@@ -447,6 +447,13 @@ public:
         return numForceBuffers;
     }
     /**
+     * Get whether the device being used is a CPU.  In some cases, different algorithms
+     * may be more efficient on CPUs and GPUs.
+     */
+    bool getIsCPU() const {
+        return (device.getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
+    }
+    /**
      * Get the SIMD width of the device being used.
      */
     int getSIMDWidth() const {

@@ -114,6 +114,42 @@ public:
      */
     virtual double padCutoff(double cutoff) = 0;
     /**
+     * Get the array containing the center of each atom block.
+     */
+    virtual ArrayInterface& getBlockCenters() = 0;
+    /**
+     * Get the array containing the dimensions of each atom block.
+     */
+    virtual ArrayInterface& getBlockBoundingBoxes() = 0;
+    /**
+     * Get the array whose first element contains the number of tiles with interactions.
+     */
+    virtual ArrayInterface& getInteractionCount() = 0;
+    /**
+     * Get the array containing tiles with interactions.
+     */
+    virtual ArrayInterface& getInteractingTiles() = 0;
+    /**
+     * Get the array containing the atoms in each tile with interactions.
+     */
+    virtual ArrayInterface& getInteractingAtoms() = 0;
+    /**
+     * Get the array containing exclusion flags.
+     */
+    virtual ArrayInterface& getExclusions() = 0;
+    /**
+     * Get the array containing tiles with exclusions.
+     */
+    virtual ArrayInterface& getExclusionTiles() = 0;
+    /**
+     * Get the array containing the index into the exclusion array for each tile.
+     */
+    virtual ArrayInterface& getExclusionIndices() = 0;
+    /**
+     * Get the array listing where the exclusion data starts for each row.
+     */
+    virtual ArrayInterface& getExclusionRowIndices() = 0;
+    /**
      * Get the array containing a flag for whether the neighbor list was rebuilt
      * on the most recent call to prepareInteractions().
      */

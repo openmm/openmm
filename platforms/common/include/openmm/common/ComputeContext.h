@@ -119,6 +119,11 @@ public:
      */
     virtual void addAutoclearBuffer(ArrayInterface& array) = 0;
     /**
+     * Get whether the device being used is a CPU.  In some cases, different algorithms
+     * may be more efficient on CPUs and GPUs.
+     */
+    virtual bool getIsCPU() const = 0;
+    /**
      * Get the SIMD width of the device being used.
      */
     virtual int getSIMDWidth() const = 0;

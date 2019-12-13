@@ -96,7 +96,7 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == CalcCustomNonbondedForceKernel::Name())
         return new CommonCalcCustomNonbondedForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcGBSAOBCForceKernel::Name())
-        return new OpenCLCalcGBSAOBCForceKernel(name, platform, cl);
+        return new CommonCalcGBSAOBCForceKernel(name, platform, cl);
     if (name == CalcCustomGBForceKernel::Name())
         return new OpenCLCalcCustomGBForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomExternalForceKernel::Name())

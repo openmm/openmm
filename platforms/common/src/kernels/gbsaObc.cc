@@ -1,60 +1,4 @@
-#define DIELECTRIC_OFFSET 0.009f
-#define PROBE_RADIUS 0.14f
 #define WARPS_PER_GROUP (FORCE_WORK_GROUP_SIZE/TILE_SIZE)
-
-/**
- * Reduce the Born sums to compute the Born radii.
- */
-
-extern "C" __global__ void reduceBornSum(float alpha, float beta, float gamma, const long long* __restrict__ bornSum,
-            const float2* __restrict__ params, real* __restrict__ bornRadii, real* __restrict__ obcChain) {
-    for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
-        // Get summed Born data
-
-        real sum = RECIP(0x100000000)*bornSum[index];
-
-        // Now calculate Born radius and OBC term.
-
-        float offsetRadius = params[index].x;
-        sum *= 0.5f*offsetRadius;
-        real sum2 = sum*sum;
-        real sum3 = sum*sum2;
-        real tanhSum = tanh(alpha*sum - beta*sum2 + gamma*sum3);
-        real nonOffsetRadius = offsetRadius + DIELECTRIC_OFFSET;
-        real radius = RECIP(RECIP(offsetRadius) - tanhSum/nonOffsetRadius);
-        real chain = offsetRadius*(alpha - 2.0f*beta*sum + 3.0f*gamma*sum2);
-        chain = (1-tanhSum*tanhSum)*chain / nonOffsetRadius;
-        bornRadii[index] = radius;
-        obcChain[index] = chain;
-    }
-}
-
-/**
- * Reduce the Born force.
- */
-
-extern "C" __global__ void reduceBornForce(long long* __restrict__ bornForce, mixed* __restrict__ energyBuffer,
-        const float2* __restrict__ params, const real* __restrict__ bornRadii, const real* __restrict__ obcChain) {
-    mixed energy = 0;
-    for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
-        // Get summed Born force
-
-        real force = RECIP(0x100000000)*bornForce[index];
-
-        // Now calculate the actual force
-
-        float offsetRadius = params[index].x;
-        real bornRadius = bornRadii[index];
-        real r = offsetRadius+DIELECTRIC_OFFSET+PROBE_RADIUS;
-        real ratio6 = POW((offsetRadius+DIELECTRIC_OFFSET)/bornRadius, 6);
-        real saTerm = SURFACE_AREA_FACTOR*r*r*ratio6;
-        force += saTerm/bornRadius;
-        energy += saTerm;
-        force *= bornRadius*bornRadius*obcChain[index];
-        bornForce[index] = (long long) (force*0x100000000);
-    }
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy/-6;
-}
 
 typedef struct {
     real x, y, z;
@@ -66,20 +10,26 @@ typedef struct {
 /**
  * Compute the Born sum.
  */
-extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ global_bornSum, const real4* __restrict__ posq, const real* __restrict__ charge, const float2* __restrict__ global_params,
+KERNEL void computeBornSum(
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        GLOBAL mm_ulong* RESTRICT global_bornSum,
+#else
+        GLOBAL real* RESTRICT global_bornSum,
+#endif
+        GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT charge, GLOBAL const float2* RESTRICT global_params,
 #ifdef USE_CUTOFF
-        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
-        const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms,
+        GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
+        GLOBAL const real4* RESTRICT blockSize, GLOBAL const int* RESTRICT interactingAtoms,
 #else
         unsigned int numTiles,
 #endif
-        const ushort2* __restrict__ exclusionTiles) {
-    const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
-    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
-    const unsigned int tbx = threadIdx.x - tgx;
-    __shared__ AtomData1 localData[FORCE_WORK_GROUP_SIZE];
+        GLOBAL const ushort2* RESTRICT exclusionTiles) {
+    const unsigned int totalWarps = GLOBAL_SIZE/TILE_SIZE;
+    const unsigned int warp = GLOBAL_ID/TILE_SIZE;
+    const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
+    const unsigned int tbx = LOCAL_ID - tgx;
+    LOCAL AtomData1 localData[FORCE_WORK_GROUP_SIZE];
 
     // First loop: process tiles that contain exclusions.
     
@@ -97,12 +47,13 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
         if (x == y) {
             // This tile is on the diagonal.
 
-            localData[threadIdx.x].x = posq1.x;
-            localData[threadIdx.x].y = posq1.y;
-            localData[threadIdx.x].z = posq1.z;
-            localData[threadIdx.x].q = charge1;
-            localData[threadIdx.x].radius = params1.x;
-            localData[threadIdx.x].scaledRadius = params1.y;
+            localData[LOCAL_ID].x = posq1.x;
+            localData[LOCAL_ID].y = posq1.y;
+            localData[LOCAL_ID].z = posq1.z;
+            localData[LOCAL_ID].q = charge1;
+            localData[LOCAL_ID].radius = params1.x;
+            localData[LOCAL_ID].scaledRadius = params1.y;
+            SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 real3 delta = make_real3(localData[tbx+j].x-posq1.x, localData[tbx+j].y-posq1.y, localData[tbx+j].z-posq1.z);
 #ifdef USE_PERIODIC
@@ -119,16 +70,17 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
                     float2 params2 = make_float2(localData[tbx+j].radius, localData[tbx+j].scaledRadius);
                     real rScaledRadiusJ = r+params2.y;
                     if ((j != tgx) && (params1.x < rScaledRadiusJ)) {
-                        real l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
+                        real l_ij = RECIP(max((real) params1.x, fabs(r-params2.y)));
                         real u_ij = RECIP(rScaledRadiusJ);
                         real l_ij2 = l_ij*l_ij;
                         real u_ij2 = u_ij*u_ij;
                         real ratio = LOG(u_ij * RECIP(l_ij));
                         bornSum += l_ij - u_ij + (0.50f*invR*ratio) + 0.25f*(r*(u_ij2-l_ij2) +
-                                            (params2.y*params2.y*invR)*(l_ij2-u_ij2));
+                                         (params2.y*params2.y*invR)*(l_ij2-u_ij2));
                         bornSum += (params1.x < params2.y-r ? 2.0f*(RECIP(params1.x)-l_ij) : 0);
                     }
                 }
+                SYNC_WARPS;
             }
         }
         else {
@@ -136,14 +88,15 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
 
             unsigned int j = y*TILE_SIZE + tgx;
             real4 tempPosq = posq[j];
-            localData[threadIdx.x].x = tempPosq.x;
-            localData[threadIdx.x].y = tempPosq.y;
-            localData[threadIdx.x].z = tempPosq.z;
-            localData[threadIdx.x].q = charge[j];
+            localData[LOCAL_ID].x = tempPosq.x;
+            localData[LOCAL_ID].y = tempPosq.y;
+            localData[LOCAL_ID].z = tempPosq.z;
+            localData[LOCAL_ID].q = charge[j];
             float2 tempParams = global_params[j];
-            localData[threadIdx.x].radius = tempParams.x;
-            localData[threadIdx.x].scaledRadius = tempParams.y;
-            localData[threadIdx.x].bornSum = 0.0f;
+            localData[LOCAL_ID].radius = tempParams.x;
+            localData[LOCAL_ID].scaledRadius = tempParams.y;
+            localData[LOCAL_ID].bornSum = 0.0f;
+            SYNC_WARPS;
 
             // Compute the full set of interactions in this tile.
 
@@ -164,40 +117,49 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
                     float2 params2 = make_float2(localData[tbx+tj].radius, localData[tbx+tj].scaledRadius);
                     real rScaledRadiusJ = r+params2.y;
                     if (params1.x < rScaledRadiusJ) {
-                        real l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
+                        real l_ij = RECIP(max((real) params1.x, fabs(r-params2.y)));
                         real u_ij = RECIP(rScaledRadiusJ);
                         real l_ij2 = l_ij*l_ij;
                         real u_ij2 = u_ij*u_ij;
                         real ratio = LOG(u_ij * RECIP(l_ij));
                         bornSum += l_ij - u_ij + (0.50f*invR*ratio) + 0.25f*(r*(u_ij2-l_ij2) +
-                                            (params2.y*params2.y*invR)*(l_ij2-u_ij2));
+                                         (params2.y*params2.y*invR)*(l_ij2-u_ij2));
                         bornSum += (params1.x < params2.y-r ? 2.0f*(RECIP(params1.x)-l_ij) : 0);
                     }
                     real rScaledRadiusI = r+params1.y;
                     if (params2.x < rScaledRadiusI) {
-                        real l_ij = RECIP(max(params2.x, fabs(r-params1.y)));
+                        real l_ij = RECIP(max((real) params2.x, fabs(r-params1.y)));
                         real u_ij = RECIP(rScaledRadiusI);
                         real l_ij2 = l_ij*l_ij;
                         real u_ij2 = u_ij*u_ij;
                         real ratio = LOG(u_ij * RECIP(l_ij));
                         real term = l_ij - u_ij + (0.50f*invR*ratio) + 0.25f*(r*(u_ij2-l_ij2) +
-                                            (params1.y*params1.y*invR)*(l_ij2-u_ij2));
+                                         (params1.y*params1.y*invR)*(l_ij2-u_ij2));
                         term += (params2.x < params1.y-r ? 2.0f*(RECIP(params2.x)-l_ij) : 0);
                         localData[tbx+tj].bornSum += term;
                     }
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
         }
-        
+
         // Write results.
-        
+
+#ifdef SUPPORTS_64_BIT_ATOMICS
         unsigned int offset = x*TILE_SIZE + tgx;
-        atomicAdd(&global_bornSum[offset], static_cast<unsigned long long>((long long) (bornSum*0x100000000)));
+        ATOMIC_ADD(&global_bornSum[offset], (mm_ulong) ((mm_long) (bornSum*0x100000000)));
         if (x != y) {
             offset = y*TILE_SIZE + tgx;
-            atomicAdd(&global_bornSum[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].bornSum*0x100000000)));
+            ATOMIC_ADD(&global_bornSum[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].bornSum*0x100000000)));
         }
+#else
+        unsigned int offset1 = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
+        unsigned int offset2 = y*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
+        global_bornSum[offset1] += bornSum;
+        if (x != y)
+            global_bornSum[offset2] += localData[LOCAL_ID].bornSum;
+#endif
     }
 
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
@@ -207,17 +169,17 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
     unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (warp*(numTiles > maxTiles ? NUM_BLOCKS*((long long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
-    int end = (int) ((warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
+    int pos = (int) (warp*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : (mm_long)numTiles)/totalWarps);
+    int end = (int) ((warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : (mm_long)numTiles)/totalWarps);
 #else
-    int pos = (int) (warp*(long long)numTiles/totalWarps);
-    int end = (int) ((warp+1)*(long long)numTiles/totalWarps);
+    int pos = (int) (warp*(mm_long)numTiles/totalWarps);
+    int end = (int) ((warp+1)*(mm_long)numTiles/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
-    __shared__ int atomIndices[FORCE_WORK_GROUP_SIZE];
-    __shared__ volatile int skipTiles[FORCE_WORK_GROUP_SIZE];
-    skipTiles[threadIdx.x] = -1;
+    LOCAL int atomIndices[FORCE_WORK_GROUP_SIZE];
+    LOCAL volatile int skipTiles[FORCE_WORK_GROUP_SIZE];
+    skipTiles[LOCAL_ID] = -1;
 
     while (pos < end) {
         real bornSum = 0;
@@ -228,11 +190,11 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
         int x, y;
         bool singlePeriodicCopy = false;
 #ifdef USE_CUTOFF
-            x = tiles[pos];
-            real4 blockSizeX = blockSize[x];
-            singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
-                                  0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
-                                  0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
+        x = tiles[pos];
+        real4 blockSizeX = blockSize[x];
+        singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= CUTOFF &&
+                              0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
+                              0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
 #else
         y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
         x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
@@ -243,15 +205,18 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
 
         // Skip over tiles that have exclusions, since they were already processed.
 
+        SYNC_WARPS;
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+            SYNC_WARPS;
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 ushort2 tile = exclusionTiles[skipBase+tgx];
-                skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else
-                skipTiles[threadIdx.x] = end;
+                skipTiles[LOCAL_ID] = end;
             skipBase += TILE_SIZE;            
             currentSkipIndex = tbx;
+            SYNC_WARPS;
         }
         while (skipTiles[currentSkipIndex] < pos)
             currentSkipIndex++;
@@ -270,18 +235,19 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
-            atomIndices[threadIdx.x] = j;
+            atomIndices[LOCAL_ID] = j;
             if (j < PADDED_NUM_ATOMS) {
                 real4 tempPosq = posq[j];
-                localData[threadIdx.x].x = tempPosq.x;
-                localData[threadIdx.x].y = tempPosq.y;
-                localData[threadIdx.x].z = tempPosq.z;
-                localData[threadIdx.x].q = charge[j];
+                localData[LOCAL_ID].x = tempPosq.x;
+                localData[LOCAL_ID].y = tempPosq.y;
+                localData[LOCAL_ID].z = tempPosq.z;
+                localData[LOCAL_ID].q = charge[j];
                 float2 tempParams = global_params[j];
-                localData[threadIdx.x].radius = tempParams.x;
-                localData[threadIdx.x].scaledRadius = tempParams.y;
-                localData[threadIdx.x].bornSum = 0.0f;
+                localData[LOCAL_ID].radius = tempParams.x;
+                localData[LOCAL_ID].scaledRadius = tempParams.y;
+                localData[LOCAL_ID].bornSum = 0.0f;
             }
+            SYNC_WARPS;
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
                 // The box is small enough that we can just translate all the atoms into a single periodic
@@ -289,7 +255,8 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
 
                 real4 blockCenterX = blockCenter[x];
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
-                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[threadIdx.x], blockCenterX)
+                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[LOCAL_ID], blockCenterX)
+                SYNC_WARPS;
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     real3 delta = make_real3(localData[tbx+tj].x-posq1.x, localData[tbx+tj].y-posq1.y, localData[tbx+tj].z-posq1.z);
@@ -301,29 +268,30 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
                         float2 params2 = make_float2(localData[tbx+tj].radius, localData[tbx+tj].scaledRadius);
                         real rScaledRadiusJ = r+params2.y;
                         if (params1.x < rScaledRadiusJ) {
-                            real l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
+                            real l_ij = RECIP(max((real) params1.x, fabs(r-params2.y)));
                             real u_ij = RECIP(rScaledRadiusJ);
                             real l_ij2 = l_ij*l_ij;
                             real u_ij2 = u_ij*u_ij;
                             real ratio = LOG(u_ij * RECIP(l_ij));
                             bornSum += l_ij - u_ij + (0.50f*invR*ratio) + 0.25f*(r*(u_ij2-l_ij2) +
-                                                (params2.y*params2.y*invR)*(l_ij2-u_ij2));
+                                             (params2.y*params2.y*invR)*(l_ij2-u_ij2));
                             bornSum += (params1.x < params2.y-r ? 2.0f*(RECIP(params1.x)-l_ij) : 0);
                         }
                         real rScaledRadiusI = r+params1.y;
                         if (params2.x < rScaledRadiusI) {
-                            real l_ij = RECIP(max(params2.x, fabs(r-params1.y)));
+                            real l_ij = RECIP(max((real) params2.x, fabs(r-params1.y)));
                             real u_ij = RECIP(rScaledRadiusI);
                             real l_ij2 = l_ij*l_ij;
                             real u_ij2 = u_ij*u_ij;
                             real ratio = LOG(u_ij * RECIP(l_ij));
                             real term = l_ij - u_ij + (0.50f*invR*ratio) + 0.25f*(r*(u_ij2-l_ij2) +
-                                                (params1.y*params1.y*invR)*(l_ij2-u_ij2));
+                                             (params1.y*params1.y*invR)*(l_ij2-u_ij2));
                             term += (params2.x < params1.y-r ? 2.0f*(RECIP(params2.x)-l_ij) : 0);
                             localData[tbx+tj].bornSum += term;
                         }
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
             else
@@ -349,42 +317,51 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ globa
                         float2 params2 = make_float2(localData[tbx+tj].radius, localData[tbx+tj].scaledRadius);
                         real rScaledRadiusJ = r+params2.y;
                         if (params1.x < rScaledRadiusJ) {
-                            real l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
+                            real l_ij = RECIP(max((real) params1.x, fabs(r-params2.y)));
                             real u_ij = RECIP(rScaledRadiusJ);
                             real l_ij2 = l_ij*l_ij;
                             real u_ij2 = u_ij*u_ij;
                             real ratio = LOG(u_ij * RECIP(l_ij));
                             bornSum += l_ij - u_ij + (0.50f*invR*ratio) + 0.25f*(r*(u_ij2-l_ij2) +
-                                                (params2.y*params2.y*invR)*(l_ij2-u_ij2));
+                                             (params2.y*params2.y*invR)*(l_ij2-u_ij2));
                             bornSum += (params1.x < params2.y-r ? 2.0f*(RECIP(params1.x)-l_ij) : 0);
                         }
                         real rScaledRadiusI = r+params1.y;
                         if (params2.x < rScaledRadiusI) {
-                            real l_ij = RECIP(max(params2.x, fabs(r-params1.y)));
+                            real l_ij = RECIP(max((real) params2.x, fabs(r-params1.y)));
                             real u_ij = RECIP(rScaledRadiusI);
                             real l_ij2 = l_ij*l_ij;
                             real u_ij2 = u_ij*u_ij;
                             real ratio = LOG(u_ij * RECIP(l_ij));
                             real term = l_ij - u_ij + (0.50f*invR*ratio) + 0.25f*(r*(u_ij2-l_ij2) +
-                                                (params1.y*params1.y*invR)*(l_ij2-u_ij2));
+                                             (params1.y*params1.y*invR)*(l_ij2-u_ij2));
                             term += (params2.x < params1.y-r ? 2.0f*(RECIP(params2.x)-l_ij) : 0);
                             localData[tbx+tj].bornSum += term;
                         }
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
-        
+
             // Write results.
 
-            atomicAdd(&global_bornSum[atom1], static_cast<unsigned long long>((long long) (bornSum*0x100000000)));
 #ifdef USE_CUTOFF
-            unsigned int atom2 = atomIndices[threadIdx.x];
+            unsigned int atom2 = atomIndices[LOCAL_ID];
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
+#ifdef SUPPORTS_64_BIT_ATOMICS
+            ATOMIC_ADD(&global_bornSum[atom1], (mm_ulong) ((mm_long) (bornSum*0x100000000)));
             if (atom2 < PADDED_NUM_ATOMS)
-                atomicAdd(&global_bornSum[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].bornSum*0x100000000)));
+                ATOMIC_ADD(&global_bornSum[atom2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].bornSum*0x100000000)));
+#else
+            unsigned int offset1 = atom1 + warp*PADDED_NUM_ATOMS;
+            unsigned int offset2 = atom2 + warp*PADDED_NUM_ATOMS;
+            global_bornSum[offset1] += bornSum;
+            if (atom2 < PADDED_NUM_ATOMS)
+                global_bornSum[offset2] += localData[LOCAL_ID].bornSum;
+#endif
         }
         pos++;
     }
@@ -401,22 +378,28 @@ typedef struct {
  * First part of computing the GBSA interaction.
  */
 
-extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ global_bornForce,
-        mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const real* __restrict__ charge, const real* __restrict__ global_bornRadii, bool needEnergy,
+KERNEL void computeGBSAForce1(
+#ifdef SUPPORTS_64_BIT_ATOMICS
+        GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mm_ulong* RESTRICT global_bornForce,
+#else
+        GLOBAL real4* RESTRICT forceBuffers, GLOBAL real* RESTRICT global_bornForce,
+#endif
+        GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT charge,
+        GLOBAL const real* RESTRICT global_bornRadii, int needEnergy,
 #ifdef USE_CUTOFF
-        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
-        const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms,
+        GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
+        GLOBAL const real4* RESTRICT blockSize, GLOBAL const int* RESTRICT interactingAtoms,
 #else
         unsigned int numTiles,
 #endif
-        const ushort2* __restrict__ exclusionTiles) {
-    const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
-    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
-    const unsigned int tbx = threadIdx.x - tgx;
+        GLOBAL const ushort2* RESTRICT exclusionTiles) {
+    const unsigned int totalWarps = GLOBAL_SIZE/TILE_SIZE;
+    const unsigned int warp = GLOBAL_ID/TILE_SIZE;
+    const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
+    const unsigned int tbx = LOCAL_ID - tgx;
     mixed energy = 0;
-    __shared__ AtomData2 localData[FORCE_WORK_GROUP_SIZE];
+    LOCAL AtomData2 localData[FORCE_WORK_GROUP_SIZE];
 
     // First loop: process tiles that contain exclusions.
     
@@ -434,11 +417,12 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
         if (x == y) {
             // This tile is on the diagonal.
 
-            localData[threadIdx.x].x = posq1.x;
-            localData[threadIdx.x].y = posq1.y;
-            localData[threadIdx.x].z = posq1.z;
-            localData[threadIdx.x].q = charge1;
-            localData[threadIdx.x].bornRadius = bornRadius1;
+            localData[LOCAL_ID].x = posq1.x;
+            localData[LOCAL_ID].y = posq1.y;
+            localData[LOCAL_ID].z = posq1.z;
+            localData[LOCAL_ID].q = charge1;
+            localData[LOCAL_ID].bornRadius = bornRadius1;
+            SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 if (atom1 < NUM_ATOMS && y*TILE_SIZE+j < NUM_ATOMS) {
                     real3 pos2 = make_real3(localData[tbx+j].x, localData[tbx+j].y, localData[tbx+j].z);
@@ -479,6 +463,7 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
                     }
 #endif
                 }
+                SYNC_WARPS;
             }
         }
         else {
@@ -486,15 +471,16 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
 
             unsigned int j = y*TILE_SIZE + tgx;
             real4 tempPosq = posq[j];
-            localData[threadIdx.x].x = tempPosq.x;
-            localData[threadIdx.x].y = tempPosq.y;
-            localData[threadIdx.x].z = tempPosq.z;
-            localData[threadIdx.x].q = charge[j];
-            localData[threadIdx.x].bornRadius = global_bornRadii[j];
-            localData[threadIdx.x].fx = 0.0f;
-            localData[threadIdx.x].fy = 0.0f;
-            localData[threadIdx.x].fz = 0.0f;
-            localData[threadIdx.x].fw = 0.0f;
+            localData[LOCAL_ID].x = tempPosq.x;
+            localData[LOCAL_ID].y = tempPosq.y;
+            localData[LOCAL_ID].z = tempPosq.z;
+            localData[LOCAL_ID].q = charge[j];
+            localData[LOCAL_ID].bornRadius = global_bornRadii[j];
+            localData[LOCAL_ID].fx = 0.0f;
+            localData[LOCAL_ID].fy = 0.0f;
+            localData[LOCAL_ID].fz = 0.0f;
+            localData[LOCAL_ID].fw = 0.0f;
+            SYNC_WARPS;
             unsigned int tj = tgx;
             for (j = 0; j < TILE_SIZE; j++) {
                 if (atom1 < NUM_ATOMS && y*TILE_SIZE+tj < NUM_ATOMS) {
@@ -540,23 +526,35 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
 #endif
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
         }
         
         // Write results.
         
+#ifdef SUPPORTS_64_BIT_ATOMICS
         unsigned int offset = x*TILE_SIZE + tgx;
-        atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
-        atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
-        atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
-        atomicAdd(&global_bornForce[offset], static_cast<unsigned long long>((long long) (force.w*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (force.x*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
+        ATOMIC_ADD(&global_bornForce[offset], (mm_ulong) ((mm_long) (force.w*0x100000000)));
         if (x != y) {
             offset = y*TILE_SIZE + tgx;
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0x100000000)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0x100000000)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
-            atomicAdd(&global_bornForce[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fw*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fx*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fy*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fz*0x100000000)));
+            ATOMIC_ADD(&global_bornForce[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fw*0x100000000)));
         }
+#else
+        unsigned int offset1 = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
+        unsigned int offset2 = y*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
+        forceBuffers[offset1] += make_real4(force.x, force.y, force.z, 0);
+        global_bornForce[offset1] += force.w;
+        if (x != y) {
+            forceBuffers[offset2] += (real4) (localData[LOCAL_ID].fx, localData[LOCAL_ID].fy, localData[LOCAL_ID].fz, 0.0f);
+            global_bornForce[offset2] += localData[LOCAL_ID].fw;
+        }
+#endif
     }
 
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
@@ -566,17 +564,17 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
     unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (warp*(numTiles > maxTiles ? NUM_BLOCKS*((long long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
-    int end = (int) ((warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
+    int pos = (int) (warp*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : (mm_long)numTiles)/totalWarps);
+    int end = (int) ((warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : (mm_long)numTiles)/totalWarps);
 #else
-    int pos = (int) (warp*(long long)numTiles/totalWarps);
-    int end = (int) ((warp+1)*(long long)numTiles/totalWarps);
+    int pos = (int) (warp*(mm_long)numTiles/totalWarps);
+    int end = (int) ((warp+1)*(mm_long)numTiles/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
-    __shared__ int atomIndices[FORCE_WORK_GROUP_SIZE];
-    __shared__ volatile int skipTiles[FORCE_WORK_GROUP_SIZE];
-    skipTiles[threadIdx.x] = -1;
+    LOCAL int atomIndices[FORCE_WORK_GROUP_SIZE];
+    LOCAL volatile int skipTiles[FORCE_WORK_GROUP_SIZE];
+    skipTiles[LOCAL_ID] = -1;
 
     while (pos < end) {
         real4 force = make_real4(0);
@@ -602,15 +600,18 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
 
         // Skip over tiles that have exclusions, since they were already processed.
 
+        SYNC_WARPS;
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+            SYNC_WARPS;
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 ushort2 tile = exclusionTiles[skipBase+tgx];
-                skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else
-                skipTiles[threadIdx.x] = end;
+                skipTiles[LOCAL_ID] = end;
             skipBase += TILE_SIZE;            
             currentSkipIndex = tbx;
+            SYNC_WARPS;
         }
         while (skipTiles[currentSkipIndex] < pos)
             currentSkipIndex++;
@@ -629,19 +630,20 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
-            atomIndices[threadIdx.x] = j;
+            atomIndices[LOCAL_ID] = j;
             if (j < PADDED_NUM_ATOMS) {
                 real4 tempPosq = posq[j];
-                localData[threadIdx.x].x = tempPosq.x;
-                localData[threadIdx.x].y = tempPosq.y;
-                localData[threadIdx.x].z = tempPosq.z;
-                localData[threadIdx.x].q = charge[j];
-                localData[threadIdx.x].bornRadius = global_bornRadii[j];
-                localData[threadIdx.x].fx = 0.0f;
-                localData[threadIdx.x].fy = 0.0f;
-                localData[threadIdx.x].fz = 0.0f;
-                localData[threadIdx.x].fw = 0.0f;
+                localData[LOCAL_ID].x = tempPosq.x;
+                localData[LOCAL_ID].y = tempPosq.y;
+                localData[LOCAL_ID].z = tempPosq.z;
+                localData[LOCAL_ID].q = charge[j];
+                localData[LOCAL_ID].bornRadius = global_bornRadii[j];
+                localData[LOCAL_ID].fx = 0.0f;
+                localData[LOCAL_ID].fy = 0.0f;
+                localData[LOCAL_ID].fz = 0.0f;
+                localData[LOCAL_ID].fw = 0.0f;
             }
+            SYNC_WARPS;
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
                 // The box is small enough that we can just translate all the atoms into a single periodic
@@ -649,7 +651,8 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
 
                 real4 blockCenterX = blockCenter[x];
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
-                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[threadIdx.x], blockCenterX)
+                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[LOCAL_ID], blockCenterX)
+                SYNC_WARPS;
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = atomIndices[tbx+tj];
@@ -689,6 +692,7 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
                         }
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
             else
@@ -742,28 +746,40 @@ extern "C" __global__ void computeGBSAForce1(unsigned long long* __restrict__ fo
 #endif
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
 
             // Write results.
 
-            atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
-            atomicAdd(&global_bornForce[atom1], static_cast<unsigned long long>((long long) (force.w*0x100000000)));
 #ifdef USE_CUTOFF
-            unsigned int atom2 = atomIndices[threadIdx.x];
+            unsigned int atom2 = atomIndices[LOCAL_ID];
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
+#ifdef SUPPORTS_64_BIT_ATOMICS
+            ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) (force.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
+            ATOMIC_ADD(&global_bornForce[atom1], (mm_ulong) ((mm_long) (force.w*0x100000000)));
             if (atom2 < PADDED_NUM_ATOMS) {
-                atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0x100000000)));
-                atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0x100000000)));
-                atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
-                atomicAdd(&global_bornForce[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fw*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fx*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fy*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fz*0x100000000)));
+                ATOMIC_ADD(&global_bornForce[atom2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fw*0x100000000)));
             }
+#else
+            unsigned int offset1 = atom1 + warp*PADDED_NUM_ATOMS;
+            unsigned int offset2 = atom2 + warp*PADDED_NUM_ATOMS;
+            forceBuffers[offset1] += make_real4(force.x, force.y, force.z, 0);
+            global_bornForce[offset1] += force.w;
+            if (atom2 < PADDED_NUM_ATOMS) {
+                forceBuffers[offset2] += (real4) (localData[LOCAL_ID].fx, localData[LOCAL_ID].fy, localData[LOCAL_ID].fz, 0.0f);
+                global_bornForce[offset2] += localData[LOCAL_ID].fw;
+            }
+#endif
         }
         pos++;
     }
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+    energyBuffer[GLOBAL_ID] += energy;
 }

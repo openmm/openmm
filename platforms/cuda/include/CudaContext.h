@@ -336,6 +336,13 @@ public:
         return 1024;
     }
     /**
+     * Get whether the device being used is a CPU.  In some cases, different algorithms
+     * may be more efficient on CPUs and GPUs.
+     */
+    bool getIsCPU() const {
+        return false;
+    }
+    /**
      * Get the SIMD width of the device being used.
      */
     int getSIMDWidth() const {

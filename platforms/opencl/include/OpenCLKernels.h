@@ -374,58 +374,6 @@ private:
 };
 
 /**
- * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
- */
-class OpenCLCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
-public:
-    OpenCLCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGBSAOBCForceKernel(name, platform), cl(cl),
-            hasCreatedKernels(false) {
-    }
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the GBSAOBCForce this kernel will be used for
-     */
-    void initialize(const System& system, const GBSAOBCForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the GBSAOBCForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force);
-private:
-    class ForceInfo;
-    double prefactor, surfaceAreaFactor, cutoff;
-    bool hasCreatedKernels;
-    int maxTiles;
-    OpenCLContext& cl;
-    ForceInfo* info;
-    OpenCLArray params;
-    OpenCLArray charges;
-    OpenCLArray bornSum;
-    OpenCLArray longBornSum;
-    OpenCLArray bornRadii;
-    OpenCLArray bornForce;
-    OpenCLArray longBornForce;
-    OpenCLArray obcChain;
-    cl::Kernel computeBornSumKernel;
-    cl::Kernel reduceBornSumKernel;
-    cl::Kernel force1Kernel;
-    cl::Kernel reduceBornForceKernel;
-};
-
-/**
  * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
  */
 class OpenCLCalcCustomGBForceKernel : public CalcCustomGBForceKernel {

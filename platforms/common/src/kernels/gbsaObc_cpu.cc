@@ -1,7 +1,3 @@
-#ifdef SUPPORTS_64_BIT_ATOMICS
-#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
-#endif
-
 typedef struct {
     real x, y, z;
     real q;
@@ -12,27 +8,27 @@ typedef struct {
 /**
  * Compute the Born sum.
  */
-__kernel void computeBornSum(
+KERNEL void computeBornSum(
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        __global long* restrict global_bornSum,
+        GLOBAL mm_long* RESTRICT global_bornSum,
 #else
-        __global real* restrict global_bornSum,
+        GLOBAL real* RESTRICT global_bornSum,
 #endif
-        __global const real4* restrict posq, __global const real* restrict charge, __global const float2* restrict global_params,
+        GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT charge, GLOBAL const float2* RESTRICT global_params,
 #ifdef USE_CUTOFF
-        __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
-        __global const real4* restrict blockSize, __global const int* restrict interactingAtoms,
+        GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
+        GLOBAL const real4* RESTRICT blockSize, GLOBAL const int* RESTRICT interactingAtoms,
 #else
         unsigned int numTiles,
 #endif
-        __global const ushort2* exclusionTiles) {
-    __local AtomData1 localData[TILE_SIZE];
+        GLOBAL const ushort2* exclusionTiles) {
+    LOCAL AtomData1 localData[TILE_SIZE];
 
     // First loop: process tiles that contain exclusions.
     
-    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+get_group_id(0)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
-    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(get_group_id(0)+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
+    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+GROUP_ID*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
+    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(GROUP_ID+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
     for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const ushort2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
@@ -56,17 +52,17 @@ __kernel void computeBornSum(
 
             for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
                 unsigned int atom1 = x*TILE_SIZE+tgx;
-                real bornSum = 0.0f;
+                real bornSum = 0;
                 real4 posq1 = posq[atom1];
                 float2 params1 = global_params[atom1];
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                    real3 pos2 = (real3) (localData[j].x, localData[j].y, localData[j].z);
+                    real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
                     real charge2 = localData[j].q;
-                    real4 delta = (real4) (pos2 - posq1.xyz, 0);
+                    real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(delta)
 #endif
-                    real r2 = dot(delta.xyz, delta.xyz);
+                    real r2 = dot(trimTo3(delta), trimTo3(delta));
 #ifdef USE_CUTOFF
                     if (atom1 < NUM_ATOMS && y*TILE_SIZE+j < NUM_ATOMS && r2 < CUTOFF_SQUARED) {
 #else
@@ -74,7 +70,7 @@ __kernel void computeBornSum(
 #endif
                         real invR = RSQRT(r2);
                         real r = r2*invR;
-                        float2 params2 = (float2) (localData[j].radius, localData[j].scaledRadius);
+                        float2 params2 = make_float2(localData[j].radius, localData[j].scaledRadius);
                         real rScaledRadiusJ = r+params2.y;
                         if ((j != tgx) && (params1.x < rScaledRadiusJ)) {
                             real l_ij = RECIP(max((real) params1.x, fabs(r-params2.y)));
@@ -92,9 +88,9 @@ __kernel void computeBornSum(
                 // Write results.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                atom_add(&global_bornSum[atom1], (long) (bornSum*0x100000000));
+                ATOMIC_ADD(&global_bornSum[atom1], (mm_long) (bornSum*0x100000000));
 #else
-                unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
                 global_bornSum[offset] += bornSum;
 #endif
             }
@@ -110,9 +106,9 @@ __kernel void computeBornSum(
                 real4 posq1 = posq[atom1];
                 float2 params1 = global_params[atom1];
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                    real3 pos2 = (real3) (localData[j].x, localData[j].y, localData[j].z);
+                    real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
                     real charge2 = localData[j].q;
-                    real4 delta = (real4) (pos2 - posq1.xyz, 0);
+                    real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(delta)
 #endif
@@ -124,7 +120,7 @@ __kernel void computeBornSum(
 #endif
                         real invR = RSQRT(r2);
                         real r = r2*invR;
-                        float2 params2 = (float2) (localData[j].radius, localData[j].scaledRadius);
+                        float2 params2 = make_float2(localData[j].radius, localData[j].scaledRadius);
                         real rScaledRadiusJ = r+params2.y;
                         if (params1.x < rScaledRadiusJ) {
                             real l_ij = RECIP(max((real) params1.x, fabs(r-params2.y)));
@@ -154,9 +150,9 @@ __kernel void computeBornSum(
                // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                atom_add(&global_bornSum[atom1], (long) (bornSum*0x100000000));
+                ATOMIC_ADD(&global_bornSum[atom1], (mm_long) (bornSum*0x100000000));
 #else
-                unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
                 global_bornSum[offset] += bornSum;
 #endif
             }
@@ -166,9 +162,9 @@ __kernel void computeBornSum(
             for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 unsigned int offset = y*TILE_SIZE + tgx;
-                atom_add(&global_bornSum[offset], (long) (localData[tgx].bornSum*0x100000000));
+                ATOMIC_ADD(&global_bornSum[offset], (mm_long) (localData[tgx].bornSum*0x100000000));
 #else
-                unsigned int offset = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+                unsigned int offset = y*TILE_SIZE+tgx + GROUP_ID*PADDED_NUM_ATOMS;
                 global_bornSum[offset] += localData[tgx].bornSum;
 #endif
             }
@@ -182,15 +178,15 @@ __kernel void computeBornSum(
     unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
-    int end = (int) ((get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
+    int pos = (int) (GROUP_ID*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : numTiles)/NUM_GROUPS);
+    int end = (int) ((GROUP_ID+1)*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : numTiles)/NUM_GROUPS);
 #else
-    int pos = (int) (get_group_id(0)*(long)numTiles/get_num_groups(0));
-    int end = (int) ((get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
+    int pos = (int) (GROUP_ID*(mm_long)numTiles/NUM_GROUPS);
+    int end = (int) ((GROUP_ID+1)*(mm_long)numTiles/NUM_GROUPS);
 #endif
     int nextToSkip = -1;
     int currentSkipIndex = 0;
-    __local int atomIndices[TILE_SIZE];
+    LOCAL int atomIndices[TILE_SIZE];
 
     while (pos < end) {
         bool includeTile = true;
@@ -263,15 +259,15 @@ __kernel void computeBornSum(
                     APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
                     float2 params1 = global_params[atom1];
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                        real3 pos2 = (real3) (localData[j].x, localData[j].y, localData[j].z);
+                        real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
                         real charge2 = localData[j].q;
-                        real4 delta = (real4) (pos2 - posq1.xyz, 0);
+                        real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
                         real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                         int atom2 = atomIndices[j];
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && r2 < CUTOFF_SQUARED) {
                             real invR = RSQRT(r2);
                             real r = r2*invR;
-                            float2 params2 = (float2) (localData[j].radius, localData[j].scaledRadius);
+                            float2 params2 = make_float2(localData[j].radius, localData[j].scaledRadius);
                             real rScaledRadiusJ = r+params2.y;
                             if (params1.x < rScaledRadiusJ) {
                                 real l_ij = RECIP(max((real) params1.x, fabs(r-params2.y)));
@@ -301,9 +297,9 @@ __kernel void computeBornSum(
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&global_bornSum[atom1], (long) (bornSum*0x100000000));
+                    ATOMIC_ADD(&global_bornSum[atom1], (mm_long) (bornSum*0x100000000));
 #else
-                    unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                    unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
                     global_bornSum[offset] += bornSum;
 #endif
                 }
@@ -319,9 +315,9 @@ __kernel void computeBornSum(
                     real4 posq1 = posq[atom1];
                     float2 params1 = global_params[atom1];
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                        real3 pos2 = (real3) (localData[j].x, localData[j].y, localData[j].z);
+                        real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
                         real charge2 = localData[j].q;
-                        real4 delta = (real4) (pos2 - posq1.xyz, 0);
+                        real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
 #ifdef USE_PERIODIC
                         APPLY_PERIODIC_TO_DELTA(delta)
 #endif
@@ -334,7 +330,7 @@ __kernel void computeBornSum(
 #endif
                             real invR = RSQRT(r2);
                             real r = r2*invR;
-                            float2 params2 = (float2) (localData[j].radius, localData[j].scaledRadius);
+                            float2 params2 = make_float2(localData[j].radius, localData[j].scaledRadius);
                             real rScaledRadiusJ = r+params2.y;
                             if (params1.x < rScaledRadiusJ) {
                                 real l_ij = RECIP(max((real) params1.x, fabs(r-params2.y)));
@@ -364,9 +360,9 @@ __kernel void computeBornSum(
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&global_bornSum[atom1], (long) (bornSum*0x100000000));
+                    ATOMIC_ADD(&global_bornSum[atom1], (mm_long) (bornSum*0x100000000));
 #else
-                    unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
+                    unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
                     global_bornSum[offset] += bornSum;
 #endif
                 }
@@ -382,9 +378,9 @@ __kernel void computeBornSum(
 #endif
                 if (atom2 < PADDED_NUM_ATOMS) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&global_bornSum[atom2], (long) (localData[tgx].bornSum*0x100000000));
+                    ATOMIC_ADD(&global_bornSum[atom2], (mm_long) (localData[tgx].bornSum*0x100000000));
 #else
-                    unsigned int offset = atom2 + get_group_id(0)*PADDED_NUM_ATOMS;
+                    unsigned int offset = atom2 + GROUP_ID*PADDED_NUM_ATOMS;
                     global_bornSum[offset] += localData[tgx].bornSum;
 #endif
                 }
@@ -405,29 +401,29 @@ typedef struct {
  * First part of computing the GBSA interaction.
  */
 
-__kernel void computeGBSAForce1(
+KERNEL void computeGBSAForce1(
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        __global long* restrict forceBuffers, __global long* restrict global_bornForce,
+        GLOBAL mm_long* RESTRICT forceBuffers, GLOBAL mm_long* RESTRICT global_bornForce,
 #else
-        __global real4* restrict forceBuffers, __global real* restrict global_bornForce,
+        GLOBAL real4* RESTRICT forceBuffers, GLOBAL real* RESTRICT global_bornForce,
 #endif
-        __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const real* restrict charge,
-        __global const real* restrict global_bornRadii, int needEnergy,
+        GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT charge,
+        GLOBAL const real* RESTRICT global_bornRadii, int needEnergy,
 #ifdef USE_CUTOFF
-        __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
-        __global const real4* restrict blockSize, __global const int* restrict interactingAtoms,
+        GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
+        GLOBAL const real4* RESTRICT blockSize, GLOBAL const int* RESTRICT interactingAtoms,
 #else
         unsigned int numTiles,
 #endif
-        __global const ushort2* exclusionTiles) {
+        GLOBAL const ushort2* exclusionTiles) {
     mixed energy = 0;
-    __local AtomData2 localData[TILE_SIZE];
+    LOCAL AtomData2 localData[TILE_SIZE];
 
     // First loop: process tiles that contain exclusions.
     
-    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+get_group_id(0)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
-    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(get_group_id(0)+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
+    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+GROUP_ID*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
+    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(GROUP_ID+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
     for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const ushort2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
@@ -449,14 +445,14 @@ __kernel void computeGBSAForce1(
 
             for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
                 unsigned int atom1 = x*TILE_SIZE+tgx;
-                real4 force = 0;
+                real4 force = make_real4(0);
                 real4 posq1 = posq[atom1];
                 real charge1 = charge[atom1];
                 real bornRadius1 = global_bornRadii[atom1];
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                    real3 pos2 = (real3) (localData[j].x, localData[j].y, localData[j].z);
+                    real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
                     real charge2 = localData[j].q;
-                    real4 delta = (real4) (pos2 - posq1.xyz, 0);
+                    real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(delta)
 #endif
@@ -485,21 +481,23 @@ __kernel void computeGBSAForce1(
                             tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
                         energy += 0.5f*tempEnergy;
-                        delta.xyz *= dEdR;
-                        force.xyz -= delta.xyz;
+                        delta *= dEdR;
+                        force.x -= delta.x;
+                        force.y -= delta.y;
+                        force.z -= delta.z;
                     }
                 }
 
                 // Write results.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                atom_add(&forceBuffers[atom1], (long) (force.x*0x100000000));
-                atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
-                atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
-                atom_add(&global_bornForce[atom1], (long) (force.w*0x100000000));
+                ATOMIC_ADD(&forceBuffers[atom1], (mm_long) (force.x*0x100000000));
+                ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_long) (force.y*0x100000000));
+                ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_long) (force.z*0x100000000));
+                ATOMIC_ADD(&global_bornForce[atom1], (mm_long) (force.w*0x100000000));
 #else
-                unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
+                unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
+                forceBuffers[offset] += make_real4(force.x, force.y, force.z, 0);
                 global_bornForce[offset] += force.w;
 #endif
             }
@@ -515,14 +513,14 @@ __kernel void computeGBSAForce1(
             }
             for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
                 unsigned int atom1 = x*TILE_SIZE+tgx;
-                real4 force = 0;
+                real4 force = make_real4(0);
                 real4 posq1 = posq[atom1];
                 real charge1 = charge[atom1];
                 real bornRadius1 = global_bornRadii[atom1];
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                    real3 pos2 = (real3) (localData[j].x, localData[j].y, localData[j].z);
+                    real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
                     real charge2 = localData[j].q;
-                    real4 delta = (real4) (pos2 - posq1.xyz, 0);
+                    real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(delta)
 #endif
@@ -550,8 +548,10 @@ __kernel void computeGBSAForce1(
                         tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
                         energy += tempEnergy;
-                        delta.xyz *= dEdR;
-                        force.xyz -= delta.xyz;
+                        delta *= dEdR;
+                        force.x -= delta.x;
+                        force.y -= delta.y;
+                        force.z -= delta.z;
                         localData[j].fx += delta.x;
                         localData[j].fy += delta.y;
                         localData[j].fz += delta.z;
@@ -562,13 +562,13 @@ __kernel void computeGBSAForce1(
                // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                atom_add(&forceBuffers[atom1], (long) (force.x*0x100000000));
-                atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
-                atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
-                atom_add(&global_bornForce[atom1], (long) (force.w*0x100000000));
+                ATOMIC_ADD(&forceBuffers[atom1], (mm_long) (force.x*0x100000000));
+                ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_long) (force.y*0x100000000));
+                ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_long) (force.z*0x100000000));
+                ATOMIC_ADD(&global_bornForce[atom1], (mm_long) (force.w*0x100000000));
 #else
-                unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
+                unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
+                forceBuffers[offset] += make_real4(force.x, force.y, force.z, 0);
                 global_bornForce[offset] += force.w;
 #endif
             }
@@ -578,12 +578,12 @@ __kernel void computeGBSAForce1(
             for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 unsigned int offset = y*TILE_SIZE + tgx;
-                atom_add(&forceBuffers[offset], (long) (localData[tgx].fx*0x100000000));
-                atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (localData[tgx].fy*0x100000000));
-                atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (localData[tgx].fz*0x100000000));
-                atom_add(&global_bornForce[offset], (long) (localData[tgx].fw*0x100000000));
+                ATOMIC_ADD(&forceBuffers[offset], (mm_long) (localData[tgx].fx*0x100000000));
+                ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_long) (localData[tgx].fy*0x100000000));
+                ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_long) (localData[tgx].fz*0x100000000));
+                ATOMIC_ADD(&global_bornForce[offset], (mm_long) (localData[tgx].fw*0x100000000));
 #else
-                unsigned int offset = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+                unsigned int offset = y*TILE_SIZE+tgx + GROUP_ID*PADDED_NUM_ATOMS;
                 real4 f = forceBuffers[offset];
                 f.x += localData[tgx].fx;
                 f.y += localData[tgx].fy;
@@ -602,15 +602,15 @@ __kernel void computeGBSAForce1(
     unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
-    int end = (int) ((get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
+    int pos = (int) (GROUP_ID*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : numTiles)/NUM_GROUPS);
+    int end = (int) ((GROUP_ID+1)*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : numTiles)/NUM_GROUPS);
 #else
-    int pos = (int) (get_group_id(0)*(long)numTiles/get_num_groups(0));
-    int end = (int) ((get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
+    int pos = (int) (GROUP_ID*(mm_long)numTiles/NUM_GROUPS);
+    int end = (int) ((GROUP_ID+1)*(mm_long)numTiles/NUM_GROUPS);
 #endif
     int nextToSkip = -1;
     int currentSkipIndex = 0;
-    __local int atomIndices[TILE_SIZE];
+    LOCAL int atomIndices[TILE_SIZE];
 
     while (pos < end) {
         bool includeTile = true;
@@ -679,16 +679,16 @@ __kernel void computeGBSAForce1(
                 }
                 for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
                     unsigned int atom1 = x*TILE_SIZE+tgx;
-                    real4 force = 0;
+                    real4 force = make_real4(0);
                     real4 posq1 = posq[atom1];
                     real charge1 = charge[atom1];
                     APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
                     float bornRadius1 = global_bornRadii[atom1];
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                        real3 pos2 = (real3) (localData[j].x, localData[j].y, localData[j].z);
+                        real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
                         real charge2 = localData[j].q;
-                        real4 delta = (real4) (pos2 - posq1.xyz, 0);
-                        real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                        real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
+                       `real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                         int atom2 = atomIndices[j];
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && r2 < CUTOFF_SQUARED) {
                             real invR = RSQRT(r2);
@@ -709,8 +709,10 @@ __kernel void computeGBSAForce1(
                             tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
                             energy += tempEnergy;
-                            delta.xyz *= dEdR;
-                            force.xyz -= delta.xyz;
+                            delta *= dEdR;
+                            force.x -= delta.x;
+                            force.y -= delta.y;
+                            force.z -= delta.z;
                             localData[j].fx += delta.x;
                             localData[j].fy += delta.y;
                             localData[j].fz += delta.z;
@@ -721,13 +723,13 @@ __kernel void computeGBSAForce1(
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&forceBuffers[atom1], (long) (force.x*0x100000000));
-                    atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
-                    atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
-                    atom_add(&global_bornForce[atom1], (long) (force.w*0x100000000));
+                    ATOMIC_ADD(&forceBuffers[atom1], (mm_long) (force.x*0x100000000));
+                    ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_long) (force.y*0x100000000));
+                    ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_long) (force.z*0x100000000));
+                    ATOMIC_ADD(&global_bornForce[atom1], (mm_long) (force.w*0x100000000));
 #else
-                    unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                    forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
+                    unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
+                    forceBuffers[offset] += make_real4(force.x, force.y, force.z, 0);
                     global_bornForce[offset] += force.w;
 #endif
                 }
@@ -739,14 +741,14 @@ __kernel void computeGBSAForce1(
 
                 for (unsigned int tgx = 0; tgx < TILE_SIZE; tgx++) {
                     unsigned int atom1 = x*TILE_SIZE+tgx;
-                    real4 force = 0;
+                    real4 force = make_real4(0);
                     real4 posq1 = posq[atom1];
                     real charge1 = charge[atom1];
                     float bornRadius1 = global_bornRadii[atom1];
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                        real3 pos2 = (real3) (localData[j].x, localData[j].y, localData[j].z);
+                        real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
                         real charge2 = localData[j].q;
-                        real4 delta = (real4) (pos2 - posq1.xyz, 0);
+                        real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
 #ifdef USE_PERIODIC
                         APPLY_PERIODIC_TO_DELTA(delta)
 #endif
@@ -775,8 +777,10 @@ __kernel void computeGBSAForce1(
                             tempEnergy -= scaledChargeProduct/CUTOFF;
 #endif
                             energy += tempEnergy;
-                            delta.xyz *= dEdR;
-                            force.xyz -= delta.xyz;
+                            delta *= dEdR;
+                            force.x -= delta.x;
+                            force.y -= delta.y;
+                            force.z -= delta.z;
                             localData[j].fx += delta.x;
                             localData[j].fy += delta.y;
                             localData[j].fz += delta.z;
@@ -787,13 +791,13 @@ __kernel void computeGBSAForce1(
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&forceBuffers[atom1], (long) (force.x*0x100000000));
-                    atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
-                    atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
-                    atom_add(&global_bornForce[atom1], (long) (force.w*0x100000000));
+                    ATOMIC_ADD(&forceBuffers[atom1], (mm_long) (force.x*0x100000000));
+                    ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_long) (force.y*0x100000000));
+                    ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_long) (force.z*0x100000000));
+                    ATOMIC_ADD(&global_bornForce[atom1], (mm_long) (force.w*0x100000000));
 #else
-                    unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
-                    forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
+                    unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
+                    forceBuffers[offset] += make_real4(force.x, force.y, force.z, 0);
                     global_bornForce[offset] += force.w;
 #endif
                 }
@@ -809,12 +813,12 @@ __kernel void computeGBSAForce1(
 #endif
                 if (atom2 < PADDED_NUM_ATOMS) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&forceBuffers[atom2], (long) (localData[tgx].fx*0x100000000));
-                    atom_add(&forceBuffers[atom2+PADDED_NUM_ATOMS], (long) (localData[tgx].fy*0x100000000));
-                    atom_add(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (long) (localData[tgx].fz*0x100000000));
-                    atom_add(&global_bornForce[atom2], (long) (localData[tgx].fw*0x100000000));
+                    ATOMIC_ADD(&forceBuffers[atom2], (mm_long) (localData[tgx].fx*0x100000000));
+                    ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_long) (localData[tgx].fy*0x100000000));
+                    ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_long) (localData[tgx].fz*0x100000000));
+                    ATOMIC_ADD(&global_bornForce[atom2], (mm_long) (localData[tgx].fw*0x100000000));
 #else
-                    unsigned int offset = atom2 + get_group_id(0)*PADDED_NUM_ATOMS;
+                    unsigned int offset = atom2 + GROUP_ID*PADDED_NUM_ATOMS;
                     real4 f = forceBuffers[offset];
                     f.x += localData[tgx].fx;
                     f.y += localData[tgx].fy;
@@ -827,5 +831,5 @@ __kernel void computeGBSAForce1(
         }
         pos++;
     }
-    energyBuffer[get_global_id(0)] += energy;
+    energyBuffer[GLOBAL_ID] += energy;
 }

@@ -2525,6 +2525,223 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
     cc.invalidateMolecules(info);
 }
 
+class CommonCalcGBSAOBCForceKernel::ForceInfo : public ComputeForceInfo {
+public:
+    ForceInfo(const GBSAOBCForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, radius1, radius2, scale1, scale2;
+        force.getParticleParameters(particle1, charge1, radius1, scale1);
+        force.getParticleParameters(particle2, charge2, radius2, scale2);
+        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2);
+    }
+private:
+    const GBSAOBCForce& force;
+};
+
+void CommonCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
+    cc.setAsCurrent();
+    if (cc.getNumContexts() > 1)
+        throw OpenMMException("GBSAOBCForce does not support using multiple devices");
+    int forceIndex;
+    for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex)
+        ;
+    string prefix = "obc"+cc.intToString(forceIndex)+"_";
+    NonbondedUtilities& nb = cc.getNonbondedUtilities();
+    params.initialize<mm_float2>(cc, cc.getPaddedNumAtoms(), "gbsaObcParams");
+    int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    charges.initialize(cc, cc.getPaddedNumAtoms(), elementSize, "gbsaObcCharges");
+    bornRadii.initialize(cc, cc.getPaddedNumAtoms(), elementSize, "bornRadii");
+    obcChain.initialize(cc, cc.getPaddedNumAtoms(), elementSize, "obcChain");
+    if (cc.getSupports64BitGlobalAtomics()) {
+        bornSum.initialize<long long>(cc, cc.getPaddedNumAtoms(), "bornSum");
+        bornForce.initialize<long long>(cc, cc.getPaddedNumAtoms(), "bornForce");
+    }
+    else {
+        int bufferSize = cc.getForceBuffers().getSize();
+        bornSum.initialize(cc, bufferSize, elementSize, "bornSum");
+        bornForce.initialize(cc, bufferSize, elementSize, "bornForce");
+    }
+    cc.addAutoclearBuffer(bornSum);
+    cc.addAutoclearBuffer(bornForce);
+    vector<double> chargeVec(cc.getPaddedNumAtoms());
+    vector<mm_float2> paramsVector(cc.getPaddedNumAtoms(), mm_float2(1,1));
+    const double dielectricOffset = 0.009;
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double charge, radius, scalingFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor);
+        radius -= dielectricOffset;
+        chargeVec[i] = charge;
+        paramsVector[i] = mm_float2((float) radius, (float) (scalingFactor*radius));
+    }
+    charges.upload(chargeVec, true);
+    params.upload(paramsVector);
+    prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
+    surfaceAreaFactor = -6.0*4*M_PI*force.getSurfaceAreaEnergy();
+    bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
+    bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
+    cutoff = force.getCutoffDistance();
+    string source = CommonKernelSources::gbsaObc2;
+    map<string, string> replacements;
+    replacements["CHARGE1"] = prefix+"charge1";
+    replacements["CHARGE2"] = prefix+"charge2";
+    replacements["OBC_PARAMS1"] = prefix+"obcParams1";
+    replacements["OBC_PARAMS2"] = prefix+"obcParams2";
+    replacements["BORN_FORCE1"] = prefix+"bornForce1";
+    replacements["BORN_FORCE2"] = prefix+"bornForce2";
+    source = cc.replaceStrings(source, replacements);
+    nb.addInteraction(useCutoff, usePeriodic, false, cutoff, vector<vector<int> >(), source, force.getForceGroup());
+    nb.addParameter(ComputeParameterInfo(charges, prefix+"charge", "float", 1));
+    nb.addParameter(ComputeParameterInfo(params, prefix+"obcParams", "float", 2));
+    nb.addParameter(ComputeParameterInfo(bornForce, prefix+"bornForce", cc.getSupports64BitGlobalAtomics() ? "mm_long" : "real", 1));
+    info = new ForceInfo(force);
+    cc.addForce(info);
+}
+
+double CommonCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    NonbondedUtilities& nb = cc.getNonbondedUtilities();
+    bool deviceIsCpu = cc.getIsCPU();
+    if (!hasCreatedKernels) {
+        // These Kernels cannot be created in initialize(), because the NonbondedUtilities has not been initialized yet then.
+
+        hasCreatedKernels = true;
+        maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : 0);
+        int numAtomBlocks = cc.getPaddedNumAtoms()/32;
+        map<string, string> defines;
+        if (nb.getUseCutoff())
+            defines["USE_CUTOFF"] = "1";
+        if (nb.getUsePeriodic())
+            defines["USE_PERIODIC"] = "1";
+        defines["CUTOFF_SQUARED"] = cc.doubleToString(cutoff*cutoff);
+        defines["CUTOFF"] = cc.doubleToString(cutoff);
+        defines["PREFACTOR"] = cc.doubleToString(prefactor);
+        defines["SURFACE_AREA_FACTOR"] = cc.doubleToString(surfaceAreaFactor);
+        defines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
+        defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+        defines["NUM_BLOCKS"] = cc.intToString(numAtomBlocks);
+        defines["FORCE_WORK_GROUP_SIZE"] = cc.intToString(nb.getForceThreadBlockSize());
+        defines["TILE_SIZE"] = "32";
+        int numExclusionTiles = nb.getExclusionTiles().getSize();
+        defines["NUM_TILES_WITH_EXCLUSIONS"] = cc.intToString(numExclusionTiles);
+        defines["FIRST_EXCLUSION_TILE"] = "0";
+        defines["LAST_EXCLUSION_TILE"] = cc.intToString(numExclusionTiles);
+        string file;
+        if (deviceIsCpu)
+            file = CommonKernelSources::gbsaObc_cpu;
+        else
+            file = CommonKernelSources::gbsaObc;
+        ComputeProgram program = cc.compileProgram(file, defines);
+        bool useLong = cc.getSupports64BitGlobalAtomics();
+        computeBornSumKernel = program->createKernel("computeBornSum");
+        computeBornSumKernel->addArg(bornSum);
+        computeBornSumKernel->addArg(cc.getPosq());
+        computeBornSumKernel->addArg(charges);
+        computeBornSumKernel->addArg(params);
+        if (nb.getUseCutoff()) {
+            computeBornSumKernel->addArg(nb.getInteractingTiles());
+            computeBornSumKernel->addArg(nb.getInteractionCount());
+            for (int i = 0; i < 5; i++)
+                computeBornSumKernel->addArg(); // The periodic box size arguments are set when the kernel is executed.
+            computeBornSumKernel->addArg(maxTiles);
+            computeBornSumKernel->addArg(nb.getBlockCenters());
+            computeBornSumKernel->addArg(nb.getBlockBoundingBoxes());
+            computeBornSumKernel->addArg(nb.getInteractingAtoms());
+        }
+        else
+            computeBornSumKernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
+        computeBornSumKernel->addArg(nb.getExclusionTiles());
+        force1Kernel = program->createKernel("computeGBSAForce1");
+        force1Kernel->addArg(useLong ? cc.getLongForceBuffer() : cc.getForceBuffers());
+        force1Kernel->addArg(bornForce);
+        force1Kernel->addArg(cc.getEnergyBuffer());
+        force1Kernel->addArg(cc.getPosq());
+        force1Kernel->addArg(charges);
+        force1Kernel->addArg(bornRadii);
+        force1Kernel->addArg(); // Whether to include energy.
+        if (nb.getUseCutoff()) {
+            force1Kernel->addArg(nb.getInteractingTiles());
+            force1Kernel->addArg(nb.getInteractionCount());
+            for (int i = 0; i < 5; i++)
+                force1Kernel->addArg(); // The periodic box size arguments are set when the kernel is executed.
+            force1Kernel->addArg(maxTiles);
+            force1Kernel->addArg(nb.getBlockCenters());
+            force1Kernel->addArg(nb.getBlockBoundingBoxes());
+            force1Kernel->addArg(nb.getInteractingAtoms());
+        }
+        else
+            force1Kernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
+        force1Kernel->addArg(nb.getExclusionTiles());
+        program = cc.compileProgram(CommonKernelSources::gbsaObcReductions, defines);
+        reduceBornSumKernel = program->createKernel("reduceBornSum");
+        reduceBornSumKernel->addArg(1.0f);
+        reduceBornSumKernel->addArg(0.8f);
+        reduceBornSumKernel->addArg(4.85f);
+        reduceBornSumKernel->addArg(bornSum);
+        if (!useLong) {
+            reduceBornSumKernel->addArg(cc.getPaddedNumAtoms());
+            reduceBornSumKernel->addArg(cc.getForceBuffers().getSize()/cc.getPaddedNumAtoms());
+        }
+        reduceBornSumKernel->addArg(params);
+        reduceBornSumKernel->addArg(bornRadii);
+        reduceBornSumKernel->addArg(obcChain);
+        reduceBornForceKernel = program->createKernel("reduceBornForce");
+        reduceBornForceKernel->addArg(bornForce);
+        if (!useLong) {
+            reduceBornForceKernel->addArg(cc.getPaddedNumAtoms());
+            reduceBornForceKernel->addArg(cc.getForceBuffers().getSize()/cc.getPaddedNumAtoms());
+        }
+        reduceBornForceKernel->addArg(cc.getEnergyBuffer());
+        reduceBornForceKernel->addArg(params);
+        reduceBornForceKernel->addArg(bornRadii);
+        reduceBornForceKernel->addArg(obcChain);
+    }
+    force1Kernel->setArg(6, (int) includeEnergy);
+    if (nb.getUseCutoff()) {
+        setPeriodicBoxArgs(cc, computeBornSumKernel, 6);
+        setPeriodicBoxArgs(cc, force1Kernel, 9);
+        if (maxTiles < nb.getInteractingTiles().getSize()) {
+            maxTiles = nb.getInteractingTiles().getSize();
+            computeBornSumKernel->setArg(11, maxTiles);
+            force1Kernel->setArg(14, maxTiles);
+        }
+    }
+    computeBornSumKernel->execute(nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
+    reduceBornSumKernel->execute(cc.getPaddedNumAtoms());
+    force1Kernel->execute(nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
+    reduceBornForceKernel->execute(cc.getPaddedNumAtoms());
+    return 0.0;
+}
+
+void CommonCalcGBSAOBCForceKernel::copyParametersToContext(ContextImpl& context, const GBSAOBCForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    cc.setAsCurrent();
+    int numParticles = force.getNumParticles();
+    if (numParticles != cc.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    // Record the per-particle parameters.
+    
+    vector<double> chargeVector(cc.getPaddedNumAtoms(), 0.0);
+    vector<mm_float2> paramsVector(cc.getPaddedNumAtoms());
+    const double dielectricOffset = 0.009;
+    for (int i = 0; i < numParticles; i++) {
+        double charge, radius, scalingFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor);
+        chargeVector[i] = charge;
+        radius -= dielectricOffset;
+        paramsVector[i] = mm_float2((float) radius, (float) (scalingFactor*radius));
+    }
+    for (int i = numParticles; i < cc.getPaddedNumAtoms(); i++)
+        paramsVector[i] = mm_float2(1,1);
+    charges.upload(chargeVector, true);
+    params.upload(paramsVector);
+    
+    // Mark that the current reordering may be invalid.
+    
+    cc.invalidateMolecules(info);
+}
+
 class CommonCalcCustomManyParticleForceKernel::ForceInfo : public ComputeForceInfo {
 public:
     ForceInfo(const CustomManyParticleForce& force) : force(force) {
@@ -4884,7 +5101,7 @@ double CommonIntegrateCustomStepKernel::computeKineticEnergy(ContextImpl& contex
     prepareForComputation(context, integrator, forcesAreValid);
     cc.clearBuffer(sumBuffer);
     kineticEnergyKernel->setArg(8, cc.getIntegrationUtilities().getRandom());
-    kineticEnergyKernel->setArg<uint>(9, 0);
+    kineticEnergyKernel->setArg(9, 0);
     kineticEnergyKernel->execute(cc.getNumAtoms());
     sumKineticEnergyKernel->execute(sumWorkGroupSize, sumWorkGroupSize);
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
