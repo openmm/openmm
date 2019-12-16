@@ -10,6 +10,7 @@
 #define KERNEL __kernel
 #define DEVICE
 #define LOCAL __local
+#define LOCAL_ARG __local
 #define GLOBAL __global
 #define RESTRICT restrict
 #define LOCAL_ID get_local_id(0)

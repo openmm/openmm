@@ -125,7 +125,7 @@ public:
     /**
      * Get the number of force buffers required for nonbonded forces.
      */
-    int getNumForceBuffers() {
+    int getNumForceBuffers() const {
         return numForceBuffers;
     }
     /**

@@ -136,6 +136,12 @@ public:
      */
     void initialize(const System& system);
     /**
+     * Get the number of force buffers required for nonbonded forces.
+     */
+    int getNumForceBuffers() const {
+        return 0;
+    }
+    /**
      * Get the number of energy buffers required for nonbonded forces.
      */
     int getNumEnergyBuffers() {

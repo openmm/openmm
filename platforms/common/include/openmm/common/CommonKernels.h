@@ -619,6 +619,62 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
+ */
+class CommonCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
+public:
+    CommonCalcCustomGBForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcCustomGBForceKernel(name, platform),
+            hasInitializedKernels(false), cc(cc), params(NULL), computedValues(NULL), energyDerivs(NULL), energyDerivChain(NULL), system(system) {
+    }
+    ~CommonCalcCustomGBForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomGBForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomGBForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the CustomGBForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
+private:
+    class ForceInfo;
+    double cutoff;
+    bool hasInitializedKernels, needParameterGradient, needEnergyParamDerivs;
+    int maxTiles, numComputedValues;
+    ComputeContext& cc;
+    ForceInfo* info;
+    ComputeParameterSet* params;
+    ComputeParameterSet* computedValues;
+    ComputeParameterSet* energyDerivs;
+    ComputeParameterSet* energyDerivChain;
+    std::vector<ComputeParameterSet*> dValuedParam;
+    std::vector<ComputeArray> dValue0dParam;
+    ComputeArray longEnergyDerivs, globals, valueBuffers, longValueBuffers;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    std::vector<ComputeArray> tabulatedFunctions;
+    std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
+    const System& system;
+    ComputeKernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
+    std::string pairValueSrc, pairEnergySrc;
+    std::map<std::string, std::string> pairValueDefines, pairEnergyDefines;
+};
+
+/**
  * This kernel is invoked by CustomManyParticleForce to calculate the forces acting on the system.
  */
 class CommonCalcCustomManyParticleForceKernel : public CalcCustomManyParticleForceKernel {

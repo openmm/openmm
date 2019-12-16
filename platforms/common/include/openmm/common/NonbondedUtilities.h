@@ -89,6 +89,10 @@ public:
      */
     virtual std::string addEnergyParameterDerivative(const std::string& param) = 0;
     /**
+     * Get the number of force buffers required for nonbonded forces.
+     */
+    virtual int getNumForceBuffers() const = 0;
+    /**
      * Get whether a cutoff is being used.
      */
     virtual bool getUseCutoff() = 0;
