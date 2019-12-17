@@ -1,3 +1,4 @@
+import copy
 import math
 import sys
 
@@ -85,6 +86,22 @@ def setForceGroups(system):
         if isinstance(force, NonbondedForce):
             force.setReciprocalSpaceForceGroup(1) # 0x00000010 = 2
 
+def addScaledForce(system):
+
+    for force in system.getForces():
+        if isinstance(force, NonbondedForce):
+            new_force = copy.deepcopy(force)
+
+            # Scale PME by 2, i.e. scale charges by sqrt(2)
+            for i in range(new_force.getNumParticles()):
+                charge, sigma, epsilon = new_force.getParticleParameters(i)
+                charge *= math.sqrt(2)
+                new_force.setParticleParameters(i, charge, sigma, epsilon)
+
+            new_force.setForceGroup(2) # 0x00000100 = 4 <-- not used
+            new_force.setReciprocalSpaceForceGroup(3) # 0x00001000 = 8 <-- slowForce
+
+            system.addForce(new_force)
 
 if __name__ == '__main__':
 
@@ -115,6 +132,10 @@ if __name__ == '__main__':
     elif integratorType == 'm4':
         setForceGroups(system)
         integrator = MultiStepVerletIntegrator4(1.0*femtoseconds)
+    elif integratorType == 'm5':
+        setForceGroups(system)
+        addScaledForce(system)
+        integrator = MultiStepVerletIntegrator3(1.0*femtoseconds, 1, 8)
 
     platform = Platform.getPlatformByName('CUDA')
     #properties = {'DeterministicForces': 'true', 'Precision': 'double'}
