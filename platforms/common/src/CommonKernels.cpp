@@ -2925,17 +2925,16 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
     bool useLong = cc.getSupports64BitGlobalAtomics();
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     if (useLong) {
-        longValueBuffers.initialize<long long>(cc, cc.getPaddedNumAtoms(), "customGBLongValueBuffers");
+        valueBuffers.initialize<long long>(cc, cc.getPaddedNumAtoms(), "customGBValueBuffers");
         longEnergyDerivs.initialize<long long>(cc, numComputedValues*cc.getPaddedNumAtoms(), "customGBLongEnergyDerivatives");
         energyDerivs = new ComputeParameterSet(cc, numComputedValues, cc.getPaddedNumAtoms(), "customGBEnergyDerivatives", true);
-        cc.addAutoclearBuffer(longValueBuffers);
     }
     else {
         int bufferSize = cc.getPaddedNumAtoms()*nb.getNumForceBuffers();
         valueBuffers.initialize(cc, bufferSize, elementSize, "customGBValueBuffers");
         energyDerivs = new ComputeParameterSet(cc, numComputedValues, bufferSize, "customGBEnergyDerivatives", true);
-        cc.addAutoclearBuffer(valueBuffers);
     }
+    cc.addAutoclearBuffer(valueBuffers);
     energyDerivChain = new ComputeParameterSet(cc, numComputedValues, cc.getPaddedNumAtoms(), "customGBEnergyDerivativeChain", true);
     needEnergyParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
     dValue0dParam.resize(force.getNumEnergyParameterDerivatives());
@@ -3031,14 +3030,14 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
                     if (deviceIsCpu)
                         storeDeriv2 << "ATOMIC_ADD(&global_" << derivName << "[offset2], (mm_ulong) ((mm_long) (local_" << derivName << "[tgx]*0x100000000)));\n";
                     else
-                        storeDeriv2 << "ATOMIC_ADD(&global_" << derivName << "[offset2], (mm_ulong) ((mm_long) (local_" << derivName << "[get_local_id(0)]*0x100000000)));\n";
+                        storeDeriv2 << "ATOMIC_ADD(&global_" << derivName << "[offset2], (mm_ulong) ((mm_long) (local_" << derivName << "[LOCAL_ID]*0x100000000)));\n";
                 }
                 else {
                     storeDeriv1 << "global_" << derivName << "[offset1] += " << derivName << ";\n";
                     if (deviceIsCpu)
                         storeDeriv2 << "global_" << derivName << "[offset2] += local_" << derivName << "[tgx];\n";
                     else
-                        storeDeriv2 << "global_" << derivName << "[offset2] += local_" << derivName << "[get_local_id(0)];\n";
+                        storeDeriv2 << "global_" << derivName << "[offset2] += local_" << derivName << "[LOCAL_ID];\n";
                 }
             }
         }
@@ -3516,6 +3515,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         replacements["SAVE_PARAM_DERIVS"] = saveParamDerivs.str();
         map<string, string> defines;
         defines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
+        defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
         ComputeProgram program = cc.compileProgram(cc.replaceStrings(CommonKernelSources::customGBGradientChainRule, replacements), defines);
         gradientChainRuleKernel = program->createKernel("computeGradientChainRuleTerms");
     }
@@ -3653,7 +3653,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         pairValueKernel->addArg(cc.getPosq());
         pairValueKernel->addArg(cc.getNonbondedUtilities().getExclusions());
         pairValueKernel->addArg(cc.getNonbondedUtilities().getExclusionTiles());
-        pairValueKernel->addArg(useLong ? longValueBuffers : valueBuffers);
+        pairValueKernel->addArg(valueBuffers);
         if (nb.getUseCutoff()) {
             pairValueKernel->addArg(nb.getInteractingTiles());
             pairValueKernel->addArg(nb.getInteractionCount());
@@ -3679,7 +3679,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         for (auto& function : tabulatedFunctions)
             pairValueKernel->addArg(function);
         perParticleValueKernel->addArg(cc.getPosq());
-        perParticleValueKernel->addArg(useLong ? longValueBuffers : valueBuffers);
+        perParticleValueKernel->addArg(valueBuffers);
         if (!useLong) {
             perParticleValueKernel->addArg(cc.getPaddedNumAtoms());
             perParticleValueKernel->addArg(cc.getForceBuffers().getSize()/cc.getPaddedNumAtoms());
@@ -3795,7 +3795,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         if (changed)
             globals.upload(globalParamValues);
     }
-    pairEnergyKernel->setArg(5, includeEnergy);
+    pairEnergyKernel->setArg(5, (int) includeEnergy);
     if (nb.getUseCutoff()) {
         setPeriodicBoxArgs(cc, pairValueKernel, 6);
         setPeriodicBoxArgs(cc, pairEnergyKernel, 8);

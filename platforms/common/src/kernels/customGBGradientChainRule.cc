@@ -4,12 +4,13 @@
 
 KERNEL void computeGradientChainRuleTerms(GLOBAL const real4* RESTRICT posq,
 #ifdef SUPPORTS_64_BIT_ATOMICS
-    mm_long* RESTRICT forceBuffers
+    GLOBAL mm_long* RESTRICT forceBuffers
 #else
     GLOBAL real4* RESTRICT forceBuffers
 #endif
         PARAMETER_ARGUMENTS) {
     INIT_PARAM_DERIVS
+    const real scale = RECIP((real) 0x100000000);
     for (int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         real4 pos = posq[index];
 #ifdef SUPPORTS_64_BIT_ATOMICS

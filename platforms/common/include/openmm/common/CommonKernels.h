@@ -663,7 +663,7 @@ private:
     ComputeParameterSet* energyDerivChain;
     std::vector<ComputeParameterSet*> dValuedParam;
     std::vector<ComputeArray> dValue0dParam;
-    ComputeArray longEnergyDerivs, globals, valueBuffers, longValueBuffers;
+    ComputeArray longEnergyDerivs, globals, valueBuffers;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctions;

@@ -374,65 +374,6 @@ private:
 };
 
 /**
- * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
- */
-class OpenCLCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
-public:
-    OpenCLCalcCustomGBForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcCustomGBForceKernel(name, platform),
-            hasInitializedKernels(false), cl(cl), params(NULL), computedValues(NULL), energyDerivs(NULL), energyDerivChain(NULL), system(system) {
-    }
-    ~OpenCLCalcCustomGBForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CustomGBForce this kernel will be used for
-     */
-    void initialize(const System& system, const CustomGBForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomGBForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
-private:
-    class ForceInfo;
-    double cutoff;
-    bool hasInitializedKernels, needParameterGradient, needEnergyParamDerivs;
-    int maxTiles, numComputedValues;
-    OpenCLContext& cl;
-    ForceInfo* info;
-    OpenCLParameterSet* params;
-    OpenCLParameterSet* computedValues;
-    OpenCLParameterSet* energyDerivs;
-    OpenCLParameterSet* energyDerivChain;
-    std::vector<OpenCLParameterSet*> dValuedParam;
-    std::vector<OpenCLArray> dValue0dParam;
-    OpenCLArray longEnergyDerivs;
-    OpenCLArray globals;
-    OpenCLArray valueBuffers;
-    OpenCLArray longValueBuffers;
-    std::vector<std::string> globalParamNames;
-    std::vector<cl_float> globalParamValues;
-    std::vector<OpenCLArray> tabulatedFunctions;
-    std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
-    const System& system;
-    cl::Kernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
-    std::string pairValueSrc, pairEnergySrc;
-    std::map<std::string, std::string> pairValueDefines, pairEnergyDefines;
-};
-
-/**
  * This kernel is invoked by CustomHbondForce to calculate the forces acting on the system.
  */
 class OpenCLCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {

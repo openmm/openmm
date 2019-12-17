@@ -43,7 +43,7 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
             // This tile is on the diagonal.
 
             const unsigned int localAtomIndex = LOCAL_ID;
-            local_pos[localAtomIndex] = trimTo3(pos1);
+            local_pos[localAtomIndex] = pos1;
             LOAD_LOCAL_PARAMETERS_FROM_1
             SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
@@ -143,7 +143,7 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
         STORE_PARAM_DERIVS1
         if (x != y) {
             unsigned int offset2 = y*TILE_SIZE + tgx;
-            ATOMIC_ADD(&global_value[offset2], (mm_ulong) ((mm_long) (local_value[LOCAL_ID]*0x100000000));
+            ATOMIC_ADD(&global_value[offset2], (mm_ulong) ((mm_long) (local_value[LOCAL_ID]*0x100000000)));
             STORE_PARAM_DERIVS2
         }
 #else
