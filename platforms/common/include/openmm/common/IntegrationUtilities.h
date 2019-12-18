@@ -27,9 +27,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/common/ArrayInterface.h"
+#include "openmm/common/ComputeArray.h"
+#include "openmm/common/ComputeKernel.h"
+#include "openmm/common/ComputeVectorTypes.h"
+#include "openmm/System.h"
+#include <iosfwd>
 
 namespace OpenMM {
+
+class ComputeContext;
 
 /**
  * This class implements features that are used by many different integrators, including
@@ -38,6 +44,7 @@ namespace OpenMM {
 
 class IntegrationUtilities {
 public:
+    IntegrationUtilities(ComputeContext& context, const System& system);
     virtual ~IntegrationUtilities() {
     }
     /**
@@ -60,11 +67,11 @@ public:
     /**
      * Set the size to use for the next step.
      */
-    virtual void setNextStepSize(double size) = 0;
+    void setNextStepSize(double size);
     /**
      * Get the size that was used for the last step.
      */
-    virtual double getLastStepSize() = 0;
+    double getLastStepSize();
     /**
      * Apply constraints to the atom positions.  When calling this method, the
      * context's array of positions should contain the positions at the start of the
@@ -74,38 +81,97 @@ public:
      *
      * @param tol             the constraint tolerance
      */
-    virtual void applyConstraints(double tol) = 0;
+    void applyConstraints(double tol);
     /**
      * Apply constraints to the atom velocities.
      *
      * @param tol             the constraint tolerance
      */
-    virtual void applyVelocityConstraints(double tol) = 0;
+    void applyVelocityConstraints(double tol);
     /**
      * Initialize the random number generator.  This should be called once when the
      * context is first created.  Subsequent calls will be ignored if the random
      * seed is the same as on the first call, or throw an exception if the random
      * seed is different.
      */
-    virtual void initRandomNumberGenerator(unsigned int randomNumberSeed) = 0;
+    void initRandomNumberGenerator(unsigned int randomNumberSeed);
     /**
      * Ensure that sufficient random numbers are available in the array, and generate new ones if not.
      *
      * @param numValues     the number of random float4's that will be required
      * @return the index in the array at which to start reading
      */
-    virtual int prepareRandomNumbers(int numValues) = 0;
+    int prepareRandomNumbers(int numValues);
     /**
      * Compute the positions of virtual sites.
      */
-    virtual void computeVirtualSites() = 0;
+    void computeVirtualSites();
+    /**
+     * Distribute forces from virtual sites to the atoms they are based on.
+     */
+    virtual void distributeForcesFromVirtualSites() = 0;
+    /**
+     * Create a checkpoint recording the current state of the random number generator.
+     * 
+     * @param stream    an output stream the checkpoint data should be written to
+     */
+    void createCheckpoint(std::ostream& stream);
+    /**
+     * Load a checkpoint that was written by createCheckpoint().
+     * 
+     * @param stream    an input stream the checkpoint data should be read from
+     */
+    void loadCheckpoint(std::istream& stream);
     /**
      * Compute the kinetic energy of the system, possibly shifting the velocities in time to account
      * for a leapfrog integrator.
      * 
      * @param timeShift   the amount by which to shift the velocities in time
      */
-    virtual double computeKineticEnergy(double timeShift) = 0;
+    double computeKineticEnergy(double timeShift);
+protected:
+    virtual void applyConstraintsImpl(bool constrainVelocities, double tol) = 0;
+    ComputeContext& context;
+    ComputeKernel settlePosKernel, settleVelKernel;
+    ComputeKernel shakePosKernel, shakeVelKernel;
+    ComputeKernel ccmaDirectionsKernel, ccmaPosForceKernel, ccmaVelForceKernel;
+    ComputeKernel ccmaMultiplyKernel, ccmaUpdateKernel;
+    ComputeKernel vsitePositionKernel, vsiteForceKernel, vsiteSaveForcesKernel;
+    ComputeKernel randomKernel, timeShiftKernel;
+    ComputeArray posDelta;
+    ComputeArray settleAtoms;
+    ComputeArray settleParams;
+    ComputeArray shakeAtoms;
+    ComputeArray shakeParams;
+    ComputeArray random;
+    ComputeArray randomSeed;
+    ComputeArray stepSize;
+    ComputeArray ccmaAtoms;
+    ComputeArray ccmaDistance;
+    ComputeArray ccmaReducedMass;
+    ComputeArray ccmaAtomConstraints;
+    ComputeArray ccmaNumAtomConstraints;
+    ComputeArray ccmaConstraintMatrixColumn;
+    ComputeArray ccmaConstraintMatrixValue;
+    ComputeArray ccmaDelta1;
+    ComputeArray ccmaDelta2;
+    ComputeArray ccmaConverged;
+    ComputeArray vsite2AvgAtoms;
+    ComputeArray vsite2AvgWeights;
+    ComputeArray vsite3AvgAtoms;
+    ComputeArray vsite3AvgWeights;
+    ComputeArray vsiteOutOfPlaneAtoms;
+    ComputeArray vsiteOutOfPlaneWeights;
+    ComputeArray vsiteLocalCoordsIndex;
+    ComputeArray vsiteLocalCoordsAtoms;
+    ComputeArray vsiteLocalCoordsWeights;
+    ComputeArray vsiteLocalCoordsPos;
+    ComputeArray vsiteLocalCoordsStartIndex;
+    int randomPos, lastSeed, numVsites;
+    bool hasOverlappingVsites;
+    mm_double2 lastStepSize;
+    struct ShakeCluster;
+    struct ConstraintOrderer;
 };
 
 } // namespace OpenMM

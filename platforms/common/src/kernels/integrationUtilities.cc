@@ -1,8 +1,8 @@
 /**
  * Generate random numbers
  */
-extern "C" __global__ void generateRandomNumbers(int numValues, float4* __restrict__ random, uint4* __restrict__ seed) {
-    int index = blockIdx.x*blockDim.x+threadIdx.x;
+KERNEL void generateRandomNumbers(int numValues, GLOBAL float4* RESTRICT random, GLOBAL uint4* RESTRICT seed) {
+    int index = GLOBAL_ID;
     uint4 state = seed[index];
     unsigned int carry = 0;
     while (index < numValues) {
@@ -63,15 +63,15 @@ extern "C" __global__ void generateRandomNumbers(int numValues, float4* __restri
         // Record the values.
 
         random[index] = value;
-        index += blockDim.x*gridDim.x;
+        index += GLOBAL_SIZE;
     }
-    seed[blockIdx.x*blockDim.x+threadIdx.x] = state;
+    seed[GLOBAL_ID] = state;
 }
 
 /**
  * Load the position of a particle.
  */
-inline __device__ mixed4 loadPos(const real4* __restrict__ posq, const real4* __restrict__ posqCorrection, int index) {
+inline DEVICE mixed4 loadPos(GLOBAL const real4* RESTRICT posq, GLOBAL const real4* RESTRICT posqCorrection, int index) {
 #ifdef USE_MIXED_PRECISION
     real4 pos1 = posq[index];
     real4 pos2 = posqCorrection[index];
@@ -84,7 +84,7 @@ inline __device__ mixed4 loadPos(const real4* __restrict__ posq, const real4* __
 /**
  * Store the position of a particle.
  */
-inline __device__ void storePos(real4* __restrict__ posq, real4* __restrict__ posqCorrection, int index, mixed4 pos) {
+inline DEVICE void storePos(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTRICT posqCorrection, int index, mixed4 pos) {
 #ifdef USE_MIXED_PRECISION
     posq[index] = make_real4((real) pos.x, (real) pos.y, (real) pos.z, (real) pos.w);
     posqCorrection[index] = make_real4(pos.x-(real) pos.x, pos.y-(real) pos.y, pos.z-(real) pos.z, 0);
@@ -96,16 +96,24 @@ inline __device__ void storePos(real4* __restrict__ posq, real4* __restrict__ po
 /**
  * Enforce constraints on SHAKE clusters
  */
-extern "C" __global__ void applyShakeToPositions(int numClusters, mixed tol, const real4* __restrict__ oldPos, real4* __restrict__ posCorrection, mixed4* __restrict__ posDelta, const int4* __restrict__ clusterAtoms, const float4* __restrict__ clusterParams) {
-    int index = blockIdx.x*blockDim.x+threadIdx.x;
+KERNEL void applyShakeToPositions(int numClusters, mixed tol, GLOBAL const real4* RESTRICT oldPos,
+        GLOBAL mixed4* RESTRICT posDelta, GLOBAL const int4* RESTRICT clusterAtoms, GLOBAL const float4* RESTRICT clusterParams
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL const real4* RESTRICT posqCorrection
+#endif
+        ) {
+#ifndef USE_MIXED_PRECISION
+        GLOBAL real4* posqCorrection = NULL;
+#endif
+    int index = GLOBAL_ID;
     while (index < numClusters) {
         // Load the data for this cluster.
 
         int4 atoms = clusterAtoms[index];
         float4 params = clusterParams[index];
-        mixed4 pos = loadPos(oldPos, posCorrection, atoms.x);
+        mixed4 pos = loadPos(oldPos, posqCorrection, atoms.x);
         mixed4 xpi = posDelta[atoms.x];
-        mixed4 pos1 = loadPos(oldPos, posCorrection, atoms.y);
+        mixed4 pos1 = loadPos(oldPos, posqCorrection, atoms.y);
         mixed4 xpj1 = posDelta[atoms.y];
         mixed4 pos2 = make_mixed4(0);
         mixed4 xpj2 = make_mixed4(0);
@@ -114,13 +122,13 @@ extern "C" __global__ void applyShakeToPositions(int numClusters, mixed tol, con
         float d2 = params.z;
         float invMassPeripheral = params.w;
         if (atoms.z != -1) {
-            pos2 = loadPos(oldPos, posCorrection, atoms.z);
+            pos2 = loadPos(oldPos, posqCorrection, atoms.z);
             xpj2 = posDelta[atoms.z];
         }
         mixed4 pos3 = make_mixed4(0);
         mixed4 xpj3 = make_mixed4(0);
         if (atoms.w != -1) {
-            pos3 = loadPos(oldPos, posCorrection, atoms.w);
+            pos3 = loadPos(oldPos, posqCorrection, atoms.w);
             xpj3 = posDelta[atoms.w];
         }
 
@@ -202,23 +210,31 @@ extern "C" __global__ void applyShakeToPositions(int numClusters, mixed tol, con
             posDelta[atoms.z] = xpj2;
         if (atoms.w != -1)
             posDelta[atoms.w] = xpj3;
-        index += blockDim.x*gridDim.x;
+        index += GLOBAL_SIZE;
     }
 }
 
 /**
  * Enforce velocity constraints on SHAKE clusters
  */
-extern "C" __global__ void applyShakeToVelocities(int numClusters, mixed tol, const real4* __restrict__ oldPos, real4* __restrict__ posCorrection, mixed4* __restrict__ posDelta, const int4* __restrict__ clusterAtoms, const float4* __restrict__ clusterParams) {
-    int index = blockIdx.x*blockDim.x+threadIdx.x;
+KERNEL void applyShakeToVelocities(int numClusters, mixed tol, GLOBAL const real4* RESTRICT oldPos,
+        GLOBAL mixed4* RESTRICT posDelta, GLOBAL const int4* RESTRICT clusterAtoms, GLOBAL const float4* RESTRICT clusterParams
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL const real4* RESTRICT posqCorrection
+#endif
+        ) {
+#ifndef USE_MIXED_PRECISION
+        GLOBAL real4* posqCorrection = NULL;
+#endif
+    int index = GLOBAL_ID;
     while (index < numClusters) {
         // Load the data for this cluster.
 
         int4 atoms = clusterAtoms[index];
         float4 params = clusterParams[index];
-        mixed4 pos = loadPos(oldPos, posCorrection, atoms.x);
+        mixed4 pos = loadPos(oldPos, posqCorrection, atoms.x);
         mixed4 xpi = posDelta[atoms.x];
-        mixed4 pos1 = loadPos(oldPos, posCorrection, atoms.y);
+        mixed4 pos1 = loadPos(oldPos, posqCorrection, atoms.y);
         mixed4 xpj1 = posDelta[atoms.y];
         mixed4 pos2 = make_mixed4(0);
         mixed4 xpj2 = make_mixed4(0);
@@ -226,13 +242,13 @@ extern "C" __global__ void applyShakeToVelocities(int numClusters, mixed tol, co
         float avgMass = params.y;
         float invMassPeripheral = params.w;
         if (atoms.z != -1) {
-            pos2 = loadPos(oldPos, posCorrection, atoms.z);
+            pos2 = loadPos(oldPos, posqCorrection, atoms.z);
             xpj2 = posDelta[atoms.z];
         }
         mixed4 pos3 = make_mixed4(0);
         mixed4 xpj3 = make_mixed4(0);
         if (atoms.w != -1) {
-            pos3 = loadPos(oldPos, posCorrection, atoms.w);
+            pos3 = loadPos(oldPos, posqCorrection, atoms.w);
             xpj3 = posDelta[atoms.w];
         }
 
@@ -302,25 +318,34 @@ extern "C" __global__ void applyShakeToVelocities(int numClusters, mixed tol, co
             posDelta[atoms.z] = xpj2;
         if (atoms.w != -1)
             posDelta[atoms.w] = xpj3;
-        index += blockDim.x*gridDim.x;
+        index += GLOBAL_SIZE;
     }
 }
 
 /**
  * Enforce constraints on SETTLE clusters
  */
-extern "C" __global__ void applySettleToPositions(int numClusters, mixed tol, const real4* __restrict__ oldPos, real4* __restrict__ posCorrection, mixed4* __restrict__ posDelta, const mixed4* __restrict__ velm, const int4* __restrict__ clusterAtoms, const float2* __restrict__ clusterParams) {
-    int index = blockIdx.x*blockDim.x+threadIdx.x;
+KERNEL void applySettleToPositions(int numClusters, mixed tol, GLOBAL const real4* RESTRICT oldPos,
+        GLOBAL mixed4* RESTRICT posDelta, GLOBAL const mixed4* RESTRICT velm, GLOBAL const int4* RESTRICT clusterAtoms,
+        GLOBAL const float2* RESTRICT clusterParams
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL const real4* RESTRICT posqCorrection
+#endif
+        ) {
+#ifndef USE_MIXED_PRECISION
+        GLOBAL real4* posqCorrection = NULL;
+#endif
+    int index = GLOBAL_ID;
     while (index < numClusters) {
         // Load the data for this cluster.
 
         int4 atoms = clusterAtoms[index];
         float2 params = clusterParams[index];
-        mixed4 apos0 = loadPos(oldPos, posCorrection, atoms.x);
+        mixed4 apos0 = loadPos(oldPos, posqCorrection, atoms.x);
         mixed4 xp0 = posDelta[atoms.x];
-        mixed4 apos1 = loadPos(oldPos, posCorrection, atoms.y);
+        mixed4 apos1 = loadPos(oldPos, posqCorrection, atoms.y);
         mixed4 xp1 = posDelta[atoms.y];
-        mixed4 apos2 = loadPos(oldPos, posCorrection, atoms.z);
+        mixed4 apos2 = loadPos(oldPos, posqCorrection, atoms.z);
         mixed4 xp2 = posDelta[atoms.z];
         mixed m0 = 1/velm[atoms.x].w;
         mixed m1 = 1/velm[atoms.y].w;
@@ -454,21 +479,30 @@ extern "C" __global__ void applySettleToPositions(int numClusters, mixed tol, co
         posDelta[atoms.x] = xp0;
         posDelta[atoms.y] = xp1;
         posDelta[atoms.z] = xp2;
-        index += blockDim.x*gridDim.x;
+        index += GLOBAL_SIZE;
     }
 }
 
 /**
  * Enforce velocity constraints on SETTLE clusters
  */
-extern "C" __global__ void applySettleToVelocities(int numClusters, mixed tol, const real4* __restrict__ oldPos, real4* __restrict__ posCorrection, mixed4* __restrict__ posDelta, mixed4* __restrict__ velm, const int4* __restrict__ clusterAtoms, const float2* __restrict__ clusterParams) {
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numClusters; index += blockDim.x*gridDim.x) {
+KERNEL void applySettleToVelocities(int numClusters, mixed tol, GLOBAL const real4* RESTRICT oldPos,
+        GLOBAL mixed4* RESTRICT posDelta, GLOBAL mixed4* RESTRICT velm, GLOBAL const int4* RESTRICT clusterAtoms,
+        GLOBAL const float2* RESTRICT clusterParams
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL const real4* RESTRICT posqCorrection
+#endif
+        ) {
+#ifndef USE_MIXED_PRECISION
+        GLOBAL real4* posqCorrection = NULL;
+#endif
+    for (int index = GLOBAL_ID; index < numClusters; index += GLOBAL_SIZE) {
         // Load the data for this cluster.
 
         int4 atoms = clusterAtoms[index];
-        mixed4 apos0 = loadPos(oldPos, posCorrection, atoms.x);
-        mixed4 apos1 = loadPos(oldPos, posCorrection, atoms.y);
-        mixed4 apos2 = loadPos(oldPos, posCorrection, atoms.z);
+        mixed4 apos0 = loadPos(oldPos, posqCorrection, atoms.x);
+        mixed4 apos1 = loadPos(oldPos, posqCorrection, atoms.y);
+        mixed4 apos2 = loadPos(oldPos, posqCorrection, atoms.z);
         mixed4 v0 = velm[atoms.x];
         mixed4 v1 = velm[atoms.y];
         mixed4 v2 = velm[atoms.z];
@@ -522,9 +556,16 @@ extern "C" __global__ void applySettleToVelocities(int numClusters, mixed tol, c
 /**
  * Compute the direction each CCMA constraint is pointing in.  This is called once at the beginning of constraint evaluation.
  */
-extern "C" __global__ void computeCCMAConstraintDirections(const int2* __restrict__ constraintAtoms, mixed4* __restrict__ constraintDistance,
-        const real4* __restrict__ atomPositions, const real4* __restrict__ posqCorrection, int* __restrict__ converged) {
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_CCMA_CONSTRAINTS; index += blockDim.x*gridDim.x) {
+KERNEL void computeCCMAConstraintDirections(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL mixed4* RESTRICT constraintDistance,
+        GLOBAL const real4* RESTRICT atomPositions, GLOBAL int* RESTRICT converged
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL const real4* RESTRICT posqCorrection
+#endif
+        ) {
+#ifndef USE_MIXED_PRECISION
+        GLOBAL real4* posqCorrection = NULL;
+#endif
+    for (int index = GLOBAL_ID; index < NUM_CCMA_CONSTRAINTS; index += GLOBAL_SIZE) {
         // Compute the direction for this constraint.
 
         int2 atoms = constraintAtoms[index];
@@ -536,7 +577,7 @@ extern "C" __global__ void computeCCMAConstraintDirections(const int2* __restric
         dir.z = oldPos1.z-oldPos2.z;
         constraintDistance[index] = dir;
     }
-    if (threadIdx.x == 0 && blockIdx.x == 0) {
+    if (GLOBAL_ID == 0) {
         converged[0] = 1;
         converged[1] = 0;
     }
@@ -545,23 +586,24 @@ extern "C" __global__ void computeCCMAConstraintDirections(const int2* __restric
 /**
  * Compute the force applied by each CCMA position constraint.
  */
-extern "C" __global__ void computeCCMAPositionConstraintForce(const int2* __restrict__ constraintAtoms, const mixed4* __restrict__ constraintDistance, const mixed4* __restrict__ atomPositions,
-        const mixed* __restrict__ reducedMass, mixed* __restrict__ delta1, int* __restrict__ converged, int* __restrict__ hostConvergedFlag, mixed tol, int iteration) {
-    __shared__ int groupConverged;
+KERNEL void computeCCMAPositionConstraintForce(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL const mixed4* RESTRICT constraintDistance,
+        GLOBAL const mixed4* RESTRICT atomPositions, GLOBAL const mixed* RESTRICT reducedMass, GLOBAL mixed* RESTRICT delta1,
+        GLOBAL int* RESTRICT converged, GLOBAL int* RESTRICT hostConvergedFlag, mixed tol, int iteration) {
+    LOCAL int groupConverged;
     if (converged[1-iteration%2]) {
-        if (blockIdx.x == 0 && threadIdx.x == 0) {
+        if (GLOBAL_ID == 0) {
             converged[iteration%2] = 1;
             hostConvergedFlag[0] = 1;
         }
         return; // The constraint iteration has already converged.
     }
-    if (threadIdx.x == 0)
+    if (LOCAL_ID == 0)
         groupConverged = 1;
-    __syncthreads();
+    SYNC_THREADS;
     mixed lowerTol = 1-2*tol+tol*tol;
     mixed upperTol = 1+2*tol+tol*tol;
     bool threadConverged = true;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_CCMA_CONSTRAINTS; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_CCMA_CONSTRAINTS; index += GLOBAL_SIZE) {
         // Compute the force due to this constraint.
 
         int2 atoms = constraintAtoms[index];
@@ -580,28 +622,29 @@ extern "C" __global__ void computeCCMAPositionConstraintForce(const int2* __rest
     }
     if (groupConverged && !threadConverged)
         groupConverged = 0;
-    __syncthreads();
-    if (threadIdx.x == 0 && !groupConverged)
+    SYNC_THREADS;
+    if (LOCAL_ID == 0 && !groupConverged)
         converged[iteration%2] = 0;
 }
 
 /**
  * Compute the force applied by each CCMA velocity constraint.
  */
-extern "C" __global__ void computeCCMAVelocityConstraintForce(const int2* __restrict__ constraintAtoms, const mixed4* __restrict__ constraintDistance, const mixed4* __restrict__ atomPositions,
-        const mixed* __restrict__ reducedMass, mixed* __restrict__ delta1, int* __restrict__ converged, int* __restrict__ hostConvergedFlag, mixed tol, int iteration) {
-    __shared__ int groupConverged;
+KERNEL void computeCCMAVelocityConstraintForce(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL const mixed4* RESTRICT constraintDistance,
+        GLOBAL const mixed4* RESTRICT atomPositions, GLOBAL const mixed* RESTRICT reducedMass, GLOBAL mixed* RESTRICT delta1,
+        GLOBAL int* RESTRICT converged, GLOBAL int* RESTRICT hostConvergedFlag, mixed tol, int iteration) {
+    LOCAL int groupConverged;
     if (converged[1-iteration%2]) {
-        if (blockIdx.x == 0 && threadIdx.x == 0) {
+        if (GROUP_ID == 0 && LOCAL_ID == 0) {
             converged[iteration%2] = 1;
             hostConvergedFlag[0] = 1;
         }
         return; // The constraint iteration has already converged.
     }
-    if (threadIdx.x == 0)
+    if (LOCAL_ID == 0)
         groupConverged = 1;
-    __syncthreads();
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_CCMA_CONSTRAINTS; index += blockDim.x*gridDim.x) {
+    SYNC_THREADS;
+    for (int index = GLOBAL_ID; index < NUM_CCMA_CONSTRAINTS; index += GLOBAL_SIZE) {
         // Compute the force due to this constraint.
 
         int2 atoms = constraintAtoms[index];
@@ -623,14 +666,14 @@ extern "C" __global__ void computeCCMAVelocityConstraintForce(const int2* __rest
 /**
  * Multiply the vector of CCMA constraint forces by the constraint matrix.
  */
-extern "C" __global__ void multiplyByCCMAConstraintMatrix(const mixed* __restrict__ delta1, mixed* __restrict__ delta2, const int* __restrict__ constraintMatrixColumn,
-        const mixed* __restrict__ constraintMatrixValue, const int* __restrict__ converged, int iteration) {
+KERNEL void multiplyByCCMAConstraintMatrix(GLOBAL const mixed* RESTRICT delta1, GLOBAL mixed* RESTRICT delta2, GLOBAL const int* RESTRICT constraintMatrixColumn,
+        GLOBAL const mixed* RESTRICT constraintMatrixValue, GLOBAL const int* RESTRICT converged, int iteration) {
     if (converged[iteration%2])
         return; // The constraint iteration has already converged.
 
     // Multiply by the inverse constraint matrix.
 
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_CCMA_CONSTRAINTS; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_CCMA_CONSTRAINTS; index += GLOBAL_SIZE) {
         mixed sum = 0;
         for (int i = 0; ; i++) {
             int element = index+i*NUM_CCMA_CONSTRAINTS;
@@ -646,14 +689,15 @@ extern "C" __global__ void multiplyByCCMAConstraintMatrix(const mixed* __restric
 /**
  * Update the atom positions based on CCMA constraint forces.
  */
-extern "C" __global__ void updateCCMAAtomPositions(const int* __restrict__ numAtomConstraints, const int* __restrict__ atomConstraints, const mixed4* __restrict__ constraintDistance,
-        mixed4* __restrict__ atomPositions, const mixed4* __restrict__ velm, const mixed* __restrict__ delta1, const mixed* __restrict__ delta2, int* __restrict__ converged, int iteration) {
-    if (blockIdx.x == 0 && threadIdx.x == 0)
+KERNEL void updateCCMAAtomPositions(GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
+        GLOBAL const mixed4* RESTRICT constraintDistance, GLOBAL mixed4* RESTRICT atomPositions, GLOBAL const mixed4* RESTRICT velm,
+        GLOBAL const mixed* RESTRICT delta1, GLOBAL const mixed* RESTRICT delta2, GLOBAL int* RESTRICT converged, int iteration) {
+    if (GROUP_ID == 0 && LOCAL_ID == 0)
         converged[1-iteration%2] = 1;
     if (converged[iteration%2])
         return; // The constraint iteration has already converged.
     mixed damping = (iteration < 2 ? 0.5f : 1.0f);
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         // Compute the new position of this atom.
 
         mixed4 atomPos = atomPositions[index];
@@ -677,16 +721,17 @@ extern "C" __global__ void updateCCMAAtomPositions(const int* __restrict__ numAt
 /**
  * Compute the positions of virtual sites
  */
-extern "C" __global__ void computeVirtualSites(real4* __restrict__ posq, real4* __restrict__ posqCorrection, const int4* __restrict__ avg2Atoms, const real2* __restrict__ avg2Weights,
-        const int4* __restrict__ avg3Atoms, const real4* __restrict__ avg3Weights,
-        const int4* __restrict__ outOfPlaneAtoms, const real4* __restrict__ outOfPlaneWeights,
-        const int* __restrict__ localCoordsIndex, const int* __restrict__ localCoordsAtoms,
-        const real* __restrict__ localCoordsWeights, const real4* __restrict__ localCoordsPos,
-        const int* __restrict__ localCoordsStartIndex) {
+KERNEL void computeVirtualSites(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTRICT posqCorrection,
+        GLOBAL const int4* RESTRICT avg2Atoms, GLOBAL const real2* RESTRICT avg2Weights,
+        GLOBAL const int4* RESTRICT avg3Atoms, GLOBAL const real4* RESTRICT avg3Weights,
+        GLOBAL const int4* RESTRICT outOfPlaneAtoms, GLOBAL const real4* RESTRICT outOfPlaneWeights,
+        GLOBAL const int* RESTRICT localCoordsIndex, GLOBAL const int* RESTRICT localCoordsAtoms,
+        GLOBAL const real* RESTRICT localCoordsWeights, GLOBAL const real4* RESTRICT localCoordsPos,
+        GLOBAL const int* RESTRICT localCoordsStartIndex) {
     
     // Two particle average sites.
     
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_2_AVERAGE; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_2_AVERAGE; index += GLOBAL_SIZE) {
         int4 atoms = avg2Atoms[index];
         real2 weights = avg2Weights[index];
         mixed4 pos = loadPos(posq, posqCorrection, atoms.x);
@@ -700,7 +745,7 @@ extern "C" __global__ void computeVirtualSites(real4* __restrict__ posq, real4* 
     
     // Three particle average sites.
     
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_3_AVERAGE; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_3_AVERAGE; index += GLOBAL_SIZE) {
         int4 atoms = avg3Atoms[index];
         real4 weights = avg3Weights[index];
         mixed4 pos = loadPos(posq, posqCorrection, atoms.x);
@@ -715,7 +760,7 @@ extern "C" __global__ void computeVirtualSites(real4* __restrict__ posq, real4* 
     
     // Out of plane sites.
     
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_OUT_OF_PLANE; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_OUT_OF_PLANE; index += GLOBAL_SIZE) {
         int4 atoms = outOfPlaneAtoms[index];
         real4 weights = outOfPlaneWeights[index];
         mixed4 pos = loadPos(posq, posqCorrection, atoms.x);
@@ -733,7 +778,7 @@ extern "C" __global__ void computeVirtualSites(real4* __restrict__ posq, real4* 
     
     // Local coordinates sites.
     
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_LOCAL_COORDS; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_LOCAL_COORDS; index += GLOBAL_SIZE) {
         int siteAtomIndex = localCoordsIndex[index];
         int start = localCoordsStartIndex[index];
         int end = localCoordsStartIndex[index+1];
@@ -762,32 +807,38 @@ extern "C" __global__ void computeVirtualSites(real4* __restrict__ posq, real4* 
     }
 }
 
-inline __device__ real3 loadForce(int index, long long* __restrict__ force) {
+inline DEVICE real3 loadForce(int index, GLOBAL const mm_long* RESTRICT force) {
     real scale = 1/((real) 0x100000000);
     return make_real3(scale*force[index], scale*force[index+PADDED_NUM_ATOMS], scale*force[index+PADDED_NUM_ATOMS*2]);
 }
 
-inline __device__ void addForce(int index, long long* __restrict__ force, real3 value) {
-    unsigned long long* f = (unsigned long long*) force;
-    atomicAdd(&f[index], static_cast<unsigned long long>((long long) (value.x*0x100000000)));
-    atomicAdd(&f[index+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (value.y*0x100000000)));
-    atomicAdd(&f[index+PADDED_NUM_ATOMS*2], static_cast<unsigned long long>((long long) (value.z*0x100000000)));
+inline DEVICE void addForce(int index, GLOBAL mm_long* RESTRICT force, real3 value) {
+    GLOBAL mm_ulong* f = (GLOBAL mm_ulong*) force;
+#ifdef HAS_OVERLAPPING_VSITES
+    ATOMIC_ADD(&f[index], (mm_ulong) ((mm_long) (value.x*0x100000000)));
+    ATOMIC_ADD(&f[index+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (value.y*0x100000000)));
+    ATOMIC_ADD(&f[index+PADDED_NUM_ATOMS*2], (mm_ulong) ((mm_long) (value.z*0x100000000)));
+#else
+    f[index] += (mm_ulong) ((mm_long) (value.x*0x100000000));
+    f[index+PADDED_NUM_ATOMS] += (mm_ulong) ((mm_long) (value.y*0x100000000));
+    f[index+PADDED_NUM_ATOMS*2] += (mm_ulong) ((mm_long) (value.z*0x100000000));
+#endif
 }
 
 /**
  * Distribute forces from virtual sites to the atoms they are based on.
  */
-extern "C" __global__ void distributeVirtualSiteForces(const real4* __restrict__ posq, const real4* __restrict__ posqCorrection, long long* __restrict__ force,
-        const int4* __restrict__ avg2Atoms, const real2* __restrict__ avg2Weights,
-        const int4* __restrict__ avg3Atoms, const real4* __restrict__ avg3Weights,
-        const int4* __restrict__ outOfPlaneAtoms, const real4* __restrict__ outOfPlaneWeights,
-        const int* __restrict__ localCoordsIndex, const int* __restrict__ localCoordsAtoms,
-        const real* __restrict__ localCoordsWeights, const real4* __restrict__ localCoordsPos,
-        const int* __restrict__ localCoordsStartIndex) {
+KERNEL void distributeVirtualSiteForces(GLOBAL const real4* RESTRICT posq, GLOBAL const real4* RESTRICT posqCorrection, GLOBAL mm_long* RESTRICT force,
+        GLOBAL const int4* RESTRICT avg2Atoms, GLOBAL const real2* RESTRICT avg2Weights,
+        GLOBAL const int4* RESTRICT avg3Atoms, GLOBAL const real4* RESTRICT avg3Weights,
+        GLOBAL const int4* RESTRICT outOfPlaneAtoms, GLOBAL const real4* RESTRICT outOfPlaneWeights,
+        GLOBAL const int* RESTRICT localCoordsIndex, GLOBAL const int* RESTRICT localCoordsAtoms,
+        GLOBAL const real* RESTRICT localCoordsWeights, GLOBAL const real4* RESTRICT localCoordsPos,
+        GLOBAL const int* RESTRICT localCoordsStartIndex) {
     
     // Two particle average sites.
     
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_2_AVERAGE; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_2_AVERAGE; index += GLOBAL_SIZE) {
         int4 atoms = avg2Atoms[index];
         real2 weights = avg2Weights[index];
         real3 f = loadForce(atoms.x, force);
@@ -797,7 +848,7 @@ extern "C" __global__ void distributeVirtualSiteForces(const real4* __restrict__
     
     // Three particle average sites.
     
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_3_AVERAGE; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_3_AVERAGE; index += GLOBAL_SIZE) {
         int4 atoms = avg3Atoms[index];
         real4 weights = avg3Weights[index];
         real3 f = loadForce(atoms.x, force);
@@ -808,7 +859,7 @@ extern "C" __global__ void distributeVirtualSiteForces(const real4* __restrict__
     
     // Out of plane sites.
     
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_OUT_OF_PLANE; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_OUT_OF_PLANE; index += GLOBAL_SIZE) {
         int4 atoms = outOfPlaneAtoms[index];
         real4 weights = outOfPlaneWeights[index];
         mixed4 pos1 = loadPos(posq, posqCorrection, atoms.y);
@@ -830,7 +881,7 @@ extern "C" __global__ void distributeVirtualSiteForces(const real4* __restrict__
     
     // Local coordinates sites.
     
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_LOCAL_COORDS; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_LOCAL_COORDS; index += GLOBAL_SIZE) {
         int siteAtomIndex = localCoordsIndex[index];
         int start = localCoordsStartIndex[index];
         int end = localCoordsStartIndex[index+1];
@@ -885,11 +936,21 @@ extern "C" __global__ void distributeVirtualSiteForces(const real4* __restrict__
 }
 
 /**
+ * Copy the distributed forces from the long buffer back to the float buffer.
+ */
+KERNEL void saveDistributedForces(GLOBAL const mm_long* RESTRICT longForces, GLOBAL real4* RESTRICT forces) {
+    for (int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
+        real3 f = loadForce(index, longForces);
+        forces[index] = make_real4(f.x, f.y, f.z, 0);
+    }
+}
+
+/**
  * Apply a time shift to the velocities before computing kinetic energy.
  */
-extern "C" __global__ void timeShiftVelocities(mixed4* __restrict__ velm, const long long* __restrict__ force, real timeShift) {
+KERNEL void timeShiftVelocities(GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force, real timeShift) {
     const mixed scale = timeShift/(mixed) 0x100000000;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0.0) {
             velocity.x += scale*force[index]*velocity.w;

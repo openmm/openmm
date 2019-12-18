@@ -33,7 +33,6 @@
 #include "windowsExportCuda.h"
 #include <cuda.h>
 #include <builtin_types.h>
-#include <iosfwd>
 
 namespace OpenMM {
 
@@ -51,128 +50,25 @@ public:
     /**
      * Get the array which contains position deltas.
      */
-    CudaArray& getPosDelta() {
-        return posDelta;
-    }
+    CudaArray& getPosDelta();
     /**
      * Get the array which contains random values.  Each element is a float4, whose components
      * are independent, normally distributed random numbers with mean 0 and variance 1.
      */
-    CudaArray& getRandom() {
-        return random;
-    }
+    CudaArray& getRandom();
     /**
      * Get the array which contains the current step size.
      */
-    CudaArray& getStepSize() {
-        return stepSize;
-    }
-    /**
-     * Set the size to use for the next step.
-     */
-    void setNextStepSize(double size);
-    /**
-     * Get the size that was used for the last step.
-     */
-    double getLastStepSize();
-    /**
-     * Apply constraints to the atom positions.
-     *
-     * @param tol             the constraint tolerance
-     */
-    void applyConstraints(double tol);
-    /**
-     * Apply constraints to the atom velocities.
-     *
-     * @param tol             the constraint tolerance
-     */
-    void applyVelocityConstraints(double tol);
-    /**
-     * Initialize the random number generator.
-     */
-    void initRandomNumberGenerator(unsigned int randomNumberSeed);
-    /**
-     * Ensure that sufficient random numbers are available in the array, and generate new ones if not.
-     *
-     * @param numValues     the number of random float4's that will be required
-     * @return the index in the array at which to start reading
-     */
-    int prepareRandomNumbers(int numValues);
-    /**
-     * Compute the positions of virtual sites.
-     */
-    void computeVirtualSites();
+    CudaArray& getStepSize();
     /**
      * Distribute forces from virtual sites to the atoms they are based on.
      */
     void distributeForcesFromVirtualSites();
-    /**
-     * Create a checkpoint recording the current state of the random number generator.
-     * 
-     * @param stream    an output stream the checkpoint data should be written to
-     */
-    void createCheckpoint(std::ostream& stream);
-    /**
-     * Load a checkpoint that was written by createCheckpoint().
-     * 
-     * @param stream    an input stream the checkpoint data should be read from
-     */
-    void loadCheckpoint(std::istream& stream);
-    /**
-     * Compute the kinetic energy of the system, possibly shifting the velocities in time to account
-     * for a leapfrog integrator.
-     * 
-     * @param timeShift   the amount by which to shift the velocities in time
-     */
-    double computeKineticEnergy(double timeShift);
 private:
-    void applyConstraints(bool constrainVelocities, double tol);
-    CudaContext& context;
-    CUfunction settlePosKernel, settleVelKernel;
-    CUfunction shakePosKernel, shakeVelKernel;
-    CUfunction ccmaDirectionsKernel;
-    CUfunction ccmaPosForceKernel, ccmaVelForceKernel;
-    CUfunction ccmaMultiplyKernel;
-    CUfunction ccmaUpdateKernel;
-    CUfunction vsitePositionKernel, vsiteForceKernel;
-    CUfunction randomKernel, timeShiftKernel;
-    CudaArray posDelta;
-    CudaArray settleAtoms;
-    CudaArray settleParams;
-    CudaArray shakeAtoms;
-    CudaArray shakeParams;
-    CudaArray random;
-    CudaArray randomSeed;
-    CudaArray stepSize;
-    CudaArray ccmaAtoms;
-    CudaArray ccmaDistance;
-    CudaArray ccmaReducedMass;
-    CudaArray ccmaAtomConstraints;
-    CudaArray ccmaNumAtomConstraints;
-    CudaArray ccmaConstraintMatrixColumn;
-    CudaArray ccmaConstraintMatrixValue;
-    CudaArray ccmaDelta1;
-    CudaArray ccmaDelta2;
-    CudaArray ccmaConverged;
+    void applyConstraintsImpl(bool constrainVelocities, double tol);
     int* ccmaConvergedMemory;
     CUdeviceptr ccmaConvergedDeviceMemory;
     CUevent ccmaEvent;
-    CudaArray vsite2AvgAtoms;
-    CudaArray vsite2AvgWeights;
-    CudaArray vsite3AvgAtoms;
-    CudaArray vsite3AvgWeights;
-    CudaArray vsiteOutOfPlaneAtoms;
-    CudaArray vsiteOutOfPlaneWeights;
-    CudaArray vsiteLocalCoordsIndex;
-    CudaArray vsiteLocalCoordsAtoms;
-    CudaArray vsiteLocalCoordsWeights;
-    CudaArray vsiteLocalCoordsPos;
-    CudaArray vsiteLocalCoordsStartIndex;
-    int randomPos;
-    int lastSeed, numVsites;
-    double2 lastStepSize;
-    struct ShakeCluster;
-    struct ConstraintOrderer;
 };
 
 } // namespace OpenMM
