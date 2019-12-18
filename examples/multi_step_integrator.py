@@ -136,11 +136,19 @@ if __name__ == '__main__':
         setForceGroups(system)
         addScaledForce(system)
         integrator = MultiStepVerletIntegrator3(1.0*femtoseconds, 1, 8)
+    elif integratorType == 'm6':
+        setForceGroups(system)
+        addScaledForce(system)
+        integrator = MultiStepVerletIntegrator3(1.0*femtoseconds, 1, 8)
 
     platform = Platform.getPlatformByName('CUDA')
     #properties = {'DeterministicForces': 'true', 'Precision': 'double'}
     properties = {}
     simulation = Simulation(prmtop.topology, system, integrator, platform, properties)
+
+    if integratorType == 'm6':
+        simulation.context.setDefaulfForceGroups(3) # 0b00000011 = 3 <-- fastForces + slowForces
+
     inpcrd = AmberInpcrdFile('input.inpcrd')
     simulation.context.setPositions(inpcrd.positions)
 
