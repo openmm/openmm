@@ -279,3 +279,11 @@ const ContextImpl& Context::getImpl() const {
 const vector<vector<int> >& Context::getMolecules() const {
     return impl->getMolecules();
 }
+
+void Context::setDefaulfForceGroups(int groups) {
+    impl->setDefaulfForceGroups(groups);
+}
+
+int Context::getDefaultForceGroups() const {
+    return impl->getDefaultForceGroups();
+}

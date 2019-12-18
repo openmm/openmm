@@ -195,7 +195,7 @@ public:
      *                       if (groups&(1<<i)) != 0.  The default value includes all groups.
      * @return the potential energy of the system, or 0 if includeEnergy is false
      */
-    double calcForcesAndEnergy(bool includeForces, bool includeEnergy, int groups=0xFFFFFFFF);
+    double calcForcesAndEnergy(bool includeForces, bool includeEnergy, int groups=0);
     /**
      * Get the set of force group flags that were passed to the most recent call to calcForcesAndEnergy().
      * 
@@ -277,6 +277,14 @@ public:
      * means you shouldn't.
      */
     Context* createLinkedContext(const System& system, Integrator& integrator);
+    /**
+     * TODO
+     */
+    void setDefaulfForceGroups(int groups) { defaultForceGroups = groups; }
+    /**
+     * TODO
+     */
+    int getDefaultForceGroups() const { return defaultForceGroups; }
 private:
     friend class Context;
     void initialize();
@@ -291,6 +299,7 @@ private:
     Platform* platform;
     Kernel initializeForcesKernel, updateStateDataKernel, applyConstraintsKernel, virtualSitesKernel;
     void* platformData;
+    int defaultForceGroups;
 };
 
 } // namespace OpenMM

@@ -124,7 +124,7 @@ public:
      * @param groups a set of bit flags for which force groups to include when computing forces
      * and energies.  Group i will be included if (groups&(1<<i)) != 0.  The default value includes all groups.
      */
-    State getState(int types, bool enforcePeriodicBox=false, int groups=0xFFFFFFFF) const;
+    State getState(int types, bool enforcePeriodicBox=false, int groups=0) const;
     /**
      * Copy information from a State object into this Context.  This restores the Context to
      * approximately the same state it was in when the State was created.  If the State does not include
@@ -272,6 +272,14 @@ public:
      * belong to exactly one molecule.
      */
     const std::vector<std::vector<int> >& getMolecules() const;
+    /**
+     * TODO
+     */
+    void setDefaulfForceGroups(int groups);
+    /**
+     * TODO
+     */
+    int getDefaultForceGroups() const;
 private:
     friend class ContextImpl;
     friend class Force;

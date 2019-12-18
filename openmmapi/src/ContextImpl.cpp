@@ -55,7 +55,7 @@ const static char CHECKPOINT_MAGIC_BYTES[] = "OpenMM Binary Checkpoint\n";
 
 ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties, ContextImpl* originalContext) :
         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), hasSetPositions(false), integratorIsDeleted(false),
-        lastForceGroups(-1), platform(platform), platformData(NULL) {
+        lastForceGroups(-1), platform(platform), platformData(NULL), defaultForceGroups(0xFFFFFFFF) {
     int numParticles = system.getNumParticles();
     if (numParticles == 0)
         throw OpenMMException("Cannot create a Context for a System with no particles");
@@ -290,9 +290,12 @@ void ContextImpl::computeVirtualSites() {
     virtualSitesKernel.getAs<VirtualSitesKernel>().computePositions(*this);
 }
 
-double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy, int groups_) {
     if (!hasSetPositions)
         throw OpenMMException("Particle positions have not been set");
+
+    int groups = groups_ == 0 ? defaultForceGroups : groups_;
+
     lastForceGroups = groups;
     CalcForcesAndEnergyKernel& kernel = initializeForcesKernel.getAs<CalcForcesAndEnergyKernel>();
     while (true) {
