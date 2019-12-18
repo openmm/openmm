@@ -82,9 +82,9 @@ def MultiStepVerletIntegrator4(timeStep):
 def setForceGroups(system):
 
     for force in system.getForces():
-        force.setForceGroup(0) # 0x00000001 = 1
+        force.setForceGroup(0) # 0b00000001 = 1
         if isinstance(force, NonbondedForce):
-            force.setReciprocalSpaceForceGroup(1) # 0x00000010 = 2
+            force.setReciprocalSpaceForceGroup(1) # 0b00000010 = 2
 
 def addScaledForce(system):
 
@@ -98,8 +98,8 @@ def addScaledForce(system):
                 charge *= math.sqrt(2)
                 new_force.setParticleParameters(i, charge, sigma, epsilon)
 
-            new_force.setForceGroup(2) # 0x00000100 = 4 <-- not used
-            new_force.setReciprocalSpaceForceGroup(3) # 0x00001000 = 8 <-- slowForce
+            new_force.setForceGroup(2) # 0b00000100 = 4 <-- not used
+            new_force.setReciprocalSpaceForceGroup(3) # 0b00001000 = 8 <-- slowForce
 
             system.addForce(new_force)
 
