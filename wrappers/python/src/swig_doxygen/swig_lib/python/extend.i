@@ -11,7 +11,7 @@
 
     def getState(self, getPositions=False, getVelocities=False,
                  getForces=False, getEnergy=False, getParameters=False,
-                 getParameterDerivatives=False, enforcePeriodicBox=False, groups=-1):
+                 getParameterDerivatives=False, enforcePeriodicBox=False, groups=0):
         """Get a State object recording the current state information stored in this context.
 
         Parameters
