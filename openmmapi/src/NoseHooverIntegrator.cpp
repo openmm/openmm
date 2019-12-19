@@ -53,6 +53,7 @@ NoseHooverIntegrator::NoseHooverIntegrator(double stepSize):
 {
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
+    setMaximumPairDistance(0.0);
 }
 NoseHooverIntegrator::NoseHooverIntegrator(double temperature, double collisionFrequency, double stepSize,
                                            int chainLength, int numMTS, int numYoshidaSuzuki) : 
@@ -61,6 +62,7 @@ NoseHooverIntegrator::NoseHooverIntegrator(double temperature, double collisionF
 
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
+    setMaximumPairDistance(0.0);
     addThermostat(temperature, collisionFrequency, chainLength, numMTS, numYoshidaSuzuki);
 }
 

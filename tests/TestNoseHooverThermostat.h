@@ -236,15 +236,11 @@ void testCheckpoints() {
     context.createCheckpoint(checkpoint);
 
     // Now continue the simulation
-    for (size_t i=0; i<25; i++){
-        integrator.step(1);
-    }
+    integrator.step(5);
 
     // And try the same, starting from the checkpoint
     newContext.loadCheckpoint(checkpoint);
-    for (size_t i=0; i<25; i++){
-        newIntegrator.step(1);
-    }
+    newIntegrator.step(5);
 
     State state1 = context.getState(State::Positions | State::Velocities);
     State state2 = newContext.getState(State::Positions | State::Velocities);
