@@ -104,7 +104,7 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == CalcCustomExternalForceKernel::Name())
         return new CommonCalcCustomExternalForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomHbondForceKernel::Name())
-        return new CudaCalcCustomHbondForceKernel(name, platform, cu, context.getSystem());
+        return new CommonCalcCustomHbondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomCentroidBondForceKernel::Name())
         return new CommonCalcCustomCentroidBondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomCompoundBondForceKernel::Name())

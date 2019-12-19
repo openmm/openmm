@@ -536,8 +536,8 @@ private:
 class OpenCLParallelCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
     OpenCLParallelCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcCustomHbondForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcCustomHbondForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomHbondForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomHbondForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.

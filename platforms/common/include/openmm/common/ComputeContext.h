@@ -75,6 +75,14 @@ public:
         return forces;
     }
     /**
+     * Request that the context provide at least a particular number of force buffers.
+     * This is only meaningful for devices that do not support 64 bit atomic operations.
+     * On other devices, this will typically have no effect.  Force kernels should call
+     * this during initialization.
+     */
+    virtual void requestForceBuffers(int minBuffers) {
+    }
+    /**
      * Set this as the current context for the calling thread.  This should be called before
      * doing any computation when you do not know what other code has just been executing on
      * the thread.  Platforms that rely on binding contexts to threads (such as CUDA) need to

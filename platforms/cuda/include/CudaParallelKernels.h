@@ -537,8 +537,8 @@ private:
 class CudaParallelCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
     CudaParallelCalcCustomHbondForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcCustomHbondForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcCustomHbondForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomHbondForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomHbondForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.

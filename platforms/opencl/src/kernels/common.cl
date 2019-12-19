@@ -39,7 +39,7 @@ typedef unsigned long mm_ulong;
 #define make_double3(x...) ((double3) (x))
 #define make_double4(x...) ((double4) (x))
 
-#define trimTo3(v) v.xyz
+#define trimTo3(v) (v).xyz
 
 // OpenCL has overloaded versions of standard math functions for single and double
 // precision arguments.  CUDA has separate functions.  To allow them to be called

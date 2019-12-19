@@ -393,59 +393,6 @@ private:
 };
 
 /**
- * This kernel is invoked by CustomHbondForce to calculate the forces acting on the system.
- */
-class CudaCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
-public:
-    CudaCalcCustomHbondForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcCustomHbondForceKernel(name, platform),
-            hasInitializedKernel(false), cu(cu), donorParams(NULL), acceptorParams(NULL), system(system) {
-    }
-    ~CudaCalcCustomHbondForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CustomHbondForce this kernel will be used for
-     */
-    void initialize(const System& system, const CustomHbondForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomHbondForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force);
-private:
-    class ForceInfo;
-    int numDonors, numAcceptors;
-    bool hasInitializedKernel;
-    CudaContext& cu;
-    ForceInfo* info;
-    CudaParameterSet* donorParams;
-    CudaParameterSet* acceptorParams;
-    CudaArray globals;
-    CudaArray donors;
-    CudaArray acceptors;
-    CudaArray donorExclusions;
-    CudaArray acceptorExclusions;
-    std::vector<std::string> globalParamNames;
-    std::vector<float> globalParamValues;
-    std::vector<CudaArray> tabulatedFunctions;
-    std::vector<void*> donorArgs, acceptorArgs;
-    const System& system;
-    CUfunction donorKernel, acceptorKernel;
-};
-
-/**
  * This kernel is invoked by CustomCVForce to calculate the forces acting on the system and the energy of the system.
  */
 class CudaCalcCustomCVForceKernel : public CalcCustomCVForceKernel {

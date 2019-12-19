@@ -102,7 +102,7 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == CalcCustomExternalForceKernel::Name())
         return new CommonCalcCustomExternalForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomHbondForceKernel::Name())
-        return new OpenCLCalcCustomHbondForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomHbondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomCentroidBondForceKernel::Name())
         return new CommonCalcCustomCentroidBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomCompoundBondForceKernel::Name())

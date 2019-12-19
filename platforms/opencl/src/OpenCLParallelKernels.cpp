@@ -669,7 +669,7 @@ void OpenCLParallelCalcCustomExternalForceKernel::copyParametersToContext(Contex
 
 class OpenCLParallelCalcCustomHbondForceKernel::Task : public OpenCLContext::WorkTask {
 public:
-    Task(ContextImpl& context, OpenCLCalcCustomHbondForceKernel& kernel, bool includeForce,
+    Task(ContextImpl& context, CommonCalcCustomHbondForceKernel& kernel, bool includeForce,
             bool includeEnergy, double& energy) : context(context), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), energy(energy) {
     }
@@ -678,7 +678,7 @@ public:
     }
 private:
     ContextImpl& context;
-    OpenCLCalcCustomHbondForceKernel& kernel;
+    CommonCalcCustomHbondForceKernel& kernel;
     bool includeForce, includeEnergy;
     double& energy;
 };
@@ -686,7 +686,7 @@ private:
 OpenCLParallelCalcCustomHbondForceKernel::OpenCLParallelCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system) :
         CalcCustomHbondForceKernel(name, platform), data(data) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
-        kernels.push_back(Kernel(new OpenCLCalcCustomHbondForceKernel(name, platform, *data.contexts[i], system)));
+        kernels.push_back(Kernel(new CommonCalcCustomHbondForceKernel(name, platform, *data.contexts[i], system)));
 }
 
 void OpenCLParallelCalcCustomHbondForceKernel::initialize(const System& system, const CustomHbondForce& force) {
