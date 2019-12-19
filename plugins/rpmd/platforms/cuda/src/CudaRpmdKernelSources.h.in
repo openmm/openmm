@@ -39,7 +39,7 @@ namespace OpenMM {
 
 class CudaRpmdKernelSources {
 public:
-@CUDA_FILE_DECLARATIONS@
+@KERNEL_FILE_DECLARATIONS@
 };
 
 } // namespace OpenMM

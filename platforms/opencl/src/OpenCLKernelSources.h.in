@@ -40,7 +40,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_OPENCL OpenCLKernelSources {
 public:
-@CL_FILE_DECLARATIONS@
+@KERNEL_FILE_DECLARATIONS@
 };
 
 } // namespace OpenMM

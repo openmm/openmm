@@ -1,8 +1,7 @@
-FILE(GLOB CUDA_KERNELS ${CUDA_SOURCE_DIR}/kernels/*.cu)
-SET(CUDA_FILE_DECLARATIONS)
-SET(CUDA_FILE_DEFINITIONS)
-CONFIGURE_FILE(${CUDA_SOURCE_DIR}/${CUDA_SOURCE_CLASS}.cpp.in ${CUDA_KERNELS_CPP})
-FOREACH(file ${CUDA_KERNELS})
+FILE(GLOB KERNEL_FILES ${KERNEL_SOURCE_DIR}/kernels/*.${KERNEL_FILE_EXTENSION})
+SET(KERNEL_FILE_DECLARATIONS)
+CONFIGURE_FILE(${KERNEL_SOURCE_DIR}/${KERNEL_SOURCE_CLASS}.cpp.in ${KERNELS_CPP})
+FOREACH(file ${KERNEL_FILES})
     # Load the file contents and process it.
     FILE(STRINGS ${file} file_content NEWLINE_CONSUME)
     # Replace all backslashes by double backslashes as they are being put in a C string.
@@ -15,13 +14,13 @@ FOREACH(file ${CUDA_KERNELS})
     STRING(REPLACE "\n" "\\n\"\n\"" file_content "${file_content}")
 
     # Determine a name for the variable that will contain this file's contents
-    FILE(RELATIVE_PATH filename ${CUDA_SOURCE_DIR}/kernels ${file})
+    FILE(RELATIVE_PATH filename ${KERNEL_SOURCE_DIR}/kernels ${file})
     STRING(LENGTH ${filename} filename_length)
     MATH(EXPR filename_length ${filename_length}-3)
     STRING(SUBSTRING ${filename} 0 ${filename_length} variable_name)
 
     # Record the variable declaration and definition.
-    SET(CUDA_FILE_DECLARATIONS ${CUDA_FILE_DECLARATIONS}static\ const\ std::string\ ${variable_name};\n)
-    FILE(APPEND ${CUDA_KERNELS_CPP} const\ string\ ${CUDA_SOURCE_CLASS}::${variable_name}\ =\ \"${file_content}\"\;\n)
+    SET(KERNEL_FILE_DECLARATIONS ${KERNEL_FILE_DECLARATIONS}static\ const\ std::string\ ${variable_name};\n)
+    FILE(APPEND ${KERNELS_CPP} const\ string\ ${KERNEL_SOURCE_CLASS}::${variable_name}\ =\ \"${file_content}\"\;\n)
 ENDFOREACH(file)
-CONFIGURE_FILE(${CUDA_SOURCE_DIR}/${CUDA_SOURCE_CLASS}.h.in ${CUDA_KERNELS_H})
+CONFIGURE_FILE(${KERNEL_SOURCE_DIR}/${KERNEL_SOURCE_CLASS}.h.in ${KERNELS_H})
