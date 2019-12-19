@@ -103,7 +103,7 @@ KERNEL void applyShakeToPositions(int numClusters, mixed tol, GLOBAL const real4
 #endif
         ) {
 #ifndef USE_MIXED_PRECISION
-        GLOBAL real4* posqCorrection = NULL;
+        GLOBAL real4* posqCorrection = 0;
 #endif
     int index = GLOBAL_ID;
     while (index < numClusters) {
@@ -224,7 +224,7 @@ KERNEL void applyShakeToVelocities(int numClusters, mixed tol, GLOBAL const real
 #endif
         ) {
 #ifndef USE_MIXED_PRECISION
-        GLOBAL real4* posqCorrection = NULL;
+        GLOBAL real4* posqCorrection = 0;
 #endif
     int index = GLOBAL_ID;
     while (index < numClusters) {
@@ -333,7 +333,7 @@ KERNEL void applySettleToPositions(int numClusters, mixed tol, GLOBAL const real
 #endif
         ) {
 #ifndef USE_MIXED_PRECISION
-        GLOBAL real4* posqCorrection = NULL;
+        GLOBAL real4* posqCorrection = 0;
 #endif
     int index = GLOBAL_ID;
     while (index < numClusters) {
@@ -494,7 +494,7 @@ KERNEL void applySettleToVelocities(int numClusters, mixed tol, GLOBAL const rea
 #endif
         ) {
 #ifndef USE_MIXED_PRECISION
-        GLOBAL real4* posqCorrection = NULL;
+        GLOBAL real4* posqCorrection = 0;
 #endif
     for (int index = GLOBAL_ID; index < numClusters; index += GLOBAL_SIZE) {
         // Load the data for this cluster.
@@ -563,7 +563,7 @@ KERNEL void computeCCMAConstraintDirections(GLOBAL const int2* RESTRICT constrai
 #endif
         ) {
 #ifndef USE_MIXED_PRECISION
-        GLOBAL real4* posqCorrection = NULL;
+        GLOBAL real4* posqCorrection = 0;
 #endif
     for (int index = GLOBAL_ID; index < NUM_CCMA_CONSTRAINTS; index += GLOBAL_SIZE) {
         // Compute the direction for this constraint.

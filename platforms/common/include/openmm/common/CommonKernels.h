@@ -1158,6 +1158,83 @@ private:
     ComputeKernel kernel1, kernel2;
 };
 
+/**
+ * This kernel is invoked by RMSDForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CommonCalcRMSDForceKernel : public CalcRMSDForceKernel {
+public:
+    CommonCalcRMSDForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : CalcRMSDForceKernel(name, platform), cc(cc) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the RMSDForce this kernel will be used for
+     */
+    void initialize(const System& system, const RMSDForce& force);
+    /**
+     * Record the reference positions and particle indices.
+     */
+    void recordParameters(const RMSDForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * This is the internal implementation of execute(), templatized on whether we're
+     * using single or double precision.
+     */
+    template <class REAL>
+    double executeImpl(ContextImpl& context);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the RMSDForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const RMSDForce& force);
+private:
+    class ForceInfo;
+    ComputeContext& cc;
+    ForceInfo* info;
+    int blockSize;
+    double sumNormRef;
+    ComputeArray referencePos, particles, buffer;
+    ComputeKernel kernel1, kernel2;
+};
+
+/**
+ * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
+ */
+class CommonApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
+public:
+    CommonApplyAndersenThermostatKernel(std::string name, const Platform& platform, ComputeContext& cc) : ApplyAndersenThermostatKernel(name, platform), cc(cc) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param thermostat the AndersenThermostat this kernel will be used for
+     */
+    void initialize(const System& system, const AndersenThermostat& thermostat);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void execute(ContextImpl& context);
+private:
+    ComputeContext& cc;
+    int randomSeed;
+    ComputeArray atomGroups;
+    ComputeKernel kernel;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_COMMONKERNELS_H_*/

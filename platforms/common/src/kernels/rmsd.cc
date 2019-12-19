@@ -4,20 +4,20 @@
 /**
  * Sum a value over all threads.
  */
-__device__ real reduceValue(real value, volatile real* temp) {
-    const int thread = threadIdx.x;
-    __syncthreads();
+DEVICE real reduceValue(real value, LOCAL_ARG volatile real* temp) {
+    const int thread = LOCAL_ID;
+    SYNC_THREADS;
     temp[thread] = value;
-    __syncthreads();
-    for (unsigned int step = 1; step < 32; step *= 2) {
-        if (thread+step < blockDim.x && thread%(2*step) == 0)
+    SYNC_THREADS;
+    for (int step = 1; step < 32; step *= 2) {
+        if (thread+step < LOCAL_SIZE && thread%(2*step) == 0)
             temp[thread] = temp[thread] + temp[thread+step];
-        SYNC_WARPS
+        SYNC_WARPS;
     }
-    for (unsigned int step = 32; step < blockDim.x; step *= 2) {
-        if (thread+step < blockDim.x && thread%(2*step) == 0)
+    for (int step = 32; step < LOCAL_SIZE; step *= 2) {
+        if (thread+step < LOCAL_SIZE && thread%(2*step) == 0)
             temp[thread] = temp[thread] + temp[thread+step];
-        __syncthreads();
+        SYNC_THREADS;
     }
     return temp[0];
 }
@@ -25,14 +25,14 @@ __device__ real reduceValue(real value, volatile real* temp) {
 /**
  * Perform the first step of computing the RMSD.  This is executed as a single work group.
  */
-extern "C" __global__ void computeRMSDPart1(int numParticles, const real4* __restrict__ posq, const real4* __restrict__ referencePos,
-         const int* __restrict__ particles, real* buffer) {
-    extern __shared__ volatile real temp[];
+KERNEL void computeRMSDPart1(int numParticles, GLOBAL const real4* RESTRICT posq, GLOBAL const real4* RESTRICT referencePos,
+        GLOBAL const int* RESTRICT particles, GLOBAL real* buffer) {
+    LOCAL volatile real temp[THREAD_BLOCK_SIZE];
 
     // Compute the center of the particle positions.
     
     real3 center = make_real3(0);
-    for (int i = threadIdx.x; i < numParticles; i += blockDim.x)
+    for (int i = LOCAL_ID; i < numParticles; i += LOCAL_SIZE)
         center += trimTo3(posq[particles[i]]);
     center.x = reduceValue(center.x, temp)/numParticles;
     center.y = reduceValue(center.y, temp)/numParticles;
@@ -42,7 +42,7 @@ extern "C" __global__ void computeRMSDPart1(int numParticles, const real4* __res
     
     real R[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
     real sum = 0;
-    for (int i = threadIdx.x; i < numParticles; i += blockDim.x) {
+    for (int i = LOCAL_ID; i < numParticles; i += LOCAL_SIZE) {
         int index = particles[i];
         real3 pos = trimTo3(posq[index]) - center;
         real3 refPos = trimTo3(referencePos[index]);
@@ -64,7 +64,7 @@ extern "C" __global__ void computeRMSDPart1(int numParticles, const real4* __res
 
     // Copy everything into the output buffer to send back to the host.
     
-    if (threadIdx.x == 0) {
+    if (LOCAL_ID == 0) {
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++)
                 buffer[3*i+j] = R[i][j];
@@ -78,11 +78,11 @@ extern "C" __global__ void computeRMSDPart1(int numParticles, const real4* __res
 /**
  * Apply forces based on the RMSD.
  */
-extern "C" __global__ void computeRMSDForces(int numParticles, int paddedNumAtoms, const real4* __restrict__ posq, const real4* __restrict__ referencePos,
-         const int* __restrict__ particles, const real* buffer, unsigned long long* __restrict__ forceBuffers) {
+KERNEL void computeRMSDForces(int numParticles, int paddedNumAtoms, GLOBAL const real4* RESTRICT posq, GLOBAL const real4* RESTRICT referencePos,
+        GLOBAL const int* RESTRICT particles, GLOBAL const real* buffer, GLOBAL mm_long* RESTRICT forceBuffers) {
     real3 center = make_real3(buffer[10], buffer[11], buffer[12]);
     real scale = 1 / (real) (buffer[9]*numParticles);
-    for (int i = blockDim.x*blockIdx.x+threadIdx.x; i < numParticles; i += blockDim.x*gridDim.x) {
+    for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
         int index = particles[i];
         real3 pos = trimTo3(posq[index]) - center;
         real3 refPos = trimTo3(referencePos[index]);
@@ -90,8 +90,8 @@ extern "C" __global__ void computeRMSDForces(int numParticles, int paddedNumAtom
                                       buffer[1]*refPos.x + buffer[4]*refPos.y + buffer[7]*refPos.z,
                                       buffer[2]*refPos.x + buffer[5]*refPos.y + buffer[8]*refPos.z);
         real3 force = (rotatedRef-pos)*scale;
-        atomicAdd(&forceBuffers[index], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
-        atomicAdd(&forceBuffers[index+paddedNumAtoms], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
-        atomicAdd(&forceBuffers[index+2*paddedNumAtoms], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
+        forceBuffers[index] += (mm_long) (force.x*0x100000000);
+        forceBuffers[index+paddedNumAtoms] += (mm_long) (force.y*0x100000000);
+        forceBuffers[index+2*paddedNumAtoms] += (mm_long) (force.z*0x100000000);
     }
 }

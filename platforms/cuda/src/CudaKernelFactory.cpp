@@ -112,7 +112,7 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == CalcCustomCVForceKernel::Name())
         return new CudaCalcCustomCVForceKernel(name, platform, cu);
     if (name == CalcRMSDForceKernel::Name())
-        return new CudaCalcRMSDForceKernel(name, platform, cu);
+        return new CommonCalcRMSDForceKernel(name, platform, cu);
     if (name == CalcCustomManyParticleForceKernel::Name())
         return new CommonCalcCustomManyParticleForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcGayBerneForceKernel::Name())
@@ -132,7 +132,7 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == IntegrateCustomStepKernel::Name())
         return new CommonIntegrateCustomStepKernel(name, platform, cu);
     if (name == ApplyAndersenThermostatKernel::Name())
-        return new CudaApplyAndersenThermostatKernel(name, platform, cu);
+        return new CommonApplyAndersenThermostatKernel(name, platform, cu);
     if (name == ApplyMonteCarloBarostatKernel::Name())
         return new CudaApplyMonteCarloBarostatKernel(name, platform, cu);
     if (name == RemoveCMMotionKernel::Name())

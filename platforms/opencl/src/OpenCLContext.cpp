@@ -314,6 +314,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             compilationDefines["make_mixed3"] = "make_float3";
             compilationDefines["make_mixed4"] = "make_float4";
         }
+        longForceBuffer.initialize<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
         posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
         atomIndexDevice.initialize<cl_int>(*this, paddedNumAtoms, "atomIndexDevice");
         atomIndex.resize(paddedNumAtoms);
@@ -489,7 +490,6 @@ void OpenCLContext::initialize() {
         energyBuffer.initialize<cl_float>(*this, energyBufferSize, "energyBuffer");
         energySum.initialize<cl_float>(*this, 1, "energySum");
     }
-    longForceBuffer.initialize<cl_long>(*this, 3*paddedNumAtoms, "longForceBuffer");
     reduceForcesKernel.setArg<cl::Buffer>(0, longForceBuffer.getDeviceBuffer());
     reduceForcesKernel.setArg<cl::Buffer>(1, forceBuffers.getDeviceBuffer());
     reduceForcesKernel.setArg<cl_int>(2, paddedNumAtoms);

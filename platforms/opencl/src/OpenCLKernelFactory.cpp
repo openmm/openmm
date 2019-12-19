@@ -110,7 +110,7 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == CalcCustomCVForceKernel::Name())
         return new OpenCLCalcCustomCVForceKernel(name, platform, cl);
     if (name == CalcRMSDForceKernel::Name())
-        return new OpenCLCalcRMSDForceKernel(name, platform, cl);
+        return new CommonCalcRMSDForceKernel(name, platform, cl);
     if (name == CalcCustomManyParticleForceKernel::Name())
         return new CommonCalcCustomManyParticleForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcGayBerneForceKernel::Name())
@@ -130,7 +130,7 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == IntegrateCustomStepKernel::Name())
         return new CommonIntegrateCustomStepKernel(name, platform, cl);
     if (name == ApplyAndersenThermostatKernel::Name())
-        return new OpenCLApplyAndersenThermostatKernel(name, platform, cl);
+        return new CommonApplyAndersenThermostatKernel(name, platform, cl);
     if (name == ApplyMonteCarloBarostatKernel::Name())
         return new OpenCLApplyMonteCarloBarostatKernel(name, platform, cl);
     if (name == RemoveCMMotionKernel::Name())

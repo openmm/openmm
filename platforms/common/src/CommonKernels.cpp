@@ -43,6 +43,7 @@
 #include "ReferenceTabulatedFunction.h"
 #include "SimTKOpenMMRealType.h"
 #include "SimTKOpenMMUtilities.h"
+#include "jama_eig.h"
 #include <algorithm>
 #include <cmath>
 #include <iterator>
@@ -6335,4 +6336,227 @@ void CommonRemoveCMMotionKernel::execute(ContextImpl& context) {
     cc.setAsCurrent();
     kernel1->execute(cc.getNumAtoms(), 64);
     kernel2->execute(cc.getNumAtoms(), 64);
+}
+
+class CommonCalcRMSDForceKernel::ForceInfo : public ComputeForceInfo {
+public:
+    ForceInfo(const RMSDForce& force) : force(force) {
+        updateParticles();
+    }
+    void updateParticles() {
+        particles.clear();
+        for (int i : force.getParticles())
+            particles.insert(i);
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        bool include1 = (particles.find(particle1) != particles.end());
+        bool include2 = (particles.find(particle2) != particles.end());
+        return (include1 == include2);
+    }
+private:
+    const RMSDForce& force;
+    set<int> particles;
+};
+
+void CommonCalcRMSDForceKernel::initialize(const System& system, const RMSDForce& force) {
+    // Create data structures.
+    
+    bool useDouble = cc.getUseDoublePrecision();
+    int elementSize = (useDouble ? sizeof(double) : sizeof(float));
+    int numParticles = force.getParticles().size();
+    if (numParticles == 0)
+        numParticles = system.getNumParticles();
+    referencePos.initialize(cc, system.getNumParticles(), 4*elementSize, "referencePos");
+    particles.initialize<int>(cc, numParticles, "particles");
+    buffer.initialize(cc, 13, elementSize, "buffer");
+    recordParameters(force);
+    info = new ForceInfo(force);
+    cc.addForce(info);
+    
+    // Create the kernels.
+
+    blockSize = min(256, cc.getMaxThreadBlockSize());
+    map<string, string> defines;
+    defines["THREAD_BLOCK_SIZE"] = cc.intToString(blockSize);
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::rmsd, defines);
+    kernel1 = program->createKernel("computeRMSDPart1");
+    kernel2 = program->createKernel("computeRMSDForces");
+    kernel1->addArg();
+    kernel1->addArg(cc.getPosq());
+    kernel1->addArg(referencePos);
+    kernel1->addArg(particles);
+    kernel1->addArg(buffer);
+    kernel2->addArg();
+    kernel2->addArg(cc.getPaddedNumAtoms());
+    kernel2->addArg(cc.getPosq());
+    kernel2->addArg(referencePos);
+    kernel2->addArg(particles);
+    kernel2->addArg(buffer);
+    kernel2->addArg(cc.getLongForceBuffer());
+}
+
+void CommonCalcRMSDForceKernel::recordParameters(const RMSDForce& force) {
+    // Record the parameters and center the reference positions.
+    
+    vector<int> particleVec = force.getParticles();
+    if (particleVec.size() == 0)
+        for (int i = 0; i < cc.getNumAtoms(); i++)
+            particleVec.push_back(i);
+    vector<Vec3> centeredPositions = force.getReferencePositions();
+    Vec3 center;
+    for (int i : particleVec)
+        center += centeredPositions[i];
+    center /= particleVec.size();
+    for (Vec3& p : centeredPositions)
+        p -= center;
+
+    // Upload them to the device.
+
+    particles.upload(particleVec);
+    vector<mm_double4> pos;
+    for (Vec3 p : centeredPositions)
+        pos.push_back(mm_double4(p[0], p[1], p[2], 0));
+    referencePos.upload(pos, true);
+
+    // Record the sum of the norms of the reference positions.
+
+    sumNormRef = 0.0;
+    for (int i : particleVec) {
+        Vec3 p = centeredPositions[i];
+        sumNormRef += p.dot(p);
+    }
+}
+
+double CommonCalcRMSDForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (cc.getUseDoublePrecision())
+        return executeImpl<double>(context);
+    return executeImpl<float>(context);
+}
+
+template <class REAL>
+double CommonCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
+    // Execute the first kernel.
+
+    int numParticles = particles.getSize();
+    kernel1->setArg(0, numParticles);
+    kernel1->execute(blockSize, blockSize);
+    
+    // Download the results, build the F matrix, and find the maximum eigenvalue
+    // and eigenvector.
+
+    vector<REAL> b;
+    buffer.download(b);
+    Array2D<double> F(4, 4);
+    F[0][0] =  b[0*3+0] + b[1*3+1] + b[2*3+2];
+    F[1][0] =  b[1*3+2] - b[2*3+1];
+    F[2][0] =  b[2*3+0] - b[0*3+2];
+    F[3][0] =  b[0*3+1] - b[1*3+0];
+    F[0][1] =  b[1*3+2] - b[2*3+1];
+    F[1][1] =  b[0*3+0] - b[1*3+1] - b[2*3+2];
+    F[2][1] =  b[0*3+1] + b[1*3+0];
+    F[3][1] =  b[0*3+2] + b[2*3+0];
+    F[0][2] =  b[2*3+0] - b[0*3+2];
+    F[1][2] =  b[0*3+1] + b[1*3+0];
+    F[2][2] = -b[0*3+0] + b[1*3+1] - b[2*3+2];
+    F[3][2] =  b[1*3+2] + b[2*3+1];
+    F[0][3] =  b[0*3+1] - b[1*3+0];
+    F[1][3] =  b[0*3+2] + b[2*3+0];
+    F[2][3] =  b[1*3+2] + b[2*3+1];
+    F[3][3] = -b[0*3+0] - b[1*3+1] + b[2*3+2];
+    JAMA::Eigenvalue<double> eigen(F);
+    Array1D<double> values;
+    eigen.getRealEigenvalues(values);
+    Array2D<double> vectors;
+    eigen.getV(vectors);
+
+    // Compute the RMSD.
+
+    double msd = (sumNormRef+b[9]-2*values[3])/numParticles;
+    if (msd < 1e-20) {
+        // The particles are perfectly aligned, so all the forces should be zero.
+        // Numerical error can lead to NaNs, so just return 0 now.
+        return 0.0;
+    }
+    double rmsd = sqrt(msd);
+    b[9] = rmsd;
+
+    // Compute the rotation matrix.
+
+    double q[] = {vectors[0][3], vectors[1][3], vectors[2][3], vectors[3][3]};
+    double q00 = q[0]*q[0], q01 = q[0]*q[1], q02 = q[0]*q[2], q03 = q[0]*q[3];
+    double q11 = q[1]*q[1], q12 = q[1]*q[2], q13 = q[1]*q[3];
+    double q22 = q[2]*q[2], q23 = q[2]*q[3];
+    double q33 = q[3]*q[3];
+    b[0] = q00+q11-q22-q33;
+    b[1] = 2*(q12-q03);
+    b[2] = 2*(q13+q02);
+    b[3] = 2*(q12+q03);
+    b[4] = q00-q11+q22-q33;
+    b[5] = 2*(q23-q01);
+    b[6] = 2*(q13-q02);
+    b[7] = 2*(q23+q01);
+    b[8] = q00-q11-q22+q33;
+
+    // Upload it to the device and invoke the kernel to apply forces.
+    
+    buffer.upload(b);
+    kernel2->setArg(0, numParticles);
+    kernel2->execute(numParticles);
+    return rmsd;
+}
+
+void CommonCalcRMSDForceKernel::copyParametersToContext(ContextImpl& context, const RMSDForce& force) {
+    if (referencePos.getSize() != force.getReferencePositions().size())
+        throw OpenMMException("updateParametersInContext: The number of reference positions has changed");
+    int numParticles = force.getParticles().size();
+    if (numParticles == 0)
+        numParticles = context.getSystem().getNumParticles();
+    if (numParticles != particles.getSize())
+        particles.resize(numParticles);
+    recordParameters(force);
+    
+    // Mark that the current reordering may be invalid.
+    
+    info->updateParticles();
+    cc.invalidateMolecules(info);
+}
+
+void CommonApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
+    cc.setAsCurrent();
+    randomSeed = thermostat.getRandomNumberSeed();
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::andersenThermostat);
+    kernel = program->createKernel("applyAndersenThermostat");
+    cc.getIntegrationUtilities().initRandomNumberGenerator(randomSeed);
+
+    // Create the arrays with the group definitions.
+
+    vector<vector<int> > groups = AndersenThermostatImpl::calcParticleGroups(system);
+    atomGroups.initialize<int>(cc, cc.getNumAtoms(), "atomGroups");
+    vector<int> atoms(atomGroups.getSize());
+    for (int i = 0; i < (int) groups.size(); i++) {
+        for (int j = 0; j < (int) groups[i].size(); j++)
+            atoms[groups[i][j]] = i;
+    }
+    atomGroups.upload(atoms);
+    kernel->addArg(system.getNumParticles());
+    kernel->addArg();
+    kernel->addArg();
+    kernel->addArg(cc.getVelm());
+    kernel->addArg();
+    kernel->addArg(cc.getIntegrationUtilities().getRandom());
+    kernel->addArg();
+    kernel->addArg(atomGroups);
+}
+
+void CommonApplyAndersenThermostatKernel::execute(ContextImpl& context) {
+    cc.setAsCurrent();
+    kernel->setArg(1, (float) context.getParameter(AndersenThermostat::CollisionFrequency()));
+    kernel->setArg(2, (float) (BOLTZ*context.getParameter(AndersenThermostat::Temperature())));
+    double stepSize = context.getIntegrator().getStepSize();
+    if (cc.getUseDoublePrecision())
+        kernel->setArg(4, stepSize);
+    else
+        kernel->setArg(4, (float) stepSize);
+    kernel->setArg(6, cc.getIntegrationUtilities().prepareRandomNumbers(cc.getPaddedNumAtoms()));
+    kernel->execute(cc.getNumAtoms());
 }

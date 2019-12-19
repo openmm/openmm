@@ -12,11 +12,7 @@ typedef struct {
  * Find the maximum of a value across all threads in a warp, and return that to
  * every thread.
  */
-#ifdef __CUDA_ARCH__
-DEVICE int reduceMax(int val, int* temp) {
-#else
-DEVICE int reduceMax(int val, LOCAL int* temp) {
-#endif
+DEVICE int reduceMax(int val, LOCAL_ARG int* temp) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
     // CUDA lets us do this slightly more efficiently by using shuffle operations.
     for (int mask = 16; mask > 0; mask /= 2)
