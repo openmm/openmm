@@ -49,7 +49,6 @@
 #include <vector>
 #include <algorithm>
 #include <numeric>
-#include <unistd.h>
 
 using namespace OpenMM;
 using namespace std;
@@ -174,19 +173,6 @@ void testWaterBox(Platform& platform) {
         double heatBathEnergy = integ.computeHeatBathEnergy();
         double conserved = PE + fullKE + heatBathEnergy;
         meanConserved = (i*meanConserved + conserved)/(i+1);
-#define DEBUG 0
-#if DEBUG
-        if(i%10 == 0)
-        std::cout << std::setw(6) << i
-                  << std::setprecision(8) << std::setw(16) << KE
-                  << std::setprecision(8) << std::setw(16) << drudeKE
-                  << std::setprecision(8) << std::setw(16) << meanTemp
-                  << std::setprecision(8) << std::setw(16) << meanDrudeTemp
-                  << std::setprecision(8) << std::setw(16) << heatBathEnergy
-                  << std::setprecision(8) << std::setw(16) << fullKE
-                  << std::setprecision(8) << std::setw(16) << conserved
-                  << std::endl;
-#endif
         totalKE += KE;
         ASSERT(fabs(meanConserved - conserved) < 0.6);
     }
@@ -268,19 +254,6 @@ double testWaterBoxWithHardWallConstraint(Platform& platform, double hardWallCon
             auto dR = positions[5*mol+1] - positions[5*mol];
             maxR = std::max(maxR, std::sqrt(dR.dot(dR)));
         }
-#if DEBUG
-        if(i%1 == 0)
-        std::cout << std::setw(6) << i
-                  << std::setprecision(8) << std::setw(16) << KE
-                  << std::setprecision(8) << std::setw(16) << drudeKE
-                  << std::setprecision(8) << std::setw(16) << meanTemp
-                  << std::setprecision(8) << std::setw(16) << meanDrudeTemp
-                  << std::setprecision(8) << std::setw(16) << heatBathEnergy
-                  << std::setprecision(8) << std::setw(16) << fullKE
-                  << std::setprecision(8) << std::setw(16) << conserved
-                  << std::setprecision(8) << std::setw(16) << maxR
-                  << std::endl;
-#endif
         totalKE += KE;
     }
     totalKE /= numSteps;
