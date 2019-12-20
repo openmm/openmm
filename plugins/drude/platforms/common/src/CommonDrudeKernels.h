@@ -1,5 +1,5 @@
-#ifndef OPENCL_DRUDE_KERNELS_H_
-#define OPENCL_DRUDE_KERNELS_H_
+#ifndef COMMON_DRUDE_KERNELS_H_
+#define COMMON_DRUDE_KERNELS_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,8 +33,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/DrudeKernels.h"
-#include "OpenCLContext.h"
-#include "OpenCLArray.h"
+#include "openmm/common/ComputeContext.h"
+#include "openmm/common/ComputeArray.h"
 #include "lbfgs.h"
 
 namespace OpenMM {
@@ -42,10 +42,10 @@ namespace OpenMM {
 /**
  * This kernel is invoked by DrudeForce to calculate the forces acting on the system and the energy of the system.
  */
-class OpenCLCalcDrudeForceKernel : public CalcDrudeForceKernel {
+class CommonCalcDrudeForceKernel : public CalcDrudeForceKernel {
 public:
-    OpenCLCalcDrudeForceKernel(const std::string& name, const Platform& platform, OpenCLContext& cl) :
-            CalcDrudeForceKernel(name, platform), cl(cl) {
+    CommonCalcDrudeForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc) :
+            CalcDrudeForceKernel(name, platform), cc(cc) {
     }
     /**
      * Initialize the kernel.
@@ -71,18 +71,18 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const DrudeForce& force);
 private:
-    OpenCLContext& cl;
-    OpenCLArray particleParams;
-    OpenCLArray pairParams;
+    ComputeContext& cc;
+    ComputeArray particleParams;
+    ComputeArray pairParams;
 };
 
 /**
  * This kernel is invoked by DrudeLangevinIntegrator to take one time step
  */
-class OpenCLIntegrateDrudeLangevinStepKernel : public IntegrateDrudeLangevinStepKernel {
+class CommonIntegrateDrudeLangevinStepKernel : public IntegrateDrudeLangevinStepKernel {
 public:
-    OpenCLIntegrateDrudeLangevinStepKernel(const std::string& name, const Platform& platform, OpenCLContext& cl) :
-            IntegrateDrudeLangevinStepKernel(name, platform), cl(cl), hasInitializedKernels(false) {
+    CommonIntegrateDrudeLangevinStepKernel(const std::string& name, const Platform& platform, ComputeContext& cc) :
+            IntegrateDrudeLangevinStepKernel(name, platform), cc(cc), hasInitializedKernels(false) {
     }
     /**
      * Initialize the kernel.
@@ -107,23 +107,23 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator);
 private:
-    OpenCLContext& cl;
-    bool hasInitializedKernels;
+    ComputeContext& cc;
     double prevStepSize;
-    OpenCLArray normalParticles;
-    OpenCLArray pairParticles;
-    cl::Kernel kernel1, kernel2, hardwallKernel;
+    bool hasInitializedKernels;
+    ComputeArray normalParticles;
+    ComputeArray pairParticles;
+    ComputeKernel kernel1, kernel2, hardwallKernel;
 };
 
 /**
  * This kernel is invoked by DrudeSCFIntegrator to take one time step
  */
-class OpenCLIntegrateDrudeSCFStepKernel : public IntegrateDrudeSCFStepKernel {
+class CommonIntegrateDrudeSCFStepKernel : public IntegrateDrudeSCFStepKernel {
 public:
-    OpenCLIntegrateDrudeSCFStepKernel(const std::string& name, const Platform& platform, OpenCLContext& cl) :
-            IntegrateDrudeSCFStepKernel(name, platform), cl(cl), hasInitializedKernels(false), minimizerPos(NULL) {
+    CommonIntegrateDrudeSCFStepKernel(const std::string& name, const Platform& platform, ComputeContext& cc) :
+            IntegrateDrudeSCFStepKernel(name, platform), cc(cc), minimizerPos(NULL), hasInitializedKernels(false) {
     }
-    ~OpenCLIntegrateDrudeSCFStepKernel();
+    ~CommonIntegrateDrudeSCFStepKernel();
     /**
      * Initialize the kernel.
      *
@@ -148,15 +148,15 @@ public:
     double computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator);
 private:
     void minimize(ContextImpl& context, double tolerance);
-    OpenCLContext& cl;
-    bool hasInitializedKernels;
+    ComputeContext& cc;
     double prevStepSize;
+    bool hasInitializedKernels;
     std::vector<int> drudeParticles;
     lbfgsfloatval_t *minimizerPos;
     lbfgs_parameter_t minimizerParams;
-    cl::Kernel kernel1, kernel2;
+    ComputeKernel kernel1, kernel2;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENCL_DRUDE_KERNELS_H_*/
+#endif /*COMMON_DRUDE_KERNELS_H_*/

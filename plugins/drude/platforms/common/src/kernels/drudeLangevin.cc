@@ -2,14 +2,14 @@
  * Perform the first step of Langevin integration.
  */
 
-extern "C" __global__ void integrateDrudeLangevinPart1(mixed4* __restrict__ velm, const long long* __restrict__ force, mixed4* __restrict__ posDelta,
-        const int* __restrict__ normalParticles, const int2* __restrict__ pairParticles, const mixed2* __restrict__ dt, mixed vscale, mixed fscale,
-        mixed noisescale, mixed vscaleDrude, mixed fscaleDrude, mixed noisescaleDrude, const float4* __restrict__ random, unsigned int randomIndex) {
+KERNEL void integrateDrudeLangevinPart1(GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force, GLOBAL mixed4* RESTRICT posDelta,
+        GLOBAL const int* RESTRICT normalParticles, GLOBAL const int2* RESTRICT pairParticles, GLOBAL const mixed2* RESTRICT dt, mixed vscale, mixed fscale,
+        mixed noisescale, mixed vscaleDrude, mixed fscaleDrude, mixed noisescaleDrude, GLOBAL const float4* RESTRICT random, unsigned int randomIndex) {
     mixed stepSize = dt[0].y;
     
     // Update normal particles.
 
-    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_NORMAL_PARTICLES; i += blockDim.x*gridDim.x) {
+    for (int i = GLOBAL_ID; i < NUM_NORMAL_PARTICLES; i += GLOBAL_SIZE) {
         int index = normalParticles[i];
         mixed4 velocity = velm[index];
         if (velocity.w != 0) {
@@ -26,7 +26,7 @@ extern "C" __global__ void integrateDrudeLangevinPart1(mixed4* __restrict__ velm
     // Update Drude particle pairs.
     
     randomIndex += NUM_NORMAL_PARTICLES;
-    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_PAIRS; i += blockDim.x*gridDim.x) {
+    for (int i = GLOBAL_ID; i < NUM_PAIRS; i += GLOBAL_SIZE) {
         int2 particles = pairParticles[i];
         mixed4 velocity1 = velm[particles.x];
         mixed4 velocity2 = velm[particles.y];
@@ -69,14 +69,17 @@ extern "C" __global__ void integrateDrudeLangevinPart1(mixed4* __restrict__ velm
  * Perform the second step of Langevin integration.
  */
 
-extern "C" __global__ void integrateDrudeLangevinPart2(real4* __restrict__ posq, real4* __restrict__ posqCorrection, const mixed4* __restrict__ posDelta, mixed4* __restrict__ velm, const mixed2* __restrict__ dt) {
+KERNEL void integrateDrudeLangevinPart2(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTRICT posqCorrection, GLOBAL const mixed4* RESTRICT posDelta, GLOBAL mixed4* RESTRICT velm, GLOBAL const mixed2* RESTRICT dt) {
+#ifdef SUPPORTS_DOUBLE_PRECISION
     double invStepSize = 1.0/dt[0].y;
-    int index = blockIdx.x*blockDim.x+threadIdx.x;
+#else
+    float invStepSize = 1.0f/dt[0].y;
+#endif
+    int index = GLOBAL_ID;
     while (index < NUM_ATOMS) {
         mixed4 vel = velm[index];
         if (vel.w != 0) {
 #ifdef USE_MIXED_PRECISION
- 
             real4 pos1 = posq[index];
             real4 pos2 = posqCorrection[index];
             mixed4 pos = make_mixed4(pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z, pos1.w);
@@ -98,17 +101,17 @@ extern "C" __global__ void integrateDrudeLangevinPart2(real4* __restrict__ posq,
 #endif
             velm[index] = vel;
         }
-        index += blockDim.x*gridDim.x;
+        index += GLOBAL_SIZE;
     }
 }
 
 /**
  * Apply hard wall constraints
  */
-extern "C" __global__ void applyHardWallConstraints(real4* __restrict__ posq, real4* __restrict__ posqCorrection, mixed4* __restrict__ velm,
-        const int2* __restrict__ pairParticles, const mixed2* __restrict__ dt, mixed maxDrudeDistance, mixed hardwallscaleDrude) {
+KERNEL void applyHardWallConstraints(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTRICT posqCorrection, GLOBAL mixed4* RESTRICT velm,
+        GLOBAL const int2* RESTRICT pairParticles, GLOBAL const mixed2* RESTRICT dt, mixed maxDrudeDistance, mixed hardwallscaleDrude) {
     mixed stepSize = dt[0].y;
-    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_PAIRS; i += blockDim.x*gridDim.x) {
+    for (int i = GLOBAL_ID; i < NUM_PAIRS; i += GLOBAL_SIZE) {
         int2 particles = pairParticles[i];
 #ifdef USE_MIXED_PRECISION
         real4 posReal1 = posq[particles.x];

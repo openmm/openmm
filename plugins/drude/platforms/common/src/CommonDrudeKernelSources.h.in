@@ -1,5 +1,5 @@
-#ifndef OPENMM_OPENCLDRUDEKERNELSOURCES_H_
-#define OPENMM_OPENCLDRUDEKERNELSOURCES_H_
+#ifndef OPENMM_COMMONDRUDEKERNELSOURCES_H_
+#define OPENMM_COMMONDRUDEKERNELSOURCES_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,16 +32,16 @@
 namespace OpenMM {
 
 /**
- * This class is a central holding place for the source code of OpenCL kernels.
- * The CMake build script inserts declarations into it based on the .cu files in the
+ * This class is a central holding place for the source code of device kernels.
+ * The CMake build script inserts declarations into it based on the .cc files in the
  * kernels subfolder.
  */
 
-class OpenCLDrudeKernelSources {
+class CommonDrudeKernelSources {
 public:
 @KERNEL_FILE_DECLARATIONS@
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_OPENCLDRUDEKERNELSOURCES_H_*/
+#endif /*OPENMM_COMMONDRUDEKERNELSOURCES_H_*/

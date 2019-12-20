@@ -29,13 +29,12 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CudaDrudeKernels.h"
-#include "CudaDrudeKernelSources.h"
+#include "CommonDrudeKernels.h"
+#include "CommonDrudeKernelSources.h"
 #include "openmm/internal/ContextImpl.h"
-#include "CudaBondedUtilities.h"
-#include "CudaForceInfo.h"
-#include "CudaIntegrationUtilities.h"
-#include "CudaKernelSources.h"
+#include "openmm/common/BondedUtilities.h"
+#include "openmm/common/ComputeForceInfo.h"
+#include "openmm/common/IntegrationUtilities.h"
 #include "CommonKernelSources.h"
 #include "SimTKOpenMMRealType.h"
 #include <set>
@@ -43,9 +42,9 @@
 using namespace OpenMM;
 using namespace std;
 
-class CudaDrudeForceInfo : public CudaForceInfo {
+class CommonDrudeForceInfo : public ComputeForceInfo {
 public:
-    CudaDrudeForceInfo(const DrudeForce& force) : force(force) {
+    CommonDrudeForceInfo(const DrudeForce& force) : force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumParticles()+force.getNumScreenedPairs();
@@ -101,17 +100,17 @@ private:
     const DrudeForce& force;
 };
 
-void CudaCalcDrudeForceKernel::initialize(const System& system, const DrudeForce& force) {
-    cu.setAsCurrent();
-    if (cu.getContextIndex() != 0)
+void CommonCalcDrudeForceKernel::initialize(const System& system, const DrudeForce& force) {
+    cc.setAsCurrent();
+    if (cc.getContextIndex() != 0)
         return; // This is run entirely on one device
     int numParticles = force.getNumParticles();
     if (numParticles > 0) {
         // Create the harmonic interaction .
         
         vector<vector<int> > atoms(numParticles, vector<int>(5));
-        particleParams.initialize<float4>(cu, numParticles, "drudeParticleParams");
-        vector<float4> paramVector(numParticles);
+        particleParams.initialize<mm_float4>(cc, numParticles, "drudeParticleParams");
+        vector<mm_float4> paramVector(numParticles);
         for (int i = 0; i < numParticles; i++) {
             double charge, polarizability, aniso12, aniso34;
             force.getParticleParameters(i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], atoms[i][4], charge, polarizability, aniso12, aniso34);
@@ -130,20 +129,20 @@ void CudaCalcDrudeForceKernel::initialize(const System& system, const DrudeForce
                 atoms[i][4] = 0;
                 k2 = 0;
             }
-            paramVector[i] = make_float4((float) k1, (float) k2, (float) k3, 0.0f);
+            paramVector[i] = mm_float4((float) k1, (float) k2, (float) k3, 0.0f);
         }
         particleParams.upload(paramVector);
         map<string, string> replacements;
-        replacements["PARAMS"] = cu.getBondedUtilities().addArgument(particleParams.getDevicePointer(), "float4");
-        cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaDrudeKernelSources::drudeParticleForce, replacements), force.getForceGroup());
+        replacements["PARAMS"] = cc.getBondedUtilities().addArgument(particleParams, "float4");
+        cc.getBondedUtilities().addInteraction(atoms, cc.replaceStrings(CommonDrudeKernelSources::drudeParticleForce, replacements), force.getForceGroup());
     }
     int numPairs = force.getNumScreenedPairs();
     if (numPairs > 0) {
         // Create the screened interaction between dipole pairs.
         
         vector<vector<int> > atoms(numPairs, vector<int>(4));
-        pairParams.initialize<float2>(cu, numPairs, "drudePairParams");
-        vector<float2> paramVector(numPairs);
+        pairParams.initialize<mm_float2>(cc, numPairs, "drudePairParams");
+        vector<mm_float2> paramVector(numPairs);
         for (int i = 0; i < numPairs; i++) {
             int drude1, drude2;
             double thole;
@@ -154,22 +153,22 @@ void CudaCalcDrudeForceKernel::initialize(const System& system, const DrudeForce
             force.getParticleParameters(drude2, atoms[i][2], atoms[i][3], p2, p3, p4, charge2, polarizability2, aniso12, aniso34);
             double screeningScale = thole/pow(polarizability1*polarizability2, 1.0/6.0);
             double energyScale = ONE_4PI_EPS0*charge1*charge2;
-            paramVector[i] = make_float2((float) screeningScale, (float) energyScale);
+            paramVector[i] = mm_float2((float) screeningScale, (float) energyScale);
         }
         pairParams.upload(paramVector);
         map<string, string> replacements;
-        replacements["PARAMS"] = cu.getBondedUtilities().addArgument(pairParams.getDevicePointer(), "float2");
-        cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaDrudeKernelSources::drudePairForce, replacements), force.getForceGroup());
+        replacements["PARAMS"] = cc.getBondedUtilities().addArgument(pairParams, "float2");
+        cc.getBondedUtilities().addInteraction(atoms, cc.replaceStrings(CommonDrudeKernelSources::drudePairForce, replacements), force.getForceGroup());
     }
-    cu.addForce(new CudaDrudeForceInfo(force));
+    cc.addForce(new CommonDrudeForceInfo(force));
 }
 
-double CudaCalcDrudeForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+double CommonCalcDrudeForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
 
-void CudaCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, const DrudeForce& force) {
-    if (cu.getContextIndex() != 0)
+void CommonCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, const DrudeForce& force) {
+    if (cc.getContextIndex() != 0)
         return; // This is run entirely on one device
     
     // Set the particle parameters.
@@ -178,7 +177,7 @@ void CudaCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, con
     if (numParticles > 0) {
         if (!particleParams.isInitialized() || numParticles != particleParams.getSize())
             throw OpenMMException("updateParametersInContext: The number of Drude particles has changed");
-        vector<float4> paramVector(numParticles);
+        vector<mm_float4> paramVector(numParticles);
         for (int i = 0; i < numParticles; i++) {
             int p, p1, p2, p3, p4;
             double charge, polarizability, aniso12, aniso34;
@@ -193,7 +192,7 @@ void CudaCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, con
                 k1 = 0;
             if (p3 == -1 || p4 == -1)
                 k2 = 0;
-            paramVector[i] = make_float4((float) k1, (float) k2, (float) k3, 0.0f);
+            paramVector[i] = mm_float4((float) k1, (float) k2, (float) k3, 0.0f);
         }
         particleParams.upload(paramVector);
     }
@@ -204,7 +203,7 @@ void CudaCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, con
     if (numPairs > 0) {
         if (!pairParams.isInitialized() || numPairs != pairParams.getSize())
             throw OpenMMException("updateParametersInContext: The number of screened pairs has changed");
-        vector<float2> paramVector(numPairs);
+        vector<mm_float2> paramVector(numPairs);
         for (int i = 0; i < numPairs; i++) {
             int drude1, drude2;
             double thole;
@@ -215,21 +214,21 @@ void CudaCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, con
             force.getParticleParameters(drude2, p, p1, p2, p3, p4, charge2, polarizability2, aniso12, aniso34);
             double screeningScale = thole/pow(polarizability1*polarizability2, 1.0/6.0);
             double energyScale = ONE_4PI_EPS0*charge1*charge2;
-            paramVector[i] = make_float2((float) screeningScale, (float) energyScale);
+            paramVector[i] = mm_float2((float) screeningScale, (float) energyScale);
         }
         pairParams.upload(paramVector);
     }
 }
 
-void CudaIntegrateDrudeLangevinStepKernel::initialize(const System& system, const DrudeLangevinIntegrator& integrator, const DrudeForce& force) {
-    cu.getPlatformData().initializeContexts(system);
-    cu.getIntegrationUtilities().initRandomNumberGenerator((unsigned int) integrator.getRandomNumberSeed());
+void CommonIntegrateDrudeLangevinStepKernel::initialize(const System& system, const DrudeLangevinIntegrator& integrator, const DrudeForce& force) {
+    cc.initializeContexts();
+    cc.getIntegrationUtilities().initRandomNumberGenerator((unsigned int) integrator.getRandomNumberSeed());
     
     // Identify particle pairs and ordinary particles.
     
     set<int> particles;
     vector<int> normalParticleVec;
-    vector<int2> pairParticleVec;
+    vector<mm_int2> pairParticleVec;
     for (int i = 0; i < system.getNumParticles(); i++)
         particles.insert(i);
     for (int i = 0; i < force.getNumParticles(); i++) {
@@ -238,11 +237,11 @@ void CudaIntegrateDrudeLangevinStepKernel::initialize(const System& system, cons
         force.getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
         particles.erase(p);
         particles.erase(p1);
-        pairParticleVec.push_back(make_int2(p, p1));
+        pairParticleVec.push_back(mm_int2(p, p1));
     }
     normalParticleVec.insert(normalParticleVec.begin(), particles.begin(), particles.end());
-    normalParticles.initialize<int>(cu, max((int) normalParticleVec.size(), 1), "drudeNormalParticles");
-    pairParticles.initialize<int2>(cu, max((int) pairParticleVec.size(), 1), "drudePairParticles");
+    normalParticles.initialize<int>(cc, max((int) normalParticleVec.size(), 1), "drudeNormalParticles");
+    pairParticles.initialize<mm_int2>(cc, max((int) pairParticleVec.size(), 1), "drudePairParticles");
     if (normalParticleVec.size() > 0)
         normalParticles.upload(normalParticleVec);
     if (pairParticleVec.size() > 0)
@@ -251,22 +250,53 @@ void CudaIntegrateDrudeLangevinStepKernel::initialize(const System& system, cons
     // Create kernels.
     
     map<string, string> defines;
-    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
-    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-    defines["NUM_NORMAL_PARTICLES"] = cu.intToString(normalParticleVec.size());
-    defines["NUM_PAIRS"] = cu.intToString(pairParticleVec.size());
+    defines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+    defines["NUM_NORMAL_PARTICLES"] = cc.intToString(normalParticleVec.size());
+    defines["NUM_PAIRS"] = cc.intToString(pairParticleVec.size());
     map<string, string> replacements;
-    CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaDrudeKernelSources::drudeLangevin, defines, "");
-    kernel1 = cu.getKernel(module, "integrateDrudeLangevinPart1");
-    kernel2 = cu.getKernel(module, "integrateDrudeLangevinPart2");
-    hardwallKernel = cu.getKernel(module, "applyHardWallConstraints");
+    ComputeProgram program = cc.compileProgram(CommonDrudeKernelSources::drudeLangevin, defines);
+    kernel1 = program->createKernel("integrateDrudeLangevinPart1");
+    kernel2 = program->createKernel("integrateDrudeLangevinPart2");
+    hardwallKernel = program->createKernel("applyHardWallConstraints");
     prevStepSize = -1.0;
 }
 
-void CudaIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
-    cu.setAsCurrent();
-    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
-    int numAtoms = cu.getNumAtoms();
+void CommonIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
+    cc.setAsCurrent();
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    int numAtoms = cc.getNumAtoms();
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        kernel1->addArg(cc.getVelm());
+        kernel1->addArg(cc.getLongForceBuffer());
+        kernel1->addArg(integration.getPosDelta());
+        kernel1->addArg(normalParticles);
+        kernel1->addArg(pairParticles);
+        kernel1->addArg(integration.getStepSize());
+        for (int i = 0; i < 6; i++)
+            kernel1->addArg();
+        kernel1->addArg(integration.getRandom());
+        kernel1->addArg();
+        kernel2->addArg(cc.getPosq());
+        if (cc.getUseMixedPrecision())
+            kernel2->addArg(cc.getPosqCorrection());
+        else
+            kernel2->addArg(NULL);
+        kernel2->addArg(integration.getPosDelta());
+        kernel2->addArg(cc.getVelm());
+        kernel2->addArg(integration.getStepSize());
+        hardwallKernel->addArg(cc.getPosq());
+        if (cc.getUseMixedPrecision())
+            hardwallKernel->addArg(cc.getPosqCorrection());
+        else
+            hardwallKernel->addArg(NULL);
+        hardwallKernel->addArg(cc.getVelm());
+        hardwallKernel->addArg(pairParticles);
+        hardwallKernel->addArg(integration.getStepSize());
+        hardwallKernel->addArg();
+        hardwallKernel->addArg();
+    }
     
     // Compute integrator coefficients.
     
@@ -280,56 +310,41 @@ void CudaIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const D
     double maxDrudeDistance = integrator.getMaxDrudeDistance();
     double hardwallscaleDrude = sqrt(BOLTZ*integrator.getDrudeTemperature());
     if (stepSize != prevStepSize) {
-        if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
-            double2 ss = make_double2(0, stepSize);
+        if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
+            mm_double2 ss = mm_double2(0, stepSize);
             integration.getStepSize().upload(&ss);
         }
         else {
-            float2 ss = make_float2(0, (float) stepSize);
+            mm_float2 ss = mm_float2(0, (float) stepSize);
             integration.getStepSize().upload(&ss);
         }
         prevStepSize = stepSize;
     }
-    
-    // Create appropriate pointer for the precision mode.
-    
-    float vscaleFloat = (float) vscale;
-    float fscaleFloat = (float) fscale;
-    float noisescaleFloat = (float) noisescale;
-    float vscaleDrudeFloat = (float) vscaleDrude;
-    float fscaleDrudeFloat = (float) fscaleDrude;
-    float noisescaleDrudeFloat = (float) noisescaleDrude;
-    float maxDrudeDistanceFloat =(float) maxDrudeDistance;
-    float hardwallscaleDrudeFloat = (float) hardwallscaleDrude;
-    void *vscalePtr, *fscalePtr, *noisescalePtr, *vscaleDrudePtr, *fscaleDrudePtr, *noisescaleDrudePtr, *maxDrudeDistancePtr, *hardwallscaleDrudePtr;
-    if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
-        vscalePtr = &vscale;
-        fscalePtr = &fscale;
-        noisescalePtr = &noisescale;
-        vscaleDrudePtr = &vscaleDrude;
-        fscaleDrudePtr = &fscaleDrude;
-        noisescaleDrudePtr = &noisescaleDrude;
-        maxDrudeDistancePtr = &maxDrudeDistance;
-        hardwallscaleDrudePtr = &hardwallscaleDrude;
+    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
+            kernel1->setArg(6, vscale);
+            kernel1->setArg(7, fscale);
+            kernel1->setArg(8, noisescale);
+            kernel1->setArg(9, vscaleDrude);
+            kernel1->setArg(10, fscaleDrude);
+            kernel1->setArg(11, noisescaleDrude);
+            hardwallKernel->setArg(5, maxDrudeDistance);
+            hardwallKernel->setArg(6, hardwallscaleDrude);
     }
     else {
-        vscalePtr = &vscaleFloat;
-        fscalePtr = &fscaleFloat;
-        noisescalePtr = &noisescaleFloat;
-        vscaleDrudePtr = &vscaleDrudeFloat;
-        fscaleDrudePtr = &fscaleDrudeFloat;
-        noisescaleDrudePtr = &noisescaleDrudeFloat;
-        maxDrudeDistancePtr = &maxDrudeDistanceFloat;
-        hardwallscaleDrudePtr = &hardwallscaleDrudeFloat;
+            kernel1->setArg(6, (float) vscale);
+            kernel1->setArg(7, (float) fscale);
+            kernel1->setArg(8, (float) noisescale);
+            kernel1->setArg(9, (float) vscaleDrude);
+            kernel1->setArg(10, (float) fscaleDrude);
+            kernel1->setArg(11, (float) noisescaleDrude);
+            hardwallKernel->setArg(5, (float) maxDrudeDistance);
+            hardwallKernel->setArg(6, (float) hardwallscaleDrude);
     }
 
     // Call the first integration kernel.
 
-    int randomIndex = integration.prepareRandomNumbers(normalParticles.getSize()+2*pairParticles.getSize());
-    void* args1[] = {&cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer(),
-            &normalParticles.getDevicePointer(), &pairParticles.getDevicePointer(), &integration.getStepSize().getDevicePointer(),
-            vscalePtr, fscalePtr, noisescalePtr, vscaleDrudePtr, fscaleDrudePtr, noisescaleDrudePtr, &integration.getRandom().getDevicePointer(), &randomIndex};
-    cu.executeKernel(kernel1, args1, numAtoms);
+    kernel1->setArg(13, integration.prepareRandomNumbers(normalParticles.getSize()+2*pairParticles.getSize()));
+    kernel1->execute(numAtoms);
 
     // Apply constraints.
 
@@ -337,39 +352,33 @@ void CudaIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const D
 
     // Call the second integration kernel.
 
-    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
-    void* args2[] = {&cu.getPosq().getDevicePointer(), &posCorrection, &integration.getPosDelta().getDevicePointer(),
-            &cu.getVelm().getDevicePointer(), &integration.getStepSize().getDevicePointer()};
-    cu.executeKernel(kernel2, args2, numAtoms);
+    kernel2->execute(numAtoms);
     
     // Apply hard wall constraints.
     
-    if (maxDrudeDistance > 0) {
-        void* hardwallArgs[] = {&cu.getPosq().getDevicePointer(), &posCorrection, &cu.getVelm().getDevicePointer(),
-                &pairParticles.getDevicePointer(), &integration.getStepSize().getDevicePointer(), maxDrudeDistancePtr, hardwallscaleDrudePtr};
-        cu.executeKernel(hardwallKernel, hardwallArgs, pairParticles.getSize());
-    }
+    if (maxDrudeDistance > 0)
+        hardwallKernel->execute(pairParticles.getSize());
     integration.computeVirtualSites();
 
     // Update the time and step count.
 
-    cu.setTime(cu.getTime()+stepSize);
-    cu.setStepCount(cu.getStepCount()+1);
-    cu.reorderAtoms();
+    cc.setTime(cc.getTime()+stepSize);
+    cc.setStepCount(cc.getStepCount()+1);
+    cc.reorderAtoms();
 }
 
-double CudaIntegrateDrudeLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
-    return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
+double CommonIntegrateDrudeLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
+    return cc.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
-CudaIntegrateDrudeSCFStepKernel::~CudaIntegrateDrudeSCFStepKernel() {
+CommonIntegrateDrudeSCFStepKernel::~CommonIntegrateDrudeSCFStepKernel() {
     if (minimizerPos != NULL)
         lbfgs_free(minimizerPos);
 }
 
-void CudaIntegrateDrudeSCFStepKernel::initialize(const System& system, const DrudeSCFIntegrator& integrator, const DrudeForce& force) {
-    cu.getPlatformData().initializeContexts(system);
-    cu.setAsCurrent();
+void CommonIntegrateDrudeSCFStepKernel::initialize(const System& system, const DrudeSCFIntegrator& integrator, const DrudeForce& force) {
+    cc.initializeContexts();
+    cc.setAsCurrent();
 
     // Identify Drude particles.
     
@@ -390,42 +399,53 @@ void CudaIntegrateDrudeSCFStepKernel::initialize(const System& system, const Dru
 
     // Create the kernels.
     
-    map<string, string> defines;
-    defines["NUM_ATOMS"] = cu.intToString(cu.getNumAtoms());
-    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-    CUmodule module = cu.createModule(CommonKernelSources::verlet, defines, "");
-    kernel1 = cu.getKernel(module, "integrateVerletPart1");
-    kernel2 = cu.getKernel(module, "integrateVerletPart2");
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::verlet);
+    kernel1 = program->createKernel("integrateVerletPart1");
+    kernel2 = program->createKernel("integrateVerletPart2");
     prevStepSize = -1.0;
 }
 
-void CudaIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
-    cu.setAsCurrent();
-    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
-    int numAtoms = cu.getNumAtoms();
-    int paddedNumAtoms = cu.getPaddedNumAtoms();
+void CommonIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
+    cc.setAsCurrent();
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    int numAtoms = cc.getNumAtoms();
     double dt = integrator.getStepSize();
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        kernel1->addArg(numAtoms);
+        kernel1->addArg(cc.getPaddedNumAtoms());
+        kernel1->addArg(cc.getIntegrationUtilities().getStepSize());
+        kernel1->addArg(cc.getPosq());
+        kernel1->addArg(cc.getVelm());
+        kernel1->addArg(cc.getLongForceBuffer());
+        kernel1->addArg(integration.getPosDelta());
+        if (cc.getUseMixedPrecision())
+            kernel1->addArg(cc.getPosqCorrection());
+        kernel2->addArg(numAtoms);
+        kernel2->addArg(cc.getIntegrationUtilities().getStepSize());
+        kernel2->addArg(cc.getPosq());
+        kernel2->addArg(cc.getVelm());
+        kernel2->addArg(integration.getPosDelta());
+        if (cc.getUseMixedPrecision())
+            kernel2->addArg(cc.getPosqCorrection());
+    }
     if (dt != prevStepSize) {
-        if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
-            vector<double2> stepSizeVec(1);
-            stepSizeVec[0] = make_double2(dt, dt);
-            cu.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
+        if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
+            vector<mm_double2> stepSizeVec(1);
+            stepSizeVec[0] = mm_double2(dt, dt);
+            cc.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
         }
         else {
-            vector<float2> stepSizeVec(1);
-            stepSizeVec[0] = make_float2((float) dt, (float) dt);
-            cu.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
+            vector<mm_float2> stepSizeVec(1);
+            stepSizeVec[0] = mm_float2((float) dt, (float) dt);
+            cc.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
         }
         prevStepSize = dt;
     }
 
     // Call the first integration kernel.
 
-    vector<void*> args1 = {&numAtoms, &paddedNumAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(),
-            &cu.getVelm().getDevicePointer(), &cu.getForce().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
-    if (cu.getUseMixedPrecision())
-        args1.push_back(&cu.getPosqCorrection().getDevicePointer());
-    cu.executeKernel(kernel1, args1.data(), numAtoms);
+    kernel1->execute(numAtoms);
 
     // Apply constraints.
 
@@ -433,11 +453,7 @@ void CudaIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeS
 
     // Call the second integration kernel.
 
-    vector<void*> args2 = {&numAtoms, &cu.getIntegrationUtilities().getStepSize().getDevicePointer(), &cu.getPosq().getDevicePointer(),
-            &cu.getVelm().getDevicePointer(), &integration.getPosDelta().getDevicePointer()};
-    if (cu.getUseMixedPrecision())
-        args2.push_back(&cu.getPosqCorrection().getDevicePointer());
-    cu.executeKernel(kernel2, args2.data(), numAtoms);
+    kernel2->execute(numAtoms);
 
     // Update the positions of virtual sites and Drude particles.
 
@@ -446,59 +462,65 @@ void CudaIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeS
 
     // Update the time and step count.
 
-    cu.setTime(cu.getTime()+dt);
-    cu.setStepCount(cu.getStepCount()+1);
-    cu.reorderAtoms();
+    cc.setTime(cc.getTime()+dt);
+    cc.setStepCount(cc.getStepCount()+1);
+    cc.reorderAtoms();
+    
+    // Reduce UI lag.
+    
+#ifdef WIN32
+    cc.flushQueue();
+#endif
 }
 
-double CudaIntegrateDrudeSCFStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
-    return cu.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
+double CommonIntegrateDrudeSCFStepKernel::computeKineticEnergy(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
+    return cc.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
 struct MinimizerData {
     ContextImpl& context;
-    CudaContext& cu;
+    ComputeContext& cc;
     vector<int>& drudeParticles;
-    MinimizerData(ContextImpl& context, CudaContext& cu, vector<int>& drudeParticles) : context(context), cu(cu), drudeParticles(drudeParticles) {}
+    MinimizerData(ContextImpl& context, ComputeContext& cc, vector<int>& drudeParticles) : context(context), cc(cc), drudeParticles(drudeParticles) {}
 };
 
 static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step) {
     MinimizerData* data = reinterpret_cast<MinimizerData*>(instance);
     ContextImpl& context = data->context;
-    CudaContext& cu = data->cu;
+    ComputeContext& cc = data->cc;
     vector<int>& drudeParticles = data->drudeParticles;
     int numDrudeParticles = drudeParticles.size();
 
     // Set the particle positions.
     
-    cu.getPosq().download(cu.getPinnedBuffer());
-    if (cu.getUseDoublePrecision()) {
-        double4* posq = (double4*) cu.getPinnedBuffer();
+    cc.getPosq().download(cc.getPinnedBuffer());
+    if (cc.getUseDoublePrecision()) {
+        mm_double4* posq = (mm_double4*) cc.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            double4& p = posq[drudeParticles[i]];
+            mm_double4& p = posq[drudeParticles[i]];
             p.x = x[3*i];
             p.y = x[3*i+1];
             p.z = x[3*i+2];
         }
     }
     else {
-        float4* posq = (float4*) cu.getPinnedBuffer();
+        mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            float4& p = posq[drudeParticles[i]];
+            mm_float4& p = posq[drudeParticles[i]];
             p.x = x[3*i];
             p.y = x[3*i+1];
             p.z = x[3*i+2];
         }
     }
-    cu.getPosq().upload(cu.getPinnedBuffer());
+    cc.getPosq().upload(cc.getPinnedBuffer());
 
     // Compute the forces and energy for this configuration.
 
     double energy = context.calcForcesAndEnergy(true, true);
-    long long* force = (long long*) cu.getPinnedBuffer();
-    cu.getForce().download(force);
+    long long* force = (long long*) cc.getPinnedBuffer();
+    cc.getLongForceBuffer().download(force);
     double forceScale = -1.0/0x100000000;
-    int paddedNumAtoms = cu.getPaddedNumAtoms();
+    int paddedNumAtoms = cc.getPaddedNumAtoms();
     for (int i = 0; i < numDrudeParticles; ++i) {
         int index = drudeParticles[i];
         g[3*i] = forceScale*force[index];
@@ -508,24 +530,24 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
     return energy;
 }
 
-void CudaIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tolerance) {
+void CommonIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tolerance) {
     // Record the initial positions.
 
     int numDrudeParticles = drudeParticles.size();
-    cu.getPosq().download(cu.getPinnedBuffer());
-    if (cu.getUseDoublePrecision()) {
-        double4* posq = (double4*) cu.getPinnedBuffer();
+    cc.getPosq().download(cc.getPinnedBuffer());
+    if (cc.getUseDoublePrecision()) {
+        mm_double4* posq = (mm_double4*) cc.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            double4 p = posq[drudeParticles[i]];
+            mm_double4 p = posq[drudeParticles[i]];
             minimizerPos[3*i] = p.x;
             minimizerPos[3*i+1] = p.y;
             minimizerPos[3*i+2] = p.z;
         }
     }
     else {
-        float4* posq = (float4*) cu.getPinnedBuffer();
+        mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
         for (int i = 0; i < numDrudeParticles; ++i) {
-            float4 p = posq[drudeParticles[i]];
+            mm_float4 p = posq[drudeParticles[i]];
             minimizerPos[3*i] = p.x;
             minimizerPos[3*i+1] = p.y;
             minimizerPos[3*i+2] = p.z;
@@ -545,6 +567,6 @@ void CudaIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tole
     // Perform the minimization.
 
     lbfgsfloatval_t fx;
-    MinimizerData data(context, cu, drudeParticles);
+    MinimizerData data(context, cc, drudeParticles);
     lbfgs(numDrudeParticles*3, minimizerPos, &fx, evaluate, NULL, &data, &minimizerParams);
 }
