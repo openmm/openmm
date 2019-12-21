@@ -53,6 +53,7 @@
 #include "SimTKOpenMMUtilities.h"
 #include "jama_eig.h"
 #include <algorithm>
+#include <assert.h>
 #include <cmath>
 #include <iterator>
 #include <set>
@@ -413,7 +414,7 @@ void OpenCLUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, co
 }
 
 void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
-    int version = 2;
+    int version = 3;
     stream.write((char*) &version, sizeof(int));
     int precision = (cl.getUseDoublePrecision() ? 2 : cl.getUseMixedPrecision() ? 1 : 0);
     stream.write((char*) &precision, sizeof(int));
@@ -444,7 +445,7 @@ void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream
 void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
     int version;
     stream.read((char*) &version, sizeof(int));
-    if (version != 2)
+    if (version != 3)
         throw OpenMMException("Checkpoint was created with a different version of OpenMM");
     int precision;
     stream.read((char*) &precision, sizeof(int));
@@ -7391,6 +7392,155 @@ double OpenCLIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& contex
     return cl.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
+void OpenCLIntegrateVelocityVerletStepKernel::initialize(const System& system, const NoseHooverIntegrator& integrator) {
+    cl.getPlatformData().initializeContexts(system);
+    map<string, string> defines;
+    defines["BOLTZ"] = cl.doubleToString(BOLTZ);
+    cl::Program program = cl.createProgram(OpenCLKernelSources::velocityVerlet, defines, "");
+    kernel1 = cl::Kernel(program, "integrateVelocityVerletPart1");
+    kernel2 = cl::Kernel(program, "integrateVelocityVerletPart2");
+    kernel3 = cl::Kernel(program, "integrateVelocityVerletPart3");
+    kernelHardWall = cl::Kernel(program, "integrateVelocityVerletHardWall");
+    prevMaxPairDistance = (cl_float) -1.0;
+    maxPairDistanceBuffer.initialize<cl_float>(cl, 1, "maxPairDistanceBuffer");
+}
+
+void OpenCLIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
+    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
+    int paddedNumAtoms = cl.getPaddedNumAtoms();
+    double dt = integrator.getStepSize();
+    cl.getIntegrationUtilities().setNextStepSize(dt);
+
+    if( !forcesAreValid ) context.calcForcesAndEnergy(true, false);
+
+    const auto& atomList = integrator.getAllThermostatedIndividualParticles();
+    const auto& pairList = integrator.getAllThermostatedPairs();
+    int numAtoms = atomList.size();
+    int numPairs = pairList.size();
+    int numParticles = numAtoms + 2*numPairs;
+    float maxPairDistance = integrator.getMaximumPairDistance();
+    // Make sure atom and pair metadata is uploaded and has the correct dimensions
+    if (prevMaxPairDistance != maxPairDistance) {
+        std::vector<float> tmp(1, maxPairDistance);
+        maxPairDistanceBuffer.upload(tmp);
+        prevMaxPairDistance = maxPairDistance;
+    }
+    if (numAtoms !=0 && (!atomListBuffer.isInitialized() || atomListBuffer.getSize() != numAtoms)) {
+        if (atomListBuffer.isInitialized()) {
+            atomListBuffer.resize(atomList.size());
+        } else {
+            atomListBuffer.initialize<cl_int>(cl, atomList.size(), "atomListBuffer");
+        }
+        atomListBuffer.upload(atomList);
+    }
+    if (numPairs !=0 && (!pairListBuffer.isInitialized() || pairListBuffer.getSize() != numPairs)) {
+        if (pairListBuffer.isInitialized()) {
+            pairListBuffer.resize(pairList.size());
+            pairTemperatureBuffer.resize(pairList.size());
+        } else {
+            pairListBuffer.initialize<mm_int2>(cl, pairList.size(), "pairListBuffer");
+            pairTemperatureBuffer.initialize<cl_float>(cl, pairList.size(), "pairTemperatureBuffer");
+        }
+        std::vector<mm_int2> tmp;
+        std::vector<float> tmp2;
+        for(const auto &pair : pairList) {
+            tmp.push_back(mm_int2(std::get<0>(pair), std::get<1>(pair)));
+            tmp2.push_back(std::get<2>(pair));
+        }
+        pairListBuffer.upload(tmp);
+        pairTemperatureBuffer.upload(tmp2);
+    }
+
+//// Call the first integration kernel.
+    kernel1.setArg<cl_int>(0, numAtoms);
+    kernel1.setArg<cl_int>(1, numPairs);
+    kernel1.setArg<cl_int>(2, paddedNumAtoms);
+    kernel1.setArg<cl::Buffer>(3, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+    setPosqCorrectionArg(cl, kernel1, 5);
+    kernel1.setArg<cl::Buffer>(6, cl.getVelm().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(7, cl.getForce().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(8, integration.getPosDelta().getDeviceBuffer());
+    if (numAtoms > 0) {
+        kernel1.setArg<cl::Buffer>(9, atomListBuffer.getDeviceBuffer());
+    } else {
+        kernel1.setArg<void*>(9, NULL);
+    }
+    if (numPairs > 0) {
+        kernel1.setArg<cl::Buffer>(10, pairListBuffer.getDeviceBuffer());
+    } else {
+        kernel1.setArg<void*>(10, NULL);
+    }
+    cl.executeKernel(kernel1, std::max(numAtoms, numPairs));
+
+    //// Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance());
+
+    //// Call the second integration kernel.
+    kernel2.setArg<cl_int>(0, numParticles);
+    kernel2.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+    setPosqCorrectionArg(cl, kernel2, 3);
+    kernel2.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
+    cl.executeKernel(kernel2, numParticles);
+
+    if (numPairs > 0) {
+        //// Enforce hard wall constraint
+        kernelHardWall.setArg<cl_int>(0, numPairs);
+        kernelHardWall.setArg<cl::Buffer>(1, maxPairDistanceBuffer.getDeviceBuffer());
+        kernelHardWall.setArg<cl::Buffer>(2, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+        kernelHardWall.setArg<cl::Buffer>(3, cl.getPosq().getDeviceBuffer());
+        setPosqCorrectionArg(cl, kernelHardWall, 4);
+        kernelHardWall.setArg<cl::Buffer>(5, cl.getVelm().getDeviceBuffer());
+        kernelHardWall.setArg<cl::Buffer>(6, pairListBuffer.getDeviceBuffer());
+        kernelHardWall.setArg<cl::Buffer>(7, pairTemperatureBuffer.getDeviceBuffer());
+        cl.executeKernel(kernelHardWall, numPairs);
+    }
+
+
+    integration.computeVirtualSites();
+
+    //// Update forces
+    context.calcForcesAndEnergy(true, false);
+    forcesAreValid = true;
+
+    //// Call the third integration kernel.
+    kernel3.setArg<cl_int>(0, numAtoms);
+    kernel3.setArg<cl_int>(1, numPairs);
+    kernel3.setArg<cl_int>(2, paddedNumAtoms);
+    kernel3.setArg<cl::Buffer>(3, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+    kernel3.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+    setPosqCorrectionArg(cl, kernel3, 5);
+    kernel3.setArg<cl::Buffer>(6, cl.getVelm().getDeviceBuffer());
+    kernel3.setArg<cl::Buffer>(7, cl.getForce().getDeviceBuffer());
+    kernel3.setArg<cl::Buffer>(8, integration.getPosDelta().getDeviceBuffer());
+    if (numAtoms > 0) {
+        kernel3.setArg<cl::Buffer>(9, atomListBuffer.getDeviceBuffer());
+    } else {
+        kernel3.setArg<void*>(9, NULL);
+    }
+    if (numPairs > 0) {
+        kernel3.setArg<cl::Buffer>(10, pairListBuffer.getDeviceBuffer());
+    } else {
+        kernel3.setArg<void*>(10, NULL);
+    }
+    cl.executeKernel(kernel3, std::max(numAtoms, numPairs));
+
+    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+
+    //// Update the time and step count.
+
+    cl.setTime(cl.getTime()+dt);
+    cl.setStepCount(cl.getStepCount()+1);
+    cl.reorderAtoms();
+}
+
+double OpenCLIntegrateVelocityVerletStepKernel::computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) {
+    return cl.getIntegrationUtilities().computeKineticEnergy(0);
+}
+
 void OpenCLIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
     cl.getPlatformData().initializeContexts(system);
     cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
@@ -8775,6 +8925,388 @@ void OpenCLApplyAndersenThermostatKernel::execute(ContextImpl& context) {
     kernel.setArg<cl_float>(1, (cl_float) (BOLTZ*context.getParameter(AndersenThermostat::Temperature())));
     kernel.setArg<cl_uint>(5, cl.getIntegrationUtilities().prepareRandomNumbers(cl.getPaddedNumAtoms()));
     cl.executeKernel(kernel, cl.getNumAtoms());
+}
+void OpenCLNoseHooverChainKernel::initialize() {
+
+    bool useDouble = cl.getUseDoublePrecision() || cl.getUseMixedPrecision();
+
+    map<string, string> defines;
+    defines["BEGIN_YS_LOOP"] = "const real arr[1] = {1.0}; for(int i=0;i<1;++i) { const real ys = arr[i];";
+    defines["END_YS_LOOP"] = "}";
+    cl::Program program = cl.createProgram(OpenCLKernelSources::noseHooverChain, defines);
+    propagateKernels[1] = cl::Kernel(program, "propagateNoseHooverChain");
+    defines["BEGIN_YS_LOOP"] = "const real arr[3] = {0.828981543588751, -0.657963087177502, 0.828981543588751}; for(int i=0;i<3;++i) { const real ys = arr[i];";
+    program = cl.createProgram(OpenCLKernelSources::noseHooverChain, defines);
+    propagateKernels[3] = cl::Kernel(program, "propagateNoseHooverChain");
+    defines["BEGIN_YS_LOOP"] = "const real arr[5] = {0.2967324292201065, 0.2967324292201065, -0.186929716880426, 0.2967324292201065, 0.2967324292201065}; for(int i=0;i<5;++i) { const real ys = arr[i];";
+    program = cl.createProgram(OpenCLKernelSources::noseHooverChain, defines);
+    propagateKernels[5] = cl::Kernel(program, "propagateNoseHooverChain");
+    program = cl.createProgram(OpenCLKernelSources::noseHooverChain, defines);
+    reduceEnergyKernel = cl::Kernel(program, "reduceEnergyPair");
+
+    computeHeatBathEnergyKernel = cl::Kernel(program, "computeHeatBathEnergy");
+    computeAtomsKineticEnergyKernel = cl::Kernel(program, "computeAtomsKineticEnergy");
+    computePairsKineticEnergyKernel = cl::Kernel(program, "computePairsKineticEnergy");
+    scaleAtomsVelocitiesKernel = cl::Kernel(program, "scaleAtomsVelocities");
+    scalePairsVelocitiesKernel = cl::Kernel(program, "scalePairsVelocities");
+    int energyBufferSize = cl.getEnergyBuffer().getSize();
+    if (cl.getUseDoublePrecision() || cl.getUseMixedPrecision()) {
+        energyBuffer.initialize<mm_double2>(cl, energyBufferSize, "energyBuffer");
+    } else {
+        energyBuffer.initialize<mm_float2>(cl, energyBufferSize, "energyBuffer");
+    }
+}
+
+std::pair<double, double> OpenCLNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> kineticEnergies, double timeStep) {
+
+    bool useDouble = cl.getUseDoublePrecision() || cl.getUseMixedPrecision();
+
+    int chainID = nhc.getChainID();
+    int nAtoms = nhc.getThermostatedAtoms().size();
+    int nPairs = nhc.getThermostatedPairs().size();
+    int chainLength = nhc.getChainLength();
+    int numYS = nhc.getNumYoshidaSuzukiTimeSteps();
+    int numMTS = nhc.getNumMultiTimeSteps();
+    int numDOFs = nhc.getNumDegreesOfFreedom();
+    double temperature = nhc.getTemperature();
+    double frequency = nhc.getCollisionFrequency();
+    double relativeTemperature = nhc.getRelativeTemperature();
+    double relativeFrequency = nhc.getRelativeCollisionFrequency();
+
+    if (numYS != 1 && numYS != 3 && numYS != 5) {
+        throw OpenMMException("Number of Yoshida Suzuki time steps has to be 1, 3, or 5.");
+    }
+
+    auto & chainState = cl.getIntegrationUtilities().getNoseHooverChainState();
+
+    if (!scaleFactorBuffer.isInitialized() ||scaleFactorBuffer.getSize() == 0) {
+        if(useDouble){
+            std::vector<mm_double2> zeros{{0,0}};
+            if (scaleFactorBuffer.isInitialized()) {
+                scaleFactorBuffer.resize(1);
+            } else {
+                scaleFactorBuffer.initialize<mm_double2>(cl, 1, "scaleFactorBuffer");
+            }
+            scaleFactorBuffer.upload(zeros);
+        } else {
+            std::vector<mm_float2> zeros{{0,0}};
+            if (scaleFactorBuffer.isInitialized()) {
+                scaleFactorBuffer.resize(1);
+            } else {
+                scaleFactorBuffer.initialize<mm_float2>(cl, 1, "scaleFactorBuffer");
+            }
+            scaleFactorBuffer.upload(zeros);
+        }
+    }
+    if (!chainForces.isInitialized() || !chainMasses.isInitialized() ){
+        if(useDouble){
+            std::vector<cl_double> zeros(chainLength,0);
+            if (chainForces.isInitialized()) {
+                chainMasses.resize(chainLength);
+                chainForces.resize(chainLength);
+            } else {
+                chainMasses.initialize<cl_double>(cl, chainLength, "chainMasses");
+                chainForces.initialize<cl_double>(cl, chainLength, "chainForces");
+            }
+            chainMasses.upload(zeros);
+            chainForces.upload(zeros);
+        } else {
+            std::vector<cl_float> zeros(chainLength,0);
+            if (chainForces.isInitialized()) {
+                chainMasses.resize(chainLength);
+                chainForces.resize(chainLength);
+            } else {
+                chainMasses.initialize<cl_float>(cl, chainLength, "chainMasses");
+                chainForces.initialize<cl_float>(cl, chainLength, "chainForces");
+            }
+            chainMasses.upload(zeros);
+            chainForces.upload(zeros);
+        }
+    }
+    if (chainForces.getSize() < chainLength) chainMasses.resize(chainLength);
+    if (chainMasses.getSize() < chainLength) chainMasses.resize(chainLength);
+
+    float timeStepFloat = (float) timeStep;
+    // N.B. We ignore the incoming kineticEnergy and grab it from the device buffer instead
+    if (nAtoms) {
+        if (!chainState.count(2*chainID))  chainState[2*chainID] = OpenCLArray();
+        if (chainState.at(2*chainID).getSize() != chainLength) {
+            // We need to upload the OpenCL array
+            if(useDouble){
+                if (chainState.at(2*chainID).isInitialized()) {
+                    chainState.at(2*chainID).resize(chainLength);
+                } else {
+                    chainState.at(2*chainID).initialize<mm_double2>(cl, chainLength, "chainState" + std::to_string(2*chainID));
+                }
+                std::vector<mm_double2> zeros(chainLength, mm_double2(0.0, 0.0));
+                chainState.at(2*chainID).upload(zeros.data());
+            } else {
+                if (chainState.at(2*chainID).isInitialized()) {
+                    chainState.at(2*chainID).resize(chainLength);
+                } else {
+                    chainState.at(2*chainID).initialize<mm_float2>(cl, chainLength, "chainState" + std::to_string(2*chainID));
+                }
+                std::vector<mm_float2> zeros(chainLength, mm_float2(0.0f, 0.0f));
+                chainState.at(2*chainID).upload(zeros.data());
+            }
+        }
+        int chainType = 0;
+        double kT = BOLTZ * temperature;
+        float kTfloat = (float) kT;
+        float frequencyFloat = (float) frequency;
+        propagateKernels[numYS].setArg<cl::Buffer>(0, chainState[2*chainID].getDeviceBuffer());
+        propagateKernels[numYS].setArg<cl::Buffer>(1, kineticEnergyBuffer.getDeviceBuffer());
+        propagateKernels[numYS].setArg<cl::Buffer>(2, scaleFactorBuffer.getDeviceBuffer());
+        propagateKernels[numYS].setArg<cl::Buffer>(3, chainMasses.getDeviceBuffer());
+        propagateKernels[numYS].setArg<cl::Buffer>(4, chainForces.getDeviceBuffer());
+        propagateKernels[numYS].setArg<cl_int>(5, chainType);
+        propagateKernels[numYS].setArg<cl_int>(6, chainLength);
+        propagateKernels[numYS].setArg<cl_int>(7, numMTS);
+        propagateKernels[numYS].setArg<cl_int>(8, numDOFs);
+        propagateKernels[numYS].setArg<cl_float>(9, timeStepFloat);
+        if (useDouble) 
+            propagateKernels[numYS].setArg<cl_double>(10, kT);
+        else
+            propagateKernels[numYS].setArg<cl_float>(10, kTfloat);
+        propagateKernels[numYS].setArg<cl_float>(11, frequencyFloat);
+        cl.executeKernel(propagateKernels[numYS], 1, 1);
+    }
+    if (nPairs) {
+        if (!chainState.count(2*chainID+1)) chainState[2*chainID+1] = OpenCLArray();
+        if (chainState.at(2*chainID+1).getSize() != chainLength) {
+            // We need to upload the OpenCL array
+            if(useDouble){
+                if (chainState.at(2*chainID+1).isInitialized()) {
+                    chainState.at(2*chainID+1).resize(chainLength);
+                } else {
+                    chainState.at(2*chainID+1).initialize<mm_double2>(cl, chainLength, "chainState" + std::to_string(2*chainID+1));
+                }
+                std::vector<mm_double2> zeros(chainLength, mm_double2(0.0, 0.0));
+                chainState.at(2*chainID+1).upload(zeros.data());
+            } else {
+                if (chainState.at(2*chainID+1).isInitialized()) {
+                    chainState.at(2*chainID+1).resize(chainLength);
+                } else {
+                    chainState.at(2*chainID+1).initialize<mm_float2>(cl, chainLength, "chainState" + std::to_string(2*chainID+1));
+                }
+                std::vector<mm_float2> zeros(chainLength, mm_float2(0.0f, 0.0f));
+                chainState.at(2*chainID+1).upload(zeros.data());
+            }
+        }
+        int chainType = 1;
+        double kT = BOLTZ * relativeTemperature;
+        int ndf = 3*nPairs;
+        float kTfloat = (float) kT;
+        float frequencyFloat = (float) relativeFrequency;
+        propagateKernels[numYS].setArg<cl::Buffer>(0, chainState[2*chainID+1].getDeviceBuffer());
+        propagateKernels[numYS].setArg<cl::Buffer>(1, kineticEnergyBuffer.getDeviceBuffer());
+        propagateKernels[numYS].setArg<cl::Buffer>(2, scaleFactorBuffer.getDeviceBuffer());
+        propagateKernels[numYS].setArg<cl::Buffer>(3, chainMasses.getDeviceBuffer());
+        propagateKernels[numYS].setArg<cl::Buffer>(4, chainForces.getDeviceBuffer());
+        propagateKernels[numYS].setArg<cl_int>(5, chainType);
+        propagateKernels[numYS].setArg<cl_int>(6, chainLength);
+        propagateKernels[numYS].setArg<cl_int>(7, numMTS);
+        propagateKernels[numYS].setArg<cl_int>(8, ndf);
+        propagateKernels[numYS].setArg<cl_float>(9, timeStepFloat);
+        if (useDouble) 
+            propagateKernels[numYS].setArg<cl_double>(10, kT);
+        else
+            propagateKernels[numYS].setArg<cl_float>(10, kTfloat);
+        propagateKernels[numYS].setArg<cl_float>(11, frequencyFloat);
+        cl.executeKernel(propagateKernels[numYS], 1, 1);
+    }
+    return {0, 0};
+}
+
+double OpenCLNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
+
+    bool useDouble = cl.getUseDoublePrecision() || cl.getUseMixedPrecision();
+
+    int chainID = nhc.getChainID();
+    int chainLength = nhc.getChainLength();
+
+    auto & chainState = cl.getIntegrationUtilities().getNoseHooverChainState();
+
+    bool absChainIsValid = chainState.count(2*chainID) != 0 &&
+                           chainState[2*chainID].isInitialized() &&
+                           chainState[2*chainID].getSize() == chainLength;
+    bool relChainIsValid = chainState.count(2*chainID+1) != 0 &&
+                           chainState[2*chainID+1].isInitialized() &&
+                           chainState[2*chainID+1].getSize() == chainLength;
+
+    if (!absChainIsValid && !relChainIsValid) return 0.0;
+
+    if (!heatBathEnergy.isInitialized() || heatBathEnergy.getSize() == 0) {
+        if(useDouble){
+            std::vector<cl_double> one(1);
+            heatBathEnergy.initialize<cl_double>(cl, 1, "heatBathEnergy");
+            heatBathEnergy.upload(one);
+        } else {
+            std::vector<cl_float> one(1);
+            heatBathEnergy.initialize<cl_float>(cl, 1, "heatBathEnergy");
+            heatBathEnergy.upload(one);
+        }
+    }
+
+    cl.clearBuffer(heatBathEnergy);
+
+    if (absChainIsValid) {
+        int numDOFs = nhc.getNumDegreesOfFreedom();
+        double temperature = nhc.getTemperature();
+        double frequency = nhc.getCollisionFrequency();
+        double kT = BOLTZ * temperature;
+        float kTfloat = (float) kT;
+        float frequencyFloat = (float) frequency;
+
+        computeHeatBathEnergyKernel.setArg<cl::Buffer>(0, heatBathEnergy.getDeviceBuffer());
+        computeHeatBathEnergyKernel.setArg<cl_int>(1, chainLength);
+        computeHeatBathEnergyKernel.setArg<cl_int>(2, numDOFs); 
+        if (useDouble)
+            computeHeatBathEnergyKernel.setArg<cl_double>(3, kT);
+        else
+            computeHeatBathEnergyKernel.setArg<cl_float>(3, kTfloat);
+        computeHeatBathEnergyKernel.setArg<cl_float>(4, frequencyFloat);
+        computeHeatBathEnergyKernel.setArg<cl::Buffer>(5, chainState[2*chainID].getDeviceBuffer());
+        cl.executeKernel(computeHeatBathEnergyKernel, 1, 1);
+    }
+    if (relChainIsValid) {
+        int numDOFs = 3 * nhc.getThermostatedPairs().size();
+        double temperature = nhc.getRelativeTemperature();
+        double frequency = nhc.getRelativeCollisionFrequency();
+        double kT = BOLTZ * temperature;
+        float kTfloat = (float) kT;
+        float frequencyFloat = (float) frequency;
+
+        computeHeatBathEnergyKernel.setArg<cl::Buffer>(0, heatBathEnergy.getDeviceBuffer());
+        computeHeatBathEnergyKernel.setArg<cl_int>(1, chainLength);
+        computeHeatBathEnergyKernel.setArg<cl_int>(2, numDOFs); 
+        if (useDouble)
+            computeHeatBathEnergyKernel.setArg<cl_double>(3, kT);
+        else
+            computeHeatBathEnergyKernel.setArg<cl_float>(3, kTfloat);
+        computeHeatBathEnergyKernel.setArg<cl_float>(4, frequencyFloat);
+        computeHeatBathEnergyKernel.setArg<cl::Buffer>(5, chainState[2*chainID+1].getDeviceBuffer());
+        cl.executeKernel(computeHeatBathEnergyKernel, 1, 1);
+    }
+
+
+    void * pinnedBuffer = cl.getPinnedBuffer();
+    heatBathEnergy.download(pinnedBuffer);
+    if (useDouble){
+        return *((double*) pinnedBuffer);
+    } else {
+        return *((float*) pinnedBuffer);
+    }
+}
+
+std::pair<double, double> OpenCLNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &nhc, bool downloadValue) {
+
+    bool useDouble = cl.getUseDoublePrecision() || cl.getUseMixedPrecision();
+
+    int chainID = nhc.getChainID();
+    const auto & nhcAtoms = nhc.getThermostatedAtoms();
+    const auto & nhcPairs = nhc.getThermostatedPairs();
+    auto nAtoms = nhcAtoms.size();
+    auto nPairs = nhcPairs.size();
+    if (nAtoms) {
+        if (!atomlists.count(chainID)) { 
+            // We need to upload the OpenCL array
+            atomlists[chainID] = OpenCLArray();
+            atomlists[chainID].initialize<int>(cl, nAtoms, "atomlist" + std::to_string(chainID));
+            atomlists[chainID].upload(nhcAtoms);
+        }
+        if (atomlists[chainID].getSize() != nAtoms) {
+            throw OpenMMException("Number of atoms changed. Cannot be handled by the same Nose-Hoover thermostat.");
+        }
+    }
+    if (nPairs) {
+        if (!pairlists.count(chainID)) { 
+            // We need to upload the OpenCL array
+            pairlists[chainID] = OpenCLArray();
+            pairlists[chainID].initialize<mm_int2>(cl, nPairs, "pairlist" + std::to_string(chainID));
+            std::vector<mm_int2> int2vec;
+            for(const auto &p : nhcPairs) int2vec.push_back(mm_int2(p.first, p.second));
+            pairlists[chainID].upload(int2vec);
+        }
+        if (pairlists[chainID].getSize() != nPairs) {
+            throw OpenMMException("Number of thermostated pairs changed. Cannot be handled by the same Nose-Hoover thermostat.");
+        }
+    }
+    if (!kineticEnergyBuffer.isInitialized() || kineticEnergyBuffer.getSize() == 0) {
+        if(useDouble){
+            std::vector<mm_double2> zeros{{0,0}};
+            kineticEnergyBuffer.initialize<mm_double2>(cl, 1, "kineticEnergyBuffer");
+            kineticEnergyBuffer.upload(zeros);
+        } else {
+            std::vector<mm_float2> zeros{{0,0}};
+            kineticEnergyBuffer.initialize<mm_float2>(cl, 1, "kineticEnergyBuffer");
+            kineticEnergyBuffer.upload(zeros);
+        }
+    }
+    cl.clearBuffer(cl.getEnergyBuffer());
+    if (nAtoms) {
+        computeAtomsKineticEnergyKernel.setArg<cl::Buffer>(0, energyBuffer.getDeviceBuffer());
+        computeAtomsKineticEnergyKernel.setArg<cl_int>(1, nAtoms);
+        computeAtomsKineticEnergyKernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+        computeAtomsKineticEnergyKernel.setArg<cl::Buffer>(3, atomlists[chainID].getDeviceBuffer());
+        cl.executeKernel(computeAtomsKineticEnergyKernel, nAtoms);
+    }
+    if (nPairs) {
+        computePairsKineticEnergyKernel.setArg<cl::Buffer>(0, energyBuffer.getDeviceBuffer());
+        computePairsKineticEnergyKernel.setArg<cl_int>(1, nPairs);
+        computePairsKineticEnergyKernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+        computePairsKineticEnergyKernel.setArg<cl::Buffer>(3, pairlists[chainID].getDeviceBuffer());
+        cl.executeKernel(computePairsKineticEnergyKernel, nPairs);
+    }
+    int bufferSize = energyBuffer.getSize();
+    int workGroupSize  = cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+    if (workGroupSize > 512)
+        workGroupSize = 512;
+    reduceEnergyKernel.setArg<cl::Buffer>(0, energyBuffer.getDeviceBuffer());
+    reduceEnergyKernel.setArg<cl::Buffer>(1, kineticEnergyBuffer.getDeviceBuffer());
+    reduceEnergyKernel.setArg<cl_int>(2, bufferSize);
+    reduceEnergyKernel.setArg<cl_int>(3, workGroupSize);
+    reduceEnergyKernel.setArg(4, workGroupSize*energyBuffer.getElementSize(), NULL);
+    cl.executeKernel(reduceEnergyKernel, workGroupSize, workGroupSize);
+
+    std::pair<double, double> KEs = {0, 0};
+    if (downloadValue) {
+        if (useDouble) {
+            mm_double2 tmp;
+            kineticEnergyBuffer.download(&tmp);
+            KEs.first = tmp.x;
+            KEs.second = tmp.y;
+        } else {
+            mm_float2 tmp;
+            kineticEnergyBuffer.download(&tmp);
+            KEs.first = tmp.x;
+            KEs.second = tmp.y;
+        }
+    }
+    return KEs;
+}
+
+void OpenCLNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> scaleFactor) {
+    // For now we assume that the atoms and pairs info is valid, because compute{Atoms|Pairs}KineticEnergy must have been
+    // called before this kernel.  If that ever ceases to be true, some sanity checks are needed here.
+
+    int chainID = nhc.getChainID();
+    auto nAtoms = nhc.getThermostatedAtoms().size();
+    auto nPairs = nhc.getThermostatedPairs().size();
+    if(nAtoms) {
+        scaleAtomsVelocitiesKernel.setArg<cl::Buffer>(0, scaleFactorBuffer.getDeviceBuffer());
+        scaleAtomsVelocitiesKernel.setArg<cl_int>(1, nAtoms);
+        scaleAtomsVelocitiesKernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+        scaleAtomsVelocitiesKernel.setArg<cl::Buffer>(3, atomlists[chainID].getDeviceBuffer());
+        cl.executeKernel(scaleAtomsVelocitiesKernel, nAtoms);
+    }
+    if(nPairs) {
+        scalePairsVelocitiesKernel.setArg<cl::Buffer>(0, scaleFactorBuffer.getDeviceBuffer());
+        scalePairsVelocitiesKernel.setArg<cl_int>(1, nPairs);
+        scalePairsVelocitiesKernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+        scalePairsVelocitiesKernel.setArg<cl::Buffer>(3, pairlists[chainID].getDeviceBuffer());
+        cl.executeKernel(scalePairsVelocitiesKernel, nPairs);
+    }
 }
 
 void OpenCLApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {

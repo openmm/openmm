@@ -30,6 +30,7 @@
 #include "openmm/System.h"
 #include "CudaContext.h"
 #include "windowsExportCuda.h"
+#include <map>
 #include <iosfwd>
 
 namespace OpenMM {
@@ -120,6 +121,12 @@ public:
      * @param timeShift   the amount by which to shift the velocities in time
      */
     double computeKineticEnergy(double timeShift);
+    /**
+     * Get the data structure that holds the state of all Nose-Hoover chains
+     * 
+     * @return  vector of chain states
+     */
+    std::map<int, CudaArray>& getNoseHooverChainState();
 private:
     void applyConstraints(bool constrainVelocities, double tol);
     CudaContext& context;
@@ -168,6 +175,7 @@ private:
     double2 lastStepSize;
     struct ShakeCluster;
     struct ConstraintOrderer;
+    std::map<int, CudaArray> noseHooverChainState;
 };
 
 } // namespace OpenMM

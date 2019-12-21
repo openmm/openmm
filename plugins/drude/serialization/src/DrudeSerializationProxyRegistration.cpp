@@ -42,11 +42,13 @@
 
 #include "openmm/DrudeForce.h"
 #include "openmm/DrudeLangevinIntegrator.h"
+#include "openmm/DrudeNoseHooverIntegrator.h"
 
 #include "openmm/serialization/SerializationProxy.h"
 
 #include "openmm/serialization/DrudeForceProxy.h"
 #include "openmm/serialization/DrudeLangevinIntegratorProxy.h"
+#include "openmm/serialization/DrudeNoseHooverIntegratorProxy.h"
 
 #if defined(WIN32)
     #include <windows.h>
@@ -65,4 +67,5 @@ using namespace OpenMM;
 extern "C" OPENMM_EXPORT_DRUDE void registerDrudeSerializationProxies() {
     SerializationProxy::registerProxy(typeid(DrudeForce), new DrudeForceProxy());
     SerializationProxy::registerProxy(typeid(DrudeLangevinIntegrator), new DrudeLangevinIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(DrudeNoseHooverIntegrator), new DrudeNoseHooverIntegratorProxy());
 }
