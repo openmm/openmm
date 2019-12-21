@@ -40,7 +40,7 @@ class CudaNonbondedUtilities;
  * ComputeParameterSet directly instead.
  */
 
-class OPENMM_EXPORT_CUDA CudaParameterSet : public ComputeParameterSet {
+class OPENMM_EXPORT_COMMON CudaParameterSet : public ComputeParameterSet {
 public:
     /**
      * Create an CudaParameterSet.

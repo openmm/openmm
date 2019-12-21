@@ -66,7 +66,7 @@ class CudaSort;
  * by ForceImpls during calcForcesAndEnergy().
  */
 
-class OPENMM_EXPORT_CUDA CudaNonbondedUtilities : public NonbondedUtilities  {
+class OPENMM_EXPORT_COMMON CudaNonbondedUtilities : public NonbondedUtilities  {
 public:
     class ParameterInfo;
     CudaNonbondedUtilities(CudaContext& context);

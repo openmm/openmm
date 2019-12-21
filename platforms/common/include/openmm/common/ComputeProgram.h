@@ -44,7 +44,7 @@ namespace OpenMM {
  * value semantics, and frees you from having to manage memory.  
  */
 
-class ComputeProgramImpl {
+class OPENMM_EXPORT_COMMON ComputeProgramImpl {
 public:
     virtual ~ComputeProgramImpl() {
     }

@@ -30,7 +30,7 @@
 #define __CL_ENABLE_EXCEPTIONS
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 #include "openmm/OpenMMException.h"
-#include "windowsExportOpenCL.h"
+#include "openmm/common/windowsExportCommon.h"
 #include "openmm/common/ArrayInterface.h"
 #include <cl.hpp>
 #include <iostream>
@@ -46,7 +46,7 @@ class OpenCLContext;
  * and for copying data to and from the OpenCL Buffer.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLArray : public ArrayInterface {
+class OPENMM_EXPORT_COMMON OpenCLArray : public ArrayInterface {
 public:
     /**
      * Create an OpenCLArray object.  The object is allocated on the heap with the "new" operator.

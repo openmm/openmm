@@ -49,7 +49,7 @@
 #endif
 #include <pthread.h>
 #include <cl.hpp>
-#include "windowsExportOpenCL.h"
+#include "openmm/common/windowsExportCommon.h"
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLExpressionUtilities.h"
@@ -121,7 +121,7 @@ struct mm_int16 {
  * thread is not used and calculations are performed on the main application thread.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLContext : public ComputeContext {
+class OPENMM_EXPORT_COMMON OpenCLContext : public ComputeContext {
 public:
     class WorkTask;
     class ReorderListener;
@@ -691,25 +691,25 @@ private:
 /**
  * This class exists only for backward compatibility.  Use ComputeContext::WorkTask instead.
  */
-class OPENMM_EXPORT_OPENCL OpenCLContext::WorkTask : public ComputeContext::WorkTask {
+class OPENMM_EXPORT_COMMON OpenCLContext::WorkTask : public ComputeContext::WorkTask {
 };
 
 /**
  * This class exists only for backward compatibility.  Use ComputeContext::ReorderListener instead.
  */
-class OPENMM_EXPORT_OPENCL OpenCLContext::ReorderListener : public ComputeContext::ReorderListener {
+class OPENMM_EXPORT_COMMON OpenCLContext::ReorderListener : public ComputeContext::ReorderListener {
 };
 
 /**
  * This class exists only for backward compatibility.  Use ComputeContext::ForcePreComputation instead.
  */
-class OPENMM_EXPORT_OPENCL OpenCLContext::ForcePreComputation : public ComputeContext::ForcePreComputation {
+class OPENMM_EXPORT_COMMON OpenCLContext::ForcePreComputation : public ComputeContext::ForcePreComputation {
 };
 
 /**
  * This class exists only for backward compatibility.  Use ComputeContext::ForcePostComputation instead.
  */
-class OPENMM_EXPORT_OPENCL OpenCLContext::ForcePostComputation : public ComputeContext::ForcePostComputation {
+class OPENMM_EXPORT_COMMON OpenCLContext::ForcePostComputation : public ComputeContext::ForcePostComputation {
 };
 
 } // namespace OpenMM

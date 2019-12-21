@@ -41,7 +41,7 @@ namespace OpenMM {
  * on the number of parameters required.
  */
 
-class ComputeParameterSet {
+class OPENMM_EXPORT_COMMON ComputeParameterSet {
 public:
     /**
      * Create an ComputeParameterSet.

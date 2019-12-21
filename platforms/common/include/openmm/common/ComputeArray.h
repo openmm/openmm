@@ -38,7 +38,7 @@ namespace OpenMM {
  * based on the ComputeContext.
  */
 
-class ComputeArray : public ArrayInterface {
+class OPENMM_EXPORT_COMMON ComputeArray : public ArrayInterface {
 public:
     /**
      * Create an uninitialized ComputeArray object.  It cannot be used until initialize() is called on it.

@@ -44,7 +44,7 @@ namespace OpenMM {
  * user defined mathematical expressions.
  */
 
-class ExpressionUtilities {
+class OPENMM_EXPORT_COMMON ExpressionUtilities {
 public:
     ExpressionUtilities(ComputeContext& context);
     /**

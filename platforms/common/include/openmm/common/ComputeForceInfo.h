@@ -27,6 +27,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/common/windowsExportCommon.h"
 #include <vector>
 
 namespace OpenMM {
@@ -38,7 +39,7 @@ namespace OpenMM {
  * and add them to the ComputeContext by calling addForce().
  */
 
-class ComputeForceInfo {
+class OPENMM_EXPORT_COMMON ComputeForceInfo {
 public:
     ComputeForceInfo() {
     }

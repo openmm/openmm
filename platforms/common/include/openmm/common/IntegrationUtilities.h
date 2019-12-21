@@ -42,7 +42,7 @@ class ComputeContext;
  * common workspace arrays, random number generation, and enforcing constraints.
  */
 
-class IntegrationUtilities {
+class OPENMM_EXPORT_COMMON IntegrationUtilities {
 public:
     IntegrationUtilities(ComputeContext& context, const System& system);
     virtual ~IntegrationUtilities() {

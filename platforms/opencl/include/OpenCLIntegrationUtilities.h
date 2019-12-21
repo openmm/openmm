@@ -30,7 +30,7 @@
 #include "OpenCLArray.h"
 #include "openmm/System.h"
 #include "openmm/common/IntegrationUtilities.h"
-#include "windowsExportOpenCL.h"
+#include "openmm/common/windowsExportCommon.h"
 
 namespace OpenMM {
 
@@ -41,7 +41,7 @@ class OpenCLContext;
  * common workspace arrays, random number generation, and enforcing constraints.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLIntegrationUtilities : public IntegrationUtilities {
+class OPENMM_EXPORT_COMMON OpenCLIntegrationUtilities : public IntegrationUtilities {
 public:
     OpenCLIntegrationUtilities(OpenCLContext& context, const System& system);
     /**

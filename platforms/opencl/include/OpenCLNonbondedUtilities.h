@@ -66,7 +66,7 @@ class OpenCLSort;
  * by ForceImpls during calcForcesAndEnergy().
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLNonbondedUtilities : public NonbondedUtilities {
+class OPENMM_EXPORT_COMMON OpenCLNonbondedUtilities : public NonbondedUtilities {
 public:
     class ParameterInfo;
     OpenCLNonbondedUtilities(OpenCLContext& context);

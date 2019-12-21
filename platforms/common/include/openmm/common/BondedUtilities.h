@@ -80,7 +80,7 @@ namespace OpenMM {
  * from your interaction code.
  */
 
-class BondedUtilities {
+class OPENMM_EXPORT_COMMON BondedUtilities {
 public:
     virtual ~BondedUtilities() {
     }

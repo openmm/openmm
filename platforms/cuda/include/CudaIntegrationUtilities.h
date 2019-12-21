@@ -30,7 +30,7 @@
 #include "CudaArray.h"
 #include "openmm/System.h"
 #include "openmm/common/IntegrationUtilities.h"
-#include "windowsExportCuda.h"
+#include "openmm/common/windowsExportCommon.h"
 #include <cuda.h>
 #include <builtin_types.h>
 
@@ -43,7 +43,7 @@ class CudaContext;
  * common workspace arrays, random number generation, and enforcing constraints.
  */
 
-class OPENMM_EXPORT_CUDA CudaIntegrationUtilities : public IntegrationUtilities {
+class OPENMM_EXPORT_COMMON CudaIntegrationUtilities : public IntegrationUtilities {
 public:
     CudaIntegrationUtilities(CudaContext& context, const System& system);
     ~CudaIntegrationUtilities();

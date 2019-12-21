@@ -40,7 +40,7 @@ class OpenCLNonbondedUtilities;
  * ComputeParameterSet directly instead.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLParameterSet : public ComputeParameterSet {
+class OPENMM_EXPORT_COMMON OpenCLParameterSet : public ComputeParameterSet {
 public:
     /**
      * Create an OpenCLParameterSet.

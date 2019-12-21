@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/common/ExpressionUtilities.h"
-#include "windowsExportCuda.h"
+#include "openmm/common/windowsExportCommon.h"
 
 namespace OpenMM {
 
@@ -37,7 +37,7 @@ namespace OpenMM {
  * the base ExpressionUtilities class.
  */
 
-class OPENMM_EXPORT_CUDA CudaExpressionUtilities : public ExpressionUtilities {
+class OPENMM_EXPORT_COMMON CudaExpressionUtilities : public ExpressionUtilities {
 public:
     CudaExpressionUtilities(ComputeContext& context) : ExpressionUtilities(context) {
     }

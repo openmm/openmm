@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/OpenMMException.h"
+#include "openmm/common/windowsExportCommon.h"
 #include <vector>
 
 namespace OpenMM {
@@ -38,7 +39,7 @@ class ComputeContext;
  * This abstract class defines the interface for arrays stored on a computing device.
  */
 
-class ArrayInterface {
+class OPENMM_EXPORT_COMMON ArrayInterface {
 public:
     virtual ~ArrayInterface() {
     }

@@ -55,7 +55,7 @@ namespace OpenMM {
  * by ForceImpls during calcForcesAndEnergy().
  */
 
-class NonbondedUtilities {
+class OPENMM_EXPORT_COMMON NonbondedUtilities {
 public:
     virtual ~NonbondedUtilities() {
     }

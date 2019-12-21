@@ -49,7 +49,7 @@ extern "C" void registerOpenCLPlatform() {
         Platform::registerPlatform(new OpenCLPlatform());
 }
 #else
-extern "C" OPENMM_EXPORT_OPENCL void registerPlatforms() {
+extern "C" OPENMM_EXPORT_COMMON void registerPlatforms() {
     if (OpenCLPlatform::isPlatformSupported())
         Platform::registerPlatform(new OpenCLPlatform());
 }

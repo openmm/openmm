@@ -29,7 +29,7 @@
 
 #include "OpenCLArray.h"
 #include "OpenCLContext.h"
-#include "windowsExportOpenCL.h"
+#include "openmm/common/windowsExportCommon.h"
 
 namespace OpenMM {
 
@@ -66,7 +66,7 @@ namespace OpenMM {
  * elements).
  */
     
-class OPENMM_EXPORT_OPENCL OpenCLSort {
+class OPENMM_EXPORT_COMMON OpenCLSort {
 public:
     class SortTrait;
     /**

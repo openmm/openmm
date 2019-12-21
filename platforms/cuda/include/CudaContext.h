@@ -39,7 +39,7 @@
 #include <cuda.h>
 #include <builtin_types.h>
 #include <vector_functions.h>
-#include "windowsExportCuda.h"
+#include "openmm/common/windowsExportCommon.h"
 #include "CudaArray.h"
 #include "CudaBondedUtilities.h"
 #include "CudaExpressionUtilities.h"
@@ -65,7 +65,7 @@ namespace OpenMM {
  * thread is not used and calculations are performed on the main application thread.
  */
 
-class OPENMM_EXPORT_CUDA CudaContext : public ComputeContext {
+class OPENMM_EXPORT_COMMON CudaContext : public ComputeContext {
 public:
     class WorkTask;
     class WorkThread;
@@ -572,25 +572,25 @@ private:
 /**
  * This class exists only for backward compatibility.  Use ComputeContext::WorkTask instead.
  */
-class OPENMM_EXPORT_CUDA CudaContext::WorkTask : public ComputeContext::WorkTask {
+class OPENMM_EXPORT_COMMON CudaContext::WorkTask : public ComputeContext::WorkTask {
 };
 
 /**
  * This class exists only for backward compatibility.  Use ComputeContext::ReorderListener instead.
  */
-class OPENMM_EXPORT_CUDA CudaContext::ReorderListener : public ComputeContext::ReorderListener {
+class OPENMM_EXPORT_COMMON CudaContext::ReorderListener : public ComputeContext::ReorderListener {
 };
 
 /**
  * This class exists only for backward compatibility.  Use ComputeContext::ForcePreComputation instead.
  */
-class OPENMM_EXPORT_CUDA CudaContext::ForcePreComputation : public ComputeContext::ForcePreComputation {
+class OPENMM_EXPORT_COMMON CudaContext::ForcePreComputation : public ComputeContext::ForcePreComputation {
 };
 
 /**
  * This class exists only for backward compatibility.  Use ComputeContext::ForcePostComputation instead.
  */
-class OPENMM_EXPORT_CUDA CudaContext::ForcePostComputation : public ComputeContext::ForcePostComputation {
+class OPENMM_EXPORT_COMMON CudaContext::ForcePostComputation : public ComputeContext::ForcePostComputation {
 };
 
 } // namespace OpenMM

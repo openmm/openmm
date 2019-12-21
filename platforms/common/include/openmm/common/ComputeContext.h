@@ -58,7 +58,7 @@ class ThreadPool;
  * positions and forces.
  */
 
-class ComputeContext {
+class OPENMM_EXPORT_COMMON ComputeContext {
 public:
     class WorkTask;
     class WorkThread;
@@ -484,14 +484,14 @@ struct ComputeContext::MoleculeGroup {
 /**
  * This abstract class defines a task to be executed on the worker thread.
  */
-class ComputeContext::WorkTask {
+class OPENMM_EXPORT_COMMON ComputeContext::WorkTask {
 public:
     virtual void execute() = 0;
     virtual ~WorkTask() {
     }
 };
 
-class ComputeContext::WorkThread {
+class OPENMM_EXPORT_COMMON ComputeContext::WorkThread {
 public:
     struct ThreadData;
     WorkThread();
@@ -526,7 +526,7 @@ private:
  * Objects that need to know when reordering happens should create a ReorderListener
  * and register it by calling addReorderListener().
  */
-class ComputeContext::ReorderListener {
+class OPENMM_EXPORT_COMMON ComputeContext::ReorderListener {
 public:
     virtual void execute() = 0;
     virtual ~ReorderListener() {
@@ -539,7 +539,7 @@ public:
  * that need to be performed at a nonstandard point in the process.  After creating a
  * ForcePreComputation, register it by calling addForcePreComputation().
  */
-class ComputeContext::ForcePreComputation {
+class OPENMM_EXPORT_COMMON ComputeContext::ForcePreComputation {
 public:
     virtual ~ForcePreComputation() {
     }
@@ -557,7 +557,7 @@ public:
  * that need to be performed at a nonstandard point in the process.  After creating a
  * ForcePostComputation, register it by calling addForcePostComputation().
  */
-class ComputeContext::ForcePostComputation {
+class OPENMM_EXPORT_COMMON ComputeContext::ForcePostComputation {
 public:
     virtual ~ForcePostComputation() {
     }

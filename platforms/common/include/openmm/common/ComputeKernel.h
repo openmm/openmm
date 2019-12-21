@@ -46,7 +46,7 @@ namespace OpenMM {
  * value semantics, and frees you from having to manage memory.  
  */
 
-class ComputeKernelImpl {
+class OPENMM_EXPORT_COMMON ComputeKernelImpl {
 public:
     virtual ~ComputeKernelImpl() {
     }

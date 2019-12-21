@@ -80,7 +80,7 @@ class OpenCLContext;
  * from your interaction code.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLBondedUtilities : public BondedUtilities {
+class OPENMM_EXPORT_COMMON OpenCLBondedUtilities : public BondedUtilities {
 public:
     OpenCLBondedUtilities(OpenCLContext& context);
     /**

@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/common/ExpressionUtilities.h"
-#include "windowsExportOpenCL.h"
+#include "openmm/common/windowsExportCommon.h"
 
 namespace OpenMM {
 
@@ -37,7 +37,7 @@ namespace OpenMM {
  * the base ExpressionUtilities class.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLExpressionUtilities : public ExpressionUtilities {
+class OPENMM_EXPORT_COMMON OpenCLExpressionUtilities : public ExpressionUtilities {
 public:
     OpenCLExpressionUtilities(ComputeContext& context) : ExpressionUtilities(context) {
     }

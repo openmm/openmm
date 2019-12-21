@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/OpenMMException.h"
-#include "windowsExportCuda.h"
+#include "openmm/common/windowsExportCommon.h"
 #include "openmm/common/ArrayInterface.h"
 #include <cuda.h>
 #include <iostream>
@@ -44,7 +44,7 @@ class CudaContext;
  * for working with it and for copying data to and from device memory.
  */
 
-class OPENMM_EXPORT_CUDA CudaArray : public ArrayInterface {
+class OPENMM_EXPORT_COMMON CudaArray : public ArrayInterface {
 public:
     /**
      * Create a CudaArray object.  The object is allocated on the heap with the "new" operator.

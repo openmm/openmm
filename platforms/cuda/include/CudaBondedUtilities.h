@@ -80,7 +80,7 @@ class CudaContext;
  * from your interaction code.
  */
 
-class OPENMM_EXPORT_CUDA CudaBondedUtilities : public BondedUtilities {
+class OPENMM_EXPORT_COMMON CudaBondedUtilities : public BondedUtilities {
 public:
     CudaBondedUtilities(CudaContext& context);
     /**

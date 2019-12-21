@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/common/ComputeForceInfo.h"
-#include "windowsExportCuda.h"
+#include "openmm/common/windowsExportCommon.h"
 #include <vector>
 
 namespace OpenMM {
@@ -38,7 +38,7 @@ namespace OpenMM {
  * in ComputeForceInfo.
  */
 
-class OPENMM_EXPORT_CUDA CudaForceInfo : public ComputeForceInfo {
+class OPENMM_EXPORT_COMMON CudaForceInfo : public ComputeForceInfo {
 };
 
 } // namespace OpenMM

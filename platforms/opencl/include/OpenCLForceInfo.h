@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/common/ComputeForceInfo.h"
-#include "windowsExportOpenCL.h"
+#include "openmm/common/windowsExportCommon.h"
 #include <vector>
 
 namespace OpenMM {
@@ -39,7 +39,7 @@ namespace OpenMM {
  * Using this mechanism is equivalent to calling requestForceBuffers() on the OpenCLContext.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLForceInfo : public ComputeForceInfo {
+class OPENMM_EXPORT_COMMON OpenCLForceInfo : public ComputeForceInfo {
 public:
     OpenCLForceInfo(int requiredForceBuffers) : requiredForceBuffers(requiredForceBuffers) {
     }
