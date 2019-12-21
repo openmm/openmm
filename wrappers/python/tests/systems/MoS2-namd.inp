@@ -1,0 +1,17 @@
+timestep 1.0  # fs
+# initial config
+coordinates MoS2.pdb
+temperature 300K
+outputname out
+# force field params
+structure MoS2.psf
+parameters MoS2.prm
+paraTypeCharmm on
+vdwGeometricSigma no
+LJcorrection no
+exclude scaled1-4
+1-4scaling 1.0
+switching off
+cutoff 100 # A. actually no cutoff
+pairlistdist 100
+run 20

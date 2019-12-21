@@ -5,6 +5,7 @@ ENABLE_TESTING()
 INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/reference/include)
 INCLUDE_DIRECTORIES(${OPENMM_DIR}/openmmapi/include/openmm)
 INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/reference/src)
+INCLUDE_DIRECTORIES(${OPENMM_DIR}/plugins/drude/tests)
 
 SET(SHARED_OPENMM_DRUDE_TARGET OpenMMDrude)
 

@@ -1259,9 +1259,9 @@ class Modeller(object):
         adds whole copies of the pre-equilibrated membrane patch, so the box dimensions will always be
         integer multiples of the patch size.  That may lead to a larger membrane than what you requested.
 
-        This method has built in support for POPC and POPE lipids.  You can also build other types of
-        membranes by providing a pre-equilibrated, solvated membrane patch that can be tiled in the XY
-        plane to form the membrane.
+        This method has built in support for POPC, POPE, DLPC, DLPE, DMPC, DOPC and DPPC lipids.
+        You can also build other types of membranes by providing a pre-equilibrated, solvated membrane patch
+        that can be tiled in the XY plane to form the membrane.
 
         Parameters
         ----------
@@ -1289,7 +1289,7 @@ class Modeller(object):
         """
         if 'topology' in dir(lipidType) and 'positions' in dir(lipidType):
             patch = lipidType
-        elif lipidType.upper() in ('POPC', 'POPE'):
+        elif lipidType.upper() in ('POPC', 'POPE', 'DLPC', 'DLPE', 'DMPC', 'DOPC', 'DPPC'):
             patch = PDBFile(os.path.join(os.path.dirname(__file__), 'data', lipidType.upper()+'.pdb'))
         else:
             raise ValueError('Unsupported lipid type: '+lipidType)

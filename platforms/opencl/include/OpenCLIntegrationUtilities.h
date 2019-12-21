@@ -31,6 +31,7 @@
 #include "OpenCLContext.h"
 #include "windowsExportOpenCL.h"
 #include <iosfwd>
+#include <map>
 
 namespace OpenMM {
 
@@ -119,6 +120,12 @@ public:
      * @param timeShift   the amount by which to shift the velocities in time
      */
     double computeKineticEnergy(double timeShift);
+    /**
+     * Get the data structure that holds the state of all Nose-Hoover chains
+     * 
+     * @return  vector of chain states
+     */
+    std::map<int, OpenCLArray>& getNoseHooverChainState();
 private:
     void applyConstraints(bool constrainVelocities, double tol);
     OpenCLContext& context;
@@ -166,6 +173,7 @@ private:
     mm_double2 lastStepSize;
     struct ShakeCluster;
     struct ConstraintOrderer;
+    std::map<int, OpenCLArray> noseHooverChainState;
 };
 
 } // namespace OpenMM
