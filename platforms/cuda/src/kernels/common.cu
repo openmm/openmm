@@ -16,7 +16,7 @@
 #define GROUP_ID blockIdx.x
 #define NUM_GROUPS gridDim.x
 #define SYNC_THREADS __syncthreads();
-#define MEM_FENCE __threadfence_block()
+#define MEM_FENCE __threadfence_block();
 #define ATOMIC_ADD(dest, value) atomicAdd(dest, value)
 
 typedef long long mm_long;
