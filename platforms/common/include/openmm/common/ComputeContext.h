@@ -27,6 +27,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#ifdef _MSC_VER
+    // Prevent Windows from defining macros that interfere with other code.
+    #define NOMINMAX
+#endif
 #include "openmm/common/ArrayInterface.h"
 #include "openmm/common/BondedUtilities.h"
 #include "openmm/common/ComputeEvent.h"

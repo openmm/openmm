@@ -2251,7 +2251,7 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         }
         if (numExcluded == atoms1.size()*atoms2.size())
             continue; // All interactions are excluded.
-        tileOrder.push_back(make_pair((int) -atoms2.size(), tile));
+        tileOrder.push_back(make_pair(-((int)atoms2.size()), tile));
     }
     sort(tileOrder.begin(), tileOrder.end());
     
