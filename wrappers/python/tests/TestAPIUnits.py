@@ -682,7 +682,7 @@ class TestAPIUnits(unittest.TestCase):
         force.setSolventDielectric(80)
         self.assertEqual(force.getSolventDielectric(), 80)
 
-        self.assertEqual(force.getSurfaceAreaFactor(),
+        self.assertAlmostEqualUnit(force.getSurfaceAreaFactor(),
                 -170.35173066268223*kilojoule_per_mole/nanometer**2) # default
         force.setSurfaceAreaFactor(-1.0*kilocalorie_per_mole/angstrom**2)
         self.assertAlmostEqualUnit(force.getSurfaceAreaFactor(),
@@ -1163,6 +1163,60 @@ class TestAPIUnits(unittest.TestCase):
         integrator = BrownianIntegrator(300*kelvin, 0.1/microsecond, 1*femtosecond)
         self.assertEqual(integrator.getTemperature(), 300*kelvin)
         self.assertAlmostEqualUnit(integrator.getFriction(), 0.1/microsecond)
+        self.assertEqual(integrator.getStepSize(), 1*femtosecond)
+
+    def testNoseHooverIntegrator(self):
+        """ Tests the NoseHooverIntegrator API features """
+        integrator = NoseHooverIntegrator(300, 0.1, 1)
+        self.assertEqual(integrator.getTemperature(0), 300*kelvin)
+        self.assertEqual(integrator.getCollisionFrequency(), 0.1/picosecond)
+        self.assertEqual(integrator.getStepSize(), 1*picosecond)
+
+        integrator = NoseHooverIntegrator(300*kelvin, 0.1/microsecond, 1*femtosecond)
+        self.assertEqual(integrator.getTemperature(), 300*kelvin)
+        self.assertAlmostEqualUnit(integrator.getCollisionFrequency(), 0.1/microsecond)
+        self.assertEqual(integrator.getStepSize(), 1*femtosecond)
+        self.assertEqual(integrator.computeHeatBathEnergy(), 0.0*kilojoule_per_mole)
+
+        # Test setters
+        integrator.setTemperature(200*kelvin)
+        self.assertEqual(integrator.getTemperature(), 200*kelvin)
+        integrator.setCollisionFrequency(0.1/picosecond)
+        self.assertEqual(integrator.getCollisionFrequency(), 0.1/picosecond)
+        integrator.setRelativeTemperature(200*kelvin)
+        self.assertEqual(integrator.getRelativeTemperature(), 200*kelvin)
+        integrator.setRelativeCollisionFrequency(0.1/picosecond)
+        self.assertEqual(integrator.getRelativeCollisionFrequency(), 0.1/picosecond)
+
+        # Test bare consructor and addThermostat
+        integrator = NoseHooverIntegrator(1*femtosecond)
+        self.assertEqual(integrator.getStepSize(), 1*femtosecond)
+
+        integrator.addThermostat(300*kelvin, 0.1/microsecond, 3, 3, 3)
+        self.assertAlmostEqualUnit(integrator.getTemperature(), 300*kelvin)
+        self.assertAlmostEqualUnit(integrator.getCollisionFrequency(), 0.1/microsecond)
+
+        integrator = NoseHooverIntegrator(1*femtosecond)
+        integrator.addSubsystemThermostat([0], [], 300*kelvin, 0.1/microsecond, 1.0*kelvin, 1.0/microsecond, 3, 3, 3)
+        self.assertAlmostEqualUnit(integrator.getTemperature(), 300*kelvin)
+        self.assertAlmostEqualUnit(integrator.getCollisionFrequency(), 0.1/microsecond)
+        self.assertAlmostEqualUnit(integrator.getRelativeTemperature(), 1.0*kelvin)
+        self.assertAlmostEqualUnit(integrator.getRelativeCollisionFrequency(), 1.0/microsecond)
+
+    def testDrudeNoseHooverIntegrator(self):
+        """ Tests the DrudeNoseHooverIntegrator API features """
+        integrator = DrudeNoseHooverIntegrator(300, 0.1, 1.0, 1.0, 1)
+        self.assertEqual(integrator.getTemperature(0), 300*kelvin)
+        self.assertEqual(integrator.getCollisionFrequency(), 0.1/picosecond)
+        self.assertEqual(integrator.getRelativeTemperature(0), 1.0*kelvin)
+        self.assertEqual(integrator.getRelativeCollisionFrequency(), 1.0/picosecond)
+        self.assertEqual(integrator.getStepSize(), 1*picosecond)
+
+        integrator = DrudeNoseHooverIntegrator(300*kelvin, 0.1/microsecond, 5.0*kelvin, 0.01/microsecond, 1*femtosecond)
+        self.assertEqual(integrator.getTemperature(), 300*kelvin)
+        self.assertAlmostEqualUnit(integrator.getCollisionFrequency(), 0.1/microsecond)
+        self.assertEqual(integrator.getRelativeTemperature(), 5.0*kelvin)
+        self.assertAlmostEqualUnit(integrator.getRelativeCollisionFrequency(), 0.01/microsecond)
         self.assertEqual(integrator.getStepSize(), 1*femtosecond)
 
     def testAndersenThermostat(self):

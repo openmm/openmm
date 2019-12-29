@@ -131,6 +131,10 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new CommonIntegrateCustomStepKernel(name, platform, cl);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new CommonApplyAndersenThermostatKernel(name, platform, cl);
+    if (name == NoseHooverChainKernel::Name())
+        return new OpenCLNoseHooverChainKernel(name, platform, cl);
+    if (name == IntegrateVelocityVerletStepKernel::Name())
+        return new OpenCLIntegrateVelocityVerletStepKernel(name, platform, cl);
     if (name == ApplyMonteCarloBarostatKernel::Name())
         return new OpenCLApplyMonteCarloBarostatKernel(name, platform, cl);
     if (name == RemoveCMMotionKernel::Name())

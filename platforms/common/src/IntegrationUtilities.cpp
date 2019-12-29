@@ -753,7 +753,26 @@ int IntegrationUtilities::prepareRandomNumbers(int numValues) {
 }
 
 void IntegrationUtilities::createCheckpoint(ostream& stream) {
-    if (!random.isInitialized()) 
+    int numChains = noseHooverChainState.size();
+    bool useDouble = context.getUseDoublePrecision() || context.getUseMixedPrecision();
+    stream.write((char*) &numChains, sizeof(int));
+    for (auto &chainState: noseHooverChainState){
+        int chainID = chainState.first;
+        int chainLength = chainState.second.getSize();
+        stream.write((char*) &chainID, sizeof(int));
+        stream.write((char*) &chainLength, sizeof(int));
+        if (useDouble) {
+            vector<mm_double2> stateVec;
+            chainState.second.download(stateVec);
+            stream.write((char*) stateVec.data(), sizeof(mm_double2)*chainLength);
+        }
+        else {
+            vector<mm_float2> stateVec;
+            chainState.second.download(stateVec);
+            stream.write((char*) stateVec.data(), sizeof(mm_float2)*chainLength);
+        }
+    }
+    if (!random.isInitialized())
         return;
     stream.write((char*) &randomPos, sizeof(int));
     vector<mm_float4> randomVec;
@@ -765,7 +784,30 @@ void IntegrationUtilities::createCheckpoint(ostream& stream) {
 }
 
 void IntegrationUtilities::loadCheckpoint(istream& stream) {
-    if (!random.isInitialized()) 
+    int numChains;
+    bool useDouble = context.getUseDoublePrecision() || context.getUseMixedPrecision();
+    stream.read((char*) &numChains, sizeof(int));
+    noseHooverChainState.clear();
+    for (int i = 0; i < numChains; i++) {
+        int chainID, chainLength;
+        stream.read((char*) &chainID, sizeof(int));
+        stream.read((char*) &chainLength, sizeof(int));
+        if (useDouble) {
+            noseHooverChainState[chainID] = ComputeArray();
+            noseHooverChainState[chainID].initialize<mm_double2>(context, chainLength, "chainState" + to_string(chainID));
+            vector<mm_double2> stateVec(chainLength);
+            stream.read((char*) &stateVec[0], sizeof(mm_double2)*chainLength);
+            noseHooverChainState[chainID].upload(stateVec);
+        }
+        else {
+            noseHooverChainState[chainID] = ComputeArray();
+            noseHooverChainState[chainID].initialize<mm_float2>(context, chainLength, "chainState" + to_string(chainID));
+            vector<mm_float2> stateVec(chainLength);
+            stream.read((char*) &stateVec[0], sizeof(mm_float2)*chainLength);
+            noseHooverChainState[chainID].upload(stateVec);
+        }
+    }
+    if (!random.isInitialized())
         return;
     stream.read((char*) &randomPos, sizeof(int));
     vector<mm_float4> randomVec(random.getSize());

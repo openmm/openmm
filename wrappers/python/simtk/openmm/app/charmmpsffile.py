@@ -164,6 +164,7 @@ class CharmmPsfFile(object):
     CMAP_FORCE_GROUP = 5
     NONBONDED_FORCE_GROUP = 6
     GB_FORCE_GROUP = 6
+    DRUDE_FORCE_GROUP = 7
 
     @_catchindexerror
     def __init__(self, psf_name, periodicBoxVectors=None, unitCellDimensions=None):
@@ -465,6 +466,37 @@ class CharmmPsfFile(object):
             self.box_vectors = (Vec3(unitCellDimensions[0], 0, 0), Vec3(0, unitCellDimensions[1], 0), Vec3(0, 0, unitCellDimensions[2]))*u.nanometers
         else:
             self.box_vectors = periodicBoxVectors
+
+    def _build_exclusion_list(self):
+        pair_12_set = set()
+        pair_13_set = set()
+        pair_14_set = set()
+        for bond in self.bond_list:
+            a1, a2 = bond.atom1, bond.atom2
+            pair = (min(a1.idx, a2.idx), max(a1.idx, a2.idx),)
+            pair_12_set.add(pair)
+        for bond in self.bond_list:
+            a2, a3 = bond.atom1, bond.atom2
+            for a1 in a2.bond_partners:
+                pair = (min(a1.idx, a3.idx), max(a1.idx, a3.idx),)
+                if a1 != a3:
+                    pair_13_set.add(pair)
+            for a4 in a3.bond_partners:
+                pair = (min(a2.idx, a4.idx), max(a2.idx, a4.idx),)
+                if a2 != a4:
+                    pair_13_set.add(pair)
+        for bond in self.bond_list:
+            a2, a3 = bond.atom1, bond.atom2
+            for a1 in a2.bond_partners:
+                for a4 in a3.bond_partners:
+                    pair = (min(a1.idx, a4.idx), max(a1.idx, a4.idx),)
+                    if a1 != a4:
+                        pair_14_set.add(pair)
+
+        # in case there are 3,4,5-member rings
+        self.pair_12_list = list(sorted(pair_12_set))
+        self.pair_13_list = list(sorted(pair_13_set - pair_12_set))
+        self.pair_14_list = list(sorted(pair_14_set - pair_13_set.union(pair_12_set)))
 
     @staticmethod
     def _convert(string, type, message):
@@ -1320,31 +1352,29 @@ class CharmmPsfFile(object):
             # now, add the actual force to the system
             system.addForce(nbtforce)
 
+        # build 1-2, 1-3 and 1-4 pairs from connectivity
+        if verbose:
+            print('Build exclusion list...')
+        self._build_exclusion_list()
+        if verbose:
+            print('\tNumber of 1-2 pairs: %i' % len(self.pair_12_list))
+            print('\tNumber of 1-3 pairs: %i' % len(self.pair_13_list))
+            print('\tNumber of 1-4 pairs: %i' % len(self.pair_14_list))
+
         # Add 1-4 interactions
-        excluded_atom_pairs = set() # save these pairs so we don't zero them out
         sigma_scale = 2**(-1/6)
         nbxmod = abs(params.nbxmod)
+        if nbxmod == 4:
+            for ia1, ia4 in self.pair_14_list:
+                force.addException(ia1, ia4, 0.0, 0.1, 0.0)
         if nbxmod == 5:
-            for tor in self.dihedral_parameter_list:
-                # First check to see if atoms 1 and 4 are already excluded because
-                # they are 1-2 or 1-3 pairs (would happen in 6-member rings or
-                # fewer). Then check that they're not already added as exclusions
-                if tor.atom1 in tor.atom4.bond_partners: continue
-                if tor.atom1 in tor.atom4.angle_partners: continue
-                key = min((tor.atom1.idx, tor.atom4.idx),
-                          (tor.atom4.idx, tor.atom1.idx))
-                if key in excluded_atom_pairs: continue # multiterm...
-                charge_prod = (tor.atom1.charge * tor.atom4.charge)
-                epsilon = (sqrt(abs(tor.atom1.type.epsilon_14) * ene_conv *
-                                abs(tor.atom4.type.epsilon_14) * ene_conv))
-                sigma = (tor.atom1.type.rmin_14 + tor.atom4.type.rmin_14) * (
-                         length_conv * sigma_scale)
-                force.addException(tor.atom1.idx, tor.atom4.idx,
-                                   charge_prod, sigma, epsilon)
-                excluded_atom_pairs.add(
-                        min((tor.atom1.idx, tor.atom4.idx),
-                            (tor.atom4.idx, tor.atom1.idx))
-                )
+            for ia1, ia4 in self.pair_14_list:
+                atom1 = self.atom_list[ia1]
+                atom4 = self.atom_list[ia4]
+                charge_prod = (atom1.charge * atom4.charge)
+                epsilon = sqrt(abs(atom1.type.epsilon_14 * atom4.type.epsilon_14)) * ene_conv
+                sigma = (atom1.type.rmin_14 + atom4.type.rmin_14) * (length_conv * sigma_scale)
+                force.addException(ia1, ia4, charge_prod, sigma, epsilon)
 
         # Add excluded atoms
         # Drude and lonepairs will be excluded based on their parent atoms
@@ -1368,33 +1398,24 @@ class CharmmPsfFile(object):
                     for i in range(len(excludeterm)):
                         for j in range(i):
                             force.addException(excludeterm[j], excludeterm[i], 0.0, 0.1, 0.0)
-        # Exclude all bonds and angles, as well as the lonepair/Drude attached onto them
-        for atom in self.atom_list:
-            if nbxmod > 1:
-                for atom2 in atom.bond_partners:
-                    if atom2.idx > atom.idx:
-                        for excludeatom in [atom.idx]+parent_exclude_list[atom.idx]:
-                            for excludeatom2 in [atom2.idx]+parent_exclude_list[atom2.idx]:
-                                force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
-            if nbxmod > 2:
-                for atom2 in atom.angle_partners:
-                    if atom2.idx > atom.idx:
-                        for excludeatom in [atom.idx]+parent_exclude_list[atom.idx]:
-                            for excludeatom2 in [atom2.idx]+parent_exclude_list[atom2.idx]:
-                                force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
-            if nbxmod > 3:
-                for atom2 in atom.dihedral_partners:
-                    if atom2.idx <= atom.idx: continue
-                    if ((atom.idx, atom2.idx) in excluded_atom_pairs):
-                        continue
-                    force.addException(atom.idx, atom2.idx, 0.0, 0.1, 0.0)
+        # Exclude 1-2 and 1-3 pairs as well as the lonepair/Drude attached onto them
+        if nbxmod > 1:
+            for ia1, ia2 in self.pair_12_list:
+                for excludeatom in [ia1]+parent_exclude_list[ia1]:
+                    for excludeatom2 in [ia2]+parent_exclude_list[ia2]:
+                        force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
+        if nbxmod > 2:
+            for ia1, ia3 in self.pair_13_list:
+                for excludeatom in [ia1]+parent_exclude_list[ia1]:
+                    for excludeatom2 in [ia3]+parent_exclude_list[ia3]:
+                        force.addException(excludeatom, excludeatom2, 0.0, 0.1, 0.0)
         system.addForce(force)
 
         # Add Drude particles (Drude force)
         if has_drude_particle:
             if verbose: print('Adding Drude force and Thole screening...')
             drudeforce = mm.DrudeForce()
-            drudeforce.setForceGroup(7)
+            drudeforce.setForceGroup(self.DRUDE_FORCE_GROUP)
             for pair in self.drudepair_list:
                 parentatom=pair[0]
                 drudeatom=pair[1]
@@ -1423,24 +1444,16 @@ class CharmmPsfFile(object):
             particleMap = {}
             for i in range(drudeforce.getNumParticles()):
                 particleMap[drudeforce.getParticleParameters(i)[0]] = i
-            
-            for bond in self.bond_list:
-                alpha1 = self.drudeconsts_list[bond.atom1.idx][0]
-                alpha2 = self.drudeconsts_list[bond.atom2.idx][0] 
+
+            # Apply thole screening for 1-2 and 1-3 pairs
+            for ia1, ia2 in self.pair_12_list + self.pair_13_list:
+                alpha1 = self.drudeconsts_list[ia1][0]
+                alpha2 = self.drudeconsts_list[ia2][0]
                 if abs(alpha1) > TINY and abs(alpha2) > TINY: # both are Drude parent atoms
-                    thole1 = self.drudeconsts_list[bond.atom1.idx][1]
-                    thole2 = self.drudeconsts_list[bond.atom2.idx][1]
-                    drude1 = bond.atom1.idx + 1 # CHARMM psf has hard-coded rule that the Drude is next to its parent
-                    drude2 = bond.atom2.idx + 1
-                    drudeforce.addScreenedPair(particleMap[drude1], particleMap[drude2], thole1+thole2)
-            for ang in self.angle_list:
-                alpha1 = self.drudeconsts_list[ang.atom1.idx][0]
-                alpha2 = self.drudeconsts_list[ang.atom3.idx][0] 
-                if abs(alpha1) > TINY and abs(alpha2) > TINY: # both are Drude parent atoms
-                    thole1 = self.drudeconsts_list[ang.atom1.idx][1]
-                    thole2 = self.drudeconsts_list[ang.atom3.idx][1]
-                    drude1 = ang.atom1.idx + 1 # CHARMM psf has hard-coded rule that the Drude is next to its parent
-                    drude2 = ang.atom3.idx + 1
+                    thole1 = self.drudeconsts_list[ia1][1]
+                    thole2 = self.drudeconsts_list[ia2][1]
+                    drude1 = ia1 + 1 # CHARMM psf has hard-coded rule that the Drude is next to its parent
+                    drude2 = ia2 + 1
                     drudeforce.addScreenedPair(particleMap[drude1], particleMap[drude2], thole1+thole2)
 
         # If we needed a CustomNonbondedForce, map all of the exceptions from

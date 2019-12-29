@@ -126,5 +126,5 @@ void OpenCLIntegrationUtilities::distributeForcesFromVirtualSites() {
         vsiteSaveForcesKernel->setArg(0, context.getLongForceBuffer());
         vsiteSaveForcesKernel->setArg(1, context.getForceBuffers());
         vsiteSaveForcesKernel->execute(context.getNumAtoms());
-    }
+   }
 }

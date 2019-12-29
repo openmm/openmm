@@ -56,6 +56,7 @@
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/MonteCarloMembraneBarostat.h"
 #include "openmm/NonbondedForce.h"
+#include "openmm/NoseHooverIntegrator.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/RMSDForce.h"
@@ -93,6 +94,7 @@
 #include "openmm/serialization/MonteCarloBarostatProxy.h"
 #include "openmm/serialization/MonteCarloMembraneBarostatProxy.h"
 #include "openmm/serialization/NonbondedForceProxy.h"
+#include "openmm/serialization/NoseHooverIntegratorProxy.h"
 #include "openmm/serialization/PeriodicTorsionForceProxy.h"
 #include "openmm/serialization/RBTorsionForceProxy.h"
 #include "openmm/serialization/RMSDForceProxy.h"
@@ -151,6 +153,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(MonteCarloBarostat), new MonteCarloBarostatProxy());
     SerializationProxy::registerProxy(typeid(MonteCarloMembraneBarostat), new MonteCarloMembraneBarostatProxy());
     SerializationProxy::registerProxy(typeid(NonbondedForce), new NonbondedForceProxy());
+    SerializationProxy::registerProxy(typeid(NoseHooverIntegrator), new NoseHooverIntegratorProxy());
     SerializationProxy::registerProxy(typeid(PeriodicTorsionForce), new PeriodicTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(RBTorsionForce), new RBTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(RMSDForce), new RMSDForceProxy());

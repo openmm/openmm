@@ -184,7 +184,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     if not openmm_lib_path:
         reportError("Set OPENMM_LIB_PATH to point to the lib directory for OpenMM")
 
-    extra_compile_args=[]
+    extra_compile_args=['-std=c++11']
     extra_link_args=[]
     if platform.system() == "Windows":
         define_macros.append( ('WIN32', None) )
