@@ -171,5 +171,18 @@ class TestPdbxFile(unittest.TestCase):
         for chain1, chain2 in zip(cif_ori.topology.chains(), cif_new.topology.chains()):
             self.assertEqual(chain1.id, chain2.id)
 
+    def testInsertionCodes(self):
+        """Test reading a file that uses insertion codes."""
+        pdbx = PDBxFile('systems/insertions.pdbx')
+        residues = list(pdbx.topology.residues())
+        self.assertEqual(7, len(residues))
+        names = ['PHE', 'ASP', 'LYS', 'ILE', 'LYS', 'ASN', 'TRP']
+        ids = ['59', '60', '60', '60', '60', '60', '61']
+        codes = ['', '', 'A', 'B', 'C', 'D', '']
+        for res, name, id, code in zip(residues, names, ids, codes):
+            self.assertEqual(name, res.name)
+            self.assertEqual(id, res.id)
+            self.assertEqual(code, res.insertionCode)
+
 if __name__ == '__main__':
     unittest.main()
