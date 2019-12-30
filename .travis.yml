@@ -17,7 +17,7 @@ env:
 matrix:
   include:
     - sudo: required
-      dist: trusty
+      dist: xenial
       env: ==CPU_OPENCL==
            OPENCL=true
            CUDA=false
@@ -40,7 +40,7 @@ matrix:
       addons: {apt: {packages: []}}
 
     - sudo: required
-      dist: trusty
+      dist: xenial
       env: ==CUDA_COMPILE==
            CUDA=true
            OPENCL=false
@@ -74,7 +74,7 @@ matrix:
       addons: {apt: {packages: []}}
 
     - sudo: false
-      dist: trusty
+      dist: xenial
       python: 3.6
       env: ==STATIC_LIB==
            OPENCL=false
@@ -84,7 +84,7 @@ matrix:
            CMAKE_FLAGS="-DOPENMM_BUILD_STATIC_LIB=ON"
 
     - sudo: false
-      dist: trusty
+      dist: xenial
       python: 3.6
       env: ==PYTHON_3_6==
            OPENCL=false
