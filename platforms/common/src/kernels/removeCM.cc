@@ -22,19 +22,19 @@ KERNEL void calcCenterOfMassMomentum(int numAtoms, GLOBAL const mixed4* RESTRICT
     SYNC_THREADS;
     if (thread < 32)
         temp[thread] += temp[thread+32];
-    SYNC_WARPS;
+    SYNC_THREADS;
     if (thread < 16)
         temp[thread] += temp[thread+16];
-    SYNC_WARPS;
+    SYNC_THREADS;
     if (thread < 8)
         temp[thread] += temp[thread+8];
-    SYNC_WARPS;
+    SYNC_THREADS;
     if (thread < 4)
         temp[thread] += temp[thread+4];
-    SYNC_WARPS;
+    SYNC_THREADS;
     if (thread < 2)
         temp[thread] += temp[thread+2];
-    SYNC_WARPS;
+    SYNC_THREADS;
     if (thread == 0)
         cmMomentum[GROUP_ID] = temp[thread]+temp[thread+1];
 }
@@ -52,22 +52,22 @@ KERNEL void removeCenterOfMassMomentum(int numAtoms, GLOBAL mixed4* RESTRICT vel
         cm += cmMomentum[index];
     int thread = LOCAL_ID;
     temp[thread] = cm;
-    SYNC_THREADS
+    SYNC_THREADS;
     if (thread < 32)
         temp[thread] += temp[thread+32];
-    SYNC_WARPS;
+    SYNC_THREADS;
     if (thread < 16)
         temp[thread] += temp[thread+16];
-    SYNC_WARPS;
+    SYNC_THREADS;
     if (thread < 8)
         temp[thread] += temp[thread+8];
-    SYNC_WARPS;
+    SYNC_THREADS;
     if (thread < 4)
         temp[thread] += temp[thread+4];
-    SYNC_WARPS;
+    SYNC_THREADS;
     if (thread < 2)
         temp[thread] += temp[thread+2];
-    SYNC_WARPS;
+    SYNC_THREADS;
     cm = make_float3(INVERSE_TOTAL_MASS*(temp[0].x+temp[1].x), INVERSE_TOTAL_MASS*(temp[0].y+temp[1].y), INVERSE_TOTAL_MASS*(temp[0].z+temp[1].z));
 
     // Now remove the center of mass velocity from each atom.
