@@ -970,7 +970,7 @@ class TestForceField(unittest.TestCase):
         for index in range(force.getNumTorsions()):
             i,j,k,l,_,_,_ = force.getTorsionParameters(index)
             created_torsions.add((i,j,k,l))
-        expected_torsions = set((0,3,1,2), (0,1,2,3), (0,2,3,1))
+        expected_torsions = set([(0,3,1,2), (0,1,2,3), (0,2,3,1)])
         self.assertEqual(expected_torsions, created_torsions)
 
     def test_Disulfides(self):
