@@ -921,23 +921,6 @@ class TestForceField(unittest.TestCase):
     <Type name="[H]C(=O)[H]$H1#2" element="H" mass="1.007947" class="[H]C(=O)[H]$H1#2"/>
     <Type name="[H]C(=O)[H]$H2#3" element="H" mass="1.007947" class="[H]C(=O)[H]$H2#3"/>
   </AtomTypes>
-  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
-    <UseAttributeFromResidue name="charge"/>
-    <Atom sigma="0.3399669508423535" epsilon="0.359824" class="[H]C(=O)[H]$C1#0"/>
-    <Atom sigma="0.2959921901149463" epsilon="0.87864" class="[H]C(=O)[H]$O1#1"/>
-    <Atom sigma="0.2510552587719476" epsilon="0.06276" class="[H]C(=O)[H]$H1#2"/>
-    <Atom sigma="0.2510552587719476" epsilon="0.06276" class="[H]C(=O)[H]$H2#3"/>
-  </NonbondedForce>
-  <HarmonicBondForce>
-    <Bond class1="[H]C(=O)[H]$C1#0" class2="[H]C(=O)[H]$O1#1" length="0.122768286085" k="475133.08130977117"/>
-    <Bond class1="[H]C(=O)[H]$C1#0" class2="[H]C(=O)[H]$H1#2" length="0.10850661293899999" k="338125.5447433327"/>
-    <Bond class1="[H]C(=O)[H]$C1#0" class2="[H]C(=O)[H]$H2#3" length="0.10850661293899999" k="338125.5447433327"/>
-  </HarmonicBondForce>
-  <HarmonicAngleForce>
-    <Angle class1="[H]C(=O)[H]$O1#1" class2="[H]C(=O)[H]$C1#0" class3="[H]C(=O)[H]$H1#2" angle="2.4141195890059883" k="279.7597371776727"/>
-    <Angle class1="[H]C(=O)[H]$O1#1" class2="[H]C(=O)[H]$C1#0" class3="[H]C(=O)[H]$H2#3" angle="2.4141195890059883" k="279.7597371776727"/>
-    <Angle class1="[H]C(=O)[H]$H1#2" class2="[H]C(=O)[H]$C1#0" class3="[H]C(=O)[H]$H2#3" angle="2.2670423843424943" k="330.7820750751862"/>
-  </HarmonicAngleForce>
   <PeriodicTorsionForce ordering="smirnoff">
     <Improper class1="[H]C(=O)[H]$C1#0" class2="[H]C(=O)[H]$O1#1" class3="[H]C(=O)[H]$H1#2" class4="[H]C(=O)[H]$H2#3" periodicity1="2" phase1="3.141592653589793" k1="1.5341333333333336"/>
     <Improper class1="[H]C(=O)[H]$C1#0" class2="[H]C(=O)[H]$H1#2" class3="[H]C(=O)[H]$H2#3" class4="[H]C(=O)[H]$O1#1" periodicity1="2" phase1="3.141592653589793" k1="1.5341333333333336"/>
