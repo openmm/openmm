@@ -20,8 +20,8 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
     const unsigned int warp = GLOBAL_ID/TILE_SIZE;
     const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
     const unsigned int tbx = LOCAL_ID - tgx;
-    LOCAL real3 local_pos[FORCE_WORK_GROUP_SIZE];
-    LOCAL real local_value[FORCE_WORK_GROUP_SIZE];
+    LOCAL real3 local_pos[LOCAL_BUFFER_SIZE];
+    LOCAL real local_value[LOCAL_BUFFER_SIZE];
     ATOM_PARAMETER_DATA
 
     // First loop: process tiles that contain exclusions.
@@ -173,8 +173,8 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
-    LOCAL int atomIndices[FORCE_WORK_GROUP_SIZE];
-    LOCAL volatile int skipTiles[FORCE_WORK_GROUP_SIZE];
+    LOCAL int atomIndices[LOCAL_BUFFER_SIZE];
+    LOCAL volatile int skipTiles[LOCAL_BUFFER_SIZE];
     skipTiles[LOCAL_ID] = -1;
 
     while (pos < end) {

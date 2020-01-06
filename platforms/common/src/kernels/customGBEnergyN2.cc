@@ -32,8 +32,8 @@ KERNEL void computeN2Energy(
     const unsigned int tbx = LOCAL_ID - tgx;
     mixed energy = 0;
     INIT_PARAM_DERIVS
-    LOCAL real3 local_pos[FORCE_WORK_GROUP_SIZE];
-    LOCAL real3 local_force[FORCE_WORK_GROUP_SIZE];
+    LOCAL real3 local_pos[LOCAL_BUFFER_SIZE];
+    LOCAL real3 local_force[LOCAL_BUFFER_SIZE];
     ATOM_PARAMETER_DATA
 
     // First loop: process tiles that contain exclusions.
@@ -202,8 +202,8 @@ KERNEL void computeN2Energy(
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
-    LOCAL int atomIndices[FORCE_WORK_GROUP_SIZE];
-    LOCAL volatile int skipTiles[FORCE_WORK_GROUP_SIZE];
+    LOCAL int atomIndices[LOCAL_BUFFER_SIZE];
+    LOCAL volatile int skipTiles[LOCAL_BUFFER_SIZE];
     skipTiles[LOCAL_ID] = -1;
 
     while (pos < end) {

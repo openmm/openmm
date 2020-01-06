@@ -3002,7 +3002,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             string paramName = "params"+cc.intToString(i+1);
             if (n2ValueStr.find(paramName+"1") != n2ValueStr.npos || n2ValueStr.find(paramName+"2") != n2ValueStr.npos) {
                 extraArgs << ", GLOBAL const " << buffer.getType() << "* RESTRICT global_" << paramName;
-                atomParams << "LOCAL " << buffer.getType() << " local_" << paramName << "[FORCE_WORK_GROUP_SIZE];\n";
+                atomParams << "LOCAL " << buffer.getType() << " local_" << paramName << "[LOCAL_BUFFER_SIZE];\n";
                 loadLocal1 << "local_" << paramName << "[localAtomIndex] = " << paramName << "1;\n";
                 loadLocal2 << "local_" << paramName << "[localAtomIndex] = global_" << paramName << "[j];\n";
                 load1 << buffer.getType() << " " << paramName << "1 = global_" << paramName << "[atom1];\n";
@@ -3016,7 +3016,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
                 extraArgs << ", GLOBAL mm_ulong* RESTRICT global_" << derivName;
             else
                 extraArgs << ", GLOBAL real* RESTRICT global_" << derivName;
-            atomParams << "LOCAL real local_" << derivName << "[FORCE_WORK_GROUP_SIZE];\n";
+            atomParams << "LOCAL real local_" << derivName << "[LOCAL_BUFFER_SIZE];\n";
             loadLocal2 << "local_" << derivName << "[localAtomIndex] = 0;\n";
             load1 << "real " << derivName << " = 0;\n";
             if (!isZeroExpression(valueParamDerivExpressions[0][i])) {
@@ -3059,7 +3059,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             pairValueDefines["USE_PERIODIC"] = "1";
         if (useExclusionsForValue)
             pairValueDefines["USE_EXCLUSIONS"] = "1";
-        pairValueDefines["FORCE_WORK_GROUP_SIZE"] = cc.intToString(nb.getForceThreadBlockSize());
+        pairValueDefines["LOCAL_BUFFER_SIZE"] = cc.intToString(deviceIsCpu ? 32 : nb.getForceThreadBlockSize());
         pairValueDefines["CUTOFF_SQUARED"] = cc.doubleToString(cutoff*cutoff);
         pairValueDefines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
         pairValueDefines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
@@ -3218,7 +3218,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             string paramName = "params"+cc.intToString(i+1);
             if (n2EnergyStr.find(paramName+"1") != n2EnergyStr.npos || n2EnergyStr.find(paramName+"2") != n2EnergyStr.npos) {
                 extraArgs << ", GLOBAL const " << buffer.getType() << "* RESTRICT global_" << paramName;
-                atomParams << "LOCAL " << buffer.getType() << " local_" << paramName << "[FORCE_WORK_GROUP_SIZE];\n";
+                atomParams << "LOCAL " << buffer.getType() << " local_" << paramName << "[LOCAL_BUFFER_SIZE];\n";
                 loadLocal1 << "local_" << paramName << "[localAtomIndex] = " << paramName << "1;\n";
                 loadLocal2 << "local_" << paramName << "[localAtomIndex] = global_" << paramName << "[j];\n";
                 load1 << buffer.getType() << " " << paramName << "1 = global_" << paramName << "[atom1];\n";
@@ -3232,7 +3232,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             string valueName = "values"+cc.intToString(i+1);
             if (n2EnergyStr.find(valueName+"1") != n2EnergyStr.npos || n2EnergyStr.find(valueName+"2") != n2EnergyStr.npos) {
                 extraArgs << ", GLOBAL const " << buffer.getType() << "* RESTRICT global_" << valueName;
-                atomParams << "LOCAL " << buffer.getType() << " local_" << valueName << "[FORCE_WORK_GROUP_SIZE];\n";
+                atomParams << "LOCAL " << buffer.getType() << " local_" << valueName << "[LOCAL_BUFFER_SIZE];\n";
                 loadLocal1 << "local_" << valueName << "[localAtomIndex] = " << valueName << "1;\n";
                 loadLocal2 << "local_" << valueName << "[localAtomIndex] = global_" << valueName << "[j];\n";
                 load1 << buffer.getType() << " " << valueName << "1 = global_" << valueName << "[atom1];\n";
@@ -3244,7 +3244,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             extraArgs << ", GLOBAL mm_ulong* RESTRICT derivBuffers";
             for (int i = 0; i < numComputedValues; i++) {
                 string index = cc.intToString(i+1);
-                atomParams << "LOCAL real local_deriv" << index << "[FORCE_WORK_GROUP_SIZE];\n";
+                atomParams << "LOCAL real local_deriv" << index << "[LOCAL_BUFFER_SIZE];\n";
                 clearLocal << "local_deriv" << index << "[localAtomIndex] = 0.0f;\n";
                 declare1 << "real deriv" << index << "_1 = 0;\n";
                 load2 << "real deriv" << index << "_2 = 0;\n";
@@ -3258,7 +3258,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
                 const ComputeParameterInfo& buffer = energyDerivs->getParameterInfos()[i];
                 string index = cc.intToString(i+1);
                 extraArgs << ", GLOBAL " << buffer.getType() << "* RESTRICT derivBuffers" << index;
-                atomParams << "LOCAL " << buffer.getType() << " local_deriv" << index << "[FORCE_WORK_GROUP_SIZE];\n";
+                atomParams << "LOCAL " << buffer.getType() << " local_deriv" << index << "[LOCAL_BUFFER_SIZE];\n";
                 clearLocal << "local_deriv" << index << "[localAtomIndex] = 0.0f;\n";
                 declare1 << buffer.getType() << " deriv" << index << "_1 = 0.0f;\n";
                 load2 << buffer.getType() << " deriv" << index << "_2 = 0.0f;\n";
@@ -3297,7 +3297,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             pairEnergyDefines["USE_PERIODIC"] = "1";
         if (anyExclusions)
             pairEnergyDefines["USE_EXCLUSIONS"] = "1";
-        pairEnergyDefines["FORCE_WORK_GROUP_SIZE"] = cc.intToString(nb.getForceThreadBlockSize());
+        pairEnergyDefines["LOCAL_BUFFER_SIZE"] = cc.intToString(deviceIsCpu ? 32 : nb.getForceThreadBlockSize());
         pairEnergyDefines["CUTOFF_SQUARED"] = cc.doubleToString(cutoff*cutoff);
         pairEnergyDefines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
         pairEnergyDefines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());

@@ -16,7 +16,7 @@ KERNEL void computeN2Energy(
         GLOBAL real4* RESTRICT forceBuffers,
 #endif
         GLOBAL mixed* RESTRICT energyBuffer,
-        GLOBAL const real4* RESTRICT posq,, GLOBAL const unsigned int* RESTRICT exclusions,
+        GLOBAL const real4* RESTRICT posq, GLOBAL const unsigned int* RESTRICT exclusions,
         GLOBAL const ushort2* exclusionTiles, int needEnergy,
 #ifdef USE_CUTOFF
         GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
@@ -28,8 +28,8 @@ KERNEL void computeN2Energy(
         PARAMETER_ARGUMENTS) {
     mixed energy = 0;
     INIT_PARAM_DERIVS
-    LOCAL real3 local_pos[FORCE_WORK_GROUP_SIZE];
-    LOCAL real3 local_force[FORCE_WORK_GROUP_SIZE];
+    LOCAL real3 local_pos[LOCAL_BUFFER_SIZE];
+    LOCAL real3 local_force[LOCAL_BUFFER_SIZE];
     ATOM_PARAMETER_DATA
 
     // First loop: process tiles that contain exclusions.

@@ -688,7 +688,7 @@ KERNEL void computeGBSAForce1(
                         real3 pos2 = make_real3(localData[j].x, localData[j].y, localData[j].z);
                         real charge2 = localData[j].q;
                         real3 delta = make_real3(pos2.x-posq1.x, pos2.y-posq1.y, pos2.z-posq1.z);
-                       `real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                        real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                         int atom2 = atomIndices[j];
                         if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && r2 < CUTOFF_SQUARED) {
                             real invR = RSQRT(r2);

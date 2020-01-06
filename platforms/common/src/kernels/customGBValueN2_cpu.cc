@@ -16,8 +16,8 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
         unsigned int numTiles
 #endif
         PARAMETER_ARGUMENTS) {
-    LOCAL real3 local_pos[FORCE_WORK_GROUP_SIZE];
-    LOCAL real local_value[FORCE_WORK_GROUP_SIZE];
+    LOCAL real3 local_pos[LOCAL_BUFFER_SIZE];
+    LOCAL real local_value[LOCAL_BUFFER_SIZE];
     ATOM_PARAMETER_DATA
 
     // First loop: process tiles that contain exclusions.
