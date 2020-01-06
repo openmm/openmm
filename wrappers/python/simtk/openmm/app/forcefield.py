@@ -634,7 +634,7 @@ class ForceField(object):
 
         def areParametersIdentical(self, template2, matchingAtoms, matchingAtoms2):
             """Get whether this template and another one both assign identical atom types and parameters to all atoms.
-            
+
             Parameters
             ----------
             template2: _TemplateData
@@ -1841,6 +1841,16 @@ def _matchImproper(data, torsion, generator):
                                 (a2, a3) = (a3, a2)
                         match = (a2, a3, torsion[0], a4, tordef)
                         break
+                    elif tordef.ordering == 'smirnoff':
+                        # topology atom indexes
+                        a1 = torsion[0]
+                        a2 = torsion[t2[1]]
+                        a3 = torsion[t3[1]]
+                        a4 = torsion[t4[1]]
+                        # enforce exact match
+                        match = (a1, a2, a3, a4, tordef)
+                        break
+
     return match
 
 
@@ -2032,7 +2042,7 @@ class PeriodicTorsionGenerator(object):
     def registerImproperTorsion(self, parameters, ordering='default'):
         torsion = self.ff._parseTorsion(parameters)
         if torsion is not None:
-            if ordering in ['default', 'charmm', 'amber']:
+            if ordering in ['default', 'charmm', 'amber', 'smirnoff']:
                 torsion.ordering = ordering
             else:
                 raise ValueError('Illegal ordering type %s for improper torsion %s' % (ordering, torsion))
@@ -2116,7 +2126,13 @@ class PeriodicTorsionGenerator(object):
                 (a1, a2, a3, a4, tordef) = match
                 for i in range(len(tordef.phase)):
                     if tordef.k[i] != 0:
-                        force.addTorsion(a1, a2, a3, a4, tordef.periodicity[i], tordef.phase[i], tordef.k[i])
+                        if tordef.ordering == 'smirnoff':
+                            # Add all torsions in trefoil
+                            force.addTorsion(a1, a2, a3, a4, tordef.periodicity[i], tordef.phase[i], tordef.k[i])
+                            force.addTorsion(a1, a3, a4, a2, tordef.periodicity[i], tordef.phase[i], tordef.k[i])
+                            force.addTorsion(a1, a4, a2, a3, tordef.periodicity[i], tordef.phase[i], tordef.k[i])
+                        else:
+                            force.addTorsion(a1, a2, a3, a4, tordef.periodicity[i], tordef.phase[i], tordef.k[i])
 parsers["PeriodicTorsionForce"] = PeriodicTorsionGenerator.parseElement
 
 
