@@ -29,7 +29,7 @@
     #pragma warning(disable:4251)
     #if defined(OPENMM_COMMON_BUILDING_SHARED_LIBRARY)
         #define OPENMM_EXPORT_COMMON __declspec(dllexport)
-    #elif defined(OPENMM_COMMON_BUILDING_STATIC_LIBRARY) || defined(OPENMM_CUDA_USE_STATIC_LIBRARIES)
+    #elif defined(OPENMM_COMMON_BUILDING_STATIC_LIBRARY) || defined(OPENMM_COMMON_USE_STATIC_LIBRARIES)
         #define OPENMM_EXPORT_COMMON
     #else
         #define OPENMM_EXPORT_COMMON __declspec(dllimport)   // i.e., a client of a shared library
