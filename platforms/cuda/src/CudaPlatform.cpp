@@ -51,7 +51,7 @@ using namespace std;
     }
 
 
-#ifdef OPENMM_CUDA_BUILDING_STATIC_LIBRARY
+#ifdef OPENMM_COMMON_BUILDING_STATIC_LIBRARY
 extern "C" void registerCudaPlatform() {
     Platform::registerPlatform(new CudaPlatform());
 }
