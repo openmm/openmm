@@ -3406,9 +3406,9 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             compute << "derivBuffers" << index << "[index] = deriv" << index << ";\n";
         }
         if (useLong) {
-            compute << "forceBuffers[index] += (long long) (force.x*0x100000000);\n";
-            compute << "forceBuffers[index+PADDED_NUM_ATOMS] += (long long) (force.y*0x100000000);\n";
-            compute << "forceBuffers[index+PADDED_NUM_ATOMS*2] += (long long) (force.z*0x100000000);\n";
+            compute << "forceBuffers[index] += (mm_long) (force.x*0x100000000);\n";
+            compute << "forceBuffers[index+PADDED_NUM_ATOMS] += (mm_long) (force.y*0x100000000);\n";
+            compute << "forceBuffers[index+PADDED_NUM_ATOMS*2] += (mm_long) (force.z*0x100000000);\n";
         }
         else
             compute << "forceBuffers[index] = forceBuffers[index]+make_real4(force.x, force.y, force.z, 0);\n";
