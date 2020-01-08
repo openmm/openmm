@@ -25,6 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLFFT3D.h"
+#include "OpenCLContext.h"
 #include "OpenCLExpressionUtilities.h"
 #include "OpenCLKernelSources.h"
 #include "SimTKOpenMMRealType.h"

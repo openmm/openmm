@@ -341,6 +341,12 @@ IF(OPENMM_BUILD_OPENCL_LIB)
     ADD_SUBDIRECTORY(platforms/opencl)
 ENDIF(OPENMM_BUILD_OPENCL_LIB)
 
+# Common compute files
+
+IF(CUDA_FOUND OR OPENCL_FOUND)
+    ADD_SUBDIRECTORY(platforms/common)
+ENDIF()
+
 # Optimized CPU platform
 
 SET(OPENMM_BUILD_CPU_LIB ON CACHE BOOL "Build optimized CPU platform")

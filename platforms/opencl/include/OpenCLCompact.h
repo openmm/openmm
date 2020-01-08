@@ -30,7 +30,7 @@
 
 namespace OpenMM {
 
-class OPENMM_EXPORT_OPENCL OpenCLCompact {
+class OPENMM_EXPORT_COMMON OpenCLCompact {
 public:
     OpenCLCompact(OpenCLContext& context);
     void compactStream(OpenCLArray& dOut, OpenCLArray& dIn, OpenCLArray& dValid, OpenCLArray& numValid);

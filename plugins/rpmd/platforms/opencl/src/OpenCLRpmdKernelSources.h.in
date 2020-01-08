@@ -39,7 +39,7 @@ namespace OpenMM {
 
 class OpenCLRpmdKernelSources {
 public:
-@CL_FILE_DECLARATIONS@
+@KERNEL_FILE_DECLARATIONS@
 };
 
 } // namespace OpenMM

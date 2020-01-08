@@ -43,13 +43,13 @@
 using namespace OpenMM;
 using namespace std;
 
-#ifdef OPENMM_OPENCL_BUILDING_STATIC_LIBRARY
+#ifdef OPENMM_COMMON_BUILDING_STATIC_LIBRARY
 extern "C" void registerOpenCLPlatform() {
     if (OpenCLPlatform::isPlatformSupported())
         Platform::registerPlatform(new OpenCLPlatform());
 }
 #else
-extern "C" OPENMM_EXPORT_OPENCL void registerPlatforms() {
+extern "C" OPENMM_EXPORT_COMMON void registerPlatforms() {
     if (OpenCLPlatform::isPlatformSupported())
         Platform::registerPlatform(new OpenCLPlatform());
 }
