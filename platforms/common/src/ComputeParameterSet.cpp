@@ -160,9 +160,7 @@ void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values) {
 string ComputeParameterSet::getParameterSuffix(int index, const std::string& extraSuffix) const {
     const string suffixes[] = {".x", ".y", ".z", ".w"};
     int buffer = -1;
-//    printf("%d parameters\n", parameters.size());
     for (int i = 0; buffer == -1 && i < (int) parameters.size(); i++) {
-//        printf("%d %d %d\n", index, elementSize, parameters[i].getSize());
         if (index*elementSize < parameters[i].getSize())
             buffer = i;
         else

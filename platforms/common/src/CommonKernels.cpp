@@ -2014,10 +2014,12 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     // Record parameters and exclusions.
 
     int numParticles = force.getNumParticles();
-    params = new ComputeParameterSet(cc, force.getNumPerParticleParameters(), numParticles, "customNonbondedParameters");
+    int paddedNumParticles = cc.getPaddedNumAtoms();
+    int numParams = force.getNumPerParticleParameters();
+    params = new ComputeParameterSet(cc, numParams, paddedNumParticles, "customNonbondedParameters");
     if (force.getNumGlobalParameters() > 0)
         globals.initialize<float>(cc, force.getNumGlobalParameters(), "customNonbondedGlobals");
-    vector<vector<float> > paramVector(numParticles);
+    vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
     vector<vector<int> > exclusionList(numParticles);
     for (int i = 0; i < numParticles; i++) {
         vector<double> parameters;
@@ -2501,10 +2503,12 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
     int numParticles = force.getNumParticles();
     if (numParticles != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
-    
+
     // Record the per-particle parameters.
-    
-    vector<vector<float> > paramVector(numParticles);
+
+    int paddedNumParticles = cc.getPaddedNumAtoms();
+    int numParams = force.getNumPerParticleParameters();
+    vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
     vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
         force.getParticleParameters(i, parameters);
