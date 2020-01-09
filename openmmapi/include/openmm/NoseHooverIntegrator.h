@@ -230,7 +230,7 @@ public:
     /**
      * Get a list of all connected Drude-like pairs, and their target relative temperature, in the system.
      */
-    const std::vector<std::tuple<int, int, double>> & getAllThermostatedPairs() const { return allPairs; }
+    const std::vector<std::tuple<int, int, double> > & getAllThermostatedPairs() const { return allPairs; }
 protected:
    /**
      * Advance any Nose-Hoover chains associated with this integrator and determine
@@ -267,7 +267,7 @@ protected:
 
     std::vector<NoseHooverChain> noseHooverChains;
     std::vector<int> allAtoms;
-    std::vector<std::tuple<int, int, double>> allPairs;
+    std::vector<std::tuple<int, int, double> > allPairs;
     bool forcesAreValid;
     Kernel vvKernel, nhcKernel;
     bool hasSubsystemThermostats_;

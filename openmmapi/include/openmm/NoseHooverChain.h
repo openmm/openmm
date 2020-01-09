@@ -258,7 +258,7 @@ private:
     // The suffix used to distinguish NH chains, e.g. for Drude particles vs. regular particles.
     int chainID;
     std::vector<int> thermostatedAtoms;
-    std::vector<std::pair<int, int>> thermostatedPairs;
+    std::vector<std::pair<int, int> > thermostatedPairs;
 };
 
 } // namespace OpenMM
