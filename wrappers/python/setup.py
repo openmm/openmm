@@ -8,6 +8,7 @@ import sys
 import platform
 import numpy
 from setuptools import setup
+from distutils.sysconfig import get_python_lib
 from Cython.Build import cythonize
 
 MAJOR_VERSION_NUM='@OPENMM_MAJOR_VERSION@'
@@ -214,7 +215,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                 os.environ['CC'] = 'clang'
                 os.environ['CXX'] = 'clang++'
 
-    library_dirs=[openmm_lib_path]
+    library_dirs=[openmm_lib_path, os.path.dirname(os.path.dirname(get_python_lib()))]
     include_dirs=openmm_include_path.split(';')
     include_dirs.append(numpy.get_include())
 
