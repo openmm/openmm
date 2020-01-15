@@ -194,6 +194,15 @@ protected:
      * Compute the kinetic energy of the system at the current time.
      */
     double computeKineticEnergy();
+    /**
+     * Return a list of velocities normally distributed around a target temperature, correctly
+     * handling center of mass velocities for the Drude pairs.
+     *
+     * @param system the system whose velocities are to be initialized.
+     * @param temperature the target temperature in Kelvin.
+     * @param randomSeed the random number seed to use when selecting velocities 
+     */
+    virtual std::vector<Vec3> getVelocitiesForTemperature(const System &system, double temperature, int randomSeed) const override;
 private:
     double temperature, friction, drudeTemperature, drudeFriction, maxDrudeDistance;
     int randomNumberSeed;
