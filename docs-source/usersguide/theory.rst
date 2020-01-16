@@ -1334,21 +1334,65 @@ components are chosen from a normal distribution with mean zero and variance
 :math:`2m_i \gamma k_B T`\ , where *T* is the temperature of
 the heat bath.
 
-The integration is done using a leap-frog method similar to VerletIntegrator.
-:cite:`Izaguirre2010` The same comments about the offset between positions and
-velocities apply to this integrator as to that one.
+The integration is done using the Langevin leap-frog method. :cite:`Izaguirre2010`
+In each step, the positions and velocities are updated as follows:
+
+
+.. math::
+   \mathbf{v}_{i}(t+\Delta t/2)=\mathbf{v}_{i}(t-\Delta t/2)\alpha+\mathbf{f}_{i}(t)(1-\alpha)/\gamma{m}_{i} + \sqrt{kT(1-\alpha^2)/m}R
+
+
+.. math::
+   \mathbf{r}_{i}(t+\Delta t)=\mathbf{r}_{i}(t)+\mathbf{v}_{i}(t+\Delta t/2)\Delta t
+
+
+where :math:`k` is Boltzmann's constant, :math:`T` is the temperature,
+:math:`\gamma` is the friction coefficient, :math:`R` is a normally distributed
+random number, and :math:`\alpha=\exp(-\gamma\Delta t)`.
+
+The same comments about the offset between positions and velocities apply to
+this integrator as to VerletIntegrator.
 
 BAOABLangevinIntegrator
 ***********************
 
 This integrator is similar to LangevinIntegerator, but it instead uses the BAOAB
-discretization. :cite:`Leimkuhler2013` This tends to produce more accurate
+discretization. :cite:`Leimkuhler2013` In each step, the positions and velocities
+are updated as follows:
+
+
+.. math::
+   \mathbf{v}_{i}(t+\Delta t/2) = \mathbf{v}_{i}(t) + \mathbf{f}_{i}(t)\Delta t/2{m}_{i}
+
+
+.. math::
+   \mathbf{r}_{i}(t+\Delta t/2) = \mathbf{r}_{i}(t) + \mathbf{v}_{i}(t+\Delta t/2)\Delta t/2
+
+
+.. math::
+   \mathbf{v'}_{i}(t+\Delta t/2) = \mathbf{v}_{i}(t+\Delta t/2)\alpha + \sqrt{kT(1-\alpha^2)/m}R
+
+
+.. math::
+   \mathbf{r}_{i}(t+\Delta t) = \mathbf{r}_{i}(t+\Delta t/2) + \mathbf{v'}_{i}(t+\Delta t/2)\Delta t/2
+
+
+.. math::
+   \mathbf{v}_{i}(t+\Delta t) = \mathbf{v'}_{i}(t+\Delta t/2) + \mathbf{f}_{i}(t+\Delta t)\Delta t/2{m}_{i}
+
+
+This tends to produce more accurate
 sampling of configurational properties (such as free energies), but less
 accurate sampling of kinetic properties (such as mean kinetic energy).  Because
 configurational properties are much more important than kinetic ones in most
 simulations, this integrator is generally preferred over LangevinIntegrator.  It
 often allows one to use a larger time step while still maintaining similar or
 better accuracy.
+
+One disadvantage of this integrator is that it requires applying constraints
+three times per time step, compared to only once for LangevinIntegrator.  This
+can make it slightly slower for systems that involve constraints.  However, this
+usually is more than compensated by allowing you to use a larger time step.
 
 Unlike LangevinIntegrator, this does not use a leap-frog algorithm.  The
 positions and velocities all correspond to the same point in time.
