@@ -32,6 +32,8 @@ It is organized as follows:
   information relevant to writing OpenCL implementations of new features.
 * Chapter :ref:`the-cuda-platform` discusses the architecture of the CUDA Platform, providing
   information relevant to writing CUDA implementations of new features.
+* Chapter :ref:`common-compute` describes the Common Compute framework, which lets you
+  write a single implementation of a feature that can be used for both OpenCL and CUDA.
 
 
 This guide assumes you are already familiar with the public API and how to use
@@ -214,9 +216,9 @@ plugins happen to be loaded in.
 Creating New Platforms
 **********************
 
-One common type of plugin defines a new Platform.  There are three such plugins
-that come with OpenMM: one for the CPU Platform, one for the CUDA Platform, and
-one for the OpenCL Platform.
+One common type of plugin defines a new Platform.  There are four such plugins
+that come with OpenMM: one for the Reference platform, one for the CPU Platform,
+one for the CUDA Platform, and one for the OpenCL Platform.
 
 To define a new Platform, you must create subclasses of the various abstract
 classes in the OpenMM Low Level API: a subclass of Platform, one or more
@@ -974,5 +976,5 @@ value for a kernel argument or to access the elements of an array.  OpenCL and
 CUDA both define types for them, but they have different names, and in any case
 you want to avoid using OpenCL-specific or CUDA-specific types in common code.
 OpenMM therefore defines types for vectors in host code.  They have the same
-names as the correspond types in device code, only with the prefix :code:`mm_`\ ,
+names as the corresponding types in device code, only with the prefix :code:`mm_`\ ,
 for example :code:`mm_int2` and :code:`mm_float3`\ .

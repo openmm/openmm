@@ -50,8 +50,8 @@ namespace OpenMM {
  * with the particle positions and momenta.
  *
  * To create an integration algorithm, you first define a set of variables the
- * integrator will compute.  Variables come in two types: <i>global</i> variables
- * have a single value, while <i>per-DOF</i> variables have a value for every
+ * integrator will compute.  Variables come in two types: global variables
+ * have a single value, while per-DOF variables have a value for every
  * degree of freedom (x, y, or z coordinate of a particle).  You can define as
  * many variables as you want of each type.  The value of any variable can be
  * computed by the integration algorithm, or set directly by calling a method on
@@ -112,14 +112,14 @@ namespace OpenMM {
  * evaluated, a different value will be used.  When used in a per-DOF
  * expression, a different value will be used for every degree of freedom.
  * Note, however, that if this variable appears multiple times in a single
- * expression, the <i>same</i> value is used everywhere it appears in that
+ * expression, the same value is used everywhere it appears in that
  * expression.</li>
  * <li>gaussian: (either global or per-DOF, read-only) This is a Gaussian
  * distributed random number with mean 0 and variance 1.  Every time an expression
  * is evaluated, a different value will be used.  When used in a per-DOF
  * expression, a different value will be used for every degree of freedom.
  * Note, however, that if this variable appears multiple times in a single
- * expression, the <i>same</i> value is used everywhere it appears in that
+ * expression, the same value is used everywhere it appears in that
  * expression.</li>
  * <li>A global variable is created for every adjustable parameter defined
  * in the integrator's Context.</li>
@@ -218,6 +218,47 @@ namespace OpenMM {
  * integrator.addComputePerDof("angularMomentum", "m*cross(x, v)");
  * </pre></tt>
  * 
+ * Here are two more examples that may be useful as starting points for writing
+ * your own integrators.  The first one implements the algorithm used by the
+ * standard VerletIntegrator class.  This is a leapfrog algorithm, in contrast
+ * to the velocity Verlet algorithm shown above, so it only requires applying
+ * constraints once in each time step.
+ * 
+ * <tt><pre>
+ * CustomIntegrator integrator(dt);
+ * integrator.addPerDofVariable("x0", 0);
+ * integrator.addUpdateContextState();
+ * integrator.addComputePerDof("x0", "x");
+ * integrator.addComputePerDof("v", "v+dt*f/m");
+ * integrator.addComputePerDof("x", "x+dt*v");
+ * integrator.addConstrainPositions();
+ * integrator.addComputePerDof("v", "(x-x0)/dt");
+ * </pre></tt>
+ * 
+ * The second one implements the algorithm used by the standard
+ * BAOABLangevinIntegrator class.  kB is Boltzmann's constant.
+ * 
+ * <tt><pre>
+ * CustomIntegrator integrator(dt);
+ * integrator.addGlobalVariable("a", exp(-friction*dt));
+ * integrator.addGlobalVariable("b", sqrt(1-exp(-2*friction*dt)));
+ * integrator.addGlobalVariable("kT", kB*temperature);
+ * integrator.addPerDofVariable("x1", 0);
+ * integrator.addUpdateContextState();
+ * integrator.addComputePerDof("v", "v + 0.5*dt*f/m");
+ * integrator.addComputePerDof("x", "x + 0.5*dt*v");
+ * integrator.addComputePerDof("x1", "x");
+ * integrator.addConstrainPositions();
+ * integrator.addComputePerDof("v", "v + 2*(x-x1)/dt");
+ * integrator.addComputePerDof("v", "a*v + b*sqrt(kT/m)*gaussian");
+ * integrator.addComputePerDof("x", "x + 0.5*dt*v");
+ * integrator.addComputePerDof("x1", "x");
+ * integrator.addConstrainPositions();
+ * integrator.addComputePerDof("v", "v + 2*(x-x1)/dt");
+ * integrator.addComputePerDof("v", "v + 0.5*dt*f/m");
+ * integrator.addConstrainVelocities();
+ * </pre></tt>
+ * 
  * Another feature of CustomIntegrator is that it can use derivatives of the
  * potential energy with respect to context parameters.  These derivatives are
  * typically computed by custom forces, and are only computed if a Force object
@@ -230,7 +271,7 @@ namespace OpenMM {
  *
  * An Integrator has one other job in addition to evolving the equations of motion:
  * it defines how to compute the kinetic energy of the system.  Depending on the
- * integration method used, simply summing mv<sup>2</sup>/2 over all degrees of
+ * integration method used, simply summing (mv^2)/2 over all degrees of
  * freedom may not give the correct answer.  For example, in a leapfrog integrator
  * the velocities are "delayed" by half a time step, so the above formula would
  * give the kinetic energy half a time step ago, not at the current time.
@@ -250,7 +291,7 @@ namespace OpenMM {
  * The kinetic energy expression may depend on the following pre-defined variables:
  * x, v, f, m, dt.  It also may depend on user-defined global and per-DOF variables,
  * and on the values of adjustable parameters defined  in the integrator's Context.
- * It may <i>not</i> depend on any other variable, such as the potential energy,
+ * It may not depend on any other variable, such as the potential energy,
  * the force from a single force group, or a random number.
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
