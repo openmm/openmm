@@ -171,7 +171,7 @@ std::vector<Vec3> DrudeLangevinIntegrator::getVelocitiesForTemperature(const Sys
             double fracM1 = mass1 * invMass;
             double fracM2 = mass2 * invMass;
             Vec3 comVelocity = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*sqrt(BOLTZ*temperature*invMass);
-            Vec3 relVelocity = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*sqrt(BOLTZ*drudeTemperature*redMass);
+            Vec3 relVelocity = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*sqrt(BOLTZ*drudeTemperature/redMass);
             velocities[atom1] = comVelocity - fracM2 * relVelocity;
             velocities[atom2] = comVelocity + fracM1 * relVelocity;
         }
