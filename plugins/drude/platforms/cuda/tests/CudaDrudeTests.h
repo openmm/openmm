@@ -29,7 +29,14 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLDrudeTests.h"
-#include "TestDrudeLangevinIntegrator.h"
+#include "CudaTests.h"
 
-void runPlatformTests() {}
+extern "C" void registerDrudeCudaKernelFactories();
+
+using namespace OpenMM;
+
+void setupKernels (int argc, char* argv[]) {
+    registerDrudeCudaKernelFactories();
+    platform = dynamic_cast<CudaPlatform&>(Platform::getPlatformByName("CUDA"));
+    initializeTests(argc, argv);
+}

@@ -52,9 +52,6 @@
 
 using namespace OpenMM;
 using namespace std;
-extern "C" OPENMM_EXPORT void registerDrudeReferenceKernelFactories();
-extern "C" OPENMM_EXPORT void registerKernelFactories();
-Platform& initializePlatform(int argc, char* argv[]);
 
 void build_waterbox(System &system, int gridSize, double polarizability, vector<Vec3> & positions) {
     // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
@@ -107,7 +104,7 @@ void build_waterbox(System &system, int gridSize, double polarizability, vector<
     }
 }
 
-void testWaterBox(Platform& platform) {
+void testWaterBox() {
     // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
     // and Drude particles.
     System system;
@@ -131,8 +128,8 @@ void testWaterBox(Platform& platform) {
     double frequency = 800.0;
     double frequencyDrude = 2000.0;
     int randomSeed = 100;
-    DrudeNoseHooverIntegrator integ(temperature, frequency, 
-                                    temperatureDrude, frequencyDrude, 0.0005, 
+    DrudeNoseHooverIntegrator integ(temperature, frequency,
+                                    temperatureDrude, frequencyDrude, 0.0005,
                                     chainLength, numMTS, numYS);
     Context context(system, integ, platform);
     context.setPositions(positions);
@@ -182,7 +179,7 @@ void testWaterBox(Platform& platform) {
 }
 
 
-double testWaterBoxWithHardWallConstraint(Platform& platform, double hardWallConstraint){
+double testWaterBoxWithHardWallConstraint(double hardWallConstraint){
     // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
     // and Drude particles.
     System system;
@@ -206,8 +203,8 @@ double testWaterBoxWithHardWallConstraint(Platform& platform, double hardWallCon
     double frequency = 25.0;
     double frequencyDrude = 25.0;
     int randomSeed = 100;
-    DrudeNoseHooverIntegrator integ(temperature, frequency, 
-                                    temperatureDrude, frequencyDrude, 0.0005, 
+    DrudeNoseHooverIntegrator integ(temperature, frequency,
+                                    temperatureDrude, frequencyDrude, 0.0005,
                                     chainLength, numMTS, numYS);
     integ.setMaxDrudeDistance(hardWallConstraint);
     Context context(system, integ, platform);
@@ -225,10 +222,10 @@ double testWaterBoxWithHardWallConstraint(Platform& platform, double hardWallCon
     context.setVelocities(velocities);
     context.applyConstraints(1e-6);
     // Equilibrate.
-    
+
     integ.step(10);
     // Compute the internal and center of mass temperatures.
-    
+
     double totalKE = 0;
     const int numSteps = 10;
     double meanTemp = 0.0;
@@ -260,18 +257,20 @@ double testWaterBoxWithHardWallConstraint(Platform& platform, double hardWallCon
     return maxR;
 }
 
+void setupKernels(int argc, char* argv[]);
+void runPlatformTests();
 
 int main(int argc, char* argv[]) {
     try {
-        registerKernelFactories();
+        setupKernels(argc, argv);
 
-        Platform& platform = initializePlatform(argc, argv);
-        testWaterBox(platform);
+        testWaterBox();
         double maxDrudeDistance = 0.005;
-        double observedDrudeDistance = testWaterBoxWithHardWallConstraint(platform, 0.0);
+        double observedDrudeDistance = testWaterBoxWithHardWallConstraint(0.0);
         ASSERT(observedDrudeDistance > maxDrudeDistance);
-        observedDrudeDistance = testWaterBoxWithHardWallConstraint(platform, maxDrudeDistance);
+        observedDrudeDistance = testWaterBoxWithHardWallConstraint(maxDrudeDistance);
         ASSERT(observedDrudeDistance < maxDrudeDistance);
+        runPlatformTests();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

@@ -29,7 +29,14 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLDrudeTests.h"
-#include "TestDrudeLangevinIntegrator.h"
+#include "OpenCLTests.h"
 
-void runPlatformTests() {}
+extern "C" void registerDrudeOpenCLKernelFactories();
+
+using namespace OpenMM;
+
+void setupKernels (int argc, char* argv[]) {
+    registerDrudeOpenCLKernelFactories();
+    platform = dynamic_cast<OpenCLPlatform&>(Platform::getPlatformByName("OpenCL"));
+    initializeTests(argc, argv);
+}

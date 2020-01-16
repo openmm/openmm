@@ -29,22 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-//#include "ReferenceTests.h"
-#include "openmm/Platform.h"
-
-
-using namespace OpenMM;
-using namespace std;
-//extern "C" OPENMM_EXPORT void registerDrudeReferenceKernelFactories();
-
-
-Platform& initializePlatform(int argc, char* argv[]) {
-/*    registerDrudeReferenceKernelFactories();
-    */
-    return Platform::getPlatformByName("Reference");
-}
-
+#include "ReferenceDrudeTests.h"
 #include "TestDrudeNoseHoover.h"
 
-void runPlatformTests() { }
-
+void runPlatformTests() {}
