@@ -2983,7 +2983,7 @@
    <ExternalBond from="14" />
    <ExternalBond from="0" />
  </Residue>
-  <Residue name="HOH">
+  <Residue name="HOH" rigidWater="false">
    <Atom name="H1" type="403" />
    <Atom name="H2" type="403" />
    <Atom name="O" type="402" />
