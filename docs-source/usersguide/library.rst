@@ -1297,7 +1297,7 @@ existing MD program.
     static const double SolventDielectric   = 80.;     // typical for water
     static const double SoluteDielectric    = 2.;      // typical for protein
 
-    static const double StepSizeInFs        = 2;       // integration step size (fs)
+    static const double StepSizeInFs        = 4;       // integration step size (fs)
     static const double ReportIntervalInFs  = 50;      // how often to issue PDB frame (fs)
     static const double SimulationTimeInPs  = 100;     // total simulation time (ps)
 
@@ -1631,7 +1631,7 @@ along with the handle :code:`omm`\ , back to the calling function.
     // best available Platform. Initialize the configuration from the default
     // positions we collected above. Initial velocities will be zero but could
     // have been set here.
-    omm->integrator = new OpenMM::LangevinIntegrator(temperature,
+    omm->integrator = new OpenMM::BAOABLangevinIntegrator(temperature,
     frictionInPs,
     stepSizeInFs * OpenMM::PsPerFs);
     omm->context    = new OpenMM::Context(*omm->system, *omm->integrator);
