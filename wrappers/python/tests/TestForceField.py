@@ -165,12 +165,12 @@ class TestForceField(unittest.TestCase):
 
         topology = self.pdb1.topology
         for constraints_value in [None, HBonds, AllBonds, HAngles]:
-            for rigidWater_value in [True, False]:
+            for rigidWater_value in [True, False, None]:
                 system = self.forcefield1.createSystem(topology,
                                                        constraints=constraints_value,
                                                        rigidWater=rigidWater_value)
                 validateConstraints(self, topology, system,
-                                    constraints_value, rigidWater_value)
+                                    constraints_value, rigidWater_value != False)
 
     def test_flexibleConstraints(self):
         """ Test the flexibleConstraints keyword """
@@ -1061,6 +1061,15 @@ class AmoebaTestForceField(unittest.TestCase):
         self.assertAlmostEqual(constraints[(0,1)], hoDist)
         self.assertAlmostEqual(constraints[(0,2)], hoDist)
         self.assertAlmostEqual(constraints[(1,2)], hohDist)
+        
+        # Check that all values of rigidWater are interpreted correctly.
+        
+        numWaters = 215
+        self.assertEqual(3*numWaters, system.getNumConstraints())
+        system = self.forcefield1.createSystem(self.pdb1.topology, rigidWater=False)
+        self.assertEqual(0, system.getNumConstraints())
+        system = self.forcefield1.createSystem(self.pdb1.topology, rigidWater=None)
+        self.assertEqual(0, system.getNumConstraints())
 
     def test_Forces(self):
         """Compute forces and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""

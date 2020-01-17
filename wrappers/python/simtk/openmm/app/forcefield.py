@@ -264,6 +264,8 @@ class ForceField(object):
                     template = ForceField._TemplateData(resName)
                     if 'override' in residue.attrib:
                         template.overrideLevel = int(residue.attrib['override'])
+                    if 'rigidWater' in residue.attrib:
+                        template.rigidWater = (residue.attrib['rigidWater'].lower() == 'true')
                     atomIndices = template.atomIndices
                     for ia, atom in enumerate(residue.findall('Atom')):
                         params = {}
@@ -594,6 +596,7 @@ class ForceField(object):
             self.bonds = []
             self.externalBonds = []
             self.overrideLevel = 0
+            self.rigidWater = True
 
         def getAtomIndexByName(self, atom_name):
             """Look up an atom index by atom name, providing a helpful error message if not found."""
@@ -1051,7 +1054,7 @@ class ForceField(object):
         return [templates, unique_unmatched_residues]
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
+                     constraints=None, rigidWater=None, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
                      ignoreExternalBonds=False, switchDistance=None, flexibleConstraints=False, **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
@@ -1067,9 +1070,10 @@ class ForceField(object):
         constraints : object=None
             Specifies which bonds and angles should be implemented with constraints.
             Allowed values are None, HBonds, AllBonds, or HAngles.
-        rigidWater : boolean=True
+        rigidWater : boolean=None
             If true, water molecules will be fully rigid regardless of the value
-            passed for the constraints argument
+            passed for the constraints argument.  If None (the default), it uses the
+            default behavior for this force field's water model.
         removeCMMotion : boolean=True
             If true, a CMMotionRemover will be added to the System
         hydrogenMass : mass=None
@@ -1109,6 +1113,7 @@ class ForceField(object):
         data.atoms = list(topology.atoms())
         for atom in data.atoms:
             data.excludeAtomWith.append([])
+        rigidResidue = [False]*topology.getNumResidues()
 
         # Make a list of all bonds
 
@@ -1146,6 +1151,13 @@ class ForceField(object):
                     unmatchedResidues.append(res)
                 else:
                     data.recordMatchedAtomParameters(res, template, matches)
+                if res.name == 'HOH':
+                    # Determine whether this should be a rigid water.
+
+                    if rigidWater is None and template is not None:
+                        rigidResidue[res.index] = template.rigidWater
+                    elif rigidWater:
+                        rigidResidue[res.index] = True
 
         # Try to apply patches to find matches for any unmatched residues.
 
@@ -1269,12 +1281,11 @@ class ForceField(object):
                 atom1 = data.atoms[bond.atom1]
                 atom2 = data.atoms[bond.atom2]
                 bond.isConstrained = atom1.element is elem.hydrogen or atom2.element is elem.hydrogen
-        if rigidWater:
-            for bond in data.bonds:
-                atom1 = data.atoms[bond.atom1]
-                atom2 = data.atoms[bond.atom2]
-                if atom1.residue.name == 'HOH' and atom2.residue.name == 'HOH':
-                    bond.isConstrained = True
+        for bond in data.bonds:
+            atom1 = data.atoms[bond.atom1]
+            atom2 = data.atoms[bond.atom2]
+            if rigidResidue[atom1.residue.index] and rigidResidue[atom2.residue.index]:
+                bond.isConstrained = True
 
         # Identify angles that should be implemented with constraints
 
@@ -1291,14 +1302,13 @@ class ForceField(object):
                 data.isAngleConstrained.append(numH == 2 or (numH == 1 and atom2.element is elem.oxygen))
         else:
             data.isAngleConstrained = len(data.angles)*[False]
-        if rigidWater:
-            for i in range(len(data.angles)):
-                angle = data.angles[i]
-                atom1 = data.atoms[angle[0]]
-                atom2 = data.atoms[angle[1]]
-                atom3 = data.atoms[angle[2]]
-                if atom1.residue.name == 'HOH' and atom2.residue.name == 'HOH' and atom3.residue.name == 'HOH':
-                    data.isAngleConstrained[i] = True
+        for i in range(len(data.angles)):
+            angle = data.angles[i]
+            atom1 = data.atoms[angle[0]]
+            atom2 = data.atoms[angle[1]]
+            atom3 = data.atoms[angle[2]]
+            if rigidResidue[atom1.residue.index] and rigidResidue[atom2.residue.index] and rigidResidue[atom3.residue.index]:
+                data.isAngleConstrained[i] = True
 
         # Add virtual sites
 
