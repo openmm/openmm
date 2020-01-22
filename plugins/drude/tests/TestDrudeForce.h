@@ -43,6 +43,8 @@
 using namespace OpenMM;
 using namespace std;
 
+bool doublePrecision = false;
+
 void validateForce(System& system, vector<Vec3>& positions, double expectedEnergy) {
     // Given a System containing a Drude force, check that its energy has the expected value.
 
@@ -54,7 +56,8 @@ void validateForce(System& system, vector<Vec3>& positions, double expectedEnerg
 
     // Try moving each particle along each axis, and see if the energy changes by the correct amount.
 
-    double offset = 1e-3;
+    double offset = doublePrecision ? 1e-3 : 1e-2;
+    const double TOL = doublePrecision ? 1e-5 : 5e-4;
     for (int i = 0; i < system.getNumParticles(); i++)
         for (int j = 0; j < 3; j++) {
             vector<Vec3> offsetPos = positions;
@@ -64,7 +67,7 @@ void validateForce(System& system, vector<Vec3>& positions, double expectedEnerg
             offsetPos[i][j] = positions[i][j]+offset;
             context.setPositions(offsetPos);
             double e2 = context.getState(State::Energy | State::Forces).getPotentialEnergy();
-            ASSERT_EQUAL_TOL(state.getForces()[i][j], (e1-e2)/(2*offset), 1e-5);
+            ASSERT_EQUAL_TOL(state.getForces()[i][j], (e1-e2)/(2*offset), TOL);
         }
 }
 
@@ -193,6 +196,7 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         setupKernels(argc, argv);
+        if (argc > 0 && std::string(argv[1]) == "double") doublePrecision = true;
         testSingleParticle();
         testAnisotropicParticle();
         testThole();
