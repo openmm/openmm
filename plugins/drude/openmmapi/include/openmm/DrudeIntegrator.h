@@ -39,12 +39,7 @@
 namespace OpenMM {
 
 /**
- * This is a leap-frog Verlet Integrator that simulates systems with Drude particles.  It uses the
- * self-consistent field (SCF) method: at every time step, the positions of Drude particles are
- * adjusted to minimize the potential energy.
- * 
- * This Integrator requires the System to include a DrudeForce, which it uses to identify the Drude
- * particles.
+ * A base class to encapsulate features common to Drude integrators.
  */
 
 class OPENMM_EXPORT_DRUDE DrudeIntegrator : public Integrator {
