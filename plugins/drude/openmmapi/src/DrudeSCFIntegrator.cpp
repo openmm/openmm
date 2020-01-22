@@ -42,7 +42,9 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-DrudeSCFIntegrator::DrudeSCFIntegrator(double stepSize) {
+DrudeSCFIntegrator::DrudeSCFIntegrator(double stepSize) : DrudeIntegrator(stepSize)
+{
+    setDrudeTemperature(0.0);  // This is only used to initialize velocities for this integrator
     setStepSize(stepSize);
     setMinimizationErrorTolerance(0.1);
     setConstraintTolerance(1e-5);
@@ -70,9 +72,6 @@ void DrudeSCFIntegrator::initialize(ContextImpl& contextRef) {
 
 void DrudeSCFIntegrator::cleanup() {
     kernel = Kernel();
-}
-
-void DrudeSCFIntegrator::stateChanged(State::DataType changed) {
 }
 
 vector<string> DrudeSCFIntegrator::getKernelNames() {

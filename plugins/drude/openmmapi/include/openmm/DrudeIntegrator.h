@@ -121,10 +121,6 @@ protected:
      */
     virtual void cleanup() override {};
     /**
-     * When the user modifies the state, we need to mark that the forces need to be recalculated.
-     */
-    virtual void stateChanged(State::DataType changed) override {};
-    /**
      * Get the names of all Kernels used by this Integrator.
      */
     virtual std::vector<std::string> getKernelNames() override { return std::vector<std::string>(); }

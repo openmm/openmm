@@ -93,6 +93,18 @@ public:
      * Compute the kinetic energy of all (real and drude) particles at the current time.
      */
     double computeTotalKineticEnergy();
+    /**
+     * Return a list of velocities normally distributed around a target temperature, with the Drude
+     * temperatures assigned according to the Drude temperature assigned to the integrator.
+     *
+     * @param system the system whose velocities are to be initialized.
+     * @param temperature the target temperature in Kelvin.
+     * @param randomSeed the random number seed to use when selecting velocities 
+     */
+    virtual std::vector<Vec3> getVelocitiesForTemperature(const System &system, double temperature,
+                                                          int randomSeed) const override;
+protected:
+    double drudeTemperature;
 };
 
 } // namespace OpenMM
