@@ -36,6 +36,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/NonbondedForce.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/VirtualSite.h"
@@ -106,6 +107,14 @@ void testWater() {
     State state = context.getState(State::Energy);
     double initialEnergy;
     int numSteps = 1000;
+    double maxNorm = 1.0;
+    try {
+        if (platform.getPropertyValue(context, "Precision") != "double") {
+            maxNorm = 5.0;
+        }
+    } catch(OpenMMException) {
+        // The defaults above are for double precision, which is assumed in this case
+    }
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
         state = context.getState(State::Energy | State::Forces);
@@ -118,7 +127,7 @@ void testWater() {
         for (int j = 1; j < (int) force.size(); j += 5)
             norm += sqrt(force[j].dot(force[j]));
         norm = (norm/numMolecules);
-        ASSERT(norm < 1.0);
+        ASSERT(norm < maxNorm);
     }
 }
 

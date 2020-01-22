@@ -32,6 +32,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/NonbondedForce.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
@@ -43,8 +44,6 @@
 using namespace OpenMM;
 using namespace std;
 
-bool doublePrecision = false;
-
 void validateForce(System& system, vector<Vec3>& positions, double expectedEnergy) {
     // Given a System containing a Drude force, check that its energy has the expected value.
 
@@ -55,9 +54,16 @@ void validateForce(System& system, vector<Vec3>& positions, double expectedEnerg
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
 
     // Try moving each particle along each axis, and see if the energy changes by the correct amount.
-
-    double offset = doublePrecision ? 1e-3 : 1e-2;
-    const double TOL = doublePrecision ? 1e-5 : 5e-4;
+    double offset = 1e-3;
+    double TOL = 1e-5;
+    try {
+        if (platform.getPropertyValue(context, "Precision") != "double") {
+            offset = 1e-2;
+            TOL = 5e-4;
+        }
+    } catch(OpenMMException) {
+        // The defaults above are for double precision, which is assumed in this case
+    }
     for (int i = 0; i < system.getNumParticles(); i++)
         for (int j = 0; j < 3; j++) {
             vector<Vec3> offsetPos = positions;
@@ -196,7 +202,6 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         setupKernels(argc, argv);
-        if (argc > 0 && std::string(argv[1]) == "double") doublePrecision = true;
         testSingleParticle();
         testAnisotropicParticle();
         testThole();
