@@ -125,8 +125,10 @@ void testWaterBox() {
     int chainLength = 4;
     int numMTS = 4;
     int numYS = 5;
-    double frequency = 800.0;
-    double frequencyDrude = 2000.0;
+    // N.B. These are higher frequencies than recommeded for production runs, but are used
+    // here to achieve rapid equilibration to the target temperature, allowing a short run
+    double frequency = 1000.0;
+    double frequencyDrude = 1000.0;
     int randomSeed = 100;
     DrudeNoseHooverIntegrator integ(temperature, frequency,
                                     temperatureDrude, frequencyDrude, 0.0005,
@@ -134,25 +136,14 @@ void testWaterBox() {
     Context context(system, integ, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temperature, randomSeed);
-    std::vector<Vec3> velocities = context.getState(State::Velocities).getVelocities();
-    for (int i = 0; i < numMolecules; i++){
-        Vec3 noize;
-        for (int j = 0; j < 3; j++){
-            noize[j] = float(((i+18311)*(j+18253) * 313419097822414) % 18313) / float(18313);
-            noize[j] *= sqrt(3 * BOLTZ * temperatureDrude / 0.4);
-        }
-        velocities[5*i+1] = velocities[5*i] + noize;
-    }
-    context.setVelocities(velocities);
     context.applyConstraints(1e-6);
 
-    // Equilibrate.
-    integ.step(500);
+    // Equilibrate
+    integ.step(1500);
 
     // Compute the internal and center of mass temperatures.
-
     double totalKE = 0;
-    const int numSteps = 4000;
+    const int numSteps = 500;
     double meanTemp = 0.0;
     double meanDrudeTemp = 0.0;
     double meanConserved = 0.0;
@@ -171,11 +162,11 @@ void testWaterBox() {
         double conserved = PE + fullKE + heatBathEnergy;
         meanConserved = (i*meanConserved + conserved)/(i+1);
         totalKE += KE;
-        ASSERT(fabs(meanConserved - conserved) < 0.6);
+        ASSERT(fabs(meanConserved - conserved) < 0.3);
     }
     totalKE /= numSteps;
-    ASSERT_USUALLY_EQUAL_TOL(temperature, meanTemp,  0.004);
-    ASSERT_USUALLY_EQUAL_TOL(temperatureDrude, meanDrudeTemp,  0.004);
+    ASSERT_USUALLY_EQUAL_TOL(temperature, meanTemp,  0.01);
+    ASSERT_USUALLY_EQUAL_TOL(temperatureDrude, meanDrudeTemp,  0.01);
 }
 
 
@@ -210,24 +201,14 @@ double testWaterBoxWithHardWallConstraint(double hardWallConstraint){
     Context context(system, integ, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temperature, randomSeed);
-    std::vector<Vec3> velocities = context.getState(State::Velocities).getVelocities();
-    for (int i = 0; i < numMolecules; i++){
-        Vec3 noize;
-        for (int j = 0; j < 3; j++){
-            noize[j] = float(((i+18311)*(j+18253) * 313419097822414) % 18313) / float(18313);
-            noize[j] *= sqrt(3 * BOLTZ * temperatureDrude / 0.4);
-        }
-        velocities[5*i+1] = velocities[5*i] + noize;
-    }
-    context.setVelocities(velocities);
     context.applyConstraints(1e-6);
+
     // Equilibrate.
+    integ.step(50);
 
-    integ.step(10);
     // Compute the internal and center of mass temperatures.
-
     double totalKE = 0;
-    const int numSteps = 10;
+    const int numSteps = 500;
     double meanTemp = 0.0;
     double meanDrudeTemp = 0.0;
     double meanConserved = 0.0;
@@ -235,25 +216,12 @@ double testWaterBoxWithHardWallConstraint(double hardWallConstraint){
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
         State state = context.getState(State::Energy | State::Positions);
-        double KE = state.getKineticEnergy();
-        double PE = state.getPotentialEnergy();
-        double fullKE = integ.computeTotalKineticEnergy();
-        double drudeKE = integ.computeDrudeKineticEnergy();
-        double temp = KE/(0.5*numStandardDof*BOLTZ);
-        double drudeTemp = drudeKE/(0.5*numDrudeDof*BOLTZ);
-        meanTemp = (i*meanTemp + temp)/(i+1);
-        meanDrudeTemp = (i*meanDrudeTemp + drudeTemp)/(i+1);
-        double heatBathEnergy = integ.computeHeatBathEnergy();
-        double conserved = PE + fullKE + heatBathEnergy;
-        meanConserved = (i*meanConserved + conserved)/(i+1);
         const auto & positions = state.getPositions();
         for(int mol = 0; mol < gridSize*gridSize*gridSize; ++mol) {
             auto dR = positions[5*mol+1] - positions[5*mol];
             maxR = std::max(maxR, std::sqrt(dR.dot(dR)));
         }
-        totalKE += KE;
     }
-    totalKE /= numSteps;
     return maxR;
 }
 
