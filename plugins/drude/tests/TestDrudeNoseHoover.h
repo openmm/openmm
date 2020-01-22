@@ -257,6 +257,64 @@ double testWaterBoxWithHardWallConstraint(double hardWallConstraint){
     return maxR;
 }
 
+void testInitialTemperature() {
+    // Check temperature initialization for a collection of randomly placed particles
+    const int numRealParticles = 500000;
+    const int numParticles = 2 * numRealParticles;
+    const int nDoF = 3 * numRealParticles;
+    const double targetTemperature = 300;
+    const double drudeTemperature = 1;
+    const double realMass = 10;
+    const double drudeMass = 1;
+    System system;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    std::vector<Vec3> positions(numParticles);
+    DrudeForce* drude = new DrudeForce();
+
+    for (int i = 0; i < numRealParticles; i++) {
+        system.addParticle(realMass);
+        system.addParticle(drudeMass);
+        positions[2*i][0] = genrand_real2(sfmt);
+        positions[2*i][1] = genrand_real2(sfmt);
+        positions[2*i][2] = genrand_real2(sfmt);
+        positions[2*i+1][0] = positions[2*i][0] + 0.01*genrand_real2(sfmt);
+        positions[2*i+1][1] = positions[2*i][1] + 0.01*genrand_real2(sfmt);
+        positions[2*i+1][2] = positions[2*i][2] + 0.01*genrand_real2(sfmt);
+        drude->addParticle(2*i+1, 2*i, -1, -1, -1, -1.0, 0.001, 1, 1);
+    }
+    system.addForce(drude);
+    CMMotionRemover* cmm = new CMMotionRemover(1);
+    system.addForce(cmm);
+
+    DrudeNoseHooverIntegrator integrator(targetTemperature, 25, drudeTemperature, 25, 0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(targetTemperature);
+    auto velocities = context.getState(State::Velocities).getVelocities();
+    double comKineticEnergy = 0;
+    double relKineticEnergy = 0;
+    for (int i = 0; i < numRealParticles; i++) {
+        int m1 = realMass;
+        int m2 = drudeMass;
+        Vec3 v1 = velocities[2*i];
+        Vec3 v2 = velocities[2*i + 1];
+        double invMass = 1.0 / (m1 + m2);
+        double redMass = m1 * m2 * invMass;
+        double fracM1 = m1 * invMass;
+        double fracM2 = m2 * invMass;
+        Vec3 comVelocity = fracM1 * v1 + fracM2 * v2;
+        Vec3 relVelocity = v2 - v1;
+
+        comKineticEnergy += 0.5 * (m1 + m2) * comVelocity.dot(comVelocity);
+        relKineticEnergy += 0.5 * redMass * relVelocity.dot(relVelocity);
+    }
+    double comTemperature = (2*comKineticEnergy / (nDoF*BOLTZ));
+    double relTemperature = (2*relKineticEnergy / (nDoF*BOLTZ));
+    ASSERT_USUALLY_EQUAL_TOL(targetTemperature, comTemperature, 0.01);
+    ASSERT_USUALLY_EQUAL_TOL(drudeTemperature, relTemperature, 0.01);
+}
+
 void setupKernels(int argc, char* argv[]);
 void runPlatformTests();
 
@@ -270,6 +328,7 @@ int main(int argc, char* argv[]) {
         ASSERT(observedDrudeDistance > maxDrudeDistance);
         observedDrudeDistance = testWaterBoxWithHardWallConstraint(maxDrudeDistance);
         ASSERT(observedDrudeDistance < maxDrudeDistance);
+        testInitialTemperature();
         runPlatformTests();
     }
     catch(const exception& e) {

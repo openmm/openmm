@@ -173,7 +173,6 @@ void testWater() {
 
 void testForceEnergyConsistency() {
     // Create a box of polarizable particles.
-
     const int gridSize = 3;
     const int numAtoms = gridSize*gridSize*gridSize;
     const double spacing = 0.6;

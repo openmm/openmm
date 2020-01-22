@@ -74,7 +74,7 @@ public:
      * of what context it will be integrating, and gives it a chance to do any necessary initialization.
      * It will also get called again if the application calls reinitialize() on the Context.
      */
-    void initialize(ContextImpl& context);
+    void initialize(ContextImpl& context) override;
     /**
      * Get the maximum distance a Drude particle can ever move from its parent particle, measured in nm.  This is implemented
      * with a hard wall constraint.  If this distance is set to 0 (the default), the hard wall constraint is omitted.
