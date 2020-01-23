@@ -165,8 +165,8 @@ void testWaterBox() {
         ASSERT(fabs(meanConserved - conserved) < 0.3);
     }
     totalKE /= numSteps;
-    ASSERT_USUALLY_EQUAL_TOL(temperature, meanTemp,  0.01);
-    ASSERT_USUALLY_EQUAL_TOL(temperatureDrude, meanDrudeTemp,  0.01);
+    ASSERT_USUALLY_EQUAL_TOL(temperature, meanTemp,  0.03);
+    ASSERT_USUALLY_EQUAL_TOL(temperatureDrude, meanDrudeTemp,  0.03);
 }
 
 
