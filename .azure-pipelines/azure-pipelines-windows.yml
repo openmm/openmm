@@ -102,6 +102,7 @@ jobs:
           cd python\tests
           python --version
           set PYTHONPATH=D:\tools\miniconda3\Lib\site-packages;%PYTHONPATH%
+          echo %PYTHONPATH%
           py.test -v
         workingDirectory: $(Build.BinariesDirectory)/build
         displayName: "Run OpenMM tests"
