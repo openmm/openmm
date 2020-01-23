@@ -101,8 +101,8 @@ jobs:
           python $(Build.SourcesDirectory)\devtools\run-ctest.py --job-duration 50 --parallel %NUMBER_OF_PROCESSORS%
           cd python\tests
           python --version
-          set PYTHONPATH=D:\tools\miniconda3\Lib\site-packages;%PYTHONPATH%
-          echo %PYTHONPATH%
+          set PYTHONPATH=D:\tools\miniconda3\Lib\site-packages
+          dir %PYTHONPATH%
           py.test -v
         workingDirectory: $(Build.BinariesDirectory)/build
         displayName: "Run OpenMM tests"
