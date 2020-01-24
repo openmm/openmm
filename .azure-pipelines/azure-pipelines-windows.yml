@@ -104,6 +104,6 @@ jobs:
           python --version
           set PYTHONPATH=D:\tools\miniconda3\Lib\site-packages
           dir %PYTHONPATH%
-          py.test -v
+          py.test -v -n %NUMBER_OF_PROCESSORS%
         workingDirectory: $(Build.BinariesDirectory)/build
         displayName: "Run OpenMM tests"
