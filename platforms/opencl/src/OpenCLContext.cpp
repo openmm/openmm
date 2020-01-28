@@ -102,7 +102,13 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
 
             string platformVendor = platforms[j].getInfo<CL_PLATFORM_VENDOR>();
             vector<cl::Device> devices;
-            platforms[j].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+            try {
+                platforms[j].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+            }
+            catch (...) {
+                // There are no devices available for this platform.
+                continue;
+            }
             if (deviceIndex < -1 || deviceIndex >= (int) devices.size())
                 throw OpenMMException("Illegal value for DeviceIndex: "+intToString(deviceIndex));
 
