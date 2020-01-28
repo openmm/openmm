@@ -614,7 +614,7 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
     else
         dispersionCoefficient = 0.0;
-    data.isPeriodic = (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME);
+    data.isPeriodic |= (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME);
 }
 
 double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
@@ -923,7 +923,7 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         force.getInteractionGroupParameters(i, set1, set2);
         interactionGroups.push_back(make_pair(set1, set2));
     }
-    data.isPeriodic = (nonbondedMethod == CutoffPeriodic);
+    data.isPeriodic |= (nonbondedMethod == CutoffPeriodic);
     nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions, data.threads);
     if (interactionGroups.size() > 0)
         nonbonded->setInteractionGroups(interactionGroups);
@@ -1016,7 +1016,7 @@ void CpuCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCFo
     obc.setSurfaceAreaEnergy((float) force.getSurfaceAreaEnergy());
     if (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff)
         obc.setUseCutoff((float) force.getCutoffDistance());
-    data.isPeriodic = (force.getNonbondedMethod() == GBSAOBCForce::CutoffPeriodic);
+    data.isPeriodic |= (force.getNonbondedMethod() == GBSAOBCForce::CutoffPeriodic);
 }
 
 double CpuCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1190,7 +1190,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     ixn = new CpuCustomGBForce(numParticles, exclusions, valueExpressions, valueDerivExpressions, valueGradientExpressions, valueParamDerivExpressions,
         valueNames, valueTypes, energyExpressions, energyDerivExpressions, energyGradientExpressions, energyParamDerivExpressions, energyTypes,
         particleParameterNames, data.threads);
-    data.isPeriodic = (force.getNonbondedMethod() == CustomGBForce::CutoffPeriodic);
+    data.isPeriodic |= (force.getNonbondedMethod() == CustomGBForce::CutoffPeriodic);
 }
 
 double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1252,7 +1252,7 @@ void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, cons
     ixn = new CpuCustomManyParticleForce(force, data.threads);
     nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
     cutoffDistance = force.getCutoffDistance();
-    data.isPeriodic = (nonbondedMethod == CutoffPeriodic);
+    data.isPeriodic |= (nonbondedMethod == CutoffPeriodic);
 }
 
 double CpuCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1295,7 +1295,7 @@ CpuCalcGayBerneForceKernel::~CpuCalcGayBerneForceKernel() {
 
 void CpuCalcGayBerneForceKernel::initialize(const System& system, const GayBerneForce& force) {
     ixn = new CpuGayBerneForce(force);
-    data.isPeriodic = (force.getNonbondedMethod() == GayBerneForce::CutoffPeriodic);
+    data.isPeriodic |= (force.getNonbondedMethod() == GayBerneForce::CutoffPeriodic);
     if (force.getNonbondedMethod() != GayBerneForce::NoCutoff) {
         double cutoff = force.getCutoffDistance();
         data.requestNeighborList(cutoff, 0.1*cutoff, true, ixn->getExclusions());
