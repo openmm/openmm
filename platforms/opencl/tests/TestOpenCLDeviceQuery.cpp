@@ -47,7 +47,13 @@ int main() {
 
     for (int j = 0; j < platforms.size(); j++) {
         vector<cl::Device> devices;
-        platforms[j].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        try {
+            platforms[j].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        }
+        catch (...) {
+            // There are no devices available for this platform.
+            continue;
+        }
 
         for (int i = 0; i < devices.size(); i++) {
             cl::Device d = devices[i];
