@@ -16,6 +16,7 @@ pipeline {
                         sh "git clean -fxd && git checkout ."
                         withEnv(["OPENMM_CUDA_COMPILER=/usr/local/cuda/bin/nvcc"]) {
                             sh "devtools/ci/jenkins/install.sh"
+                            sh "/usr/local/cuda/bin/cuda-memcheck TestCudaCustomNonbondedForce"
                             sh "devtools/ci/jenkins/test.sh -R 'TestCuda' --parallel 2"
                         }
                     }
