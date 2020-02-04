@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2013-2019 Stanford University and Simbios.
+/* Portions copyright (c) 2013-2020 Stanford University and Simbios.
  * Authors: Peter Eastman
  * Contributors: 
  *
@@ -56,14 +56,11 @@ public:
      * First update step.
      * 
      * @param numberOfAtoms       number of atoms
-     * @param atomCoordinates     atom coordinates
      * @param velocities          velocities
      * @param forces              forces
      * @param inverseMasses       inverse atom masses
-     * @param xPrime              xPrime
      */
-    void updatePart1(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
-                     std::vector<OpenMM::Vec3>& forces, std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
+    void updatePart1(int numberOfAtoms, std::vector<OpenMM::Vec3>& velocities,  std::vector<OpenMM::Vec3>& forces, std::vector<double>& inverseMasses);
       
     /**
      * Second update step.
@@ -94,7 +91,6 @@ private:
     void threadUpdate1(int threadIndex);
     void threadUpdate2(int threadIndex);
     void threadUpdate3(int threadIndex);
-    void threadUpdate4(int threadIndex);
     OpenMM::ThreadPool& threads;
     OpenMM::CpuRandom& random;
     std::vector<OpenMM_SFMT::SFMT> threadRandom;

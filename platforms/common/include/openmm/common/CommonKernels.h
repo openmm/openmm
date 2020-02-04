@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -924,12 +924,8 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      * @param integrator the BAOABLangevinIntegrator this kernel is being used for
-     * @param forcesAreValid if the context has been modified since the last time step, this will be
-     *                       false to show that cached forces are invalid and must be recalculated.
-     *                       On exit, this should specify whether the cached forces are valid at the
-     *                       end of the step.
      */
-    void execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid);
+    void execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator);
     /**
      * Compute the kinetic energy.
      * 
@@ -942,7 +938,7 @@ private:
     double prevTemp, prevFriction, prevStepSize;
     bool hasInitializedKernels;
     ComputeArray params, oldDelta;
-    ComputeKernel kernel1, kernel2, kernel3, kernel4;
+    ComputeKernel kernel1, kernel2, kernel3;
 };
 
 /**

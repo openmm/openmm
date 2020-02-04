@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2019 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -51,22 +51,15 @@ double ReferenceBAOABDynamics::getFriction() const {
    return friction;
 }
 
-void ReferenceBAOABDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& atomCoordinates,
-                                              vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& inverseMasses,
-                                              vector<Vec3>& xPrime) {
-    const double halfdt = 0.5*getDeltaT();
-    for (int i = 0; i < numberOfAtoms; i++) {
-        if (inverseMasses[i] != 0.0) {
-            velocities[i] += (halfdt*inverseMasses[i])*forces[i];
-            xPrime[i] = atomCoordinates[i] + velocities[i]*halfdt;
-            oldx[i] = xPrime[i];
-        }
-    }
+void ReferenceBAOABDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& inverseMasses) {
+    for (int i = 0; i < numberOfAtoms; i++)
+        if (inverseMasses[i] != 0.0)
+            velocities[i] += (getDeltaT()*inverseMasses[i])*forces[i];
 }
 
 void ReferenceBAOABDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCoordinates,
-                                              vector<Vec3>& velocities, vector<double>& inverseMasses,
-                                              vector<Vec3>& xPrime) {
+                                         vector<Vec3>& velocities, vector<double>& inverseMasses,
+                                         vector<Vec3>& xPrime) {
     const double halfdt = 0.5*getDeltaT();
     const double kT = BOLTZ*getTemperature();
     const double friction = getFriction();
@@ -75,37 +68,29 @@ void ReferenceBAOABDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCo
 
     for (int i = 0; i < numberOfAtoms; i++) {
         if (inverseMasses[i] != 0.0) {
-            velocities[i] += (xPrime[i]-oldx[i])/halfdt;
+            xPrime[i] = atomCoordinates[i] + velocities[i]*halfdt;
             velocities[i] = vscale*velocities[i] + noisescale*sqrt(kT*inverseMasses[i])*Vec3(
                     SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
                     SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
                     SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
-            atomCoordinates[i] = xPrime[i];
-            xPrime[i] = atomCoordinates[i] + velocities[i]*halfdt;
+            xPrime[i] = xPrime[i] + velocities[i]*halfdt;
             oldx[i] = xPrime[i];
         }
     }
 }
 
 void ReferenceBAOABDynamics::updatePart3(OpenMM::ContextImpl& context, int numberOfAtoms, vector<Vec3>& atomCoordinates,
-                                              vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& inverseMasses,
-                                              vector<Vec3>& xPrime) {
-    const double halfdt = 0.5*getDeltaT();
+                                         vector<Vec3>& velocities, vector<double>& inverseMasses, vector<Vec3>& xPrime) {
     for (int i = 0; i < numberOfAtoms; i++) {
         if (inverseMasses[i] != 0.0) {
-            velocities[i] += (xPrime[i]-oldx[i])/halfdt;
+            velocities[i] += (xPrime[i]-oldx[i])/getDeltaT();
             atomCoordinates[i] = xPrime[i];
         }
-    }
-    context.calcForcesAndEnergy(true, false);
-    for (int i = 0; i < numberOfAtoms; i++) {
-        if (inverseMasses[i] != 0.0)
-            velocities[i] += (halfdt*inverseMasses[i])*forces[i];
     }
 }
 
 void ReferenceBAOABDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordinates,
-                                          vector<Vec3>& velocities, vector<double>& masses, bool& forcesAreValid, double tolerance) {
+                                    vector<Vec3>& velocities, vector<double>& masses, double tolerance) {
     int numberOfAtoms = context.getSystem().getNumParticles();
     ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
     if (getTimeStep() == 0) {
@@ -118,18 +103,14 @@ void ReferenceBAOABDynamics::update(ContextImpl& context, vector<Vec3>& atomCoor
                 inverseMasses[ii] = 1.0/masses[ii];
         }
     }
-    if (!forcesAreValid) {
-        context.calcForcesAndEnergy(true, false);
-        forcesAreValid = true;
-    }
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     vector<Vec3>& forces = *data->forces;
 
     // 1st update
 
-    updatePart1(numberOfAtoms, atomCoordinates, velocities, forces, inverseMasses, xPrime);
+    updatePart1(numberOfAtoms, velocities, forces, inverseMasses);
     if (referenceConstraintAlgorithm)
-        referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses, tolerance);
+        referenceConstraintAlgorithm->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
 
     // 2nd update
 
@@ -139,9 +120,7 @@ void ReferenceBAOABDynamics::update(ContextImpl& context, vector<Vec3>& atomCoor
 
     // 3rd update
 
-    updatePart3(context, numberOfAtoms, atomCoordinates, velocities, forces, inverseMasses, xPrime);
-    if (referenceConstraintAlgorithm)
-        referenceConstraintAlgorithm->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
+    updatePart3(context, numberOfAtoms, atomCoordinates, velocities, inverseMasses, xPrime);
 
     ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates);
     incrementTimeStep();

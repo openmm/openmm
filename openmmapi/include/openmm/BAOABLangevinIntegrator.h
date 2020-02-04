@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -129,10 +129,6 @@ protected:
      */
     void cleanup();
     /**
-     * When the user modifies the state, we need to mark that the forces need to be recalculated.
-     */
-    void stateChanged(State::DataType changed);
-    /**
      * Get the names of all Kernels used by this Integrator.
      */
     std::vector<std::string> getKernelNames();
@@ -147,7 +143,6 @@ protected:
 private:
     double temperature, friction;
     int randomNumberSeed;
-    bool forcesAreValid;
     Kernel kernel;
 };
 

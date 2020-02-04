@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -46,7 +46,6 @@ BAOABLangevinIntegrator::BAOABLangevinIntegrator(double temperature, double fric
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
     setRandomNumberSeed(0);
-    forcesAreValid = false;
 }
 
 void BAOABLangevinIntegrator::initialize(ContextImpl& contextRef) {
@@ -62,10 +61,6 @@ void BAOABLangevinIntegrator::cleanup() {
     kernel = Kernel();
 }
 
-void BAOABLangevinIntegrator::stateChanged(State::DataType changed) {
-    forcesAreValid = false;
-}
-
 vector<string> BAOABLangevinIntegrator::getKernelNames() {
     std::vector<std::string> names;
     names.push_back(IntegrateBAOABStepKernel::Name());
@@ -73,7 +68,6 @@ vector<string> BAOABLangevinIntegrator::getKernelNames() {
 }
 
 double BAOABLangevinIntegrator::computeKineticEnergy() {
-    forcesAreValid = false;
     return kernel.getAs<IntegrateBAOABStepKernel>().computeKineticEnergy(*context, *this);
 }
 
@@ -85,8 +79,8 @@ void BAOABLangevinIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");  
     for (int i = 0; i < steps; ++i) {
-        if (context->updateContextState())
-            forcesAreValid = false;
-        kernel.getAs<IntegrateBAOABStepKernel>().execute(*context, *this, forcesAreValid);
+        context->updateContextState();
+        context->calcForcesAndEnergy(true, false);
+        kernel.getAs<IntegrateBAOABStepKernel>().execute(*context, *this);
     }
 }

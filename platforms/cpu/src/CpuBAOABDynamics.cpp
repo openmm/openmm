@@ -1,5 +1,4 @@
-
-/* Portions copyright (c) 2006-2019 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
  * Authors: Peter Eastman
  * Contributors: 
  *
@@ -36,16 +35,13 @@ CpuBAOABDynamics::CpuBAOABDynamics(int numberOfAtoms, double deltaT, double fric
 CpuBAOABDynamics::~CpuBAOABDynamics() {
 }
 
-void CpuBAOABDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
-                                   vector<Vec3>& forces, vector<double>& inverseMasses, vector<Vec3>& xPrime) {
+void CpuBAOABDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& inverseMasses) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
-    this->atomCoordinates = &atomCoordinates[0];
     this->velocities = &velocities[0];
     this->forces = &forces[0];
     this->inverseMasses = &inverseMasses[0];
-    this->xPrime = &xPrime[0];
     
     // Signal the threads to start running and wait for them to finish.
     
@@ -83,23 +79,15 @@ void CpuBAOABDynamics::updatePart3(ContextImpl& context, int numberOfAtoms, vect
     
     threads.execute([&] (ThreadPool& threads, int threadIndex) { threadUpdate3(threadIndex); });
     threads.waitForThreads();
-    context.calcForcesAndEnergy(true, false);
-    threads.execute([&] (ThreadPool& threads, int threadIndex) { threadUpdate4(threadIndex); });
-    threads.waitForThreads();
 }
 
 void CpuBAOABDynamics::threadUpdate1(int threadIndex) {
-    const double halfdt = 0.5*getDeltaT();
     int start = threadIndex*numberOfAtoms/threads.getNumThreads();
     int end = (threadIndex+1)*numberOfAtoms/threads.getNumThreads();
 
-    for (int i = start; i < end; i++) {
-        if (inverseMasses[i] != 0.0) {
-            velocities[i] += (halfdt*inverseMasses[i])*forces[i];
-            xPrime[i] = atomCoordinates[i] + velocities[i]*halfdt;
-            oldx[i] = xPrime[i];
-        }
-    }
+    for (int i = start; i < end; i++)
+        if (inverseMasses[i] != 0.0)
+            velocities[i] += (getDeltaT()*inverseMasses[i])*forces[i];
 }
 
 void CpuBAOABDynamics::threadUpdate2(int threadIndex) {
@@ -113,34 +101,22 @@ void CpuBAOABDynamics::threadUpdate2(int threadIndex) {
 
     for (int i = start; i < end; i++) {
         if (inverseMasses[i] != 0.0) {
-            velocities[i] += (xPrime[i]-oldx[i])/halfdt;
+            xPrime[i] = atomCoordinates[i] + velocities[i]*halfdt;
             Vec3 noise(random.getGaussianRandom(threadIndex), random.getGaussianRandom(threadIndex), random.getGaussianRandom(threadIndex));
             velocities[i] = vscale*velocities[i] + noisescale*sqrt(kT*inverseMasses[i])*noise;
-            atomCoordinates[i] = xPrime[i];
-            xPrime[i] = atomCoordinates[i] + velocities[i]*halfdt;
+            xPrime[i] = xPrime[i] + velocities[i]*halfdt;
             oldx[i] = xPrime[i];
         }
     }
 }
 
 void CpuBAOABDynamics::threadUpdate3(int threadIndex) {
-    const double halfdt = 0.5*getDeltaT();
     int start = threadIndex*numberOfAtoms/threads.getNumThreads();
     int end = (threadIndex+1)*numberOfAtoms/threads.getNumThreads();
 
     for (int i = start; i < end; ++i)
         if (inverseMasses[i] != 0.0) {
-            velocities[i] += (xPrime[i]-oldx[i])/halfdt;
+            velocities[i] += (xPrime[i]-oldx[i])/getDeltaT();
             atomCoordinates[i] = xPrime[i];
         }
-}
-
-void CpuBAOABDynamics::threadUpdate4(int threadIndex) {
-    const double halfdt = 0.5*getDeltaT();
-    int start = threadIndex*numberOfAtoms/threads.getNumThreads();
-    int end = (threadIndex+1)*numberOfAtoms/threads.getNumThreads();
-
-    for (int i = start; i < end; ++i)
-        if (inverseMasses[i] != 0.0)
-            velocities[i] += (halfdt*inverseMasses[i])*forces[i];
 }

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2019 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -79,29 +79,25 @@ class OPENMM_EXPORT ReferenceBAOABDynamics : public ReferenceDynamics {
          @param atomCoordinates     atom coordinates
          @param velocities          velocities
          @param masses              atom masses
-         @param forcesAreValid      whether the current forces are valid or need to be recomputed
          @param tolerance           the constraint tolerance
       
          --------------------------------------------------------------------------------------- */
      
       void update(OpenMM::ContextImpl& context, std::vector<OpenMM::Vec3>& atomCoordinates,
-                  std::vector<OpenMM::Vec3>& velocities, std::vector<double>& masses, bool& forcesAreValid, double tolerance);
+                  std::vector<OpenMM::Vec3>& velocities, std::vector<double>& masses, double tolerance);
      
       /**---------------------------------------------------------------------------------------
       
          First update; based on code in update.c do_update_sd() Gromacs 3.1.4
       
          @param numberOfAtoms       number of atoms
-         @param atomCoordinates     atom coordinates
          @param velocities          velocities
          @param forces              forces
          @param inverseMasses       inverse atom masses
-         @param xPrime              xPrime
       
          --------------------------------------------------------------------------------------- */
       
-      virtual void updatePart1(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
-                       std::vector<OpenMM::Vec3>& forces, std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
+      virtual void updatePart1(int numberOfAtoms, std::vector<OpenMM::Vec3>& velocities,  std::vector<OpenMM::Vec3>& forces, std::vector<double>& inverseMasses);
       
       /**---------------------------------------------------------------------------------------
       
@@ -116,7 +112,7 @@ class OPENMM_EXPORT ReferenceBAOABDynamics : public ReferenceDynamics {
          --------------------------------------------------------------------------------------- */
       
       virtual void updatePart2(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
-                       std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
+                               std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
       
       /**---------------------------------------------------------------------------------------
       
@@ -126,14 +122,13 @@ class OPENMM_EXPORT ReferenceBAOABDynamics : public ReferenceDynamics {
          @param numberOfAtoms       number of atoms
          @param atomCoordinates     atom coordinates
          @param velocities          velocities
-         @param forces              forces
          @param inverseMasses       inverse atom masses
          @param xPrime              xPrime
       
          --------------------------------------------------------------------------------------- */
       
       virtual void updatePart3(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
-                       std::vector<OpenMM::Vec3>& forces, std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
+                               std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
 };
 
 } // namespace OpenMM
