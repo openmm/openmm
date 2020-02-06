@@ -8,7 +8,7 @@ Structures at Stanford, funded under the NIH Roadmap for Medical Research,
 grant U54 GM072970. See https://simtk.org.  This code was originally part of
 the ParmEd program and was ported for use with OpenMM.
 
-Copyright (c) 2014-2016 the Authors
+Copyright (c) 2014-2020 the Authors
 
 Author: Jason M. Swails
 Contributors: Jing Huang
@@ -41,7 +41,7 @@ import sys
 import simtk.openmm as mm
 from simtk.openmm.vec3 import Vec3
 import simtk.unit as u
-from simtk.openmm.app import (forcefield as ff, Topology, element)
+from simtk.openmm.app import (forcefield as ff, Topology, element, PDBFile)
 from simtk.openmm.app.amberprmtopfile import HCT, OBC1, OBC2, GBn, GBn2
 from simtk.openmm.app.internal.customgbforces import (GBSAHCTForce,
                 GBSAOBC1Force, GBSAOBC2Force, GBSAGBnForce, GBSAGBn2Force)
@@ -219,6 +219,7 @@ class CharmmPsfFile(object):
         atom_list = AtomList()
         if IsDrudePSF:
             drudeconsts_list = TrackedList()
+        PDBFile._loadNameReplacementTables()
         for i in xrange(natom):
             words = psfsections['NATOM'][1][i].split()
             system = words[1]
@@ -239,6 +240,12 @@ class CharmmPsfFile(object):
             charge = conv(words[6], float, 'partial charge')
             mass = conv(words[7], float, 'atomic mass')
             props = words[8:]
+            if resname in PDBFile._residueNameReplacements:
+                resname = PDBFile._residueNameReplacements[resname]
+            if resname in PDBFile._atomNameReplacements:
+                atomReplacements = PDBFile._atomNameReplacements[resname]
+                if name in atomReplacements:
+                    name = atomReplacements[name]
             atom = residue_list.add_atom(system, resid, resname, name,
                             attype, charge, mass, inscode, props)
             atom_list.append(atom)
