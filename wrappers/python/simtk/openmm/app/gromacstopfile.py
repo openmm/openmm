@@ -592,7 +592,8 @@ class GromacsTopFile(object):
                     top.addBond(atoms[int(fields[0])-1], atoms[int(fields[1])-1])
 
     def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, implicitSolvent=None, soluteDielectric=1.0, solventDielectric=78.5, ewaldErrorTolerance=0.0005, removeCMMotion=True, hydrogenMass=None):
+                     constraints=None, rigidWater=True, implicitSolvent=None, soluteDielectric=1.0, solventDielectric=78.5,
+                     ewaldErrorTolerance=0.0005, removeCMMotion=True, hydrogenMass=None, switchDistance=None):
         """Construct an OpenMM System representing the topology described by this
         top file.
 
@@ -627,6 +628,9 @@ class GromacsTopFile(object):
             The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
             added to a hydrogen is subtracted from the heavy atom to keep their
             total mass the same.
+        switchDistance : float=None
+            The distance at which the potential energy switching function is turned on for
+            Lennard-Jones interactions. If this is None, no switching function will be used.
 
         Returns
         -------
@@ -1091,6 +1095,9 @@ class GromacsTopFile(object):
         nb.setNonbondedMethod(methodMap[nonbondedMethod])
         nb.setCutoffDistance(nonbondedCutoff)
         nb.setEwaldErrorTolerance(ewaldErrorTolerance)
+        if switchDistance is not None:
+            nb.setUseSwitchingFunction(True)
+            nb.setSwitchingDistance(switchDistance)
         if self._defaults[1] in ('1', '3'):
             methodMap = {ff.NoCutoff:mm.CustomNonbondedForce.NoCutoff,
                          ff.CutoffNonPeriodic:mm.CustomNonbondedForce.CutoffNonPeriodic,
@@ -1100,6 +1107,9 @@ class GromacsTopFile(object):
                          ff.LJPME:mm.CustomNonbondedForce.CutoffPeriodic}
             lj.setNonbondedMethod(methodMap[nonbondedMethod])
             lj.setCutoffDistance(nonbondedCutoff)
+            if switchDistance is not None:
+                lj.setUseSwitchingFunction(True)
+                lj.setSwitchingDistance(switchDistance)
 
         if has_nbfix_terms:
             if self._defaults[1] != '2':
@@ -1175,6 +1185,9 @@ class GromacsTopFile(object):
                 cforce.setCutoffDistance(nonbondedCutoff)
             else:
                 raise ValueError('Unrecognized nonbonded method')
+            if switchDistance is not None:
+                cforce.setUseSwitchingFunction(True)
+                cforce.setSwitchingDistance(switchDistance)
             for i in lj_idx_list:
                 cforce.addParticle((i - 1,)) # adjust for indexing from 0
 
