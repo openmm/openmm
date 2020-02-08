@@ -23,7 +23,7 @@ DEVICE int reduceMax(int val, LOCAL_ARG int* temp) {
     temp[LOCAL_ID] = val;
     SYNC_WARPS;
     for (int offset = 16; offset > 0; offset /= 2) {
-        if (offset < indexInWarp)
+        if (indexInWarp < offset)
             temp[LOCAL_ID] = max(temp[LOCAL_ID], temp[LOCAL_ID+offset]);
         SYNC_WARPS;
     }
