@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2019 Stanford University and the Authors.      *
- * Authors: Peter Eastman, Yutong Zhao                                        *
+ * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,32 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/serialization/BAOABLangevinIntegratorProxy.h"
-#include <OpenMM.h>
+#include "OpenCLTests.h"
+#include "TestLangevinMiddleIntegrator.h"
 
-using namespace std;
-using namespace OpenMM;
-
-BAOABLangevinIntegratorProxy::BAOABLangevinIntegratorProxy() : SerializationProxy("BAOABLangevinIntegrator") {
-
-}
-
-void BAOABLangevinIntegratorProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 1);
-    const BAOABLangevinIntegrator& integrator = *reinterpret_cast<const BAOABLangevinIntegrator*>(object);
-    node.setDoubleProperty("stepSize", integrator.getStepSize());
-    node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
-    node.setDoubleProperty("temperature", integrator.getTemperature());
-    node.setDoubleProperty("friction", integrator.getFriction());
-    node.setIntProperty("randomSeed", integrator.getRandomNumberSeed());
-}
-
-void* BAOABLangevinIntegratorProxy::deserialize(const SerializationNode& node) const {
-    if (node.getIntProperty("version") != 1)
-        throw OpenMMException("Unsupported version number");
-    BAOABLangevinIntegrator *integrator = new BAOABLangevinIntegrator(node.getDoubleProperty("temperature"),
-            node.getDoubleProperty("friction"), node.getDoubleProperty("stepSize"));
-    integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
-    integrator->setRandomNumberSeed(node.getIntProperty("randomSeed"));
-    return integrator;
+void runPlatformTests() {
 }

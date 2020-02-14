@@ -74,7 +74,7 @@ CpuPlatform::CpuPlatform() {
     registerKernelFactory(CalcCustomGBForceKernel::Name(), factory);
     registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateBAOABStepKernel::Name(), factory);
+    registerKernelFactory(IntegrateLangevinMiddleStepKernel::Name(), factory);
     platformProperties.push_back(CpuThreads());
     platformProperties.push_back(CpuDeterministicForces());
     int threads = getNumProcessors();

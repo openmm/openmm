@@ -1,10 +1,10 @@
 enum {VelScale, NoiseScale};
 
 /**
- * Perform the first part of BAOAB integration: velocity half step, then position half step.
+ * Perform the first part of integration: velocity step.
  */
 
-KERNEL void integrateBAOABPart1(int numAtoms, int paddedNumAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force,
+KERNEL void integrateLangevinMiddlePart1(int numAtoms, int paddedNumAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force,
         GLOBAL const mixed2* RESTRICT dt) {
     mixed fscale = dt[0].y/(mixed) 0x100000000;
     for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
@@ -19,11 +19,11 @@ KERNEL void integrateBAOABPart1(int numAtoms, int paddedNumAtoms, GLOBAL mixed4*
 }
 
 /**
- * Perform the second part of BAOAB integration: apply constraint forces to velocities, then interact with heat bath,
- * then position half step.
+ * Perform the second part of integration: position half step, then interact with heat bath,
+ * then another position half step.
  */
 
-KERNEL void integrateBAOABPart2(int numAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL mixed4* RESTRICT posDelta,
+KERNEL void integrateLangevinMiddlePart2(int numAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL mixed4* RESTRICT posDelta,
         GLOBAL mixed4* RESTRICT oldDelta, GLOBAL const mixed* RESTRICT paramBuffer, GLOBAL const mixed2* RESTRICT dt, GLOBAL const float4* RESTRICT random, unsigned int randomIndex
         ) {
     mixed vscale = paramBuffer[VelScale];
@@ -50,11 +50,11 @@ KERNEL void integrateBAOABPart2(int numAtoms, GLOBAL mixed4* RESTRICT velm, GLOB
 }
 
 /**
- * Perform the third part of BAOAB integration: apply constraint forces to velocities, then record
- * the constrained positions in preparation for computing forces.
+ * Perform the third part of integration: apply constraint forces to velocities, then record
+ * the constrained positions.
  */
 
-KERNEL void integrateBAOABPart3(int numAtoms, GLOBAL real4* RESTRICT posq, GLOBAL mixed4* RESTRICT velm,
+KERNEL void integrateLangevinMiddlePart3(int numAtoms, GLOBAL real4* RESTRICT posq, GLOBAL mixed4* RESTRICT velm,
          GLOBAL mixed4* RESTRICT posDelta, GLOBAL mixed4* RESTRICT oldDelta, GLOBAL const mixed2* RESTRICT dt
 #ifdef USE_MIXED_PRECISION
         , GLOBAL real4* RESTRICT posqCorrection

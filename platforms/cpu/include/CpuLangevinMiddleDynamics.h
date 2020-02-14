@@ -23,17 +23,17 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __CPU_BAOAB_DYNAMICS_H__
-#define __CPU_BAOAB_DYNAMICS_H__
+#ifndef __CPU_LANGEVIN_MIDDLE_DYNAMICS_H__
+#define __CPU_LANGEVIN_MIDDLE_DYNAMICS_H__
 
-#include "ReferenceBAOABDynamics.h"
+#include "ReferenceLangevinMiddleDynamics.h"
 #include "CpuRandom.h"
 #include "openmm/internal/ThreadPool.h"
 #include "sfmt/SFMT.h"
 
 namespace OpenMM {
 
-class CpuBAOABDynamics : public ReferenceBAOABDynamics {
+class CpuLangevinMiddleDynamics : public ReferenceLangevinMiddleDynamics {
 public:
     /**
      * Constructor.
@@ -45,12 +45,12 @@ public:
      * @param threads        thread pool for parallelizing computation
      * @param random         random number generator
      */
-    CpuBAOABDynamics(int numberOfAtoms, double deltaT, double friction, double temperature, OpenMM::ThreadPool& threads, OpenMM::CpuRandom& random);
+    CpuLangevinMiddleDynamics(int numberOfAtoms, double deltaT, double friction, double temperature, OpenMM::ThreadPool& threads, OpenMM::CpuRandom& random);
 
     /**
      * Destructor.
      */
-    ~CpuBAOABDynamics();
+    ~CpuLangevinMiddleDynamics();
 
     /**
      * First update step.
@@ -105,4 +105,4 @@ private:
 
 } // namespace OpenMM
 
-#endif // __CPU_BAOAB_DYNAMICS_H__
+#endif // __CPU_LANGEVIN_MIDDLE_DYNAMICS_H__

@@ -22,8 +22,8 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ReferenceBAOABDynamics_H__
-#define __ReferenceBAOABDynamics_H__
+#ifndef __ReferenceLangevinMiddleDynamics_H__
+#define __ReferenceLangevinMiddleDynamics_H__
 
 #include "ReferenceDynamics.h"
 #include "openmm/internal/ContextImpl.h"
@@ -31,7 +31,7 @@
 
 namespace OpenMM {
 
-class OPENMM_EXPORT ReferenceBAOABDynamics : public ReferenceDynamics {
+class OPENMM_EXPORT ReferenceLangevinMiddleDynamics : public ReferenceDynamics {
 
    protected:
 
@@ -52,7 +52,7 @@ class OPENMM_EXPORT ReferenceBAOABDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceBAOABDynamics(int numberOfAtoms, double deltaT, double friction, double temperature);
+       ReferenceLangevinMiddleDynamics(int numberOfAtoms, double deltaT, double friction, double temperature);
 
       /**---------------------------------------------------------------------------------------
       
@@ -60,7 +60,7 @@ class OPENMM_EXPORT ReferenceBAOABDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceBAOABDynamics();
+       ~ReferenceLangevinMiddleDynamics();
 
       /**---------------------------------------------------------------------------------------
       
@@ -133,4 +133,4 @@ class OPENMM_EXPORT ReferenceBAOABDynamics : public ReferenceDynamics {
 
 } // namespace OpenMM
 
-#endif // __ReferenceBAOABDynamics_H__
+#endif // __ReferenceLangevinMiddleDynamics_H__

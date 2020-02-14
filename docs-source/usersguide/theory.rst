@@ -1353,8 +1353,8 @@ random number, and :math:`\alpha=\exp(-\gamma\Delta t)`.
 The same comments about the offset between positions and velocities apply to
 this integrator as to VerletIntegrator.
 
-BAOABLangevinIntegrator
-***********************
+LangevinMiddleIntegrator
+************************
 
 This integrator is similar to LangevinIntegerator, but it instead uses the BAOAB
 discretization. :cite:`Leimkuhler2013` In each step, the positions and velocities

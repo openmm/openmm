@@ -31,11 +31,11 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 
-#include "openmm/BAOABLangevinIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CompoundIntegrator.h"
 #include "openmm/CustomIntegrator.h"
 #include "openmm/LangevinIntegrator.h"
+#include "openmm/LangevinMiddleIntegrator.h"
 #include "openmm/VariableLangevinIntegrator.h"
 #include "openmm/VariableVerletIntegrator.h"
 #include "openmm/VerletIntegrator.h"
@@ -75,11 +75,11 @@ void testSerializeLangevinIntegrator() {
     delete intg2;
 }
 
-void testSerializeBAOABLangevinIntegrator() {
-    BAOABLangevinIntegrator *intg = new BAOABLangevinIntegrator(372.4, 1.234, 0.0018);
+void testSerializeLangevinMiddleIntegrator() {
+    LangevinMiddleIntegrator *intg = new LangevinMiddleIntegrator(372.4, 1.234, 0.0018);
     stringstream ss;
-    XmlSerializer::serialize<Integrator>(intg, "BAOABLangevinIntegrator", ss);
-    BAOABLangevinIntegrator *intg2 = dynamic_cast<BAOABLangevinIntegrator*>(XmlSerializer::deserialize<Integrator>(ss));
+    XmlSerializer::serialize<Integrator>(intg, "LangevinMiddleIntegrator", ss);
+    LangevinMiddleIntegrator *intg2 = dynamic_cast<LangevinMiddleIntegrator*>(XmlSerializer::deserialize<Integrator>(ss));
     ASSERT_EQUAL(intg->getConstraintTolerance(), intg2->getConstraintTolerance());
     ASSERT_EQUAL(intg->getStepSize(), intg2->getStepSize());
     ASSERT_EQUAL(intg->getTemperature(), intg2->getTemperature());
@@ -259,7 +259,7 @@ int main() {
         testSerializeVariableLangevinIntegrator();
         testSerializeVariableVerletIntegrator();
         testSerializeLangevinIntegrator();
-        testSerializeBAOABLangevinIntegrator();
+        testSerializeLangevinMiddleIntegrator();
         testSerializeCompoundIntegrator();
     }
     catch(const exception& e) {

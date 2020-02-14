@@ -171,7 +171,7 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     ! These are the objects we'll create here thare are stored in the
     ! Context for later access. Don't forget to delete them at the end.
     type (OpenMM_System)             system
-    type (OpenMM_BAOABLangevinIntegrator) langevin
+    type (OpenMM_LangevinMiddleIntegrator) langevin
     type (OpenMM_Context)            context
 
     ! These are temporary OpenMM objects used and discarded here.
@@ -236,11 +236,11 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     ! best available Platform. Initialize the configuration from the default
     ! positions we collected above. Initial velocities will be zero but could
     ! have been set here.
-    call OpenMM_BAOABLangevinIntegrator_create(langevin,                     &
+    call OpenMM_LangevinMiddleIntegrator_create(langevin,                     &
                                           Temperature, FrictionInPerPs, &
                                           StepSizeInFs * OpenMM_PsPerFs)
 
-    ! Convert BAOABLangevinIntegrator to generic Integrator type for this call.
+    ! Convert LangevinMiddleIntegrator to generic Integrator type for this call.
     call OpenMM_Context_create(context, system,                         &
                                transfer(langevin, OpenMM_Integrator(0)))
     call OpenMM_Context_setPositions(context, initialPosInNm)

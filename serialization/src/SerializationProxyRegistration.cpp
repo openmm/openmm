@@ -30,7 +30,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/AndersenThermostat.h"
-#include "openmm/BAOABLangevinIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/CMMotionRemover.h"
@@ -52,6 +51,7 @@
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/LangevinIntegrator.h"
+#include "openmm/LangevinMiddleIntegrator.h"
 #include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/MonteCarloMembraneBarostat.h"
@@ -67,7 +67,6 @@
 #include "openmm/VerletIntegrator.h"
 
 #include "openmm/serialization/SerializationProxy.h"
-#include "openmm/serialization/BAOABLangevinIntegratorProxy.h"
 #include "openmm/serialization/BrownianIntegratorProxy.h"
 #include "openmm/serialization/AndersenThermostatProxy.h"
 #include "openmm/serialization/CMAPTorsionForceProxy.h"
@@ -90,6 +89,7 @@
 #include "openmm/serialization/HarmonicAngleForceProxy.h"
 #include "openmm/serialization/HarmonicBondForceProxy.h"
 #include "openmm/serialization/LangevinIntegratorProxy.h"
+#include "openmm/serialization/LangevinMiddleIntegratorProxy.h"
 #include "openmm/serialization/MonteCarloAnisotropicBarostatProxy.h"
 #include "openmm/serialization/MonteCarloBarostatProxy.h"
 #include "openmm/serialization/MonteCarloMembraneBarostatProxy.h"
@@ -121,7 +121,6 @@ using namespace OpenMM;
 
 extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(AndersenThermostat), new AndersenThermostatProxy());
-    SerializationProxy::registerProxy(typeid(BAOABLangevinIntegrator), new BAOABLangevinIntegratorProxy());
     SerializationProxy::registerProxy(typeid(BrownianIntegrator), new BrownianIntegratorProxy());
     SerializationProxy::registerProxy(typeid(CMAPTorsionForce), new CMAPTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(CMMotionRemover), new CMMotionRemoverProxy());
@@ -149,6 +148,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(HarmonicAngleForce), new HarmonicAngleForceProxy());
     SerializationProxy::registerProxy(typeid(HarmonicBondForce), new HarmonicBondForceProxy());
     SerializationProxy::registerProxy(typeid(LangevinIntegrator), new LangevinIntegratorProxy());
+    SerializationProxy::registerProxy(typeid(LangevinMiddleIntegrator), new LangevinMiddleIntegratorProxy());
     SerializationProxy::registerProxy(typeid(MonteCarloAnisotropicBarostat), new MonteCarloAnisotropicBarostatProxy());
     SerializationProxy::registerProxy(typeid(MonteCarloBarostat), new MonteCarloBarostatProxy());
     SerializationProxy::registerProxy(typeid(MonteCarloMembraneBarostat), new MonteCarloMembraneBarostatProxy());

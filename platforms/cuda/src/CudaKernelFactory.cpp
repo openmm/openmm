@@ -121,8 +121,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CommonIntegrateVerletStepKernel(name, platform, cu);
     if (name == IntegrateLangevinStepKernel::Name())
         return new CommonIntegrateLangevinStepKernel(name, platform, cu);
-    if (name == IntegrateBAOABStepKernel::Name())
-        return new CommonIntegrateBAOABStepKernel(name, platform, cu);
+    if (name == IntegrateLangevinMiddleStepKernel::Name())
+        return new CommonIntegrateLangevinMiddleStepKernel(name, platform, cu);
     if (name == IntegrateBrownianStepKernel::Name())
         return new CommonIntegrateBrownianStepKernel(name, platform, cu);
     if (name == IntegrateVariableVerletStepKernel::Name())

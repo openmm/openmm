@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/AndersenThermostat.h"
-#include "openmm/BAOABLangevinIntegrator.h"
+#include "openmm/LangevinMiddleIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/CMMotionRemover.h"
@@ -1129,36 +1129,36 @@ public:
 };
 
 /**
- * This kernel is invoked by BAOABLangevinIntegrator to take one time step.
+ * This kernel is invoked by LangevinMiddleIntegrator to take one time step.
  */
-class IntegrateBAOABStepKernel : public KernelImpl {
+class IntegrateLangevinMiddleStepKernel : public KernelImpl {
 public:
     static std::string Name() {
-        return "IntegrateBAOABStep";
+        return "IntegrateLangevinMiddleStep";
     }
-    IntegrateBAOABStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    IntegrateLangevinMiddleStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param integrator the BAOABLangevinIntegrator this kernel will be used for
+     * @param integrator the LangevinMiddleIntegrator this kernel will be used for
      */
-    virtual void initialize(const System& system, const BAOABLangevinIntegrator& integrator) = 0;
+    virtual void initialize(const System& system, const LangevinMiddleIntegrator& integrator) = 0;
     /**
      * Execute the kernel.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     * @param integrator the LangevinMiddleIntegrator this kernel is being used for
      */
-    virtual void execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator) = 0;
+    virtual void execute(ContextImpl& context, const LangevinMiddleIntegrator& integrator) = 0;
     /**
      * Compute the kinetic energy.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     * @param integrator the LangevinMiddleIntegrator this kernel is being used for
      */
-    virtual double computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator) = 0;
+    virtual double computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator) = 0;
 };
 
 /**

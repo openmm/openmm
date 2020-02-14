@@ -905,34 +905,34 @@ private:
 };
 
 /**
- * This kernel is invoked by BAOABLangevinIntegrator to take one time step.
+ * This kernel is invoked by LangevinMiddleIntegrator to take one time step.
  */
-class CommonIntegrateBAOABStepKernel : public IntegrateBAOABStepKernel {
+class CommonIntegrateLangevinMiddleStepKernel : public IntegrateLangevinMiddleStepKernel {
 public:
-    CommonIntegrateBAOABStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateBAOABStepKernel(name, platform), cc(cc),
+    CommonIntegrateLangevinMiddleStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateLangevinMiddleStepKernel(name, platform), cc(cc),
             hasInitializedKernels(false) {
     }
     /**
      * Initialize the kernel, setting up the particle masses.
      * 
      * @param system     the System this kernel will be applied to
-     * @param integrator the BAOABLangevinIntegrator this kernel will be used for
+     * @param integrator the LangevinMiddleIntegrator this kernel will be used for
      */
-    void initialize(const System& system, const BAOABLangevinIntegrator& integrator);
+    void initialize(const System& system, const LangevinMiddleIntegrator& integrator);
     /**
      * Execute the kernel.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     * @param integrator the LangevinMiddleIntegrator this kernel is being used for
      */
-    void execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator);
+    void execute(ContextImpl& context, const LangevinMiddleIntegrator& integrator);
     /**
      * Compute the kinetic energy.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     * @param integrator the LangevinMiddleIntegrator this kernel is being used for
      */
-    double computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator);
+    double computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator);
 private:
     ComputeContext& cc;
     double prevTemp, prevFriction, prevStepSize;

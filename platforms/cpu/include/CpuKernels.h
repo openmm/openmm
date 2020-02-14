@@ -32,7 +32,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CpuBAOABDynamics.h"
 #include "CpuBondForce.h"
 #include "CpuCustomGBForce.h"
 #include "CpuCustomManyParticleForce.h"
@@ -40,6 +39,7 @@
 #include "CpuGayBerneForce.h"
 #include "CpuGBSAOBCForce.h"
 #include "CpuLangevinDynamics.h"
+#include "CpuLangevinMiddleDynamics.h"
 #include "CpuNeighborList.h"
 #include "CpuNonbondedForce.h"
 #include "CpuPlatform.h"
@@ -538,38 +538,38 @@ private:
 };
 
 /**
- * This kernel is invoked by BAOABLangevinIntegrator to take one time step.
+ * This kernel is invoked by LangevinMiddleIntegrator to take one time step.
  */
-class CpuIntegrateBAOABStepKernel : public IntegrateBAOABStepKernel {
+class CpuIntegrateLangevinMiddleStepKernel : public IntegrateLangevinMiddleStepKernel {
 public:
-    CpuIntegrateBAOABStepKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : IntegrateBAOABStepKernel(name, platform),
+    CpuIntegrateLangevinMiddleStepKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : IntegrateLangevinMiddleStepKernel(name, platform),
             data(data), dynamics(0) {
     }
-    ~CpuIntegrateBAOABStepKernel();
+    ~CpuIntegrateLangevinMiddleStepKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
      * 
      * @param system     the System this kernel will be applied to
-     * @param integrator the BAOABLangevinIntegrator this kernel will be used for
+     * @param integrator the LangevinMiddleIntegrator this kernel will be used for
      */
-    void initialize(const System& system, const BAOABLangevinIntegrator& integrator);
+    void initialize(const System& system, const LangevinMiddleIntegrator& integrator);
     /**
      * Execute the kernel.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     * @param integrator the LangevinMiddleIntegrator this kernel is being used for
      */
-    void execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator);
+    void execute(ContextImpl& context, const LangevinMiddleIntegrator& integrator);
     /**
      * Compute the kinetic energy.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     * @param integrator the LangevinMiddleIntegrator this kernel is being used for
      */
-    double computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator);
+    double computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator);
 private:
     CpuPlatform::PlatformData& data;
-    CpuBAOABDynamics* dynamics;
+    CpuLangevinMiddleDynamics* dynamics;
     std::vector<double> masses;
     double prevTemp, prevFriction, prevStepSize;
 };

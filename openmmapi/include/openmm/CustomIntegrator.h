@@ -236,7 +236,7 @@ namespace OpenMM {
  * </pre></tt>
  * 
  * The second one implements the algorithm used by the standard
- * BAOABLangevinIntegrator class.  kB is Boltzmann's constant.
+ * LangevinMiddleIntegrator class.  kB is Boltzmann's constant.
  * 
  * <tt><pre>
  * CustomIntegrator integrator(dt);

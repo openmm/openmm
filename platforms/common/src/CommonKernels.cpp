@@ -5547,26 +5547,26 @@ double CommonIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& cont
     return cc.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
-void CommonIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLangevinIntegrator& integrator) {
+void CommonIntegrateLangevinMiddleStepKernel::initialize(const System& system, const LangevinMiddleIntegrator& integrator) {
     cc.initializeContexts();
     cc.setAsCurrent();
     cc.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::baoab);
-    kernel1 = program->createKernel("integrateBAOABPart1");
-    kernel2 = program->createKernel("integrateBAOABPart2");
-    kernel3 = program->createKernel("integrateBAOABPart3");
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::langevinMiddle);
+    kernel1 = program->createKernel("integrateLangevinMiddlePart1");
+    kernel2 = program->createKernel("integrateLangevinMiddlePart2");
+    kernel3 = program->createKernel("integrateLangevinMiddlePart3");
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
-        params.initialize<double>(cc, 2, "baoabParams");
+        params.initialize<double>(cc, 2, "langevinMiddleParams");
         oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
     }
     else {
-        params.initialize<float>(cc, 2, "baoabParams");
+        params.initialize<float>(cc, 2, "langevinMiddleParams");
         oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
     }
     prevStepSize = -1.0;
 }
 
-void CommonIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator) {
+void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
     int numAtoms = cc.getNumAtoms();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
@@ -5636,7 +5636,7 @@ void CommonIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLa
 #endif
 }
 
-double CommonIntegrateBAOABStepKernel::computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator) {
+double CommonIntegrateLangevinMiddleStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     return cc.getIntegrationUtilities().computeKineticEnergy(0.0);
 }
 

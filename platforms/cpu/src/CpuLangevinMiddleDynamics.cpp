@@ -23,19 +23,19 @@
  */
 
 #include "SimTKOpenMMUtilities.h"
-#include "CpuBAOABDynamics.h"
+#include "CpuLangevinMiddleDynamics.h"
 
 using namespace OpenMM;
 using namespace std;
 
-CpuBAOABDynamics::CpuBAOABDynamics(int numberOfAtoms, double deltaT, double friction, double temperature, ThreadPool& threads, CpuRandom& random) : 
-           ReferenceBAOABDynamics(numberOfAtoms, deltaT, friction, temperature), threads(threads), random(random) {
+CpuLangevinMiddleDynamics::CpuLangevinMiddleDynamics(int numberOfAtoms, double deltaT, double friction, double temperature, ThreadPool& threads, CpuRandom& random) : 
+           ReferenceLangevinMiddleDynamics(numberOfAtoms, deltaT, friction, temperature), threads(threads), random(random) {
 }
 
-CpuBAOABDynamics::~CpuBAOABDynamics() {
+CpuLangevinMiddleDynamics::~CpuLangevinMiddleDynamics() {
 }
 
-void CpuBAOABDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& inverseMasses) {
+void CpuLangevinMiddleDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& inverseMasses) {
     // Record the parameters for the threads.
     
     this->numberOfAtoms = numberOfAtoms;
@@ -49,7 +49,7 @@ void CpuBAOABDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& velocities, 
     threads.waitForThreads();
 }
 
-void CpuBAOABDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
+void CpuLangevinMiddleDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
                                    vector<double>& inverseMasses, vector<Vec3>& xPrime) {
     // Record the parameters for the threads.
     
@@ -65,7 +65,7 @@ void CpuBAOABDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCoordina
     threads.waitForThreads();
 }
 
-void CpuBAOABDynamics::updatePart3(ContextImpl& context, int numberOfAtoms, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
+void CpuLangevinMiddleDynamics::updatePart3(ContextImpl& context, int numberOfAtoms, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
                                    vector<double>& inverseMasses, vector<Vec3>& xPrime) {
     // Record the parameters for the threads.
     
@@ -81,7 +81,7 @@ void CpuBAOABDynamics::updatePart3(ContextImpl& context, int numberOfAtoms, vect
     threads.waitForThreads();
 }
 
-void CpuBAOABDynamics::threadUpdate1(int threadIndex) {
+void CpuLangevinMiddleDynamics::threadUpdate1(int threadIndex) {
     int start = threadIndex*numberOfAtoms/threads.getNumThreads();
     int end = (threadIndex+1)*numberOfAtoms/threads.getNumThreads();
 
@@ -90,7 +90,7 @@ void CpuBAOABDynamics::threadUpdate1(int threadIndex) {
             velocities[i] += (getDeltaT()*inverseMasses[i])*forces[i];
 }
 
-void CpuBAOABDynamics::threadUpdate2(int threadIndex) {
+void CpuLangevinMiddleDynamics::threadUpdate2(int threadIndex) {
     const double halfdt = 0.5*getDeltaT();
     const double kT = BOLTZ*getTemperature();
     const double friction = getFriction();
@@ -110,7 +110,7 @@ void CpuBAOABDynamics::threadUpdate2(int threadIndex) {
     }
 }
 
-void CpuBAOABDynamics::threadUpdate3(int threadIndex) {
+void CpuLangevinMiddleDynamics::threadUpdate3(int threadIndex) {
     int start = threadIndex*numberOfAtoms/threads.getNumThreads();
     int end = (threadIndex+1)*numberOfAtoms/threads.getNumThreads();
 

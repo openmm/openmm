@@ -34,7 +34,7 @@
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
-#include "openmm/BAOABLangevinIntegrator.h"
+#include "openmm/LangevinMiddleIntegrator.h"
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
@@ -49,7 +49,7 @@ void testSingleBond() {
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
-    BAOABLangevinIntegrator integrator(0, 0.1, 0.01);
+    LangevinMiddleIntegrator integrator(0, 0.1, 0.01);
     HarmonicBondForce* forceField = new HarmonicBondForce();
     forceField->addBond(0, 1, 1.5, 1);
     system.addForce(forceField);
@@ -93,7 +93,7 @@ void testTemperature() {
     const double temp = 100.0;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(5, 0, 0), Vec3(0, 5, 0), Vec3(0, 0, 5));
-    BAOABLangevinIntegrator integrator(temp, 3.0, 0.01);
+    LangevinMiddleIntegrator integrator(temp, 3.0, 0.01);
     NonbondedForce* forceField = new NonbondedForce();
     forceField->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     for (int i = 0; i < numParticles; ++i) {
@@ -130,7 +130,7 @@ void testConstraints() {
     const int numConstraints = 5;
     const double temp = 100.0;
     System system;
-    BAOABLangevinIntegrator integrator(temp, 2.0, 0.01);
+    LangevinMiddleIntegrator integrator(temp, 2.0, 0.01);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
@@ -181,7 +181,7 @@ void testConstrainedMasslessParticles() {
     vector<Vec3> positions(2);
     positions[0] = Vec3(-1, 0, 0);
     positions[1] = Vec3(1, 0, 0);
-    BAOABLangevinIntegrator integrator(300.0, 2.0, 0.01);
+    LangevinMiddleIntegrator integrator(300.0, 2.0, 0.01);
     bool failed = false;
     try {
         // This should throw an exception.
@@ -208,7 +208,7 @@ void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
     System system;
-    BAOABLangevinIntegrator integrator(temp, 2.0, 0.01);
+    LangevinMiddleIntegrator integrator(temp, 2.0, 0.01);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.addParticle(2.0);

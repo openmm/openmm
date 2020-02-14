@@ -26,7 +26,7 @@
 #include <sstream>
 
 #include "SimTKOpenMMUtilities.h"
-#include "ReferenceBAOABDynamics.h"
+#include "ReferenceLangevinMiddleDynamics.h"
 #include "ReferencePlatform.h"
 #include "ReferenceVirtualSites.h"
 #include "openmm/OpenMMException.h"
@@ -35,7 +35,7 @@
 using std::vector;
 using namespace OpenMM;
 
-ReferenceBAOABDynamics::ReferenceBAOABDynamics(int numberOfAtoms,
+ReferenceLangevinMiddleDynamics::ReferenceLangevinMiddleDynamics(int numberOfAtoms,
                                                double deltaT, double friction,
                                                double temperature) : 
            ReferenceDynamics(numberOfAtoms, deltaT, temperature), friction(friction) {
@@ -44,20 +44,20 @@ ReferenceBAOABDynamics::ReferenceBAOABDynamics(int numberOfAtoms,
    inverseMasses.resize(numberOfAtoms);
 }
 
-ReferenceBAOABDynamics::~ReferenceBAOABDynamics() {
+ReferenceLangevinMiddleDynamics::~ReferenceLangevinMiddleDynamics() {
 }
 
-double ReferenceBAOABDynamics::getFriction() const {
+double ReferenceLangevinMiddleDynamics::getFriction() const {
    return friction;
 }
 
-void ReferenceBAOABDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& inverseMasses) {
+void ReferenceLangevinMiddleDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& inverseMasses) {
     for (int i = 0; i < numberOfAtoms; i++)
         if (inverseMasses[i] != 0.0)
             velocities[i] += (getDeltaT()*inverseMasses[i])*forces[i];
 }
 
-void ReferenceBAOABDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCoordinates,
+void ReferenceLangevinMiddleDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCoordinates,
                                          vector<Vec3>& velocities, vector<double>& inverseMasses,
                                          vector<Vec3>& xPrime) {
     const double halfdt = 0.5*getDeltaT();
@@ -79,7 +79,7 @@ void ReferenceBAOABDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCo
     }
 }
 
-void ReferenceBAOABDynamics::updatePart3(OpenMM::ContextImpl& context, int numberOfAtoms, vector<Vec3>& atomCoordinates,
+void ReferenceLangevinMiddleDynamics::updatePart3(OpenMM::ContextImpl& context, int numberOfAtoms, vector<Vec3>& atomCoordinates,
                                          vector<Vec3>& velocities, vector<double>& inverseMasses, vector<Vec3>& xPrime) {
     for (int i = 0; i < numberOfAtoms; i++) {
         if (inverseMasses[i] != 0.0) {
@@ -89,7 +89,7 @@ void ReferenceBAOABDynamics::updatePart3(OpenMM::ContextImpl& context, int numbe
     }
 }
 
-void ReferenceBAOABDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordinates,
+void ReferenceLangevinMiddleDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordinates,
                                     vector<Vec3>& velocities, vector<double>& masses, double tolerance) {
     int numberOfAtoms = context.getSystem().getNumParticles();
     ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();

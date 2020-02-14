@@ -1,5 +1,5 @@
-#ifndef OPENMM_BAOABLANGEVININTEGRATOR_H_
-#define OPENMM_BAOABLANGEVININTEGRATOR_H_
+#ifndef OPENMM_LANGEVINMIDDLEINTEGRATOR_H_
+#define OPENMM_LANGEVINMIDDLEINTEGRATOR_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -45,16 +45,16 @@ namespace OpenMM {
  * discretizations, such as the one used in LangevinIntegrator.
  */
 
-class OPENMM_EXPORT BAOABLangevinIntegrator : public Integrator {
+class OPENMM_EXPORT LangevinMiddleIntegrator : public Integrator {
 public:
     /**
-     * Create a BAOABLangevinIntegrator.
+     * Create a LangevinMiddleIntegrator.
      * 
      * @param temperature    the temperature of the heat bath (in Kelvin)
      * @param frictionCoeff  the friction coefficient which couples the system to the heat bath (in inverse picoseconds)
      * @param stepSize       the step size with which to integrate the system (in picoseconds)
      */
-    BAOABLangevinIntegrator(double temperature, double frictionCoeff, double stepSize);
+    LangevinMiddleIntegrator(double temperature, double frictionCoeff, double stepSize);
     /**
      * Get the temperature of the heat bath (in Kelvin).
      *
@@ -148,4 +148,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_BAOABLANGEVININTEGRATOR_H_*/
+#endif /*OPENMM_LANGEVINMIDDLEINTEGRATOR_H_*/
