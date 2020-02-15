@@ -1379,9 +1379,8 @@ are updated as follows:
    \mathbf{r}_{i}(t+\Delta t) = \mathbf{r}_{i}(t+\Delta t/2) + \mathbf{v'}_{i}(t+\Delta t/2)\Delta t/2
 
 
-This tends to produce more accurate
-sampling of configurational properties (such as free energies), but less
-accurate sampling of kinetic properties (such as mean kinetic energy).  Because
+This tends to produce more accurate sampling of configurational properties (such
+as free energies), but less accurate sampling of kinetic properties.  Because
 configurational properties are much more important than kinetic ones in most
 simulations, this integrator is generally preferred over LangevinIntegrator.  It
 often allows one to use a larger time step while still maintaining similar or

@@ -1021,13 +1021,15 @@ mass constant while slowing down the fast motions of hydrogens.  When combined
 with constraints (typically :code:`constraints=AllBonds`\ ), this often allows a
 further increase in integration step size.
 
+.. _integrators:
+
 Integrators
 ===========
 
 
 OpenMM offers a choice of several different integration methods.  You select
 which one to use by creating an integrator object of the appropriate type.
-Detailed descriptions of all these integrators can be found in Section
+Detailed descriptions of all these integrators can be found in Chapter
 :ref:`integrators-theory`.  In addition to these built in integrators, lots of
 others are available as part of the `OpenMMTools <https://openmmtools.readthedocs.io>`_ package.
 
