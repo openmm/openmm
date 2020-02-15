@@ -40,7 +40,7 @@ namespace OpenMM {
 
 /**
  * This is an Integrator which simulates a System using Langevin dynamics, with
- * the BAOAB discretization of Leimkuhler and Matthews (http://dx.doi.org/10.1093/amrx/abs010).
+ * the LFMiddle discretization (http://dx.doi.org/10.1021/acs.jpca.9b02771).
  * This method tend to produce more accurate configurational sampling than other
  * discretizations, such as the one used in LangevinIntegrator.
  */

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -245,18 +245,14 @@ namespace OpenMM {
  * integrator.addGlobalVariable("kT", kB*temperature);
  * integrator.addPerDofVariable("x1", 0);
  * integrator.addUpdateContextState();
- * integrator.addComputePerDof("v", "v + 0.5*dt*f/m");
+ * integrator.addComputePerDof("v", "v + dt*f/m");
+ * integrator.addConstrainVelocities();
  * integrator.addComputePerDof("x", "x + 0.5*dt*v");
- * integrator.addComputePerDof("x1", "x");
- * integrator.addConstrainPositions();
- * integrator.addComputePerDof("v", "v + 2*(x-x1)/dt");
  * integrator.addComputePerDof("v", "a*v + b*sqrt(kT/m)*gaussian");
  * integrator.addComputePerDof("x", "x + 0.5*dt*v");
  * integrator.addComputePerDof("x1", "x");
  * integrator.addConstrainPositions();
- * integrator.addComputePerDof("v", "v + 2*(x-x1)/dt");
- * integrator.addComputePerDof("v", "v + 0.5*dt*f/m");
- * integrator.addConstrainVelocities();
+ * integrator.addComputePerDof("v", "v + (x-x1)/dt");
  * </pre></tt>
  * 
  * Another feature of CustomIntegrator is that it can use derivatives of the

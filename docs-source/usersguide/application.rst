@@ -217,7 +217,10 @@ It specifies a :class:`LangevinMiddleIntegrator`, which performs Langevin dynami
 and assigns it to a variable called :code:`integrator`\ .  It also specifies
 the values of three parameters that are specific to Langevin dynamics: the
 simulation temperature (300 K), the friction coefficient (1 ps\ :sup:`-1`\ ), and
-the step size (0.004 ps).
+the step size (0.004 ps).  Lots of other integration methods are also available.
+For example, if you wanted to simulate the system at constant energy rather than
+constant temperature you would use a :code:`VerletIntegrator`\ .  The available
+integration methods are listed in Section :ref:`integrators`.
 ::
 
     simulation = Simulation(pdb.topology, system, integrator)
@@ -1024,9 +1027,12 @@ Integrators
 
 OpenMM offers a choice of several different integration methods.  You select
 which one to use by creating an integrator object of the appropriate type.
+Detailed descriptions of all these integrators can be found in Section
+:ref:`integrators-theory`.  In addition to these built in integrators, lots of
+others are available as part of the `OpenMMTools <https://openmmtools.readthedocs.io>`_ package.
 
-BAOAB Langevin Integrator
--------------------------
+Langevin Middle Integrator
+--------------------------
 
 In the examples of the previous sections, we used Langevin integration:
 ::
@@ -1038,7 +1044,8 @@ the friction coefficient (1 ps\ :sup:`-1`\ ), and the step size (0.004 ps).  You
 are free to change these to whatever values you want.  Be sure to specify units
 on all values.  For example, the step size could be written either as
 :code:`0.004*picoseconds` or :code:`4*femtoseconds`\ .  They are exactly
-equivalent.
+equivalent.  Note that :code:`LangevinMiddleIntegrator` is a leapfrog
+integrator, so the velocities are offset by half a time step from the positions.
 
 Langevin Integrator
 -------------------
@@ -1047,7 +1054,7 @@ Langevin Integrator
 but it uses a different discretization of the Langevin equation.
 :code:`LangevinMiddleIntegrator` tends to produce more accurate configurational
 sampling, and therefore is preferred for most applications.  Also note that
-:code:`LangevinIntegrator` (unlike :code:`LangevinMiddleIntegrator`) is a leapfrog
+:code:`LangevinIntegrator`\ , like :code:`LangevinMiddleIntegrator`\ , is a leapfrog
 integrator, so the velocities are offset by half a time step from the positions.
 
 Leapfrog Verlet Integrator
