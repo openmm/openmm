@@ -165,12 +165,12 @@ class TestForceField(unittest.TestCase):
 
         topology = self.pdb1.topology
         for constraints_value in [None, HBonds, AllBonds, HAngles]:
-            for rigidWater_value in [True, False]:
+            for rigidWater_value in [True, False, None]:
                 system = self.forcefield1.createSystem(topology,
                                                        constraints=constraints_value,
                                                        rigidWater=rigidWater_value)
                 validateConstraints(self, topology, system,
-                                    constraints_value, rigidWater_value)
+                                    constraints_value, rigidWater_value != False)
 
     def test_flexibleConstraints(self):
         """ Test the flexibleConstraints keyword """
@@ -907,6 +907,55 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(system1_indexes, [51, 56, 54, 55])
         self.assertEqual(system2_indexes, [51, 55, 54, 56])
 
+    def test_ImpropersOrdering_smirnoff(self):
+        """Test correctness of the ordering of atom indexes in improper torsions
+        and the torsion.ordering parameter when using the 'smirnoff' mode.
+        """
+
+        # SMIRNOFF parameters for formaldehyde
+        xml = """
+<ForceField>
+  <AtomTypes>
+    <Type name="[H]C(=O)[H]$C1#0" element="C" mass="12.01078" class="[H]C(=O)[H]$C1#0"/>
+    <Type name="[H]C(=O)[H]$O1#1" element="O" mass="15.99943" class="[H]C(=O)[H]$O1#1"/>
+    <Type name="[H]C(=O)[H]$H1#2" element="H" mass="1.007947" class="[H]C(=O)[H]$H1#2"/>
+    <Type name="[H]C(=O)[H]$H2#3" element="H" mass="1.007947" class="[H]C(=O)[H]$H2#3"/>
+  </AtomTypes>
+  <PeriodicTorsionForce ordering="smirnoff">
+    <Improper class1="[H]C(=O)[H]$C1#0" class2="[H]C(=O)[H]$O1#1" class3="[H]C(=O)[H]$H1#2" class4="[H]C(=O)[H]$H2#3" periodicity1="2" phase1="3.141592653589793" k1="1.5341333333333336"/>
+    <Improper class1="[H]C(=O)[H]$C1#0" class2="[H]C(=O)[H]$H1#2" class3="[H]C(=O)[H]$H2#3" class4="[H]C(=O)[H]$O1#1" periodicity1="2" phase1="3.141592653589793" k1="1.5341333333333336"/>
+    <Improper class1="[H]C(=O)[H]$C1#0" class2="[H]C(=O)[H]$H2#3" class3="[H]C(=O)[H]$O1#1" class4="[H]C(=O)[H]$H1#2" periodicity1="2" phase1="3.141592653589793" k1="1.5341333333333336"/>
+  </PeriodicTorsionForce>
+  <Residues>
+    <Residue name="[H]C(=O)[H]">
+      <Atom name="C1" type="[H]C(=O)[H]$C1#0" charge="0.5632799863815308"/>
+      <Atom name="O1" type="[H]C(=O)[H]$O1#1" charge="-0.514739990234375"/>
+      <Atom name="H1" type="[H]C(=O)[H]$H1#2" charge="-0.02426999807357788"/>
+      <Atom name="H2" type="[H]C(=O)[H]$H2#3" charge="-0.02426999807357788"/>
+      <Bond atomName1="C1" atomName2="O1"/>
+      <Bond atomName1="C1" atomName2="H1"/>
+      <Bond atomName1="C1" atomName2="H2"/>
+    </Residue>
+  </Residues>
+</ForceField>
+"""
+        pdb = PDBFile('systems/formaldehyde.pdb')
+        # ff1 uses default ordering of impropers, ff2 uses "amber" for the one
+        # problematic improper
+        ff = ForceField(StringIO(xml))
+
+        system = ff.createSystem(pdb.topology)
+
+        # Check that impropers are applied in the correct three-fold trefoil pattern
+        forces = { force.__class__.__name__ : force for force in system.getForces() }
+        force = forces['PeriodicTorsionForce']
+        created_torsions = set()
+        for index in range(force.getNumTorsions()):
+            i,j,k,l,_,_,_ = force.getTorsionParameters(index)
+            created_torsions.add((i,j,k,l))
+        expected_torsions = set([(0,3,1,2), (0,1,2,3), (0,2,3,1)])
+        self.assertEqual(expected_torsions, created_torsions)
+
     def test_Disulfides(self):
         """Test that various force fields handle disulfides correctly."""
         pdb = PDBFile('systems/bpti.pdb')
@@ -1012,6 +1061,15 @@ class AmoebaTestForceField(unittest.TestCase):
         self.assertAlmostEqual(constraints[(0,1)], hoDist)
         self.assertAlmostEqual(constraints[(0,2)], hoDist)
         self.assertAlmostEqual(constraints[(1,2)], hohDist)
+        
+        # Check that all values of rigidWater are interpreted correctly.
+        
+        numWaters = 215
+        self.assertEqual(3*numWaters, system.getNumConstraints())
+        system = self.forcefield1.createSystem(self.pdb1.topology, rigidWater=False)
+        self.assertEqual(0, system.getNumConstraints())
+        system = self.forcefield1.createSystem(self.pdb1.topology, rigidWater=None)
+        self.assertEqual(0, system.getNumConstraints())
 
     def test_Forces(self):
         """Compute forces and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""

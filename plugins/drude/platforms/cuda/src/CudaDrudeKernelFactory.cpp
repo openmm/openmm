@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,7 +27,8 @@
 #include <exception>
 
 #include "CudaDrudeKernelFactory.h"
-#include "CudaDrudeKernels.h"
+#include "CommonDrudeKernels.h"
+#include "CudaContext.h"
 #include "openmm/internal/windowsExport.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
@@ -63,10 +64,10 @@ extern "C" OPENMM_EXPORT void registerDrudeCudaKernelFactories() {
 KernelImpl* CudaDrudeKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     CudaContext& cu = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData())->contexts[0];
     if (name == CalcDrudeForceKernel::Name())
-        return new CudaCalcDrudeForceKernel(name, platform, cu);
+        return new CommonCalcDrudeForceKernel(name, platform, cu);
     if (name == IntegrateDrudeLangevinStepKernel::Name())
-        return new CudaIntegrateDrudeLangevinStepKernel(name, platform, cu);
+        return new CommonIntegrateDrudeLangevinStepKernel(name, platform, cu);
     if (name == IntegrateDrudeSCFStepKernel::Name())
-        return new CudaIntegrateDrudeSCFStepKernel(name, platform, cu);
+        return new CommonIntegrateDrudeSCFStepKernel(name, platform, cu);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

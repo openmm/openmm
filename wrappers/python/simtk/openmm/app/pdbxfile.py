@@ -106,6 +106,7 @@ class PDBxFile(object):
         zCol = atomData.getAttributeIndex('Cartn_z')
         lastChainId = None
         lastResId = None
+        lastInsertionCode = ''
         atomTable = {}
         atomsInResidue = set()
         models = []
@@ -123,17 +124,24 @@ class PDBxFile(object):
             if modelIndex == 0:
                 # This row defines a new atom.
 
+                if resInsertionCol == -1:
+                    insertionCode = ''
+                else:
+                    insertionCode = row[resInsertionCol]
+                if insertionCode in ('.', '?'):
+                    insertionCode = ''
                 if lastChainId != row[chainIdCol]:
                     # The start of a new chain.
                     chain = top.addChain(row[chainIdCol])
                     lastChainId = row[chainIdCol]
                     lastResId = None
-                if lastResId != row[resNumCol] or lastChainId != row[chainIdCol] or (lastResId == '.' and row[atomNameCol] in atomsInResidue):
+                if lastResId != row[resNumCol] or lastChainId != row[chainIdCol] or lastInsertionCode != insertionCode or (lastResId == '.' and row[atomNameCol] in atomsInResidue):
                     # The start of a new residue.
                     resId = (None if resNumCol == -1 else row[resNumCol])
-                    resIC = ('' if resInsertionCol == -1 else row[resInsertionCol])
+                    resIC = insertionCode
                     res = top.addResidue(row[resNameCol], chain, resId, resIC)
                     lastResId = row[resNumCol]
+                    lastInsertionCode = insertionCode
                     atomsInResidue.clear()
                 element = None
                 try:

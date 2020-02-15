@@ -32,6 +32,8 @@ It is organized as follows:
   information relevant to writing OpenCL implementations of new features.
 * Chapter :ref:`the-cuda-platform` discusses the architecture of the CUDA Platform, providing
   information relevant to writing CUDA implementations of new features.
+* Chapter :ref:`common-compute` describes the Common Compute framework, which lets you
+  write a single implementation of a feature that can be used for both OpenCL and CUDA.
 
 
 This guide assumes you are already familiar with the public API and how to use
@@ -214,9 +216,9 @@ plugins happen to be loaded in.
 Creating New Platforms
 **********************
 
-One common type of plugin defines a new Platform.  There are three such plugins
-that come with OpenMM: one for the CPU Platform, one for the CUDA Platform, and
-one for the OpenCL Platform.
+One common type of plugin defines a new Platform.  There are four such plugins
+that come with OpenMM: one for the Reference platform, one for the CPU Platform,
+one for the CUDA Platform, and one for the OpenCL Platform.
 
 To define a new Platform, you must create subclasses of the various abstract
 classes in the OpenMM Low Level API: a subclass of Platform, one or more
@@ -456,15 +458,22 @@ It also defines vector versions of these types (\ :code:`real2`\ ,
 Computing Forces
 ****************
 
-When forces are computed, they are stored in multiple buffers.  This is done to
-enable multiple work-items or work-groups to compute forces on the same particle
-at the same time; as long as each one writes to a different buffer, there is no
-danger of race conditions.  At the start of a force calculation, all forces in
-all buffers are set to zero.   Each Force is then free to add its contributions
-to any or all of the buffers.  Finally, the buffers are summed to produce the
-total force on each particle.
+When forces are computed, they can be stored in either of two places.  There is
+an array of :code:`long` values storing them as 64 bit fixed point values, and
+a collection of buffers of :code:`real4` values storing them in floating point
+format.  Most GPUs support atomic operations on 64 bit integers, which allows
+many threads to simultaneously record forces without a danger of conflicts.
+Some low end GPUs do not support this, however, especially the embedded GPUs
+found in many laptops.  These devices write to the floating point buffers, with
+careful coordination to make sure two threads will never write to the same
+memory location at the same time.
 
-The size of each buffer is equal to the number of particles, rounded up to the
+At the start of a force calculation, all forces in all buffers are set to zero.
+Each Force is then free to add its contributions to any or all of the buffers.
+Finally, the buffers are summed to produce the total force on each particle.
+The total is recorded in both the floating point and fixed point arrays.
+
+The size of each floating point buffer is equal to the number of particles, rounded up to the
 next multiple of 32.  Call :code:`getPaddedNumAtoms()` on the OpenCLContext
 to get that number.  The actual force buffers are obtained by calling 
 :code:`getForceBuffers()`\ .  The first *n* entries (where *n* is the
@@ -473,16 +482,13 @@ represent the second force buffer, and so on.  More generally, the *i*\ ’th
 force buffer’s contribution to the force on particle *j* is stored in
 element :code:`i*context.getPaddedNumAtoms()+j`\ .
 
-Depending on the device, a buffer may also be created that stores contributions
-to the forces in 64 bit fixed point format.  On devices that support atomic
-operations on 64 bit integers in global memory, this can be a more efficient way
-of accumulating forces than using a large number of force buffers.  To convert a
-value from floating point to fixed point, multiply it by 0x100000000 (2\ :sup:`32`\ ),
-then cast it to a :code:`long`\ .  The fixed point buffer is
-ordered differently from the others.  For atom *i*\ , the x component of its
-force is stored in element :code:`i`\ , the y component in element 
+The fixed point buffer is ordered differently.  For atom *i*\ , the x component
+of its force is stored in element :code:`i`\ , the y component in element 
 :code:`i+context.getPaddedNumAtoms()`\ , and the z component in element 
-:code:`i+2*context.getPaddedNumAtoms()`\ .
+:code:`i+2*context.getPaddedNumAtoms()`\ .  To convert a value from floating
+point to fixed point, multiply it by 0x100000000 (2\ :sup:`32`\ ),
+then cast it to a :code:`long`\ .  Call :code:`getLongForceBuffer()` to get the
+array of fixed point values.
 
 The potential energy is also accumulated in a set of buffers, but this one is
 simply a list of floating point values.  All of them are set to zero at the
@@ -490,15 +496,10 @@ start of a computation, and they are summed at the end of the computation to
 yield the total energy.
 
 The OpenCL implementation of each Force object should define a subclass of
-OpenCLForce, and register an instance of it by calling :code:`addForce()` on
-the OpenCLContext.  This serves two purposes:
-
-#. It reports how many force buffers are required when calculating this
-   particular Force.  The OpenCLContext sets the size of its force buffer array
-   based on the largest number of buffers required by any Force.
-#. It implements methods for determining whether particular particles or groups
-   of particles are identical.  This is important when reordering particles, and is
-   discussed below.
+ComputeForceInfo, and register an instance of it by calling :code:`addForce()` on
+the OpenCLContext.  It implements methods for determining whether particular
+particles or groups of particles are identical.  This is important when
+reordering particles, and is discussed below.
 
 
 Nonbonded Forces
@@ -586,8 +587,7 @@ where *k* is a per-particle parameter.  First we create a parameter as
 follows
 ::
 
-    nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("kparam", "float", 1,
-            sizeof(cl_float), kparam->getDeviceBuffer()));
+    nb.addParameter(ComputeParameterInfo(kparam, "kparam", "float", 1));
 
 where :code:`nb` is the OpenCLNonbondedUtilities for the context.  Now we
 call :code:`addInteraction()` to define an interaction with the following
@@ -700,7 +700,7 @@ exchanged without affecting the System in any way.
 
 Every Force can contribute to defining the boundaries of molecules, and to
 determining whether two molecules are identical.  This is done through the
-OpenCLForceInfo it adds to the OpenCLContext.  It can specify two types of
+ComputeForceInfo it adds to the OpenCLContext.  It can specify two types of
 information:
 
 #. Given a pair of particles, it can say whether those two particles are
@@ -792,3 +792,189 @@ buffer.  In contrast, the CUDA platform uses *only* the fixed point buffer
 the CUDA platform only works on devices that support 64 bit atomic operations
 (compute capability 1.2 or higher).
 
+
+.. _common-compute
+
+Common Compute
+##############
+
+Common Compute is not a platform, but it shares many elements of one.  It exists
+to reduce code duplication between the OpenCL and CUDA platforms.  It allows a
+single implementation to be written for most kernels that can be used by both
+platforms.
+
+OpenCL and CUDA are very similar to each other.  Their computational models are
+nearly identical.  For example, each is based around launching kernels that are
+executed in parallel by many threads.  Each of them groups threads into blocks,
+with more communication and synchronization permitted between the threads
+in a block than between ones in different blocks.  They have very similar memory
+hierarchies: high latency global memory, low latency local/shared memory that
+can be used for communication between the threads of a block, and local variables
+that are visible only to a single thread.
+
+Even their languages for writing kernels are very similar.  Here is an OpenCL
+kernel that adds two arrays together, storing the result in a third array.
+::
+
+    __kernel void addArrays(__global const float* restrict a,
+                            __global const float* restrict b,
+                            __global float* restrict c
+                            int length) {
+        for (int i = get_global_id(0); i < length; i += get_global_size(0))
+            c[i] = a[i]+b[i];
+    }
+
+Here is the corresponding CUDA kernel.
+::
+
+    __extern "C" __global__ void addArrays(const float* __restrict__ a,
+                                           const float* __restrict__ b,
+                                           _float* __restrict__ c
+                                           int length) {
+        for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < length; i += blockDim.x*gridDim.x)
+            c[i] = a[i]+b[i];
+    }
+
+The difference between them is largely just a mechanical find-and-replace.
+After many years of writing and maintaining nearly identical kernels by hand,
+it finally occurred to us that the translation could be done automatically by
+the compiler.  Simply by defining a few preprocessor macros, the following
+kernel can be compiled equally well either as OpenCL or as CUDA.
+::
+
+    KERNEL void addArrays(GLOBAL const float* RESTRICT a,
+                          GLOBAL const float* RESTRICT b,
+                          GLOBAL float* RESTRICT c
+                          int length) {
+        for (int i = GLOBAL_ID; i < length; i += GLOBAL_SIZE)
+            c[i] = a[i]+b[i];
+    }
+
+Writing Device Code
+*******************
+
+When compiling kernels with the Common Compute API, the following macros are
+defined.
+
+.. tabularcolumns:: |l|l|L|
+
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|Macro                          |OpenCL Definition                                           |CUDA Definition                             |
++===============================+============================================================+============================================+
+|:code:`KERNEL`                 |:code:`__kernel`                                            |:code:`extern "C" __global__`               |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`DEVICE`                 |                                                            |:code:`__device__`                          |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`LOCAL`                  |:code:`__local`                                             |:code:`__shared__`                          |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`LOCAL_ARG`              |:code:`__local`                                             |                                            |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`GLOBAL`                 |:code:`__global`                                            |                                            |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`RESTRICT`               |:code:`restrict`                                            |:code:`__restrict__`                        |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`LOCAL_ID`               |:code:`get_local_id(0)`                                     |:code:`threadIdx.x`                         |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`LOCAL_SIZE`             |:code:`get_local_size(0)`                                   |:code:`blockDim.x`                          |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`GLOBAL_ID`              |:code:`get_global_id(0)`                                    |:code:`(blockIdx.x*blockDim.x+threadIdx.x)` |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`GLOBAL_SIZE`            |:code:`get_global_size(0)`                                  |:code:`(blockDim.x*gridDim.x)`              |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`GROUP_ID`               |:code:`get_group_id(0)`                                     |:code:`blockIdx.x`                          |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`NUM_GROUPS`             |:code:`get_num_groups(0)`                                   |:code:`gridDim.x`                           |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`SYNC_THREADS`           |:code:`barrier(CLK_LOCAL_MEM_FENCE+CLK_GLOBAL_MEM_FENCE);`  |:code:`__syncthreads();`                    |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`SYNC_WARPS`             | | if SIMT width >= 32:                                     | | if compute capability >= 7.0:            |
+|                               | | :code:`mem_fence(CLK_LOCAL_MEM_FENCE)`                   | | :code:`__syncwarp();`                    |
+|                               | | otherwise:                                               | | otherwise empty                          |
+|                               | | :code:`barrier(CLK_LOCAL_MEM_FENCE)`                     |                                            |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`MEM_FENCE`              |:code:`mem_fence(CLK_LOCAL_MEM_FENCE+CLK_GLOBAL_MEM_FENCE);`|:code:`__threadfence_block();`              |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+|:code:`ATOMIC_ADD(dest, value)`|:code:`atom_add(dest, value)`                               |:code:`atomicAdd(dest, value)`              |
++-------------------------------+------------------------------------------------------------+--------------------------------------------+
+
+A few other symbols may or may not be defined based on the device you are running on:
+:code:`SUPPORTS_DOUBLE_PRECISION` and :code:`SUPPORTS_64_BIT_ATOMICS`\ .  You
+can use :code:`#ifdef` blocks with these symbols to conditionally compile code
+based on the features supported by the device.  In addition, the CUDA compiler
+defines the symbol :code:`__CUDA_ARCH__`\ , so you can check for this symbol if
+you want to have different code blocks for CUDA and OpenCL.
+
+Both OpenCL and CUDA define vector types like :code:`int2` and :code:`float4`\ .
+The types they support are different but overlapping.  When writing common code,
+use only the vector types that are supported by both OpenCL and CUDA: 2, 3, and 4
+element vectors of type :code:`short`\ , :code:`int`\ , :code:`float`\ , and
+:code:`double`\ .
+
+CUDA uses functions to construct vector values, such as :code:`make_float2(x, y)`\ .
+OpenCL instead uses a typecast like syntax: :code:`(float2) (x, y)`\ .  In common
+code, use the CUDA style :code:`make_` functions.  OpenMM provides definitions
+of these functions when compiling as OpenCL.
+
+In CUDA, vector types are simply data structures.  You can access their elements,
+but not do much more with them.  In contrast, OpenCL's vectors are mathematical
+types.  All standard math operators are defined for them, as well as geometrical
+functions like :code:`dot()` and :code:`cross()`\ .  When compiling kernels as
+CUDA, OpenMM provides definitions of these operators and functions.
+
+OpenCL also supports "swizzle" notation for vectors.  For example, if :code:`f`
+is a :code:`float4` you can construct a vector of its first three elements
+by writing :code:`f.xyz`\ , or you can swap its first two elements by writing
+:code:`f.xy = f.yx`\ .  Unfortunately, there is no practical way to support this
+in CUDA, so swizzle notation cannot be used in common code.  Because stripping
+the final element from a four component vector is such a common operation, OpenMM
+provides a special function for doing it: :code:`trimTo3(f)` is a vector of its
+first three elements.
+
+64 bit integers are another data type that needs special handling.  Both OpenCL
+and CUDA support them, but they use different names for them: :code:`long` in OpenCL,
+:code:`long long` in CUDA.  To work around this inconsistency, OpenMM provides
+the typedefs :code:`mm_long` and :code:`mm_ulong` for signed and unsigned 64 bit
+integers in device code.
+
+Writing Host Code
+*****************
+
+Host code for Common Compute is very similar to host code for OpenCL or CUDA.
+In fact, most of the classes provided by the OpenCL and CUDA platforms are
+subclasses of Common Compute classes.  For example, OpenCLContext and
+CudaContext are both subclasses of ComputeContext.  When writing common code,
+each KernelImpl should expect a ComputeContext to be passed to its constructor.
+By using the common API provided by that abstract class, it can be used for
+either OpenCL or CUDA just based on the particular context passed to it at
+runtime.  Similarly, OpenCLNonbondedUtilities and CudaNonbondedUtilities are
+subclasses of the abstract NonbondedUtilities class, and so on.
+
+ArrayInterface is an abstract class defining the interface for arrays stored on
+the device.  OpenCLArray and CudaArray are both subclasses of it.  To simplify
+code that creates and uses arrays, there is also a third subclass called
+ComputeArray.  It acts as a wrapper around an OpenCLArray or CudaArray,
+automatically creating an array of the appropriate type for the current
+platform.  In practice, just follow these rules:
+
+  1. Whenever you need to create an array, make it a ComputeArray.
+
+  2. Whenever you write a function that expects an array to be passed to it,
+     declare the type to be ArrayInterface.
+
+If you do these two things, all differences between platforms will be handled
+automatically.
+
+OpenCL and CUDA have quite different APIs for compiling and invoking kernels.
+To hide these differences, OpenMM provides a set of abstract classes.  To compile
+device code, pass the source code to :code:`compileProgram()` on the ComputeContext.
+This returns a ComputeProgram.  You can then call its :code:`createKernel()`
+method to get a ComputeKernel object, which has methods for setting arguments
+and invoking the kernel.
+
+Sometimes you need to refer to vector types in host code, such as to set the
+value for a kernel argument or to access the elements of an array.  OpenCL and
+CUDA both define types for them, but they have different names, and in any case
+you want to avoid using OpenCL-specific or CUDA-specific types in common code.
+OpenMM therefore defines types for vectors in host code.  They have the same
+names as the corresponding types in device code, only with the prefix :code:`mm_`\ ,
+for example :code:`mm_int2` and :code:`mm_float3`\ .

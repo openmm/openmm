@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -26,6 +26,7 @@
 
 #include "OpenCLKernelFactory.h"
 #include "OpenCLParallelKernels.h"
+#include "openmm/common/CommonKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
@@ -75,64 +76,68 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == VirtualSitesKernel::Name())
         return new OpenCLVirtualSitesKernel(name, platform, cl);
     if (name == CalcHarmonicBondForceKernel::Name())
-        return new OpenCLCalcHarmonicBondForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcHarmonicBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomBondForceKernel::Name())
-        return new OpenCLCalcCustomBondForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcHarmonicAngleForceKernel::Name())
-        return new OpenCLCalcHarmonicAngleForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcHarmonicAngleForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomAngleForceKernel::Name())
-        return new OpenCLCalcCustomAngleForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomAngleForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcPeriodicTorsionForceKernel::Name())
-        return new OpenCLCalcPeriodicTorsionForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcPeriodicTorsionForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcRBTorsionForceKernel::Name())
-        return new OpenCLCalcRBTorsionForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcRBTorsionForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCMAPTorsionForceKernel::Name())
-        return new OpenCLCalcCMAPTorsionForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCMAPTorsionForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomTorsionForceKernel::Name())
-        return new OpenCLCalcCustomTorsionForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomTorsionForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcNonbondedForceKernel::Name())
         return new OpenCLCalcNonbondedForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomNonbondedForceKernel::Name())
-        return new OpenCLCalcCustomNonbondedForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomNonbondedForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcGBSAOBCForceKernel::Name())
-        return new OpenCLCalcGBSAOBCForceKernel(name, platform, cl);
+        return new CommonCalcGBSAOBCForceKernel(name, platform, cl);
     if (name == CalcCustomGBForceKernel::Name())
-        return new OpenCLCalcCustomGBForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomGBForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomExternalForceKernel::Name())
-        return new OpenCLCalcCustomExternalForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomExternalForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomHbondForceKernel::Name())
-        return new OpenCLCalcCustomHbondForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomHbondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomCentroidBondForceKernel::Name())
-        return new OpenCLCalcCustomCentroidBondForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomCentroidBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomCompoundBondForceKernel::Name())
-        return new OpenCLCalcCustomCompoundBondForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomCompoundBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomCVForceKernel::Name())
         return new OpenCLCalcCustomCVForceKernel(name, platform, cl);
     if (name == CalcRMSDForceKernel::Name())
-        return new OpenCLCalcRMSDForceKernel(name, platform, cl);
+        return new CommonCalcRMSDForceKernel(name, platform, cl);
     if (name == CalcCustomManyParticleForceKernel::Name())
-        return new OpenCLCalcCustomManyParticleForceKernel(name, platform, cl, context.getSystem());
+        return new CommonCalcCustomManyParticleForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcGayBerneForceKernel::Name())
-        return new OpenCLCalcGayBerneForceKernel(name, platform, cl);
+        return new CommonCalcGayBerneForceKernel(name, platform, cl);
     if (name == IntegrateVerletStepKernel::Name())
-        return new OpenCLIntegrateVerletStepKernel(name, platform, cl);
+        return new CommonIntegrateVerletStepKernel(name, platform, cl);
     if (name == IntegrateLangevinStepKernel::Name())
-        return new OpenCLIntegrateLangevinStepKernel(name, platform, cl);
+        return new CommonIntegrateLangevinStepKernel(name, platform, cl);
     if (name == IntegrateBAOABStepKernel::Name())
-        return new OpenCLIntegrateBAOABStepKernel(name, platform, cl);
+        return new CommonIntegrateBAOABStepKernel(name, platform, cl);
     if (name == IntegrateBrownianStepKernel::Name())
-        return new OpenCLIntegrateBrownianStepKernel(name, platform, cl);
+        return new CommonIntegrateBrownianStepKernel(name, platform, cl);
     if (name == IntegrateVariableVerletStepKernel::Name())
-        return new OpenCLIntegrateVariableVerletStepKernel(name, platform, cl);
+        return new CommonIntegrateVariableVerletStepKernel(name, platform, cl);
     if (name == IntegrateVariableLangevinStepKernel::Name())
-        return new OpenCLIntegrateVariableLangevinStepKernel(name, platform, cl);
+        return new CommonIntegrateVariableLangevinStepKernel(name, platform, cl);
     if (name == IntegrateCustomStepKernel::Name())
-        return new OpenCLIntegrateCustomStepKernel(name, platform, cl);
+        return new CommonIntegrateCustomStepKernel(name, platform, cl);
     if (name == ApplyAndersenThermostatKernel::Name())
-        return new OpenCLApplyAndersenThermostatKernel(name, platform, cl);
+        return new CommonApplyAndersenThermostatKernel(name, platform, cl);
+    if (name == NoseHooverChainKernel::Name())
+        return new OpenCLNoseHooverChainKernel(name, platform, cl);
+    if (name == IntegrateVelocityVerletStepKernel::Name())
+        return new OpenCLIntegrateVelocityVerletStepKernel(name, platform, cl);
     if (name == ApplyMonteCarloBarostatKernel::Name())
         return new OpenCLApplyMonteCarloBarostatKernel(name, platform, cl);
     if (name == RemoveCMMotionKernel::Name())
-        return new OpenCLRemoveCMMotionKernel(name, platform, cl);
+        return new CommonRemoveCMMotionKernel(name, platform, cl);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

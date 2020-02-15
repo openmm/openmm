@@ -81,21 +81,26 @@ __kernel void reduceReal4Buffer(__global real4* restrict buffer, int bufferSize,
     }
 }
 
-#ifdef SUPPORTS_64_BIT_ATOMICS
 /**
  * Sum the various buffers containing forces.
  */
-__kernel void reduceForces(__global const long* restrict longBuffer, __global real4* restrict buffer, int bufferSize, int numBuffers) {
+__kernel void reduceForces(__global long* restrict longBuffer, __global real4* restrict buffer, int bufferSize, int numBuffers) {
     int totalSize = bufferSize*numBuffers;
     real scale = 1/(real) 0x100000000;
     for (int index = get_global_id(0); index < bufferSize; index += get_global_size(0)) {
+#ifdef SUPPORTS_64_BIT_ATOMICS
         real4 sum = (real4) (scale*longBuffer[index], scale*longBuffer[index+bufferSize], scale*longBuffer[index+2*bufferSize], 0);
+#else
+        real4 sum = (real4) 0;
+#endif
         for (int i = index; i < totalSize; i += bufferSize)
             sum += buffer[i];
         buffer[index] = sum;
+        longBuffer[index] = (long) (sum.x*0x100000000);
+        longBuffer[index+bufferSize] = (long) (sum.y*0x100000000);
+        longBuffer[index+2*bufferSize] = (long) (sum.z*0x100000000);
     }
 }
-#endif
 
 /**
  * Sum the energy buffer.

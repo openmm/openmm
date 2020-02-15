@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -25,6 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaBondedUtilities.h"
+#include "CudaContext.h"
 #include "CudaExpressionUtilities.h"
 #include "CudaKernelSources.h"
 #include "openmm/OpenMMException.h"
@@ -50,6 +51,10 @@ string CudaBondedUtilities::addArgument(CUdeviceptr data, const string& type) {
     arguments.push_back(data);
     argTypes.push_back(type);
     return "customArg"+context.intToString(arguments.size());
+}
+
+string CudaBondedUtilities::addArgument(ArrayInterface& data, const string& type) {
+    return addArgument(context.unwrap(data).getDevicePointer(), type);
 }
 
 string CudaBondedUtilities::addEnergyParameterDerivative(const string& param) {

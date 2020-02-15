@@ -40,7 +40,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT CudaAmoebaKernelSources {
 public:
-@CUDA_FILE_DECLARATIONS@
+@KERNEL_FILE_DECLARATIONS@
 };
 
 } // namespace OpenMM

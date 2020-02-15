@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -25,6 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLBondedUtilities.h"
+#include "OpenCLContext.h"
 #include "OpenCLExpressionUtilities.h"
 #include "openmm/OpenMMException.h"
 #include "OpenCLNonbondedUtilities.h"
@@ -53,6 +54,10 @@ string OpenCLBondedUtilities::addArgument(cl::Memory& data, const string& type) 
     arguments.push_back(&data);
     argTypes.push_back(type);
     return "customArg"+context.intToString(arguments.size());
+}
+
+string OpenCLBondedUtilities::addArgument(ArrayInterface& data, const string& type) {
+    return addArgument(context.unwrap(data).getDeviceBuffer(), type);
 }
 
 string OpenCLBondedUtilities::addEnergyParameterDerivative(const string& param) {

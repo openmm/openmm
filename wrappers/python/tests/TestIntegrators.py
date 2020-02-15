@@ -1,4 +1,5 @@
 import unittest
+import warnings
 import tempfile
 from datetime import datetime, timedelta
 from simtk.openmm import *
@@ -119,6 +120,37 @@ class TestIntegrators(unittest.TestCase):
             context = Context(system, integrator)
             context.setPositions(pdb.positions)
             integrator.step(10)
+
+    def testNoseHooverIntegrator(self):
+        """Test partial thermostating in the NoseHooverIntegrator (only API)"""
+        pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
+        system = ff.createSystem(pdb.topology, cutoffMethod=PME)
+
+        integrator = NoseHooverIntegrator(1.0*femtosecond) 
+        integrator.addSubsystemThermostat(list(range(5)), [], 200*kelvin, 1/picosecond, 200*kelvin, 1/picosecond, 3,3,3)
+        con = Context(system, integrator)
+        con.setPositions(pdb.positions)
+
+        integrator.step(5)
+        self.assertNotEqual(integrator.computeHeatBathEnergy(), 0.0*kilojoule_per_mole)
+
+    def testDrudeNoseHooverIntegrator(self):
+        """Test the DrudeNoseHooverIntegrator"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/ala3_solv_drude.psf')
+        crd = CharmmCrdFile('systems/ala3_solv_drude.crd')
+        params = CharmmParameterSet('systems/toppar_drude_master_protein_2013e.str')
+        # Box dimensions (cubic box)
+        psf.setBox(33.2*angstroms, 33.2*angstroms, 33.2*angstroms)
+
+        system = psf.createSystem(params, nonbondedMethod=PME, ewaldErrorTolerance=0.0005)
+        integrator = DrudeNoseHooverIntegrator(300*kelvin, 1.0/picosecond, 1*kelvin, 10/picosecond, 0.001*picoseconds)
+        con = Context(system, integrator)
+        con.setPositions(crd.positions)
+
+        integrator.step(5)
+        self.assertNotEqual(integrator.computeHeatBathEnergy(), 0.0*kilojoule_per_mole)
 
 if __name__ == '__main__':
     unittest.main()

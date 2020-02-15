@@ -28,7 +28,6 @@
  * -------------------------------------------------------------------------- */
 
 #include <map>
-#include <queue>
 #include <string>
 #define __CL_ENABLE_EXCEPTIONS
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS
@@ -50,39 +49,23 @@
 #endif
 #include <pthread.h>
 #include <cl.hpp>
-#include "windowsExportOpenCL.h"
+#include "openmm/common/windowsExportCommon.h"
 #include "OpenCLArray.h"
+#include "OpenCLBondedUtilities.h"
+#include "OpenCLExpressionUtilities.h"
+#include "OpenCLIntegrationUtilities.h"
+#include "OpenCLNonbondedUtilities.h"
 #include "OpenCLPlatform.h"
+#include "openmm/common/ComputeContext.h"
 
 namespace OpenMM {
 
 class OpenCLForceInfo;
-class OpenCLIntegrationUtilities;
-class OpenCLExpressionUtilities;
-class OpenCLBondedUtilities;
-class OpenCLNonbondedUtilities;
-class System;
 
 /**
- * We can't use predefined vector types like cl_float4, since different OpenCL implementations currently define
- * them in incompatible ways.  Hopefully that will be fixed in the future.  In the mean time, we define our own
- * types to represent them on the host.
+ * These are a few extra vector types beyond the ones in ComputeVectorTypes.h.
  */
 
-struct mm_float2 {
-    cl_float x, y;
-    mm_float2() {
-    }
-    mm_float2(cl_float x, cl_float y) : x(x), y(y) {
-    }
-};
-struct mm_float4 {
-    cl_float x, y, z, w;
-    mm_float4() {
-    }
-    mm_float4(cl_float x, cl_float y, cl_float z, cl_float w) : x(x), y(y), z(z), w(w) {
-    }
-};
 struct mm_float8 {
     cl_float s0, s1, s2, s3, s4, s5, s6, s7;
     mm_float8() {
@@ -101,39 +84,11 @@ struct mm_float16 {
         s8(s8), s9(s9), s10(s10), s11(s11), s12(s12), s13(s13), s14(s14), s15(15) {
     }
 };
-struct mm_double2 {
-    cl_double x, y;
-    mm_double2() {
-    }
-    mm_double2(cl_double x, cl_double y) : x(x), y(y) {
-    }
-};
-struct mm_double4 {
-    cl_double x, y, z, w;
-    mm_double4() {
-    }
-    mm_double4(cl_double x, cl_double y, cl_double z, cl_double w) : x(x), y(y), z(z), w(w) {
-    }
-};
 struct mm_ushort2 {
     cl_ushort x, y;
     mm_ushort2() {
     }
     mm_ushort2(cl_ushort x, cl_ushort y) : x(x), y(y) {
-    }
-};
-struct mm_int2 {
-    cl_int x, y;
-    mm_int2() {
-    }
-    mm_int2(cl_int x, cl_int y) : x(x), y(y) {
-    }
-};
-struct mm_int4 {
-    cl_int x, y, z, w;
-    mm_int4() {
-    }
-    mm_int4(cl_int x, cl_int y, cl_int z, cl_int w) : x(x), y(y), z(z), w(w) {
     }
 };
 struct mm_int8 {
@@ -166,10 +121,9 @@ struct mm_int16 {
  * thread is not used and calculations are performed on the main application thread.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLContext {
+class OPENMM_EXPORT_COMMON OpenCLContext : public ComputeContext {
 public:
     class WorkTask;
-    class WorkThread;
     class ReorderListener;
     class ForcePreComputation;
     class ForcePostComputation;
@@ -184,13 +138,14 @@ public:
      */
     void initialize();
     /**
-     * Add an OpenCLForceInfo to this context.
+     * Add an ComputeForceInfo to this context.
      */
-    void addForce(OpenCLForceInfo* force);
+    void addForce(ComputeForceInfo* force);
     /**
-     * Get all OpenCLForceInfos that have been added to this context.
+     * Request that the context provide at least a particular number of force buffers.
+     * Force kernels should call this during initialization.
      */
-    std::vector<OpenCLForceInfo*>& getForceInfos();
+    void requestForceBuffers(int minBuffers);
     /**
      * Get the cl::Context associated with this object.
      */
@@ -222,6 +177,14 @@ public:
         return platformData;
     }
     /**
+     * Get the number of contexts being used for the current simulation.
+     * This is relevant when a simulation is parallelized across multiple devices.  In that case,
+     * one OpenCLContext is created for each device.
+     */
+    int getNumContexts() const {
+        return platformData.contexts.size();
+    }
+    /**
      * Get the index of this context in the list stored in the PlatformData.
      */
     int getContextIndex() const {
@@ -239,6 +202,28 @@ public:
      * Reset the context to using the default queue for execution.
      */
     void restoreDefaultQueue();
+    /**
+     * Construct an uninitialized array of the appropriate class for this platform.  The returned
+     * value should be created on the heap with the "new" operator.
+     */
+    OpenCLArray* createArray();
+    /**
+     * Construct a ComputeEvent object of the appropriate class for this platform.
+     */
+    ComputeEvent createEvent();
+    /**
+     * Compile source code to create a ComputeProgram.
+     *
+     * @param source             the source code of the program
+     * @param defines            a set of preprocessor definitions (name, value) to define when compiling the program
+     */
+    ComputeProgram compileProgram(const std::string source, const std::map<std::string, std::string>& defines=std::map<std::string, std::string>());
+    /**
+     * Convert an array to an OpenCLArray.  If the argument is already an OpenCLArray, this simply casts it.
+     * If the argument is a ComputeArray that wraps an OpenCLArray, this returns the wrapped array.  For any
+     * other argument, this throws an exception.
+     */
+    OpenCLArray& unwrap(ArrayInterface& array) const;
     /**
      * Get the array which contains the position (the xyz components) and charge (the w component) of each atom.
      */
@@ -295,10 +280,14 @@ public:
         return pinnedMemory;
     }
     /**
-     * Get the host-side vector which contains the index of each atom.
+     * Get a shared ThreadPool that code can use to parallelize operations.
+     * 
+     * Because this object is freely available to all code, care is needed to avoid conflicts.  Only use it
+     * from the main thread, and make sure all operations are complete before you invoke any other code that
+     * might make use of it
      */
-    const std::vector<int>& getAtomIndex() const {
-        return atomIndex;
+    ThreadPool& getThreadPool() {
+        return getPlatformData().threads;
     }
     /**
      * Get the array which contains the index of each atom.
@@ -306,20 +295,6 @@ public:
     OpenCLArray& getAtomIndexArray() {
         return atomIndexDevice;
     }
-    /**
-     * Get the number of cells by which the positions are offset.
-     */
-    std::vector<mm_int4>& getPosCellOffsets() {
-        return posCellOffsets;
-    }
-    /**
-     * Replace all occurrences of a list of substrings.
-     *
-     * @param input   a string to process
-     * @param replacements a set of strings that should be replaced with new strings wherever they appear in the input string
-     * @return a new string produced by performing the replacements
-     */
-    std::string replaceStrings(const std::string& input, const std::map<std::string, std::string>& replacements) const;
     /**
      * Create an OpenCL Program from source code.
      *
@@ -348,7 +323,7 @@ public:
     /**
      * Set all elements of an array to 0.
      */
-    void clearBuffer(OpenCLArray& array);
+    void clearBuffer(ArrayInterface& array);
     /**
      * Set all elements of an array to 0.
      *
@@ -359,7 +334,7 @@ public:
     /**
      * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
      */
-    void addAutoclearBuffer(OpenCLArray& array);
+    void addAutoclearBuffer(ArrayInterface& array);
     /**
      * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
      *
@@ -448,19 +423,6 @@ public:
         forcesValid = valid;
     }
     /**
-     * Get the number of atoms.
-     */
-    int getNumAtoms() const {
-        return numAtoms;
-    }
-    /**
-     * Get the number of atoms, rounded up to a multiple of TileSize.  This is the actual size of
-     * most arrays with one element per atom.
-     */
-    int getPaddedNumAtoms() const {
-        return paddedNumAtoms;
-    }
-    /**
      * Get the number of blocks of TileSize atoms.
      */
     int getNumAtomBlocks() const {
@@ -473,10 +435,23 @@ public:
         return numThreadBlocks;
     }
     /**
+     * Get the maximum number of threads in a thread block supported by this device.
+     */
+    int getMaxThreadBlockSize() const {
+        return device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+    }
+    /**
      * Get the number of force buffers.
      */
     int getNumForceBuffers() const {
         return numForceBuffers;
+    }
+    /**
+     * Get whether the device being used is a CPU.  In some cases, different algorithms
+     * may be more efficient on CPUs and GPUs.
+     */
+    bool getIsCPU() const {
+        return (device.getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
     }
     /**
      * Get the SIMD width of the device being used.
@@ -514,15 +489,6 @@ public:
     bool getBoxIsTriclinic() const {
         return boxIsTriclinic;
     }
-    /**
-     * Convert a number to a string in a format suitable for including in a kernel.
-     * This takes into account whether the context uses single or double precision.
-     */
-    std::string doubleToString(double value) const;
-    /**
-     * Convert a number to a string in a format suitable for including in a kernel.
-     */
-    std::string intToString(int value) const;
     /**
      * Get the vectors defining the periodic box.
      */
@@ -631,6 +597,11 @@ public:
         return *nonbonded;
     }
     /**
+     * This should be called by the Integrator from its own initialize() method.
+     * It ensures all contexts are fully initialized.
+     */
+    void initializeContexts();
+    /**
      * Set the particle charges.  These are packed into the fourth element of the posq array.
      */
     void setCharges(const std::vector<double>& charges);
@@ -639,62 +610,6 @@ public:
      * do that, this returns true the first time it is called, and false on all subsequent calls.
      */
     bool requestPosqCharges();
-    /**
-     * Get the thread used by this context for executing parallel computations.
-     */
-    WorkThread& getWorkThread() {
-        return *thread;
-    }
-    /**
-     * Get whether atoms were reordered during the most recent force/energy computation.
-     */
-    bool getAtomsWereReordered() const {
-        return atomsWereReordered;
-    }
-    /**
-     * Set whether atoms were reordered during the most recent force/energy computation.
-     */
-    void setAtomsWereReordered(bool wereReordered) {
-        atomsWereReordered = wereReordered;
-    }
-    /**
-     * Reorder the internal arrays of atoms to try to keep spatially contiguous atoms close
-     * together in the arrays.
-     */
-    void reorderAtoms();
-    /**
-     * Add a listener that should be called whenever atoms get reordered.  The OpenCLContext
-     * assumes ownership of the object, and deletes it when the context itself is deleted.
-     */
-    void addReorderListener(ReorderListener* listener);
-    /**
-     * Get the list of ReorderListeners.
-     */
-    std::vector<ReorderListener*>& getReorderListeners() {
-        return reorderListeners;
-    }
-    /**
-     * Add a pre-computation that should be called at the very start of force and energy evaluations.
-     * The OpenCLContext assumes ownership of the object, and deletes it when the context itself is deleted.
-     */
-    void addPreComputation(ForcePreComputation* computation);
-    /**
-     * Get the list of ForcePreComputations.
-     */
-    std::vector<ForcePreComputation*>& getPreComputations() {
-        return preComputations;
-    }
-    /**
-     * Add a post-computation that should be called at the very end of force and energy evaluations.
-     * The OpenCLContext assumes ownership of the object, and deletes it when the context itself is deleted.
-     */
-    void addPostComputation(ForcePostComputation* computation);
-    /**
-     * Get the list of ForcePostComputations.
-     */
-    std::vector<ForcePostComputation*>& getPostComputations() {
-        return postComputations;
-    }
     /**
      * Get the names of all parameters with respect to which energy derivatives are computed.
      */
@@ -717,49 +632,22 @@ public:
      */
     void addEnergyParameterDerivative(const std::string& param);
     /**
-     * Mark that the current molecule definitions (and hence the atom order) may be invalid.
-     * This should be called whenever force field parameters change.  It will cause the definitions
-     * and order to be revalidated.
+     * Wait until all work that has been queued (kernel executions, asynchronous data transfers, etc.)
+     * has been submitted to the device.  This does not mean it has necessarily been completed.
+     * Calling this periodically may improve the responsiveness of the computer's GUI, but at the
+     * expense of reduced simulation performance.
      */
-    void invalidateMolecules();
-    /**
-     * Mark that the current molecule definitions from one particular force (and hence the atom order)
-     * may be invalid.  This should be called whenever force field parameters change.  It will cause the
-     * definitions and order to be revalidated.
-     */
-    bool invalidateMolecules(OpenCLForceInfo* force);
+    void flushQueue();
 private:
-    struct Molecule;
-    struct MoleculeGroup;
-    class VirtualSiteInfo;
-    void findMoleculeGroups();
-    /**
-     * Ensure that all molecules marked as "identical" really are identical.  This should be
-     * called whenever force field parameters change.  If necessary, it will rebuild the list
-     * of molecules and resort the atoms.
-     */
-    void validateMolecules();
-    /**
-     * This is the internal implementation of reorderAtoms(), templatized by the numerical precision in use.
-     */
-    template <class Real, class Real4, class Mixed, class Mixed4>
-    void reorderAtomsImpl();
-    const System& system;
-    double time;
     OpenCLPlatform::PlatformData& platformData;
     int deviceIndex;
     int platformIndex;
     int contextIndex;
-    int stepCount;
-    int computeForceCount;
-    int stepsSinceReorder;
-    int numAtoms;
-    int paddedNumAtoms;
     int numAtomBlocks;
     int numThreadBlocks;
     int numForceBuffers;
     int simdWidth;
-    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, atomsWereReordered, boxIsTriclinic, forcesValid, hasAssignedPosqCharges;
+    bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, boxIsTriclinic, hasAssignedPosqCharges;
     mm_float4 periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ;
     mm_double4 periodicBoxSizeDouble, invPeriodicBoxSizeDouble, periodicBoxVecXDouble, periodicBoxVecYDouble, periodicBoxVecZDouble;
     std::string defaultOptimizationOptions;
@@ -777,10 +665,6 @@ private:
     cl::Kernel reduceForcesKernel;
     cl::Kernel reduceEnergyKernel;
     cl::Kernel setChargesKernel;
-    std::vector<OpenCLForceInfo*> forces;
-    std::vector<Molecule> molecules;
-    std::vector<MoleculeGroup> moleculeGroups;
-    std::vector<mm_int4> posCellOffsets;
     cl::Buffer* pinnedBuffer;
     void* pinnedMemory;
     OpenCLArray posq;
@@ -796,118 +680,36 @@ private:
     OpenCLArray chargeBuffer;
     std::vector<std::string> energyParamDerivNames;
     std::map<std::string, double> energyParamDerivWorkspace;
-    std::vector<int> atomIndex;
     std::vector<cl::Memory*> autoclearBuffers;
     std::vector<int> autoclearBufferSizes;
-    std::vector<ReorderListener*> reorderListeners;
-    std::vector<ForcePreComputation*> preComputations;
-    std::vector<ForcePostComputation*> postComputations;
     OpenCLIntegrationUtilities* integration;
     OpenCLExpressionUtilities* expression;
     OpenCLBondedUtilities* bonded;
     OpenCLNonbondedUtilities* nonbonded;
-    WorkThread* thread;
-};
-
-struct OpenCLContext::Molecule {
-    std::vector<int> atoms;
-    std::vector<int> constraints;
-    std::vector<std::vector<int> > groups;
-};
-
-struct OpenCLContext::MoleculeGroup {
-    std::vector<int> atoms;
-    std::vector<int> instances;
-    std::vector<int> offsets;
 };
 
 /**
- * This abstract class defines a task to be executed on the worker thread.
+ * This class exists only for backward compatibility.  Use ComputeContext::WorkTask instead.
  */
-class OPENMM_EXPORT_OPENCL OpenCLContext::WorkTask {
-public:
-    virtual void execute() = 0;
-    virtual ~WorkTask() {
-    }
-};
-
-class OPENMM_EXPORT_OPENCL OpenCLContext::WorkThread {
-public:
-    struct ThreadData;
-    WorkThread();
-    ~WorkThread();
-    /**
-     * Request that a task be executed on the worker thread.  The argument should have been allocated on the
-     * heap with the "new" operator.  After its execute() method finishes, the object will be deleted automatically.
-     */
-    void addTask(OpenCLContext::WorkTask* task);
-    /**
-     * Get whether the worker thread is idle, waiting for a task to be added.
-     */
-    bool isWaiting();
-    /**
-     * Get whether the worker thread has exited.
-     */
-    bool isFinished();
-    /**
-     * Block until all tasks have finished executing and the worker thread is idle.
-     */
-    void flush();
-private:
-    std::queue<OpenCLContext::WorkTask*> tasks;
-    bool waiting, finished;
-    pthread_mutex_t queueLock;
-    pthread_cond_t waitForTaskCondition, queueEmptyCondition;
-    pthread_t thread;
+class OPENMM_EXPORT_COMMON OpenCLContext::WorkTask : public ComputeContext::WorkTask {
 };
 
 /**
- * This abstract class defines a function to be executed whenever atoms get reordered.
- * Objects that need to know when reordering happens should create a ReorderListener
- * and register it by calling addReorderListener().
+ * This class exists only for backward compatibility.  Use ComputeContext::ReorderListener instead.
  */
-class OPENMM_EXPORT_OPENCL OpenCLContext::ReorderListener {
-public:
-    virtual void execute() = 0;
-    virtual ~ReorderListener() {
-    }
+class OPENMM_EXPORT_COMMON OpenCLContext::ReorderListener : public ComputeContext::ReorderListener {
 };
 
 /**
- * This abstract class defines a function to be executed at the very beginning of force and
- * energy evaluation, before any other calculation has been done.  It is useful for operations
- * that need to be performed at a nonstandard point in the process.  After creating a
- * ForcePreComputation, register it by calling addForcePreComputation().
+ * This class exists only for backward compatibility.  Use ComputeContext::ForcePreComputation instead.
  */
-class OPENMM_EXPORT_OPENCL OpenCLContext::ForcePreComputation {
-public:
-    virtual ~ForcePreComputation() {
-    }
-    /**
-     * @param includeForce  true if forces should be computed
-     * @param includeEnergy true if potential energy should be computed
-     * @param groups        a set of bit flags for which force groups to include
-     */
-    virtual void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) = 0;
+class OPENMM_EXPORT_COMMON OpenCLContext::ForcePreComputation : public ComputeContext::ForcePreComputation {
 };
 
 /**
- * This abstract class defines a function to be executed at the very end of force and
- * energy evaluation, after all other calculations have been done.  It is useful for operations
- * that need to be performed at a nonstandard point in the process.  After creating a
- * ForcePostComputation, register it by calling addForcePostComputation().
+ * This class exists only for backward compatibility.  Use ComputeContext::ForcePostComputation instead.
  */
-class OPENMM_EXPORT_OPENCL OpenCLContext::ForcePostComputation {
-public:
-    virtual ~ForcePostComputation() {
-    }
-    /**
-     * @param includeForce  true if forces should be computed
-     * @param includeEnergy true if potential energy should be computed
-     * @param groups        a set of bit flags for which force groups to include
-     * @return an optional contribution to add to the potential energy.
-     */
-    virtual double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) = 0;
+class OPENMM_EXPORT_COMMON OpenCLContext::ForcePostComputation : public ComputeContext::ForcePostComputation {
 };
 
 } // namespace OpenMM

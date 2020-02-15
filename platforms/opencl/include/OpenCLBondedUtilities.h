@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -28,12 +28,14 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLArray.h"
-#include "OpenCLContext.h"
 #include "openmm/System.h"
+#include "openmm/common/BondedUtilities.h"
 #include <string>
 #include <vector>
 
 namespace OpenMM {
+
+class OpenCLContext;
 
 /**
  * This class provides a generic mechanism for evaluating bonded interactions.  You write only
@@ -56,10 +58,10 @@ namespace OpenMM {
  * <li>The index of the bond being evaluated will have been stored in the unsigned int variable "index".</li>
  * <li>The indices of the atoms forming that bond will have been stored in the unsigned int variables "atom1",
  * "atom2", ....</li>
- * <li>The positions of those atoms will have been stored in the float4 variables "pos1", "pos2", ....</li>
- * <li>A float variable called "energy" will exist.  Your code should add the potential energy of the
+ * <li>The positions of those atoms will have been stored in the real4 variables "pos1", "pos2", ....</li>
+ * <li>A real variable called "energy" will exist.  Your code should add the potential energy of the
  * bond to that variable.</li>
- * <li>Your code should define float4 variables called "force1", "force2", ... that contain the force to
+ * <li>Your code should define real4 variables called "force1", "force2", ... that contain the force to
  * apply to each atom.</li>
  * </ol>
  * 
@@ -67,10 +69,10 @@ namespace OpenMM {
  * the form E=r^2:
  * 
  * <tt><pre>
- * float4 delta = pos2-pos1;
+ * real4 delta = pos2-pos1;
  * energy += delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
- * float4 force1 = 2.0f*delta;
- * float4 force2 = -2.0f*delta;
+ * real4 force1 = 2.0f*delta;
+ * real4 force2 = -2.0f*delta;
  * </pre></tt>
  * 
  * Interactions will often depend on parameters or other data.  Call addArgument() to provide the data
@@ -78,7 +80,7 @@ namespace OpenMM {
  * from your interaction code.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLBondedUtilities {
+class OPENMM_EXPORT_COMMON OpenCLBondedUtilities : public BondedUtilities {
 public:
     OpenCLBondedUtilities(OpenCLContext& context);
     /**
@@ -99,6 +101,15 @@ public:
      * refer to it by this name.
      */
     std::string addArgument(cl::Memory& data, const std::string& type);
+    /**
+     * Add an argument that should be passed to the interaction kernel.
+     * 
+     * @param data    the array containing the data to pass
+     * @param type    the data type contained in the memory (e.g. "float4")
+     * @return the name that will be used for the argument.  Any code you pass to addInteraction() should
+     * refer to it by this name.
+     */
+    std::string addArgument(ArrayInterface& data, const std::string& type);
     /**
      * Register that the interaction kernel will be computing the derivative of the potential energy
      * with respect to a parameter.

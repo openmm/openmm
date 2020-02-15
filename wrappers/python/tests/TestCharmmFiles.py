@@ -284,7 +284,7 @@ class TestCharmmFiles(unittest.TestCase):
                + ["H{}".format(i) for i in range(1,12)]
                + ["N{}".format(i) for i in range(1,4)]
                )
-        tip3 = ["OH2", "H1", "H2"]
+        hoh = ["O", "H1", "H2"]
         pot = ["POT"]
         cla = ["CLA"]
         psf = CharmmPsfFile('systems/charmm-solvated/isa_wat.3_kcl.m14.psf')
@@ -292,8 +292,8 @@ class TestCharmmFiles(unittest.TestCase):
             atoms = [atom.name for atom in residue.atoms()]
             if residue.name == "M14":
                 self.assertEqual(sorted(m14), sorted(atoms))
-            elif residue.name == "TIP3":
-                self.assertEqual(sorted(tip3), sorted(atoms))
+            elif residue.name == "HOH":
+                self.assertEqual(sorted(hoh), sorted(atoms))
             elif residue.name == "POT":
                 self.assertEqual(sorted(pot), sorted(atoms))
             elif residue.name == "CLA":
@@ -348,6 +348,18 @@ class TestCharmmFiles(unittest.TestCase):
             context.setPositions(crd.positions)
             energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilocalories_per_mole)
             self.assertAlmostEqual(energy, modeEnergy[abs(nbxmod)], delta=1e-3*abs(energy))
+
+    def test_Nonbonded_Exclusion(self):
+        """Test that the 1-2, 1-3 and 1-4 pairs are correctly excluded or scaled."""
+        psf = CharmmPsfFile('systems/MoS2.psf')
+        pdb = PDBFile('systems/MoS2.pdb')
+        params = CharmmParameterSet('systems/MoS2.prm')
+        system = psf.createSystem(params, nonbondedMethod=NoCutoff)
+        context = Context(system, VerletIntegrator(1*femtoseconds), Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        # Compare with value computed with NAMD.
+        self.assertAlmostEqual(energy, -2154.5539, delta=1e-3*abs(energy))
 
 
 if __name__ == '__main__':

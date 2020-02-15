@@ -1,0 +1,88 @@
+# extract from 4X8U involving insertion codes
+#
+data_4X8U
+# 
+_entry.id   4X8U 
+# 
+loop_
+_atom_site.group_PDB 
+_atom_site.id 
+_atom_site.type_symbol 
+_atom_site.label_atom_id 
+_atom_site.label_alt_id 
+_atom_site.label_comp_id 
+_atom_site.label_asym_id 
+_atom_site.label_entity_id 
+_atom_site.label_seq_id 
+_atom_site.pdbx_PDB_ins_code 
+_atom_site.Cartn_x 
+_atom_site.Cartn_y 
+_atom_site.Cartn_z 
+_atom_site.occupancy 
+_atom_site.B_iso_or_equiv 
+_atom_site.pdbx_formal_charge 
+_atom_site.auth_seq_id 
+_atom_site.auth_comp_id 
+_atom_site.auth_asym_id 
+_atom_site.auth_atom_id 
+_atom_site.pdbx_PDB_model_num 
+ATOM   315  N  N   . PHE A 1 43  ? 6.537  37.168  14.751 1.00 16.93  ? 59  PHE H N   1 
+ATOM   316  C  CA  . PHE A 1 43  ? 6.141  37.813  13.496 1.00 16.64  ? 59  PHE H CA  1 
+ATOM   317  C  C   . PHE A 1 43  ? 4.851  38.633  13.566 1.00 21.61  ? 59  PHE H C   1 
+ATOM   318  O  O   . PHE A 1 43  ? 4.428  39.140  12.532 1.00 22.06  ? 59  PHE H O   1 
+ATOM   319  C  CB  . PHE A 1 43  ? 6.074  36.749  12.371 1.00 17.35  ? 59  PHE H CB  1 
+ATOM   320  C  CG  . PHE A 1 43  ? 7.366  35.948  12.334 1.00 17.99  ? 59  PHE H CG  1 
+ATOM   321  C  CD1 . PHE A 1 43  ? 8.485  36.434  11.667 1.00 21.29  ? 59  PHE H CD1 1 
+ATOM   322  C  CD2 . PHE A 1 43  ? 7.494  34.770  13.064 1.00 18.58  ? 59  PHE H CD2 1 
+ATOM   323  C  CE1 . PHE A 1 43  ? 9.699  35.741  11.709 1.00 22.04  ? 59  PHE H CE1 1 
+ATOM   324  C  CE2 . PHE A 1 43  ? 8.706  34.079  13.107 1.00 20.43  ? 59  PHE H CE2 1 
+ATOM   325  C  CZ  . PHE A 1 43  ? 9.803  34.575  12.437 1.00 18.31  ? 59  PHE H CZ  1 
+ATOM   326  N  N   . ASP A 1 44  ? 4.265  38.799  14.760 1.00 19.41  ? 60  ASP H N   1 
+ATOM   327  C  CA  . ASP A 1 44  ? 3.019  39.561  14.964 1.00 21.98  ? 60  ASP H CA  1 
+ATOM   328  C  C   . ASP A 1 44  ? 3.076  41.011  14.488 1.00 31.37  ? 60  ASP H C   1 
+ATOM   329  O  O   . ASP A 1 44  ? 2.061  41.541  14.068 1.00 32.54  ? 60  ASP H O   1 
+ATOM   330  C  CB  . ASP A 1 44  ? 2.633  39.555  16.453 1.00 23.09  ? 60  ASP H CB  1 
+ATOM   331  C  CG  . ASP A 1 44  ? 1.999  38.275  16.944 1.00 28.33  ? 60  ASP H CG  1 
+ATOM   332  O  OD1 . ASP A 1 44  ? 1.911  37.306  16.147 1.00 29.31  ? 60  ASP H OD1 1 
+ATOM   333  O  OD2 . ASP A 1 44  ? 1.619  38.224  18.133 1.00 29.53  ? 60  ASP H OD2 1 
+ATOM   334  N  N   . LYS A 1 45  A 4.240  41.656  14.575 1.00 30.66  ? 60  LYS H N   1 
+ATOM   335  C  CA  . LYS A 1 45  A 4.388  43.071  14.222 1.00 31.68  ? 60  LYS H CA  1 
+ATOM   336  C  C   . LYS A 1 45  A 5.294  43.324  13.023 1.00 38.11  ? 60  LYS H C   1 
+ATOM   337  O  O   . LYS A 1 45  A 5.726  44.457  12.828 1.00 39.40  ? 60  LYS H O   1 
+ATOM   338  C  CB  . LYS A 1 45  A 4.853  43.870  15.449 1.00 33.51  ? 60  LYS H CB  1 
+ATOM   339  C  CG  . LYS A 1 45  A 3.731  44.096  16.449 1.00 48.38  ? 60  LYS H CG  1 
+ATOM   340  C  CD  . LYS A 1 45  A 4.257  44.404  17.833 1.00 64.54  ? 60  LYS H CD  1 
+ATOM   341  C  CE  . LYS A 1 45  A 3.124  44.673  18.792 1.00 76.49  ? 60  LYS H CE  1 
+ATOM   342  N  N   . ILE A 1 46  B 5.552  42.303  12.196 1.00 34.95  ? 60  ILE H N   1 
+ATOM   343  C  CA  . ILE A 1 46  B 6.382  42.504  11.005 1.00 35.67  ? 60  ILE H CA  1 
+ATOM   344  C  C   . ILE A 1 46  B 5.550  43.159  9.885  1.00 40.88  ? 60  ILE H C   1 
+ATOM   345  O  O   . ILE A 1 46  B 4.442  42.696  9.581  1.00 39.95  ? 60  ILE H O   1 
+ATOM   346  C  CB  . ILE A 1 46  B 7.097  41.190  10.495 1.00 38.06  ? 60  ILE H CB  1 
+ATOM   347  C  CG1 . ILE A 1 46  B 7.974  40.487  11.586 1.00 37.99  ? 60  ILE H CG1 1 
+ATOM   348  C  CG2 . ILE A 1 46  B 7.916  41.436  9.212  1.00 37.97  ? 60  ILE H CG2 1 
+ATOM   349  C  CD1 . ILE A 1 46  B 9.078  41.330  12.278 1.00 43.63  ? 60  ILE H CD1 1 
+ATOM   350  N  N   . LYS A 1 47  C 6.112  44.208  9.256  1.00 38.12  ? 60  LYS H N   1 
+ATOM   351  C  CA  . LYS A 1 47  C 5.533  44.859  8.069  1.00 39.21  ? 60  LYS H CA  1 
+ATOM   352  C  C   . LYS A 1 47  C 6.548  44.763  6.937  1.00 45.85  ? 60  LYS H C   1 
+ATOM   353  O  O   . LYS A 1 47  C 6.177  44.543  5.787  1.00 46.49  ? 60  LYS H O   1 
+ATOM   354  C  CB  . LYS A 1 47  C 5.139  46.313  8.343  1.00 41.67  ? 60  LYS H CB  1 
+ATOM   355  C  CG  . LYS A 1 47  C 3.789  46.433  9.040  1.00 58.21  ? 60  LYS H CG  1 
+ATOM   356  N  N   . ASN A 1 48  D 7.844  44.865  7.289  1.00 43.92  ? 60  ASN H N   1 
+ATOM   357  C  CA  . ASN A 1 48  D 8.992  44.777  6.384  1.00 43.65  ? 60  ASN H CA  1 
+ATOM   358  C  C   . ASN A 1 48  D 9.414  43.301  6.208  1.00 44.11  ? 60  ASN H C   1 
+ATOM   359  O  O   . ASN A 1 48  D 10.515 42.927  6.608  1.00 42.37  ? 60  ASN H O   1 
+ATOM   360  C  CB  . ASN A 1 48  D 10.151 45.643  6.923  1.00 45.00  ? 60  ASN H CB  1 
+ATOM   361  N  N   . TRP A 1 49  ? 8.528  42.473  5.599  1.00 39.73  ? 61  TRP H N   1 
+ATOM   362  C  CA  . TRP A 1 49  ? 8.763  41.044  5.361  1.00 39.08  ? 61  TRP H CA  1 
+ATOM   363  C  C   . TRP A 1 49  ? 10.028 40.746  4.537  1.00 42.50  ? 61  TRP H C   1 
+ATOM   364  O  O   . TRP A 1 49  ? 10.652 39.719  4.780  1.00 44.39  ? 61  TRP H O   1 
+ATOM   365  C  CB  . TRP A 1 49  ? 7.534  40.355  4.762  1.00 37.55  ? 61  TRP H CB  1 
+ATOM   366  C  CG  . TRP A 1 49  ? 6.391  40.245  5.727  1.00 38.53  ? 61  TRP H CG  1 
+ATOM   367  C  CD1 . TRP A 1 49  ? 5.337  41.106  5.851  1.00 41.76  ? 61  TRP H CD1 1 
+ATOM   368  C  CD2 . TRP A 1 49  ? 6.204  39.232  6.731  1.00 37.95  ? 61  TRP H CD2 1 
+ATOM   369  N  NE1 . TRP A 1 49  ? 4.486  40.675  6.847  1.00 41.50  ? 61  TRP H NE1 1 
+ATOM   370  C  CE2 . TRP A 1 49  ? 5.002  39.534  7.413  1.00 42.54  ? 61  TRP H CE2 1 
+ATOM   371  C  CE3 . TRP A 1 49  ? 6.950  38.109  7.140  1.00 38.20  ? 61  TRP H CE3 1 
+ATOM   372  C  CZ2 . TRP A 1 49  ? 4.534  38.758  8.486  1.00 41.36  ? 61  TRP H CZ2 1 
+ATOM   373  C  CZ3 . TRP A 1 49  ? 6.468  37.325  8.175  1.00 38.85  ? 61  TRP H CZ3 1 
+ATOM   374  C  CH2 . TRP A 1 49  ? 5.277  37.648  8.837  1.00 39.68  ? 61  TRP H CH2 1 

@@ -27,7 +27,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "windowsExportCuda.h"
+#include "openmm/common/windowsExportCommon.h"
 #include <string>
 
 namespace OpenMM {
@@ -38,9 +38,9 @@ namespace OpenMM {
  * kernels subfolder.
  */
 
-class OPENMM_EXPORT_CUDA CudaKernelSources {
+class OPENMM_EXPORT_COMMON CudaKernelSources {
 public:
-@CUDA_FILE_DECLARATIONS@
+@KERNEL_FILE_DECLARATIONS@
 };
 
 } // namespace OpenMM
