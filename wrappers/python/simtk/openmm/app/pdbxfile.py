@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2015-2019 Stanford University and the Authors.
+Portions copyright (c) 2015-2020 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -98,6 +98,9 @@ class PDBxFile(object):
         chainIdCol = atomData.getAttributeIndex('auth_asym_id')
         if chainIdCol == -1:
             chainIdCol = atomData.getAttributeIndex('label_asym_id')
+            altChainIdCol = -1
+        else:
+            altChainIdCol = atomData.getAttributeIndex('label_asym_id')
         elementCol = atomData.getAttributeIndex('type_symbol')
         altIdCol = atomData.getAttributeIndex('label_alt_id')
         modelCol = atomData.getAttributeIndex('pdbx_PDB_model_num')
@@ -105,6 +108,7 @@ class PDBxFile(object):
         yCol = atomData.getAttributeIndex('Cartn_y')
         zCol = atomData.getAttributeIndex('Cartn_z')
         lastChainId = None
+        lastAltChainId = None
         lastResId = None
         lastInsertionCode = ''
         atomTable = {}
@@ -130,11 +134,13 @@ class PDBxFile(object):
                     insertionCode = row[resInsertionCol]
                 if insertionCode in ('.', '?'):
                     insertionCode = ''
-                if lastChainId != row[chainIdCol]:
+                if lastChainId != row[chainIdCol] or (altChainIdCol != -1 and lastAltChainId != row[altChainIdCol]):
                     # The start of a new chain.
                     chain = top.addChain(row[chainIdCol])
                     lastChainId = row[chainIdCol]
                     lastResId = None
+                    if altChainIdCol != -1:
+                        lastAltChainId = row[altChainIdCol]
                 if lastResId != row[resNumCol] or lastChainId != row[chainIdCol] or lastInsertionCode != insertionCode or (lastResId == '.' and row[atomNameCol] in atomsInResidue):
                     # The start of a new residue.
                     resId = (None if resNumCol == -1 else row[resNumCol])
