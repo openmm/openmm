@@ -1,5 +1,8 @@
 float4 exceptionParams = PARAMS[index];
 real4 delta = pos2-pos1;
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(delta)
+#endif
 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 real invR = RSQRT(r2);
 real sig2 = invR*exceptionParams.y;

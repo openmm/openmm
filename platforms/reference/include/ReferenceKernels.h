@@ -631,7 +631,7 @@ private:
     std::map<std::pair<std::string, int>, std::array<double, 3> > particleParamOffsets, exceptionParamOffsets;
     double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, dispersionCoefficient;
     int kmax[3], gridSize[3], dispersionGridSize[3];
-    bool useSwitchingFunction;
+    bool useSwitchingFunction, exceptionsArePeriodic;
     std::vector<std::set<int> > exclusions;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
