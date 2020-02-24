@@ -1054,6 +1054,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         }
         baseExceptionParams.upload(baseExceptionParamsVec);
         map<string, string> replacements;
+        replacements["APPLY_PERIODIC"] = (usePeriodic && force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0");
         replacements["PARAMS"] = cl.getBondedUtilities().addArgument(exceptionParams.getDeviceBuffer(), "float4");
         cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }

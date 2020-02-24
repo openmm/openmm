@@ -991,6 +991,10 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         ewaldDispersionAlpha = alpha;
         useSwitchingFunction = false;
     }
+    if (nonbondedMethod == NoCutoff || nonbondedMethod == CutoffNonPeriodic)
+        exceptionsArePeriodic = false;
+    else
+        exceptionsArePeriodic = force.getExceptionsUsePeriodicBoundaryConditions();
     rfDielectric = force.getReactionFieldDielectric();
     if (force.getUseDispersionCorrection())
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
@@ -1033,6 +1037,10 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
     if (includeDirect) {
         ReferenceBondForce refBondForce;
         ReferenceLJCoulomb14 nonbonded14;
+        if (exceptionsArePeriodic) {
+            Vec3* boxVectors = extractBoxVectors(context);
+            nonbonded14.setPeriodic(boxVectors);
+        }
         refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
         if (periodic || ewald || pme) {
             Vec3* boxVectors = extractBoxVectors(context);

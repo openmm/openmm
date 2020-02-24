@@ -32,40 +32,53 @@ namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceLJCoulomb14 : public ReferenceBondIxn {
 
-   public:
+public:
 
-      /**---------------------------------------------------------------------------------------
-      
-         Constructor
-      
-         --------------------------------------------------------------------------------------- */
+    /**---------------------------------------------------------------------------------------
 
-       ReferenceLJCoulomb14();
+       Constructor
 
-      /**---------------------------------------------------------------------------------------
-      
-         Destructor
-      
-         --------------------------------------------------------------------------------------- */
+       --------------------------------------------------------------------------------------- */
 
-       ~ReferenceLJCoulomb14();
+     ReferenceLJCoulomb14();
 
-      /**---------------------------------------------------------------------------------------
-      
-         Calculate Ryckaert-Bellemans bond ixn
-      
-         @param atomIndices      atom indices of 4 atoms in bond
-         @param atomCoordinates  atom coordinates
-         @param parameters       six RB parameters
-         @param forces           force array (forces added to current values)
-         @param totalEnergy      if not null, the energy will be added to this
-            
-         --------------------------------------------------------------------------------------- */
-      
-      void calculateBondIxn(std::vector<int>& atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
-                            std::vector<double>& parameters, std::vector<OpenMM::Vec3>& forces,
-                            double* totalEnergy, double* energyParamDerivs);
+    /**---------------------------------------------------------------------------------------
 
+       Destructor
+
+       --------------------------------------------------------------------------------------- */
+
+     ~ReferenceLJCoulomb14();
+
+     /**---------------------------------------------------------------------------------------
+
+       Set the force to use periodic boundary conditions.
+
+       @param vectors    the vectors defining the periodic box
+
+       --------------------------------------------------------------------------------------- */
+
+    void setPeriodic(OpenMM::Vec3* vectors);
+
+    /**---------------------------------------------------------------------------------------
+
+       Calculate nonbonded 1-4 interactinos
+
+       @param atomIndices      atom indices of the atoms in each pair
+       @param atomCoordinates  atom coordinates
+       @param parameters       (sigma, 4*epsilon, charge product) for each pair
+       @param forces           force array (forces added to current values)
+       @param totalEnergy      if not null, the energy will be added to this
+
+       --------------------------------------------------------------------------------------- */
+
+    void calculateBondIxn(std::vector<int>& atomIndices, std::vector<OpenMM::Vec3>& atomCoordinates,
+                          std::vector<double>& parameters, std::vector<OpenMM::Vec3>& forces,
+                          double* totalEnergy, double* energyParamDerivs);
+
+private:
+    bool periodic;
+    OpenMM::Vec3 periodicBoxVectors[3];
 };
 
 } // namespace OpenMM

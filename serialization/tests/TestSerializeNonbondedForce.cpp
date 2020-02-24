@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -50,6 +50,7 @@ void testSerialization() {
     force.setEwaldErrorTolerance(1e-3);
     force.setReactionFieldDielectric(50.0);
     force.setUseDispersionCorrection(false);
+    force.setExceptionsUsePeriodicBoundaryConditions(true);
     double alpha = 0.5;
     int nx = 3, ny = 5, nz = 7;
     force.setPMEParameters(alpha, nx, ny, nz);
@@ -83,6 +84,7 @@ void testSerialization() {
     ASSERT_EQUAL(force.getEwaldErrorTolerance(), force2.getEwaldErrorTolerance());
     ASSERT_EQUAL(force.getReactionFieldDielectric(), force2.getReactionFieldDielectric());
     ASSERT_EQUAL(force.getUseDispersionCorrection(), force2.getUseDispersionCorrection());
+    ASSERT_EQUAL(force.getExceptionsUsePeriodicBoundaryConditions(), force2.getExceptionsUsePeriodicBoundaryConditions());
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
     ASSERT_EQUAL(force.getNumExceptions(), force2.getNumExceptions());
     ASSERT_EQUAL(force.getNumGlobalParameters(), force2.getNumGlobalParameters());

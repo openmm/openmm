@@ -354,6 +354,44 @@ void testPeriodic() {
     ASSERT_EQUAL_TOL(2*ONE_4PI_EPS0*(1.0)*(1.0+krf*1.0-crf), state.getPotentialEnergy(), TOL);
 }
 
+void testPeriodicExceptions() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->addParticle(1.0, 1, 0);
+    nonbonded->addParticle(1.0, 1, 0);
+    nonbonded->addException(0, 1, 1.0, 1.0, 0.0);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    const double cutoff = 2.0;
+    nonbonded->setCutoffDistance(cutoff);
+    system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
+    system.addForce(nonbonded);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(3, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    vector<Vec3> forces = state.getForces();
+    double force = ONE_4PI_EPS0/(3*3);
+    ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], TOL);
+    ASSERT_EQUAL_TOL(ONE_4PI_EPS0/3, state.getPotentialEnergy(), TOL);
+    
+    // Now make exceptions periodic and see if it changes correctly.
+    
+    nonbonded->setExceptionsUsePeriodicBoundaryConditions(true);
+    context.reinitialize(true);
+    state = context.getState(State::Forces | State::Energy);
+    forces = state.getForces();
+    force = ONE_4PI_EPS0/(1*1);
+    ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[1], TOL);
+    ASSERT_EQUAL_TOL(ONE_4PI_EPS0/1, state.getPotentialEnergy(), TOL);
+}
+
 void testTriclinic() {
     System system;
     system.addParticle(1.0);
@@ -809,6 +847,7 @@ int main(int argc, char* argv[]) {
         testCutoff();
         testCutoff14();
         testPeriodic();
+        testPeriodicExceptions();
         testTriclinic();
         testLargeSystem();
         testDispersionCorrection();

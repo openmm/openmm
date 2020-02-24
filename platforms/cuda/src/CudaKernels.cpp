@@ -1104,6 +1104,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         }
         baseExceptionParams.upload(baseExceptionParamsVec);
         map<string, string> replacements;
+        replacements["APPLY_PERIODIC"] = (usePeriodic && force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0");
         replacements["PARAMS"] = cu.getBondedUtilities().addArgument(exceptionParams.getDevicePointer(), "float4");
         cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }

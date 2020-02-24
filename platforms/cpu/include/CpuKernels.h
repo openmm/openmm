@@ -274,7 +274,7 @@ private:
     std::vector<std::vector<double> > bonded14ParamArray;
     double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, ewaldSelfEnergy, dispersionCoefficient;
     int kmax[3], gridSize[3], dispersionGridSize[3];
-    bool useSwitchingFunction, useOptimizedPme, hasInitializedPme, hasInitializedDispersionPme, hasParticleOffsets, hasExceptionOffsets;
+    bool useSwitchingFunction, exceptionsArePeriodic, useOptimizedPme, hasInitializedPme, hasInitializedDispersionPme, hasParticleOffsets, hasExceptionOffsets;
     std::vector<std::set<int> > exclusions;
     std::vector<std::pair<float, float> > particleParams;
     std::vector<float> C6params;
