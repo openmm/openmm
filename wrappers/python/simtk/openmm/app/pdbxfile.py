@@ -101,6 +101,13 @@ class PDBxFile(object):
             altChainIdCol = -1
         else:
             altChainIdCol = atomData.getAttributeIndex('label_asym_id')
+        if altChainIdCol != -1:
+            # Figure out which column is best to use for chain IDs.
+            
+            idSet = set(row[chainIdCol] for row in atomData.getRowList())
+            altIdSet = set(row[altChainIdCol] for row in atomData.getRowList())
+            if len(altIdSet) > len(idSet):
+                chainIdCol, altChainIdCol = (altChainIdCol, chainIdCol)
         elementCol = atomData.getAttributeIndex('type_symbol')
         altIdCol = atomData.getAttributeIndex('label_alt_id')
         modelCol = atomData.getAttributeIndex('pdbx_PDB_model_num')
