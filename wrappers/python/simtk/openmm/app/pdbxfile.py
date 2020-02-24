@@ -400,6 +400,8 @@ class PDBxFile(object):
             raise ValueError('Particle position is NaN')
         if any(math.isinf(norm(pos)) for pos in positions):
             raise ValueError('Particle position is infinite')
+        nonHeterogens = PDBFile._standardResidues[:]
+        nonHeterogens.remove('HOH')
         atomIndex = 1
         posIndex = 0
         for (chainIndex, chain) in enumerate(topology.chains()):
@@ -415,14 +417,18 @@ class PDBxFile(object):
                 else:
                     resId = resIndex + 1
                     resIC = '.'
+                if res.name in nonHeterogens:
+                    recordName = "ATOM"
+                else:
+                    recordName = "HETATM"
                 for atom in res.atoms():
                     coords = positions[posIndex]
                     if atom.element is not None:
                         symbol = atom.element.symbol
                     else:
                         symbol = '?'
-                    line = "ATOM  %5d %-3s %-4s . %-4s %s ? %5s %s %10.4f %10.4f %10.4f  0.0  0.0  ?  ?  ?  ?  ?  .  %5s %4s %s %4s %5d"
-                    print(line % (atomIndex, symbol, atom.name, res.name, chainName, resId, resIC, coords[0], coords[1], coords[2],
+                    line = "%s  %5d %-3s %-4s . %-4s %s ? %5s %s %10.4f %10.4f %10.4f  0.0  0.0  ?  ?  ?  ?  ?  .  %5s %4s %s %4s %5d"
+                    print(line % (recordName, atomIndex, symbol, atom.name, res.name, chainName, resId, resIC, coords[0], coords[1], coords[2],
                                   resId, res.name, chainName, atom.name, modelIndex), file=file)
                     posIndex += 1
                     atomIndex += 1
