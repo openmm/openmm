@@ -14,12 +14,12 @@ env:
     - CCACHE=$HOME/ccache/lib/ccache/bin
 
 
-matrix:
+jobs:
   include:
     - sudo: required
       dist: xenial
-      env: ==CPU_OPENCL==
-           OPENCL=true
+      name: "CPU OpenCL"
+      env: OPENCL=true
            CUDA=false
            CC=$CCACHE/gcc
            CXX=$CCACHE/g++
@@ -41,8 +41,8 @@ matrix:
 
     - sudo: required
       dist: xenial
-      env: ==CUDA_COMPILE==
-           CUDA=true
+      name: "CUDA Compile"
+      env: CUDA=true
            OPENCL=false
            CUDA_VERSION="7.5-18"
            CC=$CCACHE/gcc
@@ -66,8 +66,8 @@ matrix:
     - language: objective-c
       os: osx
       osx_image: xcode9.3
-      env: ==OSX==
-           OPENCL=false
+      name: "Mac OS"
+      env: OPENCL=false
            CUDA=false
            CMAKE_FLAGS="
              -DOPENMM_BUILD_OPENCL_TESTS=OFF"
@@ -75,9 +75,9 @@ matrix:
 
     - sudo: false
       dist: xenial
-      python: 3.6
-      env: ==STATIC_LIB==
-           OPENCL=false
+      python: "3.6"
+      name: "Static Lib"
+      env: OPENCL=false
            CUDA=false
            CC=$CCACHE/clang
            CXX=$CCACHE/clang++
@@ -85,9 +85,9 @@ matrix:
 
     - sudo: false
       dist: xenial
-      python: 3.6
-      env: ==PYTHON_3_6==
-           OPENCL=false
+      python: "3.6"
+      name: "Python 3.6"
+      env: OPENCL=false
            CUDA=false
            CC=$CCACHE/clang
            CXX=$CCACHE/clang++
@@ -96,9 +96,9 @@ matrix:
 
     - sudo: false
       dist: xenial
-      python: 3.8
-      env: ==PYTHON_3_8==
-           OPENCL=false
+      python: "3.8"
+      name: "Python 3.8"
+      env: OPENCL=false
            CUDA=false
            CC=$CCACHE/gcc
            CXX=$CCACHE/g++
