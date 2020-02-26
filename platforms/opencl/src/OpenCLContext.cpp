@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -92,6 +92,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         cl::Platform::get(&platforms);
         if (platformIndex < -1 || platformIndex >= (int) platforms.size())
             throw OpenMMException("Illegal value for OpenCLPlatformIndex: "+intToString(platformIndex));
+        if (platforms.size() > 1 && platformIndex == -1 && deviceIndex != -1)
+            throw OpenMMException("Specified DeviceIndex but not OpenCLPlatformIndex.  When multiple platforms are available, a platform index is needed to specify a device.");
         const int minThreadBlockSize = 32;
 
         int bestSpeed = -1;
