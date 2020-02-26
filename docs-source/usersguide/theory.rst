@@ -1278,6 +1278,8 @@ algorithm.  This can be used to implement algorithms such as lambda-dynamics,
 where a global parameter is integrated as a dynamic variable.
 
 
+.. _integrators-theory:
+
 Integrators
 ###########
 
@@ -1353,16 +1355,16 @@ random number, and :math:`\alpha=\exp(-\gamma\Delta t)`.
 The same comments about the offset between positions and velocities apply to
 this integrator as to VerletIntegrator.
 
-BAOABLangevinIntegrator
-***********************
+LangevinMiddleIntegrator
+************************
 
-This integrator is similar to LangevinIntegerator, but it instead uses the BAOAB
-discretization. :cite:`Leimkuhler2013` In each step, the positions and velocities
+This integrator is similar to LangevinIntegerator, but it instead uses the LFMiddle
+discretization. :cite:`Zhang2019` In each step, the positions and velocities
 are updated as follows:
 
 
 .. math::
-   \mathbf{v}_{i}(t+\Delta t/2) = \mathbf{v}_{i}(t) + \mathbf{f}_{i}(t)\Delta t/2{m}_{i}
+   \mathbf{v}_{i}(t+\Delta t/2) = \mathbf{v}_{i}(t-\Delta t/2) + \mathbf{f}_{i}(t)\Delta t/{m}_{i}
 
 
 .. math::
@@ -1377,25 +1379,17 @@ are updated as follows:
    \mathbf{r}_{i}(t+\Delta t) = \mathbf{r}_{i}(t+\Delta t/2) + \mathbf{v'}_{i}(t+\Delta t/2)\Delta t/2
 
 
-.. math::
-   \mathbf{v}_{i}(t+\Delta t) = \mathbf{v'}_{i}(t+\Delta t/2) + \mathbf{f}_{i}(t+\Delta t)\Delta t/2{m}_{i}
-
-
-This tends to produce more accurate
-sampling of configurational properties (such as free energies), but less
-accurate sampling of kinetic properties (such as mean kinetic energy).  Because
+This tends to produce more accurate sampling of configurational properties (such
+as free energies), but less accurate sampling of kinetic properties.  Because
 configurational properties are much more important than kinetic ones in most
 simulations, this integrator is generally preferred over LangevinIntegrator.  It
 often allows one to use a larger time step while still maintaining similar or
 better accuracy.
 
 One disadvantage of this integrator is that it requires applying constraints
-three times per time step, compared to only once for LangevinIntegrator.  This
+twice per time step, compared to only once for LangevinIntegrator.  This
 can make it slightly slower for systems that involve constraints.  However, this
 usually is more than compensated by allowing you to use a larger time step.
-
-Unlike LangevinIntegrator, this does not use a leap-frog algorithm.  The
-positions and velocities all correspond to the same point in time.
 
 BrownianIntegrator
 ******************

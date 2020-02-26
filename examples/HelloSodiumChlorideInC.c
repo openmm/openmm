@@ -252,7 +252,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
      * best available Platform. Initialize the configuration from the default
      * positions we collected above. Initial velocities will be zero but could
      * have been set here. */
-    omm->integrator = (OpenMM_Integrator*)OpenMM_BAOABLangevinIntegrator_create(
+    omm->integrator = (OpenMM_Integrator*)OpenMM_LangevinMiddleIntegrator_create(
                                             temperature, frictionInPerPs, 
                                             stepSizeInFs * OpenMM_PsPerFs);
     omm->context    = OpenMM_Context_create(omm->system, omm->integrator);

@@ -1,5 +1,5 @@
-#ifndef OPENMM_BAOABLANGEVININTEGRATOR_H_
-#define OPENMM_BAOABLANGEVININTEGRATOR_H_
+#ifndef OPENMM_LANGEVINMIDDLEINTEGRATOR_H_
+#define OPENMM_LANGEVINMIDDLEINTEGRATOR_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,21 +40,21 @@ namespace OpenMM {
 
 /**
  * This is an Integrator which simulates a System using Langevin dynamics, with
- * the BAOAB discretization of Leimkuhler and Matthews (http://dx.doi.org/10.1093/amrx/abs010).
+ * the LFMiddle discretization (http://dx.doi.org/10.1021/acs.jpca.9b02771).
  * This method tend to produce more accurate configurational sampling than other
  * discretizations, such as the one used in LangevinIntegrator.
  */
 
-class OPENMM_EXPORT BAOABLangevinIntegrator : public Integrator {
+class OPENMM_EXPORT LangevinMiddleIntegrator : public Integrator {
 public:
     /**
-     * Create a BAOABLangevinIntegrator.
+     * Create a LangevinMiddleIntegrator.
      * 
      * @param temperature    the temperature of the heat bath (in Kelvin)
      * @param frictionCoeff  the friction coefficient which couples the system to the heat bath (in inverse picoseconds)
      * @param stepSize       the step size with which to integrate the system (in picoseconds)
      */
-    BAOABLangevinIntegrator(double temperature, double frictionCoeff, double stepSize);
+    LangevinMiddleIntegrator(double temperature, double frictionCoeff, double stepSize);
     /**
      * Get the temperature of the heat bath (in Kelvin).
      *
@@ -129,10 +129,6 @@ protected:
      */
     void cleanup();
     /**
-     * When the user modifies the state, we need to mark that the forces need to be recalculated.
-     */
-    void stateChanged(State::DataType changed);
-    /**
      * Get the names of all Kernels used by this Integrator.
      */
     std::vector<std::string> getKernelNames();
@@ -147,10 +143,9 @@ protected:
 private:
     double temperature, friction;
     int randomNumberSeed;
-    bool forcesAreValid;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_BAOABLANGEVININTEGRATOR_H_*/
+#endif /*OPENMM_LANGEVINMIDDLEINTEGRATOR_H_*/

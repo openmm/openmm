@@ -29,8 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CpuTests.h"
-#include "TestBAOABLangevinIntegrator.h"
+#include "ReferenceTests.h"
+#include "TestLangevinMiddleIntegrator.h"
 
 void runPlatformTests() {
 }

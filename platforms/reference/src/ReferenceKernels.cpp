@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,7 +33,6 @@
 #include "ReferenceObc.h"
 #include "ReferenceAndersenThermostat.h"
 #include "ReferenceAngleBondIxn.h"
-#include "ReferenceBAOABDynamics.h"
 #include "ReferenceBondForce.h"
 #include "ReferenceBrownianDynamics.h"
 #include "ReferenceCCMAAlgorithm.h"
@@ -53,6 +52,7 @@
 #include "ReferenceCustomTorsionIxn.h"
 #include "ReferenceGayBerneForce.h"
 #include "ReferenceHarmonicBondIxn.h"
+#include "ReferenceLangevinMiddleDynamics.h"
 #include "ReferenceLJCoulomb14.h"
 #include "ReferenceLJCoulombIxn.h"
 #include "ReferenceMonteCarloBarostat.h"
@@ -2233,12 +2233,12 @@ double ReferenceIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& c
     return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }
 
-ReferenceIntegrateBAOABStepKernel::~ReferenceIntegrateBAOABStepKernel() {
+ReferenceIntegrateLangevinMiddleStepKernel::~ReferenceIntegrateLangevinMiddleStepKernel() {
     if (dynamics)
         delete dynamics;
 }
 
-void ReferenceIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLangevinIntegrator& integrator) {
+void ReferenceIntegrateLangevinMiddleStepKernel::initialize(const System& system, const LangevinMiddleIntegrator& integrator) {
     int numParticles = system.getNumParticles();
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
@@ -2246,7 +2246,7 @@ void ReferenceIntegrateBAOABStepKernel::initialize(const System& system, const B
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
 }
 
-void ReferenceIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid) {
+void ReferenceIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double stepSize = integrator.getStepSize();
@@ -2257,7 +2257,7 @@ void ReferenceIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOA
         
         if (dynamics)
             delete dynamics;
-        dynamics = new ReferenceBAOABDynamics(
+        dynamics = new ReferenceLangevinMiddleDynamics(
                 context.getSystem().getNumParticles(), 
                 stepSize, 
                 friction, 
@@ -2267,12 +2267,12 @@ void ReferenceIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOA
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    dynamics->update(context, posData, velData, masses, forcesAreValid, integrator.getConstraintTolerance());
+    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance());
     data.time += stepSize;
     data.stepCount++;
 }
 
-double ReferenceIntegrateBAOABStepKernel::computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator) {
+double ReferenceIntegrateLangevinMiddleStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0.0);
 }
 

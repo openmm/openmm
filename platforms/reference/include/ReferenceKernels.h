@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,7 +45,7 @@ namespace OpenMM {
 
 class ReferenceObc;
 class ReferenceAndersenThermostat;
-class ReferenceBAOABDynamics;
+class ReferenceLangevinMiddleDynamics;
 class ReferenceCustomBondIxn;
 class ReferenceCustomAngleIxn;
 class ReferenceCustomTorsionIxn;
@@ -1213,42 +1213,38 @@ private:
 };
 
 /**
- * This kernel is invoked by BAOABLangevinIntegrator to take one time step.
+ * This kernel is invoked by LangevinMiddleIntegrator to take one time step.
  */
-class ReferenceIntegrateBAOABStepKernel : public IntegrateBAOABStepKernel {
+class ReferenceIntegrateLangevinMiddleStepKernel : public IntegrateLangevinMiddleStepKernel {
 public:
-    ReferenceIntegrateBAOABStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateBAOABStepKernel(name, platform),
+    ReferenceIntegrateLangevinMiddleStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateLangevinMiddleStepKernel(name, platform),
         data(data), dynamics(0) {
     }
-    ~ReferenceIntegrateBAOABStepKernel();
+    ~ReferenceIntegrateLangevinMiddleStepKernel();
     /**
      * Initialize the kernel, setting up the particle masses.
      * 
      * @param system     the System this kernel will be applied to
-     * @param integrator the BAOABLangevinIntegrator this kernel will be used for
+     * @param integrator the LangevinMiddleIntegrator this kernel will be used for
      */
-    void initialize(const System& system, const BAOABLangevinIntegrator& integrator);
+    void initialize(const System& system, const LangevinMiddleIntegrator& integrator);
     /**
      * Execute the kernel.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
-     * @param forcesAreValid if the context has been modified since the last time step, this will be
-     *                       false to show that cached forces are invalid and must be recalculated.
-     *                       On exit, this should specify whether the cached forces are valid at the
-     *                       end of the step.
+     * @param integrator the LangevinMiddleIntegrator this kernel is being used for
      */
-    void execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid);
+    void execute(ContextImpl& context, const LangevinMiddleIntegrator& integrator);
     /**
      * Compute the kinetic energy.
      * 
      * @param context    the context in which to execute this kernel
-     * @param integrator the BAOABLangevinIntegrator this kernel is being used for
+     * @param integrator the LangevinMiddleIntegrator this kernel is being used for
      */
-    double computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator);
+    double computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator);
 private:
     ReferencePlatform::PlatformData& data;
-    ReferenceBAOABDynamics* dynamics;
+    ReferenceLangevinMiddleDynamics* dynamics;
     std::vector<double> masses;
     double prevTemp, prevFriction, prevStepSize;
 };

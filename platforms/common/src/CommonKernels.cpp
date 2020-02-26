@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -5547,27 +5547,26 @@ double CommonIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& cont
     return cc.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
-void CommonIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLangevinIntegrator& integrator) {
+void CommonIntegrateLangevinMiddleStepKernel::initialize(const System& system, const LangevinMiddleIntegrator& integrator) {
     cc.initializeContexts();
     cc.setAsCurrent();
     cc.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::baoab);
-    kernel1 = program->createKernel("integrateBAOABPart1");
-    kernel2 = program->createKernel("integrateBAOABPart2");
-    kernel3 = program->createKernel("integrateBAOABPart3");
-    kernel4 = program->createKernel("integrateBAOABPart4");
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::langevinMiddle);
+    kernel1 = program->createKernel("integrateLangevinMiddlePart1");
+    kernel2 = program->createKernel("integrateLangevinMiddlePart2");
+    kernel3 = program->createKernel("integrateLangevinMiddlePart3");
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
-        params.initialize<double>(cc, 2, "baoabParams");
+        params.initialize<double>(cc, 2, "langevinMiddleParams");
         oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
     }
     else {
-        params.initialize<float>(cc, 2, "baoabParams");
+        params.initialize<float>(cc, 2, "langevinMiddleParams");
         oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
     }
     prevStepSize = -1.0;
 }
 
-void CommonIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid) {
+void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
     int numAtoms = cc.getNumAtoms();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
@@ -5577,11 +5576,8 @@ void CommonIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLa
         kernel1->addArg(paddedNumAtoms);
         kernel1->addArg(cc.getVelm());
         kernel1->addArg(cc.getLongForceBuffer());
-        kernel1->addArg(integration.getPosDelta());
-        kernel1->addArg(oldDelta);
         kernel1->addArg(integration.getStepSize());
         kernel2->addArg(numAtoms);
-        kernel2->addArg(cc.getPosq());
         kernel2->addArg(cc.getVelm());
         kernel2->addArg(integration.getPosDelta());
         kernel2->addArg(oldDelta);
@@ -5589,8 +5585,6 @@ void CommonIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLa
         kernel2->addArg(integration.getStepSize());
         kernel2->addArg(integration.getRandom());
         kernel2->addArg(); // Random index will be set just before it is executed.
-        if (cc.getUseMixedPrecision())
-            kernel2->addArg(cc.getPosqCorrection());
         kernel3->addArg(numAtoms);
         kernel3->addArg(cc.getPosq());
         kernel3->addArg(cc.getVelm());
@@ -5599,15 +5593,6 @@ void CommonIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLa
         kernel3->addArg(integration.getStepSize());
         if (cc.getUseMixedPrecision())
             kernel3->addArg(cc.getPosqCorrection());
-        kernel4->addArg(numAtoms);
-        kernel4->addArg(paddedNumAtoms);
-        kernel4->addArg(cc.getVelm());
-        kernel4->addArg(cc.getLongForceBuffer());
-        kernel4->addArg(integration.getStepSize());
-    }
-    if (!forcesAreValid) {
-        context.calcForcesAndEnergy(true, false);
-        forcesAreValid = true;
     }
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
@@ -5630,15 +5615,12 @@ void CommonIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLa
 
     // Perform the integration.
 
-    kernel2->setArg(8, integration.prepareRandomNumbers(cc.getPaddedNumAtoms()));
+    kernel2->setArg(7, integration.prepareRandomNumbers(cc.getPaddedNumAtoms()));
     kernel1->execute(numAtoms);
-    integration.applyConstraints(integrator.getConstraintTolerance());
+    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
     kernel2->execute(numAtoms);
     integration.applyConstraints(integrator.getConstraintTolerance());
     kernel3->execute(numAtoms);
-    context.calcForcesAndEnergy(true, false);
-    kernel4->execute(numAtoms);
-    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
     integration.computeVirtualSites();
 
     // Update the time and step count.
@@ -5646,8 +5628,6 @@ void CommonIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLa
     cc.setTime(cc.getTime()+stepSize);
     cc.setStepCount(cc.getStepCount()+1);
     cc.reorderAtoms();
-    if (cc.getAtomsWereReordered())
-        forcesAreValid = false;
     
     // Reduce UI lag.
     
@@ -5656,7 +5636,7 @@ void CommonIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLa
 #endif
 }
 
-double CommonIntegrateBAOABStepKernel::computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator) {
+double CommonIntegrateLangevinMiddleStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     return cc.getIntegrationUtilities().computeKineticEnergy(0.0);
 }
 

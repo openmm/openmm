@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2010-2019 Stanford University and the Authors.      *
+ * Authors: Peter Eastman, Yutong Zhao                                        *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,64 +29,32 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/BAOABLangevinIntegrator.h"
-#include "openmm/Context.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/kernels.h"
-#include <string>
+#include "openmm/serialization/LangevinMiddleIntegratorProxy.h"
+#include <OpenMM.h>
 
+using namespace std;
 using namespace OpenMM;
-using std::string;
-using std::vector;
 
-BAOABLangevinIntegrator::BAOABLangevinIntegrator(double temperature, double frictionCoeff, double stepSize) {
-    setTemperature(temperature);
-    setFriction(frictionCoeff);
-    setStepSize(stepSize);
-    setConstraintTolerance(1e-5);
-    setRandomNumberSeed(0);
-    forcesAreValid = false;
+LangevinMiddleIntegratorProxy::LangevinMiddleIntegratorProxy() : SerializationProxy("LangevinMiddleIntegrator") {
+
 }
 
-void BAOABLangevinIntegrator::initialize(ContextImpl& contextRef) {
-    if (owner != NULL && &contextRef.getOwner() != owner)
-        throw OpenMMException("This Integrator is already bound to a context");
-    context = &contextRef;
-    owner = &contextRef.getOwner();
-    kernel = context->getPlatform().createKernel(IntegrateBAOABStepKernel::Name(), contextRef);
-    kernel.getAs<IntegrateBAOABStepKernel>().initialize(contextRef.getSystem(), *this);
+void LangevinMiddleIntegratorProxy::serialize(const void* object, SerializationNode& node) const {
+    node.setIntProperty("version", 1);
+    const LangevinMiddleIntegrator& integrator = *reinterpret_cast<const LangevinMiddleIntegrator*>(object);
+    node.setDoubleProperty("stepSize", integrator.getStepSize());
+    node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
+    node.setDoubleProperty("temperature", integrator.getTemperature());
+    node.setDoubleProperty("friction", integrator.getFriction());
+    node.setIntProperty("randomSeed", integrator.getRandomNumberSeed());
 }
 
-void BAOABLangevinIntegrator::cleanup() {
-    kernel = Kernel();
-}
-
-void BAOABLangevinIntegrator::stateChanged(State::DataType changed) {
-    forcesAreValid = false;
-}
-
-vector<string> BAOABLangevinIntegrator::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(IntegrateBAOABStepKernel::Name());
-    return names;
-}
-
-double BAOABLangevinIntegrator::computeKineticEnergy() {
-    forcesAreValid = false;
-    return kernel.getAs<IntegrateBAOABStepKernel>().computeKineticEnergy(*context, *this);
-}
-
-bool BAOABLangevinIntegrator::kineticEnergyRequiresForce() const {
-    return false;
-}
-
-void BAOABLangevinIntegrator::step(int steps) {
-    if (context == NULL)
-        throw OpenMMException("This Integrator is not bound to a context!");  
-    for (int i = 0; i < steps; ++i) {
-        if (context->updateContextState())
-            forcesAreValid = false;
-        kernel.getAs<IntegrateBAOABStepKernel>().execute(*context, *this, forcesAreValid);
-    }
+void* LangevinMiddleIntegratorProxy::deserialize(const SerializationNode& node) const {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
+    LangevinMiddleIntegrator *integrator = new LangevinMiddleIntegrator(node.getDoubleProperty("temperature"),
+            node.getDoubleProperty("friction"), node.getDoubleProperty("stepSize"));
+    integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
+    integrator->setRandomNumberSeed(node.getIntProperty("randomSeed"));
+    return integrator;
 }

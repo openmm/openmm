@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1361,12 +1361,12 @@ double CpuIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context
     return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }
 
-CpuIntegrateBAOABStepKernel::~CpuIntegrateBAOABStepKernel() {
+CpuIntegrateLangevinMiddleStepKernel::~CpuIntegrateLangevinMiddleStepKernel() {
     if (dynamics)
         delete dynamics;
 }
 
-void CpuIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLangevinIntegrator& integrator) {
+void CpuIntegrateLangevinMiddleStepKernel::initialize(const System& system, const LangevinMiddleIntegrator& integrator) {
     int numParticles = system.getNumParticles();
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
@@ -1374,7 +1374,7 @@ void CpuIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLa
     data.random.initialize(integrator.getRandomNumberSeed(), data.threads.getNumThreads());
 }
 
-void CpuIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid) {
+void CpuIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double stepSize = integrator.getStepSize();
@@ -1385,18 +1385,18 @@ void CpuIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLange
         
         if (dynamics)
             delete dynamics;
-        dynamics = new CpuBAOABDynamics(context.getSystem().getNumParticles(), stepSize, friction, temperature, data.threads, data.random);
+        dynamics = new CpuLangevinMiddleDynamics(context.getSystem().getNumParticles(), stepSize, friction, temperature, data.threads, data.random);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    dynamics->update(context, posData, velData, masses, forcesAreValid, integrator.getConstraintTolerance());
+    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance());
     ReferencePlatform::PlatformData* refData = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     refData->time += stepSize;
     refData->stepCount++;
 }
 
-double CpuIntegrateBAOABStepKernel::computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator) {
+double CpuIntegrateLangevinMiddleStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0.0);
 }
