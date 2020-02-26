@@ -14,7 +14,7 @@ env:
     - CCACHE=$HOME/ccache/lib/ccache/bin
 
 
-matrix:
+jobs:
   include:
     - sudo: required
       dist: xenial
