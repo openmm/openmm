@@ -5886,7 +5886,7 @@ std::pair<double, double> CommonNoseHooverChainKernel::propagateChain(ContextImp
         }
     }
     if (chainForces.getSize() < chainLength)
-        chainMasses.resize(chainLength);
+        chainForces.resize(chainLength);
     if (chainMasses.getSize() < chainLength)
         chainMasses.resize(chainLength);
 
@@ -5964,7 +5964,11 @@ std::pair<double, double> CommonNoseHooverChainKernel::propagateChain(ContextImp
         int numDOFs = nhc.getNumDegreesOfFreedom();
         propagateKernels[numYS]->setArg(5, chainType);
         propagateKernels[numYS]->setArg(8, numDOFs);
-        propagateKernels[numYS]->setArg(10, useDouble ? kT : (float)kT);
+        if (useDouble) {
+            propagateKernels[numYS]->setArg(10, kT);
+        } else {
+            propagateKernels[numYS]->setArg(10, (float)kT);
+        }
         propagateKernels[numYS]->setArg(11, frequency);
         propagateKernels[numYS]->execute(1, 1);
     }
@@ -5976,7 +5980,11 @@ std::pair<double, double> CommonNoseHooverChainKernel::propagateChain(ContextImp
         int ndf = 3*nPairs;
         propagateKernels[numYS]->setArg(5, chainType);
         propagateKernels[numYS]->setArg(8, ndf);
-        propagateKernels[numYS]->setArg(10, useDouble ? kT : (float)kT);
+        if (useDouble) {
+            propagateKernels[numYS]->setArg(10, kT);
+        } else {
+            propagateKernels[numYS]->setArg(10, (float)kT);
+        }
         propagateKernels[numYS]->setArg(11, relativeFrequency);
         propagateKernels[numYS]->execute(1, 1);
     }
@@ -6033,7 +6041,11 @@ double CommonNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, 
         double kT = BOLTZ * temperature;
 
         computeHeatBathEnergyKernel->setArg(2, numDOFs);
-        computeHeatBathEnergyKernel->setArg(3, useDouble ? kT : (float)kT);
+        if (useDouble) {
+            computeHeatBathEnergyKernel->setArg(3, kT);
+        } else {
+            computeHeatBathEnergyKernel->setArg(3, (float)kT);
+        }
         computeHeatBathEnergyKernel->setArg(4, frequency);
         computeHeatBathEnergyKernel->setArg(5, chainState[2*chainID]);
         computeHeatBathEnergyKernel->execute(1, 1);
@@ -6045,7 +6057,11 @@ double CommonNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, 
         double kT = BOLTZ * temperature;
 
         computeHeatBathEnergyKernel->setArg(2, numDOFs);
-        computeHeatBathEnergyKernel->setArg(3, useDouble ? kT : (float)kT);
+        if (useDouble) {
+            computeHeatBathEnergyKernel->setArg(3, kT);
+        } else {
+            computeHeatBathEnergyKernel->setArg(3, (float)kT);
+        }
         computeHeatBathEnergyKernel->setArg(4, frequency);
         computeHeatBathEnergyKernel->setArg(5, chainState[2*chainID+1]);
         computeHeatBathEnergyKernel->execute(1, 1);
@@ -6110,9 +6126,14 @@ std::pair<double, double> CommonNoseHooverChainKernel::computeMaskedKineticEnerg
     if (!hasInitializedKineticEnergyKernel) {
         hasInitializedKineticEnergyKernel = true;
         computeAtomsKineticEnergyKernel->addArg(energyBuffer);
-        computeAtomsKineticEnergyKernel->addArg(); // nAtoms/nPairs
+        computeAtomsKineticEnergyKernel->addArg(); // nAtoms
         computeAtomsKineticEnergyKernel->addArg(cc.getVelm());
-        computeAtomsKineticEnergyKernel->addArg(); // pair/atom list
+        computeAtomsKineticEnergyKernel->addArg(); // atom list
+
+        computePairsKineticEnergyKernel->addArg(energyBuffer);
+        computePairsKineticEnergyKernel->addArg(); // nPairs
+        computePairsKineticEnergyKernel->addArg(cc.getVelm());
+        computePairsKineticEnergyKernel->addArg(); // pair list
 
         reduceEnergyKernel->addArg(energyBuffer);
         reduceEnergyKernel->addArg(kineticEnergyBuffer);
@@ -6160,9 +6181,14 @@ void CommonNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const No
     if (!hasInitializedScaleVelocitiesKernel) {
         hasInitializedScaleVelocitiesKernel = true;
         scaleAtomsVelocitiesKernel->addArg(scaleFactorBuffer);
-        scaleAtomsVelocitiesKernel->addArg(); // nAtoms/nPairs
+        scaleAtomsVelocitiesKernel->addArg(); // nAtoms
         scaleAtomsVelocitiesKernel->addArg(cc.getVelm());
-        scaleAtomsVelocitiesKernel->addArg(); // atom/pair list
+        scaleAtomsVelocitiesKernel->addArg(); // atom list
+
+        scalePairsVelocitiesKernel->addArg(scaleFactorBuffer);
+        scalePairsVelocitiesKernel->addArg(); // nPairs
+        scalePairsVelocitiesKernel->addArg(cc.getVelm());
+        scalePairsVelocitiesKernel->addArg(); // pair list
     }
     if (nAtoms) {
         scaleAtomsVelocitiesKernel->setArg(1, nAtoms);
