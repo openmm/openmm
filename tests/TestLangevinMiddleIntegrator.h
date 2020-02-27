@@ -278,7 +278,7 @@ void testInitialTemperature() {
         positions[i][2] = genrand_real2(sfmt);
     }
 
-    BAOABLangevinIntegrator integrator(300, 25, 0.001);
+    LangevinMiddleIntegrator integrator(300, 25, 0.001);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(targetTemperature);
