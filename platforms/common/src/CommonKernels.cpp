@@ -5942,7 +5942,7 @@ std::pair<double, double> CommonNoseHooverChainKernel::propagateChain(ContextImp
 
     if (!hasInitializedPropagateKernel) {
         hasInitializedPropagateKernel = true;
-        propagateKernels[numYS]->addArg(chainState[2*chainID]);
+        propagateKernels[numYS]->addArg(); // ChainState
         propagateKernels[numYS]->addArg(kineticEnergyBuffer);
         propagateKernels[numYS]->addArg(scaleFactorBuffer);
         propagateKernels[numYS]->addArg(chainMasses);
@@ -5962,6 +5962,7 @@ std::pair<double, double> CommonNoseHooverChainKernel::propagateChain(ContextImp
         float frequency = nhc.getCollisionFrequency();
         double kT = BOLTZ * temperature;
         int numDOFs = nhc.getNumDegreesOfFreedom();
+        propagateKernels[numYS]->setArg(0, chainState[2*chainID]);
         propagateKernels[numYS]->setArg(5, chainType);
         propagateKernels[numYS]->setArg(8, numDOFs);
         if (useDouble) {
@@ -5978,6 +5979,7 @@ std::pair<double, double> CommonNoseHooverChainKernel::propagateChain(ContextImp
         float relativeFrequency = nhc.getRelativeCollisionFrequency();
         double kT = BOLTZ * relativeTemperature;
         int ndf = 3*nPairs;
+        propagateKernels[numYS]->setArg(0, chainState[2*chainID+1]);
         propagateKernels[numYS]->setArg(5, chainType);
         propagateKernels[numYS]->setArg(8, ndf);
         if (useDouble) {
