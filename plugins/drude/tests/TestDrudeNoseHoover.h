@@ -295,6 +295,8 @@ int main(int argc, char* argv[]) {
         double observedDrudeDistance = testWaterBoxWithHardWallConstraint(0.0);
         ASSERT(observedDrudeDistance > maxDrudeDistance);
         observedDrudeDistance = testWaterBoxWithHardWallConstraint(maxDrudeDistance);
+        // Remove later: just trying to find out why Jenkins is upset
+        if(observedDrudeDistance >= maxDrudeDistance) printf("Max distance %16.10f\n", observedDrudeDistance);
         ASSERT(observedDrudeDistance < maxDrudeDistance);
         testInitialTemperature();
         runPlatformTests();
