@@ -163,7 +163,7 @@ KERNEL void integrateVelocityVerletPart3(int numAtoms, int numPairs, int paddedN
 #endif
     ){
     mixed2 stepSize = dt[0];
-#ifndef SUPPORTS_DOUBLE_PRECISION
+#ifdef SUPPORTS_DOUBLE_PRECISION
     double oneOverDt = 1.0/stepSize.y;
 #else
     float oneOverDt = 1.0f/stepSize.y;
@@ -182,7 +182,7 @@ KERNEL void integrateVelocityVerletPart3(int numAtoms, int numPairs, int paddedN
             velocity.x += scale*force[atom]*velocity.w + (deltaXconstrained.x - velocity.x*stepSize.y)*oneOverDt;
             velocity.y += scale*force[atom+paddedNumAtoms]*velocity.w + (deltaXconstrained.y - velocity.y*stepSize.y)*oneOverDt;
             velocity.z += scale*force[atom+paddedNumAtoms*2]*velocity.w + (deltaXconstrained.z - velocity.z*stepSize.y)*oneOverDt;
-#ifdef SUPPORTS_DOUBLE_PRECISION
+#ifndef SUPPORTS_DOUBLE_PRECISION
             velocity.x += (deltaXconstrained.x - velocity.x*stepSize.y)*correction;
             velocity.y += (deltaXconstrained.y - velocity.y*stepSize.y)*correction;
             velocity.z += (deltaXconstrained.z - velocity.z*stepSize.y)*correction;
@@ -237,7 +237,7 @@ KERNEL void integrateVelocityVerletPart3(int numAtoms, int numPairs, int paddedN
             v1.x = comVel.x - relVel.x*mass2fract + (deltaXconstrained.x - v1.x*stepSize.y)*oneOverDt;
             v1.y = comVel.y - relVel.y*mass2fract + (deltaXconstrained.y - v1.y*stepSize.y)*oneOverDt;
             v1.z = comVel.z - relVel.z*mass2fract + (deltaXconstrained.z - v1.z*stepSize.y)*oneOverDt;
-#ifdef SUPPORTS_DOUBLE_PRECISION
+#ifndef SUPPORTS_DOUBLE_PRECISION
             v1.x += (deltaXconstrained.x - v1.x*stepSize.y)*correction;
             v1.y += (deltaXconstrained.y - v1.y*stepSize.y)*correction;
             v1.z += (deltaXconstrained.z - v1.z*stepSize.y)*correction;
@@ -249,7 +249,7 @@ KERNEL void integrateVelocityVerletPart3(int numAtoms, int numPairs, int paddedN
             v2.x = comVel.x + relVel.x*mass1fract + (deltaXconstrained.x - v2.x*stepSize.y)*oneOverDt;
             v2.y = comVel.y + relVel.y*mass1fract + (deltaXconstrained.y - v2.y*stepSize.y)*oneOverDt;
             v2.z = comVel.z + relVel.z*mass1fract + (deltaXconstrained.z - v2.z*stepSize.y)*oneOverDt;
-#ifdef SUPPORTS_DOUBLE_PRECISION
+#ifndef SUPPORTS_DOUBLE_PRECISION
             v2.x += (deltaXconstrained.x - v2.x*stepSize.y)*correction;
             v2.y += (deltaXconstrained.y - v2.y*stepSize.y)*correction;
             v2.z += (deltaXconstrained.z - v2.z*stepSize.y)*correction;
