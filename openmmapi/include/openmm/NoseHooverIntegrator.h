@@ -264,6 +264,10 @@ protected:
      * Compute the kinetic energy of the system at the current time.
      */
     virtual double computeKineticEnergy();
+    /**
+     * Computing kinetic energy for this integrator does not require forces.
+     */
+    bool kineticEnergyRequiresForce() const override;
 
     std::vector<NoseHooverChain> noseHooverChains;
     std::vector<int> allAtoms;
