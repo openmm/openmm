@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,6 +30,7 @@
 #include "OpenCLPlatform.h"
 #include "OpenCLContext.h"
 #include "OpenCLKernels.h"
+#include "openmm/common/CommonKernels.h"
 
 namespace OpenMM {
 
@@ -97,8 +98,8 @@ private:
 class OpenCLParallelCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
     OpenCLParallelCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcHarmonicBondForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcHarmonicBondForceKernel&>(kernels[index].getImpl());
+    CommonCalcHarmonicBondForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcHarmonicBondForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -135,8 +136,8 @@ private:
 class OpenCLParallelCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
 public:
     OpenCLParallelCalcCustomBondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcCustomBondForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcCustomBondForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomBondForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomBondForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -173,8 +174,8 @@ private:
 class OpenCLParallelCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
     OpenCLParallelCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcHarmonicAngleForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcHarmonicAngleForceKernel&>(kernels[index].getImpl());
+    CommonCalcHarmonicAngleForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcHarmonicAngleForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -211,8 +212,8 @@ private:
 class OpenCLParallelCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
 public:
     OpenCLParallelCalcCustomAngleForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcCustomAngleForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcCustomAngleForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomAngleForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomAngleForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -249,8 +250,8 @@ private:
 class OpenCLParallelCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
     OpenCLParallelCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcPeriodicTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcPeriodicTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcPeriodicTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcPeriodicTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -287,8 +288,8 @@ private:
 class OpenCLParallelCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
     OpenCLParallelCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcRBTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcRBTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcRBTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcRBTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -325,8 +326,8 @@ private:
 class OpenCLParallelCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
 public:
     OpenCLParallelCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcCMAPTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcCMAPTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcCMAPTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCMAPTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -363,8 +364,8 @@ private:
 class OpenCLParallelCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
 public:
     OpenCLParallelCalcCustomTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcCustomTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcCustomTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -459,8 +460,8 @@ private:
 class OpenCLParallelCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     OpenCLParallelCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcCustomNonbondedForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcCustomNonbondedForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomNonbondedForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomNonbondedForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -497,8 +498,8 @@ private:
 class OpenCLParallelCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
 public:
     OpenCLParallelCalcCustomExternalForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcCustomExternalForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcCustomExternalForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomExternalForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomExternalForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -535,8 +536,8 @@ private:
 class OpenCLParallelCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
     OpenCLParallelCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcCustomHbondForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcCustomHbondForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomHbondForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomHbondForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -573,8 +574,8 @@ private:
 class OpenCLParallelCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
 public:
     OpenCLParallelCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, const System& system);
-    OpenCLCalcCustomCompoundBondForceKernel& getKernel(int index) {
-        return dynamic_cast<OpenCLCalcCustomCompoundBondForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomCompoundBondForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomCompoundBondForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.

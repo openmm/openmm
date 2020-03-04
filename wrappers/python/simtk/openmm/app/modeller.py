@@ -1004,7 +1004,7 @@ class Modeller(object):
         del context
         return actualVariants
 
-    def addExtraParticles(self, forcefield):
+    def addExtraParticles(self, forcefield, ignoreExternalBonds=False):
         """Add missing extra particles to the model that are required by a force
         field.
 
@@ -1023,6 +1023,10 @@ class Modeller(object):
         ----------
         forcefield : ForceField
             the ForceField defining what extra particles should be present
+        ignoreExternalBonds : boolean=False
+            If true, ignore external bonds when matching residues to templates.
+            This is useful when the Topology represents one piece of a larger
+            molecule, so chains are not terminated properly.
         """
         # Create copies of all residue templates that have had all extra points removed.
 
@@ -1090,7 +1094,7 @@ class Modeller(object):
                 signature = _createResidueSignature([atom.element for atom in residue.atoms()])
                 if signature in forcefield._templateSignatures:
                     for t in forcefield._templateSignatures[signature]:
-                        if compiled.matchResidueToTemplate(residue, t, bondedToAtom, False) is not None:
+                        if compiled.matchResidueToTemplate(residue, t, bondedToAtom, ignoreExternalBonds) is not None:
                             matchFound = True
                 if matchFound:
                     # Just copy the residue over.
@@ -1109,7 +1113,7 @@ class Modeller(object):
                     if signature in forcefield._templateSignatures:
                         for t in forcefield._templateSignatures[signature]:
                             if t in templatesNoEP:
-                                matches = compiled.matchResidueToTemplate(residueNoEP, templatesNoEP[t], bondedToAtomNoEP, False)
+                                matches = compiled.matchResidueToTemplate(residueNoEP, templatesNoEP[t], bondedToAtomNoEP, ignoreExternalBonds)
                                 if matches is not None:
                                     template = t;
                                     # Record the corresponding atoms.
@@ -1255,9 +1259,9 @@ class Modeller(object):
         adds whole copies of the pre-equilibrated membrane patch, so the box dimensions will always be
         integer multiples of the patch size.  That may lead to a larger membrane than what you requested.
 
-        This method has built in support for POPC and POPE lipids.  You can also build other types of
-        membranes by providing a pre-equilibrated, solvated membrane patch that can be tiled in the XY
-        plane to form the membrane.
+        This method has built in support for POPC, POPE, DLPC, DLPE, DMPC, DOPC and DPPC lipids.
+        You can also build other types of membranes by providing a pre-equilibrated, solvated membrane patch
+        that can be tiled in the XY plane to form the membrane.
 
         Parameters
         ----------
@@ -1285,7 +1289,7 @@ class Modeller(object):
         """
         if 'topology' in dir(lipidType) and 'positions' in dir(lipidType):
             patch = lipidType
-        elif lipidType.upper() in ('POPC', 'POPE'):
+        elif lipidType.upper() in ('POPC', 'POPE', 'DLPC', 'DLPE', 'DMPC', 'DOPC', 'DPPC'):
             patch = PDBFile(os.path.join(os.path.dirname(__file__), 'data', lipidType.upper()+'.pdb'))
         else:
             raise ValueError('Unsupported lipid type: '+lipidType)

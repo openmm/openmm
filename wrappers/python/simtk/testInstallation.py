@@ -91,6 +91,8 @@ def run_tests():
     if errorsOk:
         print()
         print('All differences are within tolerance.')
+    else:
+        raise Exception("Large differences observed. See messages above.")
 
 
 def main():
@@ -105,7 +107,7 @@ def main():
         run_tests()
     except Exception as err:
         print('Problem with OpenMM installation '
-              'encountered. OpenMM will not work until the problem '
+              'encountered. OpenMM will not work correctly until the problem '
               'has been fixed.\n\n',
               file=sys.stderr)
         print('Error message: %s' % str(err), file=sys.stderr)

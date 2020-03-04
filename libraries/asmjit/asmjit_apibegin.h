@@ -53,8 +53,8 @@
 // [GCC]
 #if ASMJIT_CC_GCC
 # pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wbool-operation"
 # if ASMJIT_CC_GCC_GE(8, 0, 0)
+#  pragma GCC diagnostic ignored "-Wbool-operation"
 #  pragma GCC diagnostic ignored "-Wclass-memaccess"
 # endif
 #endif // ASMJIT_CC_GCC

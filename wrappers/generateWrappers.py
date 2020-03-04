@@ -76,7 +76,12 @@ class WrapperGenerator:
                             'static std::vector<std::string> OpenMM::Platform::loadPluginsFromDirectory',
                             'Vec3 OpenMM::LocalCoordinatesSite::getOriginWeights',
                             'Vec3 OpenMM::LocalCoordinatesSite::getXWeights',
-                            'Vec3 OpenMM::LocalCoordinatesSite::getYWeights']
+                            'Vec3 OpenMM::LocalCoordinatesSite::getYWeights',
+                            'std::vector<double> OpenMM::NoseHooverChain::getYoshidaSuzukiWeights',
+                            'const std::vector<int>& OpenMM::NoseHooverIntegrator::getAllThermostatedIndividualParticles',
+                            'const std::vector<std::tuple<int, int, double> >& OpenMM::NoseHooverIntegrator::getAllThermostatedPairs',
+                            'virtual void OpenMM::NoseHooverIntegrator::stateChanged'
+                           ] 
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']
         self.nodeByID={}
 
@@ -165,6 +170,7 @@ class CHeaderGenerator(WrapperGenerator):
                                  'std::vector< std::string >': 'OpenMM_StringArray',
                                  'std::vector< Vec3 >': 'OpenMM_Vec3Array',
                                  'std::vector< std::pair< int, int > >': 'OpenMM_BondArray',
+                                 'const std::vector< std::pair< int, int > >': 'OpenMM_BondArray',
                                  'std::map< std::string, double >': 'OpenMM_ParameterArray',
                                  'std::map< std::string, std::string >': 'OpenMM_PropertyArray',
                                  'std::vector< double >': 'OpenMM_DoubleArray',

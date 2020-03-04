@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,104 +27,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLContext.h"
-#include "openmm/TabulatedFunction.h"
-#include "lepton/CustomFunction.h"
-#include "lepton/ExpressionTreeNode.h"
-#include "lepton/ParsedExpression.h"
-#include <map>
-#include <sstream>
-#include <string>
-#include <utility>
+#include "openmm/common/ExpressionUtilities.h"
+#include "openmm/common/windowsExportCommon.h"
 
 namespace OpenMM {
 
 /**
- * This class is used by various classes to generate OpenCL source code implementing
- * user defined mathematical expressions.
+ * This class exists only for backward compatibility.  It adds no features beyond
+ * the base ExpressionUtilities class.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLExpressionUtilities {
+class OPENMM_EXPORT_COMMON OpenCLExpressionUtilities : public ExpressionUtilities {
 public:
-    OpenCLExpressionUtilities(OpenCLContext& context);
-    /**
-     * Generate the source code for calculating a set of expressions.
-     *
-     * @param expressions    the expressions to generate code for (keys are the variables to store the output values in)
-     * @param variables      defines the source code to generate for each variable that may appear in the expressions.  Keys are
-     *                       variable names, and the values are the code to generate for them.
-     * @param functions      the tabulated functions that may appear in the expressions
-     * @param functionNames  defines the variable name for each tabulated function that may appear in the expressions
-     * @param prefix         a prefix to put in front of temporary variables
-     * @param tempType       the type of value to use for temporary variables (defaults to "real")
-     */
-    std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::map<std::string, std::string>& variables,
-            const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
-            const std::string& prefix, const std::string& tempType="real");
-    /**
-     * Generate the source code for calculating a set of expressions.
-     *
-     * @param expressions    the expressions to generate code for (keys are the variables to store the output values in)
-     * @param variables      defines the source code to generate for each variable or precomputed sub-expression that may appear in the expressions.
-     *                       Each entry is an ExpressionTreeNode, and the code to generate wherever an identical node appears.
-     * @param functions      the tabulated functions that may appear in the expressions
-     * @param functionNames  defines the variable name for each tabulated function that may appear in the expressions
-     * @param prefix         a prefix to put in front of temporary variables
-     * @param tempType       the type of value to use for temporary variables (defaults to "float")
-     */
-    std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variables,
-            const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
-            const std::string& prefix, const std::string& tempType="real");
-    /**
-     * Calculate the spline coefficients for a tabulated function that appears in expressions.
-     *
-     * @param function   the function for which to compute coefficients
-     * @param width      on output, the number of floats used for each value
-     * @return the spline coefficients
-     */
-    std::vector<float> computeFunctionCoefficients(const TabulatedFunction& function, int& width);
-    /**
-     * Get a Lepton::CustomFunction that can be used to represent a TabulatedFunction when parsing expressions.
-     * 
-     * @param function   the function for which to get a placeholder
-     */
-    Lepton::CustomFunction* getFunctionPlaceholder(const TabulatedFunction& function);
-    /**
-     * Get a Lepton::CustomFunction that can be used to represent the periodicdistance() function when parsing expressions.
-     */
-    Lepton::CustomFunction* getPeriodicDistancePlaceholder();
-private:
-    class FunctionPlaceholder : public Lepton::CustomFunction {
-        public:
-            FunctionPlaceholder(int numArgs) : numArgs(numArgs) {
-            }
-            int getNumArguments() const {
-                return numArgs;
-            }
-            double evaluate(const double* arguments) const {
-                return 0.0;
-            }
-            double evaluateDerivative(const double* arguments, const int* derivOrder) const {
-                return 0.0;
-            }
-            CustomFunction* clone() const {
-                return new FunctionPlaceholder(numArgs);
-            }
-        private:
-            int numArgs;
-    };
-    void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
-            std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps,
-            const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
-            const std::string& prefix, const std::vector<std::vector<double> >& functionParams, const std::vector<Lepton::ParsedExpression>& allExpressions, const std::string& tempType);
-    std::string getTempName(const Lepton::ExpressionTreeNode& node, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
-    void findRelatedCustomFunctions(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
-            std::vector<const Lepton::ExpressionTreeNode*>& nodes);
-    void findRelatedPowers(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
-            std::map<int, const Lepton::ExpressionTreeNode*>& powers);
-    std::vector<std::vector<double> > computeFunctionParameters(const std::vector<const TabulatedFunction*>& functions);
-    OpenCLContext& context;
-    FunctionPlaceholder fp1, fp2, fp3, periodicDistance;
+    OpenCLExpressionUtilities(ComputeContext& context) : ExpressionUtilities(context) {
+    }
 };
 
 } // namespace OpenMM

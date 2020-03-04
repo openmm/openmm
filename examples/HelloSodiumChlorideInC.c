@@ -28,7 +28,7 @@ static const double FrictionInPerPs     = 91.;    /*collisions per ps*/
 static const double SolventDielectric   = 80.;    /*typical for water    */
 static const double SoluteDielectric    = 2.;     /*typical for protein  */
 
-static const double StepSizeInFs        = 2;      /*integration step size (fs)  */
+static const double StepSizeInFs        = 4;      /*integration step size (fs)  */
 static const double ReportIntervalInFs  = 50;     /*how often for PDB frame (fs)*/
 static const double SimulationTimeInPs  = 100;    /*total simulation time (ps)  */
 
@@ -252,7 +252,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
      * best available Platform. Initialize the configuration from the default
      * positions we collected above. Initial velocities will be zero but could
      * have been set here. */
-    omm->integrator = (OpenMM_Integrator*)OpenMM_LangevinIntegrator_create(
+    omm->integrator = (OpenMM_Integrator*)OpenMM_LangevinMiddleIntegrator_create(
                                             temperature, frictionInPerPs, 
                                             stepSizeInFs * OpenMM_PsPerFs);
     omm->context    = OpenMM_Context_create(omm->system, omm->integrator);

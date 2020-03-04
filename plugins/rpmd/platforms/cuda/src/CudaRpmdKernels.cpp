@@ -307,7 +307,7 @@ void CudaIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& pos
     double4 periodicBoxSize = cu.getPeriodicBoxSize();
     vector<Vec3> offsetPos(numParticles);
     for (int i = 0; i < numParticles; ++i) {
-        int4 offset = cu.getPosCellOffsets()[i];
+        mm_int4 offset = cu.getPosCellOffsets()[i];
         offsetPos[order[i]] = pos[order[i]] + Vec3(offset.x*periodicBoxSize.x, offset.y*periodicBoxSize.y, offset.z*periodicBoxSize.z);
     }
 

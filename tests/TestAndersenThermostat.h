@@ -163,12 +163,12 @@ void testRandomSeed() {
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocities(velocities);
-    integrator.step(10);
+    integrator.step(20);
     State state1 = context.getState(State::Positions);
     context.reinitialize();
     context.setPositions(positions);
     context.setVelocities(velocities);
-    integrator.step(10);
+    integrator.step(20);
     State state2 = context.getState(State::Positions);
 
     // Try twice with a different random seed.
@@ -177,12 +177,12 @@ void testRandomSeed() {
     context.reinitialize();
     context.setPositions(positions);
     context.setVelocities(velocities);
-    integrator.step(10);
+    integrator.step(20);
     State state3 = context.getState(State::Positions);
     context.reinitialize();
     context.setPositions(positions);
     context.setVelocities(velocities);
-    integrator.step(10);
+    integrator.step(20);
     State state4 = context.getState(State::Positions);
 
     // Compare the results.

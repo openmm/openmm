@@ -61,7 +61,7 @@ public:
      * Apply the constraint algorithm to velocities.
      * 
      * @param atomCoordinates  the atom coordinates
-     * @param atomCoordinatesP the velocities to modify
+     * @param velocities       the velocities to modify
      * @param inverseMasses    1/mass
      * @param tolerance        the constraint tolerance
      */

@@ -120,7 +120,7 @@ steps.
         forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
         system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME,
                 nonbondedCutoff=1*nanometer, constraints=HBonds)
-        integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
         simulation = Simulation(pdb.topology, system, integrator)
         simulation.context.setPositions(pdb.positions)
         simulation.minimizeEnergy()
@@ -210,14 +210,17 @@ convenient and less error-prone.  We could have equivalently specified
 The units system will be described in more detail later, in Section :ref:`units-and-dimensional-analysis`.
 ::
 
-    integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+    integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
 
 This line creates the integrator to use for advancing the equations of motion.
-It specifies a :class:`BAOABLangevinIntegrator`, which performs Langevin dynamics,
+It specifies a :class:`LangevinMiddleIntegrator`, which performs Langevin dynamics,
 and assigns it to a variable called :code:`integrator`\ .  It also specifies
 the values of three parameters that are specific to Langevin dynamics: the
 simulation temperature (300 K), the friction coefficient (1 ps\ :sup:`-1`\ ), and
-the step size (0.002 ps).
+the step size (0.004 ps).  Lots of other integration methods are also available.
+For example, if you wanted to simulate the system at constant energy rather than
+constant temperature you would use a :code:`VerletIntegrator`\ .  The available
+integration methods are listed in Section :ref:`integrators`.
 ::
 
     simulation = Simulation(pdb.topology, system, integrator)
@@ -295,7 +298,7 @@ found in OpenMM’s :file:`examples` folder with the name :file:`simulateAmber.p
         inpcrd = AmberInpcrdFile('input.inpcrd')
         system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
                 constraints=HBonds)
-        integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
         simulation = Simulation(prmtop.topology, system, integrator)
         simulation.context.setPositions(inpcrd.positions)
         if inpcrd.boxVectors is not None:
@@ -389,7 +392,7 @@ with the name :file:`simulateGromacs.py`.
                 includeDir='/usr/local/gromacs/share/gromacs/top')
         system = top.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
                 constraints=HBonds)
-        integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
         simulation = Simulation(top.topology, system, integrator)
         simulation.context.setPositions(gro.positions)
         simulation.minimizeEnergy()
@@ -453,7 +456,7 @@ on the :class:`CharmmPsfFile`.
         params = CharmmParameterSet('charmm22.rtf', 'charmm22.prm')
         system = psf.createSystem(params, nonbondedMethod=NoCutoff,
                 nonbondedCutoff=1*nanometer, constraints=HBonds)
-        integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
         simulation = Simulation(psf.topology, system, integrator)
         simulation.context.setPositions(pdb.positions)
         simulation.minimizeEnergy()
@@ -981,9 +984,10 @@ Value             Meaning
 
 The main reason to use constraints is that it allows one to use a larger
 integration time step.  With no constraints, one is typically limited to a time
-step of about 1 fs for typical biomolecular force fields like AMBER or CHARMM.  With :code:`HBonds` constraints, this can be increased
-to about 2 fs.  With :code:`HAngles`\ , it can be further increased to 3.5 or
-4 fs.
+step of about 1 fs for typical biomolecular force fields like AMBER or CHARMM.
+With :code:`HBonds` constraints, this can be increased to about 2 fs for Verlet
+dynamics, or about 4 fs for Langevin dynamics.  With :code:`HAngles`\ , it can
+sometimes be increased even further.
 
 Regardless of the value of this parameter, OpenMM makes water molecules
 completely rigid, constraining both their bond lengths and angles.  You can
@@ -997,7 +1001,9 @@ step size, typically to about 0.5 fs.
 
 .. note::
 
-   The AMOEBA forcefield is intended to be used without constraints.
+   The AMOEBA forcefield is designed to be used without constraints, so by
+   default OpenMM makes AMOEBA water flexible.  You can still force it to be
+   rigid by specifying :code:`rigidWater=True`.
 
 Heavy Hydrogens
 ===============
@@ -1012,8 +1018,10 @@ optionally tell OpenMM to increase the mass of hydrogen atoms.  For example,
 This applies only to hydrogens that are bonded to heavy atoms, and any mass
 added to the hydrogen is subtracted from the heavy atom.  This keeps their total
 mass constant while slowing down the fast motions of hydrogens.  When combined
-with constraints (typically :code:`constraints=AllBonds`\ ), this allows a
+with constraints (typically :code:`constraints=AllBonds`\ ), this often allows a
 further increase in integration step size.
+
+.. _integrators:
 
 Integrators
 ===========
@@ -1021,30 +1029,34 @@ Integrators
 
 OpenMM offers a choice of several different integration methods.  You select
 which one to use by creating an integrator object of the appropriate type.
+Detailed descriptions of all these integrators can be found in Chapter
+:ref:`integrators-theory`.  In addition to these built in integrators, lots of
+others are available as part of the `OpenMMTools <https://openmmtools.readthedocs.io>`_ package.
 
-BAOAB Langevin Integrator
--------------------------
+Langevin Middle Integrator
+--------------------------
 
 In the examples of the previous sections, we used Langevin integration:
 ::
 
-    integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+    integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
 
 The three parameter values in this line are the simulation temperature (300 K),
-the friction coefficient (1 ps\ :sup:`-1`\ ), and the step size (0.002 ps).  You
+the friction coefficient (1 ps\ :sup:`-1`\ ), and the step size (0.004 ps).  You
 are free to change these to whatever values you want.  Be sure to specify units
 on all values.  For example, the step size could be written either as
-:code:`0.002*picoseconds` or :code:`2*femtoseconds`\ .  They are exactly
-equivalent.
+:code:`0.004*picoseconds` or :code:`4*femtoseconds`\ .  They are exactly
+equivalent.  Note that :code:`LangevinMiddleIntegrator` is a leapfrog
+integrator, so the velocities are offset by half a time step from the positions.
 
 Langevin Integrator
 -------------------
 
-:code:`LangevinIntegrator` is very similar to :code:`BAOABLangevinIntegrator`,
+:code:`LangevinIntegrator` is very similar to :code:`LangevinMiddleIntegrator`,
 but it uses a different discretization of the Langevin equation.
-:code:`BAOABLangevinIntegrator` tends to produce more accurate configurational
+:code:`LangevinMiddleIntegrator` tends to produce more accurate configurational
 sampling, and therefore is preferred for most applications.  Also note that
-:code:`LangevinIntegrator` (unlike :code:`BAOABLangevinIntegrator`) is a leapfrog
+:code:`LangevinIntegrator`\ , like :code:`LangevinMiddleIntegrator`\ , is a leapfrog
 integrator, so the velocities are offset by half a time step from the positions.
 
 Leapfrog Verlet Integrator
@@ -1155,7 +1167,7 @@ previous section:
     system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
             constraints=HBonds)
     system.addForce(MonteCarloBarostat(1*bar, 300*kelvin))
-    integrator = BAOABLangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+    integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
     ...
 
 The parameters of the Monte Carlo barostat are the pressure (1 bar) and
@@ -1715,7 +1727,7 @@ executing 1000 time steps at each temperature:
         :autonumber:`Example,simulated annealing`
 
 This code needs very little explanation.  The loop is executed 100 times.  Each
-time through, it adjusts the temperature of the :class:`BAOABLangevinIntegrator` and then
+time through, it adjusts the temperature of the :class:`LangevinMiddleIntegrator` and then
 calls :code:`step(1000)` to take 1000 time steps.
 
 Applying an External Force to Particles: a Spherical Container
@@ -1747,7 +1759,7 @@ coordinates.  Here is the code to do it:
         system.addForce(force)
         for i in range(system.getNumParticles()):
             force.addParticle(i, [])
-        integrator = BAOABLangevinIntegrator(300*kelvin, 91/picosecond, 0.002*picoseconds)
+        integrator = LangevinMiddleIntegrator(300*kelvin, 91/picosecond, 0.004*picoseconds)
         ...
 
     .. caption::
@@ -2330,6 +2342,22 @@ second atom has class OS and the third has class P:
 .. code-block:: xml
 
     <Proper class1="" class2="OS" class3="P" class4="" periodicity1="3" phase1="0.0" k1="1.046"/>
+
+The :code:`<PeriodicTorsionForce>` tag also supports an optional
+:code:`ordering` attribute to provide better compatibility with the way
+impropers are assigned in different simulation packages:
+
+ * :code:`ordering="default"` specifies the default behavior if the attribute
+   is omitted. 
+ * :code:`ordering="amber"` produces behavior that replicates the behavior of
+   AmberTools LEaP
+ * :code:`ordering="charmm"` produces behavior more consistent with CHARMM
+ * :code:`ordering="smirnoff"` allows multiple impropers to be added using
+   exact matching to replicate the beheavior of `SMIRNOFF <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html>`_
+   impropers
+
+Different :code:`<PeriodicTorsionForce>` tags can specify different :code:`ordering`
+values to be used for the sub-elements appearing within their tags.
 
 <RBTorsionForce>
 ================

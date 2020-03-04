@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -609,12 +609,16 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         ewaldDispersionAlpha = alpha;
         useSwitchingFunction = false;
     }
+    if (nonbondedMethod == NoCutoff || nonbondedMethod == CutoffNonPeriodic)
+        exceptionsArePeriodic = false;
+    else
+        exceptionsArePeriodic = force.getExceptionsUsePeriodicBoundaryConditions();
     rfDielectric = force.getReactionFieldDielectric();
     if (force.getUseDispersionCorrection())
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
     else
         dispersionCoefficient = 0.0;
-    data.isPeriodic = (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME);
+    data.isPeriodic |= (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME);
 }
 
 double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
@@ -699,6 +703,10 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     energy += nonbondedEnergy;
     if (includeDirect) {
         ReferenceLJCoulomb14 nonbonded14;
+        if (exceptionsArePeriodic) {
+            Vec3* boxVectors = extractBoxVectors(context);
+            nonbonded14.setPeriodic(boxVectors);
+        }
         bondForce.calculateForce(posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
         if (data.isPeriodic && nonbondedMethod != LJPME)
             energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
@@ -923,7 +931,7 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         force.getInteractionGroupParameters(i, set1, set2);
         interactionGroups.push_back(make_pair(set1, set2));
     }
-    data.isPeriodic = (nonbondedMethod == CutoffPeriodic);
+    data.isPeriodic |= (nonbondedMethod == CutoffPeriodic);
     nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions, data.threads);
     if (interactionGroups.size() > 0)
         nonbonded->setInteractionGroups(interactionGroups);
@@ -1016,7 +1024,7 @@ void CpuCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCFo
     obc.setSurfaceAreaEnergy((float) force.getSurfaceAreaEnergy());
     if (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff)
         obc.setUseCutoff((float) force.getCutoffDistance());
-    data.isPeriodic = (force.getNonbondedMethod() == GBSAOBCForce::CutoffPeriodic);
+    data.isPeriodic |= (force.getNonbondedMethod() == GBSAOBCForce::CutoffPeriodic);
 }
 
 double CpuCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1190,7 +1198,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     ixn = new CpuCustomGBForce(numParticles, exclusions, valueExpressions, valueDerivExpressions, valueGradientExpressions, valueParamDerivExpressions,
         valueNames, valueTypes, energyExpressions, energyDerivExpressions, energyGradientExpressions, energyParamDerivExpressions, energyTypes,
         particleParameterNames, data.threads);
-    data.isPeriodic = (force.getNonbondedMethod() == CustomGBForce::CutoffPeriodic);
+    data.isPeriodic |= (force.getNonbondedMethod() == CustomGBForce::CutoffPeriodic);
 }
 
 double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1252,7 +1260,7 @@ void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, cons
     ixn = new CpuCustomManyParticleForce(force, data.threads);
     nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
     cutoffDistance = force.getCutoffDistance();
-    data.isPeriodic = (nonbondedMethod == CutoffPeriodic);
+    data.isPeriodic |= (nonbondedMethod == CutoffPeriodic);
 }
 
 double CpuCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1295,7 +1303,7 @@ CpuCalcGayBerneForceKernel::~CpuCalcGayBerneForceKernel() {
 
 void CpuCalcGayBerneForceKernel::initialize(const System& system, const GayBerneForce& force) {
     ixn = new CpuGayBerneForce(force);
-    data.isPeriodic = (force.getNonbondedMethod() == GayBerneForce::CutoffPeriodic);
+    data.isPeriodic |= (force.getNonbondedMethod() == GayBerneForce::CutoffPeriodic);
     if (force.getNonbondedMethod() != GayBerneForce::NoCutoff) {
         double cutoff = force.getCutoffDistance();
         data.requestNeighborList(cutoff, 0.1*cutoff, true, ixn->getExclusions());
@@ -1353,12 +1361,12 @@ double CpuIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context
     return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }
 
-CpuIntegrateBAOABStepKernel::~CpuIntegrateBAOABStepKernel() {
+CpuIntegrateLangevinMiddleStepKernel::~CpuIntegrateLangevinMiddleStepKernel() {
     if (dynamics)
         delete dynamics;
 }
 
-void CpuIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLangevinIntegrator& integrator) {
+void CpuIntegrateLangevinMiddleStepKernel::initialize(const System& system, const LangevinMiddleIntegrator& integrator) {
     int numParticles = system.getNumParticles();
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
@@ -1366,7 +1374,7 @@ void CpuIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLa
     data.random.initialize(integrator.getRandomNumberSeed(), data.threads.getNumThreads());
 }
 
-void CpuIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid) {
+void CpuIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double stepSize = integrator.getStepSize();
@@ -1377,18 +1385,18 @@ void CpuIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLange
         
         if (dynamics)
             delete dynamics;
-        dynamics = new CpuBAOABDynamics(context.getSystem().getNumParticles(), stepSize, friction, temperature, data.threads, data.random);
+        dynamics = new CpuLangevinMiddleDynamics(context.getSystem().getNumParticles(), stepSize, friction, temperature, data.threads, data.random);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    dynamics->update(context, posData, velData, masses, forcesAreValid, integrator.getConstraintTolerance());
+    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance());
     ReferencePlatform::PlatformData* refData = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     refData->time += stepSize;
     refData->stepCount++;
 }
 
-double CpuIntegrateBAOABStepKernel::computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator) {
+double CpuIntegrateLangevinMiddleStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0.0);
 }

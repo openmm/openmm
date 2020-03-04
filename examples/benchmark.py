@@ -4,7 +4,7 @@ import simtk.openmm as mm
 import simtk.unit as unit
 import sys
 from datetime import datetime
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 def timeIntegration(context, steps, initialSteps):
     """Integrate a Context for a specified number of steps, then return how many seconds it took."""
@@ -127,35 +127,33 @@ def runOneTest(testName, options):
 
 # Parse the command line options.
 
-parser = OptionParser()
+parser = ArgumentParser()
 platformNames = [mm.Platform.getPlatform(i).getName() for i in range(mm.Platform.getNumPlatforms())]
-parser.add_option('--platform', dest='platform', choices=platformNames, help='name of the platform to benchmark')
-parser.add_option('--test', dest='test', choices=('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme'), help='the test to perform: gbsa, rf, pme, apoa1rf, apoa1pme, apoa1ljpme, amoebagk, or amoebapme [default: all]')
-parser.add_option('--pme-cutoff', default='0.9', dest='cutoff', type='float', help='direct space cutoff for PME in nm [default: 0.9]')
-parser.add_option('--seconds', default='60', dest='seconds', type='float', help='target simulation length in seconds [default: 60]')
-parser.add_option('--polarization', default='mutual', dest='polarization', choices=('direct', 'extrapolated', 'mutual'), help='the polarization method for AMOEBA: direct, extrapolated, or mutual [default: mutual]')
-parser.add_option('--mutual-epsilon', default='1e-5', dest='epsilon', type='float', help='mutual induced epsilon for AMOEBA [default: 1e-5]')
-parser.add_option('--heavy-hydrogens', action='store_true', default=False, dest='heavy', help='repartition mass to allow a larger time step')
-parser.add_option('--device', default=None, dest='device', help='device index for CUDA or OpenCL')
-parser.add_option('--precision', default='single', dest='precision', choices=('single', 'mixed', 'double'), help='precision mode for CUDA or OpenCL: single, mixed, or double [default: single]')
-(options, args) = parser.parse_args()
-if len(args) > 0:
-    parser.error('Unknown argument: '+args[0])
-if options.platform is None:
+parser.add_argument('--platform', dest='platform', choices=platformNames, help='name of the platform to benchmark')
+parser.add_argument('--test', dest='test', choices=('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme'), help='the test to perform: gbsa, rf, pme, apoa1rf, apoa1pme, apoa1ljpme, amoebagk, or amoebapme [default: all]')
+parser.add_argument('--pme-cutoff', default=0.9, dest='cutoff', type=float, help='direct space cutoff for PME in nm [default: 0.9]')
+parser.add_argument('--seconds', default=60, dest='seconds', type=float, help='target simulation length in seconds [default: 60]')
+parser.add_argument('--polarization', default='mutual', dest='polarization', choices=('direct', 'extrapolated', 'mutual'), help='the polarization method for AMOEBA: direct, extrapolated, or mutual [default: mutual]')
+parser.add_argument('--mutual-epsilon', default=1e-5, dest='epsilon', type=float, help='mutual induced epsilon for AMOEBA [default: 1e-5]')
+parser.add_argument('--heavy-hydrogens', action='store_true', default=False, dest='heavy', help='repartition mass to allow a larger time step')
+parser.add_argument('--device', default=None, dest='device', help='device index for CUDA or OpenCL')
+parser.add_argument('--precision', default='single', dest='precision', choices=('single', 'mixed', 'double'), help='precision mode for CUDA or OpenCL: single, mixed, or double [default: single]')
+args = parser.parse_args()
+if args.platform is None:
     parser.error('No platform specified')
-print('Platform:', options.platform)
-if options.platform in ('CUDA', 'OpenCL'):
-    print('Precision:', options.precision)
-    if options.device is not None:
-        print('Device:', options.device)
+print('Platform:', args.platform)
+if args.platform in ('CUDA', 'OpenCL'):
+    print('Precision:', args.precision)
+    if args.device is not None:
+        print('Device:', args.device)
 
 # Run the simulations.
 
-if options.test is None:
+if args.test is None:
     for test in ('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme'):
         try:
-            runOneTest(test, options)
+            runOneTest(test, args)
         except Exception as ex:
             print('Test failed: %s' % ex.message)
 else:
-    runOneTest(options.test, options)
+    runOneTest(args.test, args)

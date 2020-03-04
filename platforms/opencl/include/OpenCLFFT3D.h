@@ -52,7 +52,7 @@ namespace OpenMM {
  * multiply every value of the original data set by the total number of data points.
  */
 
-class OPENMM_EXPORT_OPENCL OpenCLFFT3D {
+class OPENMM_EXPORT_COMMON OpenCLFFT3D {
 public:
     /**
      * Create an OpenCLFFT3D object for performing transforms of a particular size.

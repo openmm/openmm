@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,6 +30,7 @@
 #include "CudaPlatform.h"
 #include "CudaContext.h"
 #include "CudaKernels.h"
+#include "openmm/common/CommonKernels.h"
 
 namespace OpenMM {
 
@@ -98,8 +99,8 @@ private:
 class CudaParallelCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
     CudaParallelCalcHarmonicBondForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcHarmonicBondForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcHarmonicBondForceKernel&>(kernels[index].getImpl());
+    CommonCalcHarmonicBondForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcHarmonicBondForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -136,8 +137,8 @@ private:
 class CudaParallelCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
 public:
     CudaParallelCalcCustomBondForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcCustomBondForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcCustomBondForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomBondForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomBondForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -174,8 +175,8 @@ private:
 class CudaParallelCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
     CudaParallelCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcHarmonicAngleForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcHarmonicAngleForceKernel&>(kernels[index].getImpl());
+    CommonCalcHarmonicAngleForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcHarmonicAngleForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -212,8 +213,8 @@ private:
 class CudaParallelCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
 public:
     CudaParallelCalcCustomAngleForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcCustomAngleForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcCustomAngleForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomAngleForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomAngleForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -250,8 +251,8 @@ private:
 class CudaParallelCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
     CudaParallelCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcPeriodicTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcPeriodicTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcPeriodicTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcPeriodicTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -288,8 +289,8 @@ private:
 class CudaParallelCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
     CudaParallelCalcRBTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcRBTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcRBTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcRBTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcRBTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -326,8 +327,8 @@ private:
 class CudaParallelCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
 public:
     CudaParallelCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcCMAPTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcCMAPTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcCMAPTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCMAPTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -364,8 +365,8 @@ private:
 class CudaParallelCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
 public:
     CudaParallelCalcCustomTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcCustomTorsionForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcCustomTorsionForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomTorsionForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomTorsionForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -460,8 +461,8 @@ private:
 class CudaParallelCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     CudaParallelCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcCustomNonbondedForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcCustomNonbondedForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomNonbondedForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomNonbondedForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -498,8 +499,8 @@ private:
 class CudaParallelCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
 public:
     CudaParallelCalcCustomExternalForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcCustomExternalForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcCustomExternalForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomExternalForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomExternalForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -536,8 +537,8 @@ private:
 class CudaParallelCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
     CudaParallelCalcCustomHbondForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcCustomHbondForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcCustomHbondForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomHbondForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomHbondForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.
@@ -574,8 +575,8 @@ private:
 class CudaParallelCalcCustomCompoundBondForceKernel : public CalcCustomCompoundBondForceKernel {
 public:
     CudaParallelCalcCustomCompoundBondForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system);
-    CudaCalcCustomCompoundBondForceKernel& getKernel(int index) {
-        return dynamic_cast<CudaCalcCustomCompoundBondForceKernel&>(kernels[index].getImpl());
+    CommonCalcCustomCompoundBondForceKernel& getKernel(int index) {
+        return dynamic_cast<CommonCalcCustomCompoundBondForceKernel&>(kernels[index].getImpl());
     }
     /**
      * Initialize the kernel.

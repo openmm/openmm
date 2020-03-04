@@ -4,7 +4,7 @@
   <Type name="381" class="74" element="H" mass="1.008"/>
  </AtomTypes>
  <Residues>
-  <Residue name="HOH">
+  <Residue name="HOH" rigidWater="false">
    <Atom name="H1" type="381"/>
    <Atom name="H2" type="381"/>
    <Atom name="O" type="380"/>
