@@ -267,6 +267,7 @@ void NoseHooverIntegrator::setRelativeCollisionFrequency(double frequency, int c
 }
 
 double NoseHooverIntegrator::computeKineticEnergy() {
+    forcesAreValid = false;
     double kE = 0.0;
     if(noseHooverChains.size() > 0) {
         for (const auto &nhc: noseHooverChains){
@@ -276,6 +277,10 @@ double NoseHooverIntegrator::computeKineticEnergy() {
         kE = vvKernel.getAs<IntegrateVelocityVerletStepKernel>().computeKineticEnergy(*context, *this);
     }
     return kE;
+}
+
+bool NoseHooverIntegrator::kineticEnergyRequiresForce() const {
+    return false;
 }
 
 double NoseHooverIntegrator::computeHeatBathEnergy() {
@@ -340,7 +345,8 @@ void NoseHooverIntegrator::step(int steps) {
         throw OpenMMException("This Integrator is not bound to a context!");
     std::pair<double, double> scale, kineticEnergy;
     for (int i = 0; i < steps; ++i) {
-        context->updateContextState();
+        if(context->updateContextState())
+            forcesAreValid = false;
         for(auto &nhc : noseHooverChains) {
             kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, false);
             scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, nhc, kineticEnergy, getStepSize());

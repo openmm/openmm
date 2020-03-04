@@ -1,10 +1,6 @@
-
-//#include <initializer_list>
-
-__kernel void propagateNoseHooverChain(__global mixed2* restrict chainData, __global const mixed2 * restrict energySum, __global mixed2* restrict scaleFactor,
-                                                    __global mixed* restrict chainMasses, __global mixed* restrict chainForces, 
-                                                    int chainType, int chainLength, int numMTS, int numDOFs, float timeStep,
-                                                    mixed kT, float frequency){
+KERNEL void propagateNoseHooverChain(GLOBAL mixed2* RESTRICT chainData, GLOBAL const mixed2 * RESTRICT energySum, GLOBAL mixed2* RESTRICT scaleFactor,
+                                     GLOBAL mixed* RESTRICT chainMasses, GLOBAL mixed* RESTRICT chainForces, int chainType, int chainLength, int numMTS,
+                                     int numDOFs, float timeStep, mixed kT, float frequency){
     const mixed kineticEnergy = chainType == 0 ? energySum[0].x : energySum[0].y;
     mixed scale = 1;
     if(kineticEnergy < 1e-8) return;
@@ -54,10 +50,9 @@ __kernel void propagateNoseHooverChain(__global mixed2* restrict chainData, __gl
 /**
  * Compute total (potential + kinetic) energy of the Nose-Hoover beads
  */
-__kernel void computeHeatBathEnergy(__global mixed* restrict heatBathEnergy, int chainLength, int numDOFs,
-                                                 mixed kT, float frequency, __global const mixed2* restrict chainData){
+KERNEL void computeHeatBathEnergy(GLOBAL mixed* RESTRICT heatBathEnergy, int chainLength, int numDOFs,
+                                  mixed kT, float frequency, GLOBAL const mixed2* RESTRICT chainData){
     // Note that this is always incremented; make sure it's zeroed properly before the first call
-
     for(int i = 0; i < chainLength; ++i) {
         mixed prefac = i ? 1 : numDOFs;
         mixed mass = prefac * kT / (frequency * frequency);
@@ -70,25 +65,24 @@ __kernel void computeHeatBathEnergy(__global mixed* restrict heatBathEnergy, int
     }
 }
 
-__kernel void computeAtomsKineticEnergy(__global mixed2 * restrict energyBuffer, int numAtoms,
-                                        __global const mixed4* restrict velm, __global const int *restrict atoms){
-    mixed2 energy = (mixed2) (0,0);
-    //energy = 1; return;
-    int index = get_global_id(0);
+KERNEL void computeAtomsKineticEnergy(GLOBAL mixed2 * RESTRICT energyBuffer, int numAtoms,
+                                      GLOBAL const mixed4* RESTRICT velm, GLOBAL const int *RESTRICT atoms){
+    mixed2 energy = make_mixed2(0,0);
+    int index = GLOBAL_ID;
     while (index < numAtoms){
         int atom = atoms[index];
         mixed4 v = velm[atom];
         mixed mass = v.w == 0 ? 0 : 1 / v.w;
         energy.x += 0.5f * mass * (v.x*v.x + v.y*v.y + v.z*v.z);
-        index += get_global_size(0);
+        index += GLOBAL_SIZE;
     }
-    energyBuffer[get_global_id(0)] = energy;
+    energyBuffer[GLOBAL_ID] = energy;
 }
 
-__kernel void computePairsKineticEnergy(__global mixed2 * restrict energyBuffer, int numPairs,
-                                        __global const mixed4* restrict velm, __global const int2 *restrict pairs){
-    mixed2 energy = (mixed2) (0,0);
-    int index = get_global_id(0);
+KERNEL void computePairsKineticEnergy(GLOBAL mixed2 * RESTRICT energyBuffer, int numPairs,
+                                      GLOBAL const mixed4* RESTRICT velm, GLOBAL const int2 *RESTRICT pairs){
+    mixed2 energy = make_mixed2(0,0);
+    int index = GLOBAL_ID;
     while (index < numPairs){
         int2 pair = pairs[index];
         int atom1 = pair.x;
@@ -107,64 +101,74 @@ __kernel void computePairsKineticEnergy(__global mixed2 * restrict energyBuffer,
         rv.z = v2.z - v1.z;
         energy.x += 0.5f * (m1 + m2) * (cv.x*cv.x + cv.y*cv.y + cv.z*cv.z);
         energy.y += 0.5f * (m1 * m2 / (m1 + m2)) * (rv.x*rv.x + rv.y*rv.y + rv.z*rv.z);
-        index += get_global_size(0);
+        index += GLOBAL_SIZE;
     }
     // The atoms version of this has been called already, so accumulate instead of assigning here
-    energyBuffer[get_global_id(0)].xy += energy.xy;
+    energyBuffer[GLOBAL_ID].x += energy.x;
+    energyBuffer[GLOBAL_ID].y += energy.y;
 }
 
-__kernel void scaleAtomsVelocities(__global mixed2* restrict scaleFactor, int numAtoms,
-                                   __global mixed4* restrict velm, __global const int *restrict atoms){
+KERNEL void scaleAtomsVelocities(GLOBAL mixed2* RESTRICT scaleFactor, int numAtoms,
+                                   GLOBAL mixed4* RESTRICT velm, GLOBAL const int *RESTRICT atoms){
     const mixed scale = scaleFactor[0].x;
-    int index = get_global_id(0);
+    int index = GLOBAL_ID;
     while (index < numAtoms){
         int atom = atoms[index];
         velm[atom].x *= scale;
         velm[atom].y *= scale;
         velm[atom].z *= scale;
-        index += get_global_size(0);
+        index += GLOBAL_SIZE;
     }
 }
 
-__kernel void scalePairsVelocities(__global mixed2 * restrict scaleFactor, int numPairs,
-                                   __global mixed4* restrict velm, __global const int2 *restrict pairs){
-    int index = get_global_id(0);
+KERNEL void scalePairsVelocities(GLOBAL mixed2 * RESTRICT scaleFactor, int numPairs,
+                                 GLOBAL mixed4* RESTRICT velm, GLOBAL const int2 *RESTRICT pairs){
+    int index = GLOBAL_ID;
+    mixed comScale = scaleFactor[0].x;
+    mixed relScale = scaleFactor[0].y;
     while (index < numPairs){
         int atom1 = pairs[index].x;
         int atom2 = pairs[index].y;
         mixed m1 = velm[atom1].w == 0 ? 0 : 1 / velm[atom1].w;
         mixed m2 = velm[atom2].w == 0 ? 0 : 1 / velm[atom2].w;
         mixed4 cv;
-        cv.xyz = (m1*velm[atom1].xyz + m2*velm[atom2].xyz) / (m1 + m2);
+        cv.x = (m1*velm[atom1].x + m2*velm[atom2].x) / (m1 + m2);
+        cv.y = (m1*velm[atom1].y + m2*velm[atom2].y) / (m1 + m2);
+        cv.z = (m1*velm[atom1].z + m2*velm[atom2].z) / (m1 + m2);
         mixed4 rv;
-        rv.xyz = velm[atom2].xyz - velm[atom1].xyz;
-        velm[atom1].x = scaleFactor[0].x * cv.x - scaleFactor[0].y * rv.x * m2 / (m1 + m2);
-        velm[atom1].y = scaleFactor[0].x * cv.y - scaleFactor[0].y * rv.y * m2 / (m1 + m2);
-        velm[atom1].z = scaleFactor[0].x * cv.z - scaleFactor[0].y * rv.z * m2 / (m1 + m2);
-        velm[atom2].x = scaleFactor[0].x * cv.x + scaleFactor[0].y * rv.x * m1 / (m1 + m2);
-        velm[atom2].y = scaleFactor[0].x * cv.y + scaleFactor[0].y * rv.y * m1 / (m1 + m2);
-        velm[atom2].z = scaleFactor[0].x * cv.z + scaleFactor[0].y * rv.z * m1 / (m1 + m2);
-        index += get_global_size(0);
+        rv.x = velm[atom2].x - velm[atom1].x;
+        rv.y = velm[atom2].y - velm[atom1].y;
+        rv.z = velm[atom2].z - velm[atom1].z;
+        velm[atom1].x = comScale * cv.x - relScale * rv.x * m2 / (m1 + m2);
+        velm[atom1].y = comScale * cv.y - relScale * rv.y * m2 / (m1 + m2);
+        velm[atom1].z = comScale * cv.z - relScale * rv.z * m2 / (m1 + m2);
+        velm[atom2].x = comScale * cv.x + relScale * rv.x * m1 / (m1 + m2);
+        velm[atom2].y = comScale * cv.y + relScale * rv.y * m1 / (m1 + m2);
+        velm[atom2].z = comScale * cv.z + relScale * rv.z * m1 / (m1 + m2);
+        index += GLOBAL_SIZE;
     }
 }
 
 /**
- * Sum the energy buffer containing a pair of energies stored as mixed2.  This is copied from utilities.cu with small modifications
+ * Sum the energy buffer containing a pair of energies stored as mixed2.  This is taken from the analogous customIntegrator code
  */
-__kernel void reduceEnergyPair(__global const mixed2* restrict energyBuffer, __global mixed2* restrict result, int bufferSize, int workGroupSize, __local mixed2* restrict tempBuffer) {
-    const unsigned int thread = get_local_id(0);
-    mixed2 sum = (mixed2) (0,0);
-    for (unsigned int index = thread; index < bufferSize; index += get_local_size(0)) {
-        sum.xy += energyBuffer[index].xy;
+KERNEL void reduceEnergyPair(GLOBAL const mixed2* RESTRICT sumBuffer, GLOBAL mixed2* result, int bufferSize) {
+    LOCAL mixed2 tempBuffer[WORK_GROUP_SIZE];
+    const unsigned int thread = LOCAL_ID;
+    mixed2 sum = make_mixed2(0,0);
+    for (unsigned int index = thread; index < bufferSize; index += LOCAL_SIZE) {
+        sum.x += sumBuffer[index].x;
+        sum.y += sumBuffer[index].y;
     }
-    tempBuffer[thread].xy = sum.xy;
-    for (int i = 1; i < workGroupSize; i *= 2) {
-        barrier(CLK_LOCAL_MEM_FENCE);
-        if (thread%(i*2) == 0 && thread+i < workGroupSize) {
-            tempBuffer[thread].xy += tempBuffer[thread+i].xy;
+    tempBuffer[thread].x = sum.x;
+    tempBuffer[thread].y = sum.y;
+    for (int i = 1; i < WORK_GROUP_SIZE; i *= 2) {
+        SYNC_THREADS;
+        if (thread%(i*2) == 0 && thread+i < WORK_GROUP_SIZE) {
+            tempBuffer[thread].x += tempBuffer[thread+i].x;
+            tempBuffer[thread].y += tempBuffer[thread+i].y;
         }
     }
-    if (thread == 0) {
+    if (thread == 0)
         *result = tempBuffer[0];
-    }
 }
