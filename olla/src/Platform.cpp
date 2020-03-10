@@ -222,7 +222,11 @@ static void* loadOneLibrary(const string& file) {
 #ifdef __PNACL__
     throw OpenMMException("Loading dynamic libraries is not supported on PNaCl");
 #else
+#ifdef __APPLE__
+    void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+#else
     void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_LOCAL);
+#endif
     if (handle == NULL) {
         throw OpenMMException("Error loading library "+file+": "+dlerror());
     }
