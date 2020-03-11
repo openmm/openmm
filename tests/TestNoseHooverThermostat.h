@@ -165,7 +165,7 @@ void testDimerBox(bool constrain=true) {
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temperature);
 
-    int nSteps = 1500;
+    int nSteps = 5000;
     double mean_temp = 0.0;
     std::vector<double> energies(nSteps);
     for (int i = 0; i < nSteps; ++i) {
@@ -195,7 +195,7 @@ void testDimerBox(bool constrain=true) {
     // Check mean temperature
     ASSERT_USUALLY_EQUAL_TOL(temperature, mean_temp, 1e-2);
     // Check fluctuation of conserved (total bath + system) energy
-    ASSERT_USUALLY_EQUAL_TOL(relative_std, 0, 5e-4);
+    ASSERT_USUALLY_EQUAL_TOL(relative_std, 0, 1e-3);
 }
 
 void testCheckpoints() {
