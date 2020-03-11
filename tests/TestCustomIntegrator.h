@@ -1128,6 +1128,34 @@ void testRecordEnergy() {
     }
 }
 
+void testInitialTemperature() {
+    // Check temperature initialization for a collection of randomly placed particles
+    const int numParticles = 500000;
+    const int nDoF = 3 * numParticles;
+    const double targetTemperature = 300;
+    System system;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    std::vector<Vec3> positions(numParticles);
+
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        positions[i][0] = genrand_real2(sfmt);
+        positions[i][1] = genrand_real2(sfmt);
+        positions[i][2] = genrand_real2(sfmt);
+    }
+
+    CustomIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(targetTemperature);
+    auto velocities = context.getState(State::Velocities).getVelocities();
+    double kineticEnergy = 0;
+    for(const auto &v : velocities) kineticEnergy += 0.5 * v.dot(v);
+    double temperature = (2*kineticEnergy / (nDoF*BOLTZ));
+    ASSERT_USUALLY_EQUAL_TOL(targetTemperature, temperature, 0.01);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -1155,6 +1183,7 @@ int main(int argc, char* argv[]) {
         testUpdateContextState();
         testVectorFunctions();
         testRecordEnergy();
+        testInitialTemperature();
         runPlatformTests();
     }
     catch(const exception& e) {

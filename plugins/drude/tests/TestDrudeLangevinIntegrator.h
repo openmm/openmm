@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
- * Authors: Andreas Krämer and Andrew C. Simmonett                            *
+ * Portions copyright (c) 2013-2016 Stanford University and the Authors.      *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -30,45 +30,87 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "openmm/NoseHooverChain.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/DrudeNoseHooverIntegrator.h"
 #include "openmm/Context.h"
-#include "openmm/State.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/VirtualSite.h"
 #include "openmm/NonbondedForce.h"
-#include "openmm/CustomExternalForce.h"
+#include "openmm/Platform.h"
 #include "openmm/System.h"
+#include "openmm/VirtualSite.h"
 #include "openmm/DrudeForce.h"
-#include "SimTKOpenMMRealType.h"
-#include "sfmt/SFMT.h"
+#include "openmm/DrudeLangevinIntegrator.h"
+#include "SimTKOpenMMUtilities.h"
 #include <iostream>
-#include <sstream>
-#include <iomanip>
 #include <vector>
-#include <algorithm>
-#include <numeric>
 
 using namespace OpenMM;
 using namespace std;
 
-void build_waterbox(System &system, int gridSize, double polarizability, vector<Vec3> & positions) {
+void testSinglePair() {
+    const double temperature = 300.0;
+    const double temperatureDrude = 10.0;
+    const double k = ONE_4PI_EPS0*1.5;
+    const double charge = 0.1;
+    const double alpha = ONE_4PI_EPS0*charge*charge/k;
+    const double mass1 = 1.0;
+    const double mass2 = 0.1;
+    const double totalMass = mass1+mass2;
+    const double reducedMass = (mass1*mass2)/(mass1+mass2);
+    const double maxDistance = 0.05;
+    System system;
+    system.addParticle(mass1);
+    system.addParticle(mass2);
+    DrudeForce* drude = new DrudeForce();
+    drude->addParticle(1, 0, -1, -1, -1, charge, alpha, 1, 1);
+    system.addForce(drude);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 0, 0);
+    DrudeLangevinIntegrator integ(temperature, 20.0, temperatureDrude, 20.0, 0.003);
+    integ.setMaxDrudeDistance(maxDistance);
+    Context context(system, integ, platform);
+    context.setPositions(positions);
+
+    // Equilibrate.
+
+    integ.step(1000);
+
+    // Compute the internal and center of mass temperatures.
+
+    double keCM = 0, keInternal = 0;
+    int numSteps = 10000;
+    for (int i = 0; i < numSteps; i++) {
+        integ.step(10);
+        State state = context.getState(State::Velocities | State::Positions);
+        const vector<Vec3>& vel = state.getVelocities();
+        Vec3 velCM = vel[0]*(mass1/totalMass) + vel[1]*(mass2/totalMass);
+        keCM += 0.5*totalMass*velCM.dot(velCM);
+        Vec3 velInternal = vel[0]-vel[1];
+        keInternal += 0.5*reducedMass*velInternal.dot(velInternal);
+        Vec3 delta = state.getPositions()[0]-state.getPositions()[1];
+        double distance = sqrt(delta.dot(delta));
+        ASSERT(distance <= maxDistance*(1+1e-6));
+    }
+    ASSERT_USUALLY_EQUAL_TOL(3*0.5*BOLTZ*temperature, keCM/numSteps, 0.1);
+    ASSERT_USUALLY_EQUAL_TOL(3*0.5*BOLTZ*temperatureDrude, keInternal/numSteps, 0.01);
+}
+
+void testWater() {
     // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
     // and Drude particles.
+
+    const int gridSize = 3;
     const int numMolecules = gridSize*gridSize*gridSize;
-    const double spacing = 0.8;
+    const double spacing = 0.6;
     const double boxSize = spacing*(gridSize+1);
+    const double temperature = 300.0;
+    const double temperatureDrude = 10.0;
+    System system;
     NonbondedForce* nonbonded = new NonbondedForce();
     DrudeForce* drude = new DrudeForce();
-    CMMotionRemover* cmm = new CMMotionRemover(1);
-    system.addForce(cmm);
     system.addForce(nonbonded);
     system.addForce(drude);
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
-    nonbonded->setCutoffDistance(1.2);
-    nonbonded->setSwitchingDistance(0.8);
+    nonbonded->setCutoffDistance(1.0);
     for (int i = 0; i < numMolecules; i++) {
         int startIndex = system.getNumParticles();
         system.addParticle(15.6); // O
@@ -88,10 +130,11 @@ void build_waterbox(System &system, int gridSize, double polarizability, vector<
         system.addConstraint(startIndex, startIndex+3, 0.09572);
         system.addConstraint(startIndex+2, startIndex+3, 0.15139);
         system.setVirtualSite(startIndex+4, new ThreeParticleAverageSite(startIndex, startIndex+2, startIndex+3, 0.786646558, 0.106676721, 0.106676721));
-        drude->addParticle(startIndex+1, startIndex, -1, -1, -1, -1.71636, polarizability, 1, 1);
+        drude->addParticle(startIndex+1, startIndex, -1, -1, -1, -1.71636, ONE_4PI_EPS0*1.71636*1.71636/(100000*4.184), 1, 1);
     }
-    for (int i = 0; i < gridSize; i++) {
-        for (int j = 0; j < gridSize; j++) {
+    vector<Vec3> positions;
+    for (int i = 0; i < gridSize; i++)
+        for (int j = 0; j < gridSize; j++)
             for (int k = 0; k < gridSize; k++) {
                 Vec3 pos(i*spacing, j*spacing, k*spacing);
                 positions.push_back(pos);
@@ -100,129 +143,90 @@ void build_waterbox(System &system, int gridSize, double polarizability, vector<
                 positions.push_back(pos+Vec3(-0.023999, 0.092663, 0));
                 positions.push_back(pos);
             }
-        }
-    }
-}
-
-void testWaterBox() {
-    // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
-    // and Drude particles.
-    System system;
-    const int gridSize = 3;
-    vector<Vec3> positions;
-    double polarizability = ONE_4PI_EPS0*1.71636*1.71636/(100000*4.184);
-
-    build_waterbox(system, gridSize, polarizability, positions);
-
-    const int numMolecules = gridSize*gridSize*gridSize;
-    int numStandardDof = 3*3*numMolecules - system.getNumConstraints();
-    int numDrudeDof = 3*numMolecules;
-    int numDof = numStandardDof+numDrudeDof;
-    const double temperature = 300.0;
-    const double temperatureDrude = 10.0;
 
     // Simulate it and check the temperature.
-    int chainLength = 4;
-    int numMTS = 4;
-    int numYS = 5;
-    // N.B. These are higher frequencies than recommeded for production runs, but are used
-    // here to achieve rapid equilibration to the target temperature, allowing a short run
-    double frequency = 1000.0;
-    double frequencyDrude = 1000.0;
-    int randomSeed = 100;
-    DrudeNoseHooverIntegrator integ(temperature, frequency,
-                                    temperatureDrude, frequencyDrude, 0.0005,
-                                    chainLength, numMTS, numYS);
+
+    DrudeLangevinIntegrator integ(temperature, 50.0, temperatureDrude, 50.0, 0.0005);
     Context context(system, integ, platform);
     context.setPositions(positions);
-    context.setVelocitiesToTemperature(temperature, randomSeed);
-    context.applyConstraints(1e-6);
-
-    // Equilibrate
-    integ.step(1500);
-
-    // Compute the internal and center of mass temperatures.
-    double totalKE = 0;
-    const int numSteps = 500;
-    double meanTemp = 0.0;
-    double meanDrudeTemp = 0.0;
-    double meanConserved = 0.0;
-    for (int i = 0; i < numSteps; i++) {
-        integ.step(1);
-        State state = context.getState(State::Energy);
-        double KE = state.getKineticEnergy();
-        double PE = state.getPotentialEnergy();
-        double fullKE = integ.computeTotalKineticEnergy();
-        double drudeKE = integ.computeDrudeKineticEnergy();
-        double temp = KE/(0.5*numStandardDof*BOLTZ);
-        double drudeTemp = drudeKE/(0.5*numDrudeDof*BOLTZ);
-        meanTemp = (i*meanTemp + temp)/(i+1);
-        meanDrudeTemp = (i*meanDrudeTemp + drudeTemp)/(i+1);
-        double heatBathEnergy = integ.computeHeatBathEnergy();
-        double conserved = PE + fullKE + heatBathEnergy;
-        meanConserved = (i*meanConserved + conserved)/(i+1);
-        totalKE += KE;
-        ASSERT(fabs(meanConserved - conserved) < 0.3);
-    }
-    totalKE /= numSteps;
-    ASSERT_USUALLY_EQUAL_TOL(temperature, meanTemp,  0.03);
-    ASSERT_USUALLY_EQUAL_TOL(temperatureDrude, meanDrudeTemp,  0.03);
-}
-
-
-double testWaterBoxWithHardWallConstraint(double hardWallConstraint){
-    // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
-    // and Drude particles.
-    System system;
-    const int gridSize = 3;
-    vector<Vec3> positions;
-
-    double polarizability = 1e-2;
-    build_waterbox(system, gridSize, polarizability, positions);
-
-    const int numMolecules = gridSize*gridSize*gridSize;
-    int numStandardDof = 3*3*numMolecules - system.getNumConstraints();
-    int numDrudeDof = 3*numMolecules;
-    int numDof = numStandardDof+numDrudeDof;
-    const double temperature = 300.0;
-    const double temperatureDrude = 10.0;
-
-    // Simulate it and check the temperature.
-    int chainLength = 4;
-    int numMTS = 3;
-    int numYS = 3;
-    double frequency = 25.0;
-    double frequencyDrude = 25.0;
-    int randomSeed = 100;
-    DrudeNoseHooverIntegrator integ(temperature, frequency,
-                                    temperatureDrude, frequencyDrude, 0.0005,
-                                    chainLength, numMTS, numYS);
-    integ.setMaxDrudeDistance(hardWallConstraint);
-    Context context(system, integ, platform);
-    context.setPositions(positions);
-    context.setVelocitiesToTemperature(temperature, randomSeed);
-    context.applyConstraints(1e-6);
+    context.applyConstraints(1e-5);
 
     // Equilibrate.
-    integ.step(50);
+
+    integ.step(500);
 
     // Compute the internal and center of mass temperatures.
-    double totalKE = 0;
-    const int numSteps = 500;
-    double meanTemp = 0.0;
-    double meanDrudeTemp = 0.0;
-    double meanConserved = 0.0;
-    double maxR = 0.0;
+
+    double ke = 0;
+    int numSteps = 4000;
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
-        State state = context.getState(State::Energy | State::Positions);
-        const auto & positions = state.getPositions();
-        for(int mol = 0; mol < gridSize*gridSize*gridSize; ++mol) {
-            auto dR = positions[5*mol+1] - positions[5*mol];
-            maxR = std::max(maxR, std::sqrt(dR.dot(dR)));
-        }
+        ke += context.getState(State::Energy).getKineticEnergy();
     }
-    return maxR;
+    ke /= numSteps;
+    int numStandardDof = 3*3*numMolecules-system.getNumConstraints();
+    int numDrudeDof = 3*numMolecules;
+    int numDof = numStandardDof+numDrudeDof;
+    double expectedTemp = (numStandardDof*temperature+numDrudeDof*temperatureDrude)/numDof;
+    ASSERT_USUALLY_EQUAL_TOL(expectedTemp, ke/(0.5*numDof*BOLTZ), 0.03);
+}
+
+void testForceEnergyConsistency() {
+    // Create a box of polarizable particles.
+    const int gridSize = 3;
+    const int numAtoms = gridSize*gridSize*gridSize;
+    const double spacing = 0.6;
+    const double boxSize = spacing*(gridSize+1);
+    const double temperature = 300.0;
+    const double temperatureDrude = 10.0;
+    System system;
+    vector<Vec3> positions;
+    NonbondedForce* nonbonded = new NonbondedForce();
+    DrudeForce* drude = new DrudeForce();
+    system.addForce(nonbonded);
+    system.addForce(drude);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setCutoffDistance(1.0);
+    nonbonded->setUseSwitchingFunction(true);
+    nonbonded->setSwitchingDistance(0.9);
+    nonbonded->setEwaldErrorTolerance(5e-5);
+    for (int i = 0; i < numAtoms; i++) {
+        int startIndex = system.getNumParticles();
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        nonbonded->addParticle(1.0, 0.3, 1.0);
+        nonbonded->addParticle(-1.0, 0.3, 1.0);
+        nonbonded->addException(startIndex, startIndex+1, 0, 1, 0);
+        drude->addParticle(startIndex+1, startIndex, -1, -1, -1, -1.0, 0.001, 1, 1);
+    }
+    for (int i = 0; i < gridSize; i++)
+        for (int j = 0; j < gridSize; j++)
+            for (int k = 0; k < gridSize; k++) {
+                Vec3 pos(i*spacing, j*spacing, k*spacing);
+                positions.push_back(pos);
+                positions.push_back(pos);
+            }
+
+    // Simulate it and check that force and energy remain consistent.
+
+    DrudeLangevinIntegrator integ(temperature, 50.0, temperatureDrude, 50.0, 0.001);
+    Context context(system, integ, platform);
+    context.setPositions(positions);
+    State prevState;
+    for (int i = 0; i < 100; i++) {
+        State state = context.getState(State::Energy | State::Forces | State::Positions);
+        if (i > 0) {
+            double expectedEnergyChange = 0;
+            for (int j = 0; j < system.getNumParticles(); j++) {
+                Vec3 delta = state.getPositions()[j]-prevState.getPositions()[j];
+                expectedEnergyChange -= 0.5*(state.getForces()[j]+prevState.getForces()[j]).dot(delta);
+            }
+            ASSERT_EQUAL_TOL(expectedEnergyChange, state.getPotentialEnergy()-prevState.getPotentialEnergy(), 0.05);
+        }
+        prevState = state;
+        integ.step(1);
+    }
 }
 
 void testInitialTemperature() {
@@ -252,10 +256,8 @@ void testInitialTemperature() {
         drude->addParticle(2*i+1, 2*i, -1, -1, -1, -1.0, 0.001, 1, 1);
     }
     system.addForce(drude);
-    CMMotionRemover* cmm = new CMMotionRemover(1);
-    system.addForce(cmm);
 
-    DrudeNoseHooverIntegrator integrator(targetTemperature, 25, drudeTemperature, 25, 0.001);
+    DrudeLangevinIntegrator integrator(targetTemperature, 25, drudeTemperature, 25, 0.001);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(targetTemperature);
@@ -289,23 +291,17 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         setupKernels(argc, argv);
-
-        testWaterBox();
-        double maxDrudeDistance = 0.005;
-        double observedDrudeDistance = testWaterBoxWithHardWallConstraint(0.0);
-        ASSERT(observedDrudeDistance > maxDrudeDistance);
-        observedDrudeDistance = testWaterBoxWithHardWallConstraint(maxDrudeDistance);
-        // Remove later: just trying to find out why Jenkins is upset
-        if(observedDrudeDistance >= maxDrudeDistance) printf("Max distance %16.10f\n", observedDrudeDistance);
-        ASSERT(observedDrudeDistance < maxDrudeDistance);
         testInitialTemperature();
+        testSinglePair();
+        testWater();
+        testForceEnergyConsistency();
         runPlatformTests();
     }
-    catch(const exception& e) {
-        cout << "exception: " << e.what() << endl;
+    catch(const std::exception& e) {
+        std::cout << "exception: " << e.what() << std::endl;
+        std::cout << "FAIL - ERROR.  Test failed." << std::endl;
         return 1;
     }
-    cout << "Done" << endl;
+    std::cout << "Done" << std::endl;
     return 0;
 }
-

@@ -34,14 +34,16 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/DrudeKernels.h"
+#include <cmath>
 #include <ctime>
+#include <set>
 #include <string>
 
 using namespace OpenMM;
 using std::string;
 using std::vector;
 
-DrudeLangevinIntegrator::DrudeLangevinIntegrator(double temperature, double frictionCoeff, double drudeTemperature, double drudeFrictionCoeff, double stepSize) {
+DrudeLangevinIntegrator::DrudeLangevinIntegrator(double temperature, double frictionCoeff, double drudeTemperature, double drudeFrictionCoeff, double stepSize) : DrudeIntegrator(stepSize) {
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setDrudeTemperature(drudeTemperature);
@@ -50,16 +52,6 @@ DrudeLangevinIntegrator::DrudeLangevinIntegrator(double temperature, double fric
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
     setRandomNumberSeed(0);
-}
-
-double DrudeLangevinIntegrator::getMaxDrudeDistance() const {
-    return maxDrudeDistance;
-}
-
-void DrudeLangevinIntegrator::setMaxDrudeDistance(double distance) {
-    if (distance < 0)
-        throw OpenMMException("setMaxDrudeDistance: Distance cannot be negative");
-    maxDrudeDistance = distance;
 }
 
 void DrudeLangevinIntegrator::initialize(ContextImpl& contextRef) {
@@ -84,9 +76,6 @@ void DrudeLangevinIntegrator::initialize(ContextImpl& contextRef) {
 
 void DrudeLangevinIntegrator::cleanup() {
     kernel = Kernel();
-}
-
-void DrudeLangevinIntegrator::stateChanged(State::DataType changed) {
 }
 
 vector<string> DrudeLangevinIntegrator::getKernelNames() {

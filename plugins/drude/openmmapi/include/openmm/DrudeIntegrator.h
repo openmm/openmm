@@ -1,5 +1,5 @@
-#ifndef OPENMM_DRUDENOSEHOOVERINTEGRATOR_H_
-#define OPENMM_DRUDENOSEHOOVERINTEGRATOR_H_
+#ifndef OPENMM_DRUDEINTEGRATOR_H_
+#define OPENMM_DRUDEINTEGRATOR_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
- * Authors: Andreas Krämer and Andrew C. Simmonett                            *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -32,49 +32,46 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/NoseHooverIntegrator.h"
+#include "openmm/Integrator.h"
 #include "openmm/Kernel.h"
 #include "openmm/internal/windowsExportDrude.h"
 
 namespace OpenMM {
 
 /**
- * This Integrator simulates systems that include Drude particles.  It applies two different Nose-Hoover
- * chain thermostats to the different parts of the system.  The first is applied to ordinary particles (ones
- * that are not part of a Drude particle pair), as well as to the center of mass of each Drude particle pair.
- * A second thermostat, typically with a much lower temperature, is applied to the relative internal
- * displacement of each pair.
- *
- * This Integrator requires the System to include a DrudeForce, which it uses to identify the Drude
- * particles.
+ * A base class to encapsulate features common to Drude integrators.
  */
 
-class OPENMM_EXPORT_DRUDE DrudeNoseHooverIntegrator : public NoseHooverIntegrator {
+class OPENMM_EXPORT_DRUDE DrudeIntegrator : public Integrator {
 public:
     /**
-     * Create a DrudeNoseHooverIntegrator.
+     * Create a DrudeSCFIntegrator.
      *
-     * @param temperature the target temperature for the system (in Kelvin).
-     * @param collisionFrequency the frequency of the system's interaction with the heat bath (in inverse picoseconds).
-     * @param drudeTemperature the target temperature for the Drude particles, relative to their parent atom (in Kelvin).
-     * @param drudeCollisionFrequency the frequency of the drude particles' interaction with the heat bath (in inverse picoseconds).
      * @param stepSize       the step size with which to integrator the system (in picoseconds)
-     * @param chainLength the number of beads in the Nose-Hoover chain.
-     * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
-     * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
-     *        used in the chain propagation algorithm (must be 1, 3, or 5).
      */
-    DrudeNoseHooverIntegrator(double temperature, double collisionFrequency, 
-                              double drudeTemperature, double drudeCollisionFrequency, double stepSize, 
-                              int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
-
-    virtual ~DrudeNoseHooverIntegrator();
+    DrudeIntegrator(double stepSize) {};
     /**
-     * This will be called by the Context when it is created.  It informs the Integrator
-     * of what context it will be integrating, and gives it a chance to do any necessary initialization.
-     * It will also get called again if the application calls reinitialize() on the Context.
+     * Advance a simulation through time by taking a series of time steps.
+     *
+     * @param steps   the number of time steps to take
      */
-    void initialize(ContextImpl& context) override;
+    virtual void step(int steps) override {};
+    /**
+     * Get the temperature of the heat bath applied to internal coordinates of Drude particles (in Kelvin).
+     *
+     * @return the temperature of the heat bath, measured in Kelvin
+     */
+    double getDrudeTemperature() const {
+        return drudeTemperature;
+    }
+    /**
+     * Set the temperature of the heat bath applied to internal coordinates of Drude particles (in Kelvin).
+     *
+     * @param temp    the temperature of the heat bath, measured in Kelvin
+     */
+    void setDrudeTemperature(double temp) {
+        drudeTemperature = temp;
+    }
     /**
      * Get the maximum distance a Drude particle can ever move from its parent particle, measured in nm.  This is implemented
      * with a hard wall constraint.  If this distance is set to 0 (the default), the hard wall constraint is omitted.
@@ -86,13 +83,46 @@ public:
      */
     void setMaxDrudeDistance(double distance);
     /**
-     * Compute the kinetic energy of the drude particles at the current time.
+     * Set the random number seed.  The precise meaning of this parameter is undefined, and is left up
+     * to each Platform to interpret in an appropriate way.  It is guaranteed that if two simulations
+     * are run with different random number seeds, the sequence of random forces will be different.  On
+     * the other hand, no guarantees are made about the behavior of simulations that use the same seed.
+     * In particular, Platforms are permitted to use non-deterministic algorithms which produce different
+     * results on successive runs, even if those runs were initialized identically.
+     *
+     * If seed is set to 0 (which is the default value assigned), a unique seed is chosen when a Context
+     * is created from this Force. This is done to ensure that each Context receives unique random seeds
+     * without you needing to set them explicitly.
      */
-    double computeDrudeKineticEnergy();
+    void setRandomNumberSeed(int seed) {
+        randomNumberSeed = seed;
+    }
     /**
-     * Compute the kinetic energy of all (real and drude) particles at the current time.
+     * Get the random number seed.  See setRandomNumberSeed() for details.
      */
-    double computeTotalKineticEnergy();
+    int getRandomNumberSeed() const {
+        return randomNumberSeed;
+    }
+protected:
+    /**
+     * This will be called by the Context when it is created.  It informs the Integrator
+     * of what context it will be integrating, and gives it a chance to do any necessary initialization.
+     * It will also get called again if the application calls reinitialize() on the Context.
+     */
+    virtual void initialize(ContextImpl& context) override {};
+    /**
+     * This will be called by the Context when it is destroyed to let the Integrator do any necessary
+     * cleanup.  It will also get called again if the application calls reinitialize() on the Context.
+     */
+    virtual void cleanup() override {};
+    /**
+     * Get the names of all Kernels used by this Integrator.
+     */
+    virtual std::vector<std::string> getKernelNames() override { return std::vector<std::string>(); }
+    /**
+     * Compute the kinetic energy of the system at the current time.
+     */
+    virtual double computeKineticEnergy() override { return 0; }
     /**
      * Return a list of velocities normally distributed around a target temperature, with the Drude
      * temperatures assigned according to the Drude temperature assigned to the integrator.
@@ -103,10 +133,11 @@ public:
      */
     virtual std::vector<Vec3> getVelocitiesForTemperature(const System &system, double temperature,
                                                           int randomSeed) const override;
-protected:
-    double drudeTemperature;
+
+    int randomNumberSeed;
+    double drudeTemperature, maxDrudeDistance;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_DRUDENOSEHOOVERINTEGRATOR_H_*/
+#endif /*OPENMM_DRUDEINTEGRATOR_H_*/

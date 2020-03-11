@@ -29,7 +29,14 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLDrudeTests.h"
-#include "TestDrudeLangevinIntegrator.h"
+#include "ReferenceTests.h"
 
-void runPlatformTests() {}
+extern "C" void registerDrudeReferenceKernelFactories();
+
+using namespace OpenMM;
+
+void setupKernels (int argc, char* argv[]) {
+    registerDrudeReferenceKernelFactories();
+    platform = dynamic_cast<ReferencePlatform&>(Platform::getPlatformByName("Reference"));
+    initializeTests(argc, argv);
+}

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,45 +31,45 @@
 
 #include "sfmt/SFMT.h"
 #include "SimTKOpenMMRealType.h"
-#include "openmm/Integrator.h"
+#include "openmm/DrudeForce.h"
+#include "openmm/DrudeLangevinIntegrator.h"
+#include "openmm/Context.h"
 #include "openmm/System.h"
-#include "openmm/internal/ContextImpl.h"
+#include "openmm/OpenMMException.h"
 
-#include <cmath>
+#include <set>
 
-using namespace OpenMM;
+namespace OpenMM {
 
-Integrator::Integrator() : owner(NULL), context(NULL) {
-}
+std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed) {
+    // Find the underlying Drude force object
+    const DrudeForce* drudeForce = NULL;
+    for (int i = 0; i < system.getNumForces(); i++)
+        if (dynamic_cast<const DrudeForce*>(&system.getForce(i)) != NULL) {
+            if (drudeForce == NULL)
+                drudeForce = dynamic_cast<const DrudeForce*>(&system.getForce(i));
+            else
+                throw OpenMMException("The System contains multiple DrudeForces");
+        }
+    if (drudeForce == NULL)
+        throw OpenMMException("The System does not contain a DrudeForce");
 
-Integrator::~Integrator() {
-    if (context != NULL) {
-        // The Integrator is being deleted before the Context, so do cleanup now,
-        // then notify the ContextImpl so its own destructor won't try to clean up
-        // the (no longer existing) Integrator.
-
-        cleanup();
-        context->integratorDeleted();
+    // Figure out which particles are individual and which are Drude pairs
+    std::set<int> particles;
+    std::vector<std::pair<int, int>> pairParticles;
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        particles.insert(i);
     }
-}
+    for (int i = 0; i < drudeForce->getNumParticles(); i++) {
+        int p, p1, p2, p3, p4;
+        double charge, polarizability, aniso12, aniso34;
+        drudeForce->getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
+        particles.erase(p);
+        particles.erase(p1);
+        pairParticles.emplace_back(p, p1);
+    }
+    std::vector<int> normalParticles(particles.begin(), particles.end());
 
-double Integrator::getStepSize() const {
-    return stepSize;
-}
-
-void Integrator::setStepSize(double size) {
-    stepSize = size;
-}
-
-double Integrator::getConstraintTolerance() const {
-    return constraintTol;
-}
-
-void Integrator::setConstraintTolerance(double tol) {
-    constraintTol = tol;
-}
-
-std::vector<Vec3> Integrator::getVelocitiesForTemperature(const System &system, double temperature, int randomSeed) const {
     // Generate the list of Gaussian random numbers.
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(randomSeed, sfmt);
@@ -89,13 +89,32 @@ std::vector<Vec3> Integrator::getVelocitiesForTemperature(const System &system, 
     // Assign the velocities.
     std::vector<Vec3> velocities(system.getNumParticles(), Vec3());
     int nextRandom = 0;
-    for (int i = 0; i < system.getNumParticles(); i++) {
-        double mass = system.getParticleMass(i);
+    // First the indivitual atoms
+    for (const auto &atom : normalParticles ) {
+        double mass = system.getParticleMass(atom);
         if (mass != 0) {
             double velocityScale = sqrt(BOLTZ*temperature/mass);
-            velocities[i] = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*velocityScale;
+            velocities[atom] = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*velocityScale;
+        }
+    }
+    // Now the particle-Drude pairs
+    for (const auto &pair : pairParticles ) {
+        const auto atom1 = pair.first;
+        const auto atom2 = pair.second;
+        double mass1 = system.getParticleMass(atom1);
+        double mass2 = system.getParticleMass(atom2);
+        if (mass1 != 0 && mass2 != 0) {
+            double invMass = 1.0 / (mass1 + mass2);
+            double redMass = mass1 * mass2 * invMass;
+            double fracM1 = mass1 * invMass;
+            double fracM2 = mass2 * invMass;
+            Vec3 comVelocity = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*sqrt(BOLTZ*temperature*invMass);
+            Vec3 relVelocity = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*sqrt(BOLTZ*drudeTemperature/redMass);
+            velocities[atom1] = comVelocity - fracM2 * relVelocity;
+            velocities[atom2] = comVelocity + fracM1 * relVelocity;
         }
     }
     return velocities;
 }
 
+}

@@ -29,33 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-//#include "ReferenceTests.h"
-
-#include "openmm/internal/AssertionUtilities.h"
-#include "openmm/Context.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Platform.h"
-#include "openmm/System.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/DrudeForce.h"
-#include "CudaPlatform.h"
-#include "SimTKOpenMMUtilities.h"
-#include <iostream>
-#include <vector>
-
-using namespace OpenMM;
-using namespace std;
-
-extern "C" OPENMM_EXPORT void registerDrudeCudaKernelFactories();
-
-void runPlatformTests() { }
-
+#include "CudaDrudeTests.h"
 #include "TestDrudeNoseHoover.h"
 
-Platform& initializePlatform(int argc, char* argv[]) {
-    registerDrudeCudaKernelFactories();
-    if (argc > 1) Platform::getPlatformByName("CUDA").setPropertyDefaultValue("Precision", std::string(argv[1]));   
-    return Platform::getPlatformByName("CUDA");
-}
-
-
+void runPlatformTests() {}

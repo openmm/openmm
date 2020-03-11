@@ -42,6 +42,7 @@ namespace OpenMM {
 
 class Context;
 class ContextImpl;
+class System;
 
 /**
  * An Integrator defines a method for simulating a System by integrating the equations of motion.
@@ -133,6 +134,16 @@ protected:
     virtual bool kineticEnergyRequiresForce() const {
         return true;
     }
+    /**
+     * Return a list of velocities normally distributed around a target temperature.  This may be
+     * overridden by Drude integrators to ensure that Drude pairs have their center of mass velocity
+     * assigned as a single entity, rather than treating both particles as being independent.
+     *
+     * @param system the system whose velocities are to be initialized.
+     * @param temperature the target temperature in Kelvin.
+     * @param randomSeed the random number seed to use when selecting velocities 
+     */
+    virtual std::vector<Vec3> getVelocitiesForTemperature(const System &system, double temperature, int randomSeed) const;
 private:
     double stepSize, constraintTol;
 };

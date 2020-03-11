@@ -46,11 +46,16 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
+namespace OpenMM {
+    extern std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed);
+}
+
 DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double temperature, double collisionFrequency, 
                                                      double drudeTemperature, double drudeCollisionFrequency,
                                                      double stepSize, int chainLength, int numMTS, int numYoshidaSuzuki) :
-    NoseHooverIntegrator(stepSize) {
-
+    NoseHooverIntegrator(stepSize),
+    drudeTemperature(drudeTemperature)
+{
     setMaxDrudeDistance(0);
     hasSubsystemThermostats_ = false;
     addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int, int>>(), temperature,
@@ -141,5 +146,10 @@ double DrudeNoseHooverIntegrator::computeDrudeKineticEnergy() {
 
 double DrudeNoseHooverIntegrator::computeTotalKineticEnergy() {
     return vvKernel.getAs<IntegrateVelocityVerletStepKernel>().computeKineticEnergy(*context, *this);
+}
+
+std::vector<Vec3> DrudeNoseHooverIntegrator::getVelocitiesForTemperature(const System &system, double temperature,
+                                                                         int randomSeedIn) const {
+    return assignDrudeVelocities(system, temperature, drudeTemperature, randomSeedIn);
 }
 
