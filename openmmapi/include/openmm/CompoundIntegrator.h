@@ -187,6 +187,13 @@ protected:
      * The implementation calls computeKineticEnergy() on whichever Integrator has been set as current.
      */
     double computeKineticEnergy();
+    /**
+     * Get the time interval by which velocities are offset from positions.  This is used to
+     * adjust velocities when setVelocitiesToTemperature() is called on a Context.
+     */
+    double getVelocityTimeOffset() const {
+        return getIntegrator(0).getVelocityTimeOffset();
+    }
 private:
     int currentIntegrator;
     std::vector<Integrator*> integrators;

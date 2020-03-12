@@ -231,7 +231,7 @@ void testForceEnergyConsistency() {
 
 void testInitialTemperature() {
     // Check temperature initialization for a collection of randomly placed particles
-    const int numRealParticles = 500000;
+    const int numRealParticles = 50000;
     const int numParticles = 2 * numRealParticles;
     const int nDoF = 3 * numRealParticles;
     const double targetTemperature = 300;

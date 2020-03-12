@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -144,6 +144,13 @@ protected:
      * @param randomSeed the random number seed to use when selecting velocities 
      */
     virtual std::vector<Vec3> getVelocitiesForTemperature(const System &system, double temperature, int randomSeed) const;
+    /**
+     * Get the time interval by which velocities are offset from positions.  This is used to
+     * adjust velocities when setVelocitiesToTemperature() is called on a Context.
+     */
+    virtual double getVelocityTimeOffset() const {
+        return 0.0;
+    }
 private:
     double stepSize, constraintTol;
 };

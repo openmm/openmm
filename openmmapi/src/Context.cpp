@@ -183,7 +183,19 @@ void Context::setVelocities(const vector<Vec3>& velocities) {
 void Context::setVelocitiesToTemperature(double temperature, int randomSeed) {
     const Integrator& integrator = impl->getIntegrator();
     const System& system = impl->getSystem();
-    setVelocities(integrator.getVelocitiesForTemperature(system, temperature, randomSeed));
+    vector<Vec3> velocities = integrator.getVelocitiesForTemperature(system, temperature, randomSeed);
+    double offset = integrator.getVelocityTimeOffset();
+    if (offset != 0.0) {
+        impl->calcForcesAndEnergy(true, false, -1);
+        vector<Vec3> forces;
+        impl->getForces(forces);
+        for (int i = 0; i < system.getNumParticles(); i++) {
+            double mass = system.getParticleMass(i);
+            if (mass != 0.0)
+                velocities[i] -= (offset/mass)*forces[i];
+        }
+    }
+    setVelocities(velocities);
     impl->applyVelocityConstraints(1e-5);
 }
 
