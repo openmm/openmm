@@ -263,7 +263,7 @@ void testRandomSeed() {
 
 void testInitialTemperature() {
     // Check temperature initialization for a collection of randomly placed particles
-    const int numParticles = 500000;
+    const int numParticles = 50000;
     const int nDoF = 3 * numParticles;
     const double targetTemperature = 300;
     System system;

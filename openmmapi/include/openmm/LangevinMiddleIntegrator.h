@@ -140,6 +140,13 @@ protected:
      * Computing kinetic energy for this integrator does not require forces.
      */
     bool kineticEnergyRequiresForce() const;
+    /**
+     * Get the time interval by which velocities are offset from positions.  This is used to
+     * adjust velocities when setVelocitiesToTemperature() is called on a Context.
+     */
+    double getVelocityTimeOffset() const {
+        return getStepSize()/2;
+    }
 private:
     double temperature, friction;
     int randomNumberSeed;
