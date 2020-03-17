@@ -366,41 +366,34 @@ class TestCharmmFiles(unittest.TestCase):
         psf = CharmmPsfFile('systems/water_methanol.psf')
         params = CharmmParameterSet('systems/water_methanol.prm')
         # the system is made of one water molecule and one methanol molecule
-        bH_water = [[0, 1], [1, 2]]
-        aH_water = [[0, 2]]
-        bH_methanol = [[3, 4], [3, 5], [3, 6], [7, 8]]
-        bCO_methanol = [[3, 7]]
-        aH_methanol = [[4, 5], [4, 6], [5, 6], [3, 8]]
+        hBonds_water = [[0, 1], [1, 2]]
+        hAngles_water = [[0, 2]]
+        hBonds_methanol = [[3, 4], [3, 5], [3, 6], [7, 8]]
+        allBonds_methanol = hBonds_methanol + [[3, 7]]
+        hAngles_methanol = [[4, 5], [4, 6], [5, 6], [3, 8]]
         system = psf.createSystem(params, constraints=None, rigidWater=False)
-        assert system.getNumConstraints() == 0
+        self.assertEqual(system.getNumConstraints(), 0)
         system = psf.createSystem(params, constraints=None, rigidWater=True)
-        assert system.getNumConstraints() == 3
-        for i in range(3):
-            assert system.getConstraintParameters(i)[:2] in bH_water + aH_water
+        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
+                              hBonds_water + hAngles_water)
         system = psf.createSystem(params, constraints=HBonds, rigidWater=False)
-        assert system.getNumConstraints() == 6
-        for i in range(6):
-            assert system.getConstraintParameters(i)[:2] in bH_water + bH_methanol
+        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
+                              hBonds_water + hBonds_methanol)
         system = psf.createSystem(params, constraints=HBonds, rigidWater=True)
-        assert system.getNumConstraints() == 7
-        for i in range(7):
-            assert system.getConstraintParameters(i)[:2] in bH_water + aH_water + bH_methanol
+        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
+                              hBonds_water + hAngles_water + hBonds_methanol)
         system = psf.createSystem(params, constraints=AllBonds, rigidWater=False)
-        assert system.getNumConstraints() == 7
-        for i in range(7):
-            assert system.getConstraintParameters(i)[:2] in bH_water + bH_methanol + bCO_methanol
+        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
+                              hBonds_water + allBonds_methanol)
         system = psf.createSystem(params, constraints=AllBonds, rigidWater=True)
-        assert system.getNumConstraints() == 8
-        for i in range(8):
-            assert system.getConstraintParameters(i)[:2] in bH_water + aH_water + bH_methanol + bCO_methanol
+        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
+                              hBonds_water + hAngles_water +  allBonds_methanol)
         system = psf.createSystem(params, constraints=HAngles, rigidWater=False)
-        assert system.getNumConstraints() == 12
-        for i in range(12):
-            assert system.getConstraintParameters(i)[:2] in bH_water + aH_water + bH_methanol + bCO_methanol + aH_methanol
+        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
+                              hBonds_water + hAngles_water +  allBonds_methanol + hAngles_methanol)
         system = psf.createSystem(params, constraints=HAngles, rigidWater=True)
-        assert system.getNumConstraints() == 12
-        for i in range(12):
-            assert system.getConstraintParameters(i)[:2] in bH_water + aH_water + bH_methanol + bCO_methanol + aH_methanol
+        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
+                              hBonds_water + hAngles_water +  allBonds_methanol + hAngles_methanol)
 
 
 if __name__ == '__main__':
