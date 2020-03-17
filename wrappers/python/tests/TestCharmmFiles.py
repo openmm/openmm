@@ -361,6 +361,40 @@ class TestCharmmFiles(unittest.TestCase):
         # Compare with value computed with NAMD.
         self.assertAlmostEqual(energy, -2154.5539, delta=1e-3*abs(energy))
 
+    def test_Constraints(self):
+        """Test that bond and angles constraints are correctly added into the system"""
+        psf = CharmmPsfFile('systems/water_methanol.psf')
+        params = CharmmParameterSet('systems/water_methanol.prm')
+        # the system is made of one water molecule and one methanol molecule
+        hBonds_water = [[0, 1], [1, 2]]
+        hAngles_water = [[0, 2]]
+        hBonds_methanol = [[3, 4], [3, 5], [3, 6], [7, 8]]
+        allBonds_methanol = hBonds_methanol + [[3, 7]]
+        hAngles_methanol = [[4, 5], [4, 6], [5, 6], [3, 8]]
+        system = psf.createSystem(params, constraints=None, rigidWater=False)
+        self.assertEqual(system.getNumConstraints(), 0)
+        system = psf.createSystem(params, constraints=None, rigidWater=True)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + hAngles_water))
+        system = psf.createSystem(params, constraints=HBonds, rigidWater=False)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + hBonds_methanol))
+        system = psf.createSystem(params, constraints=HBonds, rigidWater=True)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + hAngles_water + hBonds_methanol))
+        system = psf.createSystem(params, constraints=AllBonds, rigidWater=False)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + allBonds_methanol))
+        system = psf.createSystem(params, constraints=AllBonds, rigidWater=True)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + hAngles_water + allBonds_methanol))
+        system = psf.createSystem(params, constraints=HAngles, rigidWater=False)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + hAngles_water + allBonds_methanol + hAngles_methanol))
+        system = psf.createSystem(params, constraints=HAngles, rigidWater=True)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + hAngles_water + allBonds_methanol + hAngles_methanol))
+
 
 if __name__ == '__main__':
     unittest.main()
