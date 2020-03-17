@@ -374,26 +374,26 @@ class TestCharmmFiles(unittest.TestCase):
         system = psf.createSystem(params, constraints=None, rigidWater=False)
         self.assertEqual(system.getNumConstraints(), 0)
         system = psf.createSystem(params, constraints=None, rigidWater=True)
-        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
-                              hBonds_water + hAngles_water)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + hAngles_water))
         system = psf.createSystem(params, constraints=HBonds, rigidWater=False)
-        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
-                              hBonds_water + hBonds_methanol)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + hBonds_methanol))
         system = psf.createSystem(params, constraints=HBonds, rigidWater=True)
-        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
-                              hBonds_water + hAngles_water + hBonds_methanol)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + hAngles_water + hBonds_methanol))
         system = psf.createSystem(params, constraints=AllBonds, rigidWater=False)
-        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
-                              hBonds_water + allBonds_methanol)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + allBonds_methanol))
         system = psf.createSystem(params, constraints=AllBonds, rigidWater=True)
-        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
-                              hBonds_water + hAngles_water +  allBonds_methanol)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + hAngles_water + allBonds_methanol))
         system = psf.createSystem(params, constraints=HAngles, rigidWater=False)
-        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
-                              hBonds_water + hAngles_water +  allBonds_methanol + hAngles_methanol)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + hAngles_water + allBonds_methanol + hAngles_methanol))
         system = psf.createSystem(params, constraints=HAngles, rigidWater=True)
-        self.assertCountEqual([system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())],
-                              hBonds_water + hAngles_water +  allBonds_methanol + hAngles_methanol)
+        self.assertEqual(sorted(system.getConstraintParameters(i)[:2] for i in range(system.getNumConstraints())),
+                         sorted(hBonds_water + hAngles_water + allBonds_methanol + hAngles_methanol))
 
 
 if __name__ == '__main__':
