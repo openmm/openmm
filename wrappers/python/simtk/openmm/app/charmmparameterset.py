@@ -253,13 +253,13 @@ class CharmmParameterSet(object):
             if line.startswith('BOND'):
                 section = 'BONDS'
                 continue
-            if line.startswith('ANGL') or line.startswith('THETA'):
+            if line.startswith('ANGL') or line.startswith('THET'):
                 section = 'ANGLES'
                 continue
             if line.startswith('DIHE') or line.startswith('PHI'):
                 section = 'DIHEDRALS'
                 continue
-            if line.startswith('IMPR') or line.startswith('IMPHI'):
+            if line.startswith('IMPR') or line.startswith('IMPH'):
                 section = 'IMPROPER'
                 continue
             if line.startswith('CMAP'):
