@@ -30,6 +30,8 @@
 #include "AmoebaReferenceInPlaneAngleForce.h"
 #include "AmoebaReferencePiTorsionForce.h"
 #include "AmoebaReferenceStretchBendForce.h"
+#include "AmoebaReferenceStretchTorsionForce.h"
+#include "AmoebaReferenceAngleTorsionForce.h"
 #include "AmoebaReferenceOutOfPlaneBendForce.h"
 #include "AmoebaReferenceTorsionTorsionForce.h"
 #include "AmoebaReferenceVdwForce.h"
@@ -81,7 +83,9 @@ static Vec3* extractBoxVectors(ContextImpl& context) {
     return data->periodicBoxVectors;
 }
 
-// ***************************************************************************
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaBond                                       *
+ * -------------------------------------------------------------------------- */
 
 ReferenceCalcAmoebaBondForceKernel::ReferenceCalcAmoebaBondForceKernel(const std::string& name, const Platform& platform, const System& system) :
                 CalcAmoebaBondForceKernel(name, platform), system(system) {
@@ -138,7 +142,9 @@ void ReferenceCalcAmoebaBondForceKernel::copyParametersToContext(ContextImpl& co
     }
 }
 
-// ***************************************************************************
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaAngle                                      *
+ * -------------------------------------------------------------------------- */
 
 ReferenceCalcAmoebaAngleForceKernel::ReferenceCalcAmoebaAngleForceKernel(const std::string& name, const Platform& platform, const System& system) :
             CalcAmoebaAngleForceKernel(name, platform), system(system) {
@@ -195,6 +201,10 @@ void ReferenceCalcAmoebaAngleForceKernel::copyParametersToContext(ContextImpl& c
         kQuadratic[i] = k;
     }
 }
+
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaInPlaneAngle                               *
+ * -------------------------------------------------------------------------- */
 
 ReferenceCalcAmoebaInPlaneAngleForceKernel::ReferenceCalcAmoebaInPlaneAngleForceKernel(const std::string& name, const Platform& platform, const System& system) :
           CalcAmoebaInPlaneAngleForceKernel(name, platform), system(system) {
@@ -254,6 +264,10 @@ void ReferenceCalcAmoebaInPlaneAngleForceKernel::copyParametersToContext(Context
     }
 }
 
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaPiTorsion                                  *
+ * -------------------------------------------------------------------------- */
+
 ReferenceCalcAmoebaPiTorsionForceKernel::ReferenceCalcAmoebaPiTorsionForceKernel(const std::string& name, const Platform& platform, const System& system) :
          CalcAmoebaPiTorsionForceKernel(name, platform), system(system) {
 }
@@ -308,6 +322,10 @@ void ReferenceCalcAmoebaPiTorsionForceKernel::copyParametersToContext(ContextImp
         kTorsion[i] = kTorsionParameter;
     }
 }
+
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaStretchBend                                *
+ * -------------------------------------------------------------------------- */
 
 ReferenceCalcAmoebaStretchBendForceKernel::ReferenceCalcAmoebaStretchBendForceKernel(const std::string& name, const Platform& platform, const System& system) :
                    CalcAmoebaStretchBendForceKernel(name, platform), system(system) {
@@ -366,6 +384,150 @@ void ReferenceCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextI
         k2Parameters[i] = k2;
     }
 }
+
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaStretchTorsion                             *
+ * -------------------------------------------------------------------------- */
+
+ReferenceCalcAmoebaStretchTorsionForceKernel::ReferenceCalcAmoebaStretchTorsionForceKernel(std::string name, const Platform& platform, const System& system) :
+	CalcAmoebaStretchTorsionForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaStretchTorsionForceKernel::~ReferenceCalcAmoebaStretchTorsionForceKernel() {
+}
+
+void ReferenceCalcAmoebaStretchTorsionForceKernel::initialize(const System& system, const AmoebaStretchTorsionForce& force) {
+	numStretchTorsions = force.getNumStretchTorsions();
+	for(int ii = 0; ii < numStretchTorsions; ii++) {
+		int particle1Index, particle2Index, particle3Index, particle4Index;
+		double lengthBA, lengthCB, lengthDC, k1, k2, k3, k4, k5, k6, k7, k8, k9;
+		force.getStretchTorsionParameters(ii, particle1Index, particle2Index, particle3Index, particle4Index, lengthBA, lengthCB, lengthDC,
+			k1, k2, k3, k4, k5, k6, k7, k8, k9);
+		particle1.push_back(particle1Index);
+		particle2.push_back(particle2Index);
+		particle3.push_back(particle3Index);
+		particle4.push_back(particle4Index);
+		lengthBAParameters.push_back(static_cast<double>(lengthBA));
+		lengthCBParameters.push_back(static_cast<double>(lengthCB));
+		lengthDCParameters.push_back(static_cast<double>(lengthDC));
+		k1Parameters.push_back(static_cast<double>(k1));
+		k2Parameters.push_back(static_cast<double>(k2));
+		k3Parameters.push_back(static_cast<double>(k3));
+		k4Parameters.push_back(static_cast<double>(k4));
+		k5Parameters.push_back(static_cast<double>(k5));
+		k6Parameters.push_back(static_cast<double>(k6));
+		k7Parameters.push_back(static_cast<double>(k7));
+		k8Parameters.push_back(static_cast<double>(k8));
+		k9Parameters.push_back(static_cast<double>(k9));
+
+		}
+}
+
+double ReferenceCalcAmoebaStretchTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+	vector<Vec3>& posData   = extractPositions(context);
+	vector<Vec3>& forceData = extractForces(context);
+	AmoebaReferenceStretchTorsionForce amoebaReferenceStretchTorsionForce;
+	double energy = amoebaReferenceStretchTorsionForce.calculateForceAndEnergy(numStretchTorsions, posData, particle1, particle2, particle3, particle4,
+		lengthBAParameters, lengthCBParameters, lengthDCParameters,
+		k1Parameters, k2Parameters, k3Parameters, k4Parameters, k5Parameters, k6Parameters, k7Parameters, k8Parameters, k9Parameters,
+		forceData);
+	return static_cast<double>(energy);
+}
+
+void ReferenceCalcAmoebaStretchTorsionForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaStretchTorsionForce& force) {
+	if (numStretchTorsions != force.getNumStretchTorsions())
+		throw OpenMMException("updateParametersInContext: The number of stretch-torsions has changed");
+
+		for (int i = 0; i < numStretchTorsions; ++i) {
+			int particle1Index, particle2Index, particle3Index, particle4Index;
+			double lengthBA, lengthCB, lengthDC, k1, k2, k3, k4, k5, k6, k7, k8, k9;
+			force.getStretchTorsionParameters(i, particle1Index, particle2Index, particle3Index, particle4Index, lengthBA, lengthCB, lengthDC,
+				k1, k2, k3, k4, k5, k6, k7, k8, k9);
+			if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i] || particle4Index != particle4[i])
+				throw OpenMMException("updateParametersInContext: The set of particles in a stretch-torsion has changed");
+			lengthBAParameters[i] = (double) lengthBA;
+			lengthCBParameters[i] = (double) lengthCB;
+			lengthDCParameters[i] = (double) lengthDC;
+			k1Parameters[i] = (double) k1;
+			k2Parameters[i] = (double) k2;
+			k3Parameters[i] = (double) k3;
+			k4Parameters[i] = (double) k4;
+			k5Parameters[i] = (double) k5;
+			k6Parameters[i] = (double) k6;
+			k7Parameters[i] = (double) k7;
+			k8Parameters[i] = (double) k8;
+			k9Parameters[i] = (double) k9;
+		}
+}
+
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaAngleTorsion                               *
+ * -------------------------------------------------------------------------- */
+
+ReferenceCalcAmoebaAngleTorsionForceKernel::ReferenceCalcAmoebaAngleTorsionForceKernel(std::string name, const Platform& platform, const System& system) :
+	CalcAmoebaAngleTorsionForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaAngleTorsionForceKernel::~ReferenceCalcAmoebaAngleTorsionForceKernel() {
+}
+
+void ReferenceCalcAmoebaAngleTorsionForceKernel::initialize(const System& system, const AmoebaAngleTorsionForce& force) {
+	numAngleTorsions = force.getNumAngleTorsions();
+	for (int ii = 0; ii < numAngleTorsions; ii++) {
+		int particle1Index, particle2Index, particle3Index, particle4Index;
+		double angleCBA, angleDCB, k1, k2, k3, k4, k5, k6;
+		force.getAngleTorsionParameters(ii, particle1Index, particle2Index, particle3Index, particle4Index,
+			angleCBA, angleDCB, k1, k2, k3, k4, k5, k6);
+		particle1.push_back(particle1Index);
+		particle2.push_back(particle2Index);
+		particle3.push_back(particle3Index);
+		particle4.push_back(particle4Index);
+		angleCBAParameters.push_back(static_cast<double>(angleCBA));
+		angleDCBParameters.push_back(static_cast<double>(angleDCB));
+		k1Parameters.push_back(static_cast<double>(k1));
+		k2Parameters.push_back(static_cast<double>(k2));
+		k3Parameters.push_back(static_cast<double>(k3));
+		k4Parameters.push_back(static_cast<double>(k4));
+		k5Parameters.push_back(static_cast<double>(k5));
+		k6Parameters.push_back(static_cast<double>(k6));
+	}
+}
+
+double ReferenceCalcAmoebaAngleTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+	vector<Vec3>& posData   = extractPositions(context);
+	vector<Vec3>& forceData = extractForces(context);
+	AmoebaReferenceAngleTorsionForce amoebaReferenceAngleTorsionForce;
+	double energy = amoebaReferenceAngleTorsionForce.calculateForceAndEnergy(numAngleTorsions, posData, particle1, particle2, particle3, particle4,
+		angleCBAParameters, angleDCBParameters,
+		k1Parameters, k2Parameters, k3Parameters, k4Parameters, k5Parameters, k6Parameters,
+		forceData);
+	return static_cast<double>(energy);
+}
+
+void ReferenceCalcAmoebaAngleTorsionForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaAngleTorsionForce& force) {
+	if (numAngleTorsions != force.getNumAngleTorsions())
+		throw OpenMMException("updateParametersInContext: The number of angle-torsions has changed");
+	for (int i = 0; i < numAngleTorsions; ++i) {
+		int particle1Index, particle2Index, particle3Index, particle4Index;
+		double angleCBA, angleDCB, k1, k2, k3, k4, k5, k6;
+		force.getAngleTorsionParameters(i, particle1Index, particle2Index, particle3Index, particle4Index,
+			angleCBA, angleDCB, k1, k2, k3, k4, k5, k6);
+		if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i] || particle4Index != particle4[i])
+			throw OpenMMException("updateParametersInContext: The set of particles in a angle-torsion has changed");
+		angleCBAParameters[i] = (double) angleCBA;
+		angleDCBParameters[i] = (double) angleDCB;
+		k1Parameters[i] = (double) k1;
+		k2Parameters[i] = (double) k2;
+		k3Parameters[i] = (double) k3;
+		k4Parameters[i] = (double) k4;
+		k5Parameters[i] = (double) k5;
+		k6Parameters[i] = (double) k6;
+	}
+}
+
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaOutOfPlaneBend                             *
+ * -------------------------------------------------------------------------- */
 
 ReferenceCalcAmoebaOutOfPlaneBendForceKernel::ReferenceCalcAmoebaOutOfPlaneBendForceKernel(const std::string& name, const Platform& platform, const System& system) :
           CalcAmoebaOutOfPlaneBendForceKernel(name, platform), system(system) {
@@ -427,6 +589,10 @@ void ReferenceCalcAmoebaOutOfPlaneBendForceKernel::copyParametersToContext(Conte
         kParameters[i] = k;
     }
 }
+
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaTorsionTorsion                             *
+ * -------------------------------------------------------------------------- */
 
 ReferenceCalcAmoebaTorsionTorsionForceKernel::ReferenceCalcAmoebaTorsionTorsionForceKernel(const std::string& name, const Platform& platform, const System& system) :
                 CalcAmoebaTorsionTorsionForceKernel(name, platform), system(system) {
@@ -776,8 +942,6 @@ void ReferenceCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& conte
     delete amoebaReferenceMultipoleForce;
 }
 
-
-
 void ReferenceCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                                                         std::vector< double >& outputElectrostaticPotential) {
 
@@ -992,6 +1156,10 @@ void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::copyParametersToContext(
     }
 }
 
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaVdw                                        *
+ * -------------------------------------------------------------------------- */
+
 ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(const std::string& name, const Platform& platform, const System& system) :
        CalcAmoebaVdwForceKernel(name, platform), system(system) {
     useCutoff = 0;
@@ -1170,7 +1338,6 @@ void ReferenceCalcAmoebaWcaDispersionForceKernel::copyParametersToContext(Contex
     }
     totalMaximumDispersionEnergy = AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(force);
 }
-
 
 /* -------------------------------------------------------------------------- *
  *                              HippoNonbonded                                *

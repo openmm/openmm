@@ -230,6 +230,47 @@ private:
 };
 
 /**
+ * This kernel is invoked by AmoebaStretchTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcAmoebaStretchTorsionForceKernel : public CalcAmoebaStretchTorsionForceKernel {
+public:
+	CudaCalcAmoebaStretchTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+	~CudaCalcAmoebaStretchTorsionForceKernel();
+	void initialize(const System& system, const AmoebaStretchTorsionForce& force);
+	double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+	void copyParametersToContext(ContextImpl& context, const AmoebaStretchTorsionForce& force);
+private:
+	class ForceInfo;
+	int numStretchTorsions;
+	CudaContext& cu;
+	const System& system;
+	CudaArray* params1;
+	CudaArray* params2;
+	CudaArray* params3;
+	CudaArray* params4;
+};
+
+/**
+ * This kernel is invoked by AmoebaAngleTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcAmoebaAngleTorsionForceKernel : public CalcAmoebaAngleTorsionForceKernel {
+public:
+	CudaCalcAmoebaAngleTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system);
+	~CudaCalcAmoebaAngleTorsionForceKernel();
+	void initialize(const System& system, const AmoebaAngleTorsionForce& force);
+	double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+	void copyParametersToContext(ContextImpl& context, const AmoebaAngleTorsionForce& force);
+private:
+	class ForceInfo;
+	int numAngleTorsions;
+	CudaContext& cu;
+	const System& system;
+	CudaArray* params1;
+	CudaArray* params2;
+	CudaArray* params3;
+};
+
+/**
  * This kernel is invoked by AmoebaOutOfPlaneBendForce to calculate the forces acting on the system and the energy of the system.
  */
 class CudaCalcAmoebaOutOfPlaneBendForceKernel : public CalcAmoebaOutOfPlaneBendForceKernel {

@@ -59,6 +59,8 @@ extern "C" OPENMM_EXPORT void registerKernelFactories() {
         platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaWcaDispersionForceKernel::Name(), factory);
+        platform.registerKernelFactory(CalcAmoebaStretchTorsionForceKernel::Name(), factory);
+        platform.registerKernelFactory(CalcAmoebaAngleTorsionForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcHippoNonbondedForceKernel::Name(), factory);
     }
     catch (...) {
@@ -94,6 +96,12 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
 
     if (name == CalcAmoebaStretchBendForceKernel::Name())
         return new CudaCalcAmoebaStretchBendForceKernel(name, platform, cu, context.getSystem());
+
+    if (name == CalcAmoebaStretchTorsionForceKernel::Name())
+        return new CudaCalcAmoebaStretchTorsionForceKernel(name, platform, cu, context.getSystem());
+
+    if (name == CalcAmoebaAngleTorsionForceKernel::Name())
+        return new CudaCalcAmoebaAngleTorsionForceKernel(name, platform, cu, context.getSystem());
 
     if (name == CalcAmoebaOutOfPlaneBendForceKernel::Name())
         return new CudaCalcAmoebaOutOfPlaneBendForceKernel(name, platform, cu, context.getSystem());

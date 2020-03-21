@@ -530,6 +530,253 @@ void CudaCalcAmoebaStretchBendForceKernel::copyParametersToContext(ContextImpl& 
 }
 
 /* -------------------------------------------------------------------------- *
+ *                        AmoebaStretchTorsion                                *
+ * -------------------------------------------------------------------------- */
+
+class CudaCalcAmoebaStretchTorsionForceKernel::ForceInfo : public CudaForceInfo {
+public:
+	ForceInfo(const AmoebaStretchTorsionForce& force) : force(force) {
+	}
+	int getNumParticleGroups() {
+		return force.getNumStretchTorsions();
+	}
+	void getParticlesInGroup(int index, std::vector<int>& particles) {
+		int particle1, particle2, particle3, particle4;
+		double lengthBA, lengthCB, lengthDC,k1,k2,k3,k4,k5,k6,k7,k8,k9;
+		force.getStretchTorsionParameters(index, particle1, particle2, particle3, particle4, lengthBA, lengthCB, lengthDC,
+			k1, k2, k3, k4, k5, k6, k7, k8, k9);
+		particles.resize(4);
+		particles[0] = particle1;
+		particles[1] = particle2;
+		particles[2] = particle3;
+		particles[3] = particle4;
+	}
+	bool areGroupsIdentical(int group1, int group2) {
+		int particle1, particle2, particle3, particle4;
+		double lengthBA1, lengthBA2, lengthCB1, lengthCB2, lengthDC1, lengthDC2;
+		double k11, k21, k31, k41, k51, k61, k71, k81, k91;
+		double k12, k22, k32, k42, k52, k62, k72, k82, k92;
+		force.getStretchTorsionParameters(group1, particle1, particle2, particle3, particle4, lengthBA1, lengthCB1, lengthDC1,
+			k11, k21, k31, k41, k51, k61, k71, k81, k91);
+		force.getStretchTorsionParameters(group1, particle1, particle2, particle3, particle4, lengthBA2, lengthCB2, lengthDC2,
+			k12, k22, k32, k42, k52, k62, k72, k82, k92);
+		return (lengthBA1 = lengthBA2 && lengthCB1 == lengthCB2 && lengthDC1 == lengthDC2 && k11 == k12 && k21 == k22 && k31 == k32
+			&& k41 == k42 && k51 == k52 && k61 == k62 && k71 == k72 && k81 == k82 && k91 == k92);
+	}
+private:
+	const AmoebaStretchTorsionForce& force;
+};
+
+CudaCalcAmoebaStretchTorsionForceKernel::CudaCalcAmoebaStretchTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+	CalcAmoebaStretchTorsionForceKernel(name, platform), cu(cu), system(system), params1(NULL), params2(NULL), params3(NULL), params4(NULL) {
+}
+
+CudaCalcAmoebaStretchTorsionForceKernel::~CudaCalcAmoebaStretchTorsionForceKernel() {
+	cu.setAsCurrent();
+	if (params1 != NULL)
+		delete params1;
+	if (params2 != NULL)
+		delete params2;
+	if (params3 != NULL)
+		delete params3;
+	if (params4 != NULL)
+		delete params4;
+}
+
+void CudaCalcAmoebaStretchTorsionForceKernel::initialize(const System& system, const AmoebaStretchTorsionForce& force) {
+	cu.setAsCurrent();
+	int numContexts = cu.getPlatformData().contexts.size();
+	int startIndex = cu.getContextIndex()*force.getNumStretchTorsions()/numContexts;
+	int endIndex = (cu.getContextIndex()+1)*force.getNumStretchTorsions()/numContexts;
+	numStretchTorsions = endIndex-startIndex;
+	if (numStretchTorsions == 0)
+		return;
+	vector<vector<int> > atoms(numStretchTorsions, vector<int>(4));
+	params1 = CudaArray::create<float3>(cu, numStretchTorsions, "stretchTorsionParams");
+	params2 = CudaArray::create<float3>(cu, numStretchTorsions, "stretchForceConstantsFirst");
+	params3 = CudaArray::create<float3>(cu, numStretchTorsions, "stretchForceConstantsSecond");
+	params4 = CudaArray::create<float3>(cu, numStretchTorsions, "stretchForceConstantsThird");
+	vector<float3> paramVector(numStretchTorsions);
+	vector<float3> paramVectorK1(numStretchTorsions);
+	vector<float3> paramVectorK2(numStretchTorsions);
+	vector<float3> paramVectorK3(numStretchTorsions);
+	for (int i = 0; i < numStretchTorsions; i++) {
+		double lengthBA, lengthCB, lengthDC, k1, k2, k3, k4, k5, k6, k7, k8, k9;
+		force.getStretchTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], lengthBA, lengthCB, lengthDC,
+			k1, k2, k3, k4, k5, k6, k7, k8, k9);
+		paramVector[i] = make_float3((float) lengthBA, (float) lengthCB, (float) lengthDC);
+		paramVectorK1[i] = make_float3((float) k1, (float) k2, (float) k3);
+		paramVectorK2[i] = make_float3((float) k4, (float) k5, (float) k6);
+		paramVectorK3[i] = make_float3((float) k7, (float) k8, (float) k9);
+	}
+	params1->upload(paramVector);
+	params2->upload(paramVectorK1);
+	params3->upload(paramVectorK2);
+	params4->upload(paramVectorK3);
+	map<string, string> replacements;
+	replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params1->getDevicePointer(), "float3");
+	replacements["FORCE_CONSTANTS_FIRST"] = cu.getBondedUtilities().addArgument(params2->getDevicePointer(), "float3");
+	replacements["FORCE_CONSTANTS_SECOND"] = cu.getBondedUtilities().addArgument(params3->getDevicePointer(), "float3");
+	replacements["FORCE_CONSTANTS_THIRD"] = cu.getBondedUtilities().addArgument(params4->getDevicePointer(), "float3");
+	cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaAmoebaKernelSources::amoebaStretchTorsionForce, replacements), force.getForceGroup());
+	cu.addForce(new ForceInfo(force));
+}
+
+double CudaCalcAmoebaStretchTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+	return 0.0;
+}
+
+void CudaCalcAmoebaStretchTorsionForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaStretchTorsionForce& force) {
+	cu.setAsCurrent();
+	int numContexts = cu.getPlatformData().contexts.size();
+	int startIndex = cu.getContextIndex()*force.getNumStretchTorsions()/numContexts;
+	int endIndex = (cu.getContextIndex()+1)*force.getNumStretchTorsions()/numContexts;
+	if (numStretchTorsions != endIndex-startIndex)
+		throw OpenMMException("updateParametersInContext: The number of stretch-torsion terms has changed");
+	if (numStretchTorsions == 0)
+		return;
+	vector<float3> paramVector(numStretchTorsions);
+	vector<float3> paramVectorK1(numStretchTorsions);
+	vector<float3> paramVectorK2(numStretchTorsions);
+	vector<float3> paramVectorK3(numStretchTorsions);
+	for (int i = 0; i < numStretchTorsions; i++) {
+		int atom1, atom2, atom3, atom4;
+		double lengthBA, lengthCB, lengthDC, k1, k2, k3, k4, k5, k6, k7, k8, k9;
+		force.getStretchTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, lengthBA, lengthCB, lengthDC,
+			k1, k2, k3, k4, k5, k6, k7, k8, k9);
+		paramVector[i] = make_float3((float) lengthBA, (float) lengthCB, (float) lengthDC);
+		paramVectorK1[i] = make_float3((float) k1, (float) k2, (float) k3);
+		paramVectorK2[i] = make_float3((float) k4, (float) k5, (float) k6);
+		paramVectorK3[i] = make_float3((float) k7, (float) k8, (float) k9);
+	}
+	params1->upload(paramVector);
+	params2->upload(paramVectorK1);
+	params3->upload(paramVectorK2);
+	params4->upload(paramVectorK3);
+	cu.invalidateMolecules();
+}
+
+/* -------------------------------------------------------------------------- *
+ *                        AmoebaAngleTorsion                                  *
+ * -------------------------------------------------------------------------- */
+
+class CudaCalcAmoebaAngleTorsionForceKernel::ForceInfo : public CudaForceInfo {
+public:
+	ForceInfo(const AmoebaAngleTorsionForce& force) : force(force) {
+	}
+	int getNumParticleGroups() {
+		return force.getNumAngleTorsions();
+	}
+	void getParticlesInGroup(int index, std::vector<int>& particles) {
+		int particle1, particle2, particle3, particle4;
+		double angleCBA,angleDCB,k1,k2,k3,k4,k5,k6;
+		force.getAngleTorsionParameters(index, particle1, particle2, particle3, particle4, angleCBA, angleDCB,
+			k1, k2, k3, k4, k5, k6);
+		particles.resize(4);
+		particles[0] = particle1;
+		particles[1] = particle2;
+		particles[2] = particle3;
+		particles[3] = particle4;
+	}
+	bool areGroupsIdentical(int group1, int group2) {
+		int particle1, particle2, particle3, particle4;
+		double angleCBA1, angleCBA2, angleDCB1, angleDCB2;
+		double k11, k21, k31, k41, k51, k61;
+		double k12, k22, k32, k42, k52, k62;
+		force.getAngleTorsionParameters(group1, particle1, particle2, particle3, particle4, angleCBA1, angleDCB1,
+			k11, k21, k31, k41, k51, k61);
+		force.getAngleTorsionParameters(group2, particle1, particle2, particle3, particle4, angleCBA2, angleDCB2,
+			k12, k22, k32, k42, k52, k62);
+		return (angleCBA1 == angleCBA2 && angleDCB1 == angleDCB2 && k11 == k12 && k21 == k22 && k31 == k32 &&
+			k41 == k42 && k51 == k52 && k61 == k62);
+	}
+private:
+	const AmoebaAngleTorsionForce& force;
+};
+
+CudaCalcAmoebaAngleTorsionForceKernel::CudaCalcAmoebaAngleTorsionForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) :
+	CalcAmoebaAngleTorsionForceKernel(name, platform), cu(cu), system(system), params1(NULL), params2(NULL), params3(NULL) {
+}
+
+CudaCalcAmoebaAngleTorsionForceKernel::~CudaCalcAmoebaAngleTorsionForceKernel() {
+	cu.setAsCurrent();
+	if (params1 != NULL)
+		delete params1;
+	if (params2 != NULL)
+		delete params2;
+	if (params3 != NULL)
+		delete params3;
+}
+
+void CudaCalcAmoebaAngleTorsionForceKernel::initialize(const System& system, const AmoebaAngleTorsionForce& force) {
+	cu.setAsCurrent();
+	int numContexts = cu.getPlatformData().contexts.size();
+	int startIndex = cu.getContextIndex()*force.getNumAngleTorsions()/numContexts;
+	int endIndex = (cu.getContextIndex()+1)*force.getNumAngleTorsions()/numContexts;
+	numAngleTorsions = endIndex-startIndex;
+	if (numAngleTorsions == 0)
+		return;
+	vector<vector<int> > atoms(numAngleTorsions, vector<int>(4));
+	params1 = CudaArray::create<float2>(cu, numAngleTorsions, "angleTorsionParams");
+	params2 = CudaArray::create<float3>(cu, numAngleTorsions, "angleForceConstantFirst");
+	params3 = CudaArray::create<float3>(cu, numAngleTorsions, "angleForceConstantSecond");
+	vector<float2> paramVector(numAngleTorsions);
+	vector<float3> paramVectorK1(numAngleTorsions);
+	vector<float3> paramVectorK2(numAngleTorsions);
+	for (int i = 0; i < numAngleTorsions; i++) {
+		double angleCBA, angleDCB, k1, k2, k3, k4, k5, k6;
+		force.getAngleTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], angleCBA, angleDCB,
+			k1, k2, k3, k4, k5, k6);
+		paramVector[i] = make_float2((float) angleCBA, (float) angleDCB);
+		paramVectorK1[i] = make_float3((float) k1, (float) k2, (float) k3);
+		paramVectorK2[i] = make_float3((float) k4, (float) k5, (float) k6);
+	}
+	params1->upload(paramVector);
+	params2->upload(paramVectorK1);
+	params3->upload(paramVectorK2);
+	map<string, string> replacements;
+	replacements["PARAMS"] = cu.getBondedUtilities().addArgument(params1->getDevicePointer(), "float2");
+	replacements["FORCE_CONSTANTS_FIRST"] = cu.getBondedUtilities().addArgument(params2->getDevicePointer(), "float3");
+	replacements["FORCE_CONSTANTS_SECOND"] = cu.getBondedUtilities().addArgument(params3->getDevicePointer(), "float3");
+	replacements["RAD_TO_DEG"] = cu.doubleToString(180/M_PI);
+	cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CudaAmoebaKernelSources::amoebaAngleTorsionForce, replacements), force.getForceGroup());
+	cu.addForce(new ForceInfo(force));
+}
+
+double CudaCalcAmoebaAngleTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+	return 0.0;
+}
+
+void CudaCalcAmoebaAngleTorsionForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaAngleTorsionForce& force) {
+	cu.setAsCurrent();
+	int numContexts = cu.getPlatformData().contexts.size();
+	int startIndex = cu.getContextIndex()*force.getNumAngleTorsions()/numContexts;
+	int endIndex = (cu.getContextIndex()+1)*force.getNumAngleTorsions()/numContexts;
+	if (numAngleTorsions != endIndex-startIndex)
+		throw OpenMMException("updateParametersInContext: The number of angle-torsion terms has changed");
+	if (numAngleTorsions == 0)
+		return;
+	vector<float2> paramVector(numAngleTorsions);
+	vector<float3> paramVectorK1(numAngleTorsions);
+	vector<float3> paramVectorK2(numAngleTorsions);
+	for (int i = 0; i < numAngleTorsions; i++) {
+		int atom1, atom2, atom3, atom4;
+		double angleCBA, angleDCB, k1, k2, k3, k4, k5, k6;
+		force.getAngleTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, angleCBA, angleDCB,
+			k1, k2, k3, k4, k5, k6);
+		paramVector[i] = make_float2((float) angleCBA, (float) angleDCB);
+		paramVectorK1[i] = make_float3((float) k1, (float) k2, (float) k3);
+		paramVectorK2[i] = make_float3((float) k4, (float) k5, (float) k6);
+	}
+	params1->upload(paramVector);
+	params2->upload(paramVectorK1);
+	params3->upload(paramVectorK2);
+
+	cu.invalidateMolecules();
+
+}
+
+/* -------------------------------------------------------------------------- *
  *                           AmoebaOutOfPlaneBend                             *
  * -------------------------------------------------------------------------- */
 
@@ -1805,7 +2052,6 @@ void CudaCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl
     }
 }
 
-
 void CudaCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
     ensureMultipolesValid(context);
     int numParticles = cu.getNumAtoms();
@@ -1824,7 +2070,6 @@ void CudaCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context,
             dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
     }
 }
-
 
 void CudaCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
     ensureMultipolesValid(context);

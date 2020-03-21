@@ -217,6 +217,51 @@ private:
 };
 
 /**
+ * This kernel is invoked by AmoebaOutOfPlaneBendForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcAmoebaOutOfPlaneBendForceKernel : public CalcAmoebaOutOfPlaneBendForceKernel {
+public:
+    ReferenceCalcAmoebaOutOfPlaneBendForceKernel(const std::string& name, const Platform& platform, const System& system);
+    ~ReferenceCalcAmoebaOutOfPlaneBendForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaOutOfPlaneBendForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaOutOfPlaneBendForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaOutOfPlaneBendForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaOutOfPlaneBendForce& force);
+private:
+    int numOutOfPlaneBends;
+    std::vector<int>   particle1;
+    std::vector<int>   particle2;
+    std::vector<int>   particle3;
+    std::vector<int>   particle4;
+    std::vector<double> kParameters;
+    double globalOutOfPlaneBendAngleCubic;
+    double globalOutOfPlaneBendAngleQuartic;
+    double globalOutOfPlaneBendAnglePentic;
+    double globalOutOfPlaneBendAngleSextic;
+    const System& system;
+    bool usePeriodic;
+};
+
+/**
  * This kernel is invoked by AmoebaStretchBendForce to calculate the forces acting on the system and the energy of the system.
  */
 class ReferenceCalcAmoebaStretchBendForceKernel : public CalcAmoebaStretchBendForceKernel {
@@ -261,48 +306,61 @@ private:
 };
 
 /**
- * This kernel is invoked by AmoebaOutOfPlaneBendForce to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by AmoebaStretchTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
-class ReferenceCalcAmoebaOutOfPlaneBendForceKernel : public CalcAmoebaOutOfPlaneBendForceKernel {
+class ReferenceCalcAmoebaStretchTorsionForceKernel : public CalcAmoebaStretchTorsionForceKernel {
 public:
-    ReferenceCalcAmoebaOutOfPlaneBendForceKernel(const std::string& name, const Platform& platform, const System& system);
-    ~ReferenceCalcAmoebaOutOfPlaneBendForceKernel();
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaOutOfPlaneBendForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaOutOfPlaneBendForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the AmoebaOutOfPlaneBendForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const AmoebaOutOfPlaneBendForce& force);
+	ReferenceCalcAmoebaStretchTorsionForceKernel(std::string name, const Platform& platform, const System& system);
+	~ReferenceCalcAmoebaStretchTorsionForceKernel();
+	void initialize(const System& system, const AmoebaStretchTorsionForce& force);
+	double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+	void copyParametersToContext(ContextImpl& context, const AmoebaStretchTorsionForce& force);
 private:
-    int numOutOfPlaneBends;
-    std::vector<int>   particle1;
-    std::vector<int>   particle2;
-    std::vector<int>   particle3;
-    std::vector<int>   particle4;
-    std::vector<double> kParameters;
-    double globalOutOfPlaneBendAngleCubic;
-    double globalOutOfPlaneBendAngleQuartic;
-    double globalOutOfPlaneBendAnglePentic;
-    double globalOutOfPlaneBendAngleSextic;
-    const System& system;
-    bool usePeriodic;
+	int numStretchTorsions;
+	std::vector<int> particle1;
+	std::vector<int> particle2;
+	std::vector<int> particle3;
+	std::vector<int> particle4;
+	std::vector<double> lengthBAParameters;
+	std::vector<double> lengthCBParameters;
+	std::vector<double> lengthDCParameters;
+	std::vector<double> k1Parameters;
+	std::vector<double> k2Parameters;
+	std::vector<double> k3Parameters;
+	std::vector<double> k4Parameters;
+	std::vector<double> k5Parameters;
+	std::vector<double> k6Parameters;
+	std::vector<double> k7Parameters;
+	std::vector<double> k8Parameters;
+	std::vector<double> k9Parameters;
+	const System& system;
+};
+
+/**
+ * This kernel is invoked by AmoebaAngleTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcAmoebaAngleTorsionForceKernel : public CalcAmoebaAngleTorsionForceKernel {
+public:
+	ReferenceCalcAmoebaAngleTorsionForceKernel(std::string name, const Platform& platform, const System& system);
+	~ReferenceCalcAmoebaAngleTorsionForceKernel();
+	void initialize(const System& system, const AmoebaAngleTorsionForce& force);
+	double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+	void copyParametersToContext(ContextImpl& context, const AmoebaAngleTorsionForce& force);
+private:
+	int numAngleTorsions;
+	std::vector<int> particle1;
+	std::vector<int> particle2;
+	std::vector<int> particle3;
+	std::vector<int> particle4;
+	std::vector<double> angleCBAParameters;
+	std::vector<double> angleDCBParameters;
+	std::vector<double> k1Parameters;
+	std::vector<double> k2Parameters;
+	std::vector<double> k3Parameters;
+	std::vector<double> k4Parameters;
+	std::vector<double> k5Parameters;
+	std::vector<double> k6Parameters;
+	const System& system;
 };
 
 /**

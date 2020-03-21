@@ -37,6 +37,8 @@
 #include "openmm/AmoebaInPlaneAngleForce.h"
 #include "openmm/AmoebaPiTorsionForce.h"
 #include "openmm/AmoebaStretchBendForce.h"
+#include "openmm/AmoebaStretchTorsionForce.h"
+#include "openmm/AmoebaAngleTorsionForce.h"
 #include "openmm/AmoebaOutOfPlaneBendForce.h"
 #include "openmm/AmoebaTorsionTorsionForce.h"
 #include "openmm/AmoebaMultipoleForce.h"
