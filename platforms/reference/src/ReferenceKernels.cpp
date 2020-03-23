@@ -1973,7 +1973,6 @@ void ReferenceCalcCustomManyParticleForceKernel::initialize(const System& system
     // Build the arrays.
 
     numParticles = system.getNumParticles();
-    int numParticleParameters = force.getNumPerParticleParameters();
     particleParamArray.resize(numParticles);
     for (int i = 0; i < numParticles; ++i) {
         int type;
