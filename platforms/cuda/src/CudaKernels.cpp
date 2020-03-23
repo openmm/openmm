@@ -1576,7 +1576,6 @@ void CudaCalcCustomCVForceKernel::initialize(const System& system, const CustomC
     
     // Create arrays for storing information.
     
-    int elementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
     cvForces.resize(numCVs);
     for (int i = 0; i < numCVs; i++)
         cvForces[i].initialize<long long>(cu, 3*cu.getPaddedNumAtoms(), "cvForce");
