@@ -68,6 +68,45 @@ Continuous1DFunction* Continuous1DFunction::Copy() const {
     return new Continuous1DFunction(new_vec, min, max);
 }
 
+ContinuousPeriodic1DFunction::ContinuousPeriodic1DFunction(const vector<double>& values, double min, double max) {
+    if (max <= min)
+        throw OpenMMException("ContinuousPeriodic1DFunction: max <= min for a tabulated function.");
+    int n = values.size();
+    if (n < 3)
+        throw OpenMMException("ContinuousPeriodic1DFunction: a periodic tabulated function must have at least three points");
+    if (values[0] != values[n-1])
+        throw OpenMMException("ContinuousPeriodic1DFunction: the first and last points must have the same value");
+    this->values = values;
+    this->min = min;
+    this->max = max;
+}
+
+void ContinuousPeriodic1DFunction::getFunctionParameters(vector<double>& values, double& min, double& max) const {
+    values = this->values;
+    min = this->min;
+    max = this->max;
+}
+
+void ContinuousPeriodic1DFunction::setFunctionParameters(const vector<double>& values, double min, double max) {
+    if (max <= min)
+        throw OpenMMException("ContinuousPeriodic1DFunction: max <= min for a tabulated function.");
+    int n = values.size();
+    if (n < 3)
+        throw OpenMMException("ContinuousPeriodic1DFunction: a periodic tabulated function must have at least three points");
+    if (values[0] != values[n-1])
+        throw OpenMMException("ContinuousPeriodic1DFunction: the first and last points must have the same value");
+    this->values = values;
+    this->min = min;
+    this->max = max;
+}
+
+ContinuousPeriodic1DFunction* ContinuousPeriodic1DFunction::Copy() const {
+    vector<double> new_vec(values.size());
+    for (size_t i = 0; i < values.size(); i++)
+        new_vec[i] = values[i];
+    return new ContinuousPeriodic1DFunction(new_vec, min, max);
+}
+
 Continuous2DFunction::Continuous2DFunction(int xsize, int ysize, const vector<double>& values, double xmin, double xmax, double ymin, double ymax) {
     if (xsize < 2 || ysize < 2)
         throw OpenMMException("Continuous2DFunction: must have at least two points along each axis");

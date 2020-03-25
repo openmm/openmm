@@ -59,6 +59,8 @@ extern "C" OPENMM_EXPORT CustomFunction* createReferenceTabulatedFunction(const 
     CustomFunction* fn;
     if (dynamic_cast<const Continuous1DFunction*>(&function) != NULL)
         fn = new ReferenceContinuous1DFunction(dynamic_cast<const Continuous1DFunction&>(function));
+    else if (dynamic_cast<const ContinuousPeriodic1DFunction*>(&function) != NULL)
+        fn = new ReferenceContinuousPeriodic1DFunction(dynamic_cast<const ContinuousPeriodic1DFunction&>(function));
     else if (dynamic_cast<const Continuous2DFunction*>(&function) != NULL)
         fn = new ReferenceContinuous2DFunction(dynamic_cast<const Continuous2DFunction&>(function));
     else if (dynamic_cast<const Continuous3DFunction*>(&function) != NULL)
@@ -110,6 +112,44 @@ double ReferenceContinuous1DFunction::evaluateDerivative(const double* arguments
 
 CustomFunction* ReferenceContinuous1DFunction::clone() const {
     return new ReferenceContinuous1DFunction(*this);
+}
+
+ReferenceContinuousPeriodic1DFunction::ReferenceContinuousPeriodic1DFunction(const ContinuousPeriodic1DFunction& function) : function(function) {
+    function.getFunctionParameters(values, min, max);
+    int numValues = values.size();
+    x.resize(numValues);
+    for (int i = 0; i < numValues; i++)
+        x[i] = min+i*(max-min)/(numValues-1);
+    SplineFitter::createPeriodicSpline(x, values, derivs);
+}
+
+ReferenceContinuousPeriodic1DFunction::ReferenceContinuousPeriodic1DFunction(const ReferenceContinuousPeriodic1DFunction& other) : function(other.function) {
+    function.getFunctionParameters(values, min, max);
+    x = other.x;
+    values = other.values;
+    derivs = other.derivs;
+}
+
+int ReferenceContinuousPeriodic1DFunction::getNumArguments() const {
+    return 1;
+}
+
+double ReferenceContinuousPeriodic1DFunction::evaluate(const double* arguments) const {
+    double t = arguments[0];
+    if (t < min || t > max)
+        return 0.0;
+    return SplineFitter::evaluateSpline(x, values, derivs, t);
+}
+
+double ReferenceContinuousPeriodic1DFunction::evaluateDerivative(const double* arguments, const int* derivOrder) const {
+    double t = arguments[0];
+    if (t < min || t > max)
+        return 0.0;
+    return SplineFitter::evaluateSplineDerivative(x, values, derivs, t);
+}
+
+CustomFunction* ReferenceContinuousPeriodic1DFunction::clone() const {
+    return new ReferenceContinuousPeriodic1DFunction(*this);
 }
 
 ReferenceContinuous2DFunction::ReferenceContinuous2DFunction(const Continuous2DFunction& function) : function(function) {

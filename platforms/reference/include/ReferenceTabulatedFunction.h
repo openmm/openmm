@@ -63,6 +63,23 @@ private:
 };
 
 /**
+ * This class adapts a ContinuousPeriodic1DFunction into a Lepton::CustomFunction.
+ */
+class OPENMM_EXPORT ReferenceContinuousPeriodic1DFunction : public Lepton::CustomFunction {
+public:
+    ReferenceContinuousPeriodic1DFunction(const ContinuousPeriodic1DFunction& function);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    CustomFunction* clone() const;
+private:
+    ReferenceContinuousPeriodic1DFunction(const ReferenceContinuousPeriodic1DFunction& other);
+    const ContinuousPeriodic1DFunction& function;
+    double min, max;
+    std::vector<double> x, values, derivs;
+};
+
+/**
  * This class adapts a Continuous2DFunction into a Lepton::CustomFunction.
  */
 class OPENMM_EXPORT ReferenceContinuous2DFunction : public Lepton::CustomFunction {
