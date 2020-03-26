@@ -40,6 +40,7 @@
 #include "SimTKOpenMMRealType.h"
 #include "sfmt/SFMT.h"
 #include <iostream>
+#include <algorithm>
 #include <numeric>
 #include <vector>
 
