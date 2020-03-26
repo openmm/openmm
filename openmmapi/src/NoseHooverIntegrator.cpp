@@ -343,20 +343,10 @@ vector<string> NoseHooverIntegrator::getKernelNames() {
 void NoseHooverIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");
-    std::pair<double, double> scale, kineticEnergy;
     for (int i = 0; i < steps; ++i) {
         if(context->updateContextState())
             forcesAreValid = false;
-        for(auto &nhc : noseHooverChains) {
-            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, false);
-            scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, nhc, kineticEnergy, getStepSize());
-            nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, nhc, scale);
-        }
+        context->calcForcesAndEnergy(true, false);
         vvKernel.getAs<IntegrateVelocityVerletStepKernel>().execute(*context, *this, forcesAreValid);
-        for(auto &nhc : noseHooverChains) {
-            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, false);
-            scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, nhc, kineticEnergy, getStepSize());
-            nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, nhc, scale);
-        }
     }
 }

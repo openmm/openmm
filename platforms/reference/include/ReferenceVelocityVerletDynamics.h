@@ -26,6 +26,7 @@
 #define __ReferenceVelocityVerletDynamics_H__
 
 #include "ReferenceDynamics.h"
+#include <tuple>
 
 namespace OpenMM {
 
@@ -35,8 +36,10 @@ class ReferenceVelocityVerletDynamics : public ReferenceDynamics {
 
    private:
       std::vector<OpenMM::Vec3> xPrime;
+      std::vector<OpenMM::Vec3> oldx;
       std::vector<double> inverseMasses;
-      
+      int numberOfAtoms;
+
    public:
 
       /**---------------------------------------------------------------------------------------
@@ -62,7 +65,7 @@ class ReferenceVelocityVerletDynamics : public ReferenceDynamics {
 
       /**---------------------------------------------------------------------------------------
       
-         Update
+         BAstep = update the velocities and positions to start a BAOAB step
       
          @param system              the System to be integrated
          @param atomCoordinates     atom coordinates
@@ -77,7 +80,26 @@ class ReferenceVelocityVerletDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
      
-      void update(OpenMM::ContextImpl &context, const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
+      void BAstep(OpenMM::ContextImpl &context, const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
+                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance, bool &forcesAreValid,
+                  const std::vector<int> & allAtoms, const std::vector<std::tuple<int, int, double>> & allPairs, double maxPairDistance);
+      /**---------------------------------------------------------------------------------------
+      
+         ABstep = update the positions and velocities to end a BAOAB step
+      
+         @param system              the System to be integrated
+         @param atomCoordinates     atom coordinates
+         @param velocities          velocities
+         @param forces              forces
+         @param masses              atom masses
+         @param tolerance           the constraint tolerance
+         @param forcesAreValid      whether the forces are valid (duh!)
+         @param allAtoms            a list of all atoms not involved in a Drude-like pair
+         @param allPairs            a list of all Drude-like pairs, and their KT values, in the system
+         @param maxPairDistance     the maximum separation allowed for a Drude-like pair
+      
+         --------------------------------------------------------------------------------------- */
+      void ABstep(OpenMM::ContextImpl &context, const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
                   std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance, bool &forcesAreValid,
                   const std::vector<int> & allAtoms, const std::vector<std::tuple<int, int, double>> & allPairs, double maxPairDistance);
       

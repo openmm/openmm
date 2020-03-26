@@ -86,7 +86,7 @@ void testVVConstraints() {
     const int numParticles = 8;
     const int numConstraints = 5;
     System system;
-    NoseHooverIntegrator integrator(0.001);
+    NoseHooverIntegrator integrator(0.0005);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
@@ -138,7 +138,7 @@ void testVVConstraints() {
 void testVVConstrainedClusters() {
     const int numParticles = 7;
     System system;
-    NoseHooverIntegrator integrator(0.001);
+    NoseHooverIntegrator integrator(0.0005);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {

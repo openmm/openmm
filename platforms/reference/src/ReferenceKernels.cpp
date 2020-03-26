@@ -2155,6 +2155,8 @@ double ReferenceIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& con
 }
 
 ReferenceIntegrateVelocityVerletStepKernel::~ReferenceIntegrateVelocityVerletStepKernel() {
+    if (chainPropagator)
+        delete chainPropagator;
     if (dynamics)
         delete dynamics;
 }
@@ -2164,6 +2166,7 @@ void ReferenceIntegrateVelocityVerletStepKernel::initialize(const System& system
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         masses[i] = system.getParticleMass(i);
+    this->chainPropagator = new ReferenceNoseHooverChain();
 }
 
 void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
@@ -2179,14 +2182,208 @@ void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, c
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevStepSize = stepSize;
     }
-    dynamics->update(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid,
+
+    // BA
+    dynamics->BAstep(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid,
                      integrator.getAllThermostatedIndividualParticles(), integrator.getAllThermostatedPairs(), integrator.getMaximumPairDistance());
+    // O
+    int numChains = integrator.getNumThermostats();
+    for(int chain = 0; chain < numChains; ++chain) {
+        const auto &thermostatChain = integrator.getThermostat(chain);
+        std::pair<double, double> KEs = computeMaskedKineticEnergy(context, thermostatChain, true);
+        std::pair<double, double> scaleFactors = propagateChain(context, thermostatChain, KEs, stepSize);
+        scaleVelocities(context, thermostatChain, scaleFactors);
+    }
+    // AB
+    dynamics->ABstep(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid,
+                     integrator.getAllThermostatedIndividualParticles(), integrator.getAllThermostatedPairs(), integrator.getMaximumPairDistance());
+
     data.time += stepSize;
     data.stepCount++;
 }
 
 double ReferenceIntegrateVelocityVerletStepKernel::computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0);
+}
+
+std::pair<double, double> ReferenceIntegrateVelocityVerletStepKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc,
+                                                                                     std::pair<double, double> kineticEnergy, double timeStep) {
+    double absKE = kineticEnergy.first;
+    double relKE = kineticEnergy.second;
+    if (absKE < 1e-8) return {1.0, 1.0};  // (catches the problem of zero velocities in the first dynamics step, where we have nothing to scale)
+    // Get the variables describing the NHC
+    int chainLength = nhc.getChainLength();
+    int chainID = nhc.getChainID();
+    int numDOFs = nhc.getNumDegreesOfFreedom();
+    int numMTS = nhc.getNumMultiTimeSteps();
+
+    // Get the state of the NHC from the context
+    auto& allChainPositions = extractNoseHooverPositions(context);
+    auto& allChainVelocities = extractNoseHooverVelocities(context);
+
+    int nAtoms = nhc.getThermostatedAtoms().size();
+    double absScale = 0;
+    if (nAtoms) {
+        if (allChainPositions.size() < 2*chainID+1){
+            allChainPositions.resize(2*chainID+1);
+        }
+        if (allChainVelocities.size() < 2*chainID+1){
+            allChainVelocities.resize(2*chainID+1);
+        }
+        auto& chainPositions = allChainPositions.at(2*chainID);
+        auto& chainVelocities = allChainVelocities.at(2*chainID);
+        if (chainPositions.size() < chainLength){
+            chainPositions.resize(chainLength, 0);
+        }
+        if (chainVelocities.size() < chainLength){
+            chainVelocities.resize(chainLength, 0);
+        }
+        double temperature = nhc.getTemperature();
+        double collisionFrequency = nhc.getCollisionFrequency();
+        absScale = chainPropagator->propagate(absKE, chainVelocities, chainPositions, numDOFs,
+                                              temperature, collisionFrequency, timeStep,
+                                              numMTS, nhc.getYoshidaSuzukiWeights());
+    }
+    double relScale = 0;
+    int nPairs = nhc.getThermostatedPairs().size();
+    if (nPairs) {
+        if (allChainPositions.size() < 2*chainID+2){
+            allChainPositions.resize(2*chainID+2);
+        }
+        if (allChainVelocities.size() < 2*chainID+2){
+            allChainVelocities.resize(2*chainID+2);
+        }
+        auto& chainPositions = allChainPositions.at(2*chainID+1);
+        auto& chainVelocities = allChainVelocities.at(2*chainID+1);
+        if (chainPositions.size() < chainLength){
+            chainPositions.resize(chainLength, 0);
+        }
+        if (chainVelocities.size() < chainLength){
+            chainVelocities.resize(chainLength, 0);
+        }
+        double temperature = nhc.getRelativeTemperature();
+        double collisionFrequency = nhc.getRelativeCollisionFrequency();
+        relScale = chainPropagator->propagate(relKE, chainVelocities, chainPositions, 3*nPairs,
+                                              temperature, collisionFrequency, timeStep,
+                                              numMTS, nhc.getYoshidaSuzukiWeights());
+    }
+    return {absScale, relScale};
+}
+
+double ReferenceIntegrateVelocityVerletStepKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
+    double potentialEnergy = 0;
+    double kineticEnergy = 0;
+    int chainLength = nhc.getChainLength();
+    int chainID = nhc.getChainID();
+    int nAtoms = nhc.getThermostatedAtoms().size();
+    int nPairs = nhc.getThermostatedPairs().size();
+    auto& nhcPositions = extractNoseHooverPositions(context);
+    auto& nhcVelocities = extractNoseHooverVelocities(context);
+    if (nAtoms) {
+        double temperature = nhc.getTemperature();
+        double collisionFrequency = nhc.getCollisionFrequency();
+        double kT = temperature * BOLTZ;
+        int numDOFs = nhc.getNumDegreesOfFreedom();
+        for(int i = 0; i < chainLength; ++i) {
+            double prefac = i ? 1 : numDOFs;
+            double mass = prefac * kT / (collisionFrequency * collisionFrequency);
+            double velocity = nhcVelocities[2*chainID][i];
+            // The kinetic energy of this bead
+            kineticEnergy += 0.5 * mass * velocity * velocity;
+            // The potential energy of this bead
+            double position = nhcPositions[2*chainID][i];
+            potentialEnergy += prefac * kT * position;
+        }
+    }
+    if (nPairs) {
+        double temperature = nhc.getRelativeTemperature();
+        double collisionFrequency = nhc.getRelativeCollisionFrequency();
+        double kT = temperature * BOLTZ;
+        int numDOFs = 3 * nPairs;
+        for(int i = 0; i < chainLength; ++i) {
+            double prefac = i ? 1 : numDOFs;
+            double mass = prefac * kT / (collisionFrequency * collisionFrequency);
+            double velocity = nhcVelocities[2*chainID+1][i];
+            // The kinetic energy of this bead
+            kineticEnergy += 0.5 * mass * velocity * velocity;
+            // The potential energy of this bead
+            double position = nhcPositions[2*chainID+1][i];
+            potentialEnergy += prefac * kT * position;
+        }
+    }
+    return kineticEnergy + potentialEnergy;
+}
+
+std::pair<double, double> ReferenceIntegrateVelocityVerletStepKernel::computeMaskedKineticEnergy(ContextImpl& context,
+                                                                const NoseHooverChain &noseHooverChain, bool downloadValue) {
+    const std::vector<int>& atomsList = noseHooverChain.getThermostatedAtoms();
+    const std::vector<std::pair<int,int>>& pairsList = noseHooverChain.getThermostatedPairs();
+    std::vector<Vec3>& velocities = extractVelocities(context);
+    const System& system = context.getSystem();
+    int numParticles = system.getNumParticles();
+    std::vector<double> masses(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
+
+    double comKE = 0;
+    double relKE = 0;
+    // kinetic energy of individual atoms
+    for (const auto &m: atomsList){
+        comKE += 0.5 * masses[m] * velocities[m].dot(velocities[m]);
+    }
+    // center of mass kinetic energy of pairs
+    for (const auto &p: pairsList){
+        double m1 = masses[p.first];
+        double m2 = masses[p.second];
+        Vec3 v1 = velocities[p.first];
+        Vec3 v2 = velocities[p.second];
+        double invMass = 1.0 / (m1 + m2);
+        double redMass = m1 * m2 * invMass;
+        double fracM1 = m1 * invMass;
+        double fracM2 = m2 * invMass;
+        Vec3 comVelocity = fracM1 * v1 + fracM2 * v2;
+        Vec3 relVelocity = v2 - v1;
+
+        comKE += 0.5 * (m1 + m2) * comVelocity.dot(comVelocity);
+        relKE += 0.5 * redMass * relVelocity.dot(relVelocity);
+    }
+    // We ignore the downloadValue argument here and always return the correct value
+    return {comKE, relKE};
+}
+
+
+void ReferenceIntegrateVelocityVerletStepKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> scaleFactors) {
+    const auto& atoms = noseHooverChain.getThermostatedAtoms();
+    const auto& pairs = noseHooverChain.getThermostatedPairs();
+    std::vector<Vec3>& velocities = extractVelocities(context);
+    double absScale = scaleFactors.first;
+    double relScale = scaleFactors.second;
+
+    const System& system = context.getSystem();
+    int numParticles = system.getNumParticles();
+    std::vector<double> masses(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
+    // scale absolute velocities
+    for (const auto &a: atoms){
+        velocities[a] *= absScale;
+    }
+    // scale relative velocities and absolute center of mass velocities for each pair
+    for (const auto &p: pairs){
+        int p1 = p.first;
+        int p2 = p.second;
+        double m1 = masses[p.first];
+        double m2 = masses[p.second];
+        Vec3 v1 = velocities[p.first];
+        Vec3 v2 = velocities[p.second];
+        double invMass = 1.0 / (m1 + m2);
+        double fracM1 = m1 * invMass;
+        double fracM2 = m2 * invMass;
+        Vec3 comVelocity = fracM1 * v1 + fracM2 * v2;
+        Vec3 relVelocity = v2 - v1;
+        velocities[p1] = absScale * comVelocity - relScale * relVelocity * fracM2;
+        velocities[p2] = absScale * comVelocity + relScale * relVelocity * fracM1;
+    }
 }
 
 ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
@@ -2520,7 +2717,6 @@ ReferenceNoseHooverChainKernel::~ReferenceNoseHooverChainKernel() {
 
 void ReferenceNoseHooverChainKernel::initialize() {
     this->chainPropagator = new ReferenceNoseHooverChain();
-    //SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) thermostat.getRandomNumberSeed());
 }
 
 std::pair<double, double> ReferenceNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> kineticEnergy, double timeStep) {

@@ -195,7 +195,7 @@ void testDimerBox(bool constrain=true) {
     // Check mean temperature
     ASSERT_USUALLY_EQUAL_TOL(temperature, mean_temp, 1e-2);
     // Check fluctuation of conserved (total bath + system) energy
-    ASSERT_USUALLY_EQUAL_TOL(relative_std, 0, 1e-3);
+    ASSERT_USUALLY_EQUAL_TOL(relative_std, 0, 5e-3);
 }
 
 void testCheckpoints() {
