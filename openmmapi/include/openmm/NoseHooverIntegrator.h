@@ -46,7 +46,7 @@ class System;
 /**
  * This is an Integrator which simulates a System using one or more Nose Hoover chain
  * thermostats, using the "middle" leapfrog propagation algorithm described in
- * J. Phys. Chem. A 2019, 123, 6056−6079.
+ * J. Phys. Chem. A 2019, 123, 6056-6079.
  */
 
 class OPENMM_EXPORT NoseHooverIntegrator : public Integrator {
