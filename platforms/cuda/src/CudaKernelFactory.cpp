@@ -133,8 +133,6 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CommonIntegrateCustomStepKernel(name, platform, cu);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new CommonApplyAndersenThermostatKernel(name, platform, cu);
-    if (name == NoseHooverChainKernel::Name())
-        return new CommonNoseHooverChainKernel(name, platform, cu);
     if (name == IntegrateNoseHooverStepKernel::Name())
         return new CommonIntegrateNoseHooverStepKernel(name, platform, cu);
     if (name == ApplyMonteCarloBarostatKernel::Name())

@@ -90,8 +90,6 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceIntegrateVerletStepKernel(name, platform, data);
     if (name == IntegrateNoseHooverStepKernel::Name())
         return new ReferenceIntegrateNoseHooverStepKernel(name, platform, data);
-    if (name == NoseHooverChainKernel::Name())
-        return new ReferenceNoseHooverChainKernel(name, platform);
     if (name == IntegrateLangevinStepKernel::Name())
         return new ReferenceIntegrateLangevinStepKernel(name, platform, data);
     if (name == IntegrateLangevinMiddleStepKernel::Name())
