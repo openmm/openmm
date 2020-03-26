@@ -950,7 +950,6 @@ public:
                                   IntegrateNoseHooverStepKernel(name, platform), cc(cc), hasInitializedKernels(false),
                                   hasInitializedKineticEnergyKernel(false), hasInitializedHeatBathEnergyKernel(false),
                                   hasInitializedScaleVelocitiesKernel(false), hasInitializedPropagateKernel(false) {}
-                                  { }
     ~CommonIntegrateNoseHooverStepKernel() {}
     /**
      * Initialize the kernel.
