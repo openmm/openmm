@@ -5640,12 +5640,12 @@ double CommonIntegrateLangevinMiddleStepKernel::computeKineticEnergy(ContextImpl
     return cc.getIntegrationUtilities().computeKineticEnergy(0.0);
 }
 
-void CommonIntegrateVelocityVerletStepKernel::initialize(const System& system, const NoseHooverIntegrator& integrator) {
+void CommonIntegrateNoseHooverStepKernel::initialize(const System& system, const NoseHooverIntegrator& integrator) {
     cc.initializeContexts();
     bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
     map<string, string> defines;
     defines["BOLTZ"] = cc.doubleToString(BOLTZ);
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::velocityVerlet, defines);
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::noseHooverIntegrator, defines);
     kernel1 = program->createKernel("integrateNoseHooverMiddlePart1");
     kernel2 = program->createKernel("integrateNoseHooverMiddlePart2");
     kernel3 = program->createKernel("integrateNoseHooverMiddlePart3");
@@ -5655,7 +5655,7 @@ void CommonIntegrateVelocityVerletStepKernel::initialize(const System& system, c
     } else {
         oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
     }
-    kernelHardWall = program->createKernel("integrateVelocityVerletHardWall");
+    kernelHardWall = program->createKernel("integrateNoseHooverHardWall");
     prevMaxPairDistance = -1.0f;
     maxPairDistanceBuffer.initialize<float>(cc, 1, "maxPairDistanceBuffer");
 
@@ -5686,7 +5686,7 @@ void CommonIntegrateVelocityVerletStepKernel::initialize(const System& system, c
         energyBuffer.initialize<mm_float2>(cc, energyBufferSize, "energyBuffer");
 }
 
-void CommonIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
+void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     double dt = integrator.getStepSize();
@@ -5812,12 +5812,12 @@ void CommonIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, cons
 #endif
 }
 
-double CommonIntegrateVelocityVerletStepKernel::computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) {
+double CommonIntegrateNoseHooverStepKernel::computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) {
     return cc.getIntegrationUtilities().computeKineticEnergy(0);
 }
 
 
-std::pair<double, double> CommonIntegrateVelocityVerletStepKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> kineticEnergies, double timeStep) {
+std::pair<double, double> CommonIntegrateNoseHooverStepKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> kineticEnergies, double timeStep) {
     bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
     int chainID = nhc.getChainID();
     int nAtoms = nhc.getThermostatedAtoms().size();
@@ -5986,7 +5986,7 @@ std::pair<double, double> CommonIntegrateVelocityVerletStepKernel::propagateChai
     return {0, 0};
 }
 
-double CommonIntegrateVelocityVerletStepKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
+double CommonIntegrateNoseHooverStepKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
 
     bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
 
@@ -6071,7 +6071,7 @@ double CommonIntegrateVelocityVerletStepKernel::computeHeatBathEnergy(ContextImp
         return *((float*) pinnedBuffer);
 }
 
-std::pair<double, double> CommonIntegrateVelocityVerletStepKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &nhc, bool downloadValue) {
+std::pair<double, double> CommonIntegrateNoseHooverStepKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &nhc, bool downloadValue) {
 
     bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
 
@@ -6166,7 +6166,7 @@ std::pair<double, double> CommonIntegrateVelocityVerletStepKernel::computeMasked
     return KEs;
 }
 
-void CommonIntegrateVelocityVerletStepKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> scaleFactor) {
+void CommonIntegrateNoseHooverStepKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> scaleFactor) {
     // For now we assume that the atoms and pairs info is valid, because compute{Atoms|Pairs}KineticEnergy must have been
     // called before this kernel.  If that ever ceases to be true, some sanity checks are needed here.
 

@@ -944,14 +944,14 @@ private:
 /*
  * This kernel is invoked by NoseHooverIntegrator to take one time step.
  */
-class CommonIntegrateVelocityVerletStepKernel : public IntegrateVelocityVerletStepKernel {
+class CommonIntegrateNoseHooverStepKernel : public IntegrateNoseHooverStepKernel {
 public:
-    CommonIntegrateVelocityVerletStepKernel(std::string name, const Platform& platform, ComputeContext& cc) :
-                                  IntegrateVelocityVerletStepKernel(name, platform), cc(cc), hasInitializedKernels(false),
+    CommonIntegrateNoseHooverStepKernel(std::string name, const Platform& platform, ComputeContext& cc) :
+                                  IntegrateNoseHooverStepKernel(name, platform), cc(cc), hasInitializedKernels(false),
                                   hasInitializedKineticEnergyKernel(false), hasInitializedHeatBathEnergyKernel(false),
                                   hasInitializedScaleVelocitiesKernel(false), hasInitializedPropagateKernel(false) {}
                                   { }
-    ~CommonIntegrateVelocityVerletStepKernel() {}
+    ~CommonIntegrateNoseHooverStepKernel() {}
     /**
      * Initialize the kernel.
      *

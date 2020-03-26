@@ -57,6 +57,7 @@
 #include "ReferenceLJCoulombIxn.h"
 #include "ReferenceMonteCarloBarostat.h"
 #include "ReferenceNoseHooverChain.h"
+#include "ReferenceNoseHooverDynamics.h"
 #include "ReferenceProperDihedralBond.h"
 #include "ReferenceRbDihedralBond.h"
 #include "ReferenceRMSDForce.h"
@@ -64,7 +65,6 @@
 #include "ReferenceTabulatedFunction.h"
 #include "ReferenceVariableStochasticDynamics.h"
 #include "ReferenceVariableVerletDynamics.h"
-#include "ReferenceVelocityVerletDynamics.h"
 #include "ReferenceVerletDynamics.h"
 #include "ReferenceVirtualSites.h"
 #include "openmm/CMMotionRemover.h"
@@ -2154,14 +2154,14 @@ double ReferenceIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& con
     return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }
 
-ReferenceIntegrateVelocityVerletStepKernel::~ReferenceIntegrateVelocityVerletStepKernel() {
+ReferenceIntegrateNoseHooverStepKernel::~ReferenceIntegrateNoseHooverStepKernel() {
     if (chainPropagator)
         delete chainPropagator;
     if (dynamics)
         delete dynamics;
 }
 
-void ReferenceIntegrateVelocityVerletStepKernel::initialize(const System& system, const NoseHooverIntegrator& integrator) {
+void ReferenceIntegrateNoseHooverStepKernel::initialize(const System& system, const NoseHooverIntegrator& integrator) {
     int numParticles = system.getNumParticles();
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
@@ -2169,7 +2169,7 @@ void ReferenceIntegrateVelocityVerletStepKernel::initialize(const System& system
     this->chainPropagator = new ReferenceNoseHooverChain();
 }
 
-void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
+void ReferenceIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
     double stepSize = integrator.getStepSize();
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& velData = extractVelocities(context);
@@ -2178,7 +2178,7 @@ void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, c
         // Recreate the computation objects with the new parameters.
         if (dynamics)
             delete dynamics;
-        dynamics = new ReferenceVelocityVerletDynamics(context.getSystem().getNumParticles(), stepSize);
+        dynamics = new ReferenceNoseHooverDynamics(context.getSystem().getNumParticles(), stepSize);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevStepSize = stepSize;
     }
@@ -2202,11 +2202,11 @@ void ReferenceIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, c
     data.stepCount++;
 }
 
-double ReferenceIntegrateVelocityVerletStepKernel::computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) {
+double ReferenceIntegrateNoseHooverStepKernel::computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0);
 }
 
-std::pair<double, double> ReferenceIntegrateVelocityVerletStepKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc,
+std::pair<double, double> ReferenceIntegrateNoseHooverStepKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc,
                                                                                      std::pair<double, double> kineticEnergy, double timeStep) {
     double absKE = kineticEnergy.first;
     double relKE = kineticEnergy.second;
@@ -2270,7 +2270,7 @@ std::pair<double, double> ReferenceIntegrateVelocityVerletStepKernel::propagateC
     return {absScale, relScale};
 }
 
-double ReferenceIntegrateVelocityVerletStepKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
+double ReferenceIntegrateNoseHooverStepKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
     double potentialEnergy = 0;
     double kineticEnergy = 0;
     int chainLength = nhc.getChainLength();
@@ -2314,7 +2314,7 @@ double ReferenceIntegrateVelocityVerletStepKernel::computeHeatBathEnergy(Context
     return kineticEnergy + potentialEnergy;
 }
 
-std::pair<double, double> ReferenceIntegrateVelocityVerletStepKernel::computeMaskedKineticEnergy(ContextImpl& context,
+std::pair<double, double> ReferenceIntegrateNoseHooverStepKernel::computeMaskedKineticEnergy(ContextImpl& context,
                                                                 const NoseHooverChain &noseHooverChain, bool downloadValue) {
     const std::vector<int>& atomsList = noseHooverChain.getThermostatedAtoms();
     const std::vector<std::pair<int,int>>& pairsList = noseHooverChain.getThermostatedPairs();
@@ -2352,7 +2352,7 @@ std::pair<double, double> ReferenceIntegrateVelocityVerletStepKernel::computeMas
 }
 
 
-void ReferenceIntegrateVelocityVerletStepKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> scaleFactors) {
+void ReferenceIntegrateNoseHooverStepKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> scaleFactors) {
     const auto& atoms = noseHooverChain.getThermostatedAtoms();
     const auto& pairs = noseHooverChain.getThermostatedPairs();
     std::vector<Vec3>& velocities = extractVelocities(context);

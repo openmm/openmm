@@ -29,7 +29,7 @@
 #include "openmm/OpenMMException.h"
 #include "SimTKOpenMMUtilities.h"
 #include "openmm/internal/ContextImpl.h"
-#include "ReferenceVelocityVerletDynamics.h"
+#include "ReferenceNoseHooverDynamics.h"
 #include "ReferenceVirtualSites.h"
 
 #include <cstdio>
@@ -39,7 +39,7 @@ using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
-   ReferenceVelocityVerletDynamics constructor
+   ReferenceNoseHooverDynamics constructor
 
    @param numberOfAtoms  number of atoms
    @param deltaT         delta t for dynamics
@@ -48,7 +48,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceVelocityVerletDynamics::ReferenceVelocityVerletDynamics(int numberOfAtomsIn, double deltaT) :
+ReferenceNoseHooverDynamics::ReferenceNoseHooverDynamics(int numberOfAtomsIn, double deltaT) :
            ReferenceDynamics(numberOfAtomsIn, deltaT, 0.0) {
    numberOfAtoms = numberOfAtomsIn;
    xPrime.resize(numberOfAtoms);
@@ -58,11 +58,11 @@ ReferenceVelocityVerletDynamics::ReferenceVelocityVerletDynamics(int numberOfAto
 
 /**---------------------------------------------------------------------------------------
 
-   ReferenceVelocityVerletDynamics destructor
+   ReferenceNoseHooverDynamics destructor
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceVelocityVerletDynamics::~ReferenceVelocityVerletDynamics() {
+ReferenceNoseHooverDynamics::~ReferenceNoseHooverDynamics() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ ReferenceVelocityVerletDynamics::~ReferenceVelocityVerletDynamics() {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceVelocityVerletDynamics::BAstep(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+void ReferenceNoseHooverDynamics::BAstep(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
                                           vector<Vec3>& velocities,
                                           vector<Vec3>& forces, vector<double>& masses, double tolerance, bool &forcesAreValid,
                                           const std::vector<int> & atomList, const std::vector<std::tuple<int, int, double>> &pairList,
@@ -145,7 +145,7 @@ void ReferenceVelocityVerletDynamics::BAstep(OpenMM::ContextImpl &context, const
 }
 
 
-void ReferenceVelocityVerletDynamics::ABstep(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+void ReferenceNoseHooverDynamics::ABstep(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
                                           vector<Vec3>& velocities,
                                           vector<Vec3>& forces, vector<double>& masses, double tolerance, bool &forcesAreValid,
                                           const std::vector<int> & atomList, const std::vector<std::tuple<int, int, double>> &pairList,

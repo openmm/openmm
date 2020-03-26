@@ -1063,12 +1063,12 @@ public:
 /**
  * This kernel is invoked by NoseHooverIntegrator to take one time step.
  */
-class IntegrateVelocityVerletStepKernel : public KernelImpl {
+class IntegrateNoseHooverStepKernel : public KernelImpl {
 public:
     static std::string Name() {
-        return "IntegrateVelocityVerletStep";
+        return "IntegrateNoseHooverStep";
     }
-    IntegrateVelocityVerletStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    IntegrateNoseHooverStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel.

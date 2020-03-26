@@ -61,7 +61,7 @@ class ReferenceStochasticDynamics;
 class ReferenceConstraintAlgorithm;
 class ReferenceNoseHooverChain;
 class ReferenceMonteCarloBarostat;
-class ReferenceVelocityVerletDynamics;
+class ReferenceNoseHooverDynamics;
 class ReferenceVariableStochasticDynamics;
 class ReferenceVariableVerletDynamics;
 class ReferenceVerletDynamics;
@@ -1139,12 +1139,12 @@ private:
 /**
  * This kernel is invoked by NoseHooverIntegrator to take one time step.
  */
-class ReferenceIntegrateVelocityVerletStepKernel : public IntegrateVelocityVerletStepKernel {
+class ReferenceIntegrateNoseHooverStepKernel : public IntegrateNoseHooverStepKernel {
 public:
-    ReferenceIntegrateVelocityVerletStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVelocityVerletStepKernel(name, platform),
+    ReferenceIntegrateNoseHooverStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateNoseHooverStepKernel(name, platform),
         data(data), dynamics(0) {
     }
-    ~ReferenceIntegrateVelocityVerletStepKernel();
+    ~ReferenceIntegrateNoseHooverStepKernel();
     /**
      * Initialize the kernel.
      * 
@@ -1206,7 +1206,7 @@ public:
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceNoseHooverChain* chainPropagator;
-    ReferenceVelocityVerletDynamics* dynamics;
+    ReferenceNoseHooverDynamics* dynamics;
     std::vector<double> masses;
     double prevStepSize;
 };

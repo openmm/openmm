@@ -88,8 +88,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcGayBerneForceKernel(name, platform);
     if (name == IntegrateVerletStepKernel::Name())
         return new ReferenceIntegrateVerletStepKernel(name, platform, data);
-    if (name == IntegrateVelocityVerletStepKernel::Name())
-        return new ReferenceIntegrateVelocityVerletStepKernel(name, platform, data);
+    if (name == IntegrateNoseHooverStepKernel::Name())
+        return new ReferenceIntegrateNoseHooverStepKernel(name, platform, data);
     if (name == NoseHooverChainKernel::Name())
         return new ReferenceNoseHooverChainKernel(name, platform);
     if (name == IntegrateLangevinStepKernel::Name())

@@ -22,8 +22,8 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ReferenceVelocityVerletDynamics_H__
-#define __ReferenceVelocityVerletDynamics_H__
+#ifndef __ReferenceNoseHooverDynamics_H__
+#define __ReferenceNoseHooverDynamics_H__
 
 #include "ReferenceDynamics.h"
 #include <tuple>
@@ -32,7 +32,7 @@ namespace OpenMM {
 
 class ContextImpl;
 
-class ReferenceVelocityVerletDynamics : public ReferenceDynamics {
+class ReferenceNoseHooverDynamics : public ReferenceDynamics {
 
    private:
       std::vector<OpenMM::Vec3> xPrime;
@@ -53,7 +53,7 @@ class ReferenceVelocityVerletDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceVelocityVerletDynamics(int numberOfAtoms, double deltaT);
+       ReferenceNoseHooverDynamics(int numberOfAtoms, double deltaT);
 
       /**---------------------------------------------------------------------------------------
       
@@ -61,11 +61,11 @@ class ReferenceVelocityVerletDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceVelocityVerletDynamics();
+       ~ReferenceNoseHooverDynamics();
 
       /**---------------------------------------------------------------------------------------
       
-         BAstep = update the velocities and positions to start a BAOAB step
+         BAstep = update the velocities and positions to start a BAOAB step using the leapfrog "middle" scheme
       
          @param system              the System to be integrated
          @param atomCoordinates     atom coordinates
@@ -85,7 +85,7 @@ class ReferenceVelocityVerletDynamics : public ReferenceDynamics {
                   const std::vector<int> & allAtoms, const std::vector<std::tuple<int, int, double>> & allPairs, double maxPairDistance);
       /**---------------------------------------------------------------------------------------
       
-         ABstep = update the positions and velocities to end a BAOAB step
+         ABstep = update the positions and velocities to end a BAOAB step using the leapfrog "middle" scheme
       
          @param system              the System to be integrated
          @param atomCoordinates     atom coordinates
@@ -107,4 +107,4 @@ class ReferenceVelocityVerletDynamics : public ReferenceDynamics {
 
 } // namespace OpenMM
 
-#endif // __ReferenceVelocityVerletDynamics_H__
+#endif // __ReferenceNoseHooverDynamics_H__
