@@ -63,6 +63,32 @@ void* Continuous1DFunctionProxy::deserialize(const SerializationNode& node) cons
     return new Continuous1DFunction(values, node.getDoubleProperty("min"), node.getDoubleProperty("max"));
 }
 
+ContinuousPeriodic1DFunctionProxy::ContinuousPeriodic1DFunctionProxy() : SerializationProxy("ContinuousPeriodic1DFunction") {
+}
+
+void ContinuousPeriodic1DFunctionProxy::serialize(const void* object, SerializationNode& node) const {
+    node.setIntProperty("version", 1);
+    const ContinuousPeriodic1DFunction& function = *reinterpret_cast<const ContinuousPeriodic1DFunction*>(object);
+    double min, max;
+    vector<double> values;
+    function.getFunctionParameters(values, min, max);
+    node.setDoubleProperty("min", min);
+    node.setDoubleProperty("max", max);
+    SerializationNode& valuesNode = node.createChildNode("Values");
+    for (auto v : values)
+        valuesNode.createChildNode("Value").setDoubleProperty("v", v);
+}
+
+void* ContinuousPeriodic1DFunctionProxy::deserialize(const SerializationNode& node) const {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
+    const SerializationNode& valuesNode = node.getChildNode("Values");
+    vector<double> values;
+    for (auto& child : valuesNode.getChildren())
+        values.push_back(child.getDoubleProperty("v"));
+    return new ContinuousPeriodic1DFunction(values, node.getDoubleProperty("min"), node.getDoubleProperty("max"));
+}
+
 Continuous2DFunctionProxy::Continuous2DFunctionProxy() : SerializationProxy("Continuous2DFunction") {
 }
 
