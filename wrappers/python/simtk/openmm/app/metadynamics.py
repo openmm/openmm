@@ -358,7 +358,7 @@ class WellTemperedMetadynamics(Metadynamics):
             dist = np.abs(np.linspace(0, 1.0, num=v.gridWidth) - x)
             if v.periodic:
                 dist = np.min(np.array([dist, np.abs(dist-1)]), axis=0)
-            axisGaussians.append(np.exp(-dist*dist*v.gridWidth/v.biasWidth))
+            axisGaussians.append(np.exp(-0.5*dist*dist/v._scaledVariance))
 
         # Compute their outer product.
 
@@ -419,6 +419,7 @@ class BiasVariable(object):
             self.gridWidth = int(np.ceil(5*(maxValue-minValue)/biasWidth))
         else:
             self.gridWidth = gridWidth
+        self._scaledVariance = (biasWidth/(maxValue-minValue))**2
 
 
 _LoadedBias = namedtuple('LoadedBias', ['id', 'index', 'bias'])
