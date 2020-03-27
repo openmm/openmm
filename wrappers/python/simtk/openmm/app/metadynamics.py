@@ -265,6 +265,122 @@ class Metadynamics(object):
                 self._totalBias += bias.bias
 
 
+class WellTemperedMetadynamics(Metadynamics):
+    """
+    Temporary class.
+
+    """
+
+    def __init__(self, system, variables, temperature, biasFactor, height, frequency, saveFrequency=None, biasDir=None):
+        """Create a Metadynamics object.
+
+        Parameters
+        ----------
+        system: System
+            the System to simulate.  A CustomCVForce implementing the bias is created and
+            added to the System.
+        variables: list of BiasVariables
+            the collective variables to sample
+        temperature: temperature
+            the temperature at which the simulation is being run.  This is used in computing
+            the free energy.
+        biasFactor: float
+            used in scaling the height of the Gaussians added to the bias.  The collective
+            variables are sampled as if the effective temperature of the simulation were
+            temperature*biasFactor.
+        height: energy
+            the initial height of the Gaussians to add
+        frequency: int
+            the interval in time steps at which Gaussians should be added to the bias potential
+        saveFrequency: int (optional)
+            the interval in time steps at which to write out the current biases to disk.  At
+            the same time it writes biases, it also checks for updated biases written by other
+            processes and loads them in.  This must be a multiple of frequency.
+        biasDir: str (optional)
+            the directory to which biases should be written, and from which biases written by
+            other processes should be loaded
+        """
+        if not unit.is_quantity(temperature):
+            temperature = temperature*unit.kelvin
+        if not unit.is_quantity(height):
+            height = height*unit.kilojoules_per_mole
+        if biasFactor < 1.0:
+            raise ValueError('biasFactor must be >= 1')
+        if (saveFrequency is None and biasDir is not None) or (saveFrequency is not None and biasDir is None):
+            raise ValueError('Must specify both saveFrequency and biasDir')
+        if saveFrequency is not None and (saveFrequency < frequency or saveFrequency%frequency != 0):
+            raise ValueError('saveFrequency must be a multiple of frequency')
+        self.variables = variables
+        self.temperature = temperature
+        self.biasFactor = biasFactor
+        self.height = height
+        self.frequency = frequency
+        self.biasDir = biasDir
+        self.saveFrequency = saveFrequency
+        self._id = np.random.randint(0x7FFFFFFF)
+        self._saveIndex = 0
+        self._selfBias = np.zeros(tuple(v.gridWidth for v in variables))
+        self._totalBias = np.zeros(tuple(v.gridWidth for v in variables))
+        self._loadedBiases = {}
+        self._deltaT = temperature*(biasFactor-1)
+        varNames = ['cv%d' % i for i in range(len(variables))]
+        self._force = mm.CustomCVForce('table(%s)' % ', '.join(varNames))
+        for name, var in zip(varNames, variables):
+            self._force.addCollectiveVariable(name, var.force)
+        widths = [v.gridWidth for v in variables]
+        mins = [v.minValue for v in variables]
+        maxs = [v.maxValue for v in variables]
+        if len(variables) == 1:
+            self._table = mm.Continuous1DFunction(self._totalBias.flatten(), mins[0], maxs[0])
+        elif len(variables) == 2:
+            self._table = mm.Continuous2DFunction(widths[0], widths[1], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1])
+        elif len(variables) == 3:
+            self._table = mm.Continuous3DFunction(widths[0], widths[1], widths[2], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1], mins[2], maxs[2])
+        else:
+            raise ValueError('Metadynamics requires 1, 2, or 3 collective variables')
+        self._force.addTabulatedFunction('table', self._table)
+        self._force.setForceGroup(31)
+        system.addForce(self._force)
+        self._syncWithDisk()
+
+    def _addGaussian(self, position, height, context):
+        """Add a Gaussian to the bias function."""
+        # Compute a Gaussian along each axis.
+
+        axisGaussians = []
+        for i,v in enumerate(self.variables):
+            x = (position[i]-v.minValue) / (v.maxValue-v.minValue)
+            if v.periodic:
+                x = x % 1.0
+            dist = np.abs(np.linspace(0, 1.0, num=v.gridWidth) - x)
+            if v.periodic:
+                dist = np.min(np.array([dist, np.abs(dist-1)]), axis=0)
+            axisGaussians.append(np.exp(-dist*dist*v.gridWidth/v.biasWidth))
+
+        # Compute their outer product.
+
+        if len(self.variables) == 1:
+            gaussian = axisGaussians[0]
+        else:
+            gaussian = reduce(np.multiply.outer, reversed(axisGaussians))
+
+        # Add it to the bias.
+
+        height = height.value_in_unit(unit.kilojoules_per_mole)
+        self._selfBias += height*gaussian
+        self._totalBias += height*gaussian
+        widths = [v.gridWidth for v in self.variables]
+        mins = [v.minValue for v in self.variables]
+        maxs = [v.maxValue for v in self.variables]
+        if len(self.variables) == 1:
+            self._table.setFunctionParameters(self._totalBias.flatten(), mins[0], maxs[0])
+        elif len(self.variables) == 2:
+            self._table.setFunctionParameters(widths[0], widths[1], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1])
+        elif len(self.variables) == 3:
+            self._table.setFunctionParameters(widths[0], widths[1], widths[2], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1], mins[2], maxs[2])
+        self._force.updateParametersInContext(context)
+
+
 class BiasVariable(object):
     """A collective variable that can be used to bias a simulation with metadynamics."""
 
