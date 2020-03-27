@@ -2,9 +2,9 @@ jobs:
 
   # Configure, build, install, and test job
   - job: 'windows_build'
-    displayName: 'Windows VS2015'
+    displayName: 'Windows VS2017'
     pool:
-      vmImage: 'vs2015-win2012r2'
+      vmImage: 'vs2017-win2016'
     timeoutInMinutes: 360
     variables:
       llvm.version: '7.0.1'
@@ -54,7 +54,7 @@ jobs:
       # Download OpenCL Headers and build the ICD loader
       - script: |
           setlocal EnableDelayedExpansion
-          call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           mkdir opencl
           cd opencl
           wget https://www.khronos.org/registry/cl/specs/opencl-icd-1.2.11.0.tgz -O opencl-icd-1.2.11.0.tgz
@@ -67,7 +67,9 @@ jobs:
           move .\OpenCL-Headers-master\CL\*.h .\inc\CL\
           mkdir lib > $null
           cd lib
-          cmake -G Ninja ..
+          cmake -G Ninja .. ^
+                -DCMAKE_CXX_COMPILER=cl.exe ^
+                -DCMAKE_C_COMPILER=cl.exe
           cmake --build . ^
                 -- -j %NUMBER_OF_PROCESSORS%
         displayName: "Download and install OpenCL"
@@ -75,12 +77,14 @@ jobs:
       # Configure
       - script: |
           setlocal EnableDelayedExpansion
-          call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           mkdir build & cd build
           cmake -G Ninja ^
                 -DOPENCL_INCLUDE_DIR=$(Pipeline.Workspace)/opencl/inc ^
                 -DOPENCL_LIBRARY=$(Pipeline.Workspace)/opencl/lib/OpenCL.lib ^
                 -DCMAKE_BUILD_TYPE=$(cmake.build.type) ^
+                -DCMAKE_CXX_COMPILER=cl.exe ^
+                -DCMAKE_C_COMPILER=cl.exe ^
                 -DCMAKE_INSTALL_PREFIX=../install ^
                 -DOPENMM_BUILD_EXAMPLES=OFF ^
                 -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
@@ -89,7 +93,7 @@ jobs:
         workingDirectory: $(Build.BinariesDirectory)
       # Build
       - script: |
-          call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cmake --build . ^
                 --config $(cmake.build.type) ^
                 -- -j %NUMBER_OF_PROCESSORS%
