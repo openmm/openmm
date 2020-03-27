@@ -331,7 +331,10 @@ class WellTemperedMetadynamics(Metadynamics):
         mins = [v.minValue for v in variables]
         maxs = [v.maxValue for v in variables]
         if len(variables) == 1:
-            self._table = mm.Continuous1DFunction(self._totalBias.flatten(), mins[0], maxs[0])
+            if self.variables[0].periodic:
+                self._table = mm.ContinuousPeriodic1DFunction(self._totalBias.flatten(), mins[0], maxs[0])
+            else:
+                self._table = mm.Continuous1DFunction(self._totalBias.flatten(), mins[0], maxs[0])
         elif len(variables) == 2:
             self._table = mm.Continuous2DFunction(widths[0], widths[1], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1])
         elif len(variables) == 3:
@@ -373,6 +376,8 @@ class WellTemperedMetadynamics(Metadynamics):
         mins = [v.minValue for v in self.variables]
         maxs = [v.maxValue for v in self.variables]
         if len(self.variables) == 1:
+            if self.variables[0].periodic:
+                self._totalBias[-1] = self._totalBias[0]
             self._table.setFunctionParameters(self._totalBias.flatten(), mins[0], maxs[0])
         elif len(self.variables) == 2:
             self._table.setFunctionParameters(widths[0], widths[1], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1])
