@@ -5661,16 +5661,31 @@ void CommonIntegrateNoseHooverStepKernel::initialize(const System& system, const
 
     int workGroupSize = std::min(cc.getMaxThreadBlockSize(), 512);
     defines["WORK_GROUP_SIZE"] = std::to_string(workGroupSize);
-    defines["BEGIN_YS_LOOP"] = "const real arr[1] = {1.0}; for(int i=0;i<1;++i) { const real ys = arr[i];";
+
+    defines["BEGIN_YS_LOOP"] = "const real arr[1] = {1.0};"
+                               "for(int i=0;i<1;++i) {"
+                               "const real ys = arr[i];";
     defines["END_YS_LOOP"] = "}";
     program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
     propagateKernels[1] = program->createKernel("propagateNoseHooverChain");
-    defines["BEGIN_YS_LOOP"] = "const real arr[3] = {0.828981543588751, -0.657963087177502, 0.828981543588751}; for(int i=0;i<3;++i) { const real ys = arr[i];";
+
+    defines["BEGIN_YS_LOOP"] = "const real arr[3] = {0.828981543588751, -0.657963087177502, 0.828981543588751};"
+                               "for(int i=0;i<3;++i) {"
+                               "const real ys = arr[i];";
     program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
     propagateKernels[3] = program->createKernel("propagateNoseHooverChain");
-    defines["BEGIN_YS_LOOP"] = "const real arr[5] = {0.2967324292201065, 0.2967324292201065, -0.186929716880426, 0.2967324292201065, 0.2967324292201065}; for(int i=0;i<5;++i) { const real ys = arr[i];";
+
+    defines["BEGIN_YS_LOOP"] = "const real arr[5] = {0.2967324292201065, 0.2967324292201065, -0.186929716880426, 0.2967324292201065, 0.2967324292201065};"
+                               "for(int i=0;i<5;++i) {"
+                               "const real ys = arr[i];";
     program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
     propagateKernels[5] = program->createKernel("propagateNoseHooverChain");
+
+    defines["BEGIN_YS_LOOP"] = "const real arr[7] = {0.784513610477560, 0.235573213359357, -1.17767998417887, 1.31518632068391,-1.17767998417887, 0.235573213359357, 0.784513610477560};"
+                               "for(int i=0;i<7;++i) {"
+                               "const real ys = arr[i];";
+    program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
+    propagateKernels[7] = program->createKernel("propagateNoseHooverChain");
     program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
     reduceEnergyKernel = program->createKernel("reduceEnergyPair");
 
@@ -5826,8 +5841,8 @@ std::pair<double, double> CommonIntegrateNoseHooverStepKernel::propagateChain(Co
     int numYS = nhc.getNumYoshidaSuzukiTimeSteps();
     int numMTS = nhc.getNumMultiTimeSteps();
 
-    if (numYS != 1 && numYS != 3 && numYS != 5) {
-        throw OpenMMException("Number of Yoshida Suzuki time steps has to be 1, 3, or 5.");
+    if (numYS != 1 && numYS != 3 && numYS != 5 && numYS != 7) {
+        throw OpenMMException("Number of Yoshida Suzuki time steps has to be 1, 3, 5, or 7.");
     }
 
     auto & chainState = cc.getIntegrationUtilities().getNoseHooverChainState();

@@ -55,7 +55,10 @@ std::vector<double> NoseHooverChain::getYoshidaSuzukiWeights() const {
         case 5:
             return {0.2967324292201065, 0.2967324292201065, -0.186929716880426, 0.2967324292201065,
                     0.2967324292201065};
+        case 7:
+            return {0.784513610477560, 0.235573213359357, -1.17767998417887, 1.31518632068391,
+                    -1.17767998417887, 0.235573213359357, 0.784513610477560};
         default:
-            throw OpenMMException("The number of Yoshida-Suzuki weights must be 1,3, or 5.");
+            throw OpenMMException("The number of Yoshida-Suzuki weights must be 1,3,5, or 7.");
     }
 }
