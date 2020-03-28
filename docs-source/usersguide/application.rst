@@ -1068,13 +1068,18 @@ temperature control with a velocity scaling algorithm that produces more
 accurate transport properties :cite:`Basconi2013`.  This velocity scaling
 results from propagating a chain of extra variables, which slightly reduces the
 computational efficiency with respect to :code:`LangevinMiddleIntegrator`.  The
-integrator is minimally created by specifying only the timestep::
+thermostated integrator is minimally created similarly to the
+:code:`LangevinMiddleIntegrator` example above::
 
-    integrator = NoseHooverIntegrator(0.004*picoseconds)
+    NoseHooverIntegrator integrator(300*kelvin, 25/picosecond, 0.004*picoseconds);
 
-However, many optional settings may be tuned as described XXXXXXXX.  Note that
-for this integrator, the velocities are offset by half a time step from the
-positions.
+The first argument specifies the target temperature.  The second specifies the
+frequency of interaction with the heat bath: a lower value interacts minimally,
+yielding the microcanonical ensemble in the limit of a zero frequency, while a
+larger frequency will perturb the system greater, keeping it closer to the
+target temperature.  The third argument is the integration timestep that, like
+the other arguments, must be specified with units.  Note that for this
+integrator, the velocities are offset by half a time step from the positions.
 
 Leapfrog Verlet Integrator
 --------------------------
