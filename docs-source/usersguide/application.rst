@@ -1059,6 +1059,23 @@ sampling, and therefore is preferred for most applications.  Also note that
 :code:`LangevinIntegrator`\ , like :code:`LangevinMiddleIntegrator`\ , is a leapfrog
 integrator, so the velocities are offset by half a time step from the positions.
 
+Nosé-Hoover Integrator
+----------------------
+
+The :code:`NoseHooverIntegrator` uses the same "middle" leapfrog propagation
+algorithm as :code:`LangevinMiddleIntegrator`, but replaces the stochastic
+temperature control with a velocity scaling algorithm that produces more
+accurate transport properties :cite:`Basconi2013`.  This velocity scaling
+results from propagating a chain of extra variables, which slightly reduces the
+computational efficiency with respect to :code:`LangevinMiddleIntegrator`.  The
+integrator is minimally created by specifying only the timestep::
+
+    integrator = NoseHooverIntegrator(0.004*picoseconds)
+
+However, many optional settings may be tuned as described XXXXXXXX.  Note that
+for this integrator, the velocities are offset by half a time step from the
+positions.
+
 Leapfrog Verlet Integrator
 --------------------------
 
