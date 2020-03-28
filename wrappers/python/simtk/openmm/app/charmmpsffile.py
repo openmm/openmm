@@ -1384,9 +1384,7 @@ class CharmmPsfFile(object):
 
         # Add excluded atoms
         # Drude and lonepairs will be excluded based on their parent atoms
-        parent_exclude_list=[]
-        for atom in self.atom_list:
-            parent_exclude_list.append([])
+        parent_exclude_list=[[] for _ in self.atom_list]
         for lpsite in self.lonepair_list:
             idx = lpsite[1]
             idxa = lpsite[0]

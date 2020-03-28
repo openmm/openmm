@@ -272,7 +272,7 @@ removeType = [False]*len(types)
 for res in residueAtoms:
     if res not in residueBonds:
         continue
-    atomBonds = [[] for atom in residueAtoms[res]]
+    atomBonds = [[] for _ in residueAtoms[res]]
     for bond in residueBonds[res]:
         atomBonds[bond[0]].append(bond[1])
         atomBonds[bond[1]].append(bond[0])
