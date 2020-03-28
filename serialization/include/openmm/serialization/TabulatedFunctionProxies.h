@@ -49,17 +49,6 @@ public:
 };
 
 /**
- * This is a proxy for serializing ContinuousPeriodic1DFunction objects.
- */
-
-class OPENMM_EXPORT ContinuousPeriodic1DFunctionProxy : public SerializationProxy {
-public:
-    ContinuousPeriodic1DFunctionProxy();
-    void serialize(const void* object, SerializationNode& node) const;
-    void* deserialize(const SerializationNode& node) const;
-};
-
-/**
  * This is a proxy for serializing Continuous2DFunction objects.
  */
 

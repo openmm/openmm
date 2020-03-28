@@ -120,55 +120,6 @@ private:
 };
 
 /**
- * This is a TabulatedFunction that computes a continuous, periodic one dimensional function.
- */
-class OPENMM_EXPORT ContinuousPeriodic1DFunction : public TabulatedFunction {
-public:
-    /**
-     * Create a ContinuousPeriodic1DFunction f(x) based on a set of tabulated values.
-     *
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min
-     *                       and max.  A periodic cubic spline is used to interpolate between the tabulated values.
-     *                       The function is assumed to be periodic with period L=max-min.  The first and last
-     *                       elements must have the same value.
-     * @param min            the value of x corresponding to the first element of values
-     * @param max            the value of x corresponding to the last element of values
-     */
-    ContinuousPeriodic1DFunction(const std::vector<double>& values, double min, double max);
-    /**
-     * Get the parameters for the tabulated function.
-     *
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min
-     *                       and max.  A periodic cubic spline is used to interpolate between the tabulated values.
-     *                       The function is assumed to be periodic with period L=max-min.  The first and last
-     *                       elements must have the same value.
-     * @param[out] min       the value of x corresponding to the first element of values
-     * @param[out] max       the value of x corresponding to the last element of values
-     */
-    void getFunctionParameters(std::vector<double>& values, double& min, double& max) const;
-    /**
-     * Set the parameters for the tabulated function.
-     *
-     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min
-     *                       and max.  A periodic cubic spline is used to interpolate between the tabulated values.
-     *                       The function is assumed to be periodic with period L=max-min.  The first and last
-     *                       elements must have the same value.
-     * @param min            the value of x corresponding to the first element of values
-     * @param max            the value of x corresponding to the last element of values
-     */
-    void setFunctionParameters(const std::vector<double>& values, double min, double max);
-    /**
-     * Create a deep copy of the tabulated function.
-     *
-     * @deprecated This will be removed in a future release.
-     */
-    ContinuousPeriodic1DFunction* Copy() const;
-private:
-    std::vector<double> values;
-    double min, max;
-};
-
-/**
  * This is a TabulatedFunction that computes a continuous two dimensional function.
  */
 class OPENMM_EXPORT Continuous2DFunction : public TabulatedFunction {

@@ -255,24 +255,6 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                         }
                         out << "}\n";
                     }
-                    else if (dynamic_cast<const ContinuousPeriodic1DFunction*>(functions[i]) != NULL) {
-                        out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
-                        out << "if (x >= " << paramsFloat[0] << " && x <= " << paramsFloat[1] << ") {\n";
-                        out << "x = (x - " << paramsFloat[0] << ")*" << paramsFloat[2] << ";\n";
-                        out << "int index = (int) (floor(x));\n";
-                        out << "index = min(index, (int) " << paramsInt[3] << ");\n";
-                        out << "float4 coeff = " << functionNames[i].second << "[index];\n";
-                        out << "real b = x-index;\n";
-                        out << "real a = 1.0f-b;\n";
-                        for (int j = 0; j < nodes.size(); j++) {
-                            const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
-                            if (derivOrder[0] == 0)
-                                out << nodeNames[j] << suffix << " = a*coeff.x+b*coeff.y+((a*a*a-a)*coeff.z+(b*b*b-b)*coeff.w)/(" << paramsFloat[2] << "*" << paramsFloat[2] << ");\n";
-                            else
-                                out << nodeNames[j] << suffix << " = (coeff.y-coeff.x)*" << paramsFloat[2] << "+((1.0f-3.0f*a*a)*coeff.z+(3.0f*b*b-1.0f)*coeff.w)/" << paramsFloat[2] << ";\n";
-                        }
-                        out << "}\n";
-                    }
                     else if (dynamic_cast<const Continuous2DFunction*>(functions[i]) != NULL) {
                         out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
                         out << "real y = " << getTempName(node.getChildren()[1], temps) << suffix << ";\n";
@@ -758,28 +740,6 @@ vector<float> ExpressionUtilities::computeFunctionCoefficients(const TabulatedFu
         width = 4;
         return f;
     }
-    if (dynamic_cast<const ContinuousPeriodic1DFunction*>(&function) != NULL) {
-        // Compute the spline coefficients.
-
-        const ContinuousPeriodic1DFunction& fn = dynamic_cast<const ContinuousPeriodic1DFunction&>(function);
-        vector<double> values;
-        double min, max;
-        fn.getFunctionParameters(values, min, max);
-        int numValues = values.size();
-        vector<double> x(numValues), derivs;
-        for (int i = 0; i < numValues; i++)
-            x[i] = min+i*(max-min)/(numValues-1);
-        SplineFitter::createPeriodicSpline(x, values, derivs);
-        vector<float> f(4*(numValues-1));
-        for (int i = 0; i < (int) values.size()-1; i++) {
-            f[4*i] = (float) values[i];
-            f[4*i+1] = (float) values[i+1];
-            f[4*i+2] = (float) (derivs[i]/6.0);
-            f[4*i+3] = (float) (derivs[i+1]/6.0);
-        }
-        width = 4;
-        return f;
-    }
     if (dynamic_cast<const Continuous2DFunction*>(&function) != NULL) {
         // Compute the spline coefficients.
 
@@ -885,16 +845,6 @@ vector<vector<double> > ExpressionUtilities::computeFunctionParameters(const vec
             params[i].push_back((values.size()-1)/(max-min));
             params[i].push_back(values.size()-2);
         }
-        else if (dynamic_cast<const ContinuousPeriodic1DFunction*>(functions[i]) != NULL) {
-            const ContinuousPeriodic1DFunction& fn = dynamic_cast<const ContinuousPeriodic1DFunction&>(*functions[i]);
-            vector<double> values;
-            double min, max;
-            fn.getFunctionParameters(values, min, max);
-            params[i].push_back(min);
-            params[i].push_back(max);
-            params[i].push_back((values.size()-1)/(max-min));
-            params[i].push_back(values.size()-2);
-        }
         else if (dynamic_cast<const Continuous2DFunction*>(functions[i]) != NULL) {
             const Continuous2DFunction& fn = dynamic_cast<const Continuous2DFunction&>(*functions[i]);
             vector<double> values;
@@ -960,8 +910,6 @@ vector<vector<double> > ExpressionUtilities::computeFunctionParameters(const vec
 
 Lepton::CustomFunction* ExpressionUtilities::getFunctionPlaceholder(const TabulatedFunction& function) {
     if (dynamic_cast<const Continuous1DFunction*>(&function) != NULL)
-        return &fp1;
-    if (dynamic_cast<const ContinuousPeriodic1DFunction*>(&function) != NULL)
         return &fp1;
     if (dynamic_cast<const Continuous2DFunction*>(&function) != NULL)
         return &fp2;
