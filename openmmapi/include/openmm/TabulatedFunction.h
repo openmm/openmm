@@ -78,8 +78,9 @@ public:
      *                       The function is assumed to be zero for x &lt; min or x &gt; max.
      * @param min            the value of x corresponding to the first element of values
      * @param max            the value of x corresponding to the last element of values
+     * @param periodic       whether the function is periodic with period L = max - min
      */
-    Continuous1DFunction(const std::vector<double>& values, double min, double max);
+    Continuous1DFunction(const std::vector<double>& values, double min, double max, bool periodic=false);
     /**
      * Get the parameters for the tabulated function.
      *
@@ -90,6 +91,12 @@ public:
      * @param[out] max            the value of x corresponding to the last element of values
      */
     void getFunctionParameters(std::vector<double>& values, double& min, double& max) const;
+    /**
+     * Get the periodicity status of the tabulated function.
+     *
+     * @param periodic       whether the function is periodic
+     */
+    void getPeriodicityStatus(bool& periodic) const;
     /**
      * Set the parameters for the tabulated function.
      *
@@ -109,6 +116,7 @@ public:
 private:
     std::vector<double> values;
     double min, max;
+    bool periodic;
 };
 
 /**

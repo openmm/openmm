@@ -738,11 +738,16 @@ vector<float> ExpressionUtilities::computeFunctionCoefficients(const TabulatedFu
         vector<double> values;
         double min, max;
         fn.getFunctionParameters(values, min, max);
+        bool periodic;
+        fn.getPeriodicityStatus(periodic);
         int numValues = values.size();
         vector<double> x(numValues), derivs;
         for (int i = 0; i < numValues; i++)
             x[i] = min+i*(max-min)/(numValues-1);
-        SplineFitter::createNaturalSpline(x, values, derivs);
+        if (periodic)
+            SplineFitter::createPeriodicSpline(x, values, derivs);
+        else
+            SplineFitter::createNaturalSpline(x, values, derivs);
         vector<float> f(4*(numValues-1));
         for (int i = 0; i < (int) values.size()-1; i++) {
             f[4*i] = (float) values[i];

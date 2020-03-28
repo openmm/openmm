@@ -35,14 +35,9 @@
 using namespace OpenMM;
 using namespace std;
 
-Continuous1DFunction::Continuous1DFunction(const vector<double>& values, double min, double max) {
-    if (max <= min)
-        throw OpenMMException("Continuous1DFunction: max <= min for a tabulated function.");
-    if (values.size() < 2)
-        throw OpenMMException("Continuous1DFunction: a tabulated function must have at least two points");
-    this->values = values;
-    this->min = min;
-    this->max = max;
+Continuous1DFunction::Continuous1DFunction(const vector<double>& values, double min, double max, bool periodic) {
+    this->periodic = periodic;
+    setFunctionParameters(values, min, max);
 }
 
 void Continuous1DFunction::getFunctionParameters(vector<double>& values, double& min, double& max) const {
@@ -51,11 +46,22 @@ void Continuous1DFunction::getFunctionParameters(vector<double>& values, double&
     max = this->max;
 }
 
+void Continuous1DFunction::getPeriodicityStatus(bool& periodic) const {
+    periodic = this->periodic;
+}
+
 void Continuous1DFunction::setFunctionParameters(const vector<double>& values, double min, double max) {
     if (max <= min)
         throw OpenMMException("Continuous1DFunction: max <= min for a tabulated function.");
-    if (values.size() < 2)
-        throw OpenMMException("Continuous1DFunction: a tabulated function must have at least two points");
+    int n = values.size();
+    if (periodic) {
+        if (n < 3)
+            throw OpenMMException("Continuous1DFunction: a periodic tabulated function must have at least three points");
+        if (values[0] != values[n-1])
+            throw OpenMMException("Continuous1DFunction: with periodic=true, the first and last points must have the same value");
+    }
+    else if (n < 2)
+        throw OpenMMException("Continuous1DFunction: a non-periodic tabulated function must have at least two points");
     this->values = values;
     this->min = min;
     this->max = max;

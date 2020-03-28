@@ -51,6 +51,9 @@ void Continuous1DFunctionProxy::serialize(const void* object, SerializationNode&
     SerializationNode& valuesNode = node.createChildNode("Values");
     for (auto v : values)
         valuesNode.createChildNode("Value").setDoubleProperty("v", v);
+    bool periodic;
+    function.getPeriodicityStatus(periodic);
+    node.setBoolProperty("periodic", periodic);
 }
 
 void* Continuous1DFunctionProxy::deserialize(const SerializationNode& node) const {
@@ -60,7 +63,7 @@ void* Continuous1DFunctionProxy::deserialize(const SerializationNode& node) cons
     vector<double> values;
     for (auto& child : valuesNode.getChildren())
         values.push_back(child.getDoubleProperty("v"));
-    return new Continuous1DFunction(values, node.getDoubleProperty("min"), node.getDoubleProperty("max"));
+    return new Continuous1DFunction(values, node.getDoubleProperty("min"), node.getDoubleProperty("max"), node.getBoolProperty("periodic"));
 }
 
 ContinuousPeriodic1DFunctionProxy::ContinuousPeriodic1DFunctionProxy() : SerializationProxy("ContinuousPeriodic1DFunction") {

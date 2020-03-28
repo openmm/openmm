@@ -59,6 +59,7 @@ private:
     ReferenceContinuous1DFunction(const ReferenceContinuous1DFunction& other);
     const Continuous1DFunction& function;
     double min, max;
+    bool periodic;
     std::vector<double> x, values, derivs;
 };
 

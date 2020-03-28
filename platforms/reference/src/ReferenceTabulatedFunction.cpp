@@ -78,15 +78,20 @@ extern "C" OPENMM_EXPORT CustomFunction* createReferenceTabulatedFunction(const 
 
 ReferenceContinuous1DFunction::ReferenceContinuous1DFunction(const Continuous1DFunction& function) : function(function) {
     function.getFunctionParameters(values, min, max);
+    function.getPeriodicityStatus(periodic);
     int numValues = values.size();
     x.resize(numValues);
     for (int i = 0; i < numValues; i++)
         x[i] = min+i*(max-min)/(numValues-1);
-    SplineFitter::createNaturalSpline(x, values, derivs);
+    if (periodic)
+        SplineFitter::createPeriodicSpline(x, values, derivs);
+    else
+        SplineFitter::createNaturalSpline(x, values, derivs);
 }
 
 ReferenceContinuous1DFunction::ReferenceContinuous1DFunction(const ReferenceContinuous1DFunction& other) : function(other.function) {
     function.getFunctionParameters(values, min, max);
+    function.getPeriodicityStatus(periodic);
     x = other.x;
     values = other.values;
     derivs = other.derivs;
