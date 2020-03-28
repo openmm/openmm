@@ -96,7 +96,7 @@ public:
      *
      * @param periodic       whether the function is periodic
      */
-    void getPeriodicityStatus(bool& periodic) const;
+    void getPeriodic(bool& periodic) const;
     /**
      * Set the parameters for the tabulated function.
      *
@@ -107,6 +107,12 @@ public:
      * @param max            the value of x corresponding to the last element of values
      */
     void setFunctionParameters(const std::vector<double>& values, double min, double max);
+    /**
+     * Set the periodicity status for the tabulated function.
+     *
+     * @param periodic       whether the function is periodic with period L = max - min
+     */
+    void setPeriodic(bool periodic);
     /**
      * Create a deep copy of the tabulated function.
      *

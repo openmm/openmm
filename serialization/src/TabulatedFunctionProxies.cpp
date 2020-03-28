@@ -52,7 +52,7 @@ void Continuous1DFunctionProxy::serialize(const void* object, SerializationNode&
     for (auto v : values)
         valuesNode.createChildNode("Value").setDoubleProperty("v", v);
     bool periodic;
-    function.getPeriodicityStatus(periodic);
+    function.getPeriodic(periodic);
     node.setBoolProperty("periodic", periodic);
 }
 
