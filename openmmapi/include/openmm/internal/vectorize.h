@@ -31,8 +31,8 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
-        
-#if defined(__ARM__)
+
+#if defined(__ARM__) || defined(__ARM64__)
     #include "vectorize_neon.h"
 #elif defined(__PPC__)
     #include "vectorize_ppc.h"
