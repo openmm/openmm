@@ -319,8 +319,8 @@ class WellTemperedMetadynamics(Metadynamics):
         self.saveFrequency = saveFrequency
         self._id = np.random.randint(0x7FFFFFFF)
         self._saveIndex = 0
-        self._selfBias = np.zeros(tuple(v.gridWidth for v in variables))
-        self._totalBias = np.zeros(tuple(v.gridWidth for v in variables))
+        self._selfBias = np.zeros(tuple(v.gridWidth for v in reversed(variables)))
+        self._totalBias = np.zeros(tuple(v.gridWidth for v in reversed(variables)))
         self._loadedBiases = {}
         self._deltaT = temperature*(biasFactor-1)
         varNames = ['cv%d' % i for i in range(len(variables))]
