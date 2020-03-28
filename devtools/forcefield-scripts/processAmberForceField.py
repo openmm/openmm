@@ -361,7 +361,7 @@ for tor in reversed(torsions):
     tag = "  <Proper class1=\"%s\" class2=\"%s\" class3=\"%s\" class4=\"%s\"" % signature
     i = 4
     while i < len(tor):
-        index = i/3
+        index = i//3
         periodicity = int(float(tor[i+2]))
         phase = float(tor[i+1])*math.pi/180.0
         k = tor[i]*4.184
@@ -380,7 +380,7 @@ for tor in reversed(impropers):
     tag = "  <Improper class1=\"%s\" class2=\"%s\" class3=\"%s\" class4=\"%s\"" % signature
     i = 4
     while i < len(tor):
-        index = i/3
+        index = i//3
         periodicity = int(float(tor[i+2]))
         phase = float(tor[i+1])*math.pi/180.0
         k = float(tor[i])*4.184
