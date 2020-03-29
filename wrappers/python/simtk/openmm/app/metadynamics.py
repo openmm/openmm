@@ -271,7 +271,7 @@ class WellTemperedMetadynamics(Metadynamics):
 
     """
 
-    def __init__(self, system, variables, temperature, biasFactor, height, frequency, saveFrequency=None, biasDir=None):
+    def __init__(self, system, variables, temperature, biasFactor, height, frequency, saveFrequency=None, biasDir=None, gridExpansion=20):
         """Create a Metadynamics object.
 
         Parameters
@@ -299,6 +299,9 @@ class WellTemperedMetadynamics(Metadynamics):
         biasDir: str (optional)
             the directory to which biases should be written, and from which biases written by
             other processes should be loaded
+        gridExpansion: int (optional)
+            the extra number of grid points used in periodic directions for multidimensional
+            tabulated functions
         """
         if not unit.is_quantity(temperature):
             temperature = temperature*unit.kelvin
@@ -319,17 +322,25 @@ class WellTemperedMetadynamics(Metadynamics):
         self.saveFrequency = saveFrequency
         self._id = np.random.randint(0x7FFFFFFF)
         self._saveIndex = 0
-        self._selfBias = np.zeros(tuple(v.gridWidth for v in reversed(variables)))
-        self._totalBias = np.zeros(tuple(v.gridWidth for v in reversed(variables)))
+        for v in variables:
+            v._expanded = v.periodic and len(variables) > 1
+            v._extraWidth = min(gridExpansion, v.gridWidth) if v._expanded else 0
+            extraRange = v._extraWidth*(v.maxValue - v.minValue)/(v.gridWidth - 1)
+            v._actualWidth = v.gridWidth + 2*v._extraWidth
+            v._actualMin = v.minValue - extraRange
+            v._actualMax = v.maxValue + extraRange
+            v._slice = slice(v._extraWidth, v.gridWidth + v._extraWidth)
+        self._selfBias = np.zeros(tuple(v._actualWidth for v in reversed(variables)))
+        self._totalBias = np.zeros(tuple(v._actualWidth for v in reversed(variables)))
         self._loadedBiases = {}
         self._deltaT = temperature*(biasFactor-1)
         varNames = ['cv%d' % i for i in range(len(variables))]
         self._force = mm.CustomCVForce('table(%s)' % ', '.join(varNames))
         for name, var in zip(varNames, variables):
             self._force.addCollectiveVariable(name, var.force)
-        widths = [v.gridWidth for v in variables]
-        mins = [v.minValue for v in variables]
-        maxs = [v.maxValue for v in variables]
+        widths = [v._actualWidth for v in variables]
+        mins = [v._actualMin for v in variables]
+        maxs = [v._actualMax for v in variables]
         if len(variables) == 1:
             self._table = mm.Continuous1DFunction(self._totalBias.flatten(), mins[0], maxs[0], variables[0].periodic)
         elif len(variables) == 2:
@@ -343,6 +354,23 @@ class WellTemperedMetadynamics(Metadynamics):
         system.addForce(self._force)
         self._syncWithDisk()
 
+    def getFreeEnergy(self):
+        """Get the free energy of the system as a function of the collective variables.
+
+        The result is returned as a N-dimensional NumPy array, where N is the number of collective
+        variables.  The values are in kJ/mole.  The i'th position along an axis corresponds to
+        minValue + i*(maxValue-minValue)/gridWidth.
+        """
+        f = -((self.temperature+self._deltaT)/self._deltaT)*self._totalBias*unit.kilojoules_per_mole
+        if len(self.variables) == 1:
+            return f
+        else:
+            s = [v._slice for v in self.variables]
+            if len(self.variables) == 2:
+                return f[s[1], s[0]]
+            else:
+                return f[s[2], s[1], s[0]]
+
     def _addGaussian(self, position, height, context):
         """Add a Gaussian to the bias function."""
         # Compute a Gaussian along each axis.
@@ -355,7 +383,11 @@ class WellTemperedMetadynamics(Metadynamics):
             dist = np.abs(np.linspace(0, 1.0, num=v.gridWidth) - x)
             if v.periodic:
                 dist = np.min(np.array([dist, np.abs(dist-1)]), axis=0)
-            axisGaussians.append(np.exp(-0.5*dist*dist/v._scaledVariance))
+            values = np.exp(-0.5*dist*dist/v._scaledVariance)
+            if v._expanded:
+                n = v._extraWidth + 1
+                values = np.hstack((values[-n:-1], values, values[1:n]))
+            axisGaussians.append(values)
 
         # Compute their outer product.
 
@@ -369,9 +401,9 @@ class WellTemperedMetadynamics(Metadynamics):
         height = height.value_in_unit(unit.kilojoules_per_mole)
         self._selfBias += height*gaussian
         self._totalBias += height*gaussian
-        widths = [v.gridWidth for v in self.variables]
-        mins = [v.minValue for v in self.variables]
-        maxs = [v.maxValue for v in self.variables]
+        widths = [v._actualWidth for v in self.variables]
+        mins = [v._actualMin for v in self.variables]
+        maxs = [v._actualMax for v in self.variables]
         if len(self.variables) == 1:
             self._totalBias[-1] = self._totalBias[0]
             self._table.setFunctionParameters(self._totalBias.flatten(), mins[0], maxs[0])
