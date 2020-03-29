@@ -440,15 +440,20 @@ class BiasVariable(object):
             a reasonable value is chosen automatically.
         """
         self.force = force
-        self.minValue = minValue
-        self.maxValue = maxValue
-        self.biasWidth = biasWidth
+        self.minValue = self._standardize(minValue)
+        self.maxValue = self._standardize(maxValue)
+        self.biasWidth = self._standardize(biasWidth)
         self.periodic = periodic
         if gridWidth is None:
             self.gridWidth = int(np.ceil(5*(maxValue-minValue)/biasWidth))
         else:
             self.gridWidth = gridWidth
-        self._scaledVariance = (biasWidth/(maxValue-minValue))**2
+        self._scaledVariance = (self.biasWidth/(self.maxValue-self.minValue))**2
 
+    def _standardize(self, quantity):
+        if unit.is_quantity(quantity):
+            return quantity.value_in_unit_system(unit.md_unit_system)
+        else:
+            return quantity
 
 _LoadedBias = namedtuple('LoadedBias', ['id', 'index', 'bias'])
