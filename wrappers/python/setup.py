@@ -108,15 +108,12 @@ if not release:
     if not IS_RELEASED:
         full_version += '.dev-' + git_revision[:7]
 
-    a = open(filename, 'w')
-    try:
+    with open(filename, 'w') as a:
         a.write(cnt % {'version': version,
                        'full_version' : full_version,
                        'git_revision' : git_revision,
                        'isrelease': str(IS_RELEASED),
                        'path': os.getenv('OPENMM_LIB_PATH')})
-    finally:
-        a.close()
 
 
 def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
@@ -249,5 +246,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
