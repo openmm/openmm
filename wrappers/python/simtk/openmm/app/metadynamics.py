@@ -324,7 +324,7 @@ class WellTemperedMetadynamics(Metadynamics):
         self._saveIndex = 0
         for v in variables:
             v._expanded = v.periodic and len(variables) > 1
-            v._extraWidth = min(gridExpansion, v.gridWidth) if v._expanded else 0
+            v._extraWidth = min(gridExpansion, v.gridWidth - 1) if v._expanded else 0
             extraRange = v._extraWidth*(v.maxValue - v.minValue)/(v.gridWidth - 1)
             v._actualWidth = v.gridWidth + 2*v._extraWidth
             v._actualMin = v.minValue - extraRange
