@@ -350,7 +350,8 @@ class WellTemperedMetadynamics(Metadynamics):
         else:
             raise ValueError('Metadynamics requires 1, 2, or 3 collective variables')
         self._force.addTabulatedFunction('table', self._table)
-        self._force.setForceGroup(31)
+        freeGroups = set(range(32)) - set(force.getForceGroup() for force in system.getForces())
+        self._force.setForceGroup(max(freeGroups))
         system.addForce(self._force)
         self._syncWithDisk()
 
