@@ -1068,18 +1068,54 @@ temperature control with a velocity scaling algorithm that produces more
 accurate transport properties :cite:`Basconi2013`.  This velocity scaling
 results from propagating a chain of extra variables, which slightly reduces the
 computational efficiency with respect to :code:`LangevinMiddleIntegrator`.  The
-thermostated integrator is minimally created similarly to the
+thermostated integrator is minimally created with syntax analogous to the
 :code:`LangevinMiddleIntegrator` example above::
 
-    NoseHooverIntegrator integrator(300*kelvin, 25/picosecond, 0.004*picoseconds);
+    NoseHooverIntegrator integrator(300*kelvin, 25/picosecond,
+                                    0.004*picoseconds);
 
 The first argument specifies the target temperature.  The second specifies the
 frequency of interaction with the heat bath: a lower value interacts minimally,
 yielding the microcanonical ensemble in the limit of a zero frequency, while a
 larger frequency will perturb the system greater, keeping it closer to the
 target temperature.  The third argument is the integration timestep that, like
-the other arguments, must be specified with units.  Note that for this
-integrator, the velocities are offset by half a time step from the positions.
+the other arguments, must be specified with units.
+
+More verbose invocation is possible::
+
+    NoseHooverIntegrator integrator(300*kelvin, 25/picosecond,
+                                    0.004*picoseconds, 3, 3, 7);
+
+where the extra arguments are the chain length, number of multi-timesteps and
+number of Yoshida-Suzuki points, as described in section
+:ref:`nosehoover-integrators-theory`.
+
+This integrator supports partitioning of the system into an arbitrary number of
+subsystems, where each can be coupled to a different heat bath.  As an example::
+
+    NoseHooverIntegrator integrator(0.004*picoseconds)
+    integrator.addSubsystemThermostat(thermostatedParticles, thermostatedPairs,
+                                      centerOfMassTemperature, centerOfMassCollisionFrequency,
+                                      relativeTemperature, relativeCollisionFrequency,
+                                      chainLength, numMTS, numYoshidaSuzuki)
+
+Here the first argument to :code:`addSubsystemThermostat` is a list of the
+particles to be controlled by that thermostat, which will be thermostated to
+the :code:`centerOfMassTemperature`.  The :code:`thermostatedPairs` is a list
+of pairs whose center of mass motion will be thermostated to
+:code:`centerOfMassTemperature`, while the relative motion of each pair will be
+thermostated to :code:`relativeTemperature`.  It is possible for one of
+:code:`thermostatedAtoms` or :code:`thermostatedPairs` to be empty.  The final
+three arguments have the same default values as the simple constructor
+described above.  Making multiple calls to :code:`addSubsystemThermostat` with
+different lists of atoms and pairs permits the creation of differently
+thermostated subsystems: note that because some platforms can reorder similar
+molecules, all molecules of a given type must be controled by the same
+thermostat.  This more advanced syntax allows the setup of Drude oscillator
+simulations, but a more convenient form is provided through the
+:code:`DrudeNoseHooverIntegrator` class, described in :ref:`drude-plugin`.
+Note that for this integrator, the velocities are offset by half a time step
+from the positions.
 
 Leapfrog Verlet Integrator
 --------------------------

@@ -3654,4 +3654,15 @@ The equations of motion can be integrated with three different methods:
    the target temperature with one thermostat.  Another thermostat is used to keep
    relative motion of Drude pairs to a different, typically much lower,
    temperature to maintain separation of nuclear and electronic degrees of
-   freedom.
+   freedom.  The minimal specification is as follows::
+
+      DrudeNoseHooverIntegrator integrator(temperature, frequency,
+                                           temperatureDrude, frequencyDrude,
+                                           1*femtoseconds)
+
+   Where the first and third arguments specify the center-of-mass temperature and
+   relative temperature for each Drude pair, respecitvely.  The second and fourth
+   arguments describe the frequency of interaction with the center-of-mass and
+   relative heat baths, respectively, and should be specified with inverse time
+   units.  The fifth argument is the timestep.  The multi-timestep and Nosé-Hoover
+   chain length may also be specified, but sensible defaults are provided.
