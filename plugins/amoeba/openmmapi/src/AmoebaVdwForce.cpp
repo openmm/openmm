@@ -80,6 +80,45 @@ const std::string& AmoebaVdwForce::getEpsilonCombiningRule() const {
     return epsilonCombiningRule;
 }
 
+int AmoebaVdwForce::getNumCondensedTypes() const {
+    return (int) sigEpsTable.size();
+}
+
+int AmoebaVdwForce::addCondensedType(int type) {
+    condensedTypes.push_back(type);
+    return condensedTypes.size() - 1;
+}
+
+void AmoebaVdwForce::getCondensedType(int particleIndex, int& type) const {
+    type = condensedTypes[particleIndex];
+}
+
+void AmoebaVdwForce::setPairSigmaEpsilon(int type1, int type2, double sig, double eps) {
+    if (getNumCondensedTypes() == 0) {
+        std::set<int> uniqueTypes(condensedTypes.begin(), condensedTypes.end());
+        size_t nunique = uniqueTypes.size();
+        sigEpsTable.resize(nunique);
+        for (size_t i = 0; i < nunique; ++i) {
+            sigEpsTable[i].resize(nunique);
+        }
+    }
+
+    PairSigEps& pr1 = sigEpsTable[type1][type2];
+    pr1.sig = sig;
+    pr1.eps = eps;
+    if (type1 != type2) {
+        PairSigEps& pr2 = sigEpsTable[type2][type1];
+        pr2.sig = sig;
+        pr2.eps = eps;
+    }
+}
+
+void AmoebaVdwForce::getPairSigmaEpsilon(int type1, int type2, double& sig, double& eps) const {
+    const PairSigEps& pr = sigEpsTable[type1][type2];
+    sig = pr.sig;
+    eps = pr.eps;
+}
+
 void AmoebaVdwForce::setParticleExclusions(int particleIndex, const std::vector< int >& inputExclusions) {
 
    if (exclusions.size() < parameters.size()) {
