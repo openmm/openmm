@@ -1048,7 +1048,7 @@ class Modeller(object):
 
         # Identify the template to use for each residue.
 
-        templates = forcefield._matchAllResiduesToTemplates(ForceField._SystemData(self.topology), self.topology, {}, False, True)
+        templates = forcefield._matchAllResiduesToTemplates(ForceField._SystemData(self.topology), self.topology, {}, False, True, False)
 
         # Create the new Topology.
 

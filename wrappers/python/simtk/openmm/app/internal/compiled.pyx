@@ -99,7 +99,7 @@ def matchResidueToTemplate(res, template, bondedToAtom, bint ignoreExternalBonds
         templateBondedTo = {}
         for i, atom in enumerate(template.atoms):
             if atom.element is not None:
-                templateBondedTo[atom] = [j for j in atom.bondedTo if template.atoms[j].element is not None]
+                templateBondedTo[atom] = [templateAtoms.index(template.atoms[j]) for j in atom.bondedTo if template.atoms[j].element is not None]
     else:
         templateAtoms = template.atoms
         templateBondedTo = dict((atom, atom.bondedTo) for atom in template.atoms)
@@ -191,13 +191,13 @@ def matchResidueToTemplate(res, template, bondedToAtom, bint ignoreExternalBonds
     return None
 
 
-def _getAtomMatchCandidates(templateAtoms, bondedTo, matches, candidates, position):
+def _getAtomMatchCandidates(templateAtoms, bondedTo, templateBondedTo, matches, candidates, position):
     """Get a list of template atoms that are potential matches for the next atom."""
     for bonded in bondedTo[position]:
         if bonded < position:
             # This atom is bonded to another one for which we already have a match, so only consider
             # template atoms that *that* one is bonded to.
-            return templateAtoms[matches[bonded]].bondedTo
+            return templateBondedTo[templateAtoms[matches[bonded]]]
     return candidates[position]
 
 
@@ -206,7 +206,7 @@ def _findAtomMatches(templateAtoms, bondedTo, templateBondedTo, matches, hasMatc
     if position == len(matches):
         return True
     cdef int i
-    for i in _getAtomMatchCandidates(templateAtoms, bondedTo, matches, candidates, position):
+    for i in _getAtomMatchCandidates(templateAtoms, bondedTo, templateBondedTo, matches, candidates, position):
         atom = templateAtoms[i]
         if not hasMatch[i] and i in candidates[position]:
             # See if the bonds for this identification are consistent

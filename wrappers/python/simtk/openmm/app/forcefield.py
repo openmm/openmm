@@ -1295,7 +1295,7 @@ class ForceField(object):
         return sys
 
 
-    def _matchAllResiduesToTemplates(self, data, topology, residueTemplates, ignoreExternalBonds, ignoreExtraParticles=False):
+    def _matchAllResiduesToTemplates(self, data, topology, residueTemplates, ignoreExternalBonds, ignoreExtraParticles=False, recordParameters=True):
         """Return a list of which template matches each residue in the topology, and assign atom types."""
         templateForResidue = [None]*topology.getNumResidues()
         unmatchedResidues = []
@@ -1313,7 +1313,8 @@ class ForceField(object):
                 if matches is None:
                     unmatchedResidues.append(res)
                 else:
-                    data.recordMatchedAtomParameters(res, template, matches)
+                    if recordParameters:
+                        data.recordMatchedAtomParameters(res, template, matches)
                     templateForResidue[res.index] = template
 
         # Try to apply patches to find matches for any unmatched residues.
@@ -1342,7 +1343,8 @@ class ForceField(object):
             if matches is None:
                 raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
             else:
-                data.recordMatchedAtomParameters(res, template, matches)
+                if recordParameters:
+                    data.recordMatchedAtomParameters(res, template, matches)
                 templateForResidue[res.index] = template
         return templateForResidue
 
