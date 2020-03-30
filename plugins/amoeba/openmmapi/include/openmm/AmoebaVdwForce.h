@@ -53,13 +53,13 @@ namespace OpenMM {
  *
  * Support is also available for softcore interactions based on setting a per particle alchemical flag and
  * setting the AmoebaVdwForce to use an "AlchemicalMethod" -- either Decouple or Annihilate.
- * For Decouple, two alchemical atoms interact normally. For Annihilate, all interactions involving an 
- * alchemical atom are influenced. The softcore state is specified by setting a single 
+ * For Decouple, two alchemical atoms interact normally. For Annihilate, all interactions involving an
+ * alchemical atom are influenced. The softcore state is specified by setting a single
  * Context parameter "AmoebaVdwLambda" between 0.0 and 1.0.
  *
  * The softcore functional form can be modified by setting the softcore power (default of 5) and the softcore
  * alpha (default of 0,7). For more information on the softcore functional form see Eq. 2 from:
- * Jiao, D.;  Golubkov, P. A.;  Darden, T. A.; Ren, P., 
+ * Jiao, D.;  Golubkov, P. A.;  Darden, T. A.; Ren, P.,
  * Calculation of protein-ligand binding free energy by using a polarizable potential.
  * Proc. Natl. Acad. Sci. U.S.A. 2008, 105 (17), 6290-6295.
  * https://www.pnas.org/content/105/17/6290.
@@ -132,7 +132,7 @@ public:
      *                        at which the interaction site should be placed
      * @param isAlchemical    if true, this vdW particle is undergoing an alchemical change.
      */
-    void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon, 
+    void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon,
                                double reductionFactor, bool isAlchemical = false);
 
     /**
@@ -146,7 +146,7 @@ public:
      *                             at which the interaction site should be placed
      * @param[out] isAlchemical    if true, this vdW particle is undergoing an alchemical change.
      */
-    void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon, 
+    void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon,
                                double& reductionFactor, bool& isAlchemical) const;
 
 
@@ -235,7 +235,7 @@ public:
      */
 
     double getCutoffDistance() const;
-    
+
     /**
      * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * is NoCutoff, this value will have no effect.
@@ -246,14 +246,14 @@ public:
 
     /**
      * Set the cutoff distance.
-     * 
+     *
      * @deprecated This method exists only for backward compatibility.  Use setCutoffDistance() instead.
      */
     void setCutoff(double cutoff);
 
     /**
      * Get the cutoff distance.
-     * 
+     *
      * @deprecated This method exists only for backward compatibility.  Use getCutoffDistance() instead.
      */
     double getCutoff() const;
