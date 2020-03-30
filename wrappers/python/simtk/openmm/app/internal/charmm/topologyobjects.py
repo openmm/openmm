@@ -158,7 +158,7 @@ class AtomType(object):
         return other == (self.number, self.name)
 
     def __ne__(self, other):
-        return not self.__eq__(self, other)
+        return not self == other
 
     def set_lj_params(self, eps, rmin, eps14=None, rmin14=None):
         """ Sets Lennard-Jones parameters on this atom type """
@@ -990,7 +990,7 @@ class BondType(object):
         return self.k == other.k and self.req == other.req
 
     def __ne__(self, other):
-        return not self.__eq__(self, other)
+        return not self == other
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1013,7 +1013,7 @@ class AngleType(object):
         return self.k == other.k and self.theteq == other.theteq
 
     def __ne__(self, other):
-        return not self.__eq__(self, other)
+        return not self == other
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1057,7 +1057,7 @@ class DihedralType(object):
                 self.phase == other.phase)
 
     def __ne__(self, other):
-        return not self.__eq__(self, other)
+        return not self == other
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1080,7 +1080,7 @@ class ImproperType(object):
         return self.k == other.k and self.phieq == other.phieq
 
     def __ne__(self, other):
-        return not self.__eq__(self, other)
+        return not self == other
 
     def __repr__(self):
         return '<ImproperType; k=%s; phieq=%s>' % (self.k, self.phieq)
@@ -1118,7 +1118,7 @@ class CmapType(object):
                 all([abs(i - j) < TINY for i, j in zip(self.grid, other.grid)]))
 
     def __ne__(self, other):
-        return not self.__eq__(self, other)
+        return not self == other
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1218,7 +1218,7 @@ class _CmapGrid(object):
             return TypeError('Bad type comparison with _CmapGrid')
 
     def __ne__(self, other):
-        return not self.__eq__(self, other)
+        return not self == other
 
     def switch_range(self):
         """
