@@ -65,7 +65,7 @@ void AmoebaVdwForceImpl::initialize(ContextImpl& context) {
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("AmoebaVdwForce: The cutoff distance cannot be greater than half the periodic box size.");
-    }   
+    }
 
     kernel = context.getPlatform().createKernel(CalcAmoebaVdwForceKernel::Name(), context);
     kernel.getAs<CalcAmoebaVdwForceKernel>().initialize(context.getSystem(), owner);
@@ -154,7 +154,7 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     double offset = cut - 0.5 * rdelta;
 
     // Buffered-14-7 buffering constants
-    double dhal = 0.07; 
+    double dhal = 0.07;
     double ghal = 0.12;
 
     double elrc = 0.0; // This number is incremented and passed out at the end
@@ -167,7 +167,7 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     std::string epsilonCombiningRule = force.getEpsilonCombiningRule();
     for (auto& class1 : classCounts) {
         k = 0;
-        for (auto& class2 : classCounts) { 
+        for (auto& class2 : classCounts) {
             // AMOEBA combining rules, copied over from the CUDA code.
             double iSigma = class1.first.first;
             double jSigma = class2.first.first;
