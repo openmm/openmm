@@ -192,6 +192,30 @@ public:
     const std::string& getEpsilonCombiningRule(void) const;
 
     /**
+     */
+    int getNumCondensedTypes() const;
+
+    /**
+     */
+    void setCondensedType(int particleIndex, int type);
+
+    /**
+     */
+    void getCondensedType(int particleIndex, int& type) const;
+
+    /**
+     * @param type1  condensed VDW type/class of atom 1
+     * @param type2  condensed VDW type/class of atom 2
+     */
+    void setPairSigmaEpsilon(int type1, int type2, double sig, double eps);
+
+    /**
+     * @param type1  condensed VDW type/class of atom 1
+     * @param type2  condensed VDW type/class of atom 2
+     */
+    void getPairSigmaEpsilon(int type1, int type2, double& sig, double& eps) const;
+
+    /**
      * Get whether to add a contribution to the energy that approximately represents the effect of VdW
      * interactions beyond the cutoff distance.  The energy depends on the volume of the periodic box, and is only
      * applicable when periodic boundary conditions are used.  When running simulations at constant pressure, adding
@@ -334,6 +358,7 @@ private:
 
     std::vector< std::vector<int> > exclusions;
     std::vector<VdwInfo> parameters;
+    std::vector<int> condensedTypes;
     std::vector< std::vector< std::vector<double> > > sigEpsTable;
 };
 
