@@ -192,26 +192,42 @@ public:
     const std::string& getEpsilonCombiningRule(void) const;
 
     /**
+     * Get number of condensed VDW types/classes
      */
     int getNumCondensedTypes() const;
 
     /**
+     * Add condensed VDW type/class
+     *
+     * @param type  condensed VDW type/class
      */
-    void setCondensedType(int particleIndex, int type);
+    int addCondensedType(int type);
 
     /**
+     * Get condensed VDW type/class
+     *
+     * @param particleIndex  particle index
+     * @param type           condensed VDW type/class
      */
     void getCondensedType(int particleIndex, int& type) const;
 
     /**
+     * Set pairwise sigma and epsilon
+     *
      * @param type1  condensed VDW type/class of atom 1
      * @param type2  condensed VDW type/class of atom 2
+     * @param sig    pairwise sigma
+     * @param eps    pairwise epsilon
      */
     void setPairSigmaEpsilon(int type1, int type2, double sig, double eps);
 
     /**
+     * Get pairwise sigma and epsilon
+     *
      * @param type1  condensed VDW type/class of atom 1
      * @param type2  condensed VDW type/class of atom 2
+     * @param sig    pairwise sigma
+     * @param eps    pairwise epsilon
      */
     void getPairSigmaEpsilon(int type1, int type2, double& sig, double& eps) const;
 
@@ -359,7 +375,10 @@ private:
     std::vector< std::vector<int> > exclusions;
     std::vector<VdwInfo> parameters;
     std::vector<int> condensedTypes;
-    std::vector< std::vector< std::vector<double> > > sigEpsTable;
+    struct PairSigEps {
+        double sig, eps;
+    };
+    std::vector< std::vector< PairSigEps > > sigEpsTable;
 };
 
 /**
