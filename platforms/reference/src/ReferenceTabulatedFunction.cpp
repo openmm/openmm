@@ -76,7 +76,7 @@ extern "C" OPENMM_EXPORT CustomFunction* createReferenceTabulatedFunction(const 
 
 ReferenceContinuous1DFunction::ReferenceContinuous1DFunction(const Continuous1DFunction& function) : function(function) {
     function.getFunctionParameters(values, min, max);
-    function.getPeriodic(periodic);
+    periodic = function.getPeriodic();
     int numValues = values.size();
     x.resize(numValues);
     for (int i = 0; i < numValues; i++)
@@ -89,7 +89,7 @@ ReferenceContinuous1DFunction::ReferenceContinuous1DFunction(const Continuous1DF
 
 ReferenceContinuous1DFunction::ReferenceContinuous1DFunction(const ReferenceContinuous1DFunction& other) : function(other.function) {
     function.getFunctionParameters(values, min, max);
-    function.getPeriodic(periodic);
+    periodic = function.getPeriodic();
     x = other.x;
     values = other.values;
     derivs = other.derivs;

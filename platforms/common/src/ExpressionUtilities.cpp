@@ -721,7 +721,7 @@ vector<float> ExpressionUtilities::computeFunctionCoefficients(const TabulatedFu
         double min, max;
         fn.getFunctionParameters(values, min, max);
         bool periodic;
-        fn.getPeriodic(periodic);
+        periodic = fn.getPeriodic();
         int numValues = values.size();
         vector<double> x(numValues), derivs;
         for (int i = 0; i < numValues; i++)

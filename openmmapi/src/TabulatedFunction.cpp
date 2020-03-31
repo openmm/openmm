@@ -46,8 +46,8 @@ void Continuous1DFunction::getFunctionParameters(vector<double>& values, double&
     max = this->max;
 }
 
-void Continuous1DFunction::getPeriodic(bool& periodic) const {
-    periodic = this->periodic;
+bool Continuous1DFunction::getPeriodic() const {
+    return periodic;
 }
 
 void Continuous1DFunction::setFunctionParameters(const vector<double>& values, double min, double max) {

@@ -94,9 +94,8 @@ public:
     /**
      * Get the periodicity status of the tabulated function.
      *
-     * @param periodic       whether the function is periodic
      */
-    void getPeriodic(bool& periodic) const;
+    bool getPeriodic() const;
     /**
      * Set the parameters for the tabulated function.
      *
