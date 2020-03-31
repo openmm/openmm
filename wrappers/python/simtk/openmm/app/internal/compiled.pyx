@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2018 Stanford University and the Authors.
+Portions copyright (c) 2018-2020 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -68,7 +68,7 @@ cdef class periodicDistance:
         return sqrt(dx*dx + dy*dy + dz*dz)
 
 
-def matchResidueToTemplate(res, template, bondedToAtom, bint ignoreExternalBonds=False):
+def matchResidueToTemplate(res, template, bondedToAtom, bint ignoreExternalBonds=False, bint ignoreExtraParticles=False):
     """Determine whether a residue matches a template and return a list of corresponding atoms.
     This is used heavily in ForceField.
 
@@ -82,6 +82,8 @@ def matchResidueToTemplate(res, template, bondedToAtom, bint ignoreExternalBonds
         Enumerates which other atoms each atom is bonded to
     ignoreExternalBonds : bool
         If true, ignore external bonds when matching templates
+    ignoreExtraParticles : bool
+        If true, ignore extra particles (ones whose element is None) when matching templates
 
     Returns
     -------
@@ -91,8 +93,18 @@ def matchResidueToTemplate(res, template, bondedToAtom, bint ignoreExternalBonds
     """
     cdef int numAtoms, i, j
     atoms = list(res.atoms())
+    if ignoreExtraParticles:
+        atoms = [a for a in atoms if a.element is not None]
+        templateAtoms = [a for a in template.atoms if a.element is not None]
+        templateBondedTo = {}
+        for i, atom in enumerate(template.atoms):
+            if atom.element is not None:
+                templateBondedTo[atom] = [templateAtoms.index(template.atoms[j]) for j in atom.bondedTo if template.atoms[j].element is not None]
+    else:
+        templateAtoms = template.atoms
+        templateBondedTo = dict((atom, atom.bondedTo) for atom in template.atoms)
     numAtoms = len(atoms)
-    if numAtoms != len(template.atoms):
+    if numAtoms != len(templateAtoms):
         return None
 
     # Translate from global to local atom indices, and record the bonds for each atom.
@@ -117,8 +129,8 @@ def matchResidueToTemplate(res, template, bondedToAtom, bint ignoreExternalBonds
             residueTypeCount[key] = 1
         residueTypeCount[key] += 1
     templateTypeCount = {}
-    for i, atom in enumerate(template.atoms):
-        key = (atom.element, len(atom.bondedTo), 0 if ignoreExternalBonds else atom.externalBonds)
+    for i, atom in enumerate(templateAtoms):
+        key = (atom.element, len(templateBondedTo[atom]), 0 if ignoreExternalBonds else atom.externalBonds)
         if key not in templateTypeCount:
             templateTypeCount[key] = 1
         templateTypeCount[key] += 1
@@ -130,11 +142,11 @@ def matchResidueToTemplate(res, template, bondedToAtom, bint ignoreExternalBonds
     candidates = [[] for i in range(numAtoms)]
     cdef bint exactNameMatch
     for i in range(numAtoms):
-        exactNameMatch = (atoms[i].element is None and any(atom.element is None and atom.name == atoms[i].name for atom in template.atoms))
-        for j, atom in enumerate(template.atoms):
+        exactNameMatch = (atoms[i].element is None and any(atom.element is None and atom.name == atoms[i].name for atom in templateAtoms))
+        for j, atom in enumerate(templateAtoms):
             if (atom.element is not None and atom.element != atoms[i].element) or (exactNameMatch and atom.name != atoms[i].name):
                 continue
-            if len(atom.bondedTo) != len(bondedTo[i]):
+            if len(templateBondedTo[atom]) != len(bondedTo[i]):
                 continue
             if not ignoreExternalBonds and atom.externalBonds != externalBonds[i]:
                 continue
@@ -174,38 +186,38 @@ def matchResidueToTemplate(res, template, bondedToAtom, bint ignoreExternalBonds
 
     matches = numAtoms*[0]
     hasMatch = numAtoms*[False]
-    if _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, 0):
+    if _findAtomMatches(templateAtoms, bondedTo, templateBondedTo, matches, hasMatch, candidates, 0):
         return [matches[inverseSearchOrder[i]] for i in range(numAtoms)]
     return None
 
 
-def _getAtomMatchCandidates(template, bondedTo, matches, candidates, position):
+def _getAtomMatchCandidates(templateAtoms, bondedTo, templateBondedTo, matches, candidates, position):
     """Get a list of template atoms that are potential matches for the next atom."""
     for bonded in bondedTo[position]:
         if bonded < position:
             # This atom is bonded to another one for which we already have a match, so only consider
             # template atoms that *that* one is bonded to.
-            return template.atoms[matches[bonded]].bondedTo
+            return templateBondedTo[templateAtoms[matches[bonded]]]
     return candidates[position]
 
 
-def _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, int position):
+def _findAtomMatches(templateAtoms, bondedTo, templateBondedTo, matches, hasMatch, candidates, int position):
     """This is called recursively from inside matchResidueToTemplate() to identify matching atoms."""
     if position == len(matches):
         return True
     cdef int i
-    for i in _getAtomMatchCandidates(template, bondedTo, matches, candidates, position):
-        atom = template.atoms[i]
+    for i in _getAtomMatchCandidates(templateAtoms, bondedTo, templateBondedTo, matches, candidates, position):
+        atom = templateAtoms[i]
         if not hasMatch[i] and i in candidates[position]:
             # See if the bonds for this identification are consistent
 
-            allBondsMatch = all((bonded > position or matches[bonded] in atom.bondedTo for bonded in bondedTo[position]))
+            allBondsMatch = all((bonded > position or matches[bonded] in templateBondedTo[atom] for bonded in bondedTo[position]))
             if allBondsMatch:
                 # This is a possible match, so try matching the rest of the residue.
 
                 matches[position] = i
                 hasMatch[i] = True
-                if _findAtomMatches(template, bondedTo, matches, hasMatch, candidates, position+1):
+                if _findAtomMatches(templateAtoms, bondedTo, templateBondedTo, matches, hasMatch, candidates, position+1):
                     return True
                 hasMatch[i] = False
     return False
