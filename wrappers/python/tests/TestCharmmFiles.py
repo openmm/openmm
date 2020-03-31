@@ -96,6 +96,33 @@ class TestCharmmFiles(unittest.TestCase):
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
 
+    def test_DrudeMass(self):
+        """Test that setting the mass of Drude particles works correctly."""
+
+        psf = CharmmPsfFile('systems/ala3_solv_drude.psf')
+        crd = CharmmCrdFile('systems/ala3_solv_drude.crd')
+        params = CharmmParameterSet('systems/toppar_drude_master_protein_2013e.str')
+        system = psf.createSystem(params, drudeMass=0)
+        trueMass = [system.getParticleMass(i) for i in range(system.getNumParticles())]
+        drudeMass = 0.3*amu
+        system = psf.createSystem(params, drudeMass=drudeMass)
+        adjustedMass = [system.getParticleMass(i) for i in range(system.getNumParticles())]
+        drudeForce = [f for f in system.getForces() if isinstance(f, DrudeForce)][0]
+        drudeParticles = set()
+        parentParticles = set()
+        for i in range(drudeForce.getNumParticles()):
+            params = drudeForce.getParticleParameters(i)
+            drudeParticles.add(params[0])
+            parentParticles.add(params[1])
+        for i in range(system.getNumParticles()):
+            if i in drudeParticles:
+                self.assertEqual(0*amu, trueMass[i])
+                self.assertEqual(drudeMass, adjustedMass[i])
+            elif i in parentParticles:
+                self.assertEqual(trueMass[i]-drudeMass, adjustedMass[i])
+            else:
+                self.assertEqual(trueMass[i], adjustedMass[i])
+
     def test_NBFIX(self):
         """Tests CHARMM systems with NBFIX Lennard-Jones modifications"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)

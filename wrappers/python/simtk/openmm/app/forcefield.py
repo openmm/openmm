@@ -1082,7 +1082,7 @@ class ForceField(object):
 
     def createSystem(self, topology, nonbondedMethod=NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
                      constraints=None, rigidWater=None, removeCMMotion=True, hydrogenMass=None, residueTemplates=dict(),
-                     ignoreExternalBonds=False, switchDistance=None, flexibleConstraints=False, **args):
+                     ignoreExternalBonds=False, switchDistance=None, flexibleConstraints=False, drudeMass=0.1*unit.amu, **args):
         """Construct an OpenMM System representing a Topology with this force field.
 
         Parameters
@@ -1124,6 +1124,9 @@ class ForceField(object):
             Lennard-Jones interactions. If this is None, no switching function will be used.
         flexibleConstraints : boolean=False
             If True, parameters for constrained degrees of freedom will be added to the System
+        drudeMass : mass=0.1*amu
+            The mass to use for Drude particles.  Any mass added to a Drude particle is
+            subtracted from its parent atom to keep their total mass the same.
         args
             Arbitrary additional keyword arguments may also be specified.
             This allows extra parameters to be specified that are specific to
@@ -1136,6 +1139,7 @@ class ForceField(object):
         """
         args['switchDistance'] = switchDistance
         args['flexibleConstraints'] = flexibleConstraints
+        args['drudeMass'] = drudeMass
         data = ForceField._SystemData(topology)
         rigidResidue = [False]*topology.getNumResidues()
 
@@ -5802,6 +5806,19 @@ class DrudeGenerator(object):
                     thole1 = self.typeMap[type1][8]
                     thole2 = self.typeMap[type2][8]
                     drude.addScreenedPair(drude1, drude2, thole1+thole2)
+
+        # Set the masses of Drude particles.
+
+        drudeMass = args['drudeMass']
+        if not unit.is_quantity(drudeMass):
+            drudeMass *= unit.dalton
+        for i in range(drude.getNumParticles()):
+            params = drude.getParticleParameters(i)
+            particle = params[0]
+            parent = params[1]
+            transferMass = drudeMass-sys.getParticleMass(particle)
+            sys.setParticleMass(particle, drudeMass)
+            sys.setParticleMass(parent, sys.getParticleMass(parent)-transferMass)
 
 parsers["DrudeForce"] = DrudeGenerator.parseElement
 
