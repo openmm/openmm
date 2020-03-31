@@ -82,10 +82,14 @@ void testPeriodicSpline() {
         ASSERT_EQUAL_TOL(sin((double)i), SplineFitter::evaluateSpline(x, y, deriv, i), 0.05);
         ASSERT_EQUAL_TOL(cos((double)i), SplineFitter::evaluateSplineDerivative(x, y, deriv, i), 0.05);
     }
+
+    for (unsigned int i = 0; i < x.size()-1; i++)
+        x[i] = i/(x.size()-1.0);
     double ya[] = {15.579, 16.235, 17.325, 18.741, 20.454, 22.517, 24.944, 27.554, 29.942, 31.657,
                    32.486, 32.612, 32.494, 32.532, 32.785, 32.917, 32.402, 30.842, 28.229, 24.989,
                    21.762, 19.074, 17.147, 15.970, 15.467, 15.579};
     y.assign(ya, ya+y.size());
+    SplineFitter::createPeriodicSpline(x, y, deriv);
     ASSERT_EQUAL_TOL(SplineFitter::evaluateSplineDerivative(x, y, deriv, x[0]),
                      SplineFitter::evaluateSplineDerivative(x, y, deriv, x[x.size()-1]), 1e-6);
 }
