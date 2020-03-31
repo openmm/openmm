@@ -358,6 +358,9 @@ class ForceField(object):
                     for bond in patch.findall('RemoveExternalBond'):
                         atom = ForceField._PatchAtomData(bond.attrib['atomName'])
                         patchData.deletedExternalBonds.append(atom)
+                    atomIndices = dict((atom.name, i) for i, atom in enumerate(patchData.addedAtoms[atomDescription.residue]+patchData.changedAtoms[atomDescription.residue]))
+                    for site in patch.findall('VirtualSite'):
+                        patchData.virtualSites[atomDescription.residue].append(ForceField._VirtualSiteData(site, atomIndices))
                     for residue in patch.findall('ApplyToResidue'):
                         name = residue.attrib['name']
                         if ':' in name:
@@ -740,6 +743,7 @@ class ForceField(object):
             self.addedExternalBonds = []
             self.deletedExternalBonds = []
             self.allAtomNames = set()
+            self.virtualSites = [[] for i in range(numResidues)]
 
         def createPatchedTemplates(self, templates):
             """Apply this patch to a set of templates, creating new modified ones."""
@@ -801,6 +805,16 @@ class ForceField(object):
                         newTemplate.addExternalBondByName(atom2.name)
                 for atom in self.addedExternalBonds:
                     newTemplate.addExternalBondByName(atom.name)
+
+                # Add new virtual sites.
+
+                indexMap = dict((i, newAtomIndex[atom.name]) for i, atom in enumerate(self.addedAtoms[index]+self.changedAtoms[index]))
+                for site in self.virtualSites[index]:
+                    newSite = deepcopy(site)
+                    newSite.index = indexMap[site.index]
+                    newSite.atoms = [indexMap[i] for i in site.atoms]
+                    newTemplate.virtualSites = [site for site in newTemplate.virtualSites if site.index != newSite.index]
+                    newTemplate.virtualSites.append(newSite)
             return newTemplates
 
     class _PatchAtomData(object):
