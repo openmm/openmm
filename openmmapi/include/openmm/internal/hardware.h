@@ -93,7 +93,8 @@ static int getNumProcessors() {
 #ifdef WIN32
 #define cpuid __cpuid
 #else
-#if !defined(__ANDROID__) && !defined(__PNACL__) && !defined(__PPC__)
+#if !defined(__ANDROID__) && !defined(__PNACL__) && !defined(__PPC__) \
+    && !defined(__ARM__) && !defined(__ARM64__)
     static void cpuid(int cpuInfo[4], int infoType){
     #ifdef __LP64__
         __asm__ __volatile__ (

@@ -32,7 +32,12 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#ifdef __ANDROID__
 #include <cpu-features.h>
+#else
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
+#endif
 #include <arm_neon.h>
 #include <cmath>
 
@@ -48,8 +53,16 @@ float32x4_t log_ps(float32x4_t);
  * Determine whether ivec4 and fvec4 are supported on this processor.
  */
 static bool isVec4Supported() {
+#ifdef __ANDROID__
     uint64_t features = android_getCpuFeatures();
     return (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
+#elif defined(__ARM__)
+    unsigned long features = getauxval(AT_HWCAP);
+    return (features & HWCAP_NEON) != 0;
+#else
+    unsigned long features = getauxval(AT_HWCAP);
+    return (features & HWCAP_ASIMD) != 0;
+#endif
 }
 
 class ivec4;
