@@ -329,6 +329,10 @@ UNITS = {
 ("AmoebaVdwForce",                        "getSoftcoreAlpha")                              :  ( None, ()),
 ("AmoebaVdwForce",                        "getCutoff")                                     :  ( 'unit.nanometer', ()),
 ("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, 'unit.nanometer', 'unit.kilojoule_per_mole', None, None)),
+("AmoebaVdwForce",                        "getNumCondensedTypes")                          :  ( None, ()),
+("AmoebaVdwForce",                        "getCondensedType")                              :  ( None, (None)),
+("AmoebaVdwForce",                        "getPairSigmaEpsilon")                           :  ( None, ('unit.nanometer', 'unit.kilojoule_per_mole')),
+("AmoebaVdwForce",                        "usesPairwiseVdw")                               :  ( None, ()),
 
 ("AmoebaWcaDispersionForce",              "getParticleParameters")                         :  ( None, ('unit.nanometer', 'unit.kilojoule_per_mole')),
 ("AmoebaWcaDispersionForce",              "getAwater")                                     :  ( '1/(unit.nanometer*unit.nanometer*unit.nanometer)',()),
