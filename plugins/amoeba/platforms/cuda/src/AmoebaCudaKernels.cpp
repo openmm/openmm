@@ -2716,7 +2716,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
         pairSigmaEpsilon.initialize<float2>(cu, nsq, "pairSigmaEpsilon");
 
         vector<long long> condensedTypesVec(cu.getPaddedNumAtoms(), -1);
-        vector<float2> pairSigmaEpsilonVec(nsq, make_real2(1, 0));
+        vector<float2> pairSigmaEpsilonVec(nsq, make_float2(1, 0));
         for (int i = 0; i < cu.getNumAtoms(); ++i) {
             int ityp;
             force.getCondensedType(i, ityp);
@@ -2821,7 +2821,7 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
         numCondensedTypes = force.getNumCondensedTypes();
         int nsq = numCondensedTypes * numCondensedTypes;
         vector<long long> condensedTypesVec(cu.getPaddedNumAtoms(), -1);
-        vector<float2> pairSigmaEpsilonVec(nsq, make_real2(1, 0));
+        vector<float2> pairSigmaEpsilonVec(nsq, make_float2(1, 0));
         for (int i = 0; i < cu.getNumAtoms(); ++i) {
             int ityp;
             force.getCondensedType(i, ityp);

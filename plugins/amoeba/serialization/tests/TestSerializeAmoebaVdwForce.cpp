@@ -63,6 +63,13 @@ void testSerialization() {
         force1.setParticleExclusions(ii, exclusions);
     }
 
+    force1.addCondensedType(0);
+    force1.addCondensedType(0);
+    force1.addCondensedType(1);
+    force1.setPairSigmaEpsilon(0, 0, 2.9, 0.37);
+    force1.setPairSigmaEpsilon(0, 1, 2.3, 0.35);
+    force1.setPairSigmaEpsilon(1, 1, 1.0, 0.31);
+
     // Serialize and then deserialize it.
 
     stringstream buffer;
@@ -80,6 +87,29 @@ void testSerialization() {
     ASSERT_EQUAL(force1.getAlchemicalMethod(),      force2.getAlchemicalMethod());
 
     ASSERT_EQUAL(force1.getNumParticles(),          force2.getNumParticles());
+
+    ASSERT_EQUAL(force1.usesPairwiseVdw(),          force2.usesPairwiseVdw());
+    if (force1.usesPairwiseVdw()) {
+        int ntype2 = force2.getNumCondensedTypes();
+        ASSERT_EQUAL(force1.getNumCondensedTypes(),     ntype2);
+        for (int ii = 0; ii < force1.getNumParticles(); ++ii) {
+            int ityp1, ityp2;
+            force1.getCondensedType(ii, ityp1);
+            force2.getCondensedType(ii, ityp2);
+
+            ASSERT_EQUAL(ityp1, ityp2);
+        }
+        for (int ii = 0; ii < ntype2; ++ii) {
+            for (int jj = 0; jj < ntype2; ++jj) {
+                double sig1, eps1, sig2, eps2;
+                force1.getPairSigmaEpsilon(ii, jj, sig1, eps1);
+                force2.getPairSigmaEpsilon(ii, jj, sig2, eps2);
+
+                ASSERT_EQUAL(sig1, sig2);
+                ASSERT_EQUAL(eps1, eps2);
+            }
+        }
+    }
 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumParticles()); ii++) {
 
