@@ -83,7 +83,7 @@ void testPeriodicSpline() {
         ASSERT_EQUAL_TOL(cos((double)i), SplineFitter::evaluateSplineDerivative(x, y, deriv, i), 0.05);
     }
 
-    for (unsigned int i = 0; i < x.size()-1; i++)
+    for (unsigned int i = 0; i < x.size(); i++)
         x[i] = i/(x.size()-1.0);
     double ya[] = {15.579, 16.235, 17.325, 18.741, 20.454, 22.517, 24.944, 27.554, 29.942, 31.657,
                    32.486, 32.612, 32.494, 32.532, 32.785, 32.917, 32.402, 30.842, 28.229, 24.989,
