@@ -2706,6 +2706,49 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     replacements["TAPER_C4"] = cu.doubleToString(15/pow(taperCutoff-cutoff, 4.0));
     replacements["TAPER_C5"] = cu.doubleToString(6/pow(taperCutoff-cutoff, 5.0));
     bool useCutoff = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
+
+    // vdwpr
+    usesVdwpr = force.usesPairwiseVdw();
+    if (usesVdwpr) {
+        numCondensedTypes = force.getNumCondensedTypes();
+        condensedTypes.initialize<long long>(cu, cu.getPaddedNumAtoms(), "condensedTypes");
+        int nsq = numCondensedTypes * numCondensedTypes;
+        pairSigmaEpsilon.initialize<float2>(cu, nsq, "pairSigmaEpsilon");
+
+        vector<long long> condensedTypesVec(cu.getPaddedNumAtoms(), -1);
+        vector<float2> pairSigmaEpsilonVec(nsq, make_real2(1, 0));
+        for (int i = 0; i < cu.getNumAtoms(); ++i) {
+            int ityp;
+            force.getCondensedType(i, ityp);
+            condensedTypesVec[i] = ityp;
+        }
+        for (int i = 0; i < numCondensedTypes; ++i) {
+            for (int j = i; j < numCondensedTypes; ++j) {
+                int k1 = i * numCondensedTypes + j;
+                double sig, eps;
+                force.getPairSigmaEpsilon(i, j, sig, eps);
+                pairSigmaEpsilonVec[k1].x = sig;
+                pairSigmaEpsilonVec[k1].y = eps;
+                if (i != j) {
+                    int k2 = j * numCondensedTypes + i;
+                    pairSigmaEpsilonVec[k2].x = sig;
+                    pairSigmaEpsilonVec[k2].y = eps;
+                }
+            }
+        }
+        condensedTypes.upload(condensedTypesVec);
+        pairSigmaEpsilon.upload(pairSigmaEpsilonVec);
+
+        nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("condensedTypes",
+            "long long", 1, sizeof(long long), condensedTypes.getDevicePointer()));
+        nonbonded->addArgument(CudaNonbondedUtilities::ParameterInfo("pairSigmaEpsilon",
+            "float", 2, sizeof(float2), pairSigmaEpsilon.getDevicePointer()));
+
+        replacements["NUM_VDW_TYPES"] = cu.intToString(numCondensedTypes);
+
+        nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoffDistance(), exclusions,
+            cu.replaceStrings(CudaAmoebaKernelSources::amoebaVdwForce3, replacements), 0);
+    } else
     nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoffDistance(), exclusions,
         cu.replaceStrings(CudaAmoebaKernelSources::amoebaVdwForce2, replacements), 0);
 
@@ -2773,6 +2816,34 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
         bondReductionFactorsVec[i] = (float) reductionFactor;
     }
     sigmaEpsilon.upload(sigmaEpsilonVec);
+    if (force.usesPairwiseVdw()) {
+        usesVdwpr = true;
+        numCondensedTypes = force.getNumCondensedTypes();
+        int nsq = numCondensedTypes * numCondensedTypes;
+        vector<long long> condensedTypesVec(cu.getPaddedNumAtoms(), -1);
+        vector<float2> pairSigmaEpsilonVec(nsq, make_real2(1, 0));
+        for (int i = 0; i < cu.getNumAtoms(); ++i) {
+            int ityp;
+            force.getCondensedType(i, ityp);
+            condensedTypesVec[i] = ityp;
+        }
+        for (int i = 0; i < numCondensedTypes; ++i) {
+            for (int j = i; j < numCondensedTypes; ++j) {
+                int k1 = i * numCondensedTypes + j;
+                double sig, eps;
+                force.getPairSigmaEpsilon(i, j, sig, eps);
+                pairSigmaEpsilonVec[k1].x = sig;
+                pairSigmaEpsilonVec[k1].y = eps;
+                if (i != j) {
+                    int k2 = j * numCondensedTypes + i;
+                    pairSigmaEpsilonVec[k2].x = sig;
+                    pairSigmaEpsilonVec[k2].y = eps;
+                }
+            }
+        }
+        condensedTypes.upload(condensedTypesVec);
+        pairSigmaEpsilon.upload(pairSigmaEpsilonVec);
+    }
     if (hasAlchemical) isAlchemical.upload(isAlchemicalVec);
     bondReductionAtoms.upload(bondReductionAtomsVec);
     bondReductionFactors.upload(bondReductionFactorsVec);

@@ -38,7 +38,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true), alchemicalMethod(None), n(5), alpha(0.7) {
+AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true), alchemicalMethod(None), n(5), alpha(0.7), usesVdwpr(false) {
 }
 
 int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical) {
@@ -94,7 +94,8 @@ void AmoebaVdwForce::getCondensedType(int particleIndex, int& type) const {
 }
 
 void AmoebaVdwForce::setPairSigmaEpsilon(int type1, int type2, double sig, double eps) {
-    if (getNumCondensedTypes() == 0) {
+    if (!usesVdwpr) {
+        usesVdwpr = true;
         std::set<int> uniqueTypes(condensedTypes.begin(), condensedTypes.end());
         size_t nunique = uniqueTypes.size();
         sigEpsTable.resize(nunique);
@@ -117,6 +118,10 @@ void AmoebaVdwForce::getPairSigmaEpsilon(int type1, int type2, double& sig, doub
     const PairSigEps& pr = sigEpsTable[type1][type2];
     sig = pr.sig;
     eps = pr.eps;
+}
+
+bool AmoebaVdwForce::usesPairwiseVdw() const {
+    return usesVdwpr;
 }
 
 void AmoebaVdwForce::setParticleExclusions(int particleIndex, const std::vector< int >& inputExclusions) {

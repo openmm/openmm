@@ -232,6 +232,11 @@ public:
     void getPairSigmaEpsilon(int type1, int type2, double& sig, double& eps) const;
 
     /**
+     * If the setPairSigmaEpsilon method has been called, return true; else return false.
+     */
+    bool usesPairwiseVdw() const;
+
+    /**
      * Get whether to add a contribution to the energy that approximately represents the effect of VdW
      * interactions beyond the cutoff distance.  The energy depends on the volume of the periodic box, and is only
      * applicable when periodic boundary conditions are used.  When running simulations at constant pressure, adding
@@ -368,6 +373,7 @@ private:
     AlchemicalMethod alchemicalMethod;
     int n;
     double alpha;
+    bool usesVdwpr;
 
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;

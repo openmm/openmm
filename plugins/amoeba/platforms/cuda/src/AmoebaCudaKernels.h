@@ -613,6 +613,11 @@ private:
     const System& system;
     bool hasInitializedNonbonded;
 
+    bool usesVdwpr;
+    int numCondensedTypes;
+    CudaArray condensedTypes;
+    CudaArray pairSigmaEpsilon;
+
     // True if the AmoebaVdwForce AlchemicalMethod is not None.
     bool hasAlchemical;
     // Pinned host memory; allocated if necessary in initialize, and freed in the destructor.
