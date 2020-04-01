@@ -805,7 +805,7 @@ class CharmmPsfFile(object):
                      flexibleConstraints=True,
                      verbose=False,
                      gbsaModel=None,
-                     drudeMass=0.1*u.amu):
+                     drudeMass=0.4*u.amu):
         """Construct an OpenMM System representing the topology described by the
         prmtop file. You MUST have loaded a parameter set into this PSF before
         calling createSystem. If not, AttributeError will be raised. ValueError
@@ -863,7 +863,7 @@ class CharmmPsfFile(object):
         gbsaModel : str=None
             Can be ACE (to use the ACE solvation model) or None. Other values
             raise a ValueError
-        drudeMass : mass=0.1*amu
+        drudeMass : mass=0.4*amu
             The mass to use for Drude particles.  Any mass added to a Drude particle is
             subtracted from its parent atom to keep their total mass the same.
         """
