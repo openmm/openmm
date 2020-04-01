@@ -804,7 +804,8 @@ class CharmmPsfFile(object):
                      ewaldErrorTolerance=0.0005,
                      flexibleConstraints=True,
                      verbose=False,
-                     gbsaModel=None):
+                     gbsaModel=None,
+                     drudeMass=0.4*u.amu):
         """Construct an OpenMM System representing the topology described by the
         prmtop file. You MUST have loaded a parameter set into this PSF before
         calling createSystem. If not, AttributeError will be raised. ValueError
@@ -862,6 +863,9 @@ class CharmmPsfFile(object):
         gbsaModel : str=None
             Can be ACE (to use the ACE solvation model) or None. Other values
             raise a ValueError
+        drudeMass : mass=0.4*amu
+            The mass to use for Drude particles.  Any mass added to a Drude particle is
+            subtracted from its parent atom to keep their total mass the same.
         """
         # Load the parameter set
         self.loadParameters(params)
@@ -1459,6 +1463,17 @@ class CharmmPsfFile(object):
                     drude1 = ia1 + 1 # CHARMM psf has hard-coded rule that the Drude is next to its parent
                     drude2 = ia2 + 1
                     drudeforce.addScreenedPair(particleMap[drude1], particleMap[drude2], thole1+thole2)
+
+            # Set the masses of Drude particles.
+            if not u.is_quantity(drudeMass):
+                drudeMass *= u.dalton
+            for i in range(drudeforce.getNumParticles()):
+                params = drudeforce.getParticleParameters(i)
+                particle = params[0]
+                parent = params[1]
+                transferMass = drudeMass-system.getParticleMass(particle)
+                system.setParticleMass(particle, drudeMass)
+                system.setParticleMass(parent, system.getParticleMass(parent)-transferMass)
 
         # If we needed a CustomNonbondedForce, map all of the exceptions from
         # the NonbondedForce to the CustomNonbondedForce
