@@ -99,12 +99,12 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
         for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
             const SerializationNode& particle = particles.getChildren()[ii];
 
-            if (version < 3) 
-               force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"), 
+            if (version < 3)
+               force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"),
                                   particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"));
-            else 
-               force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"), 
-                                  particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"), 
+            else
+               force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"),
+                                  particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"),
                                   particle.getBoolProperty("isAlchemical"));
 
             // exclusions
