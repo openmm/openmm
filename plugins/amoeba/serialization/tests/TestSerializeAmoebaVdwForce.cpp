@@ -69,7 +69,7 @@ void testSerialization() {
     XmlSerializer::serialize<AmoebaVdwForce>(&force1, "Force", buffer);
     AmoebaVdwForce* copy = XmlSerializer::deserialize<AmoebaVdwForce>(buffer);
 
-    // Compare the two forces to see if they are identical.  
+    // Compare the two forces to see if they are identical.
     AmoebaVdwForce& force2 = *copy;
 
     ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
