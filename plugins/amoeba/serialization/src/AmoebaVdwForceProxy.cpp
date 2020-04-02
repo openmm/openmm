@@ -74,6 +74,31 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
             particleExclusions.createChildNode("excl").setIntProperty("index", exclusions[jj]);
         }
     }
+
+    node.setBoolProperty("useDispersionCorrection", force.getUseDispersionCorrection());
+    node.setBoolProperty("usesVdwpr", force.usesPairwiseVdw());
+    node.setDoubleProperty("vdwLambda", force.getVdwLambda());
+    if (force.usesPairwiseVdw()) {
+        SerializationNode& vdwTypes = node.createChildNode("VdwTypes");
+        for (int ii = 0; ii < force.getNumParticles(); ++ii) {
+            int ityp;
+            force.getCondensedType(ii, ityp);
+            SerializationNode& vdwType = vdwTypes.createChildNode("VdwType");
+            vdwType.setIntProperty("vdwtype", ityp);
+        }
+
+        int ntypes = force.getNumCondensedTypes();
+        node.setIntProperty("NumVdwTypes", ntypes);
+        SerializationNode& sigEpsTable = node.createChildNode("SigEpsTable");
+        for (int ii = 0; ii < ntypes; ++ii) {
+            for (int jj = 0; jj < ntypes; ++jj) {
+                double sig, eps;
+                force.getPairSigmaEpsilon(ii, jj, sig, eps);
+                SerializationNode& sigEps = sigEpsTable.createChildNode("SigEps");
+                sigEps.setDoubleProperty("sig", sig).setDoubleProperty("eps", eps);
+            }
+        }
+    }
 }
 
 void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
@@ -89,22 +114,16 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
         force->setCutoffDistance(node.getDoubleProperty("VdwCutoff"));
         force->setNonbondedMethod((AmoebaVdwForce::NonbondedMethod) node.getIntProperty("method"));
 
-        if (version > 2) {
-           force->setAlchemicalMethod((AmoebaVdwForce::AlchemicalMethod) node.getIntProperty("alchemicalMethod"));
-           force->setSoftcorePower(node.getDoubleProperty("n"));
-           force->setSoftcoreAlpha(node.getDoubleProperty("alpha"));
-        }
-
         const SerializationNode& particles = node.getChildNode("VdwParticles");
         for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
             const SerializationNode& particle = particles.getChildren()[ii];
 
-            if (version < 3) 
-               force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"), 
+            if (version < 3)
+               force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"),
                                   particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"));
-            else 
-               force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"), 
-                                  particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"), 
+            else
+               force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"),
+                                  particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"),
                                   particle.getBoolProperty("isAlchemical"));
 
             // exclusions
@@ -117,6 +136,30 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
             force->setParticleExclusions(ii, exclusions);
         }
 
+        if (version > 2) {
+           force->setAlchemicalMethod((AmoebaVdwForce::AlchemicalMethod) node.getIntProperty("alchemicalMethod"));
+           force->setSoftcorePower(node.getDoubleProperty("n"));
+           force->setSoftcoreAlpha(node.getDoubleProperty("alpha"));
+
+           force->setUseDispersionCorrection(node.getBoolProperty("useDispersionCorrection"));
+           force->setVdwLambda(node.getDoubleProperty("vdwLambda"));
+           bool usesVdwpr = node.getBoolProperty("usesVdwpr");
+           if (usesVdwpr) {
+               const SerializationNode& vdwTypes = node.getChildNode("VdwTypes");
+               for (int ii = 0; ii < vdwTypes.getChildren().size(); ++ii) {
+                   force->addCondensedType(vdwTypes.getChildren()[ii].getIntProperty("vdwtype"));
+               }
+
+               int ntypes = node.getIntProperty("NumVdwTypes");
+               const SerializationNode& sigEpsTable = node.getChildNode("SigEpsTable");
+               for (int ii = 0; ii < sigEpsTable.getChildren().size(); ++ii) {
+                   int ityp = ii / ntypes;
+                   int jtyp = ii % ntypes;
+                   const SerializationNode& sigeps = sigEpsTable.getChildren()[ii];
+                   force->setPairSigmaEpsilon(ityp, jtyp, sigeps.getDoubleProperty("sig"), sigeps.getDoubleProperty("eps"));
+               }
+           }
+        }
     }
     catch (...) {
         delete force;

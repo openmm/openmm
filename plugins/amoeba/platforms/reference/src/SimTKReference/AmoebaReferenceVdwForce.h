@@ -42,7 +42,7 @@ class AmoebaReferenceVdwForce {
 
 public:
 
-    /** 
+    /**
      * This is an enumeration of the different methods that may be used for handling long range Vdw forces.
      */
     enum NonbondedMethod {
@@ -55,12 +55,12 @@ public:
         NoCutoff = 0,
 
         /**
-         * Interactions beyond the cutoff distance are ignored.  
+         * Interactions beyond the cutoff distance are ignored.
          */
         CutoffNonPeriodic = 1,
         /**
          * Periodic boundary conditions are used, so that each particle interacts only with the nearest periodic copy of
-         * each other particle.  Interactions beyond the cutoff distance are ignored.  
+         * each other particle.  Interactions beyond the cutoff distance are ignored.
          */
         CutoffPeriodic = 2,
     };
@@ -83,50 +83,50 @@ public:
         Annihilate = 2,
     };
 
- 
+
     /**---------------------------------------------------------------------------------------
-       
+
        Constructor
-       
+
        --------------------------------------------------------------------------------------- */
- 
+
     AmoebaReferenceVdwForce();
- 
+
     /**---------------------------------------------------------------------------------------
-       
+
        Constructor
-       
+
        --------------------------------------------------------------------------------------- */
- 
+
     AmoebaReferenceVdwForce(const std::string& sigmaCombiningRule,
                             const std::string& epsilonCombiningRule);
- 
+
     /**---------------------------------------------------------------------------------------
-       
+
        Destructor
-       
+
        --------------------------------------------------------------------------------------- */
- 
+
     ~AmoebaReferenceVdwForce() {};
- 
+
     /**---------------------------------------------------------------------------------------
-    
+
        Get nonbonded method
-    
+
        @return nonbonded method
-    
+
        --------------------------------------------------------------------------------------- */
-    
+
     NonbondedMethod getNonbondedMethod() const;
 
     /**---------------------------------------------------------------------------------------
-    
+
        Set nonbonded method
-    
+
        @param nonbonded method
-    
+
        --------------------------------------------------------------------------------------- */
-    
+
     void setNonbondedMethod(NonbondedMethod nonbondedMethod);
 
     /**---------------------------------------------------------------------------------------
@@ -151,39 +151,39 @@ public:
 
 
     /**---------------------------------------------------------------------------------------
-    
+
        Get cutoff
-    
+
        @return cutoff
-    
+
        --------------------------------------------------------------------------------------- */
-    
+
     double getCutoff() const;
 
     /**---------------------------------------------------------------------------------------
-    
+
        Set cutof
-    
+
        @param cutoff
-    
+
        --------------------------------------------------------------------------------------- */
-    
+
     void setCutoff(double cutoff);
 
     /**---------------------------------------------------------------------------------------
-   
+
        Get softcore power
-   
+
        @return n
-   
+
        --------------------------------------------------------------------------------------- */
-   
+
     int getSoftcorePower() const;
 
     /**---------------------------------------------------------------------------------------
-   
+
        Set softcore power
-   
+
        @param n
 
        --------------------------------------------------------------------------------------- */
@@ -193,17 +193,17 @@ public:
    /**---------------------------------------------------------------------------------------
 
        Get softcore alpha
-  
+
        @return alpha
-  
+
        --------------------------------------------------------------------------------------- */
-  
+
     double getSoftcoreAlpha() const;
 
     /**---------------------------------------------------------------------------------------
-  
-       Set softcore alpha 
-  
+
+       Set softcore alpha
+
        @param alpha
 
        --------------------------------------------------------------------------------------- */
@@ -212,109 +212,115 @@ public:
 
 
     /**---------------------------------------------------------------------------------------
-    
+
        Set sigma combining rule
-    
+
        @param sigmaCombiningRule      rule: GEOMETRIC, CUBIC-MEAN, ARITHMETIC (default)
-    
+
        --------------------------------------------------------------------------------------- */
-    
+
     void setSigmaCombiningRule(const std::string& sigmaCombiningRule);
 
     /**---------------------------------------------------------------------------------------
-    
+
        Get sigma combining rule
-    
+
        @return sigmaCombiningRule
-    
+
        --------------------------------------------------------------------------------------- */
-    
+
     std::string getSigmaCombiningRule() const;
 
     /**---------------------------------------------------------------------------------------
-    
+
        Set epsilon combining rule
-    
+
        @param epsilonCombiningRule      rule: GEOMETRIC, CUBIC-MEAN, ARITHMETIC (default)
-    
+
        --------------------------------------------------------------------------------------- */
-    
+
     void setEpsilonCombiningRule(const std::string& epsilonCombiningRule);
 
     /**---------------------------------------------------------------------------------------
-    
+
        Get epsilon combining rule
-    
+
        @return epsilonCombiningRule
-    
+
        --------------------------------------------------------------------------------------- */
-    
+
     std::string getEpsilonCombiningRule() const;
 
     /**---------------------------------------------------------------------------------------
-    
+
        Set box dimensions
-    
+
        @param vectors    the vectors defining the periodic box
-    
+
        --------------------------------------------------------------------------------------- */
-    
+
     void setPeriodicBox(OpenMM::Vec3* vectors);
 
     /**---------------------------------------------------------------------------------------
-    
+
        Calculate Amoeba Hal vdw ixns
-    
+
        @param numParticles            number of particles
        @param lambda                  lambda value
        @param particlePositions       Cartesian coordinates of particles
        @param indexIVs                position index for associated reducing particle
-       @param sigmas                  particle sigmas 
+       @param sigmas                  particle sigmas
        @param epsilons                particle epsilons
        @param reductions              particle reduction factors
        @param isAlchemical            particle alchemical flag
        @param vdwExclusions           particle exclusions
        @param forces                  add forces to this vector
-    
+
        @return energy
-    
+
        --------------------------------------------------------------------------------------- */
-    
+
     double calculateForceAndEnergy(int numParticles, double lambda, const std::vector<OpenMM::Vec3>& particlePositions,
-                                   const std::vector<int>& indexIVs, 
+                                   const std::vector<int>& indexIVs,
                                    const std::vector<double>& sigmas, const std::vector<double>& epsilons,
                                    const std::vector<double>& reductions,
                                    const std::vector<bool>& isAlchemical,
                                    const std::vector< std::set<int> >& vdwExclusions,
-                                   std::vector<OpenMM::Vec3>& forces) const;
-         
+                                   std::vector<OpenMM::Vec3>& forces,
+                                   bool usesVdwpr, int numCondensedTypes,
+                                   const std::vector<int>& condensedTypes,
+                                   const std::vector<double>& pairSigmaEpsilon) const;
+
     /**---------------------------------------------------------------------------------------
-    
+
        Calculate Vdw ixn using neighbor list
-    
+
        @param numParticles            number of particles
        @param lambda                  lambda value
        @param particlePositions       Cartesian coordinates of particles
        @param indexIVs                position index for associated reducing particle
-       @param sigmas                  particle sigmas 
+       @param sigmas                  particle sigmas
        @param epsilons                particle epsilons
        @param reductions              particle reduction factors
        @param isAlchemical            particle alchemical flag
        @param neighborList            neighbor list
        @param forces                  add forces to this vector
-    
+
        @return energy
-    
+
        --------------------------------------------------------------------------------------- */
-    
-    double calculateForceAndEnergy(int numParticles, double lambda, const std::vector<OpenMM::Vec3>& particlePositions, 
-                                   const std::vector<int>& indexIVs, 
+
+    double calculateForceAndEnergy(int numParticles, double lambda, const std::vector<OpenMM::Vec3>& particlePositions,
+                                   const std::vector<int>& indexIVs,
                                    const std::vector<double>& sigmas, const std::vector<double>& epsilons,
                                    const std::vector<double>& reductions,
                                    const std::vector<bool>& isAlchemical,
                                    const NeighborList& neighborList,
-                                   std::vector<OpenMM::Vec3>& forces) const;
-         
+                                   std::vector<OpenMM::Vec3>& forces,
+                                   bool usesVdwpr, int numCondensedTypes,
+                                   const std::vector<int>& condensedTypes,
+                                   const std::vector<double>& pairSigmaEpsilon) const;
+
 private:
     // taper coefficient indices
     static const int C3=0;
@@ -346,68 +352,68 @@ private:
 
 
     /**---------------------------------------------------------------------------------------
-    
-       Set reduced positions: position used to calculate vdw interaction is moved towards 
+
+       Set reduced positions: position used to calculate vdw interaction is moved towards
        covalent partner
-       
-    
+
+
        @param  numParticles         number of particles
        @param  particlePositions    current particle positions
        @param  indexIVs             particle index of covalent partner
        @param  reductions           fraction of bond length to move particle interacting site;
-                                    reductions[i] = zero, 
+                                    reductions[i] = zero,
                                     if interacting position == particle position
        @param  reducedPositions     output: modfied or original position depending on whether
                                     reduction factor is nonzero
-    
+
        --------------------------------------------------------------------------------------- */
-    
+
     void setReducedPositions(int numParticles, const std::vector<Vec3>& particlePositions,
                              const std::vector<int>& indexIVs, const std::vector<double>& reductions,
                              std::vector<Vec3>& reducedPositions) const;
 
     /**---------------------------------------------------------------------------------------
-    
+
        Add reduced forces to force vector
-    
+
        @param  particleI            index of particleI
        @param  particleIV           index of particleIV
        @param  reduction            reduction factor
        @param  sign                 +1 or -1 for add/sutracting forces
        @param  force                force vector to add
        @param  forces               force vector for particles
-    
+
        --------------------------------------------------------------------------------------- */
-    
+
     void addReducedForce(unsigned int particleI, unsigned int particleIV,
                          double reduction, double sign,
                          Vec3& force, std::vector<OpenMM::Vec3>& forces) const;
-    
+
     /**---------------------------------------------------------------------------------------
-    
+
        Set taper coefficients
-    
+
        @param  cutoff cutoff
 
        --------------------------------------------------------------------------------------- */
-    
+
     void setTaperCoefficients(double cutoff);
 
     /**---------------------------------------------------------------------------------------
-    
+
        Calculate pair ixn
-    
+
        @param  combindedSigma       combined sigmas
        @param  combindedEpsilon     combined epsilons
        @param  softcore             softcore offset parameter
-       @param  particleIPosition    particle I position 
-       @param  particleJPosition    particle J position 
+       @param  particleIPosition    particle I position
+       @param  particleJPosition    particle J position
        @param  force                output force
-    
+
        @return energy for ixn
 
        --------------------------------------------------------------------------------------- */
-    
+
     double calculatePairIxn(double combindedSigma, double combindedEpsilon, double softcore,
                             const Vec3& particleIPosition, const Vec3& particleJPosition,
                             Vec3& force) const;

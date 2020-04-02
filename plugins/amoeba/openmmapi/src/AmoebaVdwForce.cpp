@@ -38,7 +38,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true), alchemicalMethod(None), n(5), alpha(0.7) {
+AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true), alchemicalMethod(None), n(5), alpha(0.7), vdwLambda(1.0), usesVdwpr(false) {
 }
 
 int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical) {
@@ -78,6 +78,50 @@ void AmoebaVdwForce::setEpsilonCombiningRule(const std::string& inputEpsilonComb
 
 const std::string& AmoebaVdwForce::getEpsilonCombiningRule() const {
     return epsilonCombiningRule;
+}
+
+int AmoebaVdwForce::getNumCondensedTypes() const {
+    return (int) sigEpsTable.size();
+}
+
+int AmoebaVdwForce::addCondensedType(int type) {
+    condensedTypes.push_back(type);
+    return condensedTypes.size() - 1;
+}
+
+void AmoebaVdwForce::getCondensedType(int particleIndex, int& type) const {
+    type = condensedTypes[particleIndex];
+}
+
+void AmoebaVdwForce::setPairSigmaEpsilon(int type1, int type2, double sig, double eps) {
+    if (!usesVdwpr) {
+        usesVdwpr = true;
+        std::set<int> uniqueTypes(condensedTypes.begin(), condensedTypes.end());
+        size_t nunique = uniqueTypes.size();
+        sigEpsTable.resize(nunique);
+        for (size_t i = 0; i < nunique; ++i) {
+            sigEpsTable[i].resize(nunique);
+        }
+    }
+
+    PairSigEps& pr1 = sigEpsTable[type1][type2];
+    pr1.sig = sig;
+    pr1.eps = eps;
+    if (type1 != type2) {
+        PairSigEps& pr2 = sigEpsTable[type2][type1];
+        pr2.sig = sig;
+        pr2.eps = eps;
+    }
+}
+
+void AmoebaVdwForce::getPairSigmaEpsilon(int type1, int type2, double& sig, double& eps) const {
+    const PairSigEps& pr = sigEpsTable[type1][type2];
+    sig = pr.sig;
+    eps = pr.eps;
+}
+
+bool AmoebaVdwForce::usesPairwiseVdw() const {
+    return usesVdwpr;
 }
 
 void AmoebaVdwForce::setParticleExclusions(int particleIndex, const std::vector< int >& inputExclusions) {

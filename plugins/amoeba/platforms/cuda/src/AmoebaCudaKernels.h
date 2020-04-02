@@ -51,7 +51,7 @@ public:
                                           const System& system);
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaBondForce this kernel will be used for
      */
@@ -88,7 +88,7 @@ public:
     CudaCalcAmoebaAngleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaAngleForce this kernel will be used for
      */
@@ -125,7 +125,7 @@ public:
     CudaCalcAmoebaInPlaneAngleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaInPlaneAngleForce this kernel will be used for
      */
@@ -162,7 +162,7 @@ public:
     CudaCalcAmoebaPiTorsionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaPiTorsionForce this kernel will be used for
      */
@@ -199,7 +199,7 @@ public:
     CudaCalcAmoebaStretchBendForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaStretchBendForce this kernel will be used for
      */
@@ -278,7 +278,7 @@ public:
     CudaCalcAmoebaOutOfPlaneBendForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaOutOfPlaneBendForce this kernel will be used for
      */
@@ -315,7 +315,7 @@ public:
     CudaCalcAmoebaTorsionTorsionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaTorsionTorsionForce this kernel will be used for
      */
@@ -349,7 +349,7 @@ public:
     ~CudaCalcAmoebaMultipoleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -365,21 +365,21 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
      /**
      * Get the LabFrame dipole moments of all particles.
-     * 
+     *
      * @param context    the Context for which to get the induced dipoles
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the induced dipole moments of all particles.
-     * 
+     *
      * @param context    the Context for which to get the induced dipoles
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the total dipole moments of all particles.
-     * 
+     *
      * @param context    the Context for which to get the induced dipoles
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
@@ -389,12 +389,12 @@ public:
      *
      * @param context        the context in which to execute this kernel
      * @param inputGrid      input grid coordinates
-     * @param outputElectrostaticPotential output potential 
+     * @param outputElectrostaticPotential output potential
      */
     void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                    std::vector< double >& outputElectrostaticPotential);
 
-   /** 
+   /**
      * Get the system multipole moments
      *
      * @param context      context
@@ -414,7 +414,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force);
     /**
      * Get the parameters being used for PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
@@ -510,7 +510,7 @@ public:
     CudaCalcAmoebaGeneralizedKirkwoodForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -586,7 +586,7 @@ public:
     ~CudaCalcAmoebaVdwForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaVdwForce this kernel will be used for
      */
@@ -612,6 +612,11 @@ private:
     CudaContext& cu;
     const System& system;
     bool hasInitializedNonbonded;
+
+    bool usesVdwpr;
+    int numCondensedTypes;
+    CudaArray condensedTypes;
+    CudaArray pairSigmaEpsilon;
 
     // True if the AmoebaVdwForce AlchemicalMethod is not None.
     bool hasAlchemical;
@@ -642,7 +647,7 @@ public:
     CudaCalcAmoebaWcaDispersionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -681,7 +686,7 @@ public:
     ~CudaCalcHippoNonbondedForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the HippoNonbondedForce this kernel will be used for
      */
@@ -697,24 +702,24 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
     /**
      * Get the induced dipole moments of all particles.
-     * 
+     *
      * @param context    the Context for which to get the induced dipoles
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the fixed dipole moments of all particles in the global reference frame.
-     * 
+     *
      * @param context    the Context for which to get the fixed dipoles
      * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
      */
     void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    /** 
+    /**
      * Calculate the electrostatic potential given vector of grid coordinates.
      *
      * @param context                      context
      * @param inputGrid                    input grid coordinates
-     * @param outputElectrostaticPotential output potential 
+     * @param outputElectrostaticPotential output potential
      */
     void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                    std::vector< double >& outputElectrostaticPotential);
@@ -727,7 +732,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const HippoNonbondedForce& force);
     /**
      * Get the parameters being used for PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
@@ -736,7 +741,7 @@ public:
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     /**
      * Get the parameters being used for dispersion PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis

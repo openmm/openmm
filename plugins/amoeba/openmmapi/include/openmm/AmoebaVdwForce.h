@@ -53,13 +53,13 @@ namespace OpenMM {
  *
  * Support is also available for softcore interactions based on setting a per particle alchemical flag and
  * setting the AmoebaVdwForce to use an "AlchemicalMethod" -- either Decouple or Annihilate.
- * For Decouple, two alchemical atoms interact normally. For Annihilate, all interactions involving an 
- * alchemical atom are influenced. The softcore state is specified by setting a single 
+ * For Decouple, two alchemical atoms interact normally. For Annihilate, all interactions involving an
+ * alchemical atom are influenced. The softcore state is specified by setting a single
  * Context parameter "AmoebaVdwLambda" between 0.0 and 1.0.
  *
  * The softcore functional form can be modified by setting the softcore power (default of 5) and the softcore
  * alpha (default of 0,7). For more information on the softcore functional form see Eq. 2 from:
- * Jiao, D.;  Golubkov, P. A.;  Darden, T. A.; Ren, P., 
+ * Jiao, D.;  Golubkov, P. A.;  Darden, T. A.; Ren, P.,
  * Calculation of protein-ligand binding free energy by using a polarizable potential.
  * Proc. Natl. Acad. Sci. U.S.A. 2008, 105 (17), 6290-6295.
  * https://www.pnas.org/content/105/17/6290.
@@ -132,7 +132,7 @@ public:
      *                        at which the interaction site should be placed
      * @param isAlchemical    if true, this vdW particle is undergoing an alchemical change.
      */
-    void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon, 
+    void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon,
                                double reductionFactor, bool isAlchemical = false);
 
     /**
@@ -146,7 +146,7 @@ public:
      *                             at which the interaction site should be placed
      * @param[out] isAlchemical    if true, this vdW particle is undergoing an alchemical change.
      */
-    void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon, 
+    void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon,
                                double& reductionFactor, bool& isAlchemical) const;
 
 
@@ -192,6 +192,65 @@ public:
     const std::string& getEpsilonCombiningRule(void) const;
 
     /**
+     * Get VDW Lambda
+     */
+    double getVdwLambda() const {
+        return vdwLambda;
+    }
+
+    /**
+     * Set VDW Lambda
+     */
+    void setVdwLambda(double l) {
+        vdwLambda = l;
+    }
+
+    /**
+     * Get number of condensed VDW types/classes
+     */
+    int getNumCondensedTypes() const;
+
+    /**
+     * Add condensed VDW type/class
+     *
+     * @param type  condensed VDW type/class
+     */
+    int addCondensedType(int type);
+
+    /**
+     * Get condensed VDW type/class
+     *
+     * @param particleIndex  particle index
+     * @param type           condensed VDW type/class
+     */
+    void getCondensedType(int particleIndex, int& type) const;
+
+    /**
+     * Set pairwise sigma and epsilon
+     *
+     * @param type1  condensed VDW type/class of atom 1
+     * @param type2  condensed VDW type/class of atom 2
+     * @param sig    pairwise sigma
+     * @param eps    pairwise epsilon
+     */
+    void setPairSigmaEpsilon(int type1, int type2, double sig, double eps);
+
+    /**
+     * Get pairwise sigma and epsilon
+     *
+     * @param type1  condensed VDW type/class of atom 1
+     * @param type2  condensed VDW type/class of atom 2
+     * @param sig    pairwise sigma
+     * @param eps    pairwise epsilon
+     */
+    void getPairSigmaEpsilon(int type1, int type2, double& sig, double& eps) const;
+
+    /**
+     * If the setPairSigmaEpsilon method has been called, return true; else return false.
+     */
+    bool usesPairwiseVdw() const;
+
+    /**
      * Get whether to add a contribution to the energy that approximately represents the effect of VdW
      * interactions beyond the cutoff distance.  The energy depends on the volume of the periodic box, and is only
      * applicable when periodic boundary conditions are used.  When running simulations at constant pressure, adding
@@ -235,7 +294,7 @@ public:
      */
 
     double getCutoffDistance() const;
-    
+
     /**
      * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * is NoCutoff, this value will have no effect.
@@ -246,14 +305,14 @@ public:
 
     /**
      * Set the cutoff distance.
-     * 
+     *
      * @deprecated This method exists only for backward compatibility.  Use setCutoffDistance() instead.
      */
     void setCutoff(double cutoff);
 
     /**
      * Get the cutoff distance.
-     * 
+     *
      * @deprecated This method exists only for backward compatibility.  Use getCutoffDistance() instead.
      */
     double getCutoff() const;
@@ -328,13 +387,19 @@ private:
     AlchemicalMethod alchemicalMethod;
     int n;
     double alpha;
+    double vdwLambda;
+    bool usesVdwpr;
 
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;
 
     std::vector< std::vector<int> > exclusions;
     std::vector<VdwInfo> parameters;
-    std::vector< std::vector< std::vector<double> > > sigEpsTable;
+    std::vector<int> condensedTypes;
+    struct PairSigEps {
+        double sig, eps;
+    };
+    std::vector< std::vector< PairSigEps > > sigEpsTable;
 };
 
 /**
