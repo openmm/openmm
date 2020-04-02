@@ -49,7 +49,7 @@ public:
     ~ReferenceCalcAmoebaBondForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaBondForce this kernel will be used for
      */
@@ -91,7 +91,7 @@ public:
     ~ReferenceCalcAmoebaAngleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaAngleForce this kernel will be used for
      */
@@ -136,7 +136,7 @@ public:
     ~ReferenceCalcAmoebaInPlaneAngleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaInPlaneAngleForce this kernel will be used for
      */
@@ -182,7 +182,7 @@ public:
     ~ReferenceCalcAmoebaPiTorsionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaPiTorsionForce this kernel will be used for
      */
@@ -225,7 +225,7 @@ public:
     ~ReferenceCalcAmoebaOutOfPlaneBendForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaOutOfPlaneBendForce this kernel will be used for
      */
@@ -270,7 +270,7 @@ public:
     ~ReferenceCalcAmoebaStretchBendForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaStretchBendForce this kernel will be used for
      */
@@ -372,7 +372,7 @@ public:
     ~ReferenceCalcAmoebaTorsionTorsionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaTorsionTorsionForce this kernel will be used for
      */
@@ -412,13 +412,13 @@ public:
     ~ReferenceCalcAmoebaMultipoleForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
     void initialize(const System& system, const AmoebaMultipoleForce& force);
     /**
-     * Setup for AmoebaReferenceMultipoleForce instance. 
+     * Setup for AmoebaReferenceMultipoleForce instance.
      *
      * @param context        the current context
      *
@@ -436,31 +436,31 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
     /**
      * Get the induced dipole moments of all particles.
-     * 
+     *
      * @param context    the Context for which to get the induced dipoles
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the fixed dipole moments of all particles in the global reference frame.
-     * 
+     *
      * @param context    the Context for which to get the fixed dipoles
      * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
      */
     void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the total dipole moments of all particles in the global reference frame.
-     * 
+     *
      * @param context    the Context for which to get the fixed dipoles
      * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
      */
     void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    /** 
+    /**
      * Calculate the electrostatic potential given vector of grid coordinates.
      *
      * @param context                      context
      * @param inputGrid                    input grid coordinates
-     * @param outputElectrostaticPotential output potential 
+     * @param outputElectrostaticPotential output potential
      */
     void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                    std::vector< double >& outputElectrostaticPotential);
@@ -468,7 +468,7 @@ public:
     /**
      * Get the system multipole moments.
      *
-     * @param context                context 
+     * @param context                context
      * @param outputMultipoleMoments vector of multipole moments:
                                      (charge,
                                       dipole_x, dipole_y, dipole_z,
@@ -486,7 +486,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force);
     /**
      * Get the parameters being used for PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
@@ -532,7 +532,7 @@ public:
     ~ReferenceCalcAmoebaVdwForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaVdwForce this kernel will be used for
      */
@@ -583,7 +583,7 @@ public:
     ~ReferenceCalcAmoebaWcaDispersionForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -609,12 +609,12 @@ private:
     int numParticles;
     std::vector<double> radii;
     std::vector<double> epsilons;
-    double epso; 
-    double epsh; 
-    double rmino; 
-    double rminh; 
-    double awater; 
-    double shctd; 
+    double epso;
+    double epsh;
+    double rmino;
+    double rminh;
+    double awater;
+    double shctd;
     double dispoff;
     double slevy;
     double totalMaximumDispersionEnergy;
@@ -630,7 +630,7 @@ public:
     ~ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the AmoebaMultipoleForce this kernel will be used for
      */
@@ -644,7 +644,7 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
- 
+
     /**
      *  Get the 'include cavity term' flag.
      *
@@ -764,13 +764,13 @@ public:
     ~ReferenceCalcHippoNonbondedForceKernel();
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param force      the HippoNonbondedForce this kernel will be used for
      */
     void initialize(const System& system, const HippoNonbondedForce& force);
     /**
-     * Setup for AmoebaReferenceHippoNonbondedForce instance. 
+     * Setup for AmoebaReferenceHippoNonbondedForce instance.
      *
      * @param context        the current context
      *
@@ -788,21 +788,21 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
     /**
      * Get the induced dipole moments of all particles.
-     * 
+     *
      * @param context    the Context for which to get the induced dipoles
      * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
      */
     void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the fixed dipole moments of all particles in the global reference frame.
-     * 
+     *
      * @param context    the Context for which to get the fixed dipoles
      * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
      */
     void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
     /**
      * Get the total dipole moments of all particles in the global reference frame.
-     * 
+     *
      * @param context    the Context for which to get the fixed dipoles
      * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
      */
@@ -816,7 +816,7 @@ public:
     void copyParametersToContext(ContextImpl& context, const HippoNonbondedForce& force);
     /**
      * Get the parameters being used for PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
@@ -825,7 +825,7 @@ public:
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     /**
      * Get the parameters being used for dispersion PME.
-     * 
+     *
      * @param alpha   the separation parameter
      * @param nx      the number of grid points along the X axis
      * @param ny      the number of grid points along the Y axis
