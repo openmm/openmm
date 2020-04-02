@@ -38,7 +38,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true), alchemicalMethod(None), n(5), alpha(0.7), usesVdwpr(false) {
+AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true), alchemicalMethod(None), n(5), alpha(0.7), vdwLambda(1.0), usesVdwpr(false) {
 }
 
 int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical) {

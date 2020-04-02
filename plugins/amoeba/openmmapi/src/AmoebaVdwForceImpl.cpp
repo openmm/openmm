@@ -84,6 +84,135 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     if (force.getNonbondedMethod() == AmoebaVdwForce::NoCutoff)
         return 0.0;
 
+    if (force.usesPairwiseVdw()) {
+        // This is what really was implemented in Tinker.
+        double off = force.getCutoffDistance();
+        double cut = 0.9 * off;
+        int nstep = 20;
+        double range = 10.0;
+        int ndelta = int(double(nstep) * (range - cut));
+        double rdelta = (range - cut) / double(ndelta);
+        double offset = cut - 0.5 * rdelta;
+        double vlambda = force.getVdwLambda();
+        double vlam1 = 1.0 - vlambda;
+
+        int n = force.getNumParticles();
+        map<int, int> jvt, mvt;
+        for (int i = 0; i < n; ++i) {
+            int ivindex;
+            double sig, eps, red;
+            bool isAlchemical;
+            force.getParticleParameters(i, ivindex, sig, eps, red, isAlchemical);
+
+            int it;
+            force.getCondensedType(i, it);
+            if (jvt.find(it) == jvt.end()) {
+                jvt[it] = 1;
+            } else {
+                jvt[it] += 1;
+            }
+            if (isAlchemical) {
+                if (mvt.find(it) == mvt.end()) {
+                    mvt[it] = 1;
+                } else {
+                    mvt[it] += 1;
+                }
+            } else {
+                if (mvt.find(it) == mvt.end()) {
+                    mvt[it] = 0;
+                }
+            }
+        }
+
+        double c0 = 0.0;
+        double c1 = 0.0;
+        double c2 = 0.0;
+        double c3 = 0.0;
+        double c4 = 0.0;
+        double c5 = 0.0;
+
+        double vdwTaperCut = cut;
+        double vdwCut = off;
+
+        double vdwCut2 = vdwCut*vdwCut;
+        double vdwCut3 = vdwCut2*vdwCut;
+        double vdwCut4 = vdwCut2*vdwCut2;
+        double vdwCut5 = vdwCut2*vdwCut3;
+        double vdwCut6 = vdwCut3*vdwCut3;
+        double vdwCut7 = vdwCut3*vdwCut4;
+
+        double vdwTaperCut2 = vdwTaperCut*vdwTaperCut;
+        double vdwTaperCut3 = vdwTaperCut2*vdwTaperCut;
+        double vdwTaperCut4 = vdwTaperCut2*vdwTaperCut2;
+        double vdwTaperCut5 = vdwTaperCut2*vdwTaperCut3;
+        double vdwTaperCut6 = vdwTaperCut3*vdwTaperCut3;
+        double vdwTaperCut7 = vdwTaperCut3*vdwTaperCut4;
+
+        // get 5th degree multiplicative switching function coefficients;
+
+        double denom = 1.0 / (vdwCut - vdwTaperCut);
+        double denom2 = denom*denom;
+        denom = denom * denom2*denom2;
+
+        c0 = vdwCut * vdwCut2 * (vdwCut2 - 5.0 * vdwCut * vdwTaperCut + 10.0 * vdwTaperCut2) * denom;
+        c1 = -30.0 * vdwCut2 * vdwTaperCut2*denom;
+        c2 = 30.0 * (vdwCut2 * vdwTaperCut + vdwCut * vdwTaperCut2) * denom;
+        c3 = -10.0 * (vdwCut2 + 4.0 * vdwCut * vdwTaperCut + vdwTaperCut2) * denom;
+        c4 = 15.0 * (vdwCut + vdwTaperCut) * denom;
+        c5 = -6.0 * denom;
+
+        double dhal = 0.07;
+        double ghal = 0.12;
+        double elrc = 0;
+        int nvt = force.getNumCondensedTypes();
+        for (int it = 0; it < nvt; ++it) {
+            double fi = 4 * M_PI * jvt.at(it);
+            double fim = 4 * M_PI * mvt.at(it);
+            for (int kt = it; kt < nvt; ++kt) {
+                double fk = jvt.at(kt);
+                double fkm = mvt.at(kt);
+                double fik = 0;
+                if (force.getAlchemicalMethod() == AmoebaVdwForce::Decouple) {
+                    fik = fi*fk - vlam1*(fim*(fk-fkm)+(fi-fim)*fkm);
+                } else if (force.getAlchemicalMethod() == AmoebaVdwForce::Annihilate) {
+                    fik = vlambda*fi*fk + vlam1*(fi-fim)*(fk-fkm);
+                } else {
+                    fik = fi*fk;
+                }
+                if (kt == it) fik *= 0.5;
+                double rv, eps;
+                force.getPairSigmaEpsilon(it, kt, rv, eps);
+                double rv2 = rv * rv;
+                double rv6 = rv2 * rv2 * rv2;
+                double rv7 = rv6 * rv;
+                double etot = 0.0;
+                for (int j = 1; j <= ndelta; ++j) {
+                    double r = offset + j * rdelta;
+                    double r2 = r * r;
+                    double r3 = r2 * r;
+                    double r6 = r3 * r3;
+                    double r7 = r6 * r;
+
+                    double e = 0;
+                    double rho = r7 + ghal * rv7;
+                    double tau = (dhal+1.0) / (r+dhal*rv);
+                    double tau7 = pow(tau, 7);
+                    e = eps * rv7 * tau7 * ((ghal+1.0)*rv7/rho-2.0);
+
+                    if (r < off) {
+                        double r4 = r2 * r2;
+                        double r5 = r2 * r3;
+                        double taper = c5*r5 + c4*r4 + c3*r3 + c2*r2 + c1*r + c0;
+                        e *= (1.0 - taper);
+                    }
+                    etot += e * rdelta * r2;
+                }
+                elrc += fik * etot;
+            }
+        }
+        return elrc;
+    }
+
     // Identify all particle classes (defined by sigma and epsilon and reduction), and count the number of
     // particles in each class.
 
@@ -145,10 +274,10 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
 
     // Loop over all pairs of classes to compute the coefficient.
     // Copied over from TINKER - numerical integration.
-    double range = 20.0;
+    double range = 20.0; // TINKER uses 10.0
     double cut = vdwTaperCut; // This is where tapering BEGINS
     double off = vdwCut; // This is where tapering ENDS
-    int nstep = 200;
+    int nstep = 200; // TINKER uses 20
     int ndelta = int(double(nstep) * (range - cut));
     double rdelta = (range - cut) / double(ndelta);
     double offset = cut - 0.5 * rdelta;
