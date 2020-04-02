@@ -2591,7 +2591,14 @@ public:
         bool isAlchemical1, isAlchemical2;
         force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1, isAlchemical1);
         force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2, isAlchemical2);
-        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && isAlchemical1 == isAlchemical2);
+        bool sameVdwType = true;
+        if (force.usesPairwiseVdw()) {
+            int ityp, ktyp;
+            force.getCondensedType(particle1, ityp);
+            force.getCondensedType(particle2, ktyp);
+            sameVdwType = (ityp == ktyp);
+        }
+        return (sameVdwType && sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && isAlchemical1 == isAlchemical2);
     }
 private:
     const AmoebaVdwForce& force;

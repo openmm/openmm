@@ -572,6 +572,11 @@ private:
     std::string epsilonCombiningRule;
     const System& system;
     NeighborList* neighborList;
+
+    bool usesVdwpr;
+    int numCondensedTypes;
+    std::vector<int> condensedTypes;
+    std::vector<double> pairSigmaEpsilon;
 };
 
 /**

@@ -290,7 +290,10 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
                                                         const std::vector<double>& reductions,
                                                         const std::vector<bool>& isAlchemical,
                                                         const std::vector< std::set<int> >& allExclusions,
-                                                        vector<Vec3>& forces) const {
+                                                        vector<Vec3>& forces,
+                                                        bool usesVdwpr, int numCondensedTypes,
+                                                        const std::vector<int>& condensedTypes,
+                                                        const std::vector<double>& pairSigmaEpsilon) const {
 
     // set reduced coordinates
 
@@ -322,6 +325,14 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
                 double combinedSigma   = (this->*_combineSigmas)(sigmaI, sigmas[jj]);
 
                 double combinedEpsilon = (this->*_combineEpsilons)(epsilonI, epsilons[jj], sigmaI, sigmas[jj]);
+
+                if (usesVdwpr) {
+                    int ityp = condensedTypes[ii];
+                    int jtyp = condensedTypes[jj];
+                    int m = ityp * numCondensedTypes + jtyp;
+                    combinedSigma = pairSigmaEpsilon[2 * m + 0];
+                    combinedEpsilon = pairSigmaEpsilon[2 * m + 1];
+                }
 
 
                 double softcore = 0.0;
@@ -372,7 +383,10 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
                                                         const std::vector<double>& reductions,
                                                         const std::vector<bool>& isAlchemical,
                                                         const NeighborList& neighborList,
-                                                        vector<Vec3>& forces) const {
+                                                        vector<Vec3>& forces,
+                                                        bool usesVdwpr, int numCondensedTypes,
+                                                        const std::vector<int>& condensedTypes,
+                                                        const std::vector<double>& pairSigmaEpsilon) const {
 
     // set reduced coordinates
 
@@ -395,6 +409,14 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
         double combinedSigma   = (this->*_combineSigmas)(sigmas[siteI], sigmas[siteJ]);
 
         double combinedEpsilon = (this->*_combineEpsilons)(epsilons[siteI], epsilons[siteJ], sigmas[siteI], sigmas[siteJ]);
+
+        if (usesVdwpr) {
+            int ityp = condensedTypes[siteI];
+            int jtyp = condensedTypes[siteJ];
+            int m = jtyp * numCondensedTypes + ityp;
+            combinedSigma = pairSigmaEpsilon[2 * m + 0];
+            combinedEpsilon = pairSigmaEpsilon[2 * m + 1];
+        }
 
         double softcore        = 0.0;
         int isAlchemicalI      = isAlchemical[siteI];

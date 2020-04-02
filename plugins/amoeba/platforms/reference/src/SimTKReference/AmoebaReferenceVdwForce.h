@@ -286,7 +286,10 @@ public:
                                    const std::vector<double>& reductions,
                                    const std::vector<bool>& isAlchemical,
                                    const std::vector< std::set<int> >& vdwExclusions,
-                                   std::vector<OpenMM::Vec3>& forces) const;
+                                   std::vector<OpenMM::Vec3>& forces,
+                                   bool usesVdwpr, int numCondensedTypes,
+                                   const std::vector<int>& condensedTypes,
+                                   const std::vector<double>& pairSigmaEpsilon) const;
 
     /**---------------------------------------------------------------------------------------
 
@@ -313,7 +316,10 @@ public:
                                    const std::vector<double>& reductions,
                                    const std::vector<bool>& isAlchemical,
                                    const NeighborList& neighborList,
-                                   std::vector<OpenMM::Vec3>& forces) const;
+                                   std::vector<OpenMM::Vec3>& forces,
+                                   bool usesVdwpr, int numCondensedTypes,
+                                   const std::vector<int>& condensedTypes,
+                                   const std::vector<double>& pairSigmaEpsilon) const;
 
 private:
     // taper coefficient indices
