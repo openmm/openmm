@@ -33,7 +33,7 @@ from .charmmcrdfiles import CharmmCrdFile, CharmmRstFile
 from .charmmparameterset import CharmmParameterSet
 from .charmmpsffile import CharmmPsfFile, CharmmPSFWarning
 from .simulatedtempering import SimulatedTempering
-from .metadynamics import Metadynamics, WellTemperedMetadynamics, BiasVariable
+from .metadynamics import Metadynamics, BiasVariable
 
 # Enumerated values
 

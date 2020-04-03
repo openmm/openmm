@@ -72,205 +72,6 @@ class Metadynamics(object):
     directory, and also load in and apply the biases added by other processes.
     """
 
-    def __init__(self, system, variables, temperature, biasFactor, height, frequency, saveFrequency=None, biasDir=None):
-        """Create a Metadynamics object.
-
-        Parameters
-        ----------
-        system: System
-            the System to simulate.  A CustomCVForce implementing the bias is created and
-            added to the System.
-        variables: list of BiasVariables
-            the collective variables to sample
-        temperature: temperature
-            the temperature at which the simulation is being run.  This is used in computing
-            the free energy.
-        biasFactor: float
-            used in scaling the height of the Gaussians added to the bias.  The collective
-            variables are sampled as if the effective temperature of the simulation were
-            temperature*biasFactor.
-        height: energy
-            the initial height of the Gaussians to add
-        frequency: int
-            the interval in time steps at which Gaussians should be added to the bias potential
-        saveFrequency: int (optional)
-            the interval in time steps at which to write out the current biases to disk.  At
-            the same time it writes biases, it also checks for updated biases written by other
-            processes and loads them in.  This must be a multiple of frequency.
-        biasDir: str (optional)
-            the directory to which biases should be written, and from which biases written by
-            other processes should be loaded
-        """
-        if not unit.is_quantity(temperature):
-            temperature = temperature*unit.kelvin
-        if not unit.is_quantity(height):
-            height = height*unit.kilojoules_per_mole
-        if biasFactor < 1.0:
-            raise ValueError('biasFactor must be >= 1')
-        if (saveFrequency is None and biasDir is not None) or (saveFrequency is not None and biasDir is None):
-            raise ValueError('Must specify both saveFrequency and biasDir')
-        if saveFrequency is not None and (saveFrequency < frequency or saveFrequency%frequency != 0):
-            raise ValueError('saveFrequency must be a multiple of frequency')
-        self.variables = variables
-        self.temperature = temperature
-        self.biasFactor = biasFactor
-        self.height = height
-        self.frequency = frequency
-        self.biasDir = biasDir
-        self.saveFrequency = saveFrequency
-        self._id = np.random.randint(0x7FFFFFFF)
-        self._saveIndex = 0
-        self._selfBias = np.zeros(tuple(v.gridWidth for v in variables))
-        self._totalBias = np.zeros(tuple(v.gridWidth for v in variables))
-        self._loadedBiases = {}
-        self._deltaT = temperature*(biasFactor-1)
-        varNames = ['cv%d' % i for i in range(len(variables))]
-        self._force = mm.CustomCVForce('table(%s)' % ', '.join(varNames))
-        for name, var in zip(varNames, variables):
-            self._force.addCollectiveVariable(name, var.force)
-        widths = [v.gridWidth for v in variables]
-        mins = [v.minValue for v in variables]
-        maxs = [v.maxValue for v in variables]
-        if len(variables) == 1:
-            self._table = mm.Continuous1DFunction(self._totalBias.flatten(), mins[0], maxs[0])
-        elif len(variables) == 2:
-            self._table = mm.Continuous2DFunction(widths[0], widths[1], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1])
-        elif len(variables) == 3:
-            self._table = mm.Continuous3DFunction(widths[0], widths[1], widths[2], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1], mins[2], maxs[2])
-        else:
-            raise ValueError('Metadynamics requires 1, 2, or 3 collective variables')
-        self._force.addTabulatedFunction('table', self._table)
-        self._force.setForceGroup(31)
-        system.addForce(self._force)
-        self._syncWithDisk()
-
-    def step(self, simulation, steps):
-        """Advance the simulation by integrating a specified number of time steps.
-
-        Parameters
-        ----------
-        simulation: Simulation
-            the Simulation to advance
-        steps: int
-            the number of time steps to integrate
-        """
-        stepsToGo = steps
-        while stepsToGo > 0:
-            nextSteps = stepsToGo
-            if simulation.currentStep % self.frequency == 0:
-                nextSteps = min(nextSteps, self.frequency)
-            else:
-                nextSteps = min(nextSteps, simulation.currentStep % self.frequency)
-            simulation.step(nextSteps)
-            if simulation.currentStep % self.frequency == 0:
-                position = self._force.getCollectiveVariableValues(simulation.context)
-                energy = simulation.context.getState(getEnergy=True, groups={31}).getPotentialEnergy()
-                height = self.height*np.exp(-energy/(unit.MOLAR_GAS_CONSTANT_R*self._deltaT))
-                self._addGaussian(position, height, simulation.context)
-            if self.saveFrequency is not None and simulation.currentStep % self.saveFrequency == 0:
-                self._syncWithDisk()
-            stepsToGo -= nextSteps
-
-    def getFreeEnergy(self):
-        """Get the free energy of the system as a function of the collective variables.
-
-        The result is returned as a N-dimensional NumPy array, where N is the number of collective
-        variables.  The values are in kJ/mole.  The i'th position along an axis corresponds to
-        minValue + i*(maxValue-minValue)/gridWidth.
-        """
-        return -((self.temperature+self._deltaT)/self._deltaT)*self._totalBias*unit.kilojoules_per_mole
-
-    def getCollectiveVariables(self, simulation):
-        """Get the current values of all collective variables in a Simulation."""
-        return self._force.getCollectiveVariableValues(simulation.context)
-
-    def _addGaussian(self, position, height, context):
-        """Add a Gaussian to the bias function."""
-        # Compute a Gaussian along each axis.
-
-        axisGaussians = []
-        for i,v in enumerate(self.variables):
-            x = (position[i]-v.minValue) / (v.maxValue-v.minValue)
-            if v.periodic:
-                x = x % 1.0
-            dist = np.abs(np.linspace(0, 1.0, num=v.gridWidth) - x)
-            if v.periodic:
-                dist = np.min(np.array([dist, np.abs(dist-1)]), axis=0)
-            axisGaussians.append(np.exp(-dist*dist*v.gridWidth/v.biasWidth))
-
-        # Compute their outer product.
-
-        if len(self.variables) == 1:
-            gaussian = axisGaussians[0]
-        else:
-            gaussian = reduce(np.multiply.outer, reversed(axisGaussians))
-
-        # Add it to the bias.
-
-        height = height.value_in_unit(unit.kilojoules_per_mole)
-        self._selfBias += height*gaussian
-        self._totalBias += height*gaussian
-        widths = [v.gridWidth for v in self.variables]
-        mins = [v.minValue for v in self.variables]
-        maxs = [v.maxValue for v in self.variables]
-        if len(self.variables) == 1:
-            self._table.setFunctionParameters(self._totalBias.flatten(), mins[0], maxs[0])
-        elif len(self.variables) == 2:
-            self._table.setFunctionParameters(widths[0], widths[1], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1])
-        elif len(self.variables) == 3:
-            self._table.setFunctionParameters(widths[0], widths[1], widths[2], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1], mins[2], maxs[2])
-        self._force.updateParametersInContext(context)
-
-    def _syncWithDisk(self):
-        """Save biases to disk, and check for updated files created by other processes."""
-        if self.biasDir is None:
-            return
-
-        # Use a safe save to write out the biases to disk, then delete the older file.
-
-        oldName = os.path.join(self.biasDir, 'bias_%d_%d.npy' % (self._id, self._saveIndex))
-        self._saveIndex += 1
-        tempName = os.path.join(self.biasDir, 'temp_%d_%d.npy' % (self._id, self._saveIndex))
-        fileName = os.path.join(self.biasDir, 'bias_%d_%d.npy' % (self._id, self._saveIndex))
-        np.save(tempName, self._selfBias)
-        os.rename(tempName, fileName)
-        if os.path.exists(oldName):
-            os.remove(oldName)
-
-        # Check for any files updated by other processes.
-
-        fileLoaded = False
-        pattern = re.compile('bias_(.*)_(.*)\.npy')
-        for filename in os.listdir(self.biasDir):
-            match = pattern.match(filename)
-            if match is not None:
-                matchId = int(match.group(1))
-                matchIndex = int(match.group(2))
-                if matchId != self._id and (matchId not in self._loadedBiases or matchIndex > self._loadedBiases[matchId].index):
-                    try:
-                        data = np.load(os.path.join(self.biasDir, filename))
-                        self._loadedBiases[matchId] = _LoadedBias(matchId, matchIndex, data)
-                        fileLoaded = True
-                    except IOError:
-                        # There's a tiny chance the file could get deleted by another process between when
-                        # we check the directory and when we try to load it.  If so, just ignore the error
-                        # and keep using whatever version of that process' biases we last loaded.
-                        pass
-
-        # If we loaded any files, recompute the total bias from all processes.
-
-        if fileLoaded:
-            self._totalBias = self._selfBias
-            for bias in self._loadedBiases.values():
-                self._totalBias += bias.bias
-
-
-class WellTemperedMetadynamics(Metadynamics):
-    """
-    Temporary class.
-
-    """
-
     def __init__(self, system, variables, temperature, biasFactor, height, frequency, saveFrequency=None, biasDir=None, gridExpansion=20):
         """Create a Metadynamics object.
 
@@ -300,8 +101,8 @@ class WellTemperedMetadynamics(Metadynamics):
             the directory to which biases should be written, and from which biases written by
             other processes should be loaded
         gridExpansion: int (optional)
-            the extra number of grid points used in periodic directions for multidimensional
-            tabulated functions
+            the number of extra grid points to be used in periodic directions of multidimensional
+            tabulated functions. This aims at avoiding boundary discontinuity artifacts.
         """
         if not unit.is_quantity(temperature):
             temperature = temperature*unit.kelvin
@@ -355,6 +156,33 @@ class WellTemperedMetadynamics(Metadynamics):
         system.addForce(self._force)
         self._syncWithDisk()
 
+    def step(self, simulation, steps):
+        """Advance the simulation by integrating a specified number of time steps.
+
+        Parameters
+        ----------
+        simulation: Simulation
+            the Simulation to advance
+        steps: int
+            the number of time steps to integrate
+        """
+        stepsToGo = steps
+        while stepsToGo > 0:
+            nextSteps = stepsToGo
+            if simulation.currentStep % self.frequency == 0:
+                nextSteps = min(nextSteps, self.frequency)
+            else:
+                nextSteps = min(nextSteps, simulation.currentStep % self.frequency)
+            simulation.step(nextSteps)
+            if simulation.currentStep % self.frequency == 0:
+                position = self._force.getCollectiveVariableValues(simulation.context)
+                energy = simulation.context.getState(getEnergy=True, groups={31}).getPotentialEnergy()
+                height = self.height*np.exp(-energy/(unit.MOLAR_GAS_CONSTANT_R*self._deltaT))
+                self._addGaussian(position, height, simulation.context)
+            if self.saveFrequency is not None and simulation.currentStep % self.saveFrequency == 0:
+                self._syncWithDisk()
+            stepsToGo -= nextSteps
+
     def getFreeEnergy(self):
         """Get the free energy of the system as a function of the collective variables.
 
@@ -367,10 +195,11 @@ class WellTemperedMetadynamics(Metadynamics):
             return f
         else:
             s = [v._slice for v in self.variables]
-            if len(self.variables) == 2:
-                return f[s[1], s[0]]
-            else:
-                return f[s[2], s[1], s[0]]
+            return f[s[1], s[0]] if len(self.variables) == 2 else f[s[2], s[1], s[0]]
+
+    def getCollectiveVariables(self, simulation):
+        """Get the current values of all collective variables in a Simulation."""
+        return self._force.getCollectiveVariableValues(simulation.context)
 
     def _addGaussian(self, position, height, context):
         """Add a Gaussian to the bias function."""
@@ -414,6 +243,49 @@ class WellTemperedMetadynamics(Metadynamics):
             self._table.setFunctionParameters(widths[0], widths[1], widths[2], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1], mins[2], maxs[2])
         self._force.updateParametersInContext(context)
 
+    def _syncWithDisk(self):
+        """Save biases to disk, and check for updated files created by other processes."""
+        if self.biasDir is None:
+            return
+
+        # Use a safe save to write out the biases to disk, then delete the older file.
+
+        oldName = os.path.join(self.biasDir, 'bias_%d_%d.npy' % (self._id, self._saveIndex))
+        self._saveIndex += 1
+        tempName = os.path.join(self.biasDir, 'temp_%d_%d.npy' % (self._id, self._saveIndex))
+        fileName = os.path.join(self.biasDir, 'bias_%d_%d.npy' % (self._id, self._saveIndex))
+        np.save(tempName, self._selfBias)
+        os.rename(tempName, fileName)
+        if os.path.exists(oldName):
+            os.remove(oldName)
+
+        # Check for any files updated by other processes.
+
+        fileLoaded = False
+        pattern = re.compile('bias_(.*)_(.*)\.npy')
+        for filename in os.listdir(self.biasDir):
+            match = pattern.match(filename)
+            if match is not None:
+                matchId = int(match.group(1))
+                matchIndex = int(match.group(2))
+                if matchId != self._id and (matchId not in self._loadedBiases or matchIndex > self._loadedBiases[matchId].index):
+                    try:
+                        data = np.load(os.path.join(self.biasDir, filename))
+                        self._loadedBiases[matchId] = _LoadedBias(matchId, matchIndex, data)
+                        fileLoaded = True
+                    except IOError:
+                        # There's a tiny chance the file could get deleted by another process between when
+                        # we check the directory and when we try to load it.  If so, just ignore the error
+                        # and keep using whatever version of that process' biases we last loaded.
+                        pass
+
+        # If we loaded any files, recompute the total bias from all processes.
+
+        if fileLoaded:
+            self._totalBias = self._selfBias
+            for bias in self._loadedBiases.values():
+                self._totalBias += bias.bias
+
 
 class BiasVariable(object):
     """A collective variable that can be used to bias a simulation with metadynamics."""
@@ -425,17 +297,17 @@ class BiasVariable(object):
         ----------
         force: Force
             the Force object whose potential energy defines the collective variable
-        minValue: float
+        minValue: float or unit.Quantity
             the minimum value the collective variable can take.  If it should ever go below this,
             the bias force will be set to 0.
-        maxValue: float
+        maxValue: float or unit.Quantity
             the maximum value the collective variable can take.  If it should ever go above this,
             the bias force will be set to 0.
-        biasWidth: float
+        biasWidth: float or unit.Quantity
             the width (standard deviation) of the Gaussians added to the bias during metadynamics
-        periodic: bool
+        periodic: bool (optional)
             whether this is a periodic variable, such that minValue and maxValue are physical equivalent
-        gridWidth: int
+        gridWidth: int (optional)
             the number of grid points to use when tabulating the bias function.  If this is omitted,
             a reasonable value is chosen automatically.
         """
