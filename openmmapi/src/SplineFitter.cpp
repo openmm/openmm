@@ -87,6 +87,7 @@ void SplineFitter::createPeriodicSpline(const vector<double>& x, const vector<do
     // Create the system of equations to solve.
 
     vector<double> a(n-1), b(n-1), c(n-1), rhs(n-1);
+    a[0] = x[n-1]-x[n-2];
     b[0] = 2.0*(x[1]-x[0]+x[n-1]-x[n-2]);
     c[0] = x[1]-x[0];
     rhs[0] = 6.0*((y[1]-y[0])/(x[1]-x[0]) - (y[n-1]-y[n-2])/(x[n-1]-x[n-2]));
@@ -96,7 +97,7 @@ void SplineFitter::createPeriodicSpline(const vector<double>& x, const vector<do
         c[i] = x[i+1]-x[i];
         rhs[i] = 6.0*((y[i+1]-y[i])/(x[i+1]-x[i]) - (y[i]-y[i-1])/(x[i]-x[i-1]));
     }
-    double beta = x[n-1]-x[n-2];
+    double beta = a[0];
     double alpha = c[n-2];
     double gamma = -b[0];
 
