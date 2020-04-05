@@ -329,7 +329,8 @@ void testContinuous1DFunction() {
     vector<double> table;
     for (int i = 0; i < 21; i++)
         table.push_back(sin(0.25*i));
-    forceField->addTabulatedFunction("fn", new Continuous1DFunction(table, 1.0, 6.0));
+    Continuous1DFunction* continuous1DFunction = new Continuous1DFunction(table, 1.0, 6.0);
+    forceField->addTabulatedFunction("fn", continuous1DFunction);
     system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -352,6 +353,35 @@ void testContinuous1DFunction() {
         context.setPositions(positions);
         State state = context.getState(State::Energy);
         double energy = (x < 1.0 || x > 6.0 ? 0.0 : sin(x-1.0))+1.0;
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 1e-4);
+    }
+
+    double twoPi = 8.0*atan(1.0);
+    for (int i = 0; i < 20; i++)
+        table[i] = sin(i*twoPi/20.0);
+    table[20] = table[0];
+    continuous1DFunction->setFunctionParameters(table, 1.0, twoPi+1.0);
+    continuous1DFunction->setPeriodic(true);
+    context.reinitialize();
+    positions[0] = Vec3(0, 0, 0);
+    for (int i = 1; i < 30; i++) {
+        double x = (7.0/30.0)*i;
+        positions[1] = Vec3(x, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        double force = -cos(x-1.0);
+        double energy = sin(x-1.0)+1.0;
+        ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], 0.1);
+        ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], 0.1);
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.02);
+    }
+    for (int i = 1; i < 20; i++) {
+        double x = i*twoPi/20.0+1.0;
+        positions[1] = Vec3(x, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Energy);
+        double energy = sin(x-1.0)+1.0;
         ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 1e-4);
     }
 }
