@@ -101,15 +101,29 @@ int ReferenceContinuous1DFunction::getNumArguments() const {
 
 double ReferenceContinuous1DFunction::evaluate(const double* arguments) const {
     double t = arguments[0];
-    if (t < min || t > max)
-        return 0.0;
+    if (t < min || t > max) {
+        if (periodic) {
+            double L = max-min;
+            double s = (t-min)/L;
+            t = min + L*(s-floor(s));
+        }
+        else
+            return 0.0;
+    }
     return SplineFitter::evaluateSpline(x, values, derivs, t);
 }
 
 double ReferenceContinuous1DFunction::evaluateDerivative(const double* arguments, const int* derivOrder) const {
     double t = arguments[0];
-    if (t < min || t > max)
-        return 0.0;
+    if (t < min || t > max) {
+        if (periodic) {
+            double L = max-min;
+            double s = (t-min)/L;
+            t = min + L*(s-floor(s));
+        }
+        else
+            return 0.0;
+    }
     return SplineFitter::evaluateSplineDerivative(x, values, derivs, t);
 }
 

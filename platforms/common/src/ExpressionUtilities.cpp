@@ -238,11 +238,20 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                 for (auto& suffix : suffixes) {
                     out << "{\n";
                     if (dynamic_cast<const Continuous1DFunction*>(functions[i]) != NULL) {
-                        out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
-                        out << "if (x >= " << paramsFloat[0] << " && x <= " << paramsFloat[1] << ") {\n";
-                        out << "x = (x - " << paramsFloat[0] << ")*" << paramsFloat[2] << ";\n";
-                        out << "int index = (int) (floor(x));\n";
-                        out << "index = min(index, (int) " << paramsInt[3] << ");\n";
+                        int periodic = functionParams[i][4];
+                        if (periodic) {
+                            out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
+                            out << "x = (x - " << paramsFloat[0] << ")*" << paramsFloat[5]<< ";\n";
+                            out << "x = (x - floor(x))*" << paramsFloat[6] << ";\n";
+                            out << "int index = (int) (floor(x));\n";
+                        }
+                        else {
+                            out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
+                            out << "if (x >= " << paramsFloat[0] << " && x <= " << paramsFloat[1] << ") {\n";
+                            out << "x = (x - " << paramsFloat[0] << ")*" << paramsFloat[2] << ";\n";
+                            out << "int index = (int) (floor(x));\n";
+                            out << "index = min(index, (int) " << paramsInt[3] << ");\n";
+                        }
                         out << "float4 coeff = " << functionNames[i].second << "[index];\n";
                         out << "real b = x-index;\n";
                         out << "real a = 1.0f-b;\n";
@@ -253,8 +262,9 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                             else
                                 out << nodeNames[j] << suffix << " = (coeff.y-coeff.x)*" << paramsFloat[2] << "+((1.0f-3.0f*a*a)*coeff.z+(3.0f*b*b-1.0f)*coeff.w)/" << paramsFloat[2] << ";\n";
                         }
-                        out << "}\n";
-                    }
+                        if (!periodic)
+                            out << "}\n";
+                      }
                     else if (dynamic_cast<const Continuous2DFunction*>(functions[i]) != NULL) {
                         out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
                         out << "real y = " << getTempName(node.getChildren()[1], temps) << suffix << ";\n";
@@ -844,6 +854,10 @@ vector<vector<double> > ExpressionUtilities::computeFunctionParameters(const vec
             params[i].push_back(max);
             params[i].push_back((values.size()-1)/(max-min));
             params[i].push_back(values.size()-2);
+            int periodic = (int) fn.getPeriodic();
+            params[i].push_back(periodic);
+            params[i].push_back(1.0/(max-min));
+            params[i].push_back(values.size()-1);
         }
         else if (dynamic_cast<const Continuous2DFunction*>(functions[i]) != NULL) {
             const Continuous2DFunction& fn = dynamic_cast<const Continuous2DFunction&>(*functions[i]);
