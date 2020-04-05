@@ -87,7 +87,7 @@ def _parseFunctions(element):
             elif key.endswith('min') or key.endswith('max'):
                 params[key] = float(function.attrib[key])
         if functionType == 'Continuous1D':
-            params['periodic'] = bool(eval(function.attrib.get('periodic')))
+            params['periodic'] = bool(eval(function.attrib.get('periodic', 'False')))
         functions.append((function.attrib['name'], functionType, values, params))
     return functions
 
