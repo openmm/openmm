@@ -63,6 +63,22 @@ void testContinuous1DFunction() {
     ASSERT_EQUAL(values.size(), values2.size());
     for (int j = 0; j < (int) values.size(); j++)
         ASSERT_EQUAL(values[j], values2[j]);
+
+    // Same test with periodic function:
+
+    values.push_back(values[0]);
+    function.setPeriodic(true);
+    function.setFunctionParameters(values, min, max);
+    stringstream newBuffer;
+    XmlSerializer::serialize<Continuous1DFunction>(&function, "Function", newBuffer);
+    Continuous1DFunction* newCopy = XmlSerializer::deserialize<Continuous1DFunction>(newBuffer);
+    newCopy->getFunctionParameters(values2, min2, max2);
+    ASSERT_EQUAL(min, min2);
+    ASSERT_EQUAL(max, max2);
+    ASSERT_EQUAL(values.size(), values2.size());
+    for (int j = 0; j < (int) values.size(); j++)
+        ASSERT_EQUAL(values[j], values2[j]);
+    
 }
 
 void testContinuous2DFunction() {
