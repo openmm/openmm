@@ -88,8 +88,8 @@ void testSerialization() {
 
     ASSERT_EQUAL(force1.getNumParticles(),          force2.getNumParticles());
 
-    ASSERT_EQUAL(force1.usesPairwiseVdw(),          force2.usesPairwiseVdw());
-    if (force1.usesPairwiseVdw()) {
+    ASSERT_EQUAL(force1.getUsePairwiseVdw(),        force2.getUsePairwiseVdw());
+    if (force1.getUsePairwiseVdw()) {
         int ntype2 = force2.getNumCondensedTypes();
         ASSERT_EQUAL(force1.getNumCondensedTypes(),     ntype2);
         for (int ii = 0; ii < force1.getNumParticles(); ++ii) {

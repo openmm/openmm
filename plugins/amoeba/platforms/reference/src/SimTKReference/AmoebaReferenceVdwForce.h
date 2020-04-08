@@ -287,7 +287,7 @@ public:
                                    const std::vector<bool>& isAlchemical,
                                    const std::vector< std::set<int> >& vdwExclusions,
                                    std::vector<OpenMM::Vec3>& forces,
-                                   bool usesVdwpr, int numCondensedTypes,
+                                   bool usesVdwpr, bool usesLJ, int numCondensedTypes,
                                    const std::vector<int>& condensedTypes,
                                    const std::vector<double>& pairSigmaEpsilon) const;
 
@@ -317,7 +317,7 @@ public:
                                    const std::vector<bool>& isAlchemical,
                                    const NeighborList& neighborList,
                                    std::vector<OpenMM::Vec3>& forces,
-                                   bool usesVdwpr, int numCondensedTypes,
+                                   bool usesVdwpr, bool usesLJ, int numCondensedTypes,
                                    const std::vector<int>& condensedTypes,
                                    const std::vector<double>& pairSigmaEpsilon) const;
 
@@ -416,7 +416,7 @@ private:
 
     double calculatePairIxn(double combindedSigma, double combindedEpsilon, double softcore,
                             const Vec3& particleIPosition, const Vec3& particleJPosition,
-                            Vec3& force) const;
+                            Vec3& force, bool usesLJ) const;
 
 };
 

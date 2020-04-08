@@ -613,6 +613,7 @@ private:
     const System& system;
     bool hasInitializedNonbonded;
 
+    bool usesLJ;
     bool usesVdwpr;
     int numCondensedTypes;
     CudaArray condensedTypes;

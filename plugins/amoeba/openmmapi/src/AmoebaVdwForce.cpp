@@ -38,7 +38,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true), alchemicalMethod(None), n(5), alpha(0.7), vdwLambda(1.0), usesVdwpr(false) {
+AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true), alchemicalMethod(None), n(5), alpha(0.7), vdwLambda(1.0), usesVdwpr(false), usesLJ(false) {
 }
 
 int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical) {
@@ -120,9 +120,20 @@ void AmoebaVdwForce::getPairSigmaEpsilon(int type1, int type2, double& sig, doub
     eps = pr.eps;
 }
 
-bool AmoebaVdwForce::usesPairwiseVdw() const {
+bool AmoebaVdwForce::getUsePairwiseVdw() const {
     return usesVdwpr;
 }
+
+    
+void AmoebaVdwForce::setUseLennardJones() {
+    usesLJ = true;
+}
+
+
+bool AmoebaVdwForce::getUseLennardJones() const {
+    return usesLJ;
+}
+
 
 void AmoebaVdwForce::setParticleExclusions(int particleIndex, const std::vector< int >& inputExclusions) {
 

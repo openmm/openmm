@@ -84,7 +84,7 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     if (force.getNonbondedMethod() == AmoebaVdwForce::NoCutoff)
         return 0.0;
 
-    if (force.usesPairwiseVdw()) {
+    if (force.getUsePairwiseVdw()) {
         // This is what really was implemented in Tinker.
         double off = force.getCutoffDistance();
         double cut = 0.9 * off;
@@ -194,10 +194,16 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
                     double r7 = r6 * r;
 
                     double e = 0;
-                    double rho = r7 + ghal * rv7;
-                    double tau = (dhal+1.0) / (r+dhal*rv);
-                    double tau7 = pow(tau, 7);
-                    e = eps * rv7 * tau7 * ((ghal+1.0)*rv7/rho-2.0);
+                    if (force.getUseLennardJones()) {
+                        double p6 = rv6 / r6;
+                        double p12 = p6 * p6;
+                        e = eps * (p12 - 2.0 * p6);
+                    } else {
+                        double rho = r7 + ghal * rv7;
+                        double tau = (dhal+1.0) / (r+dhal*rv);
+                        double tau7 = pow(tau, 7);
+                        e = eps * rv7 * tau7 * ((ghal+1.0)*rv7/rho-2.0);
+                    }
 
                     if (r < off) {
                         double r4 = r2 * r2;

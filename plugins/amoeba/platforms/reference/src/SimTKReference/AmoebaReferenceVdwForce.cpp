@@ -209,7 +209,7 @@ void AmoebaReferenceVdwForce::addReducedForce(unsigned int particleI, unsigned i
 double AmoebaReferenceVdwForce::calculatePairIxn(double combinedSigma, double combinedEpsilon, double softcore,
                                                  const Vec3& particleIPosition,
                                                  const Vec3& particleJPosition,
-                                                 Vec3& force) const {
+                                                 Vec3& force, bool usesLJ) const {
 
     static const double dhal = 0.07;
     static const double ghal = 0.12;
@@ -243,6 +243,16 @@ double AmoebaReferenceVdwForce::calculatePairIxn(double combinedSigma, double co
     double dt2 = -7.0 * rho6 * t2 * s2;
     double energy = combinedEpsilon * t1 * t2min;
     double dEdR = combinedEpsilon * (dt1 * t2min + t1 * dt2) / combinedSigma;
+
+    if (usesLJ) {
+        double pp1 = combinedSigma / r_ij;
+        double pp2 = pp1 * pp1;
+        double pp3 = pp2 * pp1;
+        double pp6 = pp3 * pp3;
+        double pp12 = pp6 * pp6;
+        energy = combinedEpsilon * (pp12 - 2.0 * pp6);
+        dEdR = combinedEpsilon * (pp12 - pp6) * (-12.0) / r_ij;
+    }
 
     // tapering
     if ((_nonbondedMethod == CutoffNonPeriodic || _nonbondedMethod == CutoffPeriodic) && r_ij > _taperCutoff) {
@@ -291,7 +301,7 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
                                                         const std::vector<bool>& isAlchemical,
                                                         const std::vector< std::set<int> >& allExclusions,
                                                         vector<Vec3>& forces,
-                                                        bool usesVdwpr, int numCondensedTypes,
+                                                        bool usesVdwpr, bool usesLJ, int numCondensedTypes,
                                                         const std::vector<int>& condensedTypes,
                                                         const std::vector<double>& pairSigmaEpsilon) const {
 
@@ -348,7 +358,7 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
 
                 Vec3 force;
                 energy += calculatePairIxn(combinedSigma, combinedEpsilon, softcore,
-                                           reducedPositions[ii], reducedPositions[jj], force);
+                                           reducedPositions[ii], reducedPositions[jj], force, usesLJ);
 
                 if (indexIVs[ii] == ii) {
                     forces[ii][0] -= force[0];
@@ -384,7 +394,7 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
                                                         const std::vector<bool>& isAlchemical,
                                                         const NeighborList& neighborList,
                                                         vector<Vec3>& forces,
-                                                        bool usesVdwpr, int numCondensedTypes,
+                                                        bool usesVdwpr, bool usesLJ, int numCondensedTypes,
                                                         const std::vector<int>& condensedTypes,
                                                         const std::vector<double>& pairSigmaEpsilon) const {
 
@@ -433,7 +443,7 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
 
         Vec3 force;
         energy += calculatePairIxn(combinedSigma, combinedEpsilon, softcore,
-                                   reducedPositions[siteI], reducedPositions[siteJ], force);
+                                   reducedPositions[siteI], reducedPositions[siteJ], force, usesLJ);
 
         if (indexIVs[siteI] == siteI) {
             forces[siteI][0] -= force[0];
