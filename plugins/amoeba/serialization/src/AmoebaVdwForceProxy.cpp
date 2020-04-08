@@ -76,9 +76,10 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
     }
 
     node.setBoolProperty("useDispersionCorrection", force.getUseDispersionCorrection());
-    node.setBoolProperty("usesVdwpr", force.usesPairwiseVdw());
+    node.setBoolProperty("usesVdwpr", force.getUsePairwiseVdw());
+    node.setBoolProperty("usesLJ", force.getUseLennardJones());
     node.setDoubleProperty("vdwLambda", force.getVdwLambda());
-    if (force.usesPairwiseVdw()) {
+    if (force.getUsePairwiseVdw()) {
         SerializationNode& vdwTypes = node.createChildNode("VdwTypes");
         for (int ii = 0; ii < force.getNumParticles(); ++ii) {
             int ityp;
@@ -145,6 +146,8 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
            force->setVdwLambda(node.getDoubleProperty("vdwLambda"));
            bool usesVdwpr = node.getBoolProperty("usesVdwpr");
            if (usesVdwpr) {
+               bool usesLJ = node.getBoolProperty("usesLJ");
+               force->setUseLennardJones();
                const SerializationNode& vdwTypes = node.getChildNode("VdwTypes");
                for (int ii = 0; ii < vdwTypes.getChildren().size(); ++ii) {
                    force->addCondensedType(vdwTypes.getChildren()[ii].getIntProperty("vdwtype"));

@@ -332,8 +332,9 @@ UNITS = {
 ("AmoebaVdwForce",                        "getNumCondensedTypes")                          :  ( None, ()),
 ("AmoebaVdwForce",                        "getCondensedType")                              :  ( None, ()),
 ("AmoebaVdwForce",                        "getPairSigmaEpsilon")                           :  ( None, ('unit.nanometer', 'unit.kilojoule_per_mole')),
-("AmoebaVdwForce",                        "usesPairwiseVdw")                               :  ( None, ()),
+("AmoebaVdwForce",                        "getUsePairwiseVdw")                             :  ( None, ()),
 ("AmoebaVdwForce",                        "getVdwLambda")                                  :  ( None, ()),
+("AmoebaVdwForce",                        "getUseLennardJones")                            :  ( None, ()),
 
 ("AmoebaWcaDispersionForce",              "getParticleParameters")                         :  ( None, ('unit.nanometer', 'unit.kilojoule_per_mole')),
 ("AmoebaWcaDispersionForce",              "getAwater")                                     :  ( '1/(unit.nanometer*unit.nanometer*unit.nanometer)',()),

@@ -1217,7 +1217,8 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
     n                      = force.getSoftcorePower();
     alpha                  = force.getSoftcoreAlpha();
 
-    usesVdwpr = force.usesPairwiseVdw();
+    usesLJ = force.getUseLennardJones();
+    usesVdwpr = force.getUsePairwiseVdw();
     condensedTypes.resize(force.getNumParticles());
     for (int i = 0; i < force.getNumParticles(); ++i) {
         int ityp;
@@ -1266,7 +1267,7 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
             vdwForce.setPeriodicBox(boxVectors);
             energy  = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, indexIVs, sigmas, epsilons,
                                                        reductions, isAlchemical, *neighborList, forceData,
-                                                       usesVdwpr, numCondensedTypes, condensedTypes, pairSigmaEpsilon);
+                                                       usesVdwpr, usesLJ, numCondensedTypes, condensedTypes, pairSigmaEpsilon);
             energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
         } else {
             vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::CutoffNonPeriodic);
@@ -1275,7 +1276,7 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
         vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::NoCutoff);
         energy = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, indexIVs, sigmas, epsilons,
                                                   reductions, isAlchemical, allExclusions, forceData,
-                                                  usesVdwpr, numCondensedTypes, condensedTypes, pairSigmaEpsilon);
+                                                  usesVdwpr, usesLJ, numCondensedTypes, condensedTypes, pairSigmaEpsilon);
     }
     return static_cast<double>(energy);
 }
@@ -1297,7 +1298,7 @@ void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& con
         isAlchemical[i]= alchemical;
     }
 
-    usesVdwpr = force.usesPairwiseVdw();
+    usesVdwpr = force.getUsePairwiseVdw();
     condensedTypes.resize(force.getNumParticles());
     for (int i = 0; i < force.getNumParticles(); ++i) {
         int ityp;

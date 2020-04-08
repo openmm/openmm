@@ -2592,7 +2592,7 @@ public:
         force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1, isAlchemical1);
         force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2, isAlchemical2);
         bool sameVdwType = true;
-        if (force.usesPairwiseVdw()) {
+        if (force.getUsePairwiseVdw()) {
             int ityp, ktyp;
             force.getCondensedType(particle1, ityp);
             force.getCondensedType(particle2, ktyp);
@@ -2715,7 +2715,8 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     bool useCutoff = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
 
     // vdwpr
-    usesVdwpr = force.usesPairwiseVdw();
+    usesVdwpr = force.getUsePairwiseVdw();
+    usesLJ = force.getUseLennardJones();
     if (usesVdwpr) {
         numCondensedTypes = force.getNumCondensedTypes();
         condensedTypes.initialize<long long>(cu, cu.getPaddedNumAtoms(), "condensedTypes");
@@ -2750,6 +2751,12 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
             "long long", 1, sizeof(long long), condensedTypes.getDevicePointer()));
         nonbonded->addArgument(CudaNonbondedUtilities::ParameterInfo("pairSigmaEpsilon",
             "float", 2, sizeof(float2), pairSigmaEpsilon.getDevicePointer()));
+
+        if (usesLJ) {
+            replacements["USE_LJ"] = "1";
+        } else {
+            replacements["USE_LJ"] = "0";
+        }
 
         replacements["NUM_VDW_TYPES"] = cu.intToString(numCondensedTypes);
 
@@ -2823,8 +2830,9 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
         bondReductionFactorsVec[i] = (float) reductionFactor;
     }
     sigmaEpsilon.upload(sigmaEpsilonVec);
-    if (force.usesPairwiseVdw()) {
+    if (force.getUsePairwiseVdw()) {
         usesVdwpr = true;
+        usesLJ = force.getUseLennardJones();
         numCondensedTypes = force.getNumCondensedTypes();
         int nsq = numCondensedTypes * numCondensedTypes;
         vector<long long> condensedTypesVec(cu.getPaddedNumAtoms(), -1);

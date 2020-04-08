@@ -573,6 +573,7 @@ private:
     const System& system;
     NeighborList* neighborList;
 
+    bool usesLJ;
     bool usesVdwpr;
     int numCondensedTypes;
     std::vector<int> condensedTypes;

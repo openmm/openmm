@@ -248,7 +248,20 @@ public:
     /**
      * If the setPairSigmaEpsilon method has been called, return true; else return false.
      */
-    bool usesPairwiseVdw() const;
+    bool getUsePairwiseVdw() const;
+
+
+    /**
+     * Set Lennard-Jones potential.
+     */
+    void setUseLennardJones();
+
+
+    /**
+     * Get logical flag for using Lennard-Jones potential.
+     */
+    bool getUseLennardJones() const;
+
 
     /**
      * Get whether to add a contribution to the energy that approximately represents the effect of VdW
@@ -389,6 +402,7 @@ private:
     double alpha;
     double vdwLambda;
     bool usesVdwpr;
+    bool usesLJ;
 
     std::string sigmaCombiningRule;
     std::string epsilonCombiningRule;

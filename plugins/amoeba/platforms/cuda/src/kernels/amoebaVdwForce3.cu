@@ -11,6 +11,19 @@ if (atom2 < NUM_ATOMS) {
     real sigma = pairSigmaEpsilon[pairK].x;
     real epsilon = pairSigmaEpsilon[pairK].y;
 
+#if USE_LJ
+    // LENNARD-JONES
+    real pp1 = sigma * invR;
+    real pp2 = pp1 * pp1;
+    real pp3 = pp2 * pp1;
+    real pp6 = pp3 * pp3;
+    real pp12 = pp6 * pp6;
+    real termEnergy = epsilon * (pp12 - 2.0f * pp6);
+    real deltaE = epsilon * (pp12 - pp6) * (-12.0f) * invR;
+
+#else
+    // BUFFERED 14-7
+
     real softcore = 0.0f;
 #if VDW_ALCHEMICAL_METHOD == 1
     if (isAlchemical1 != isAlchemical2) {
@@ -43,6 +56,8 @@ if (atom2 < NUM_ATOMS) {
     real dt2 = -7.0f * rho6 * t2 * s2;
     real termEnergy = epsilon * t1 * t2min;
     real deltaE = epsilon * (dt1 * t2min + t1 * dt2) / sigma;
+#endif
+
 #ifdef USE_CUTOFF
     if (r > TAPER_CUTOFF) {
         real x = r-TAPER_CUTOFF;
