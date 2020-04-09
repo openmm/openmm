@@ -51,6 +51,7 @@
 #include "SimTKReference/AmoebaReferenceHippoNonbondedForce.h"
 
 #include <cmath>
+#include <iostream>
 #ifdef _MSC_VER
 #include <windows.h>
 #endif
@@ -1206,34 +1207,37 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
         reductions[ii]    = reduction;
         isAlchemical[ii]  = alchemical;
     }
-    sigmaCombiningRule     = force.getSigmaCombiningRule();
-    epsilonCombiningRule   = force.getEpsilonCombiningRule();
-    useCutoff              = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
-    usePBC                 = (force.getNonbondedMethod() == AmoebaVdwForce::CutoffPeriodic);
-    cutoff                 = force.getCutoffDistance();
-    neighborList           = useCutoff ? new NeighborList() : NULL;
-    dispersionCoefficient  = force.getUseDispersionCorrection() ?  AmoebaVdwForceImpl::calcDispersionCorrection(system, force) : 0.0;
-    alchemicalMethod       = force.getAlchemicalMethod();
-    n                      = force.getSoftcorePower();
-    alpha                  = force.getSoftcoreAlpha();
+    sigmaCombiningRule      = force.getSigmaCombiningRule();
+    epsilonCombiningRule    = force.getEpsilonCombiningRule();
+    useCutoff               = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
+    usePBC                  = (force.getNonbondedMethod() == AmoebaVdwForce::CutoffPeriodic);
+    cutoff                  = force.getCutoffDistance();
+    neighborList            = useCutoff ? new NeighborList() : NULL;
+    dispersionCoefficient0  = force.getUseDispersionCorrection() ?  AmoebaVdwForceImpl::calcDispersionCorrection(system, force, 0.0) : 0.0;
+    dispersionCoefficient1  = force.getUseDispersionCorrection() ?  AmoebaVdwForceImpl::calcDispersionCorrection(system, force, 1.0) : 0.0;
+    alchemicalMethod        = force.getAlchemicalMethod();
+    n                       = force.getSoftcorePower();
+    alpha                   = force.getSoftcoreAlpha();
 
     usesLJ = force.getUseLennardJones();
     usesVdwpr = force.getUsePairwiseVdw();
     condensedTypes.resize(force.getNumParticles());
-    for (int i = 0; i < force.getNumParticles(); ++i) {
-        int ityp;
-        force.getCondensedType(i, ityp);
-        condensedTypes[i] = ityp;
-    }
-    numCondensedTypes = force.getNumCondensedTypes();
-    pairSigmaEpsilon.resize(2 * numCondensedTypes * numCondensedTypes);
-    for (int i = 0; i < numCondensedTypes; ++i) {
+    if (usesVdwpr) {
+        for (int i = 0; i < force.getNumParticles(); ++i) {
+            int ityp;
+            force.getCondensedType(i, ityp);
+            condensedTypes[i] = ityp;
+        }
+        numCondensedTypes = force.getNumCondensedTypes();
+        pairSigmaEpsilon.resize(2 * numCondensedTypes * numCondensedTypes);
+        for (int i = 0; i < numCondensedTypes; ++i) {
         for (int k = 0; k < numCondensedTypes; ++k) {
-            int m = i * numCondensedTypes + k;
-            double sig, eps;
-            force.getPairSigmaEpsilon(i, k, sig, eps);
-            pairSigmaEpsilon[2 * m + 0] = sig;
-            pairSigmaEpsilon[2 * m + 1] = eps;
+                int m = i * numCondensedTypes + k;
+                double sig, eps;
+                force.getPairSigmaEpsilon(i, k, sig, eps);
+                pairSigmaEpsilon[2 * m + 0] = sig;
+                pairSigmaEpsilon[2 * m + 1] = eps;
+            }
         }
     }
 }
@@ -1268,7 +1272,11 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
             energy  = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, indexIVs, sigmas, epsilons,
                                                        reductions, isAlchemical, *neighborList, forceData,
                                                        usesVdwpr, usesLJ, numCondensedTypes, condensedTypes, pairSigmaEpsilon);
-            energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
+            double lrc = dispersionCoefficient1;
+            if (alchemicalMethod == AmoebaVdwForce::Annihilate || alchemicalMethod == AmoebaVdwForce::Decouple) {
+                lrc = lambda * dispersionCoefficient1 + (1.0 - lambda) *  dispersionCoefficient0;
+            }
+            energy += lrc/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
         } else {
             vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::CutoffNonPeriodic);
         }
@@ -1299,21 +1307,23 @@ void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& con
     }
 
     usesVdwpr = force.getUsePairwiseVdw();
-    condensedTypes.resize(force.getNumParticles());
-    for (int i = 0; i < force.getNumParticles(); ++i) {
-        int ityp;
-        force.getCondensedType(i, ityp);
-        condensedTypes[i] = ityp;
-    }
-    numCondensedTypes = force.getNumCondensedTypes();
-    pairSigmaEpsilon.resize(2 * numCondensedTypes * numCondensedTypes);
-    for (int i = 0; i < numCondensedTypes; ++i) {
-        for (int k = 0; k < numCondensedTypes; ++k) {
-            int m = i * numCondensedTypes + k;
-            double sig, eps;
-            force.getPairSigmaEpsilon(i, k, sig, eps);
-            pairSigmaEpsilon[2 * m + 0] = sig;
-            pairSigmaEpsilon[2 * m + 1] = eps;
+    if (usesVdwpr) {
+        condensedTypes.resize(force.getNumParticles());
+        for (int i = 0; i < force.getNumParticles(); ++i) {
+            int ityp;
+            force.getCondensedType(i, ityp);
+            condensedTypes[i] = ityp;
+        }
+        numCondensedTypes = force.getNumCondensedTypes();
+        pairSigmaEpsilon.resize(2 * numCondensedTypes * numCondensedTypes);
+        for (int i = 0; i < numCondensedTypes; ++i) {
+            for (int k = 0; k < numCondensedTypes; ++k) {
+                int m = i * numCondensedTypes + k;
+                double sig, eps;
+                force.getPairSigmaEpsilon(i, k, sig, eps);
+                pairSigmaEpsilon[2 * m + 0] = sig;
+                pairSigmaEpsilon[2 * m + 1] = eps;
+            }
         }
     }
 }

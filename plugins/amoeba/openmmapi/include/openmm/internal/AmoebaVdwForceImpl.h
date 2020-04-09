@@ -69,7 +69,7 @@ public:
      * Compute the coefficient which, when divided by the periodic box volume, gives the
      * long range dispersion correction to the energy.
      */
-    static double calcDispersionCorrection(const System& system, const AmoebaVdwForce& force);
+    static double calcDispersionCorrection(const System& system, const AmoebaVdwForce& force, double lambda);
     void updateParametersInContext(ContextImpl& context);
 private:
     const AmoebaVdwForce& owner;

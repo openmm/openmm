@@ -2654,10 +2654,13 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     sigmaEpsilon.upload(sigmaEpsilonVec);
     bondReductionAtoms.upload(bondReductionAtomsVec);
     bondReductionFactors.upload(bondReductionFactorsVec);
-    if (force.getUseDispersionCorrection())
-        dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
-    else
-        dispersionCoefficient = 0.0;
+    if (force.getUseDispersionCorrection()) {
+        dispersionCoefficient0 = AmoebaVdwForceImpl::calcDispersionCorrection(system, force, 0.0);
+        dispersionCoefficient1 = AmoebaVdwForceImpl::calcDispersionCorrection(system, force, 1.0);
+    } else {
+        dispersionCoefficient0 = 0.0;
+        dispersionCoefficient1 = 0.0;
+    }
 
     // This force is applied based on modified atom positions, where hydrogens have been moved slightly
     // closer to their parent atoms.  We therefore create a separate CudaNonbondedUtilities just for
@@ -2782,8 +2785,10 @@ double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeF
         nonbonded->initialize(system);
     }
 
+    double lrc = dispersionCoefficient1;
     if (hasAlchemical) {
        float contextLambda = context.getParameter(AmoebaVdwForce::Lambda());
+       lrc = contextLambda * dispersionCoefficient1 + (1.0 - contextLambda) * dispersionCoefficient0;
        if (contextLambda != currentVdwLambda) {
           // Non-blocking copy of vdwLambda to device memory
           ((float*) vdwLambdaPinnedBuffer)[0] = contextLambda;
@@ -2804,7 +2809,7 @@ double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeF
     tempPosq.copyTo(cu.getPosq());
     tempForces.copyTo(cu.getForce());
     double4 box = cu.getPeriodicBoxSize();
-    return dispersionCoefficient/(box.x*box.y*box.z);
+    return lrc/(box.x*box.y*box.z);
 }
 
 void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force) {
@@ -2830,9 +2835,9 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
         bondReductionFactorsVec[i] = (float) reductionFactor;
     }
     sigmaEpsilon.upload(sigmaEpsilonVec);
-    if (force.getUsePairwiseVdw()) {
-        usesVdwpr = true;
-        usesLJ = force.getUseLennardJones();
+    usesVdwpr = force.getUsePairwiseVdw();
+    usesLJ = force.getUseLennardJones();
+    if (usesVdwpr) {
         numCondensedTypes = force.getNumCondensedTypes();
         int nsq = numCondensedTypes * numCondensedTypes;
         vector<long long> condensedTypesVec(cu.getPaddedNumAtoms(), -1);
@@ -2862,10 +2867,13 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
     if (hasAlchemical) isAlchemical.upload(isAlchemicalVec);
     bondReductionAtoms.upload(bondReductionAtomsVec);
     bondReductionFactors.upload(bondReductionFactorsVec);
-    if (force.getUseDispersionCorrection())
-        dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
-    else
-        dispersionCoefficient = 0.0;
+    if (force.getUseDispersionCorrection()) {
+        dispersionCoefficient0 = AmoebaVdwForceImpl::calcDispersionCorrection(system, force, 0.0);
+        dispersionCoefficient1 = AmoebaVdwForceImpl::calcDispersionCorrection(system, force, 1.0);
+    } else {
+        dispersionCoefficient0 = 0.0;
+        dispersionCoefficient1 = 0.0;
+    }
     cu.invalidateMolecules();
 }
 
