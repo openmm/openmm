@@ -1230,7 +1230,7 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
         numCondensedTypes = force.getNumCondensedTypes();
         pairSigmaEpsilon.resize(2 * numCondensedTypes * numCondensedTypes);
         for (int i = 0; i < numCondensedTypes; ++i) {
-        for (int k = 0; k < numCondensedTypes; ++k) {
+            for (int k = 0; k < numCondensedTypes; ++k) {
                 int m = i * numCondensedTypes + k;
                 double sig, eps;
                 force.getPairSigmaEpsilon(i, k, sig, eps);
@@ -1305,6 +1305,7 @@ void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& con
         isAlchemical[i]= alchemical;
     }
 
+    usesLJ = force.getUseLennardJones();
     usesVdwpr = force.getUsePairwiseVdw();
     if (usesVdwpr) {
         condensedTypes.resize(force.getNumParticles());
