@@ -77,7 +77,7 @@ double AmoebaVdwForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includ
     return 0.0;
 }
 
-double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const AmoebaVdwForce& force) {
+double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const AmoebaVdwForce& force, double lambda) {
 
     // Amoeba VdW dispersion correction implemented by LPW
     // There is no dispersion correction if PBC is off or the cutoff is set to the default value of ten billion (AmoebaVdwForce.cpp)
@@ -93,7 +93,7 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
         int ndelta = int(double(nstep) * (range - cut));
         double rdelta = (range - cut) / double(ndelta);
         double offset = cut - 0.5 * rdelta;
-        double vlambda = force.getVdwLambda();
+        double vlambda = lambda;
         double vlam1 = 1.0 - vlambda;
 
         int n = force.getNumParticles();

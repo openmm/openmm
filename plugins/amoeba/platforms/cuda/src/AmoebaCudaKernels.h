@@ -630,7 +630,8 @@ private:
     // Per particle alchemical flag.
     CudaArray isAlchemical;
 
-    double dispersionCoefficient;
+    double dispersionCoefficient0;
+    double dispersionCoefficient1;
     CudaArray sigmaEpsilon;
     CudaArray bondReductionAtoms;
     CudaArray bondReductionFactors;

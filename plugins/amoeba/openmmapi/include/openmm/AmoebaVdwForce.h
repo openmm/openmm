@@ -192,20 +192,6 @@ public:
     const std::string& getEpsilonCombiningRule(void) const;
 
     /**
-     * Get VDW Lambda
-     */
-    double getVdwLambda() const {
-        return vdwLambda;
-    }
-
-    /**
-     * Set VDW Lambda
-     */
-    void setVdwLambda(double l) {
-        vdwLambda = l;
-    }
-
-    /**
      * Get number of condensed VDW types/classes
      */
     int getNumCondensedTypes() const;
@@ -400,7 +386,6 @@ private:
     AlchemicalMethod alchemicalMethod;
     int n;
     double alpha;
-    double vdwLambda;
     bool usesVdwpr;
     bool usesLJ;
 

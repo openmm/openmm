@@ -558,7 +558,8 @@ private:
     int useCutoff;
     int usePBC;
     double cutoff;
-    double dispersionCoefficient;
+    double dispersionCoefficient0;
+    double dispersionCoefficient1;
     AmoebaVdwForce::AlchemicalMethod alchemicalMethod;
     int n;
     double alpha;
