@@ -382,7 +382,11 @@ static inline ivec4 abs(const ivec4& v) {
 }
 
 static inline bool any(const ivec4& v) {
+#ifdef __ARM64__
+    return (vmaxvq_u32(vreinterpretq_u32_s32(v)) != 0);
+#else
     return (vgetq_lane_s32(v, 0) != 0 || vgetq_lane_s32(v, 1) != 0 || vgetq_lane_s32(v, 2) != 0 || vgetq_lane_s32(v, 3) != 0);
+#endif
 }
 
 // Mathematical operators involving a scalar and a vector.
