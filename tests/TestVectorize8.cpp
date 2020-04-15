@@ -214,6 +214,29 @@ void testTranspose() {
 
 }
 
+void testUtility() {
+    fvec8 f1(0.4, 1.9, -1.2, -3.8, 0.4, 1.9, -6.8, -3.8);
+    fvec8 f2(1, 2, 4, 7, 19, 31, 64, 5);
+    fvec8 f3(0.5, 1.0, 1.5, 2.0,   2.5, 3.0, 3.5, 4.0);
+
+    // Reduce-add across three vectors into a single vec3.
+    const auto computedVec3 = reduceToVec3(f1, f2, f3);
+    ASSERT_EQUAL(-11, computedVec3[0]);
+    ASSERT_EQUAL(133, computedVec3[1]);
+    ASSERT_EQUAL(18,  computedVec3[2]);
+
+    // Gather pairs of values from a table into two vectors.
+    float table[2048];
+    for (int i=0; i<2048;++i)
+        table[i] = -i; // Same index to make it easy to debug, but negative to avoid copying idx.
+
+    const __m256i idx = _mm256_setr_epi32(57, 105, 1976, 91, 636, 1952, 345, 12);
+    fvec8 p0, p1;
+    gatherVecPair(table, idx, p0, p1);
+    ASSERT_VEC8_EQUAL(p0, -57, -105, -1976, -91, -636, -1952, -345, -12);
+    ASSERT_VEC8_EQUAL(p1, -58, -106, -1977, -92, -637, -1953, -346, -13);
+}
+
 int main(int argc, char* argv[]) {
     try {
         if (!isVec8Supported()) {
@@ -226,6 +249,7 @@ int main(int argc, char* argv[]) {
         testComparisons();
         testMathFunctions();
         testTranspose();
+        testUtility();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

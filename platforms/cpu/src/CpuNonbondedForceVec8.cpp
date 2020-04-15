@@ -69,6 +69,24 @@ CpuNonbondedForce* createCpuNonbondedForceVec8() {
     return new CpuNonbondedForceVec8();
 }
 
+/// Use a table lookup to approximate a function specific function.
+fvec8
+CpuNonbondedForceVec8::approximateFunctionFromTable(const std::vector<float>& table,
+                                                    fvec8 x, fvec8 inverse) const
+{
+    // Compute the set of 8 index positions from which to gather the table data.
+    const fvec8 x1 = x * inverse;
+    const ivec8 index = min(floor(x1), float(NUM_TABLE_POINTS));
+
+    fvec8 s1, s2;
+    gatherVecPair(table.data(), index, s1, s2);
+
+    fvec8 coeff2 = x1-fvec8(index);
+    fvec8 coeff1 = 1.0f-coeff2;
+
+    return coeff1*s1 + coeff2*s2;
+}
+
 /**---------------------------------------------------------------------------------------
 
    CpuNonbondedForceVec8 constructor
@@ -147,7 +165,8 @@ void CpuNonbondedForceVec8::calculateBlockIxnImpl(int blockIndex, float* forces,
     fvec8 blockAtomEpsilon(atomParameters[blockAtom[0]].second, atomParameters[blockAtom[1]].second, atomParameters[blockAtom[2]].second, atomParameters[blockAtom[3]].second, atomParameters[blockAtom[4]].second, atomParameters[blockAtom[5]].second, atomParameters[blockAtom[6]].second, atomParameters[blockAtom[7]].second);
     const bool needPeriodic = (PERIODIC_TYPE == PeriodicPerInteraction || PERIODIC_TYPE == PeriodicTriclinic);
     const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
-    
+    const fvec8 cutoffDistanceSquared = cutoffDistance * cutoffDistance;
+
     // Loop over neighbors for this block.
     
     const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
@@ -164,16 +183,11 @@ void CpuNonbondedForceVec8::calculateBlockIxnImpl(int blockIndex, float* forces,
         if (PERIODIC_TYPE == PeriodicPerAtom)
             atomPos -= floor((atomPos-blockCenter)*invBoxSize+0.5f)*boxSize;
         getDeltaR<PERIODIC_TYPE>(atomPos, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
-        ivec8 include;
-        char excl = exclusions[i];
-        if (excl == 0)
-            include = -1;
-        else
-            include = ivec8(excl&1 ? 0 : -1, excl&2 ? 0 : -1, excl&4 ? 0 : -1, excl&8 ? 0 : -1, excl&16 ? 0 : -1, excl&32 ? 0 : -1, excl&64 ? 0 : -1, excl&128 ? 0 : -1);
-        include = include & (r2 < cutoffDistance*cutoffDistance);
-        if (!any(include))
-            continue; // No interactions to compute.
-        
+
+        const int8_t include = ~exclusions[i] & getMaskFromCompare(r2 < cutoffDistanceSquared);
+        if (include == 0)
+            continue;
+
         // Compute the interactions.
         
         fvec8 inverseR = rsqrt(r2);
@@ -228,10 +242,10 @@ void CpuNonbondedForceVec8::calculateBlockIxnImpl(int blockIndex, float* forces,
         blockAtomForceX += fx;
         blockAtomForceY += fy;
         blockAtomForceZ += fz;
+
         float* atomForce = forces+4*atom;
-        atomForce[0] -= dot8(fx, one);
-        atomForce[1] -= dot8(fy, one);
-        atomForce[2] -= dot8(fz, one);
+        const fvec4 newAtomForce = fvec4(atomForce) - reduceToVec3(fx, fy, fz);
+        _mm_maskstore_ps(atomForce, _mm_setr_epi32(-1, -1, -1, 0), newAtomForce);
     }
     
     // Record the forces on the block atoms.
@@ -311,7 +325,8 @@ void CpuNonbondedForceVec8::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
     fvec8 C6s(C6params[blockAtom[0]], C6params[blockAtom[1]], C6params[blockAtom[2]], C6params[blockAtom[3]], C6params[blockAtom[4]], C6params[blockAtom[5]], C6params[blockAtom[6]], C6params[blockAtom[7]]);
     const bool needPeriodic = (PERIODIC_TYPE == PeriodicPerInteraction || PERIODIC_TYPE == PeriodicTriclinic);
     const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
-    
+    const fvec8 cutoffDistanceSquared = cutoffDistance * cutoffDistance;
+
     // Loop over neighbors for this block.
     
     const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
@@ -328,16 +343,11 @@ void CpuNonbondedForceVec8::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
         if (PERIODIC_TYPE == PeriodicPerAtom)
             atomPos -= floor((atomPos-blockCenter)*invBoxSize+0.5f)*boxSize;
         getDeltaR<PERIODIC_TYPE>(atomPos, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, needPeriodic, boxSize, invBoxSize);
-        ivec8 include;
-        char excl = exclusions[i];
-        if (excl == 0)
-            include = -1;
-        else
-            include = ivec8(excl&1 ? 0 : -1, excl&2 ? 0 : -1, excl&4 ? 0 : -1, excl&8 ? 0 : -1, excl&16 ? 0 : -1, excl&32 ? 0 : -1, excl&64 ? 0 : -1, excl&128 ? 0 : -1);
-        include = include & (r2 < cutoffDistance*cutoffDistance);
-        if (!any(include))
-            continue; // No interactions to compute.
-        
+
+        const int8_t include = ~exclusions[i] & getMaskFromCompare(r2 < cutoffDistanceSquared);
+        if (include == 0)
+            continue;
+
         // Compute the interactions.
         
         fvec8 inverseR = rsqrt(r2);
@@ -365,9 +375,9 @@ void CpuNonbondedForceVec8::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
                 fvec8 inverseR2 = inverseR*inverseR;
                 fvec8 mysig2 = sig*sig;
                 fvec8 mysig6 = mysig2*mysig2*mysig2;
-                fvec8 emult = C6ij*inverseR2*inverseR2*inverseR2*exptermsApprox(r);
+                fvec8 emult = C6ij*inverseR2*inverseR2*inverseR2*approximateFunctionFromTable(exptermsTable, r, exptermsDXInv);
                 fvec8 potentialShift = eps*(1.0f-mysig6*inverseRcut6)*mysig6*inverseRcut6 - C6ij*inverseRcut6Expterm;
-                dEdR += 6.0f*C6ij*inverseR2*inverseR2*inverseR2*dExptermsApprox(r);
+                dEdR += 6.0f*C6ij*inverseR2*inverseR2*inverseR2*approximateFunctionFromTable(dExptermsTable, r, exptermsDXInv);
                 energy += emult + potentialShift;
             }
 
@@ -377,14 +387,14 @@ void CpuNonbondedForceVec8::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
             dEdR = 0.0f;
         }
         fvec8 chargeProd = blockAtomCharge*posq[4*atom+3];
-        dEdR += chargeProd*inverseR*ewaldScaleFunction(r);
+        dEdR += chargeProd*inverseR*approximateFunctionFromTable(ewaldScaleTable, r, ewaldDXInv);
         dEdR *= inverseR*inverseR;
 
         // Accumulate energies.
 
         fvec8 one(1.0f);
         if (totalEnergy) {
-            energy += chargeProd*inverseR*erfcApprox(alphaEwald*r);
+            energy += chargeProd*inverseR*approximateFunctionFromTable(erfcTable, alphaEwald*r, erfcDXInv);
             energy = blend(0.0f, energy, include);
             *totalEnergy += dot8(energy, one);
         }
@@ -398,10 +408,10 @@ void CpuNonbondedForceVec8::calculateBlockEwaldIxnImpl(int blockIndex, float* fo
         blockAtomForceX += fx;
         blockAtomForceY += fy;
         blockAtomForceZ += fz;
+
         float* atomForce = forces+4*atom;
-        atomForce[0] -= dot8(fx, one);
-        atomForce[1] -= dot8(fy, one);
-        atomForce[2] -= dot8(fz, one);
+        const fvec4 newAtomForce = fvec4(atomForce) - reduceToVec3(fx, fy, fz);
+        _mm_maskstore_ps(atomForce, _mm_setr_epi32(-1, -1, -1, 0), newAtomForce);
     }
     
     // Record the forces on the block atoms.
@@ -434,88 +444,6 @@ void CpuNonbondedForceVec8::getDeltaR(const fvec4& posI, const fvec8& x, const f
         dz -= round(dz*invBoxSize[2])*boxSize[2];
     }
     r2 = dx*dx + dy*dy + dz*dz;
-}
-
-fvec8 CpuNonbondedForceVec8::erfcApprox(const fvec8& x) {
-    fvec8 x1 = x*erfcDXInv;
-    ivec8 index = min(floor(x1), NUM_TABLE_POINTS);
-    fvec8 coeff2 = x1-index;
-    fvec8 coeff1 = 1.0f-coeff2;
-    ivec4 indexLower = index.lowerVec();
-    ivec4 indexUpper = index.upperVec();
-    fvec4 t1(&erfcTable[indexLower[0]]);
-    fvec4 t2(&erfcTable[indexLower[1]]);
-    fvec4 t3(&erfcTable[indexLower[2]]);
-    fvec4 t4(&erfcTable[indexLower[3]]);
-    fvec4 t5(&erfcTable[indexUpper[0]]);
-    fvec4 t6(&erfcTable[indexUpper[1]]);
-    fvec4 t7(&erfcTable[indexUpper[2]]);
-    fvec4 t8(&erfcTable[indexUpper[3]]);
-    fvec8 s1, s2, s3, s4;
-    transpose(t1, t2, t3, t4, t5, t6, t7, t8, s1, s2, s3, s4);
-    return coeff1*s1 + coeff2*s2;
-}
-
-fvec8 CpuNonbondedForceVec8::ewaldScaleFunction(const fvec8& x) {
-    // Compute the tabulated Ewald scale factor: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
-
-    fvec8 x1 = x*ewaldDXInv;
-    ivec8 index = min(floor(x1), NUM_TABLE_POINTS);
-    fvec8 coeff2 = x1-index;
-    fvec8 coeff1 = 1.0f-coeff2;
-    ivec4 indexLower = index.lowerVec();
-    ivec4 indexUpper = index.upperVec();
-    fvec4 t1(&ewaldScaleTable[indexLower[0]]);
-    fvec4 t2(&ewaldScaleTable[indexLower[1]]);
-    fvec4 t3(&ewaldScaleTable[indexLower[2]]);
-    fvec4 t4(&ewaldScaleTable[indexLower[3]]);
-    fvec4 t5(&ewaldScaleTable[indexUpper[0]]);
-    fvec4 t6(&ewaldScaleTable[indexUpper[1]]);
-    fvec4 t7(&ewaldScaleTable[indexUpper[2]]);
-    fvec4 t8(&ewaldScaleTable[indexUpper[3]]);
-    fvec8 s1, s2, s3, s4;
-    transpose(t1, t2, t3, t4, t5, t6, t7, t8, s1, s2, s3, s4);
-    return coeff1*s1 + coeff2*s2;
-}
-
-fvec8 CpuNonbondedForceVec8::exptermsApprox(const fvec8& r) {
-    fvec8 r1 = r*exptermsDXInv;
-    ivec8 index = min(floor(r1), NUM_TABLE_POINTS);
-    fvec8 coeff2 = r1-index;
-    fvec8 coeff1 = 1.0f-coeff2;
-    ivec4 indexLower = index.lowerVec();
-    ivec4 indexUpper = index.upperVec();
-    fvec4 t1(&exptermsTable[indexLower[0]]);
-    fvec4 t2(&exptermsTable[indexLower[1]]);
-    fvec4 t3(&exptermsTable[indexLower[2]]);
-    fvec4 t4(&exptermsTable[indexLower[3]]);
-    fvec4 t5(&exptermsTable[indexUpper[0]]);
-    fvec4 t6(&exptermsTable[indexUpper[1]]);
-    fvec4 t7(&exptermsTable[indexUpper[2]]);
-    fvec4 t8(&exptermsTable[indexUpper[3]]);
-    fvec8 s1, s2, s3, s4;
-    transpose(t1, t2, t3, t4, t5, t6, t7, t8, s1, s2, s3, s4);
-    return coeff1*s1 + coeff2*s2;
-}
-
-fvec8 CpuNonbondedForceVec8::dExptermsApprox(const fvec8& r) {
-    fvec8 r1 = r*exptermsDXInv;
-    ivec8 index = min(floor(r1), NUM_TABLE_POINTS);
-    fvec8 coeff2 = r1-index;
-    fvec8 coeff1 = 1.0f-coeff2;
-    ivec4 indexLower = index.lowerVec();
-    ivec4 indexUpper = index.upperVec();
-    fvec4 t1(&dExptermsTable[indexLower[0]]);
-    fvec4 t2(&dExptermsTable[indexLower[1]]);
-    fvec4 t3(&dExptermsTable[indexLower[2]]);
-    fvec4 t4(&dExptermsTable[indexLower[3]]);
-    fvec4 t5(&dExptermsTable[indexUpper[0]]);
-    fvec4 t6(&dExptermsTable[indexUpper[1]]);
-    fvec4 t7(&dExptermsTable[indexUpper[2]]);
-    fvec4 t8(&dExptermsTable[indexUpper[3]]);
-    fvec8 s1, s2, s3, s4;
-    transpose(t1, t2, t3, t4, t5, t6, t7, t8, s1, s2, s3, s4);
-    return coeff1*s1 + coeff2*s2;
 }
 
 #endif

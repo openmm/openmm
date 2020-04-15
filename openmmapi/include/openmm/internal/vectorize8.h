@@ -117,6 +117,10 @@ public:
     operator ivec8() const;
 };
 
+static inline int8_t getMaskFromCompare(fvec8 compare_result) {
+    return _mm256_movemask_ps(compare_result);
+}
+
 /**
  * An eight element vector of ints.
  */
@@ -268,10 +272,126 @@ static inline fvec8 operator/(float v1, const fvec8& v2) {
     return fvec8(v1)/v2;
 }
 
-// Operations for blending fvec8s based on an ivec8.
+// Operations for blending fvec8s from either a full bitmask or an 8-bit mask.
 
 static inline fvec8 blend(const fvec8& v1, const fvec8& v2, const ivec8& mask) {
     return fvec8(_mm256_blendv_ps(v1.val, v2.val, _mm256_castsi256_ps(mask.val)));
+}
+
+static inline fvec8 blend(const fvec8& v1, const fvec8& v2, int8_t mask)
+{
+   // Put a copy of bit 0 in the first element, bit 1 in the second, and so on.
+    const ivec8 expandedBits = _mm256_set1_epi8(mask) & _mm256_setr_epi32(1, 2, 4, 8, 16, 32, 64, 128);
+
+    // The individual bits are essentially extremely small floating-point values. By comparing against zero
+    //  (even a floating-point zero), the individual bits are turned into a complete element mask.
+    const auto elementMask = _mm256_cmp_ps(_mm256_castsi256_ps(expandedBits), __m256(), _CMP_NEQ_OQ);
+
+    return _mm256_blendv_ps(v1, v2, elementMask);
+}
+
+/// Given a table of floating-point values and a set of indexes, perform a gather read into a pair
+/// of vectors. The first result vector contains the values at the given indexes, and the second
+/// result vector contains the values from each respective index+1.
+static inline void gatherVecPair(const float* table, const ivec8 index, fvec8& out0, fvec8& out1)
+{
+    // Utility function to read a pair of values from the given table index and broadcast the pair to
+    // every element of the vector.
+    auto broadcast2ps = [&](int32_t i) -> __m256 {
+        return _mm256_castpd_ps(_mm256_broadcast_sd((double*)(table + i)));
+    };
+
+    // Extract the 8 index positions as 4 pairs of 64-bit values. Extracting a scalar value
+    // from a vector is relatively expensive, so rather than pull out out individual 32-bit values,
+    // pull out pairs of values as 64-bits and use the cheaper scalar instructions to
+    // manipulate the address.
+    int64_t pairAddr0 = _mm256_extract_epi64(index, 0);
+    int64_t pairAddr1 = _mm256_extract_epi64(index, 1);
+    int64_t pairAddr2 = _mm256_extract_epi64(index, 2);
+    int64_t pairAddr3 = _mm256_extract_epi64(index, 3);
+
+    // Gather the data from the individual reads. Each read will return a pair of floating-point
+    // values from that index position. The first values from each read need to be stored in
+    // the first result vector, and the second value in the second result vector. Broadcast the pairs
+    // to every element position in a vector and then use the cheap blend instructions to merge the results together.
+    const auto a0 = broadcast2ps(pairAddr0 & 0xFFFFFFFF);
+    const auto b1 = broadcast2ps(pairAddr0 >> 32);
+    const auto c2 = broadcast2ps(pairAddr1 & 0xFFFFFFFF);
+    const auto d3 = broadcast2ps(pairAddr1 >> 32);
+    const auto e4 = broadcast2ps(pairAddr2 & 0xFFFFFFFF);
+    const auto f5 = broadcast2ps(pairAddr2 >> 32);
+    const auto g6 = broadcast2ps(pairAddr3 & 0xFFFFFFFF);
+    const auto h7 = broadcast2ps(pairAddr3 >> 32);
+
+    const auto a0b1 = _mm256_blend_ps(a0, b1, 0b11001100);
+    const auto c2d3 = _mm256_blend_ps(c2, d3, 0b11001100);
+    const auto e4f5 = _mm256_blend_ps(e4, f5, 0b11001100);
+    const auto g6h7 = _mm256_blend_ps(g6, h7, 0b11001100);
+
+    const auto a0b1e4f5 = _mm256_blend_ps(a0b1, e4f5, 0b11110000);
+    const auto c2d3g6h7 = _mm256_blend_ps(c2d3, g6h7, 0b11110000);
+
+    out0 = _mm256_shuffle_ps(a0b1e4f5, c2d3g6h7, 0b10001000);
+    out1 = _mm256_shuffle_ps(a0b1e4f5, c2d3g6h7, 0b11011101);
+}
+
+/// Given 3 vectors of floating-point data, reduce them to a single 3-element position
+/// value by adding all the elements in each vector. Given inputs of:
+///   X0 X1 X2 X3 X4 X5 X6 X7
+///   Y0 Y1 Y2 Y3 Y4 Y5 Y6 Y7
+///   Z0 Z1 Z2 Z3 Z4 Z5 Z6 Z7
+/// Each vector of values needs to be summed into a single value, and then stored into
+/// the output vector:
+///   output[0] = (X0 + X1 + X2 + ...)
+///   output[1] = (Y0 + Y1 + Y2 + ...)
+///   output[2] = (Z0 + Z1 + Z2 + ...)
+///   output[3] = undefined
+static inline fvec4 reduceToVec3(const fvec8 x, const fvec8 y, const fvec8 z)
+{
+    // The general strategy for a vector reduce-add operation is to take values from
+    // different parts of the vector and overlap them a different part of the vector and then
+    // add together. Repeat this several times until all values have been summed. Initially 8
+    // values can be reduced to 4, 4 to 2, and 2 to 1. The following code essentially does this
+    // but exploits two things:
+    //   - having multiple inputs means that some vectors can be combined together to amortise the
+    //     cost of shuffling.
+    //   - the output destinations are part of anther vector, so accumulate into the correct
+    //     offsets to start with, instead of reducing to position 0 and re-inserting to the correct
+    //     output location.
+    //
+    // As far as possible, accumulate x, y and z into their output positions in both the top and
+    // bottom 128-bits to exploit in-lane permutes as much as possible early on.
+
+    // Shuffle X and Z together to form one reduced vector.
+    //   X2 X3 Z0 Z1 X6 X7 Z4 Z5
+    const auto xzshuf = _mm256_shuffle_ps(x, z, 0b01001110);
+    // Blend X and Z together to form another reduced vector, overlapping the previous.
+    //   X0 X1 Z2 Z3 X4 X5 Z6 Z7
+    const auto xzblend = _mm256_blend_ps(x, z, 0b11001100);
+    // Add them together to form:
+    // (X0 + X2) (X1 + X3) (Z0 + Z2) (Z1 + Z3) etc.
+    const auto xz0 = _mm256_add_ps(xzshuf, xzblend);
+
+    // Now there's only one vector containing all values. Shuffle again to form another overlap,
+    // and then add.
+    const auto xz1 = _mm256_permute_ps(xz0, 0b00110001);
+    const auto xz2 = _mm256_add_ps(xz0, xz1);
+
+    // Work on Z on its own as there's nothing else to work with. Start by permuting it to
+    // form some overlaps, and then add:
+    //   (Y0 + Y2) (Y1 + Y3) - - (Y4 + Y6) (Y5 + Y7) - -
+    const auto yshuf = _mm256_permute_ps(y, 0b11101110);
+    const auto y0 = _mm256_add_ps(yshuf, y);
+
+    // Shift the bottom float of each pair to the right, into the correct Y location.
+    const auto y1 = _mm256_permute_ps(y0, 0b00000000);
+    const auto y2 = _mm256_add_ps(y0, y1);
+
+    // Blend the results together to give a complete set of XYZ in the correct respective positions
+    // of both top and bottom 128-bit lanes.
+    const auto laneResult = fvec8(_mm256_blend_ps(xz2, y2, 0b00100010));
+
+    return laneResult.lowerVec() + laneResult.upperVec();
 }
 
 #endif /*OPENMM_VECTORIZE8_H_*/

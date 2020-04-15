@@ -38,9 +38,6 @@
 using namespace std;
 using namespace OpenMM;
 
-const float CpuNonbondedForce::TWO_OVER_SQRT_PI = (float) (2/sqrt(PI_M));
-const int CpuNonbondedForce::NUM_TABLE_POINTS = 2048;
-
 /**---------------------------------------------------------------------------------------
 
    CpuNonbondedForce constructor

@@ -83,29 +83,8 @@ protected:
       template <int PERIODIC_TYPE>
       void getDeltaR(const fvec4& posI, const fvec8& x, const fvec8& y, const fvec8& z, fvec8& dx, fvec8& dy, fvec8& dz, fvec8& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const;
 
-      /**
-       * Compute a fast approximation to erfc(x).
-       */
-      fvec8 erfcApprox(const fvec8& x);
-      
-      /**
-       * Evaluate the scale factor used with Ewald and PME: erfc(alpha*r) + 2*alpha*r*exp(-alpha*alpha*r*r)/sqrt(PI)
-       */
-      fvec8 ewaldScaleFunction(const fvec8& x);
-
-      /**
-       * Compute a fast approximation to (1.0 - EXP(-dar^2) * (1.0 + dar^2 + 0.5*dar^4))
-       * where dar = (dispersionAlpha * R)
-       * needed for LJPME energies.
-       */
-      fvec8 exptermsApprox(const fvec8& R);
-
-      /**
-       * Compute a fast approximation to (1.0 - EXP(-dar^2) * (1.0 + dar^2 + 0.5*dar^4 + dar^6/6.0))
-       * where dar = (dispersionAlpha * R)
-       * needed for LJPME forces.
-       */
-      fvec8 dExptermsApprox(const fvec8& R);
+      /// Compute an approximation of a function using a table lookup.
+      fvec8 approximateFunctionFromTable(const std::vector<float>& table, fvec8 x, fvec8 inverse) const;
 
 };
 
