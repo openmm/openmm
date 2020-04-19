@@ -432,56 +432,77 @@ class TestCharmmFiles(unittest.TestCase):
         system_openmm = forcefield.createSystem(topology, constraints=None, rigidWater=True, nonbondedMethod=PME,
                                                 nonbondedCutoff=8 * angstroms)
         self.assertEqual(
-            sorted(system_charmm.getConstraintParameters(i) for i in range(system_charmm.getNumConstraints())),
-            sorted(system_charmm.getConstraintParameters(j) for j in range(system_charmm.getNumConstraints())))
+            sorted(system_charmm.getConstraintParameters(i)[:2] for i in range(system_charmm.getNumConstraints())),
+            sorted(system_openmm.getConstraintParameters(j)[:2] for j in range(system_openmm.getNumConstraints())))
+        for i in range(system_charmm.getNumConstraints()):
+            self.assertAlmostEqual(system_charmm.getConstraintParameters(i)[2],
+                                   system_openmm.getConstraintParameters(i)[2], delta=1e-7 * nanometers)
 
         system_charmm = psf.createSystem(params, constraints=HBonds, rigidWater=False, nonbondedMethod=PME,
                                          nonbondedCutoff=8 * angstroms)
         system_openmm = forcefield.createSystem(topology, constraints=HBonds, rigidWater=False, nonbondedMethod=PME,
                                                 nonbondedCutoff=8 * angstroms)
         self.assertEqual(
-            sorted(system_charmm.getConstraintParameters(i) for i in range(system_charmm.getNumConstraints())),
-            sorted(system_charmm.getConstraintParameters(j) for j in range(system_charmm.getNumConstraints())))
+            sorted(system_charmm.getConstraintParameters(i)[:2] for i in range(system_charmm.getNumConstraints())),
+            sorted(system_openmm.getConstraintParameters(j)[:2] for j in range(system_openmm.getNumConstraints())))
+        for i in range(system_charmm.getNumConstraints()):
+            self.assertAlmostEqual(system_charmm.getConstraintParameters(i)[2],
+                                   system_openmm.getConstraintParameters(i)[2], delta=1e-7 * nanometers)
 
         system_charmm = psf.createSystem(params, constraints=HBonds, rigidWater=True, nonbondedMethod=PME,
                                          nonbondedCutoff=8 * angstroms)
         system_openmm = forcefield.createSystem(topology, constraints=HBonds, rigidWater=True, nonbondedMethod=PME,
                                                 nonbondedCutoff=8 * angstroms)
         self.assertEqual(
-            sorted(system_charmm.getConstraintParameters(i) for i in range(system_charmm.getNumConstraints())),
-            sorted(system_charmm.getConstraintParameters(j) for j in range(system_charmm.getNumConstraints())))
+            sorted(system_charmm.getConstraintParameters(i)[:2] for i in range(system_charmm.getNumConstraints())),
+            sorted(system_openmm.getConstraintParameters(j)[:2] for j in range(system_openmm.getNumConstraints())))
+        for i in range(system_charmm.getNumConstraints()):
+            self.assertAlmostEqual(system_charmm.getConstraintParameters(i)[2],
+                                   system_openmm.getConstraintParameters(i)[2], delta=1e-7 * nanometers)
 
         system_charmm = psf.createSystem(params, constraints=AllBonds, rigidWater=False, nonbondedMethod=PME,
                                          nonbondedCutoff=8 * angstroms)
         system_openmm = forcefield.createSystem(topology, constraints=AllBonds, rigidWater=False, nonbondedMethod=PME,
                                                 nonbondedCutoff=8 * angstroms)
         self.assertEqual(
-            sorted(system_charmm.getConstraintParameters(i) for i in range(system_charmm.getNumConstraints())),
-            sorted(system_charmm.getConstraintParameters(j) for j in range(system_charmm.getNumConstraints())))
+            sorted(system_charmm.getConstraintParameters(i)[:2] for i in range(system_charmm.getNumConstraints())),
+            sorted(system_openmm.getConstraintParameters(j)[:2] for j in range(system_openmm.getNumConstraints())))
+        for i in range(system_charmm.getNumConstraints()):
+            self.assertAlmostEqual(system_charmm.getConstraintParameters(i)[2],
+                                   system_openmm.getConstraintParameters(i)[2], delta=1e-7 * nanometers)
 
         system_charmm = psf.createSystem(params, constraints=AllBonds, rigidWater=True, nonbondedMethod=PME,
                                          nonbondedCutoff=8 * angstroms)
         system_openmm = forcefield.createSystem(topology, constraints=AllBonds, rigidWater=True, nonbondedMethod=PME,
                                                 nonbondedCutoff=8 * angstroms)
         self.assertEqual(
-            sorted(system_charmm.getConstraintParameters(i) for i in range(system_charmm.getNumConstraints())),
-            sorted(system_charmm.getConstraintParameters(j) for j in range(system_charmm.getNumConstraints())))
+            sorted(system_charmm.getConstraintParameters(i)[:2] for i in range(system_charmm.getNumConstraints())),
+            sorted(system_openmm.getConstraintParameters(j)[:2] for j in range(system_openmm.getNumConstraints())))
+        for i in range(system_charmm.getNumConstraints()):
+            self.assertAlmostEqual(system_charmm.getConstraintParameters(i)[2],
+                                   system_openmm.getConstraintParameters(i)[2], delta=1e-7 * nanometers)
 
         system_charmm = psf.createSystem(params, constraints=HAngles, rigidWater=False, nonbondedMethod=PME,
                                          nonbondedCutoff=8 * angstroms)
         system_openmm = forcefield.createSystem(topology, constraints=HAngles, rigidWater=False, nonbondedMethod=PME,
                                                 nonbondedCutoff=8 * angstroms)
         self.assertEqual(
-            sorted(system_charmm.getConstraintParameters(i) for i in range(system_charmm.getNumConstraints())),
-            sorted(system_charmm.getConstraintParameters(j) for j in range(system_charmm.getNumConstraints())))
+            sorted(system_charmm.getConstraintParameters(i)[:2] for i in range(system_charmm.getNumConstraints())),
+            sorted(system_openmm.getConstraintParameters(j)[:2] for j in range(system_openmm.getNumConstraints())))
+        for i in range(system_charmm.getNumConstraints()):
+            self.assertAlmostEqual(system_charmm.getConstraintParameters(i)[2],
+                                   system_openmm.getConstraintParameters(i)[2], delta=1e-7 * nanometers)
 
         system_charmm = psf.createSystem(params, constraints=HAngles, rigidWater=True, nonbondedMethod=PME,
                                          nonbondedCutoff=8 * angstroms)
         system_openmm = forcefield.createSystem(topology, constraints=HAngles, rigidWater=True, nonbondedMethod=PME,
                                                 nonbondedCutoff=8 * angstroms)
         self.assertEqual(
-            sorted(system_charmm.getConstraintParameters(i) for i in range(system_charmm.getNumConstraints())),
-            sorted(system_charmm.getConstraintParameters(j) for j in range(system_charmm.getNumConstraints())))
+            sorted(system_charmm.getConstraintParameters(i)[:2] for i in range(system_charmm.getNumConstraints())),
+            sorted(system_openmm.getConstraintParameters(j)[:2] for j in range(system_openmm.getNumConstraints())))
+        for i in range(system_charmm.getNumConstraints()):
+            self.assertAlmostEqual(system_charmm.getConstraintParameters(i)[2],
+                                   system_openmm.getConstraintParameters(i)[2], delta=1e-7 * nanometers)
 
 if __name__ == '__main__':
     unittest.main()
