@@ -272,6 +272,9 @@ class CharmmPsfFile(object):
                 drudepair_list.append([min(id1,id2), max(id1,id2)])
             elif (atom_list[id1].name[0:2]=='LP' or atom_list[id2].name[0:2]=='LP' or atom_list[id1].name=='OM' or atom_list[id2].name=='OM'):
                 pass
+            # Ignore H-H bond in water if present
+            elif atom_list[id1].name[0]=='H' and atom_list[id2].name[0]=='H' and (atom_list[id1].residue.resname in WATNAMES):
+                pass
             else:
                 bond_list.append(Bond(atom_list[id1], atom_list[id2]))
         bond_list.changed = False
