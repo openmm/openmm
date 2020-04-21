@@ -51,6 +51,18 @@ public:
     fvec8(float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8) : val(_mm256_set_ps(v8, v7, v6, v5, v4, v3, v2, v1)) {}
     fvec8(__m256 v) : val(v) {}
     fvec8(const float* v) : val(_mm256_loadu_ps(v)) {}
+
+    /// Create a vector by gathering individual indexes of data from a table. Element i of the vector will
+    /// be loaded from table[idx[i]].
+    /// \param table The table from which to do a lookup.
+    /// \param indexes The indexes to gather.
+    fvec8(const float* table, const int idx[8])
+    {
+        // :TODO: Using int32_t explicitly as the index type could allow the real gather instruction to be used.
+        // Use gather and static assert? Conditional code?
+        val = _mm256_setr_ps(table[idx[0]], table[idx[1]], table[idx[2]], table[idx[3]], table[idx[4]], table[idx[5]], table[idx[6]], table[idx[7]]);
+    }
+
     operator __m256() const {
         return val;
     }
@@ -207,7 +219,7 @@ static inline fvec8 rsqrt(const fvec8& v) {
     return y;
 }
 
-static inline float dot8(const fvec8& v1, const fvec8& v2) {
+static inline float dot(const fvec8& v1, const fvec8& v2) {
     fvec8 result = _mm256_dp_ps(v1, v2, 0xF1);
     return _mm_cvtss_f32(result.lowerVec())+_mm_cvtss_f32(result.upperVec());
 }
@@ -235,6 +247,14 @@ static inline void transpose(const fvec4& in1, const fvec4& in2, const fvec4& in
     out4 = _mm256_insertf128_ps(out4, i8, 1);
 }
 
+/// Given a vec4[8] input array, generate 4 vec8 outputs. The first output contains all the first elements
+/// the second output the second elements, and so on. Note that the prototype is essentially differing only
+/// in output type so it can be overloaded in other SIMD fvec types.
+static inline void transpose(const fvec4 in[8], fvec8& out1, fvec8& out2, fvec8& out3, fvec8& out4)
+{
+    transpose(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7], out1, out2, out3, out4);
+}
+
 static inline void transpose(const fvec8& in1, const fvec8& in2, const fvec8& in3, const fvec8& in4, fvec4& out1, fvec4& out2, fvec4& out3, fvec4& out4, fvec4& out5, fvec4& out6, fvec4& out7, fvec4& out8) {
     out1 = in1.lowerVec();
     out2 = in2.lowerVec();
@@ -246,6 +266,11 @@ static inline void transpose(const fvec8& in1, const fvec8& in2, const fvec8& in
     out7 = in3.upperVec();
     out8 = in4.upperVec();
     _MM_TRANSPOSE4_PS(out5, out6, out7, out8);
+}
+
+/// Given 4 input vectors of 8 elements, transpose them to form 8 output vectors of 4 elements.
+static inline void transpose(const fvec8& in1, const fvec8& in2, const fvec8& in3, const fvec8& in4, fvec4 out[8]) {
+    transpose(in1, in2, in3, in4, out[0], out[1], out[2], out[3], out[4], out[5], out[6], out[7]);
 }
 
 // Functions that operate on ivec8s.

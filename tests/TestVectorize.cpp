@@ -68,6 +68,14 @@ void testLoadStore() {
     ASSERT_EQUAL(i3[1], 3);
     ASSERT_EQUAL(i3[2], 4);
     ASSERT_EQUAL(i3[3], 5);
+
+    // Partial store of vec3 should not overwrite beyond the 3 elements.
+    float overwriteTest[4] = {9, 9, 9, 9};
+    f2.storeVec3(overwriteTest);
+    ASSERT_EQUAL(overwriteTest[0], f2[0]);
+    ASSERT_EQUAL(overwriteTest[1], f2[1]);
+    ASSERT_EQUAL(overwriteTest[2], f2[2]);
+    ASSERT_EQUAL(overwriteTest[3], 9);
 }
 
 void testArithmetic() {
@@ -160,15 +168,67 @@ void testMathFunctions() {
 }
 
 void testTranspose() {
-    fvec4 f1(1.0, 2.0, 3.0, 4.0);
-    fvec4 f2(5.0, 6.0, 7.0, 8.0);
-    fvec4 f3(9.0, 10.0, 11.0, 12.0);
-    fvec4 f4(13.0, 14.0, 15.0, 16.0);
-    transpose(f1, f2, f3, f4);
-    ASSERT_VEC4_EQUAL(f1, 1.0, 5.0, 9.0, 13.0);
-    ASSERT_VEC4_EQUAL(f2, 2.0, 6.0, 10.0, 14.0);
-    ASSERT_VEC4_EQUAL(f3, 3.0, 7.0, 11.0, 15.0);
-    ASSERT_VEC4_EQUAL(f4, 4.0, 8.0, 12.0, 16.0);
+    fvec4 f[4] = {
+        {1.0, 2.0, 3.0, 4.0},
+        {5.0, 6.0, 7.0, 8.0},
+        {9.0, 10.0, 11.0, 12.0},
+        {13.0, 14.0, 15.0, 16.0}
+    };
+
+    // Out-of-place tranpose into specific variables. Done before in-place transpose test.
+    fvec4 out0, out1, out2, out3;
+    transpose(f, out0, out1, out2, out3);
+    ASSERT_VEC4_EQUAL(out0, 1.0, 5.0, 9.0, 13.0);
+    ASSERT_VEC4_EQUAL(out1, 2.0, 6.0, 10.0, 14.0);
+    ASSERT_VEC4_EQUAL(out2, 3.0, 7.0, 11.0, 15.0);
+    ASSERT_VEC4_EQUAL(out3, 4.0, 8.0, 12.0, 16.0);
+
+    // In-place transpose. Done after the out-of-place transpose so avoid breaking that.
+    transpose(f[0], f[1], f[2], f[3]);
+    ASSERT_VEC4_EQUAL(f[0], 1.0, 5.0, 9.0, 13.0);
+    ASSERT_VEC4_EQUAL(f[1], 2.0, 6.0, 10.0, 14.0);
+    ASSERT_VEC4_EQUAL(f[2], 3.0, 7.0, 11.0, 15.0);
+    ASSERT_VEC4_EQUAL(f[3], 4.0, 8.0, 12.0, 16.0);
+
+    /// Out-of-place transpose from named variables into an array.
+    fvec4 h[4];
+    fvec4 p0(0.1, 0.2, 0.3, 0.4);
+    fvec4 p1(0.5, 0.6, 0.7, 0.8);
+    fvec4 p2(0.9, 1.0, 1.1, 1.2);
+    fvec4 p3(1.3, 1.4, 1.5, 1.6);
+    transpose(p0, p1, p2, p3, h);
+    ASSERT_VEC4_EQUAL(h[0], 0.1, 0.5, 0.9, 1.3);
+    ASSERT_VEC4_EQUAL(h[1], 0.2, 0.6, 1.0, 1.4);
+    ASSERT_VEC4_EQUAL(h[2], 0.3, 0.7, 1.1, 1.5);
+    ASSERT_VEC4_EQUAL(h[3], 0.4, 0.8, 1.2, 1.6);
+}
+
+void testUtility() {
+    fvec4 f1(7, 2, -5, 13);
+    fvec4 f2(1, 2, 4, 7);
+    fvec4 f3(0.5, 1.0, 1.5, 2.0);
+
+    // Reduce-add across three vectors into a single vec3.
+    const auto computedVec3 = reduceToVec3(f1, f2, f3);
+    ASSERT_EQUAL(17, computedVec3[0]);
+    ASSERT_EQUAL(14, computedVec3[1]);
+    ASSERT_EQUAL(5,  computedVec3[2]);
+
+    // Gather values from a table. Variants for both one vector and two vector gathers are provided.
+    float table[2048];
+    for (int i=0; i<2048;++i)
+        table[i] = -i; // Same index to make it easy to debug, but negative to avoid copying idx.
+
+    // Single vector gather.
+    const int vidx[4] = {156, 1987, 33, 1003};
+    fvec4 g(table, vidx);
+    ASSERT_VEC4_EQUAL(g, -156, -1987, -33, -1003);
+
+    // Pair-wise vector gather.
+    fvec4 p0, p1;
+    gatherVecPair(table, _mm_setr_epi32(57, 105, 1976, 91), p0, p1);
+    ASSERT_VEC4_EQUAL(p0, -57, -105, -1976, -91);
+    ASSERT_VEC4_EQUAL(p1, -58, -106, -1977, -92);
 }
 
 int main(int argc, char* argv[]) {
@@ -183,6 +243,7 @@ int main(int argc, char* argv[]) {
         testComparisons();
         testMathFunctions();
         testTranspose();
+        testUtility();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
