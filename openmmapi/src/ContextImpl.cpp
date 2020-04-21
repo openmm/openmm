@@ -454,6 +454,7 @@ void ContextImpl::createCheckpoint(ostream& stream) {
         stream.write((char*) &param.second, sizeof(double));
     }
     updateStateDataKernel.getAs<UpdateStateDataKernel>().createCheckpoint(*this, stream);
+    integrator.createCheckpoint(stream);
     stream.flush();
 }
 
@@ -480,6 +481,7 @@ void ContextImpl::loadCheckpoint(istream& stream) {
         parameters[name] = value;
     }
     updateStateDataKernel.getAs<UpdateStateDataKernel>().loadCheckpoint(*this, stream);
+    integrator.loadCheckpoint(stream);
     hasSetPositions = true;
     integrator.stateChanged(State::Positions);
     integrator.stateChanged(State::Velocities);

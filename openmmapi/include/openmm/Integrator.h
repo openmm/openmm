@@ -34,6 +34,7 @@
 
 #include "State.h"
 #include "Vec3.h"
+#include <iosfwd>
 #include <map>
 #include <vector>
 #include "internal/windowsExport.h"
@@ -150,6 +151,18 @@ protected:
      */
     virtual double getVelocityTimeOffset() const {
         return 0.0;
+    }
+    /**
+     * This is called while writing checkpoints.  It gives the integrator a chance to write
+     * its own data.  The default implementation does nothing.
+     */
+    virtual void createCheckpoint(std::ostream& stream) const {
+    }
+    /**
+     * This is called while loading a checkpoint.  The integrator should read in whatever
+     * data it wrote in createCheckpoint() and update its internal state accordingly.
+     */
+    virtual void loadCheckpoint(std::istream& stream) {
     }
 private:
     double stepSize, constraintTol;
