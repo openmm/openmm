@@ -111,8 +111,6 @@ jobs:
       arch: ppc64le
       env: OPENCL=false
            CUDA=false
-           CC=$CCACHE/gcc
-           CXX=$CCACHE/g++
            CMAKE_FLAGS=""
 
     - sudo: false
@@ -122,8 +120,6 @@ jobs:
       arch: arm64
       env: OPENCL=false
            CUDA=false
-           CC=$CCACHE/gcc
-           CXX=$CCACHE/g++
            CMAKE_FLAGS=""
 
 before_install:
