@@ -104,6 +104,28 @@ jobs:
            CXX=$CCACHE/g++
            CMAKE_FLAGS=""
 
+    - sudo: false
+      dist: xenial
+      python: "3.8"
+      name: "PPC"
+      arch: ppc64le
+      env: OPENCL=false
+           CUDA=false
+           CC=$CCACHE/gcc
+           CXX=$CCACHE/g++
+           CMAKE_FLAGS=""
+
+    - sudo: false
+      dist: xenial
+      python: "3.8"
+      name: "ARM"
+      arch: arm64
+      env: OPENCL=false
+           CUDA=false
+           CC=$CCACHE/gcc
+           CXX=$CCACHE/g++
+           CMAKE_FLAGS=""
+
 before_install:
   - START_TIME=$(date +%s)
   - wget http://anaconda.org/omnia/ccache/3.2.4/download/${TRAVIS_OS_NAME}-64/ccache-3.2.4-0.tar.bz2
