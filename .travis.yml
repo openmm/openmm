@@ -190,6 +190,7 @@ before_install:
       pip install cython;
     fi
   - if [[ "${TRAVIS_CPU_ARCH}" == "ppc64le" ]]; then
+      sudo apt-get install libpcre3;
       wget https://anaconda.org/conda-forge/swig/4.0.1/download/linux-ppc64le/swig-4.0.1-hb209c28_0.tar.bz2;
       mkdir $HOME/swig;
       tar -xjvf swig-4.0.1-hb209c28_0.tar.bz2 -C $HOME/swig;
@@ -198,6 +199,7 @@ before_install:
       pip install cython;
     fi
   - if [[ "${TRAVIS_CPU_ARCH}" == "arm64" ]]; then
+      sudo apt-get install libpcre3;
       wget https://anaconda.org/conda-forge/swig/4.0.1/download/linux-aarch64/swig-4.0.1-he1b5a44_0.tar.bz2;
       mkdir $HOME/swig;
       tar -xjvf swig-4.0.1-he1b5a44_0.tar.bz2 -C $HOME/swig;
