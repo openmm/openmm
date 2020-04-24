@@ -147,14 +147,14 @@ before_install:
   #    popd;
   #  fi
   - if [[ "${TRAVIS_CPU_ARCH}" == "ppc64le" ]]; then
-      sudo apt-get install libuv1;
+      sudo apt-get install libuv1 rhash;
       wget https://anaconda.org/conda-forge/cmake/3.17.0/download/linux-ppc64le/cmake-3.17.0-hfb1cb51_0.tar.bz2;
       mkdir $HOME/cmake;
       tar -xjvf cmake-3.17.0-hfb1cb51_0.tar.bz2 -C $HOME/cmake;
       export PATH=$HOME/cmake/bin:$PATH;
     fi
   - if [[ "${TRAVIS_CPU_ARCH}" == "arm64" ]]; then
-      sudo apt-get install libuv1;
+      sudo apt-get install libuv1 rhash;
       wget https://anaconda.org/conda-forge/cmake/3.17.0/download/linux-aarch64/cmake-3.17.0-h28c56e5_0.tar.bz2;
       mkdir $HOME/cmake;
       tar -xjvf cmake-3.17.0-h28c56e5_0.tar.bz2 -C $HOME/cmake;
