@@ -218,6 +218,7 @@ void testCheckpoint() {
     custom->addPerDofVariable("b", 2.0);
     CompoundIntegrator integrator;
     integrator.addIntegrator(custom);
+    integrator.addIntegrator(new VerletIntegrator(0.005));
     Context context(system, integrator, platform);
     vector<Vec3> positions(1, Vec3());
     context.setPositions(positions);
@@ -229,7 +230,9 @@ void testCheckpoint() {
     custom->setGlobalVariable(0, 10.0);
     vector<Vec3> b2(1, Vec3(4, 5, 6));
     custom->setPerDofVariable(0, b2);
+    integrator.setCurrentIntegrator(1);
     context.loadCheckpoint(checkpoint);
+    ASSERT_EQUAL(0, integrator.getCurrentIntegrator());
     ASSERT_EQUAL(5.0, custom->getGlobalVariable(0));
     vector<Vec3> b3;
     custom->getPerDofVariable(0, b3);

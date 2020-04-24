@@ -130,11 +130,13 @@ double CompoundIntegrator::computeKineticEnergy() {
 }
 
 void CompoundIntegrator::createCheckpoint(std::ostream& stream) const {
+    stream.write((char*) &currentIntegrator, sizeof(int));
     for (int i = 0; i < integrators.size(); i++)
         integrators[i]->createCheckpoint(stream);
 }
 
 void CompoundIntegrator::loadCheckpoint(std::istream& stream) {
+    stream.read((char*) &currentIntegrator, sizeof(int));
     for (int i = 0; i < integrators.size(); i++)
         integrators[i]->loadCheckpoint(stream);
 }
