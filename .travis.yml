@@ -143,7 +143,7 @@ before_install:
       ./bootstrap --prefix=${HOME}/cmake;
       make -j 4;
       make install;
-      export PATH=${HOME}/bin:${PATH};
+      export PATH=${HOME}/cmake/bin:${PATH};
       echo ${PATH};
       popd;
     fi
