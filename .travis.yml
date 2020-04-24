@@ -144,6 +144,7 @@ before_install:
       make -j 4;
       make install;
       export PATH=${HOME}/bin:${PATH};
+      echo ${PATH};
       popd;
     fi
   #- if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
@@ -200,6 +201,7 @@ before_install:
     fi
 
 script:
+  - echo ${PATH}
   - cmake . $CMAKE_FLAGS -DCMAKE_INSTALL_PREFIX=$HOME/OpenMM
   - make -j2 install
   - if [[ "$OPENCL" == "true" ]]; then ./TestOpenCLDeviceQuery; fi
