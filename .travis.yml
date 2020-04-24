@@ -141,6 +141,7 @@ before_install:
       cd cmake-3.17.1;
       ./bootstrap;
       make -j 4;
+      sudo make install;
       export PATH=${HOME}/OpenMM/bin:${PATH};
     fi
   #- if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
