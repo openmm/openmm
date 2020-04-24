@@ -139,10 +139,10 @@ before_install:
       wget https://github.com/Kitware/CMake/releases/download/v3.17.1/cmake-3.17.1.tar.gz;
       tar xf cmake-3.17.1.tar.gz;
       cd cmake-3.17.1;
-      ./bootstrap;
+      ./bootstrap --prefix=${HOME}/cmake;
       make -j 4;
       make install;
-      export PATH=${HOME}/OpenMM/bin:${PATH};
+      export PATH=${HOME}/cmake/bin:${PATH};
     fi
   #- if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
   #    CMAKE_URL="http://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz";
