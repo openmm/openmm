@@ -153,6 +153,10 @@ class TestSimulation(unittest.TestCase):
         expectedTime = simulation.currentStep*integrator.getStepSize().value_in_unit(picoseconds)
         self.assertAlmostEqual(expectedTime, time)
 
+        # Verify the simulation.currentStep is correctly updated.
+
+        self.assertAlmostEqual(simulation.currentStep*0.001, simulation.context.getState().getTime().value_in_unit(picoseconds))
+
         # Load the checkpoint and state and make sure they are both correct.
 
         velocities = simulation.context.getState(getVelocities=True).getVelocities()
