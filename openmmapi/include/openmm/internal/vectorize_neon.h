@@ -76,10 +76,7 @@ public:
 
     fvec4() {}
     fvec4(float v) : val(vdupq_n_f32(v)) {}
-    fvec4(float v1, float v2, float v3, float v4) {
-        float v[] = {v1, v2, v3, v4};
-        val = vld1q_f32(v);
-    }
+    fvec4(float v1, float v2, float v3, float v4) : val {v1, v2, v3, v4} {}
     fvec4(float32x4_t v) : val(v) {}
     fvec4(const float* v) : val(vld1q_f32(v)) {}
     operator float32x4_t() const {
@@ -198,10 +195,7 @@ public:
 
     ivec4() {}
     ivec4(int v) : val(vdupq_n_s32(v)) {}
-    ivec4(int v1, int v2, int v3, int v4) {
-        int v[] = {v1, v2, v3, v4};
-        val = vld1q_s32(v);
-    }
+    ivec4(int v1, int v2, int v3, int v4) : val {v1, v2, v3, v4} {}
     ivec4(int32x4_t v) : val(v) {}
     ivec4(const int* v) : val(vld1q_s32(v)) {}
     operator int32x4_t() const {
