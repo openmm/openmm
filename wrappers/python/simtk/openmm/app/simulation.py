@@ -197,7 +197,6 @@ class Simulation(object):
                 self.integrator.step(10) # Only take 10 steps at a time, to give Python more chances to respond to a control-c.
                 self.currentStep += 10
                 stepsToGo -= 10
-                self.currentStep += 10
                 if endTime is not None and datetime.now() >= endTime:
                     break
             else:
