@@ -3,7 +3,7 @@ language: python
 addons:
   apt:
     packages:
-      - gromacs
+      #- gromacs
       - doxygen
       - python-numpy
       - python-scipy
@@ -146,20 +146,20 @@ before_install:
   #    export PATH=${HOME}/cmake/bin:${PATH};
   #    popd;
   #  fi
-  - if [[ "${TRAVIS_CPU_ARCH}" == "ppc64le" ]]; then
-      sudo apt-get install libuv1 rhash libstdc++6;
-      wget https://anaconda.org/conda-forge/cmake/3.17.0/download/linux-ppc64le/cmake-3.17.0-hfb1cb51_0.tar.bz2;
-      mkdir $HOME/cmake;
-      tar -xjvf cmake-3.17.0-hfb1cb51_0.tar.bz2 -C $HOME/cmake;
-      export PATH=$HOME/cmake/bin:$PATH;
-    fi
-  - if [[ "${TRAVIS_CPU_ARCH}" == "arm64" ]]; then
-      sudo apt-get install libuv1 rhash libstdc++6;
-      wget https://anaconda.org/conda-forge/cmake/3.17.0/download/linux-aarch64/cmake-3.17.0-h28c56e5_0.tar.bz2;
-      mkdir $HOME/cmake;
-      tar -xjvf cmake-3.17.0-h28c56e5_0.tar.bz2 -C $HOME/cmake;
-      export PATH=$HOME/cmake/bin:$PATH;
-    fi
+  #- if [[ "${TRAVIS_CPU_ARCH}" == "ppc64le" ]]; then
+  #    sudo apt-get install libuv1 rhash libstdc++6;
+  #    wget https://anaconda.org/conda-forge/cmake/3.17.0/download/linux-ppc64le/cmake-3.17.0-hfb1cb51_0.tar.bz2;
+  #    mkdir $HOME/cmake;
+  #    tar -xjvf cmake-3.17.0-hfb1cb51_0.tar.bz2 -C $HOME/cmake;
+  #    export PATH=$HOME/cmake/bin:$PATH;
+  #  fi
+  #- if [[ "${TRAVIS_CPU_ARCH}" == "arm64" ]]; then
+  #    sudo apt-get install libuv1 rhash libstdc++6;
+  #    wget https://anaconda.org/conda-forge/cmake/3.17.0/download/linux-aarch64/cmake-3.17.0-h28c56e5_0.tar.bz2;
+  #    mkdir $HOME/cmake;
+  #    tar -xjvf cmake-3.17.0-h28c56e5_0.tar.bz2 -C $HOME/cmake;
+  #    export PATH=$HOME/cmake/bin:$PATH;
+  #  fi
   #- if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
   #    CMAKE_URL="http://cmake.org/files/v3.7/cmake-3.7.2-Linux-x86_64.tar.gz";
   #    mkdir $HOME/cmake && travis_retry wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C $HOME/cmake;
@@ -189,6 +189,7 @@ before_install:
       export PATH=$HOME/swig/bin:$PATH;
       export SWIG_LIB=$HOME/swig/share/swig/3.0.7;
       pip install cython;
+      sudo apt-get install gromacs;
     fi
   - if [[ "${TRAVIS_CPU_ARCH}" == "ppc64le" || "${TRAVIS_CPU_ARCH}" == "arm64" ]]; then
       sudo apt-get install swig;
