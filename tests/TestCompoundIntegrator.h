@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
+ * Portions copyright (c) 2015-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,6 +33,7 @@
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CompoundIntegrator.h"
 #include "openmm/Context.h"
+#include "openmm/CustomIntegrator.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/System.h"
@@ -208,6 +209,36 @@ void testDifferentStepSizes() {
     }
 }
 
+void testCheckpoint() {
+    // Test that member integrators get loaded correctly from checkpoints.
+    System system;
+    system.addParticle(1.0);
+    CustomIntegrator* custom = new CustomIntegrator(0.001);
+    custom->addGlobalVariable("a", 1.0);
+    custom->addPerDofVariable("b", 2.0);
+    CompoundIntegrator integrator;
+    integrator.addIntegrator(custom);
+    integrator.addIntegrator(new VerletIntegrator(0.005));
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1, Vec3());
+    context.setPositions(positions);
+    custom->setGlobalVariable(0, 5.0);
+    vector<Vec3> b1(1, Vec3(1, 2, 3));
+    custom->setPerDofVariable(0, b1);
+    stringstream checkpoint; 
+    context.createCheckpoint(checkpoint);
+    custom->setGlobalVariable(0, 10.0);
+    vector<Vec3> b2(1, Vec3(4, 5, 6));
+    custom->setPerDofVariable(0, b2);
+    integrator.setCurrentIntegrator(1);
+    context.loadCheckpoint(checkpoint);
+    ASSERT_EQUAL(0, integrator.getCurrentIntegrator());
+    ASSERT_EQUAL(5.0, custom->getGlobalVariable(0));
+    vector<Vec3> b3;
+    custom->getPerDofVariable(0, b3);
+    ASSERT_EQUAL_VEC(b1[0], b3[0], 1e-6);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -216,6 +247,7 @@ int main(int argc, char* argv[]) {
         testChangingIntegrator();
         testChangingParameters();
         testDifferentStepSizes();
+        testCheckpoint();
         runPlatformTests();
     }
     catch(const exception& e) {
