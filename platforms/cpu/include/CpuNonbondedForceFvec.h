@@ -26,7 +26,7 @@
 #define OPENMM_CPU_NONBONDED_FORCE_FVEC_H__
 
 #include "CpuNonbondedForce.h"
-#include "openmm/internal/vectorize_sse.h"
+#include "openmm/internal/vectorize.h"
 
 #include "SimTKOpenMMUtilities.h"
 
@@ -38,13 +38,17 @@ namespace OpenMM {
 enum BlockType {EWALD, NON_EWALD}; // :TODO: Better name for non-ewald.
 enum PeriodicType {NoPeriodic, PeriodicPerAtom, PeriodicPerInteraction, PeriodicTriclinic};
 
-/// Generic SIMD implementation of CpuNonbondedForce. The templating allows the same
-/// basic code to be reused for any sort of SIMD type, including SSE, AVX, AVX2, or 
-/// AVX-512.
+/**
+ * Generic SIMD implementation of CpuNonbondedForce. The templating allows the same
+ * basic code to be reused for any sort of SIMD type, including SSE, AVX, AVX2, or
+ * AVX-512.
+ */
 template<typename FVEC>
 class CpuNonbondedForceFvec : public CpuNonbondedForce {
 public:
-    /// Store how many elements are contained in each block of atoms.
+    /**
+     * Store how many elements are contained in each block of atoms.
+     */
     static constexpr int blockSize = sizeof(FVEC) / sizeof(float);
 
 protected:
@@ -55,11 +59,12 @@ protected:
       @param blockIndex       the index of the atom block
       @param forces           force array (forces added)
       @param totalEnergy      total energy
-      --------------------------------------------------------------------------------------- */
-    ///@{
+      --------------------------------------------------------------------------------------- 
+      @{
+      */
     void calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
     void calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
-    ///@}
+    /** @} */
 
     /**---------------------------------------------------------------------------------------
       Calculate all the interactions for one atom block. Identical to function prototypes above but
@@ -90,8 +95,9 @@ protected:
 
 };
 
-
-/// Use a table lookup to approximate a function specific function.
+/**
+ * Use a table lookup to approximate a function specific function.
+ */
 template<typename FVEC>
 FVEC
 CpuNonbondedForceFvec<FVEC>::approximateFunctionFromTable(const std::vector<float>& table,

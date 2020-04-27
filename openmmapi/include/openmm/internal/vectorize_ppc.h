@@ -69,10 +69,12 @@ public:
         val = *((__m128*) v);
     }
 
-    /// Create a vector by gathering individual indexes of data from a table. Element i of the vector will
-    /// be loaded from table[idx[i]].
-    /// \param table The table from which to do a lookup.
-    /// \param indexes The indexes to gather.
+    /**
+      * Create a vector by gathering individual indexes of data from a table. Element i of the vector will
+      * be loaded from table[idx[i]].
+      * @param table The table from which to do a lookup.
+      * @param indexes The indexes to gather.
+      */
     fvec4(const float* table, const int idx[4])
         : fvec4(table[idx[0]], table[idx[1]], table[idx[2]], table[idx[3]]) { }
 
@@ -86,7 +88,9 @@ public:
         *((__m128*) v) = val;
     }
 
-    /// Store only the lower three elements of the vector.
+    /**
+      * Store only the lower three elements of the vector.
+      */
     void storeVec3(float* v) const {
         v[0] = val[0];
         v[1] = val[1];
@@ -134,8 +138,10 @@ public:
     ivec4 operator<=(const fvec4& other) const;
     operator ivec4() const;
 
-    /// Convert an integer bitmask into a full vector of elements which can be used
-    /// by the blend function.
+    /***
+      * Convert an integer bitmask into a full vector of elements which can be used
+      * by the blend function.
+      */
     static ivec4 expandBitsToMask(int bitmask);
 
 };
@@ -307,13 +313,17 @@ static inline void transpose(fvec4& v1, fvec4& v2, fvec4& v3, fvec4& v4) {
     v4 = vec_perm(a2, a4, perm4);
 }
 
-/// Out-of-place transpose from an array into named variables.
+/**
+ * Out-of-place transpose from an array into named variables.
+ */
 static inline void transpose(const fvec4 in[4], fvec4& v0, fvec4& v1, fvec4& v2, fvec4& v3) {
     v0 = in[0]; v1 = in[1]; v2 = in[2]; v3 = in[3];
     transpose(v0, v1, v2, v3);
 }
 
-/// Out-of-place transpose from named variables into an array.
+/**
+ * Out-of-place transpose from named variables into an array.
+ */
 static inline void transpose(const fvec4 v0, const fvec4 v1, const fvec4 v2, const fvec4 v3, fvec4 out[4]) {
     out[0] = v0; out[1] = v1; out[2] = v2; out[3] = v3;
     transpose(out[0], out[1], out[2], out[3]);
@@ -399,9 +409,10 @@ static inline fvec4 sqrt(const fvec4& v) {
     return vec_sqrt(v.val);
 }
 
-/// Given a table of floating-point values and a set of indexes, perform a gather read into a pair
-/// of vectors. The first result vector contains the values at the given indexes, and the second
-/// result vector contains the values from each respective index+1.
+/* Given a table of floating-point values and a set of indexes, perform a gather read into a pair
+ * of vectors. The first result vector contains the values at the given indexes, and the second
+ * result vector contains the values from each respective index+1.
+ */
 static inline void gatherVecPair(const float* table, const ivec4 index, fvec4& out0, fvec4& out1)
 {
     fvec4 t0(table + index[0]);
@@ -413,17 +424,19 @@ static inline void gatherVecPair(const float* table, const ivec4 index, fvec4& o
     out1 = t1;
 }
 
-/// Given 3 vectors of floating-point data, reduce them to a single 3-element position
-/// value by adding all the elements in each vector. Given inputs of:
-///   X0 X1 X2 X3
-///   Y0 Y1 Y2 Y3
-///   Z0 Z1 Z2 Z3
-/// Each vector of values needs to be summed into a single value, and then stored into
-/// the output vector:
-///   output[0] = (X0 + X1 + X2 + X3)
-///   output[1] = (Y0 + Y1 + Y2 + Y3)
-///   output[2] = (Z0 + Z1 + Z2 + Z3)
-///   output[3] = undefined
+/**
+ * Given 3 vectors of floating-point data, reduce them to a single 3-element position
+ * value by adding all the elements in each vector. Given inputs of:
+ *   X0 X1 X2 X3
+ *   Y0 Y1 Y2 Y3
+ *   Z0 Z1 Z2 Z3
+ * Each vector of values needs to be summed into a single value, and then stored into
+ * the output vector:
+ *   output[0] = (X0 + X1 + X2 + X3)
+ *   output[1] = (Y0 + Y1 + Y2 + Y3)
+ *   output[2] = (Z0 + Z1 + Z2 + Z3)
+ *   output[3] = undefined
+ */
 static inline fvec4 reduceToVec3(const fvec4 x, const fvec4 y, const fvec4 z)
 {
     const auto nx = reduceAdd(x);

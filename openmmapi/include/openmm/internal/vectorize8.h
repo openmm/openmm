@@ -52,10 +52,11 @@ public:
     fvec8(__m256 v) : val(v) {}
     fvec8(const float* v) : val(_mm256_loadu_ps(v)) {}
 
-    /// Create a vector by gathering individual indexes of data from a table. Element i of the vector will
-    /// be loaded from table[idx[i]].
-    /// \param table The table from which to do a lookup.
-    /// \param indexes The indexes to gather.
+    /** Create a vector by gathering individual indexes of data from a table. Element i of the vector will
+     * be loaded from table[idx[i]].
+     * @param table The table from which to do a lookup.
+     * @param indexes The indexes to gather.
+     */
     fvec8(const float* table, const int idx[8])
     {
         // :TODO: Using int32_t explicitly as the index type could allow the real gather instruction to be used.
@@ -128,8 +129,10 @@ public:
     }
     operator ivec8() const;
 
-    /// Convert an integer bitmask into a full vector of elements which can be used
-    /// by the blend function.
+    /**
+     * Convert an integer bitmask into a full vector of elements which can be used
+     * by the blend function.
+     */
     static ivec8 expandBitsToMask(int bitmask);
 };
 
@@ -264,9 +267,10 @@ static inline void transpose(const fvec4& in1, const fvec4& in2, const fvec4& in
     out4 = _mm256_insertf128_ps(out4, i8, 1);
 }
 
-/// Given a vec4[8] input array, generate 4 vec8 outputs. The first output contains all the first elements
-/// the second output the second elements, and so on. Note that the prototype is essentially differing only
-/// in output type so it can be overloaded in other SIMD fvec types.
+/** Given a vec4[8] input array, generate 4 vec8 outputs. The first output contains all the first elements
+ * the second output the second elements, and so on. Note that the prototype is essentially differing only
+ * in output type so it can be overloaded in other SIMD fvec types.
+ */
 static inline void transpose(const fvec4 in[8], fvec8& out1, fvec8& out2, fvec8& out3, fvec8& out4)
 {
     transpose(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7], out1, out2, out3, out4);
@@ -285,7 +289,9 @@ static inline void transpose(const fvec8& in1, const fvec8& in2, const fvec8& in
     _MM_TRANSPOSE4_PS(out5, out6, out7, out8);
 }
 
-/// Given 4 input vectors of 8 elements, transpose them to form 8 output vectors of 4 elements.
+/**
+ * Given 4 input vectors of 8 elements, transpose them to form 8 output vectors of 4 elements.
+ */
 static inline void transpose(const fvec8& in1, const fvec8& in2, const fvec8& in3, const fvec8& in4, fvec4 out[8]) {
     transpose(in1, in2, in3, in4, out[0], out[1], out[2], out[3], out[4], out[5], out[6], out[7]);
 }
@@ -319,9 +325,11 @@ static inline fvec8 blend(const fvec8& v1, const fvec8& v2, const ivec8& mask) {
     return fvec8(_mm256_blendv_ps(v1.val, v2.val, _mm256_castsi256_ps(mask.val)));
 }
 
-/// Given a table of floating-point values and a set of indexes, perform a gather read into a pair
-/// of vectors. The first result vector contains the values at the given indexes, and the second
-/// result vector contains the values from each respective index+1.
+/**
+ * Given a table of floating-point values and a set of indexes, perform a gather read into a pair
+ * of vectors. The first result vector contains the values at the given indexes, and the second
+ * result vector contains the values from each respective index+1.
+ */
 static inline void gatherVecPair(const float* table, const ivec8 index, fvec8& out0, fvec8& out1)
 {
     // Utility function to read a pair of values from the given table index and broadcast the pair to
@@ -364,17 +372,19 @@ static inline void gatherVecPair(const float* table, const ivec8 index, fvec8& o
     out1 = _mm256_shuffle_ps(a0b1e4f5, c2d3g6h7, 0b11011101);
 }
 
-/// Given 3 vectors of floating-point data, reduce them to a single 3-element position
-/// value by adding all the elements in each vector. Given inputs of:
-///   X0 X1 X2 X3 X4 X5 X6 X7
-///   Y0 Y1 Y2 Y3 Y4 Y5 Y6 Y7
-///   Z0 Z1 Z2 Z3 Z4 Z5 Z6 Z7
-/// Each vector of values needs to be summed into a single value, and then stored into
-/// the output vector:
-///   output[0] = (X0 + X1 + X2 + ...)
-///   output[1] = (Y0 + Y1 + Y2 + ...)
-///   output[2] = (Z0 + Z1 + Z2 + ...)
-///   output[3] = undefined
+/**
+ * Given 3 vectors of floating-point data, reduce them to a single 3-element position
+ * value by adding all the elements in each vector. Given inputs of:
+ *   X0 X1 X2 X3 X4 X5 X6 X7
+ *   Y0 Y1 Y2 Y3 Y4 Y5 Y6 Y7
+ *   Z0 Z1 Z2 Z3 Z4 Z5 Z6 Z7
+ * Each vector of values needs to be summed into a single value, and then stored into
+ * the output vector:
+ *   output[0] = (X0 + X1 + X2 + ...)
+ *   output[1] = (Y0 + Y1 + Y2 + ...)
+ *   output[2] = (Z0 + Z1 + Z2 + ...)
+ *   output[3] = undefined
+ */
 static inline fvec4 reduceToVec3(const fvec8 x, const fvec8 y, const fvec8 z)
 {
     // The general strategy for a vector reduce-add operation is to take values from

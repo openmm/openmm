@@ -165,7 +165,9 @@ CpuPlatform::PlatformData::~PlatformData() {
         delete neighborList;
 }
 
-/// Assuming some sort of vectorisation is supported, how much?
+/**
+ * Return how much vectorisation is supported for host platform.
+ */
 int getVecBlockSize();
 
 void CpuPlatform::PlatformData::requestNeighborList(double cutoffDistance, double padding, bool useExclusions, const vector<set<int> >& exclusionList) {

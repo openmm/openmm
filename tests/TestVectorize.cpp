@@ -190,7 +190,7 @@ void testTranspose() {
     ASSERT_VEC4_EQUAL(f[2], 3.0, 7.0, 11.0, 15.0);
     ASSERT_VEC4_EQUAL(f[3], 4.0, 8.0, 12.0, 16.0);
 
-    /// Out-of-place transpose from named variables into an array.
+    // Out-of-place transpose from named variables into an array.
     fvec4 h[4];
     fvec4 p0(0.1, 0.2, 0.3, 0.4);
     fvec4 p1(0.5, 0.6, 0.7, 0.8);
