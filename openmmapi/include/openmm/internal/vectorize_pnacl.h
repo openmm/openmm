@@ -67,6 +67,14 @@ public:
     fvec4(const float* v) {
         val = *((__m128*) v);
     }
+
+    /// Create a vector by gathering individual indexes of data from a table. Element i of the vector will
+    /// be loaded from table[idx[i]].
+    /// \param table The table from which to do a lookup.
+    /// \param indexes The indexes to gather.
+    fvec4(const float* table, const int idx[4])
+        : fvec4(table[idx[0]], table[idx[1]], table[idx[2]], table[idx[3]]) { }
+
     operator __m128() const {
         return val;
     }
@@ -75,6 +83,12 @@ public:
     }
     void store(float* v) const {
         *((__m128*) v) = val;
+    }
+    /// Store only the lower three elements of the vector.
+    void storeVec3(float* v) const {
+        v[0] = val[0];
+        v[1] = val[1];
+        v[2] = val[2];
     }
     fvec4 operator+(const fvec4& other) const {
         return val+other;
@@ -116,6 +130,11 @@ public:
     ivec4 operator>=(const fvec4& other) const;
     ivec4 operator<=(const fvec4& other) const;
     operator ivec4() const;
+
+    /// Convert an integer bitmask into a full vector of elements which can be used
+    /// by the blend function.
+    static ivec4 expandBitsToMask(int bitmask);
+
 };
 
 /**
@@ -227,6 +246,13 @@ inline ivec4::operator fvec4() const {
     return __builtin_convertvector(val, __m128);
 }
 
+inline ivec4 fvec4::expandBitsToMask(int bitmask) {
+    return ivec4(bitmask & 1 ? -1 : 0,
+                 bitmask & 2 ? -1 : 0,
+                 bitmask & 4 ? -1 : 0,
+                 bitmask & 8 ? -1 : 0);
+}
+
 // Functions that operate on fvec4s.
 
 static inline fvec4 abs(const fvec4& v) {
@@ -252,6 +278,10 @@ static inline float dot4(const fvec4& v1, const fvec4& v2) {
     return temp[0]+temp[1];
 }
 
+static inline float reduceAdd(const fvec4 v) {
+    return dot4(v, fvec4(1.0f));
+}
+
 static inline fvec4 cross(const fvec4& v1, const fvec4& v2) {
     __m128 temp = v2.val*__builtin_shufflevector(v1.val, v1.val, 2, 0, 1, 3) -
                   v1.val*__builtin_shufflevector(v2.val, v2.val, 2, 0, 1, 3);
@@ -267,6 +297,18 @@ static inline void transpose(fvec4& v1, fvec4& v2, fvec4& v3, fvec4& v4) {
     v2 = __builtin_shufflevector(a2, a4, 0, 1, 4, 5);
     v3 = __builtin_shufflevector(a1, a3, 2, 3, 6, 7);
     v4 = __builtin_shufflevector(a2, a4, 2, 3, 6, 7);
+}
+
+/// Out-of-place transpose from an array into named variables.
+static inline void transpose(const fvec4 in[4], fvec4& v0, fvec4& v1, fvec4& v2, fvec4& v3) {
+    v0 = in[0]; v1 = in[1]; v2 = in[2]; v3 = in[3];
+    transpose(v0, v1, v2, v3);
+}
+
+/// Out-of-place transpose from named variables into an array.
+static inline void transpose(const fvec4 v0, const fvec4 v1, const fvec4 v2, const fvec4 v3, fvec4 out[4]) {
+    out[0] = v0; out[1] = v1; out[2] = v2; out[3] = v3;
+    transpose(out[0], out[1], out[2], out[3]);
 }
 
 // Functions that operate on ivec4s.
@@ -356,6 +398,39 @@ static inline fvec4 rsqrt(const fvec4& v) {
 
 static inline fvec4 sqrt(const fvec4& v) {
     return rsqrt(v)*v;
+}
+
+/// Given a table of floating-point values and a set of indexes, perform a gather read into a pair
+/// of vectors. The first result vector contains the values at the given indexes, and the second
+/// result vector contains the values from each respective index+1.
+static inline void gatherVecPair(const float* table, const ivec4 index, fvec4& out0, fvec4& out1)
+{
+    fvec4 t0(table + index[0]);
+    fvec4 t1(table + index[1]);
+    fvec4 t2(table + index[2]);
+    fvec4 t3(table + index[3]);
+    transpose(t0, t1, t2, t3);
+    out0 = t0;
+    out1 = t1;
+}
+
+/// Given 3 vectors of floating-point data, reduce them to a single 3-element position
+/// value by adding all the elements in each vector. Given inputs of:
+///   X0 X1 X2 X3
+///   Y0 Y1 Y2 Y3
+///   Z0 Z1 Z2 Z3
+/// Each vector of values needs to be summed into a single value, and then stored into
+/// the output vector:
+///   output[0] = (X0 + X1 + X2 + X3)
+///   output[1] = (Y0 + Y1 + Y2 + Y3)
+///   output[2] = (Z0 + Z1 + Z2 + Z3)
+///   output[3] = undefined
+static inline fvec4 reduceToVec3(const fvec4 x, const fvec4 y, const fvec4 z)
+{
+    const auto nx = reduceAdd(x);
+    const auto ny = reduceAdd(y);
+    const auto nz = reduceAdd(z);
+    return fvec4(nx, ny, nz, 0.0);
 }
 
 #endif /*OPENMM_VECTORIZE_PNACL_H_*/

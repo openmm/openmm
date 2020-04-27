@@ -100,6 +100,16 @@ void testLoadStore() {
     ASSERT_EQUAL(i3.upperVec()[1], 7);
     ASSERT_EQUAL(i3.upperVec()[2], 8);
     ASSERT_EQUAL(i3.upperVec()[3], 9);
+
+    // Partial store of vec3 should not overwrite beyond the 3 elements.
+    // Note that this is a fvec4 method, but is conditionally compiled for AVX so needs to be
+    // tested here too.
+    float overwriteTest[4] = {9, 9, 9, 9};
+    fvec4(1, 2, 3, 7777).storeVec3(overwriteTest);
+    ASSERT_EQUAL(overwriteTest[0], 1);
+    ASSERT_EQUAL(overwriteTest[1], 2);
+    ASSERT_EQUAL(overwriteTest[2], 3);
+    ASSERT_EQUAL(overwriteTest[3], 9);
 }
 
 void testArithmetic() {
@@ -185,32 +195,88 @@ void testMathFunctions() {
 }
 
 void testTranspose() {
-    fvec4 f1(0.0,   1.0,  2.0,  3.0);
-    fvec4 f2(10.0, 11.0, 12.0, 13.0);
-    fvec4 f3(20.0, 21.0, 22.0, 23.0);
-    fvec4 f4(30.0, 31.0, 32.0, 33.0);
-    fvec4 f5(40.0, 41.0, 42.0, 43.0);
-    fvec4 f6(50.0, 51.0, 52.0, 53.0);
-    fvec4 f7(60.0, 61.0, 62.0, 63.0);
-    fvec4 f8(70.0, 71.0, 72.0, 73.0);
-    fvec8 o1, o2, o3, o4;
+    fvec4 f[8] = {
+        {0.0,   1.0,  2.0,  3.0},
+        {10.0, 11.0, 12.0, 13.0},
+        {20.0, 21.0, 22.0, 23.0},
+        {30.0, 31.0, 32.0, 33.0},
+        {40.0, 41.0, 42.0, 43.0},
+        {50.0, 51.0, 52.0, 53.0},
+        {60.0, 61.0, 62.0, 63.0},
+        {70.0, 71.0, 72.0, 73.0}
+    };
 
-    transpose(f1, f2, f3, f4, f5, f6, f7, f8, o1, o2, o3, o4);
+    fvec8 o1, o2, o3, o4;
+    transpose(f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7], o1, o2, o3, o4);
     ASSERT_VEC8_EQUAL(o1, 0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0);
     ASSERT_VEC8_EQUAL(o2, 1.0, 11.0, 21.0, 31.0, 41.0, 51.0, 61.0, 71.0);
     ASSERT_VEC8_EQUAL(o3, 2.0, 12.0, 22.0, 32.0, 42.0, 52.0, 62.0, 72.0);
     ASSERT_VEC8_EQUAL(o4, 3.0, 13.0, 23.0, 33.0, 43.0, 53.0, 63.0, 73.0);
 
-    fvec4 g1, g2, g3, g4, g5, g6, g7, g8;
-    transpose(o1, o2, o3, o4, g1, g2, g3, g4, g5, g6, g7, g8);
-    ASSERT_VEC4_EQUAL(g1, 0.0,   1.0,  2.0,  3.0);
-    ASSERT_VEC4_EQUAL(g2, 10.0, 11.0, 12.0, 13.0);
-    ASSERT_VEC4_EQUAL(g3, 20.0, 21.0, 22.0, 23.0);
-    ASSERT_VEC4_EQUAL(g4, 30.0, 31.0, 32.0, 33.0);
-    ASSERT_VEC4_EQUAL(g5, 40.0, 41.0, 42.0, 43.0);
-    ASSERT_VEC4_EQUAL(g6, 50.0, 51.0, 52.0, 53.0);
-    ASSERT_VEC4_EQUAL(g7, 60.0, 61.0, 62.0, 63.0);
-    ASSERT_VEC4_EQUAL(g8, 70.0, 71.0, 72.0, 73.0);
+    fvec8 q1, q2, q3, q4;
+    transpose(f, q1, q2, q3, q4);
+    ASSERT_VEC8_EQUAL(q1, 0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0);
+    ASSERT_VEC8_EQUAL(q2, 1.0, 11.0, 21.0, 31.0, 41.0, 51.0, 61.0, 71.0);
+    ASSERT_VEC8_EQUAL(q3, 2.0, 12.0, 22.0, 32.0, 42.0, 52.0, 62.0, 72.0);
+    ASSERT_VEC8_EQUAL(q4, 3.0, 13.0, 23.0, 33.0, 43.0, 53.0, 63.0, 73.0);
+
+    fvec4 g[8];
+    transpose(o1, o2, o3, o4, g[0], g[1], g[2], g[3], g[4], g[5], g[6], g[7]);
+    ASSERT_VEC4_EQUAL(g[0], 0.0,   1.0,  2.0,  3.0);
+    ASSERT_VEC4_EQUAL(g[1], 10.0, 11.0, 12.0, 13.0);
+    ASSERT_VEC4_EQUAL(g[2], 20.0, 21.0, 22.0, 23.0);
+    ASSERT_VEC4_EQUAL(g[3], 30.0, 31.0, 32.0, 33.0);
+    ASSERT_VEC4_EQUAL(g[4], 40.0, 41.0, 42.0, 43.0);
+    ASSERT_VEC4_EQUAL(g[5], 50.0, 51.0, 52.0, 53.0);
+    ASSERT_VEC4_EQUAL(g[6], 60.0, 61.0, 62.0, 63.0);
+    ASSERT_VEC4_EQUAL(g[7], 70.0, 71.0, 72.0, 73.0);
+
+    fvec4 h[8];
+    transpose(o1, o2, o3, o4, h);
+    ASSERT_VEC4_EQUAL(h[0], 0.0,   1.0,  2.0,  3.0);
+    ASSERT_VEC4_EQUAL(h[1], 10.0, 11.0, 12.0, 13.0);
+    ASSERT_VEC4_EQUAL(h[2], 20.0, 21.0, 22.0, 23.0);
+    ASSERT_VEC4_EQUAL(h[3], 30.0, 31.0, 32.0, 33.0);
+    ASSERT_VEC4_EQUAL(h[4], 40.0, 41.0, 42.0, 43.0);
+    ASSERT_VEC4_EQUAL(h[5], 50.0, 51.0, 52.0, 53.0);
+    ASSERT_VEC4_EQUAL(h[6], 60.0, 61.0, 62.0, 63.0);
+    ASSERT_VEC4_EQUAL(h[7], 70.0, 71.0, 72.0, 73.0);
+}
+
+void testUtility() {
+    fvec8 f1(0.4, 1.9, -1.2, -3.8, 0.4, 1.9, -6.8, -3.8);
+    fvec8 f2(1, 2, 4, 7, 19, 31, 64, 5);
+    fvec8 f3(0.5, 1.0, 1.5, 2.0,   2.5, 3.0, 3.5, 4.0);
+
+    // Reduce-add across three vectors into a single vec3.
+    const auto computedVec3 = reduceToVec3(f1, f2, f3);
+    ASSERT_EQUAL(-11, computedVec3[0]);
+    ASSERT_EQUAL(133, computedVec3[1]);
+    ASSERT_EQUAL(18,  computedVec3[2]);
+
+    // Gather values from a table. Variants for both one vector and two vector gathers are provided.
+    float table[2048];
+    for (int i=0; i<2048;++i)
+        table[i] = -i; // Same index to make it easy to debug, but negative to avoid copying idx.
+
+    // Single vector gather.
+    const int vidx[8] = {4, 8, 156, 1987, 23, 65, 33, 1003};
+    fvec8 g(table, vidx);
+    ASSERT_VEC8_EQUAL(g, -4, -8, -156, -1987, -23, -65, -33, -1003);
+
+    // Pair-wise vector gather.
+    fvec8 p0, p1;
+    gatherVecPair(table, _mm256_setr_epi32(57, 105, 1976, 91, 636, 1952, 345, 12), p0, p1);
+    ASSERT_VEC8_EQUAL(p0, -57, -105, -1976, -91, -636, -1952, -345, -12);
+    ASSERT_VEC8_EQUAL(p1, -58, -106, -1977, -92, -637, -1953, -346, -13);
+
+    // Build a blend mask from an integer.
+    const auto maskZero = fvec8::expandBitsToMask(0);
+    ASSERT_VEC8_EQUAL_INT(maskZero, 0, 0, 0, 0, 0, 0, 0, 0);
+    const auto maskOne = fvec8::expandBitsToMask(0b11111111);
+    ASSERT_VEC8_EQUAL_INT(maskOne, -1, -1, -1, -1, -1, -1, -1, -1);
+    const auto maskMix = fvec8::expandBitsToMask(0b01101001);
+    ASSERT_VEC8_EQUAL_INT(maskMix, -1, 0, 0, -1, 0, -1, -1, 0);
 
 }
 
@@ -226,6 +292,7 @@ int main(int argc, char* argv[]) {
         testComparisons();
         testMathFunctions();
         testTranspose();
+        testUtility();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
