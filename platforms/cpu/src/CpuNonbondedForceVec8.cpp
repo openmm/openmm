@@ -23,9 +23,10 @@
  */
 
 #include "CpuNonbondedForceFvec.h"
-#include "openmm/internal/vectorize8.h"
 
 #ifdef __AVX__
+
+#include "openmm/internal/vectorize8.h"
 
 bool isVec8Supported() {
     // Make sure the CPU supports AVX.

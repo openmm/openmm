@@ -203,9 +203,9 @@ protected:
         float inverseRcut6Expterm;
         std::atomic<int> atomicCounter;
 
-        static constexpr float TWO_OVER_SQRT_PI = 1.128379167095513;
-        static constexpr int NUM_TABLE_POINTS = 2048;
-            
+        static const float TWO_OVER_SQRT_PI;
+        static const int NUM_TABLE_POINTS;
+
       /**---------------------------------------------------------------------------------------
       
          Calculate LJ Coulomb pair ixn between two atoms

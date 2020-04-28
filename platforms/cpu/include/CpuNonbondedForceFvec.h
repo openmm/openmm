@@ -101,8 +101,7 @@ protected:
 template<typename FVEC>
 FVEC
 CpuNonbondedForceFvec<FVEC>::approximateFunctionFromTable(const std::vector<float>& table,
-                                                          const FVEC x, const FVEC inverse) const
-{
+                                                          const FVEC x, const FVEC inverse) const {
     // Compute the set of 8 index positions from which to gather the table data.
     const auto x1 = x * inverse;
     const auto index = min(floor(x1), float(NUM_TABLE_POINTS));
@@ -117,21 +116,18 @@ CpuNonbondedForceFvec<FVEC>::approximateFunctionFromTable(const std::vector<floa
 }
 
 template<typename FVEC>
-void CpuNonbondedForceFvec<FVEC>::calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize)
-{
+void CpuNonbondedForceFvec<FVEC>::calculateBlockIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     calculateBlockIxnHandler<BlockType::NON_EWALD>(blockIndex, forces, totalEnergy, boxSize, invBoxSize);
 }
 
 template<typename FVEC>
-void CpuNonbondedForceFvec<FVEC>::calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize)
-{
+void CpuNonbondedForceFvec<FVEC>::calculateBlockEwaldIxn(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     calculateBlockIxnHandler<BlockType::EWALD>(blockIndex, forces, totalEnergy, boxSize, invBoxSize);
 }
 
 template<typename FVEC>
 template<BlockType BLOCK_TYPE>
-void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnHandler(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize)
-{
+void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnHandler(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
     // Determine whether we need to apply periodic boundary conditions.
 
     PeriodicType periodicType;
@@ -233,8 +229,8 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
             atomPos -= floor((atomPos-blockCenter)*invBoxSize+0.5f)*boxSize;
         getDeltaR<PERIODIC_TYPE>(atomPos, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, boxSize, invBoxSize);
 
-        const auto include =
-            FVEC::expandBitsToMask(~exclusions[i]) & (r2 < cutoffDistance*cutoffDistance);
+        const auto exclNotMask = FVEC::expandBitsToMask(~exclusions[i]);
+        const auto include = blendZero(r2 < cutoffDistance*cutoffDistance, exclNotMask);
         if (!any(include))
             continue; // No interactions to compute.
 
@@ -252,7 +248,7 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
             dEdR = epsSig6*(12.0f*sig6 - 6.0f);
             energy = epsSig6*(sig6-1.0f);
             if (useSwitch) {
-                const auto t = (r>switchingDistance) & ((r-switchingDistance)*invSwitchingInterval);
+                const auto t = blendZero((r-switchingDistance)*invSwitchingInterval, r>switchingDistance);
                 const auto switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
                 const auto switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))*invSwitchingInterval;
                 dEdR = switchValue*dEdR - energy*switchDeriv*r;
@@ -299,12 +295,12 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
                 else
                     energy += chargeProd*inverseR;
             }
-            energy = blend(0.0f, energy, include);
+            energy = blendZero(energy, include);
             *totalEnergy += reduceAdd(energy);
         }
 
         // Accumulate forces.
-        dEdR = blend(0.0f, dEdR, include);
+        dEdR = blendZero(dEdR, include);
         const auto fx = dx*dEdR;
         const auto fy = dy*dEdR;
         const auto fz = dz*dEdR;

@@ -57,8 +57,7 @@ public:
      * @param table The table from which to do a lookup.
      * @param indexes The indexes to gather.
      */
-    fvec8(const float* table, const int idx[8])
-    {
+    fvec8(const float* table, const int idx[8]) {
         // :TODO: Using int32_t explicitly as the index type could allow the real gather instruction to be used.
         // Use gather and static assert? Conditional code?
         val = _mm256_setr_ps(table[idx[0]], table[idx[1]], table[idx[2]], table[idx[3]], table[idx[4]], table[idx[5]], table[idx[6]], table[idx[7]]);
@@ -238,8 +237,7 @@ static inline float dot8(const fvec8& v1, const fvec8& v2) {
     return _mm_cvtss_f32(result.lowerVec())+_mm_cvtss_f32(result.upperVec());
 }
 
-static inline float reduceAdd(const fvec8 v)
-{
+static inline float reduceAdd(const fvec8 v) {
     // :TODO: There are more efficient ways to do this.
     return dot8(v, fvec8(1.0f));
 }
@@ -271,8 +269,7 @@ static inline void transpose(const fvec4& in1, const fvec4& in2, const fvec4& in
  * the second output the second elements, and so on. Note that the prototype is essentially differing only
  * in output type so it can be overloaded in other SIMD fvec types.
  */
-static inline void transpose(const fvec4 in[8], fvec8& out1, fvec8& out2, fvec8& out3, fvec8& out4)
-{
+static inline void transpose(const fvec4 in[8], fvec8& out1, fvec8& out2, fvec8& out3, fvec8& out4) {
     transpose(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7], out1, out2, out3, out4);
 }
 
@@ -325,13 +322,16 @@ static inline fvec8 blend(const fvec8& v1, const fvec8& v2, const ivec8& mask) {
     return fvec8(_mm256_blendv_ps(v1.val, v2.val, _mm256_castsi256_ps(mask.val)));
 }
 
+static inline fvec8 blendZero(const fvec8 v, const ivec8 mask) {
+    return blend(0.0f, v, mask);
+}
+
 /**
  * Given a table of floating-point values and a set of indexes, perform a gather read into a pair
  * of vectors. The first result vector contains the values at the given indexes, and the second
  * result vector contains the values from each respective index+1.
  */
-static inline void gatherVecPair(const float* table, const ivec8 index, fvec8& out0, fvec8& out1)
-{
+static inline void gatherVecPair(const float* table, const ivec8 index, fvec8& out0, fvec8& out1) {
     // Utility function to read a pair of values from the given table index and broadcast the pair to
     // every element of the vector.
     auto broadcast2ps = [&](int32_t i) -> __m256 {
@@ -385,8 +385,7 @@ static inline void gatherVecPair(const float* table, const ivec8 index, fvec8& o
  *   output[2] = (Z0 + Z1 + Z2 + ...)
  *   output[3] = undefined
  */
-static inline fvec4 reduceToVec3(const fvec8 x, const fvec8 y, const fvec8 z)
-{
+static inline fvec4 reduceToVec3(const fvec8 x, const fvec8 y, const fvec8 z) {
     // The general strategy for a vector reduce-add operation is to take values from
     // different parts of the vector and overlap them a different part of the vector and then
     // add together. Repeat this several times until all values have been summed. Initially 8

@@ -278,6 +278,10 @@ void testUtility() {
     const auto maskMix = fvec8::expandBitsToMask(0b01101001);
     ASSERT_VEC8_EQUAL_INT(maskMix, -1, 0, 0, -1, 0, -1, -1, 0);
 
+    // Do a zeroing mask.
+    const auto elements = fvec8(1, 2, 3, 4, 5, 6, 7, 8);
+    ASSERT_VEC8_EQUAL_INT(blendZero(elements, maskMix), 1, 0, 0, 4, 0, 6, 7, 0);
+
 }
 
 int main(int argc, char* argv[]) {

@@ -237,6 +237,11 @@ void testUtility() {
     ASSERT_VEC4_EQUAL_INT(maskOne, -1, -1, -1, -1);
     const auto maskMix = fvec4::expandBitsToMask(0b1001);
     ASSERT_VEC4_EQUAL_INT(maskMix, -1, 0, 0, -1);
+
+    // Do a zeroing mask.
+    const auto elements = fvec4(1, 2, 3, 4);
+    ASSERT_VEC4_EQUAL_INT(blendZero(elements, maskMix), 1, 0, 0, 4);
+
 }
 
 int main(int argc, char* argv[]) {
