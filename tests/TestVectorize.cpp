@@ -226,7 +226,7 @@ void testUtility() {
 
     // Pair-wise vector gather.
     fvec4 p0, p1;
-    gatherVecPair(table, _mm_setr_epi32(57, 105, 1976, 91), p0, p1);
+    gatherVecPair(table, ivec4(57, 105, 1976, 91), p0, p1);
     ASSERT_VEC4_EQUAL(p0, -57, -105, -1976, -91);
     ASSERT_VEC4_EQUAL(p1, -58, -106, -1977, -92);
 

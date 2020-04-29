@@ -344,7 +344,7 @@ static inline ivec4 abs(const ivec4& v) {
 }
 
 static inline bool any(const ivec4 v) {
-    return !vec_all_eq(v, ivec4(0).val);
+    return !vec_all_eq(v.val, ivec4(0).val);
 }
 
 // Mathematical operators involving a scalar and a vector.

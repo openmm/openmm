@@ -266,7 +266,7 @@ void testUtility() {
 
     // Pair-wise vector gather.
     fvec8 p0, p1;
-    gatherVecPair(table, _mm256_setr_epi32(57, 105, 1976, 91, 636, 1952, 345, 12), p0, p1);
+    gatherVecPair(table, ivec8(57, 105, 1976, 91, 636, 1952, 345, 12), p0, p1);
     ASSERT_VEC8_EQUAL(p0, -57, -105, -1976, -91, -636, -1952, -345, -12);
     ASSERT_VEC8_EQUAL(p1, -58, -106, -1977, -92, -637, -1953, -346, -13);
 
