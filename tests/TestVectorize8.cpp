@@ -270,16 +270,14 @@ void testUtility() {
     ASSERT_VEC8_EQUAL(p0, -57, -105, -1976, -91, -636, -1952, -345, -12);
     ASSERT_VEC8_EQUAL(p1, -58, -106, -1977, -92, -637, -1953, -346, -13);
 
-    // Build a blend mask from an integer.
-    const auto maskZero = fvec8::expandBitsToMask(0);
-    ASSERT_VEC8_EQUAL_INT(maskZero, 0, 0, 0, 0, 0, 0, 0, 0);
-    const auto maskOne = fvec8::expandBitsToMask(0b11111111);
-    ASSERT_VEC8_EQUAL_INT(maskOne, -1, -1, -1, -1, -1, -1, -1, -1);
-    const auto maskMix = fvec8::expandBitsToMask(0b01101001);
-    ASSERT_VEC8_EQUAL_INT(maskMix, -1, 0, 0, -1, 0, -1, -1, 0);
-
-    // Do a zeroing mask.
+    // Verify building blend mask from integer. The mask isn't checked directly, as different platforms
+    // use different types of mask. Instead, check the side effect of using the mask in a blend.
     const auto elements = fvec8(1, 2, 3, 4, 5, 6, 7, 8);
+    const auto maskZero = fvec8::expandBitsToMask(0);
+    ASSERT_VEC8_EQUAL_INT(blendZero(elements, maskZero), 0, 0, 0, 0, 0, 0, 0, 0);
+    const auto maskOne = fvec8::expandBitsToMask(0b11111111);
+    ASSERT_VEC8_EQUAL_INT(blendZero(elements, maskOne), 1, 2, 3, 4, 5, 6, 7, 8);
+    const auto maskMix = fvec8::expandBitsToMask(0b01101001);
     ASSERT_VEC8_EQUAL_INT(blendZero(elements, maskMix), 1, 0, 0, 4, 0, 6, 7, 0);
 
 }

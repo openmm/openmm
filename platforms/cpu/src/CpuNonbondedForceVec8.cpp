@@ -23,6 +23,7 @@
  */
 
 #include "CpuNonbondedForceFvec.h"
+#include "openmm/OpenMMException.h"
 
 #ifdef __AVX__
 
@@ -49,6 +50,6 @@ bool isVec8Supported() {
 }
 
 OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec8() {
-   throw OpenMMException("Internal error: OpenMM was compiled without AVX support");
+   throw OpenMM::OpenMMException("Internal error: OpenMM was compiled without AVX support");
 }
 #endif

@@ -132,7 +132,7 @@ public:
      * Convert an integer bitmask into a full vector of elements which can be used
      * by the blend function.
      */
-    static ivec8 expandBitsToMask(int bitmask);
+    static fvec8 expandBitsToMask(int bitmask);
 };
 
 /**
@@ -178,15 +178,17 @@ inline ivec8::operator fvec8() const {
     return _mm256_cvtepi32_ps(val);
 }
 
-inline ivec8 fvec8::expandBitsToMask(int bitmask) {
+inline fvec8 fvec8::expandBitsToMask(int bitmask) {
     // Put a copy of bit 0 in the first element, bit 1 in the second, and so on.
-    const ivec8 expandedBits = _mm256_set1_epi8(bitmask) & _mm256_setr_epi32(1, 2, 4, 8, 16, 32, 64, 128);
+    const auto expandedBits =
+      _mm256_and_ps(_mm256_castsi256_ps(_mm256_set1_epi8(bitmask)),
+                    _mm256_castsi256_ps(_mm256_setr_epi32(1, 2, 4, 8, 16, 32, 64, 128)));
 
     // The individual bits are essentially extremely small floating-point values. By comparing against zero
     //  (even a floating-point zero), the individual bits are turned into a complete element mask.
-    const auto elementMask = _mm256_cmp_ps(_mm256_castsi256_ps(expandedBits), __m256(), _CMP_NEQ_OQ);
+    const auto elementMask = _mm256_cmp_ps(expandedBits, __m256(), _CMP_NEQ_OQ);
 
-    return _mm256_castps_si256(elementMask);
+    return elementMask;
 }
 
 // Functions that operate on fvec8s.
@@ -318,11 +320,11 @@ static inline fvec8 operator/(float v1, const fvec8& v2) {
 }
 
 // Operation for blending fvec8 from a full bitmask.
-static inline fvec8 blend(const fvec8& v1, const fvec8& v2, const ivec8& mask) {
-    return fvec8(_mm256_blendv_ps(v1.val, v2.val, _mm256_castsi256_ps(mask.val)));
+static inline fvec8 blend(const fvec8& v1, const fvec8& v2, const fvec8& mask) {
+    return fvec8(_mm256_blendv_ps(v1.val, v2.val, mask.val));
 }
 
-static inline fvec8 blendZero(const fvec8 v, const ivec8 mask) {
+static inline fvec8 blendZero(const fvec8 v, const fvec8 mask) {
     return blend(0.0f, v, mask);
 }
 

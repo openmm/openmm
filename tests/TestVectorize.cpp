@@ -230,16 +230,14 @@ void testUtility() {
     ASSERT_VEC4_EQUAL(p0, -57, -105, -1976, -91);
     ASSERT_VEC4_EQUAL(p1, -58, -106, -1977, -92);
 
-    // Build a blend mask from an integer.
-    const auto maskZero = fvec4::expandBitsToMask(0);
-    ASSERT_VEC4_EQUAL_INT(maskZero, 0, 0, 0, 0);
-    const auto maskOne = fvec4::expandBitsToMask(0b1111);
-    ASSERT_VEC4_EQUAL_INT(maskOne, -1, -1, -1, -1);
-    const auto maskMix = fvec4::expandBitsToMask(0b1001);
-    ASSERT_VEC4_EQUAL_INT(maskMix, -1, 0, 0, -1);
-
-    // Do a zeroing mask.
+    // Verify building blend mask from integer. The mask isn't checked directly, as different platforms
+    // use different types of mask. Instead, check the side effect of using the mask in a blend.
     const auto elements = fvec4(1, 2, 3, 4);
+    const auto maskZero = fvec4::expandBitsToMask(0);
+    ASSERT_VEC4_EQUAL_INT(blendZero(elements, maskZero), 0, 0, 0, 0);
+    const auto maskOne = fvec4::expandBitsToMask(0b1111);
+    ASSERT_VEC4_EQUAL_INT(blendZero(elements, maskOne), 1, 2, 3, 4);
+    const auto maskMix = fvec4::expandBitsToMask(0b1001);
     ASSERT_VEC4_EQUAL_INT(blendZero(elements, maskMix), 1, 0, 0, 4);
 
 }

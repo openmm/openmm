@@ -165,7 +165,7 @@ public:
      * Convert an integer bitmask into a full vector of elements which can be used
      * by the blend function.
      */
-    static ivec4 expandBitsToMask(int bitmask);
+    static fvec4 expandBitsToMask(int bitmask);
 };
 
 /**
@@ -249,13 +249,11 @@ inline ivec4::operator fvec4() const {
     return _mm_cvtepi32_ps(val);
 }
 
-inline ivec4 fvec4::expandBitsToMask(int bitmask) {
+inline fvec4 fvec4::expandBitsToMask(int bitmask) {
     // Not optimal for SSE (see AVX implementation for better version)
     // but useful as an example for other SIMD architectures.
-    return ivec4(bitmask & 1 ? -1 : 0,
-                 bitmask & 2 ? -1 : 0,
-                 bitmask & 4 ? -1 : 0,
-                 bitmask & 8 ? -1 : 0);
+    const auto values = fvec4(bitmask & 1, bitmask & 2, bitmask & 4, bitmask & 8);
+    return values != fvec4(0.0f);
 }
 
 // Functions that operate on fvec4s.
@@ -384,11 +382,11 @@ static inline fvec4 operator/(float v1, const fvec4& v2) {
 }
 
 // Operations for blending fvec4
-static inline fvec4 blend(const fvec4& v1, const fvec4& v2, const ivec4& mask) {
-    return fvec4(_mm_blendv_ps(v1.val, v2.val, _mm_castsi128_ps(mask.val)));
+static inline fvec4 blend(const fvec4& v1, const fvec4& v2, const fvec4& mask) {
+    return fvec4(_mm_blendv_ps(v1.val, v2.val, mask.val));
 }
 
-static inline fvec4 blendZero(const fvec4 v, const ivec4 mask) {
+static inline fvec4 blendZero(const fvec4 v, const fvec4 mask) {
     return blend(0.0f, v, mask);
 }
 
