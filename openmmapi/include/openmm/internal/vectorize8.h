@@ -334,44 +334,22 @@ static inline fvec8 blendZero(const fvec8 v, const fvec8 mask) {
  * result vector contains the values from each respective index+1.
  */
 static inline void gatherVecPair(const float* table, const ivec8 index, fvec8& out0, fvec8& out1) {
-    // Utility function to read a pair of values from the given table index and broadcast the pair to
-    // every element of the vector.
-    auto broadcast2ps = [&](int32_t i) -> __m256 {
-        return _mm256_castpd_ps(_mm256_broadcast_sd((double*)(table + i)));
-    };
 
-    // Extract the 8 index positions as 4 pairs of 64-bit values. Extracting a scalar value
-    // from a vector is relatively expensive, so rather than pull out out individual 32-bit values,
-    // pull out pairs of values as 64-bits and use the cheaper scalar instructions to
-    // manipulate the address.
-    int64_t pairAddr0 = _mm256_extract_epi64(index, 0);
-    int64_t pairAddr1 = _mm256_extract_epi64(index, 1);
-    int64_t pairAddr2 = _mm256_extract_epi64(index, 2);
-    int64_t pairAddr3 = _mm256_extract_epi64(index, 3);
+    // Gather all the separate memory data together. Each vector will have two values
+    // which get used, and two which are ultimately discarded.
+    fvec4 t0(table + _mm256_extract_epi32(index, 0));
+    fvec4 t1(table + _mm256_extract_epi32(index, 1));
+    fvec4 t2(table + _mm256_extract_epi32(index, 2));
+    fvec4 t3(table + _mm256_extract_epi32(index, 3));
+    fvec4 t4(table + _mm256_extract_epi32(index, 4));
+    fvec4 t5(table + _mm256_extract_epi32(index, 5));
+    fvec4 t6(table + _mm256_extract_epi32(index, 6));
+    fvec4 t7(table + _mm256_extract_epi32(index, 7));
 
-    // Gather the data from the individual reads. Each read will return a pair of floating-point
-    // values from that index position. The first values from each read need to be stored in
-    // the first result vector, and the second value in the second result vector. Broadcast the pairs
-    // to every element position in a vector and then use the cheap blend instructions to merge the results together.
-    const auto a0 = broadcast2ps(pairAddr0 & 0xFFFFFFFF);
-    const auto b1 = broadcast2ps(pairAddr0 >> 32);
-    const auto c2 = broadcast2ps(pairAddr1 & 0xFFFFFFFF);
-    const auto d3 = broadcast2ps(pairAddr1 >> 32);
-    const auto e4 = broadcast2ps(pairAddr2 & 0xFFFFFFFF);
-    const auto f5 = broadcast2ps(pairAddr2 >> 32);
-    const auto g6 = broadcast2ps(pairAddr3 & 0xFFFFFFFF);
-    const auto h7 = broadcast2ps(pairAddr3 >> 32);
-
-    const auto a0b1 = _mm256_blend_ps(a0, b1, 0b11001100);
-    const auto c2d3 = _mm256_blend_ps(c2, d3, 0b11001100);
-    const auto e4f5 = _mm256_blend_ps(e4, f5, 0b11001100);
-    const auto g6h7 = _mm256_blend_ps(g6, h7, 0b11001100);
-
-    const auto a0b1e4f5 = _mm256_blend_ps(a0b1, e4f5, 0b11110000);
-    const auto c2d3g6h7 = _mm256_blend_ps(c2d3, g6h7, 0b11110000);
-
-    out0 = _mm256_shuffle_ps(a0b1e4f5, c2d3g6h7, 0b10001000);
-    out1 = _mm256_shuffle_ps(a0b1e4f5, c2d3g6h7, 0b11011101);
+    // Tranposing the 8 vectors above will put all the first elements into one output
+    // vector, all the second elements into the next vector and so on.
+    fvec8 discard0, discard1;
+    transpose(t0, t1, t2, t3, t4, t5, t6, t7, out0, out1, discard0, discard1);
 }
 
 /**
