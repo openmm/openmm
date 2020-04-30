@@ -165,11 +165,14 @@ CpuPlatform::PlatformData::~PlatformData() {
         delete neighborList;
 }
 
-bool isVec8Supported();
+/**
+ * Return how much vectorisation is supported for host platform.
+ */
+int getVecBlockSize();
 
 void CpuPlatform::PlatformData::requestNeighborList(double cutoffDistance, double padding, bool useExclusions, const vector<set<int> >& exclusionList) {
     if (neighborList == NULL)
-        neighborList = new CpuNeighborList(isVec8Supported() ? 8 : 4);
+        neighborList = new CpuNeighborList(getVecBlockSize());
     if (cutoffDistance > cutoff)
         cutoff = cutoffDistance;
     if (cutoffDistance+padding > paddedCutoff)
