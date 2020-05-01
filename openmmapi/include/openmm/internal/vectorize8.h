@@ -335,16 +335,19 @@ static inline fvec8 blendZero(const fvec8 v, const fvec8 mask) {
  */
 static inline void gatherVecPair(const float* table, const ivec8 index, fvec8& out0, fvec8& out1) {
 
+    const auto lower = index.lowerVec();
+    const auto upper = index.upperVec();
+
     // Gather all the separate memory data together. Each vector will have two values
     // which get used, and two which are ultimately discarded.
-    fvec4 t0(table + _mm256_extract_epi32(index, 0));
-    fvec4 t1(table + _mm256_extract_epi32(index, 1));
-    fvec4 t2(table + _mm256_extract_epi32(index, 2));
-    fvec4 t3(table + _mm256_extract_epi32(index, 3));
-    fvec4 t4(table + _mm256_extract_epi32(index, 4));
-    fvec4 t5(table + _mm256_extract_epi32(index, 5));
-    fvec4 t6(table + _mm256_extract_epi32(index, 6));
-    fvec4 t7(table + _mm256_extract_epi32(index, 7));
+    fvec4 t0(table + lower[0]);
+    fvec4 t1(table + lower[1]);
+    fvec4 t2(table + lower[2]);
+    fvec4 t3(table + lower[3]);
+    fvec4 t4(table + upper[0]);
+    fvec4 t5(table + upper[1]);
+    fvec4 t6(table + upper[2]);
+    fvec4 t7(table + upper[3]);
 
     // Tranposing the 8 vectors above will put all the first elements into one output
     // vector, all the second elements into the next vector and so on.
