@@ -340,7 +340,11 @@ static inline float dot4(fvec4 v1, fvec4 v2) {
 }
 
 static inline float reduceAdd(fvec4 v) {
+#ifdef __ARM64__
+    return vaddvq_f32(v);
+#else
     return dot4(v, fvec4(1.0f));
+#endif
 }
 
 static inline fvec4 cross(fvec4 v1, fvec4 v2) {
