@@ -157,24 +157,13 @@ public:
     fvec4 operator|(fvec4 other) const {
         return vreinterpretq_f32_u32(vorrq_u32(vreinterpretq_u32_f32(val), vreinterpretq_u32_f32(other)));
     }
-    fvec4 operator==(fvec4 other) const {
-        return vcvtq_f32_s32(vreinterpretq_s32_u32(vceqq_f32(val, other)));
-    }
-    fvec4 operator!=(fvec4 other) const {
-        return vcvtq_f32_s32(vreinterpretq_s32_u32(vmvnq_u32(vceqq_f32(val, other)))); // not(equals(val, other))
-    }
-    fvec4 operator>(fvec4 other) const {
-        return vcvtq_f32_s32(vreinterpretq_s32_u32(vcgtq_f32(val, other)));
-    }
-    fvec4 operator<(fvec4 other) const {
-        return vcvtq_f32_s32(vreinterpretq_s32_u32(vcltq_f32(val, other)));
-    }
-    fvec4 operator>=(fvec4 other) const {
-        return vcvtq_f32_s32(vreinterpretq_s32_u32(vcgeq_f32(val, other)));
-    }
-    fvec4 operator<=(fvec4 other) const {
-        return vcvtq_f32_s32(vreinterpretq_s32_u32(vcleq_f32(val, other)));
-    }
+
+    ivec4 operator==(fvec4 other) const;
+    ivec4 operator!=(fvec4 other) const;
+    ivec4 operator>(fvec4 other) const;
+    ivec4 operator<(fvec4 other) const;
+    ivec4 operator>=(fvec4 other) const;
+    ivec4 operator<=(fvec4 other) const;
     operator ivec4() const;
 
     /**
@@ -281,6 +270,32 @@ inline ivec4 fvec4::expandBitsToMask(int bitmask) {
                  bitmask & 4 ? -1 : 0,
                  bitmask & 8 ? -1 : 0);
 }
+
+// Comparison operators
+inline ivec4 fvec4::operator==(fvec4 other) const {
+    return vreinterpretq_s32_u32(vceqq_f32(val, other));
+}
+
+inline ivec4 fvec4::operator!=(fvec4 other) const {
+    return vreinterpretq_s32_u32(vmvnq_u32(vceqq_f32(val, other))); // not(equals(val, other))
+}
+
+inline ivec4 fvec4::operator>(fvec4 other) const {
+    return vreinterpretq_s32_u32(vcgtq_f32(val, other));
+}
+
+inline ivec4 fvec4::operator<(fvec4 other) const {
+    return vreinterpretq_s32_u32(vcltq_f32(val, other));
+}
+
+inline ivec4 fvec4::operator>=(fvec4 other) const {
+    return vreinterpretq_s32_u32(vcgeq_f32(val, other));
+}
+
+inline ivec4 fvec4::operator<=(fvec4 other) const {
+    return vreinterpretq_s32_u32(vcleq_f32(val, other));
+}
+
 // Functions that operate on fvec4s.
 
 static inline fvec4 min(fvec4 v1, fvec4 v2) {
