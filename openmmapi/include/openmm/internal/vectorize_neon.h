@@ -426,6 +426,10 @@ static inline fvec4 blendZero(fvec4 v, ivec4 mask) {
     return blend(0.0f, v, mask);
 }
 
+static inline ivec4 blendZero(ivec4 v, ivec4 mask) {
+    return v & mask;
+}
+
 // These are at the end since they involve other functions defined above.
 
 static inline fvec4 round(fvec4 v) {
