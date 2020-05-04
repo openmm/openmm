@@ -45,13 +45,14 @@ namespace OpenMM {
 class System;
 /**
  * This is an Integrator which simulates a System using one or more Nose Hoover chain
- * thermostats, using the velocity Verlet propagation algorithm.
+ * thermostats, using the "middle" leapfrog propagation algorithm described in
+ * J. Phys. Chem. A 2019, 123, 6056-6079.
  */
 
 class OPENMM_EXPORT NoseHooverIntegrator : public Integrator {
 public:
     /**
-     * Create a NoseHooverIntegrator.  This version creates a bare velocity Verlet integrator
+     * Create a NoseHooverIntegrator.  This version creates a bare leapfrog integrator
      * with no thermostats; any thermostats should be added by calling addThermostat.
      * 
      * @param stepSize the step size with which to integrate the system (in picoseconds)
@@ -66,10 +67,10 @@ public:
      * @param chainLength the number of beads in the Nose-Hoover chain.
      * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
-     *        used in the chain propagation algorithm (must be 1, 3, or 5).
+     *        used in the chain propagation algorithm (must be 1, 3, 5, or 7).
      */
     explicit NoseHooverIntegrator(double temperature, double collisionFrequency, double stepSize,
-                                  int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
+                                  int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 7);
 
     virtual ~NoseHooverIntegrator();
    /**
@@ -86,7 +87,7 @@ public:
      * @param chainLength the number of beads in the Nose-Hoover chain
      * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
-     *        used in the chain propagation algorithm (must be 1, 3, or 5).
+     *        used in the chain propagation algorithm (must be 1, 3, 5, or 7).
      */
      int addThermostat(double temperature, double collisionFrequency,
                        int chainLength, int numMTS, int numYoshidaSuzuki);
@@ -110,13 +111,13 @@ public:
      * @param chainLength the number of beads in the Nose-Hoover chain.
      * @param numMTS the number of step in the  multiple time step chain propagation algorithm.
      * @param numYoshidaSuzuki the number of terms in the Yoshida-Suzuki multi time step decomposition
-     *        used in the chain propagation algorithm (must be 1, 3, or 5).
+     *        used in the chain propagation algorithm (must be 1, 3, 5, or 7).
      */
      int addSubsystemThermostat(const std::vector<int>& thermostatedParticles,
                                 const std::vector< std::pair< int, int> >& thermostatedPairs,
                                 double temperature, double collisionFrequency, double relativeTemperature,
                                 double relativeCollisionFrequency,
-                                int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
+                                int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 7);
     /**
      * Get the temperature of the i-th chain for controling absolute particle motion (in Kelvin).
      * 
@@ -232,15 +233,6 @@ public:
      */
     const std::vector<std::tuple<int, int, double> > & getAllThermostatedPairs() const { return allPairs; }
 protected:
-   /**
-     * Advance any Nose-Hoover chains associated with this integrator and determine
-     * scale factor for the velocities.
-     * 
-     * @param kineticEnergy  the {absolute, relative} kinetic energies of the system that the chain is thermostating
-     * @param chainID        id of the Nose-Hoover-Chain
-     * @return the scale factor to be applied to the velocities of the particles thermostated by the chain.
-     */
-    std::pair<double, double> propagateChain(std::pair<double, double> kineticEnergy, int chainID=0);
     /**
      * This will be called by the Context when it is created.  It informs the Integrator
      * of what context it will be integrating, and gives it a chance to do any necessary initialization.
@@ -273,7 +265,7 @@ protected:
     std::vector<int> allAtoms;
     std::vector<std::tuple<int, int, double> > allPairs;
     bool forcesAreValid;
-    Kernel vvKernel, nhcKernel;
+    Kernel kernel;
     bool hasSubsystemThermostats_;
     double maxPairDistance_;
 };

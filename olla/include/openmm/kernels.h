@@ -1063,16 +1063,16 @@ public:
 /**
  * This kernel is invoked by NoseHooverIntegrator to take one time step.
  */
-class IntegrateVelocityVerletStepKernel : public KernelImpl {
+class IntegrateNoseHooverStepKernel : public KernelImpl {
 public:
     static std::string Name() {
-        return "IntegrateVelocityVerletStep";
+        return "IntegrateNoseHooverStep";
     }
-    IntegrateVelocityVerletStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    IntegrateNoseHooverStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel.
-     * 
+     *
      * @param system     the System this kernel will be applied to
      * @param integrator the NoseHooverIntegrator this kernel will be used for
      */
@@ -1093,6 +1093,41 @@ public:
      * @param integrator the NoseHooverIntegrator this kernel is being used for
      */
     virtual double computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) = 0;
+    /**
+     * Execute the kernel that propagates the Nose Hoover chain and determines the velocity scale factor.
+     *
+     * @param context  the context in which to execute this kernel
+     * @param noseHooverChain the object describing the chain to be propagated.
+     * @param kineticEnergy the {center of mass, relative} kineticEnergies of the particles being thermostated by this chain.
+     * @param timeStep the time step used by the integrator.
+     * @return the velocity scale factor to apply to the particles associated with this heat bath.
+     */
+    virtual std::pair<double, double> propagateChain(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> kineticEnergy, double timeStep) = 0;
+    /**
+     * Execute the kernal that computes the total (kinetic + potential) heat bath energy.
+     *
+     * @param context the context in which to execute this kernel
+     * @param noseHooverChain the chain whose energy is to be determined.
+     * @return the total heat bath energy.
+     */
+    virtual double computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain) = 0;
+    /**
+     * Execute the kernel that computes the kinetic energy for a subset of atoms,
+     * or the relative kinetic energy of Drude particles with respect to their parent atoms
+     *
+     * @param context the context in which to execute this kernel
+     * @param noseHooverChain the chain whose energy is to be determined.
+     * @param downloadValue whether the computed value should be downloaded and returned.
+     */
+    virtual std::pair<double, double> computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain, bool downloadValue) = 0;
+    /**
+     * Execute the kernel that scales the velocities of particles associated with a nose hoover chain
+     *
+     * @param context the context in which to execute this kernel
+     * @param noseHooverChain the chain whose energy is to be determined.
+     * @param scaleFactor the multiplicative factor by which {absolute, relative} velocities are scaled.
+     */
+    virtual void scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> scaleFactor) = 0;
 };
 
 /**
@@ -1358,58 +1393,6 @@ public:
      * @param context    the context in which to execute this kernel
      */
     virtual void execute(ContextImpl& context) = 0;
-};
-
-/**
- * This kernel is invoked by NoseHooverChainThermostat at the beginning and end of each time step
- * to update the Nose-Hoover chain.
- */
-class NoseHooverChainKernel : public KernelImpl {
-public:
-    static std::string Name() {
-        return "NoseHooverChain";
-    }
-    NoseHooverChainKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
-    }
-    /**
-     * Initialize the kernel.
-     */
-    virtual void initialize() = 0;
-    /**
-     * Execute the kernel that propagates the Nose Hoover chain and determines the velocity scale factor.
-     * 
-     * @param context  the context in which to execute this kernel
-     * @param noseHooverChain the object describing the chain to be propagated.
-     * @param kineticEnergy the {center of mass, relative} kineticEnergies of the particles being thermostated by this chain.
-     * @param timeStep the time step used by the integrator.
-     * @return the velocity scale factor to apply to the particles associated with this heat bath.
-     */
-    virtual std::pair<double, double> propagateChain(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> kineticEnergy, double timeStep) = 0;
-    /**
-     * Execute the kernal that computes the total (kinetic + potential) heat bath energy.
-     *
-     * @param context the context in which to execute this kernel
-     * @param noseHooverChain the chain whose energy is to be determined.
-     * @return the total heat bath energy.
-     */
-    virtual double computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain) = 0;
-    /**
-     * Execute the kernel that computes the kinetic energy for a subset of atoms,
-     * or the relative kinetic energy of Drude particles with respect to their parent atoms
-     *
-     * @param context the context in which to execute this kernel
-     * @param noseHooverChain the chain whose energy is to be determined.
-     * @param downloadValue whether the computed value should be downloaded and returned.
-     */
-    virtual std::pair<double, double> computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &noseHooverChain, bool downloadValue) = 0;
-    /**
-     * Execute the kernel that scales the velocities of particles associated with a nose hoover chain
-     *
-     * @param context the context in which to execute this kernel
-     * @param noseHooverChain the chain whose energy is to be determined.
-     * @param scaleFactor the multiplicative factor by which {absolute, relative} velocities are scaled.
-     */
-    virtual void scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> scaleFactor) = 0;
 };
 
 /**

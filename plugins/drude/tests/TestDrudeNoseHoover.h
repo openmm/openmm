@@ -141,6 +141,15 @@ void testWaterBox() {
     // Equilibrate
     integ.step(1500);
 
+    double TOL = 1.5;
+    try {
+        if (platform.getPropertyValue(context, "Precision") != "double") {
+            TOL = 2.0;
+        }
+    } catch(OpenMMException) {
+        // The defaults above are for double precision, which is assumed in this case
+    }
+
     // Compute the internal and center of mass temperatures.
     double totalKE = 0;
     const int numSteps = 500;
@@ -162,7 +171,7 @@ void testWaterBox() {
         double conserved = PE + fullKE + heatBathEnergy;
         meanConserved = (i*meanConserved + conserved)/(i+1);
         totalKE += KE;
-        ASSERT(fabs(meanConserved - conserved) < 0.3);
+        ASSERT(fabs(meanConserved - conserved) < TOL);
     }
     totalKE /= numSteps;
     ASSERT_USUALLY_EQUAL_TOL(temperature, meanTemp,  0.03);

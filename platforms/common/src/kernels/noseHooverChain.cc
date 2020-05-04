@@ -1,3 +1,4 @@
+// Propagates a Nose Hoover chain a full timestep
 KERNEL void propagateNoseHooverChain(GLOBAL mixed2* RESTRICT chainData, GLOBAL const mixed2 * RESTRICT energySum, GLOBAL mixed2* RESTRICT scaleFactor,
                                      GLOBAL mixed* RESTRICT chainMasses, GLOBAL mixed* RESTRICT chainForces, int chainType, int chainLength, int numMTS,
                                      int numDOFs, float timeStep, mixed kT, float frequency){
@@ -15,30 +16,29 @@ KERNEL void propagateNoseHooverChain(GLOBAL mixed2* RESTRICT chainData, GLOBAL c
     for (int mts = 0; mts < numMTS; ++mts) {
         BEGIN_YS_LOOP
             mixed wdt = ys * timeOverMTS;
-            chainData[chainLength-1].y += 0.25f * wdt * chainForces[chainLength-1];
+            chainData[chainLength-1].y += 0.5f * wdt * chainForces[chainLength-1];
             for (int bead = chainLength - 2; bead >= 0; --bead) {
-                mixed aa = EXP(-0.125f * wdt * chainData[bead + 1].y);
-                chainData[bead].y = aa * (chainData[bead].y * aa + 0.25f * wdt * chainForces[bead]);
+                mixed aa = EXP(-0.25f * wdt * chainData[bead + 1].y);
+                chainData[bead].y = aa * (chainData[bead].y * aa + 0.5f * wdt * chainForces[bead]);
             }
             // update particle velocities
-            mixed aa = EXP(-0.5f * wdt * chainData[0].y);
+            mixed aa = EXP(-wdt * chainData[0].y);
             scale *= aa;
             // update the thermostat positions
             for (int bead = 0; bead < chainLength; ++bead) {
-                chainData[bead].x += 0.5f * chainData[bead].y * wdt;
+                chainData[bead].x += chainData[bead].y * wdt;
             }
             // update the forces
             chainForces[0] = (scale * scale * KE2 - numDOFs * kT) / chainMasses[0];
             // update thermostat velocities
             for (int bead = 0; bead < chainLength - 1; ++bead) {
-                mixed aa = EXP(-0.125f * wdt * chainData[bead + 1].y);
-                chainData[bead].y = aa * (aa * chainData[bead].y + 0.25f * wdt * chainForces[bead]);
+                mixed aa = EXP(-0.25f * wdt * chainData[bead + 1].y);
+                chainData[bead].y = aa * (aa * chainData[bead].y + 0.5f * wdt * chainForces[bead]);
                 chainForces[bead + 1] = (chainMasses[bead] * chainData[bead].y * chainData[bead].y - kT) / chainMasses[bead + 1];
             }
-            chainData[chainLength-1].y += 0.25f * wdt * chainForces[chainLength-1];
+            chainData[chainLength-1].y += 0.5f * wdt * chainForces[chainLength-1];
         END_YS_LOOP
     } // MTS loop
-
     if (chainType == 0) {
         scaleFactor[0].x = scale;
     } else {

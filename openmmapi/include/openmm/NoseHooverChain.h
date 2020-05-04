@@ -72,7 +72,7 @@ public:
      *                                   interact with this chain
      * @param chainLength                the length of (number of particles in) this heat bath
      * @param numMTS                     the number of multi time steps used to propagate this chain
-     * @param numYoshidaSuzuki           the number of Yoshida Suzuki steps used to propagate this chain (1, 3, or 5).
+     * @param numYoshidaSuzuki           the number of Yoshida Suzuki steps used to propagate this chain (1, 3, 5, or 7).
      * @param chainID                    the chain id used to distinguish this Nose-Hoover chain from others that may
      *                                          be used to control a different set of particles, e.g. for Drude oscillators
      * @param thermostatedAtoms                 the list of atoms to be handled by this thermostat

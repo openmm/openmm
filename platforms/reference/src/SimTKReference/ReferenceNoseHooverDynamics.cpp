@@ -29,7 +29,7 @@
 #include "openmm/OpenMMException.h"
 #include "SimTKOpenMMUtilities.h"
 #include "openmm/internal/ContextImpl.h"
-#include "ReferenceVelocityVerletDynamics.h"
+#include "ReferenceNoseHooverDynamics.h"
 #include "ReferenceVirtualSites.h"
 
 #include <cstdio>
@@ -39,7 +39,7 @@ using namespace OpenMM;
 
 /**---------------------------------------------------------------------------------------
 
-   ReferenceVelocityVerletDynamics constructor
+   ReferenceNoseHooverDynamics constructor
 
    @param numberOfAtoms  number of atoms
    @param deltaT         delta t for dynamics
@@ -48,19 +48,21 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceVelocityVerletDynamics::ReferenceVelocityVerletDynamics(int numberOfAtoms, double deltaT) :
-           ReferenceDynamics(numberOfAtoms, deltaT, 0.0) {
+ReferenceNoseHooverDynamics::ReferenceNoseHooverDynamics(int numberOfAtomsIn, double deltaT) :
+           ReferenceDynamics(numberOfAtomsIn, deltaT, 0.0) {
+   numberOfAtoms = numberOfAtomsIn;
    xPrime.resize(numberOfAtoms);
    inverseMasses.resize(numberOfAtoms);
+   oldx.resize(numberOfAtoms);
 }
 
 /**---------------------------------------------------------------------------------------
 
-   ReferenceVelocityVerletDynamics destructor
+   ReferenceNoseHooverDynamics destructor
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceVelocityVerletDynamics::~ReferenceVelocityVerletDynamics() {
+ReferenceNoseHooverDynamics::~ReferenceNoseHooverDynamics() {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -79,7 +81,7 @@ ReferenceVelocityVerletDynamics::~ReferenceVelocityVerletDynamics() {
 
    --------------------------------------------------------------------------------------- */
 
-void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+void ReferenceNoseHooverDynamics::BAstep(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
                                           vector<Vec3>& velocities,
                                           vector<Vec3>& forces, vector<double>& masses, double tolerance, bool &forcesAreValid,
                                           const std::vector<int> & atomList, const std::vector<std::tuple<int, int, double>> &pairList,
@@ -88,10 +90,8 @@ void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const
     // first-time-through initialization
     if (!forcesAreValid) context.calcForcesAndEnergy(true, false);
 
-    int numberOfAtoms = system.getNumParticles();
     if (getTimeStep() == 0) {
        // invert masses
-
        for (int ii = 0; ii < numberOfAtoms; ii++) {
           if (masses[ii] == 0.0)
               inverseMasses[ii] = 0.0;
@@ -100,22 +100,20 @@ void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const
        }
     }
 
-    //// Perform the integration.
 
+    const double halfdt = 0.5*getDeltaT();
     // Regular atoms
     for (const auto &atom : atomList) {
         if (masses[atom] != 0.0) {
-            velocities[atom] += 0.5 * inverseMasses[atom]*forces[atom]*getDeltaT();
-            xPrime[atom] = atomCoordinates[atom];
-            atomCoordinates[atom] += velocities[atom]*getDeltaT();
+            velocities[atom] += inverseMasses[atom]*forces[atom]*getDeltaT();
         }
     }
     // Connected particles
     for (const auto &pair : pairList) {
         const auto &atom1 = std::get<0>(pair);
         const auto &atom2 = std::get<1>(pair);
-        double m1 = system.getParticleMass(atom1);
-        double m2 = system.getParticleMass(atom2);
+        double m1 = masses[atom1];
+        double m2 = masses[atom2];
         double mass1fract = m1 / (m1 + m2);
         double mass2fract = m2 / (m1 + m2);
         double invRedMass = (m1 * m2 != 0.0) ? (m1 + m2)/(m1 * m2) : 0.0;
@@ -124,26 +122,52 @@ void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const
         Vec3 relVel = velocities[atom2] - velocities[atom1];
         Vec3 comForce = forces[atom1] + forces[atom2];
         Vec3 relForce = mass1fract*forces[atom2] - mass2fract*forces[atom1];
-        comVel += 0.5 * comForce * getDeltaT() * invTotMass;
-        relVel += 0.5 * relForce * getDeltaT() * invRedMass; 
+        comVel += comForce * getDeltaT() * invTotMass;
+        relVel += relForce * getDeltaT() * invRedMass; 
         if (m1 != 0.0) {
             velocities[atom1] = comVel - relVel*mass2fract;
-            xPrime[atom1] = atomCoordinates[atom1];
-            atomCoordinates[atom1] += velocities[atom1]*getDeltaT();
         }
         if (m2 != 0.0) {
             velocities[atom2] = comVel + relVel*mass1fract;
-            xPrime[atom2] = atomCoordinates[atom2];
-            atomCoordinates[atom2] += velocities[atom2]*getDeltaT();
         }
     }
 
-    // 
+    ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
+    if (referenceConstraintAlgorithm) {
+        referenceConstraintAlgorithm->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
+    }
+
+    for (int atom = 0; atom < numberOfAtoms; ++atom) {
+        if (masses[atom] != 0.0) {
+            xPrime[atom] = atomCoordinates[atom] + velocities[atom]*halfdt;
+        }
+    }
+}
+
+
+void ReferenceNoseHooverDynamics::ABstep(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+                                          vector<Vec3>& velocities,
+                                          vector<Vec3>& forces, vector<double>& masses, double tolerance, bool &forcesAreValid,
+                                          const std::vector<int> & atomList, const std::vector<std::tuple<int, int, double>> &pairList,
+                                          double maxPairDistance) {
+    const double halfdt = 0.5*getDeltaT();
+    for (int atom = 0; atom < numberOfAtoms; ++atom) {
+        if (masses[atom] != 0.0) {
+            xPrime[atom] += velocities[atom]*halfdt;
+            oldx[atom] = xPrime[atom];
+        }
+    }
 
     ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
     if (referenceConstraintAlgorithm)
-       referenceConstraintAlgorithm->apply(xPrime, atomCoordinates, inverseMasses, tolerance);
+        referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses, tolerance);
 
+    for (int i = 0; i < numberOfAtoms; i++) {
+        if (inverseMasses[i] != 0.0) {
+            velocities[i] += (xPrime[i]-oldx[i])/getDeltaT();
+            atomCoordinates[i] = xPrime[i];
+        }
+    }
 
     // Apply hard wall constraints.
     if (maxPairDistance > 0) {
@@ -157,9 +181,6 @@ void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const
             if (rInv*maxPairDistance < 1.0) {
                 // The constraint has been violated, so make the inter-particle distance "bounce"
                 // off the hard wall.
-                //if (rInv*maxPairDistance < 0.5)
-                //    throw OpenMMException("Drude particle moved too far beyond hard wall constraint");
-                //    TODO: Review this - I commented it out to make the NoseHooverThermostat test work
                 Vec3 bondDir = delta*rInv;
                 Vec3 vel1 = velocities[atom1];
                 Vec3 vel2 = velocities[atom2];
@@ -213,50 +234,7 @@ void ReferenceVelocityVerletDynamics::update(OpenMM::ContextImpl &context, const
         }
     } /* end of hard wall constraint part */
 
-
-    ReferenceVirtualSites::computePositions(system, atomCoordinates);
-    context.calcForcesAndEnergy(true, false);
-    forcesAreValid = true;
-
-    for (int i = 0; i < numberOfAtoms; ++i) {
-        if (masses[i] != 0.0)
-            for (int j = 0; j < 3; ++j) {
-                xPrime[i][j] += velocities[i][j]*getDeltaT();
-        }
-   } 
-
-    // Update the positions and velocities.
-    // Regular atoms
-    for (const auto &atom : atomList) {
-        if (masses[atom] != 0.0) {
-            velocities[atom] += 0.5 * inverseMasses[atom]*forces[atom]*getDeltaT() + (atomCoordinates[atom] - xPrime[atom])/getDeltaT();
-        }
-    }
-    // Connected particles
-    for (const auto &pair : pairList) {
-        const auto &atom1 = std::get<0>(pair);
-        const auto &atom2 = std::get<1>(pair);
-        double m1 = system.getParticleMass(atom1);
-        double m2 = system.getParticleMass(atom2);
-        double mass1fract = m1 / (m1 + m2);
-        double mass2fract = m2 / (m1 + m2);
-        double invRedMass = (m1 * m2 != 0.0) ? (m1 + m2)/(m1 * m2) : 0.0;
-        double invTotMass = (m1 + m2 != 0.0) ? 1.0 /(m1 + m2) : 0.0;
-        Vec3 comVel = velocities[atom1]*mass1fract + velocities[atom2]*mass2fract;
-        Vec3 relVel = velocities[atom2] - velocities[atom1];
-        Vec3 comForce = forces[atom1] + forces[atom2];
-        Vec3 relForce = mass1fract*forces[atom2] - mass2fract*forces[atom1];
-        comVel += 0.5 * comForce * getDeltaT() * invTotMass;
-        relVel += 0.5 * relForce * getDeltaT() * invRedMass; 
-        if (m1 != 0.0) {
-            velocities[atom1] = comVel - relVel*mass2fract + (atomCoordinates[atom1] - xPrime[atom1])/getDeltaT();
-        }
-        if (m2 != 0.0) {
-            velocities[atom2] = comVel + relVel*mass1fract + (atomCoordinates[atom2] - xPrime[atom2])/getDeltaT();
-        }
-    }
-    if (referenceConstraintAlgorithm)
-       referenceConstraintAlgorithm->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
+    ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates);
 
     incrementTimeStep();
 }
