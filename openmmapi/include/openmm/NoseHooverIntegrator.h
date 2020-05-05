@@ -72,7 +72,7 @@ public:
     explicit NoseHooverIntegrator(double temperature, double collisionFrequency, double stepSize,
                                   int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 7);
 
-    virtual ~NoseHooverIntegrator();
+    ~NoseHooverIntegrator();
    /**
      * Advance a simulation through time by taking a series of time steps.
      * 
@@ -196,18 +196,6 @@ public:
      */
     const NoseHooverChain& getThermostat(int chainID=0) const ;
     /**
-     * This will be called by the Context when the user modifies aspects of the context state, such
-     * as positions, velocities, or parameters.  This gives the Integrator a chance to discard cached
-     * information.  This is <i>only</i> called when the user modifies information using methods of the Context
-     * object.  It is <i>not</i> called when a ForceImpl object modifies state information in its updateContextState()
-     * method (unless the ForceImpl calls a Context method to perform the modification).
-     * 
-     * @param changed     this specifies what aspect of the Context was changed
-     */
-    virtual void stateChanged(State::DataType changed) {
-       if (State::Positions == changed) forcesAreValid = false;
-    }
-    /**
      * Return false, if this integrator was set up with the 'default constructor' that thermostats the whole system,
      * true otherwise. Required for serialization.
      */
@@ -249,17 +237,29 @@ protected:
      */
     void cleanup();
     /**
+     * This will be called by the Context when the user modifies aspects of the context state, such
+     * as positions, velocities, or parameters.  This gives the Integrator a chance to discard cached
+     * information.  This is <i>only</i> called when the user modifies information using methods of the Context
+     * object.  It is <i>not</i> called when a ForceImpl object modifies state information in its updateContextState()
+     * method (unless the ForceImpl calls a Context method to perform the modification).
+     * 
+     * @param changed     this specifies what aspect of the Context was changed
+     */
+    void stateChanged(State::DataType changed) {
+       if (State::Positions == changed) forcesAreValid = false;
+    }
+    /**
      * Get the names of all Kernels used by this Integrator.
      */
     std::vector<std::string> getKernelNames();
     /**
      * Compute the kinetic energy of the system at the current time.
      */
-    virtual double computeKineticEnergy();
+    double computeKineticEnergy();
     /**
      * Computing kinetic energy for this integrator does not require forces.
      */
-    bool kineticEnergyRequiresForce() const override;
+    bool kineticEnergyRequiresForce() const;
 
     std::vector<NoseHooverChain> noseHooverChains;
     std::vector<int> allAtoms;

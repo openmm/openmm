@@ -1,6 +1,6 @@
 
-/* Portions copyright (c) 2006-2012 Stanford University and Simbios.
- * Contributors: Pande Group
+/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
+ * Contributors: Andy Simmonett, Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -65,7 +65,7 @@ class ReferenceNoseHooverDynamics : public ReferenceDynamics {
 
       /**---------------------------------------------------------------------------------------
       
-         BAstep = update the velocities and positions to start a BAOAB step using the leapfrog "middle" scheme
+         Perform the first half of a step using the leapfrog LF-Middle scheme
       
          @param system              the System to be integrated
          @param atomCoordinates     atom coordinates
@@ -80,12 +80,12 @@ class ReferenceNoseHooverDynamics : public ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
      
-      void BAstep(OpenMM::ContextImpl &context, const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
-                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance, bool &forcesAreValid,
-                  const std::vector<int> & allAtoms, const std::vector<std::tuple<int, int, double>> & allPairs, double maxPairDistance);
+      void step1(OpenMM::ContextImpl &context, const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
+                 std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance, bool &forcesAreValid,
+                 const std::vector<int> & allAtoms, const std::vector<std::tuple<int, int, double>> & allPairs, double maxPairDistance);
       /**---------------------------------------------------------------------------------------
       
-         ABstep = update the positions and velocities to end a BAOAB step using the leapfrog "middle" scheme
+         Perform the second half of a step using the leapfrog LF-Middle scheme
       
          @param system              the System to be integrated
          @param atomCoordinates     atom coordinates
@@ -99,9 +99,9 @@ class ReferenceNoseHooverDynamics : public ReferenceDynamics {
          @param maxPairDistance     the maximum separation allowed for a Drude-like pair
       
          --------------------------------------------------------------------------------------- */
-      void ABstep(OpenMM::ContextImpl &context, const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
-                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance, bool &forcesAreValid,
-                  const std::vector<int> & allAtoms, const std::vector<std::tuple<int, int, double>> & allPairs, double maxPairDistance);
+      void step2(OpenMM::ContextImpl &context, const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
+                 std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double tolerance, bool &forcesAreValid,
+                 const std::vector<int> & allAtoms, const std::vector<std::tuple<int, int, double>> & allPairs, double maxPairDistance);
       
 };
 
