@@ -196,18 +196,6 @@ public:
      */
     const NoseHooverChain& getThermostat(int chainID=0) const ;
     /**
-     * This will be called by the Context when the user modifies aspects of the context state, such
-     * as positions, velocities, or parameters.  This gives the Integrator a chance to discard cached
-     * information.  This is <i>only</i> called when the user modifies information using methods of the Context
-     * object.  It is <i>not</i> called when a ForceImpl object modifies state information in its updateContextState()
-     * method (unless the ForceImpl calls a Context method to perform the modification).
-     * 
-     * @param changed     this specifies what aspect of the Context was changed
-     */
-    void stateChanged(State::DataType changed) {
-       if (State::Positions == changed) forcesAreValid = false;
-    }
-    /**
      * Return false, if this integrator was set up with the 'default constructor' that thermostats the whole system,
      * true otherwise. Required for serialization.
      */
@@ -248,6 +236,18 @@ protected:
      * cleanup.  It will also get called again if the application calls reinitialize() on the Context.
      */
     void cleanup();
+    /**
+     * This will be called by the Context when the user modifies aspects of the context state, such
+     * as positions, velocities, or parameters.  This gives the Integrator a chance to discard cached
+     * information.  This is <i>only</i> called when the user modifies information using methods of the Context
+     * object.  It is <i>not</i> called when a ForceImpl object modifies state information in its updateContextState()
+     * method (unless the ForceImpl calls a Context method to perform the modification).
+     * 
+     * @param changed     this specifies what aspect of the Context was changed
+     */
+    void stateChanged(State::DataType changed) {
+       if (State::Positions == changed) forcesAreValid = false;
+    }
     /**
      * Get the names of all Kernels used by this Integrator.
      */
