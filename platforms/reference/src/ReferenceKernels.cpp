@@ -127,15 +127,6 @@ static map<string, double>& extractEnergyParameterDerivatives(ContextImpl& conte
     return *data->energyParameterDerivatives;
 }
 
-static vector<vector<double> >& extractNoseHooverPositions(ContextImpl& context) {
-    ReferencePlatform::PlatformData *data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());  
-    return *((vector<vector<double> >*) data->noseHooverPositions);
-}
-
-static vector<vector<double> >& extractNoseHooverVelocities(ContextImpl& context) {
-    ReferencePlatform::PlatformData *data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());  
-    return *((vector<vector<double> >*) data->noseHooverVelocities);
-}
 /**
  * Make sure an expression doesn't use any undefined variables.
  */
@@ -297,20 +288,6 @@ void ReferenceUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostr
     stream.write((char*) &velData[0], sizeof(Vec3)*velData.size());
     Vec3* vectors = extractBoxVectors(context);
     stream.write((char*) vectors, 3*sizeof(Vec3));
-    auto& allNoseHooverPositions = extractNoseHooverPositions(context);
-    auto& allNoseHooverVelocities = extractNoseHooverVelocities(context);
-    size_t numChains = allNoseHooverPositions.size();
-    assert(numChains == allNoseHooverVelocities.size());
-    stream.write((char*) &numChains, sizeof(size_t));
-    for (size_t i=0; i<numChains; i++){
-        auto & noseHooverPositions = allNoseHooverPositions.at(i);
-        auto & noseHooverVelocities = allNoseHooverVelocities.at(i);
-        size_t numBeads = noseHooverPositions.size();
-        assert(numBeads == noseHooverVelocities.size());
-        stream.write((char*) &numBeads, sizeof(size_t));
-        stream.write((char*) noseHooverPositions.data(), sizeof(double)*numBeads);
-        stream.write((char*) noseHooverVelocities.data(), sizeof(double)*numBeads);
-    }
     SimTKOpenMMUtilities::createCheckpoint(stream);
 }
 
@@ -326,21 +303,6 @@ void ReferenceUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istrea
     stream.read((char*) &velData[0], sizeof(Vec3)*velData.size());
     Vec3* vectors = extractBoxVectors(context);
     stream.read((char*) vectors, 3*sizeof(Vec3));
-    size_t numChains, numBeads;
-    auto& allNoseHooverPositions = extractNoseHooverPositions(context);
-    auto& allNoseHooverVelocities = extractNoseHooverVelocities(context);
-    stream.read((char*) &numChains, sizeof(size_t));
-    allNoseHooverPositions.clear();
-    allNoseHooverVelocities.clear();
-    for (size_t i=0; i<numChains; i++){
-        stream.read((char*) &numBeads, sizeof(size_t));
-        std::vector<double> noseHooverPositions(numBeads);
-        std::vector<double> noseHooverVelocities(numBeads);
-        stream.read((char*) &noseHooverPositions[0], sizeof(double)*numBeads);
-        stream.read((char*) &noseHooverVelocities[0], sizeof(double)*numBeads);
-        allNoseHooverPositions.push_back(noseHooverPositions);
-        allNoseHooverVelocities.push_back(noseHooverVelocities);
-    }
     SimTKOpenMMUtilities::loadCheckpoint(stream);
 }
 
@@ -2211,53 +2173,49 @@ std::pair<double, double> ReferenceIntegrateNoseHooverStepKernel::propagateChain
     int numDOFs = nhc.getNumDegreesOfFreedom();
     int numMTS = nhc.getNumMultiTimeSteps();
 
-    // Get the state of the NHC from the context
-    auto& allChainPositions = extractNoseHooverPositions(context);
-    auto& allChainVelocities = extractNoseHooverVelocities(context);
-
     int nAtoms = nhc.getThermostatedAtoms().size();
     double absScale = 0;
     if (nAtoms) {
-        if (allChainPositions.size() < 2*chainID+1){
-            allChainPositions.resize(2*chainID+1);
+        if (chainPositions.size() < 2*chainID+1){
+            chainPositions.resize(2*chainID+1);
         }
-        if (allChainVelocities.size() < 2*chainID+1){
-            allChainVelocities.resize(2*chainID+1);
+        if (chainVelocities.size() < 2*chainID+1){
+            chainVelocities.resize(2*chainID+1);
         }
-        auto& chainPositions = allChainPositions.at(2*chainID);
-        auto& chainVelocities = allChainVelocities.at(2*chainID);
-        if (chainPositions.size() < chainLength){
-            chainPositions.resize(chainLength, 0);
+        auto& positions = chainPositions.at(2*chainID);
+        auto& velocities = chainVelocities.at(2*chainID);
+        if (positions.size() < chainLength){
+            positions.resize(chainLength, 0);
         }
-        if (chainVelocities.size() < chainLength){
-            chainVelocities.resize(chainLength, 0);
+        if (velocities.size() < chainLength){
+            velocities.resize(chainLength, 0);
         }
         double temperature = nhc.getTemperature();
         double collisionFrequency = nhc.getCollisionFrequency();
-        absScale = chainPropagator->propagate(absKE, chainVelocities, chainPositions, numDOFs,
+        absScale = chainPropagator->propagate(absKE, velocities, positions, numDOFs,
                                               temperature, collisionFrequency, timeStep,
                                               numMTS, nhc.getYoshidaSuzukiWeights());
     }
     double relScale = 0;
     int nPairs = nhc.getThermostatedPairs().size();
     if (nPairs) {
-        if (allChainPositions.size() < 2*chainID+2){
-            allChainPositions.resize(2*chainID+2);
+        if (chainPositions.size() < 2*chainID+2){
+            chainPositions.resize(2*chainID+2);
         }
-        if (allChainVelocities.size() < 2*chainID+2){
-            allChainVelocities.resize(2*chainID+2);
+        if (chainVelocities.size() < 2*chainID+2){
+            chainVelocities.resize(2*chainID+2);
         }
-        auto& chainPositions = allChainPositions.at(2*chainID+1);
-        auto& chainVelocities = allChainVelocities.at(2*chainID+1);
-        if (chainPositions.size() < chainLength){
-            chainPositions.resize(chainLength, 0);
+        auto& positions = chainPositions.at(2*chainID+1);
+        auto& velocities = chainVelocities.at(2*chainID+1);
+        if (positions.size() < chainLength){
+            positions.resize(chainLength, 0);
         }
-        if (chainVelocities.size() < chainLength){
-            chainVelocities.resize(chainLength, 0);
+        if (velocities.size() < chainLength){
+            velocities.resize(chainLength, 0);
         }
         double temperature = nhc.getRelativeTemperature();
         double collisionFrequency = nhc.getRelativeCollisionFrequency();
-        relScale = chainPropagator->propagate(relKE, chainVelocities, chainPositions, 3*nPairs,
+        relScale = chainPropagator->propagate(relKE, velocities, positions, 3*nPairs,
                                               temperature, collisionFrequency, timeStep,
                                               numMTS, nhc.getYoshidaSuzukiWeights());
     }
@@ -2271,8 +2229,6 @@ double ReferenceIntegrateNoseHooverStepKernel::computeHeatBathEnergy(ContextImpl
     int chainID = nhc.getChainID();
     int nAtoms = nhc.getThermostatedAtoms().size();
     int nPairs = nhc.getThermostatedPairs().size();
-    auto& nhcPositions = extractNoseHooverPositions(context);
-    auto& nhcVelocities = extractNoseHooverVelocities(context);
     if (nAtoms) {
         double temperature = nhc.getTemperature();
         double collisionFrequency = nhc.getCollisionFrequency();
@@ -2281,11 +2237,11 @@ double ReferenceIntegrateNoseHooverStepKernel::computeHeatBathEnergy(ContextImpl
         for(int i = 0; i < chainLength; ++i) {
             double prefac = i ? 1 : numDOFs;
             double mass = prefac * kT / (collisionFrequency * collisionFrequency);
-            double velocity = nhcVelocities[2*chainID][i];
+            double velocity = chainVelocities[2*chainID][i];
             // The kinetic energy of this bead
             kineticEnergy += 0.5 * mass * velocity * velocity;
             // The potential energy of this bead
-            double position = nhcPositions[2*chainID][i];
+            double position = chainPositions[2*chainID][i];
             potentialEnergy += prefac * kT * position;
         }
     }
@@ -2297,11 +2253,11 @@ double ReferenceIntegrateNoseHooverStepKernel::computeHeatBathEnergy(ContextImpl
         for(int i = 0; i < chainLength; ++i) {
             double prefac = i ? 1 : numDOFs;
             double mass = prefac * kT / (collisionFrequency * collisionFrequency);
-            double velocity = nhcVelocities[2*chainID+1][i];
+            double velocity = chainVelocities[2*chainID+1][i];
             // The kinetic energy of this bead
             kineticEnergy += 0.5 * mass * velocity * velocity;
             // The potential energy of this bead
-            double position = nhcPositions[2*chainID+1][i];
+            double position = chainPositions[2*chainID+1][i];
             potentialEnergy += prefac * kT * position;
         }
     }
@@ -2377,6 +2333,37 @@ void ReferenceIntegrateNoseHooverStepKernel::scaleVelocities(ContextImpl& contex
         Vec3 relVelocity = v2 - v1;
         velocities[p1] = absScale * comVelocity - relScale * relVelocity * fracM2;
         velocities[p2] = absScale * comVelocity + relScale * relVelocity * fracM1;
+    }
+}
+
+void ReferenceIntegrateNoseHooverStepKernel::createCheckpoint(ContextImpl& context, ostream& stream) const {
+    size_t numChains = chainPositions.size();
+    assert(numChains == chainVelocities.size());
+    stream.write((char*) &numChains, sizeof(size_t));
+    for (size_t i=0; i<numChains; i++){
+        auto & noseHooverPositions = chainPositions.at(i);
+        auto & noseHooverVelocities = chainVelocities.at(i);
+        size_t numBeads = noseHooverPositions.size();
+        assert(numBeads == noseHooverVelocities.size());
+        stream.write((char*) &numBeads, sizeof(size_t));
+        stream.write((char*) noseHooverPositions.data(), sizeof(double)*numBeads);
+        stream.write((char*) noseHooverVelocities.data(), sizeof(double)*numBeads);
+    }
+}
+
+void ReferenceIntegrateNoseHooverStepKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    size_t numChains, numBeads;
+    stream.read((char*) &numChains, sizeof(size_t));
+    chainPositions.clear();
+    chainVelocities.clear();
+    for (size_t i=0; i<numChains; i++){
+        stream.read((char*) &numBeads, sizeof(size_t));
+        std::vector<double> noseHooverPositions(numBeads);
+        std::vector<double> noseHooverVelocities(numBeads);
+        stream.read((char*) &noseHooverPositions[0], sizeof(double)*numBeads);
+        stream.read((char*) &noseHooverVelocities[0], sizeof(double)*numBeads);
+        chainPositions.push_back(noseHooverPositions);
+        chainVelocities.push_back(noseHooverVelocities);
     }
 }
 

@@ -1128,6 +1128,14 @@ public:
      * @param scaleFactor the multiplicative factor by which {absolute, relative} velocities are scaled.
      */
     virtual void scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> scaleFactor) = 0;
+    /**
+     * Write the chain states to a checkpoint.
+     */
+    virtual void createCheckpoint(ContextImpl& context, std::ostream& stream) const = 0;
+    /**
+     * Load the chain states from a checkpoint.
+     */
+    virtual void loadCheckpoint(ContextImpl& context, std::istream& stream) = 0;
 };
 
 /**

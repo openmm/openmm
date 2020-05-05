@@ -341,3 +341,11 @@ void NoseHooverIntegrator::step(int steps) {
         kernel.getAs<IntegrateNoseHooverStepKernel>().execute(*context, *this, forcesAreValid);
     }
 }
+
+void NoseHooverIntegrator::createCheckpoint(std::ostream& stream) const {
+    kernel.getAs<IntegrateNoseHooverStepKernel>().createCheckpoint(*context, stream);
+}
+
+void NoseHooverIntegrator::loadCheckpoint(std::istream& stream) {
+    kernel.getAs<IntegrateNoseHooverStepKernel>().loadCheckpoint(*context, stream);
+}
