@@ -6211,19 +6211,19 @@ void CommonIntegrateNoseHooverStepKernel::createCheckpoint(ContextImpl& context,
     int numChains = chainState.size();
     bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
     stream.write((char*) &numChains, sizeof(int));
-    for (auto &chainState: chainState){
-        int chainID = chainState.first;
-        int chainLength = chainState.second.getSize();
+    for (auto& state : chainState){
+        int chainID = state.first;
+        int chainLength = state.second.getSize();
         stream.write((char*) &chainID, sizeof(int));
         stream.write((char*) &chainLength, sizeof(int));
         if (useDouble) {
             vector<mm_double2> stateVec;
-            chainState.second.download(stateVec);
+            state.second.download(stateVec);
             stream.write((char*) stateVec.data(), sizeof(mm_double2)*chainLength);
         }
         else {
             vector<mm_float2> stateVec;
-            chainState.second.download(stateVec);
+            state.second.download(stateVec);
             stream.write((char*) stateVec.data(), sizeof(mm_float2)*chainLength);
         }
     }
