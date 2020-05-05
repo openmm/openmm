@@ -5791,15 +5791,14 @@ void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const No
     }
 
     /*
-     * Carry out the BAOAB integration, also known as the "LF-middle" scheme
-     * c.f. J. Phys. Chem. A 2019, 123, 6056−6079
+     * Carry out the LF-middle integration (c.f. J. Phys. Chem. A 2019, 123, 6056−6079)
      */
-    // B
+    // Velocity update
     kernel1->execute(std::max(numAtoms, numPairs));
     integration.applyVelocityConstraints(integrator.getConstraintTolerance());
-    // A
+    // Position update
     kernel2->execute(numParticles);
-    // O
+    // Apply the thermostat
     int numChains = integrator.getNumThermostats();
     for(int chain = 0; chain < numChains; ++chain) {
         const auto &thermostatChain = integrator.getThermostat(chain);
@@ -5807,10 +5806,10 @@ void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const No
         auto scaleFactors = propagateChain(context, thermostatChain, KEs, dt);
         scaleVelocities(context, thermostatChain, scaleFactors);
     }
-    // A
+    // Position update
     kernel3->execute(numParticles);
     integration.applyConstraints(integrator.getConstraintTolerance());
-    // B
+    // Apply constraint forces
     kernel4->execute(numAtoms);
     // Make sure any Drude-like particles have not wandered too far from home
     if (numPairs > 0) kernelHardWall->execute(numPairs);

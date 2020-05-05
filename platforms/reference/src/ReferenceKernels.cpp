@@ -2181,11 +2181,8 @@ void ReferenceIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevStepSize = stepSize;
     }
-
-    // BA
-    dynamics->BAstep(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid,
+    dynamics->step1(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid,
                      integrator.getAllThermostatedIndividualParticles(), integrator.getAllThermostatedPairs(), integrator.getMaximumPairDistance());
-    // O
     int numChains = integrator.getNumThermostats();
     for(int chain = 0; chain < numChains; ++chain) {
         const auto &thermostatChain = integrator.getThermostat(chain);
@@ -2193,10 +2190,8 @@ void ReferenceIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const
         std::pair<double, double> scaleFactors = propagateChain(context, thermostatChain, KEs, stepSize);
         scaleVelocities(context, thermostatChain, scaleFactors);
     }
-    // AB
-    dynamics->ABstep(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid,
+    dynamics->step2(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid,
                      integrator.getAllThermostatedIndividualParticles(), integrator.getAllThermostatedPairs(), integrator.getMaximumPairDistance());
-
     data.time += stepSize;
     data.stepCount++;
 }

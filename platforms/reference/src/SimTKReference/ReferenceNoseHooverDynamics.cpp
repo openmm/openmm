@@ -1,6 +1,6 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
- * Contributors: Peter Eastman, Pande Group
+/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
+ * Contributors: Andy Simmonett, Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -37,17 +37,6 @@
 using std::vector;
 using namespace OpenMM;
 
-/**---------------------------------------------------------------------------------------
-
-   ReferenceNoseHooverDynamics constructor
-
-   @param numberOfAtoms  number of atoms
-   @param deltaT         delta t for dynamics
-   @param friction       friction coefficient
-   @param temperature    temperature
-
-   --------------------------------------------------------------------------------------- */
-
 ReferenceNoseHooverDynamics::ReferenceNoseHooverDynamics(int numberOfAtomsIn, double deltaT) :
            ReferenceDynamics(numberOfAtomsIn, deltaT, 0.0) {
    numberOfAtoms = numberOfAtomsIn;
@@ -56,32 +45,10 @@ ReferenceNoseHooverDynamics::ReferenceNoseHooverDynamics(int numberOfAtomsIn, do
    oldx.resize(numberOfAtoms);
 }
 
-/**---------------------------------------------------------------------------------------
-
-   ReferenceNoseHooverDynamics destructor
-
-   --------------------------------------------------------------------------------------- */
-
 ReferenceNoseHooverDynamics::~ReferenceNoseHooverDynamics() {
 }
 
-/**---------------------------------------------------------------------------------------
-
-   Update -- driver routine for performing Velocity Verlet dynamics update of coordinates
-   and velocities
-
-   @param system              the System to be integrated
-   @param atomCoordinates     atom coordinates
-   @param velocities          velocities
-   @param forces              forces
-   @param masses              atom masses
-   @param atomList            list of all atoms not involved in a Drude-like pair
-   @param pairList            list of all Drude-like pairs
-   @param maxPairDistance     the maximum separation of any Drude-like pairs
-
-   --------------------------------------------------------------------------------------- */
-
-void ReferenceNoseHooverDynamics::BAstep(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+void ReferenceNoseHooverDynamics::step1(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
                                           vector<Vec3>& velocities,
                                           vector<Vec3>& forces, vector<double>& masses, double tolerance, bool &forcesAreValid,
                                           const std::vector<int> & atomList, const std::vector<std::tuple<int, int, double>> &pairList,
@@ -145,7 +112,7 @@ void ReferenceNoseHooverDynamics::BAstep(OpenMM::ContextImpl &context, const Ope
 }
 
 
-void ReferenceNoseHooverDynamics::ABstep(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
+void ReferenceNoseHooverDynamics::step2(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
                                           vector<Vec3>& velocities,
                                           vector<Vec3>& forces, vector<double>& masses, double tolerance, bool &forcesAreValid,
                                           const std::vector<int> & atomList, const std::vector<std::tuple<int, int, double>> &pairList,

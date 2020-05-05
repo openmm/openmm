@@ -72,7 +72,7 @@ public:
     explicit NoseHooverIntegrator(double temperature, double collisionFrequency, double stepSize,
                                   int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 7);
 
-    virtual ~NoseHooverIntegrator();
+    ~NoseHooverIntegrator();
    /**
      * Advance a simulation through time by taking a series of time steps.
      * 
@@ -204,7 +204,7 @@ public:
      * 
      * @param changed     this specifies what aspect of the Context was changed
      */
-    virtual void stateChanged(State::DataType changed) {
+    void stateChanged(State::DataType changed) {
        if (State::Positions == changed) forcesAreValid = false;
     }
     /**
@@ -255,11 +255,11 @@ protected:
     /**
      * Compute the kinetic energy of the system at the current time.
      */
-    virtual double computeKineticEnergy();
+    double computeKineticEnergy();
     /**
      * Computing kinetic energy for this integrator does not require forces.
      */
-    bool kineticEnergyRequiresForce() const override;
+    bool kineticEnergyRequiresForce() const;
 
     std::vector<NoseHooverChain> noseHooverChains;
     std::vector<int> allAtoms;
