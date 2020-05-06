@@ -5844,8 +5844,6 @@ std::pair<double, double> CommonIntegrateNoseHooverStepKernel::propagateChain(Co
         throw OpenMMException("Number of Yoshida Suzuki time steps has to be 1, 3, 5, or 7.");
     }
 
-    auto & chainState = cc.getIntegrationUtilities().getNoseHooverChainState();
-
     if (!scaleFactorBuffer.isInitialized() || scaleFactorBuffer.getSize() == 0) {
         if (useDouble) {
             std::vector<mm_double2> zeros{{0,0}};
@@ -6006,8 +6004,6 @@ double CommonIntegrateNoseHooverStepKernel::computeHeatBathEnergy(ContextImpl& c
 
     int chainID = nhc.getChainID();
     int chainLength = nhc.getChainLength();
-
-    auto & chainState = cc.getIntegrationUtilities().getNoseHooverChainState();
 
     bool absChainIsValid = chainState.count(2*chainID) != 0 &&
                            chainState[2*chainID].isInitialized() &&
@@ -6208,6 +6204,54 @@ void CommonIntegrateNoseHooverStepKernel::scaleVelocities(ContextImpl& context, 
         scalePairsVelocitiesKernel->setArg(1, nPairs);
         scalePairsVelocitiesKernel->setArg(3, pairlists[chainID]);
         scalePairsVelocitiesKernel->execute(nPairs);
+    }
+}
+
+void CommonIntegrateNoseHooverStepKernel::createCheckpoint(ContextImpl& context, ostream& stream) const {
+    int numChains = chainState.size();
+    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
+    stream.write((char*) &numChains, sizeof(int));
+    for (auto& state : chainState){
+        int chainID = state.first;
+        int chainLength = state.second.getSize();
+        stream.write((char*) &chainID, sizeof(int));
+        stream.write((char*) &chainLength, sizeof(int));
+        if (useDouble) {
+            vector<mm_double2> stateVec;
+            state.second.download(stateVec);
+            stream.write((char*) stateVec.data(), sizeof(mm_double2)*chainLength);
+        }
+        else {
+            vector<mm_float2> stateVec;
+            state.second.download(stateVec);
+            stream.write((char*) stateVec.data(), sizeof(mm_float2)*chainLength);
+        }
+    }
+}
+
+void CommonIntegrateNoseHooverStepKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    int numChains;
+    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
+    stream.read((char*) &numChains, sizeof(int));
+    chainState.clear();
+    for (int i = 0; i < numChains; i++) {
+        int chainID, chainLength;
+        stream.read((char*) &chainID, sizeof(int));
+        stream.read((char*) &chainLength, sizeof(int));
+        if (useDouble) {
+            chainState[chainID] = ComputeArray();
+            chainState[chainID].initialize<mm_double2>(cc, chainLength, "chainState" + to_string(chainID));
+            vector<mm_double2> stateVec(chainLength);
+            stream.read((char*) &stateVec[0], sizeof(mm_double2)*chainLength);
+            chainState[chainID].upload(stateVec);
+        }
+        else {
+            chainState[chainID] = ComputeArray();
+            chainState[chainID].initialize<mm_float2>(cc, chainLength, "chainState" + to_string(chainID));
+            vector<mm_float2> stateVec(chainLength);
+            stream.read((char*) &stateVec[0], sizeof(mm_float2)*chainLength);
+            chainState[chainID].upload(stateVec);
+        }
     }
 }
 

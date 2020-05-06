@@ -1203,11 +1203,21 @@ public:
      * @param scaleFactor the multiplicative factor by which {absolute, relative} velocities are scaled.
      */
     void scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> scaleFactor);
+    /**
+     * Write the chain states to a checkpoint.
+     */
+    void createCheckpoint(ContextImpl& context, std::ostream& stream) const;
+    /**
+     * Load the chain states from a checkpoint.
+     */
+    void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceNoseHooverChain* chainPropagator;
     ReferenceNoseHooverDynamics* dynamics;
     std::vector<double> masses;
+    std::vector<std::vector<double> > chainPositions;
+    std::vector<std::vector<double> > chainVelocities;
     double prevStepSize;
 };
 

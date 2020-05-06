@@ -1009,10 +1009,19 @@ public:
      * @param scaleFactor the multiplicative factor by which {absolute, relative} velocities are scaled.
      */
     void scaleVelocities(ContextImpl& context, const NoseHooverChain &noseHooverChain, std::pair<double, double> scaleFactor);
+    /**
+     * Write the chain states to a checkpoint.
+     */
+    void createCheckpoint(ContextImpl& context, std::ostream& stream) const;
+    /**
+     * Load the chain states from a checkpoint.
+     */
+    void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
     ComputeContext& cc;
     float prevMaxPairDistance;
     ComputeArray maxPairDistanceBuffer, pairListBuffer, atomListBuffer, pairTemperatureBuffer, oldDelta;
+    std::map<int, ComputeArray> chainState;
     ComputeKernel kernel1, kernel2, kernel3, kernel4, kernelHardWall;
     bool hasInitializedKernels;
     ComputeKernel reduceEnergyKernel;
