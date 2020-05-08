@@ -83,7 +83,6 @@ void AmoebaTorsionTorsionForceProxy::serialize(const void* object, Serialization
         const std::vector< std::vector< std::vector<double> > > grid = force.getTorsionTorsionGrid(kk);
 
         unsigned int gridCount = 0;
-        unsigned int gridYsize =  grid[0].size();
         for (unsigned int ii = 0; ii < grid.size(); ii++) {
             gridCount += grid[ii].size();
         }

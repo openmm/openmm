@@ -66,96 +66,102 @@ static void spreadCharge(float* posq, float* grid, int gridx, int gridy, int gri
     float posInBox[4] = {0,0,0,0};
     memset(grid, 0, sizeof(float)*gridx*gridy*gridz);
 
-    int i = threadIndex;
+    const int groupSize = max(1, numParticles / (10 * numThreads));
+    int start = groupSize * threadIndex;
     while (true) {
         if (!deterministic)
-            i = atomicCounter++;
-        if (i >= numParticles)
+            start = atomicCounter.fetch_add(groupSize);
+
+        if (start >= numParticles)
             break;
 
-        // Find the position relative to the nearest grid point.
+        int end = min(start + groupSize, numParticles);
+        for (int i = start; i < end; ++i) {
+            // Find the position relative to the nearest grid point.
 
-        fvec4 pos(&posq[4*i]);
-        (pos-boxSize*floor(pos*invBoxSize)).store(posInBox);
-        fvec4 t = posInBox[0]*recipBoxVec0 + posInBox[1]*recipBoxVec1 + posInBox[2]*recipBoxVec2;
-        t = (t-floor(t))*gridSize;
-        ivec4 ti = t;
-        fvec4 dr = t-ti;
-        ivec4 gridIndex = ti-(gridSizeInt&ti==gridSizeInt);
-        
-        // Compute the B-spline coefficients.
+            fvec4 pos(&posq[4*i]);
+            (pos-boxSize*floor(pos*invBoxSize)).store(posInBox);
+            fvec4 t = posInBox[0]*recipBoxVec0 + posInBox[1]*recipBoxVec1 + posInBox[2]*recipBoxVec2;
+            t = (t-floor(t))*gridSize;
+            ivec4 ti = t;
+            fvec4 dr = t-ti;
+            ivec4 gridIndex = ti-(gridSizeInt&ti==gridSizeInt);
 
-        fvec4 data[PME_ORDER];
-        data[PME_ORDER-1] = 0.0f;
-        data[1] = dr;
-        data[0] = one-dr;
-        for (int j = 3; j < PME_ORDER; j++) {
-            fvec4 div(1.0f/(j-1));
-            data[j-1] = div*dr*data[j-2];
-            for (int k = 1; k < j-1; k++)
-                data[j-k-1] = div*((dr+k)*data[j-k-2]+(fvec4(j-k)-dr)*data[j-k-1]);
-            data[0] = div*(one-dr)*data[0];
-        }
-        data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
-        for (int j = 1; j < (PME_ORDER-1); j++)
-            data[PME_ORDER-j-1] = scale*((dr+j)*data[PME_ORDER-j-2]+(fvec4(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
-        data[0] = scale*(one-dr)*data[0];
-        
-        // Spread the charges.
-        
-        int gridIndexX = gridIndex[0];
-        int gridIndexY = gridIndex[1];
-        int gridIndexZ = gridIndex[2];
-        if (gridIndexX < 0)
-            return; // This happens when a simulation blows up and coordinates become NaN.
-        int zindex[PME_ORDER];
-        for (int j = 0; j < PME_ORDER; j++) {
-            zindex[j] = gridIndexZ+j;
-            zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
-        }
-        float charge = epsilonFactor*posq[4*i+3];
-        fvec4 zdata0to3(data[0][2], data[1][2], data[2][2], data[3][2]);
-        float zdata4 = data[4][2];
-        if (gridIndexZ+4 < gridz) {
-            for (int ix = 0; ix < PME_ORDER; ix++) {
-                int xbase = gridIndexX+ix;
-                xbase -= (xbase >= gridx ? gridx : 0);
-                xbase = xbase*gridy*gridz;
-                float xdata = charge*data[ix][0];
-                for (int iy = 0; iy < PME_ORDER; iy++) {
-                    int ybase = gridIndexY+iy;
-                    ybase -= (ybase >= gridy ? gridy : 0);
-                    ybase = xbase + ybase*gridz;
-                    float multiplier = xdata*data[iy][1];
-                    fvec4 add0to3 = zdata0to3*multiplier;
-                    (fvec4(&grid[ybase+gridIndexZ])+add0to3).store(&grid[ybase+gridIndexZ]);
-                    grid[ybase+zindex[4]] += multiplier*zdata4;
+            // Compute the B-spline coefficients.
+
+            fvec4 data[PME_ORDER];
+            data[PME_ORDER-1] = 0.0f;
+            data[1] = dr;
+            data[0] = one-dr;
+            for (int j = 3; j < PME_ORDER; j++) {
+                fvec4 div(1.0f/(j-1));
+                data[j-1] = div*dr*data[j-2];
+                for (int k = 1; k < j-1; k++)
+                    data[j-k-1] = div*((dr+k)*data[j-k-2]+(fvec4(j-k)-dr)*data[j-k-1]);
+                data[0] = div*(one-dr)*data[0];
+            }
+            data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
+            for (int j = 1; j < (PME_ORDER-1); j++)
+                data[PME_ORDER-j-1] = scale*((dr+j)*data[PME_ORDER-j-2]+(fvec4(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
+            data[0] = scale*(one-dr)*data[0];
+
+            // Spread the charges.
+
+            int gridIndexX = gridIndex[0];
+            int gridIndexY = gridIndex[1];
+            int gridIndexZ = gridIndex[2];
+            if (gridIndexX < 0)
+                return; // This happens when a simulation blows up and coordinates become NaN.
+            int zindex[PME_ORDER];
+            for (int j = 0; j < PME_ORDER; j++) {
+                zindex[j] = gridIndexZ+j;
+                zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
+            }
+            float charge = epsilonFactor*posq[4*i+3];
+            fvec4 zdata0to3(data[0][2], data[1][2], data[2][2], data[3][2]);
+            float zdata4 = data[4][2];
+            if (gridIndexZ+4 < gridz) {
+                for (int ix = 0; ix < PME_ORDER; ix++) {
+                    int xbase = gridIndexX+ix;
+                    xbase -= (xbase >= gridx ? gridx : 0);
+                    xbase = xbase*gridy*gridz;
+                    float xdata = charge*data[ix][0];
+                    for (int iy = 0; iy < PME_ORDER; iy++) {
+                        int ybase = gridIndexY+iy;
+                        ybase -= (ybase >= gridy ? gridy : 0);
+                        ybase = xbase + ybase*gridz;
+                        float multiplier = xdata*data[iy][1];
+                        fvec4 add0to3 = zdata0to3*multiplier;
+                        (fvec4(&grid[ybase+gridIndexZ])+add0to3).store(&grid[ybase+gridIndexZ]);
+                        grid[ybase+zindex[4]] += multiplier*zdata4;
+                    }
+                }
+            }
+            else {
+                for (int ix = 0; ix < PME_ORDER; ix++) {
+                    int xbase = gridIndexX+ix;
+                    xbase -= (xbase >= gridx ? gridx : 0);
+                    xbase = xbase*gridy*gridz;
+                    float xdata = charge*data[ix][0];
+                    for (int iy = 0; iy < PME_ORDER; iy++) {
+                        int ybase = gridIndexY+iy;
+                        ybase -= (ybase >= gridy ? gridy : 0);
+                        ybase = xbase + ybase*gridz;
+                        float multiplier = xdata*data[iy][1];
+                        fvec4 add0to3 = zdata0to3*multiplier;
+                        add0to3.store(temp);
+                        grid[ybase+zindex[0]] += temp[0];
+                        grid[ybase+zindex[1]] += temp[1];
+                        grid[ybase+zindex[2]] += temp[2];
+                        grid[ybase+zindex[3]] += temp[3];
+                        grid[ybase+zindex[4]] += multiplier*zdata4;
+                    }
                 }
             }
         }
-        else {
-            for (int ix = 0; ix < PME_ORDER; ix++) {
-                int xbase = gridIndexX+ix;
-                xbase -= (xbase >= gridx ? gridx : 0);
-                xbase = xbase*gridy*gridz;
-                float xdata = charge*data[ix][0];
-                for (int iy = 0; iy < PME_ORDER; iy++) {
-                    int ybase = gridIndexY+iy;
-                    ybase -= (ybase >= gridy ? gridy : 0);
-                    ybase = xbase + ybase*gridz;
-                    float multiplier = xdata*data[iy][1];
-                    fvec4 add0to3 = zdata0to3*multiplier;
-                    add0to3.store(temp);
-                    grid[ybase+zindex[0]] += temp[0];
-                    grid[ybase+zindex[1]] += temp[1];
-                    grid[ybase+zindex[2]] += temp[2];
-                    grid[ybase+zindex[3]] += temp[3];
-                    grid[ybase+zindex[4]] += multiplier*zdata4;
-                }
-            }
-        }
+
         if (deterministic)
-            i += numThreads;
+            start += groupSize * numThreads;
     }
 }
 
@@ -310,7 +316,7 @@ static void reciprocalConvolution(int start, int end, fftwf_complex* grid, vecto
     }
 }
 
-static void interpolateForces(float* posq, float* force, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3* periodicBoxVectors, Vec3* recipBoxVectors, atomic<int>& atomicCounter, const float epsilonFactor) {
+static void interpolateForces(float* posq, float* force, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3* periodicBoxVectors, Vec3* recipBoxVectors, atomic<int>& atomicCounter, const float epsilonFactor, int numThreads) {
     fvec4 boxSize((float) periodicBoxVectors[0][0], (float) periodicBoxVectors[1][1], (float) periodicBoxVectors[2][2], 0);
     fvec4 invBoxSize((float) recipBoxVectors[0][0], (float) recipBoxVectors[1][1], (float) recipBoxVectors[2][2], 0);
     fvec4 recipBoxVec0((float) recipBoxVectors[0][0], (float) recipBoxVectors[0][1], (float) recipBoxVectors[0][2], 0);
@@ -320,88 +326,94 @@ static void interpolateForces(float* posq, float* force, float* grid, int gridx,
     ivec4 gridSizeInt(gridx, gridy, gridz, 0);
     fvec4 one(1);
     fvec4 scale(1.0f/(PME_ORDER-1));
+
+    const int groupSize = max(1, numParticles / (10 * numThreads));
     while (true) {
-        int i = atomicCounter++;
-        if (i >= numParticles)
+        int start = atomicCounter.fetch_add(groupSize);
+        if (start >= numParticles)
             break;
 
-        // Find the position relative to the nearest grid point.
-        
-        fvec4 pos(&posq[4*i]);
-        float posInBox[4];
-        (pos-boxSize*floor(pos*invBoxSize)).store(posInBox);
-        fvec4 t = posInBox[0]*recipBoxVec0 + posInBox[1]*recipBoxVec1 + posInBox[2]*recipBoxVec2;
-        t = (t-floor(t))*gridSize;
-        ivec4 ti = t;
-        fvec4 dr = t-ti;
-        ivec4 gridIndex = ti-(gridSizeInt&ti==gridSizeInt);
-        
-        // Compute the B-spline coefficients.
-        
-        fvec4 data[PME_ORDER];
-        fvec4 ddata[PME_ORDER];
-        data[PME_ORDER-1] = 0.0f;
-        data[1] = dr;
-        data[0] = one-dr;
-        for (int j = 3; j < PME_ORDER; j++) {
-            fvec4 div(1.0f/(j-1));
-            data[j-1] = div*dr*data[j-2];
-            for (int k = 1; k < j-1; k++)
-                data[j-k-1] = div*((dr+k)*data[j-k-2]+(fvec4(j-k)-dr)*data[j-k-1]);
-            data[0] = div*(one-dr)*data[0];
-        }
-        ddata[0] = -data[0];
-        for (int j = 1; j < PME_ORDER; j++)
-            ddata[j] = data[j-1]-data[j];
-        data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
-        for (int j = 1; j < (PME_ORDER-1); j++)
-            data[PME_ORDER-j-1] = scale*((dr+j)*data[PME_ORDER-j-2]+(fvec4(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
-        data[0] = scale*(one-dr)*data[0];
-                
-        // Compute the force on this atom.
-        
-        int gridIndexX = gridIndex[0];
-        int gridIndexY = gridIndex[1];
-        int gridIndexZ = gridIndex[2];
-        if (gridIndexX < 0)
-            return; // This happens when a simulation blows up and coordinates become NaN.
-        int zindex[PME_ORDER];
-        for (int j = 0; j < PME_ORDER; j++) {
-            zindex[j] = gridIndexZ+j;
-            zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
-        }
-        fvec4 zdata[PME_ORDER];
-        for (int j = 0; j < PME_ORDER; j++)
-            zdata[j] = fvec4(data[j][2], data[j][2], ddata[j][2], 0);
-        fvec4 f = 0.0f;
-        for (int ix = 0; ix < PME_ORDER; ix++) {
-            int xbase = gridIndexX+ix;
-            xbase -= (xbase >= gridx ? gridx : 0);
-            xbase = xbase*gridy*gridz;
-            float dx = data[ix][0];
-            float ddx = ddata[ix][0];
-            fvec4 xdata(ddx, dx, dx, 0);
+        int end = min(start + groupSize, numParticles);
 
-            for (int iy = 0; iy < PME_ORDER; iy++) {
-                int ybase = gridIndexY+iy;
-                ybase -= (ybase >= gridy ? gridy : 0);
-                ybase = xbase + ybase*gridz;
-                float dy = data[iy][1];
-                float ddy = ddata[iy][1];
-                fvec4 xydata = xdata*fvec4(dy, ddy, dy, 0);
+        for (int i = start; i < end; i++) {
+            // Find the position relative to the nearest grid point.
 
-                for (int iz = 0; iz < PME_ORDER; iz++) {
-                    fvec4 gridValue(grid[ybase+zindex[iz]]);
-                    f = f+xydata*zdata[iz]*gridValue;
+            fvec4 pos(&posq[4*i]);
+            float posInBox[4];
+            (pos-boxSize*floor(pos*invBoxSize)).store(posInBox);
+            fvec4 t = posInBox[0]*recipBoxVec0 + posInBox[1]*recipBoxVec1 + posInBox[2]*recipBoxVec2;
+            t = (t-floor(t))*gridSize;
+            ivec4 ti = t;
+            fvec4 dr = t-ti;
+            ivec4 gridIndex = ti-(gridSizeInt&ti==gridSizeInt);
+
+            // Compute the B-spline coefficients.
+
+            fvec4 data[PME_ORDER];
+            fvec4 ddata[PME_ORDER];
+            data[PME_ORDER-1] = 0.0f;
+            data[1] = dr;
+            data[0] = one-dr;
+            for (int j = 3; j < PME_ORDER; j++) {
+                fvec4 div(1.0f/(j-1));
+                data[j-1] = div*dr*data[j-2];
+                for (int k = 1; k < j-1; k++)
+                    data[j-k-1] = div*((dr+k)*data[j-k-2]+(fvec4(j-k)-dr)*data[j-k-1]);
+                data[0] = div*(one-dr)*data[0];
+            }
+            ddata[0] = -data[0];
+            for (int j = 1; j < PME_ORDER; j++)
+                ddata[j] = data[j-1]-data[j];
+            data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
+            for (int j = 1; j < (PME_ORDER-1); j++)
+                data[PME_ORDER-j-1] = scale*((dr+j)*data[PME_ORDER-j-2]+(fvec4(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
+            data[0] = scale*(one-dr)*data[0];
+
+            // Compute the force on this atom.
+
+            int gridIndexX = gridIndex[0];
+            int gridIndexY = gridIndex[1];
+            int gridIndexZ = gridIndex[2];
+            if (gridIndexX < 0)
+                return; // This happens when a simulation blows up and coordinates become NaN.
+            int zindex[PME_ORDER];
+            for (int j = 0; j < PME_ORDER; j++) {
+                zindex[j] = gridIndexZ+j;
+                zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
+            }
+            fvec4 zdata[PME_ORDER];
+            for (int j = 0; j < PME_ORDER; j++)
+                zdata[j] = fvec4(data[j][2], data[j][2], ddata[j][2], 0);
+            fvec4 f = 0.0f;
+            for (int ix = 0; ix < PME_ORDER; ix++) {
+                int xbase = gridIndexX+ix;
+                xbase -= (xbase >= gridx ? gridx : 0);
+                xbase = xbase*gridy*gridz;
+                float dx = data[ix][0];
+                float ddx = ddata[ix][0];
+                fvec4 xdata(ddx, dx, dx, 0);
+
+                for (int iy = 0; iy < PME_ORDER; iy++) {
+                    int ybase = gridIndexY+iy;
+                    ybase -= (ybase >= gridy ? gridy : 0);
+                    ybase = xbase + ybase*gridz;
+                    float dy = data[iy][1];
+                    float ddy = ddata[iy][1];
+                    fvec4 xydata = xdata*fvec4(dy, ddy, dy, 0);
+
+                    for (int iz = 0; iz < PME_ORDER; iz++) {
+                        fvec4 gridValue(grid[ybase+zindex[iz]]);
+                        f = f+xydata*zdata[iz]*gridValue;
+                    }
                 }
             }
+            f *= -epsilonFactor*posq[4*i+3];
+            float fc[4];
+            f.store(fc);
+            force[4*i+0] = fc[0]*gridx*(float)recipBoxVectors[0][0];
+            force[4*i+1] = fc[0]*gridx*(float)recipBoxVectors[1][0]+fc[1]*gridy*(float)recipBoxVectors[1][1];
+            force[4*i+2] = fc[0]*gridx*(float)recipBoxVectors[2][0]+fc[1]*gridy*(float)recipBoxVectors[2][1]+fc[2]*gridz*(float)recipBoxVectors[2][2];
         }
-        f *= -epsilonFactor*posq[4*i+3];
-        float fc[4];
-        f.store(fc);
-        force[4*i+0] = fc[0]*gridx*(float)recipBoxVectors[0][0];
-        force[4*i+1] = fc[0]*gridx*(float)recipBoxVectors[1][0]+fc[1]*gridy*(float)recipBoxVectors[1][1];
-        force[4*i+2] = fc[0]*gridx*(float)recipBoxVectors[2][0]+fc[1]*gridy*(float)recipBoxVectors[2][1]+fc[2]*gridz*(float)recipBoxVectors[2][2];
     }
 }
 
@@ -606,7 +618,7 @@ void CpuCalcPmeReciprocalForceKernel::runWorkerThread(ThreadPool& threads, int i
     }
     reciprocalConvolution(complexStart, complexEnd, complexGrid, recipEterm);
     threads.syncThreads();
-    interpolateForces(posq, &force[0], realGrid, gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor);
+    interpolateForces(posq, &force[0], realGrid, gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, numThreads);
 }
 
 void CpuCalcPmeReciprocalForceKernel::beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) {
@@ -900,7 +912,7 @@ void CpuCalcDispersionPmeReciprocalForceKernel::runWorkerThread(ThreadPool& thre
     complexStart = (index*complexSize)/numThreads;
     reciprocalConvolution(complexStart, complexEnd, complexGrid, recipEterm);
     threads.syncThreads();
-    interpolateForces(posq, &force[0], realGrid, gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor);
+    interpolateForces(posq, &force[0], realGrid, gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, numThreads);
 }
 
 void CpuCalcDispersionPmeReciprocalForceKernel::beginComputation(CalcPmeReciprocalForceKernel::IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) {

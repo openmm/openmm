@@ -32,6 +32,7 @@ class TestPatches(unittest.TestCase):
     <AddExternalBond atomName="A"/>
     <RemoveExternalBond atomName="C"/>
     <ApplyToResidue name="RES"/>
+    <VirtualSite type="average2" siteName="A" atomName1="B" atomName2="B" weight1="0.8" weight2="0.2"/>
   </Patch>
  </Patches>
 </ForceField>"""
@@ -47,6 +48,7 @@ class TestPatches(unittest.TestCase):
         self.assertEqual(1, len(patch.deletedBonds))
         self.assertEqual(1, len(patch.addedExternalBonds))
         self.assertEqual(1, len(patch.deletedExternalBonds))
+        self.assertEqual(1, len(patch.virtualSites))
         self.assertEqual(1, len(ff._templatePatches))
         self.assertEqual(1, len(ff._templatePatches['RES']))
         self.assertEqual('A', patch.addedAtoms[0][0].name)
@@ -67,6 +69,9 @@ class TestPatches(unittest.TestCase):
         self.assertEqual(0, patch.addedExternalBonds[0].residue)
         self.assertEqual('C', patch.deletedExternalBonds[0].name)
         self.assertEqual(0, patch.deletedExternalBonds[0].residue)
+        self.assertEqual(0, patch.virtualSites[0][0].index)
+        self.assertEqual([1, 1], patch.virtualSites[0][0].atoms)
+        self.assertEqual([0.8, 0.2], patch.virtualSites[0][0].weights)
         patch = list(ff._templatePatches['RES'])[0]
         self.assertEqual('Test', patch[0])
         self.assertEqual(0, patch[1])

@@ -23,7 +23,7 @@ nbfixes = {}
 
 def getFieldPairs(fields):
     pairs = []
-    for i in range(len(fields)/2):
+    for i in range(len(fields)//2):
         pairs.append((fields[2*i], fields[2*i+1]))
     return pairs
 
@@ -361,7 +361,7 @@ print(' <CMAPTorsionForce>')
 for values in sorted(uniqueCmaps, key=lambda x: uniqueCmaps[x]):
     print('  <Map>')
     size = int(math.sqrt(len(values)))
-    shift = size/2
+    shift = size//2
     scale = kilocalories_per_mole.conversion_factor_to(kilojoules_per_mole)
     # Convert the ordering from the one used by CHARMM to the one used by OpenMM.
     reordered = [0]*len(values)

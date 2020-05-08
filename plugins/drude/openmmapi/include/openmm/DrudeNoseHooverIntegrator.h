@@ -66,7 +66,7 @@ public:
      */
     DrudeNoseHooverIntegrator(double temperature, double collisionFrequency, 
                               double drudeTemperature, double drudeCollisionFrequency, double stepSize, 
-                              int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
+                              int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 7);
 
     virtual ~DrudeNoseHooverIntegrator();
     /**

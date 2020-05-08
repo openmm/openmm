@@ -267,7 +267,7 @@ class Quantity(object):
     def __ne__(self, other):
         """
         """
-        return not self.__eq__(other)
+        return not self == other
 
     def __lt__(self, other):
         """Compares two quantities.

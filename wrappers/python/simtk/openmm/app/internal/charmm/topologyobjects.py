@@ -157,6 +157,9 @@ class AtomType(object):
             return self.number == other
         return other == (self.number, self.name)
 
+    def __ne__(self, other):
+        return not self == other
+
     def set_lj_params(self, eps, rmin, eps14=None, rmin14=None):
         """ Sets Lennard-Jones parameters on this atom type """
         if eps14 is None:
@@ -220,6 +223,7 @@ class WildCard(AtomType):
 
     # Define comparison operators
     def __eq__(self, other): return True
+    def __ne__(self, other): return False
     def __lt__(self, other): return True
     def __gt__(self, other): return False
     def __le__(self, other): return True
@@ -985,6 +989,9 @@ class BondType(object):
     def __eq__(self, other):
         return self.k == other.k and self.req == other.req
 
+    def __ne__(self, other):
+        return not self == other
+
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class AngleType(object):
@@ -1004,6 +1011,9 @@ class AngleType(object):
 
     def __eq__(self, other):
         return self.k == other.k and self.theteq == other.theteq
+
+    def __ne__(self, other):
+        return not self == other
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1046,6 +1056,9 @@ class DihedralType(object):
         return (self.phi_k == other.phi_k and self.per == other.per and
                 self.phase == other.phase)
 
+    def __ne__(self, other):
+        return not self == other
+
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class ImproperType(object):
@@ -1065,6 +1078,9 @@ class ImproperType(object):
 
     def __eq__(self, other):
         return self.k == other.k and self.phieq == other.phieq
+
+    def __ne__(self, other):
+        return not self == other
 
     def __repr__(self):
         return '<ImproperType; k=%s; phieq=%s>' % (self.k, self.phieq)
@@ -1100,6 +1116,9 @@ class CmapType(object):
     def __eq__(self, other):
         return (self.resolution == other.resolution and
                 all([abs(i - j) < TINY for i, j in zip(self.grid, other.grid)]))
+
+    def __ne__(self, other):
+        return not self == other
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1197,6 +1216,9 @@ class _CmapGrid(object):
             return True
         except AttributeError:
             return TypeError('Bad type comparison with _CmapGrid')
+
+    def __ne__(self, other):
+        return not self == other
 
     def switch_range(self):
         """

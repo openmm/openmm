@@ -3,7 +3,9 @@
     try {
         $action
     } catch (std::exception &e) {
-        PyErr_SetString(PyExc_Exception, const_cast<char*>(e.what()));
+        PyObject* mm = PyImport_AddModule("simtk.openmm");
+        PyObject* openmm_exception = PyObject_GetAttrString(mm, "OpenMMException");
+        PyErr_SetString(openmm_exception, const_cast<char*>(e.what()));
         return NULL;
     }
 }
@@ -14,7 +16,9 @@
         $action
     } catch (std::exception &e) {
         PyEval_RestoreThread(_savePythonThreadState);
-        PyErr_SetString(PyExc_Exception, const_cast<char*>(e.what()));
+        PyObject* mm = PyImport_AddModule("simtk.openmm");
+        PyObject* openmm_exception = PyObject_GetAttrString(mm, "OpenMMException");
+        PyErr_SetString(openmm_exception, const_cast<char*>(e.what()));
         return NULL;
     }
     PyEval_RestoreThread(_savePythonThreadState);
@@ -26,7 +30,9 @@
         $action
     } catch (std::exception &e) {
         PyEval_RestoreThread(_savePythonThreadState);
-        PyErr_SetString(PyExc_Exception, const_cast<char*>(e.what()));
+        PyObject* mm = PyImport_AddModule("simtk.openmm");
+        PyObject* openmm_exception = PyObject_GetAttrString(mm, "OpenMMException");
+        PyErr_SetString(openmm_exception, const_cast<char*>(e.what()));
         return NULL;
     }
     PyEval_RestoreThread(_savePythonThreadState);

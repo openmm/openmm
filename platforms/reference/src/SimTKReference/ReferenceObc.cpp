@@ -382,9 +382,6 @@ double ReferenceObc::computeBornEnergyForces(const vector<Vec3>& atomCoordinates
     const vector<double>& obcChain            = getObcChain();
     const vector<double>& atomicRadii         = _obcParameters->getAtomicRadii();
 
-    const double alphaObc                   = _obcParameters->getAlphaObc();
-    const double betaObc                    = _obcParameters->getBetaObc();
-    const double gammaObc                   = _obcParameters->getGammaObc();
     const vector<double>& scaledRadiusFactor  = _obcParameters->getScaledRadiusFactors();
 
     // compute factor that depends only on the outer loop index

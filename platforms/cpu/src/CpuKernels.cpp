@@ -472,16 +472,11 @@ private:
     int numParticles;
 };
 
-bool isVec8Supported();
-CpuNonbondedForce* createCpuNonbondedForceVec4();
-CpuNonbondedForce* createCpuNonbondedForceVec8();
+CpuNonbondedForce* createCpuNonbondedForceVec();
 
 CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
         data(data), hasInitializedPme(false), hasInitializedDispersionPme(false), nonbonded(NULL) {
-    if (isVec8Supported())
-        nonbonded = createCpuNonbondedForceVec8();
-    else
-        nonbonded = createCpuNonbondedForceVec4();
+    nonbonded = createCpuNonbondedForceVec();
 }
 
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
@@ -1249,7 +1244,6 @@ void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, cons
     // Build the arrays.
 
     numParticles = system.getNumParticles();
-    int numParticleParameters = force.getNumPerParticleParameters();
     particleParamArray.resize(numParticles);
     for (int i = 0; i < numParticles; ++i) {
         int type;

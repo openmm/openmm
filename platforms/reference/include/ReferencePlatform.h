@@ -72,8 +72,6 @@ public:
     Vec3* periodicBoxVectors;
     ReferenceConstraints* constraints;
     std::map<std::string, double>* energyParameterDerivatives;
-    std::vector<std::vector<double>>* noseHooverPositions;
-    std::vector<std::vector<double>>* noseHooverVelocities;
 };
 } // namespace OpenMM
 

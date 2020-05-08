@@ -663,21 +663,20 @@ class Eigenvalue
             // Double QR step involving rows l:n and columns m:n
    
             for (int k = m; k <= n-1; k++) {
-               int notlast = (k != n-1);
+               bool notlast = (k != n-1);
                if (k != m) {
                   p = H[k][k-1];
                   q = H[k+1][k-1];
                   r = (notlast ? H[k+2][k-1] : 0.0);
                   x = abs(p) + abs(q) + abs(r);
-                  if (x != 0.0) {
-                     p = p / x;
-                     q = q / x;
-                     r = r / x;
+                  if (x == 0.0) {
+                     continue;
                   }
+                  p = p / x;
+                  q = q / x;
+                  r = r / x;
                }
-               if (x == 0.0) {
-                  break;
-               }
+
                s = sqrt(p * p + q * q + r * r);
                if (p < 0) {
                   s = -s;

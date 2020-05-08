@@ -82,10 +82,8 @@ void DrudeNoseHooverIntegrator::initialize(ContextImpl& contextRef) {
 
     context = &contextRef;
     owner = &contextRef.getOwner();
-    vvKernel = context->getPlatform().createKernel(IntegrateVelocityVerletStepKernel::Name(), contextRef);
-    vvKernel.getAs<IntegrateVelocityVerletStepKernel>().initialize(contextRef.getSystem(), *this);
-    nhcKernel = context->getPlatform().createKernel(NoseHooverChainKernel::Name(), contextRef);
-    nhcKernel.getAs<NoseHooverChainKernel>().initialize();
+    kernel = context->getPlatform().createKernel(IntegrateNoseHooverStepKernel::Name(), contextRef);
+    kernel.getAs<IntegrateNoseHooverStepKernel>().initialize(contextRef.getSystem(), *this);
     forcesAreValid = false;
 
     // check for drude particles and build the Nose-Hoover Chains
@@ -138,14 +136,14 @@ double DrudeNoseHooverIntegrator::computeDrudeKineticEnergy() {
     double kE = 0.0;
     for (const auto &nhc: noseHooverChains){
         if (nhc.getThermostatedPairs().size() != 0) {
-            kE += nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, true).second;
+            kE += kernel.getAs<IntegrateNoseHooverStepKernel>().computeMaskedKineticEnergy(*context, nhc, true).second;
         }
     }
     return kE;
 }
 
 double DrudeNoseHooverIntegrator::computeTotalKineticEnergy() {
-    return vvKernel.getAs<IntegrateVelocityVerletStepKernel>().computeKineticEnergy(*context, *this);
+    return kernel.getAs<IntegrateNoseHooverStepKernel>().computeKineticEnergy(*context, *this);
 }
 
 std::vector<Vec3> DrudeNoseHooverIntegrator::getVelocitiesForTemperature(const System &system, double temperature,
