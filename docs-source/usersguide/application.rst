@@ -2321,6 +2321,22 @@ second atom has class OS and the third has class P:
 
     <Proper class1="" class2="OS" class3="P" class4="" periodicity1="3" phase1="0.0" k1="1.046"/>
 
+The :code:`<PeriodicTorsionForce>` tag also supports an optional
+:code:`ordering` attribute to provide better compatibility with the way
+impropers are assigned in different simulation packages:
+
+ * :code:`ordering="default"` specifies the default behavior if the attribute
+   is omitted. 
+ * :code:`ordering="amber"` produces behavior that replicates the behavior of
+   AmberTools LEaP
+ * :code:`ordering="charmm"` produces behavior more consistent with CHARMM
+ * :code:`ordering="smirnoff"` allows multiple impropers to be added using
+   exact matching to replicate the beheavior of `SMIRNOFF <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html>`_
+   impropers
+
+Different :code:`<PeriodicTorsionForce>` tags can specify different :code:`ordering`
+values to be used for the sub-elements appearing within their tags.
+
 <RBTorsionForce>
 ================
 

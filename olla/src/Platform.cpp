@@ -61,7 +61,7 @@ static bool stringLengthComparator(string i, string j) {
 static int registerPlatforms() {
 
     // Register the Platforms built into the main library.  This should eventually be moved elsewhere.
-    
+
     ReferencePlatform* platform = new ReferencePlatform();
     Platform::registerPlatform(platform);
     return 0;
@@ -117,7 +117,7 @@ void Platform::contextCreated(ContextImpl& context, const map<string, string>& p
 void Platform::linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const {
     // The default implementation just copies over the properties and calls contextCreated().
     // Subclasses may override this to do something different.
-    
+
     map<string, string> properties;
     for (auto& name : getPropertyNames())
         properties[name] = getPropertyValue(originalContext.getOwner(), name);
@@ -221,8 +221,12 @@ static void initializePlugins(vector<HMODULE>& plugins) {
 static void* loadOneLibrary(const string& file) {
 #ifdef __PNACL__
     throw OpenMMException("Loading dynamic libraries is not supported on PNaCl");
-#else    
+#else
+#ifdef __APPLE__
     void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+#else
+    void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_LOCAL);
+#endif
     if (handle == NULL) {
         throw OpenMMException("Error loading library "+file+": "+dlerror());
     }
@@ -357,4 +361,3 @@ ContextImpl& Platform::getContextImpl(Context& context) const {
 const ContextImpl& Platform::getContextImpl(const Context& context) const {
     return *context.impl;
 }
-

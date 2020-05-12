@@ -133,8 +133,8 @@ void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, vector<Vec3>& atomCoord
 
     int size = (int) sqrt(coeff[map].size());
     double delta = 2*M_PI/size;
-    int s = (int) (angleA/delta);
-    int t = (int) (angleB/delta);
+    int s = (int) fmin(angleA/delta, size-1);
+    int t = (int) fmin(angleB/delta, size-1);
     const vector<double>& c = coeff[map][s+size*t];
     double da = angleA/delta-s;
     double db = angleB/delta-t;

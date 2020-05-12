@@ -1,0 +1,11 @@
+REMARK   1 CREATED WITH OPENMM 7.4, 2020-01-04
+HETATM    1          A   1       0.095   0.011   0.000  1.00  0.00           C  
+HETATM    2          A   1       0.513  -1.098  -0.004  1.00  0.00           O  
+HETATM    3          A   1      -1.098   0.149   0.015  1.00  0.00           H  
+HETATM    4          A   1       0.590   0.938  -0.011  1.00  0.00           H  
+TER       5          A   1
+CONECT    1    2    3    4
+CONECT    2    1
+CONECT    3    1
+CONECT    4    1
+END

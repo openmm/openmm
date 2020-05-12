@@ -278,7 +278,7 @@ class TestCharmmFiles(unittest.TestCase):
                + ["H{}".format(i) for i in range(1,12)]
                + ["N{}".format(i) for i in range(1,4)]
                )
-        tip3 = ["OH2", "H1", "H2"]
+        hoh = ["O", "H1", "H2"]
         pot = ["POT"]
         cla = ["CLA"]
         psf = CharmmPsfFile('systems/charmm-solvated/isa_wat.3_kcl.m14.psf')
@@ -286,8 +286,8 @@ class TestCharmmFiles(unittest.TestCase):
             atoms = [atom.name for atom in residue.atoms()]
             if residue.name == "M14":
                 self.assertEqual(sorted(m14), sorted(atoms))
-            elif residue.name == "TIP3":
-                self.assertEqual(sorted(tip3), sorted(atoms))
+            elif residue.name == "HOH":
+                self.assertEqual(sorted(hoh), sorted(atoms))
             elif residue.name == "POT":
                 self.assertEqual(sorted(pot), sorted(atoms))
             elif residue.name == "CLA":
