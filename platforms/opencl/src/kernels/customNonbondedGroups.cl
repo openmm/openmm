@@ -21,7 +21,7 @@ int reduceMax(int val, __local int* temp) {
     temp[get_local_id(0)] = val;
     SYNC_WARPS;
     for (int offset = 16; offset > 0; offset /= 2) {
-        if (offset < indexInWarp)
+        if (indexInWarp < offset)
             temp[get_local_id(0)] = max(temp[get_local_id(0)], temp[get_local_id(0)+offset]);
         SYNC_WARPS;
     }
