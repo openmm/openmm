@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLTests.h"
-#include "TestBAOABLangevinIntegrator.h"
+#include "TestLangevinMiddleIntegrator.h"
 
 void runPlatformTests() {
 }

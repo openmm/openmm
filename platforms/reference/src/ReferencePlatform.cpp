@@ -66,10 +66,9 @@ ReferencePlatform::ReferencePlatform() {
     registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
     registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateVelocityVerletStepKernel::Name(), factory);
-    registerKernelFactory(NoseHooverChainKernel::Name(), factory);
+    registerKernelFactory(IntegrateNoseHooverStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateBAOABStepKernel::Name(), factory);
+    registerKernelFactory(IntegrateLangevinMiddleStepKernel::Name(), factory);
     registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
     registerKernelFactory(IntegrateVariableLangevinStepKernel::Name(), factory);
     registerKernelFactory(IntegrateVariableVerletStepKernel::Name(), factory);
@@ -104,8 +103,6 @@ ReferencePlatform::PlatformData::PlatformData(const System& system) : time(0.0),
     periodicBoxVectors = new Vec3[3];
     constraints = new ReferenceConstraints(system);
     energyParameterDerivatives = new map<string, double>();
-    noseHooverPositions = new vector<vector<double> >();
-    noseHooverVelocities = new vector<vector<double> >();
 }
 
 ReferencePlatform::PlatformData::~PlatformData() {
@@ -116,6 +113,4 @@ ReferencePlatform::PlatformData::~PlatformData() {
     delete[] periodicBoxVectors;
     delete constraints;
     delete energyParameterDerivatives;
-    delete noseHooverPositions;
-    delete noseHooverVelocities;
 }

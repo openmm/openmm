@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -472,16 +472,11 @@ private:
     int numParticles;
 };
 
-bool isVec8Supported();
-CpuNonbondedForce* createCpuNonbondedForceVec4();
-CpuNonbondedForce* createCpuNonbondedForceVec8();
+CpuNonbondedForce* createCpuNonbondedForceVec();
 
 CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
         data(data), hasInitializedPme(false), hasInitializedDispersionPme(false), nonbonded(NULL) {
-    if (isVec8Supported())
-        nonbonded = createCpuNonbondedForceVec8();
-    else
-        nonbonded = createCpuNonbondedForceVec4();
+    nonbonded = createCpuNonbondedForceVec();
 }
 
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
@@ -609,6 +604,10 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         ewaldDispersionAlpha = alpha;
         useSwitchingFunction = false;
     }
+    if (nonbondedMethod == NoCutoff || nonbondedMethod == CutoffNonPeriodic)
+        exceptionsArePeriodic = false;
+    else
+        exceptionsArePeriodic = force.getExceptionsUsePeriodicBoundaryConditions();
     rfDielectric = force.getReactionFieldDielectric();
     if (force.getUseDispersionCorrection())
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
@@ -699,6 +698,10 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     energy += nonbondedEnergy;
     if (includeDirect) {
         ReferenceLJCoulomb14 nonbonded14;
+        if (exceptionsArePeriodic) {
+            Vec3* boxVectors = extractBoxVectors(context);
+            nonbonded14.setPeriodic(boxVectors);
+        }
         bondForce.calculateForce(posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, nonbonded14);
         if (data.isPeriodic && nonbondedMethod != LJPME)
             energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
@@ -1241,7 +1244,6 @@ void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, cons
     // Build the arrays.
 
     numParticles = system.getNumParticles();
-    int numParticleParameters = force.getNumPerParticleParameters();
     particleParamArray.resize(numParticles);
     for (int i = 0; i < numParticles; ++i) {
         int type;
@@ -1353,12 +1355,12 @@ double CpuIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context
     return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
 }
 
-CpuIntegrateBAOABStepKernel::~CpuIntegrateBAOABStepKernel() {
+CpuIntegrateLangevinMiddleStepKernel::~CpuIntegrateLangevinMiddleStepKernel() {
     if (dynamics)
         delete dynamics;
 }
 
-void CpuIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLangevinIntegrator& integrator) {
+void CpuIntegrateLangevinMiddleStepKernel::initialize(const System& system, const LangevinMiddleIntegrator& integrator) {
     int numParticles = system.getNumParticles();
     masses.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
@@ -1366,7 +1368,7 @@ void CpuIntegrateBAOABStepKernel::initialize(const System& system, const BAOABLa
     data.random.initialize(integrator.getRandomNumberSeed(), data.threads.getNumThreads());
 }
 
-void CpuIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLangevinIntegrator& integrator, bool& forcesAreValid) {
+void CpuIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double stepSize = integrator.getStepSize();
@@ -1377,18 +1379,18 @@ void CpuIntegrateBAOABStepKernel::execute(ContextImpl& context, const BAOABLange
         
         if (dynamics)
             delete dynamics;
-        dynamics = new CpuBAOABDynamics(context.getSystem().getNumParticles(), stepSize, friction, temperature, data.threads, data.random);
+        dynamics = new CpuLangevinMiddleDynamics(context.getSystem().getNumParticles(), stepSize, friction, temperature, data.threads, data.random);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    dynamics->update(context, posData, velData, masses, forcesAreValid, integrator.getConstraintTolerance());
+    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance());
     ReferencePlatform::PlatformData* refData = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     refData->time += stepSize;
     refData->stepCount++;
 }
 
-double CpuIntegrateBAOABStepKernel::computeKineticEnergy(ContextImpl& context, const BAOABLangevinIntegrator& integrator) {
+double CpuIntegrateLangevinMiddleStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0.0);
 }

@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2013 Stanford University and the Authors.
+Portions copyright (c) 2012-2020 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Robert McGibbon
 
@@ -289,7 +289,10 @@ class StateDataReporter(object):
             for i in range(system.getNumParticles()):
                 if system.getParticleMass(i) > 0*unit.dalton:
                     dof += 3
-            dof -= system.getNumConstraints()
+            for i in range(system.getNumConstraints()):
+                p1, p2, distance = system.getConstraintParameters(i)
+                if system.getParticleMass(p1) > 0*unit.dalton or system.getParticleMass(p2) > 0*unit.dalton:
+                    dof -= 1
             if any(type(system.getForce(i)) == mm.CMMotionRemover for i in range(system.getNumForces())):
                 dof -= 3
             self._dof = dof

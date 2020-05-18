@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
- * Authors: Andreas Krämer and Andrew C. Simmonett                            *
+ * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -30,7 +30,13 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLTests.h"
-#include "TestNoseHooverThermostat.h"
 
-void runPlatformTests() {
+extern "C" void registerDrudeOpenCLKernelFactories();
+
+using namespace OpenMM;
+
+void setupKernels (int argc, char* argv[]) {
+    registerDrudeOpenCLKernelFactories();
+    platform = dynamic_cast<OpenCLPlatform&>(Platform::getPlatformByName("OpenCL"));
+    initializeTests(argc, argv);
 }

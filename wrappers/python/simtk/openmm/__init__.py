@@ -30,3 +30,7 @@ if sys.platform == 'win32':
     os.environ['PATH'] = _path
     del _path
 __version__ = Platform.getOpenMMVersion()
+
+class OpenMMException(Exception):
+    """This is the class used for all exceptions thrown by the C++ library."""
+    pass

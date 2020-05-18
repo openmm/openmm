@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2015-2019 Stanford University and the Authors.
+Portions copyright (c) 2015-2020 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -98,6 +98,16 @@ class PDBxFile(object):
         chainIdCol = atomData.getAttributeIndex('auth_asym_id')
         if chainIdCol == -1:
             chainIdCol = atomData.getAttributeIndex('label_asym_id')
+            altChainIdCol = -1
+        else:
+            altChainIdCol = atomData.getAttributeIndex('label_asym_id')
+        if altChainIdCol != -1:
+            # Figure out which column is best to use for chain IDs.
+            
+            idSet = set(row[chainIdCol] for row in atomData.getRowList())
+            altIdSet = set(row[altChainIdCol] for row in atomData.getRowList())
+            if len(altIdSet) > len(idSet):
+                chainIdCol, altChainIdCol = (altChainIdCol, chainIdCol)
         elementCol = atomData.getAttributeIndex('type_symbol')
         altIdCol = atomData.getAttributeIndex('label_alt_id')
         modelCol = atomData.getAttributeIndex('pdbx_PDB_model_num')
@@ -105,6 +115,7 @@ class PDBxFile(object):
         yCol = atomData.getAttributeIndex('Cartn_y')
         zCol = atomData.getAttributeIndex('Cartn_z')
         lastChainId = None
+        lastAltChainId = None
         lastResId = None
         lastInsertionCode = ''
         atomTable = {}
@@ -130,11 +141,13 @@ class PDBxFile(object):
                     insertionCode = row[resInsertionCol]
                 if insertionCode in ('.', '?'):
                     insertionCode = ''
-                if lastChainId != row[chainIdCol]:
+                if lastChainId != row[chainIdCol] or (altChainIdCol != -1 and lastAltChainId != row[altChainIdCol]):
                     # The start of a new chain.
                     chain = top.addChain(row[chainIdCol])
                     lastChainId = row[chainIdCol]
                     lastResId = None
+                    if altChainIdCol != -1:
+                        lastAltChainId = row[altChainIdCol]
                 if lastResId != row[resNumCol] or lastChainId != row[chainIdCol] or lastInsertionCode != insertionCode or (lastResId == '.' and row[atomNameCol] in atomsInResidue):
                     # The start of a new residue.
                     resId = (None if resNumCol == -1 else row[resNumCol])
@@ -394,6 +407,8 @@ class PDBxFile(object):
             raise ValueError('Particle position is NaN')
         if any(math.isinf(norm(pos)) for pos in positions):
             raise ValueError('Particle position is infinite')
+        nonHeterogens = PDBFile._standardResidues[:]
+        nonHeterogens.remove('HOH')
         atomIndex = 1
         posIndex = 0
         for (chainIndex, chain) in enumerate(topology.chains()):
@@ -409,14 +424,18 @@ class PDBxFile(object):
                 else:
                     resId = resIndex + 1
                     resIC = '.'
+                if res.name in nonHeterogens:
+                    recordName = "ATOM"
+                else:
+                    recordName = "HETATM"
                 for atom in res.atoms():
                     coords = positions[posIndex]
                     if atom.element is not None:
                         symbol = atom.element.symbol
                     else:
                         symbol = '?'
-                    line = "ATOM  %5d %-3s %-4s . %-4s %s ? %5s %s %10.4f %10.4f %10.4f  0.0  0.0  ?  ?  ?  ?  ?  .  %5s %4s %s %4s %5d"
-                    print(line % (atomIndex, symbol, atom.name, res.name, chainName, resId, resIC, coords[0], coords[1], coords[2],
+                    line = "%s  %5d %-3s %-4s . %-4s %s ? %5s %s %10.4f %10.4f %10.4f  0.0  0.0  ?  ?  ?  ?  ?  .  %5s %4s %s %4s %5d"
+                    print(line % (recordName, atomIndex, symbol, atom.name, res.name, chainName, resId, resIC, coords[0], coords[1], coords[2],
                                   resId, res.name, chainName, atom.name, modelIndex), file=file)
                     posIndex += 1
                     atomIndex += 1

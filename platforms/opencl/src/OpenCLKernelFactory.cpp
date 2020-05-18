@@ -119,8 +119,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new CommonIntegrateVerletStepKernel(name, platform, cl);
     if (name == IntegrateLangevinStepKernel::Name())
         return new CommonIntegrateLangevinStepKernel(name, platform, cl);
-    if (name == IntegrateBAOABStepKernel::Name())
-        return new CommonIntegrateBAOABStepKernel(name, platform, cl);
+    if (name == IntegrateLangevinMiddleStepKernel::Name())
+        return new CommonIntegrateLangevinMiddleStepKernel(name, platform, cl);
     if (name == IntegrateBrownianStepKernel::Name())
         return new CommonIntegrateBrownianStepKernel(name, platform, cl);
     if (name == IntegrateVariableVerletStepKernel::Name())
@@ -131,10 +131,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new CommonIntegrateCustomStepKernel(name, platform, cl);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new CommonApplyAndersenThermostatKernel(name, platform, cl);
-    if (name == NoseHooverChainKernel::Name())
-        return new OpenCLNoseHooverChainKernel(name, platform, cl);
-    if (name == IntegrateVelocityVerletStepKernel::Name())
-        return new OpenCLIntegrateVelocityVerletStepKernel(name, platform, cl);
+    if (name == IntegrateNoseHooverStepKernel::Name())
+        return new CommonIntegrateNoseHooverStepKernel(name, platform, cl);
     if (name == ApplyMonteCarloBarostatKernel::Name())
         return new OpenCLApplyMonteCarloBarostatKernel(name, platform, cl);
     if (name == RemoveCMMotionKernel::Name())

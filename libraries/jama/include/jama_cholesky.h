@@ -191,6 +191,9 @@ Array2D<Real> Cholesky<Real>::solve(const Array2D<Real> &B)
 	if (B.dim1() != n)
 		return Array2D<Real>();
 
+	if (!isspd)
+	    return Arran2D<Real>();
+
 
 	Array2D<Real> X = B.copy();
 	int nx = B.dim2();
@@ -224,9 +227,9 @@ Array2D<Real> Cholesky<Real>::solve(const Array2D<Real> &B)
 
 
       // Solve L*y = b;
-  	  for (int j=0; j< nx; j++)
+      for (int k = 0; k < n; k++)
 	  {
-      	for (int k = 0; k < n; k++) 
+  	    for (int j=0; j< nx; j++)
 		{
 			for (int i = 0; i < k; i++) 
                X[k][j] -= X[i][j]*L_[k][i];
@@ -235,9 +238,9 @@ Array2D<Real> Cholesky<Real>::solve(const Array2D<Real> &B)
       }
 
       // Solve L'*X = Y;
-     for (int j=0; j<nx; j++)
+     for (int k = n-1; k >= 0; k--)
 	 {
-      	for (int k = n-1; k >= 0; k--) 
+        for (int j=0; j<nx; j++)
 	  	{
          	for (int i = k+1; i < n; i++) 
                X[k][j] -= X[i][j]*L_[i][k];

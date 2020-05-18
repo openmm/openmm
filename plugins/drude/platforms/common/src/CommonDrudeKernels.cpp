@@ -121,12 +121,12 @@ void CommonCalcDrudeForceKernel::initialize(const System& system, const DrudeFor
             double k1 = ONE_4PI_EPS0*charge*charge/(polarizability*a1) - k3;
             double k2 = ONE_4PI_EPS0*charge*charge/(polarizability*a2) - k3;
             if (atoms[i][2] == -1) {
-                atoms[i][2] = 0;
+                atoms[i][2] = atoms[i][0];
                 k1 = 0;
             }
             if (atoms[i][3] == -1 || atoms[i][4] == -1) {
-                atoms[i][3] = 0;
-                atoms[i][4] = 0;
+                atoms[i][3] = atoms[i][0];
+                atoms[i][4] = atoms[i][0];
                 k2 = 0;
             }
             paramVector[i] = mm_float4((float) k1, (float) k2, (float) k3, 0.0f);

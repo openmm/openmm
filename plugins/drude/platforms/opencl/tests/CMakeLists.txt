@@ -6,6 +6,7 @@ ENABLE_TESTING()
 
 INCLUDE_DIRECTORIES(${OPENCL_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${OPENMM_DIR}/plugins/drude/tests)
+INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/opencl/tests)
 
 # Automatically create tests using files named "Test*.cpp"
 FILE(GLOB TEST_PROGS "*Test*.cpp")

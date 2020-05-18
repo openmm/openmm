@@ -121,8 +121,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CommonIntegrateVerletStepKernel(name, platform, cu);
     if (name == IntegrateLangevinStepKernel::Name())
         return new CommonIntegrateLangevinStepKernel(name, platform, cu);
-    if (name == IntegrateBAOABStepKernel::Name())
-        return new CommonIntegrateBAOABStepKernel(name, platform, cu);
+    if (name == IntegrateLangevinMiddleStepKernel::Name())
+        return new CommonIntegrateLangevinMiddleStepKernel(name, platform, cu);
     if (name == IntegrateBrownianStepKernel::Name())
         return new CommonIntegrateBrownianStepKernel(name, platform, cu);
     if (name == IntegrateVariableVerletStepKernel::Name())
@@ -133,10 +133,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CommonIntegrateCustomStepKernel(name, platform, cu);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new CommonApplyAndersenThermostatKernel(name, platform, cu);
-    if (name == NoseHooverChainKernel::Name())
-        return new CudaNoseHooverChainKernel(name, platform, cu);
-    if (name == IntegrateVelocityVerletStepKernel::Name())
-        return new CudaIntegrateVelocityVerletStepKernel(name, platform, cu);
+    if (name == IntegrateNoseHooverStepKernel::Name())
+        return new CommonIntegrateNoseHooverStepKernel(name, platform, cu);
     if (name == ApplyMonteCarloBarostatKernel::Name())
         return new CudaApplyMonteCarloBarostatKernel(name, platform, cu);
     if (name == RemoveCMMotionKernel::Name())

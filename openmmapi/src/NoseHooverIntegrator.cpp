@@ -68,11 +68,6 @@ NoseHooverIntegrator::NoseHooverIntegrator(double temperature, double collisionF
 
 NoseHooverIntegrator::~NoseHooverIntegrator() {}
 
-std::pair<double, double> NoseHooverIntegrator::propagateChain(std::pair<double, double> kineticEnergy, int chainID) {
-    return nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, noseHooverChains.at(chainID), kineticEnergy, getStepSize());
-}
-
-
 int NoseHooverIntegrator::addThermostat(double temperature, double collisionFrequency,
                                         int chainLength, int numMTS, int numYoshidaSuzuki) {
     hasSubsystemThermostats_ = false;
@@ -267,22 +262,27 @@ void NoseHooverIntegrator::setRelativeCollisionFrequency(double frequency, int c
 }
 
 double NoseHooverIntegrator::computeKineticEnergy() {
+    forcesAreValid = false;
     double kE = 0.0;
     if(noseHooverChains.size() > 0) {
         for (const auto &nhc: noseHooverChains){
-            kE += nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, true).first;
+            kE += kernel.getAs<IntegrateNoseHooverStepKernel>().computeMaskedKineticEnergy(*context, nhc, true).first;
         }
     } else {
-        kE = vvKernel.getAs<IntegrateVelocityVerletStepKernel>().computeKineticEnergy(*context, *this);
+        kE = kernel.getAs<IntegrateNoseHooverStepKernel>().computeKineticEnergy(*context, *this);
     }
     return kE;
+}
+
+bool NoseHooverIntegrator::kineticEnergyRequiresForce() const {
+    return false;
 }
 
 double NoseHooverIntegrator::computeHeatBathEnergy() {
     double energy = 0;
     for(auto &nhc : noseHooverChains) {
         if (context && (nhc.getNumDegreesOfFreedom() > 0)) {
-            energy += nhcKernel.getAs<NoseHooverChainKernel>().computeHeatBathEnergy(*context, nhc);
+            energy += kernel.getAs<IntegrateNoseHooverStepKernel>().computeHeatBathEnergy(*context, nhc);
         }
     }
     return energy;
@@ -295,10 +295,8 @@ void NoseHooverIntegrator::initialize(ContextImpl& contextRef) {
     context = &contextRef;
     const System& system = context->getSystem();
     owner = &contextRef.getOwner();
-    vvKernel = context->getPlatform().createKernel(IntegrateVelocityVerletStepKernel::Name(), contextRef);
-    vvKernel.getAs<IntegrateVelocityVerletStepKernel>().initialize(contextRef.getSystem(), *this);
-    nhcKernel = context->getPlatform().createKernel(NoseHooverChainKernel::Name(), contextRef);
-    nhcKernel.getAs<NoseHooverChainKernel>().initialize();
+    kernel = context->getPlatform().createKernel(IntegrateNoseHooverStepKernel::Name(), contextRef);
+    kernel.getAs<IntegrateNoseHooverStepKernel>().initialize(contextRef.getSystem(), *this);
     forcesAreValid = false;
 
     // check for drude particles and build the Nose-Hoover Chains
@@ -324,33 +322,30 @@ void NoseHooverIntegrator::initialize(ContextImpl& contextRef) {
 }
 
 void NoseHooverIntegrator::cleanup() {
-    vvKernel = Kernel();
-    nhcKernel = Kernel();
+    kernel = Kernel();
 }
 
 vector<string> NoseHooverIntegrator::getKernelNames() {
     std::vector<std::string> names;
-    names.push_back(NoseHooverChainKernel::Name());
-    names.push_back(IntegrateVelocityVerletStepKernel::Name());
+    names.push_back(IntegrateNoseHooverStepKernel::Name());
     return names;
 }
 
 void NoseHooverIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");
-    std::pair<double, double> scale, kineticEnergy;
     for (int i = 0; i < steps; ++i) {
-        context->updateContextState();
-        for(auto &nhc : noseHooverChains) {
-            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, false);
-            scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, nhc, kineticEnergy, getStepSize());
-            nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, nhc, scale);
-        }
-        vvKernel.getAs<IntegrateVelocityVerletStepKernel>().execute(*context, *this, forcesAreValid);
-        for(auto &nhc : noseHooverChains) {
-            kineticEnergy = nhcKernel.getAs<NoseHooverChainKernel>().computeMaskedKineticEnergy(*context, nhc, false);
-            scale = nhcKernel.getAs<NoseHooverChainKernel>().propagateChain(*context, nhc, kineticEnergy, getStepSize());
-            nhcKernel.getAs<NoseHooverChainKernel>().scaleVelocities(*context, nhc, scale);
-        }
+        if(context->updateContextState())
+            forcesAreValid = false;
+        context->calcForcesAndEnergy(true, false);
+        kernel.getAs<IntegrateNoseHooverStepKernel>().execute(*context, *this, forcesAreValid);
     }
+}
+
+void NoseHooverIntegrator::createCheckpoint(std::ostream& stream) const {
+    kernel.getAs<IntegrateNoseHooverStepKernel>().createCheckpoint(*context, stream);
+}
+
+void NoseHooverIntegrator::loadCheckpoint(std::istream& stream) {
+    kernel.getAs<IntegrateNoseHooverStepKernel>().loadCheckpoint(*context, stream);
 }

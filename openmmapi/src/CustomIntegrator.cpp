@@ -114,6 +114,31 @@ bool CustomIntegrator::kineticEnergyRequiresForce() const {
     return keNeedsForce;
 }
 
+void CustomIntegrator::createCheckpoint(std::ostream& stream) const {
+    for (int i = 0; i < getNumGlobalVariables(); i++) {
+        double value = getGlobalVariable(i);
+        stream.write((char*) &value, sizeof(double));
+    }
+    vector<Vec3> values;
+    for (int i = 0; i < getNumPerDofVariables(); i++) {
+        getPerDofVariable(i, values);
+        stream.write((char*) values.data(), sizeof(Vec3)*values.size());
+    }
+}
+
+void CustomIntegrator::loadCheckpoint(std::istream& stream) {
+    double value;
+    for (int i = 0; i < getNumGlobalVariables(); i++) {
+        stream.read((char*) &value, sizeof(double));
+        setGlobalVariable(i, value);
+    }
+    vector<Vec3> values(context->getSystem().getNumParticles());
+    for (int i = 0; i < getNumPerDofVariables(); i++) {
+        stream.read((char*) values.data(), sizeof(Vec3)*values.size());
+        setPerDofVariable(i, values);
+    }
+}
+
 void CustomIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");  

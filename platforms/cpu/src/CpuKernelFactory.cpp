@@ -61,7 +61,7 @@ KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform&
         return new CpuCalcGayBerneForceKernel(name, platform, data);
     if (name == IntegrateLangevinStepKernel::Name())
         return new CpuIntegrateLangevinStepKernel(name, platform, data);
-    if (name == IntegrateBAOABStepKernel::Name())
-        return new CpuIntegrateBAOABStepKernel(name, platform, data);
+    if (name == IntegrateLangevinMiddleStepKernel::Name())
+        return new CpuIntegrateLangevinMiddleStepKernel(name, platform, data);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str());
 }

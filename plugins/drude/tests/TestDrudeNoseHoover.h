@@ -52,9 +52,6 @@
 
 using namespace OpenMM;
 using namespace std;
-extern "C" OPENMM_EXPORT void registerDrudeReferenceKernelFactories();
-extern "C" OPENMM_EXPORT void registerKernelFactories();
-Platform& initializePlatform(int argc, char* argv[]);
 
 void build_waterbox(System &system, int gridSize, double polarizability, vector<Vec3> & positions) {
     // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
@@ -107,7 +104,7 @@ void build_waterbox(System &system, int gridSize, double polarizability, vector<
     }
 }
 
-void testWaterBox(Platform& platform) {
+void testWaterBox() {
     // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
     // and Drude particles.
     System system;
@@ -128,34 +125,34 @@ void testWaterBox(Platform& platform) {
     int chainLength = 4;
     int numMTS = 4;
     int numYS = 5;
-    double frequency = 800.0;
-    double frequencyDrude = 2000.0;
+    // N.B. These are higher frequencies than recommeded for production runs, but are used
+    // here to achieve rapid equilibration to the target temperature, allowing a short run
+    double frequency = 1000.0;
+    double frequencyDrude = 1000.0;
     int randomSeed = 100;
-    DrudeNoseHooverIntegrator integ(temperature, frequency, 
-                                    temperatureDrude, frequencyDrude, 0.0005, 
+    DrudeNoseHooverIntegrator integ(temperature, frequency,
+                                    temperatureDrude, frequencyDrude, 0.0005,
                                     chainLength, numMTS, numYS);
     Context context(system, integ, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temperature, randomSeed);
-    std::vector<Vec3> velocities = context.getState(State::Velocities).getVelocities();
-    for (int i = 0; i < numMolecules; i++){
-        Vec3 noize;
-        for (int j = 0; j < 3; j++){
-            noize[j] = float(((i+18311)*(j+18253) * 313419097822414) % 18313) / float(18313);
-            noize[j] *= sqrt(3 * BOLTZ * temperatureDrude / 0.4);
-        }
-        velocities[5*i+1] = velocities[5*i] + noize;
-    }
-    context.setVelocities(velocities);
     context.applyConstraints(1e-6);
 
-    // Equilibrate.
-    integ.step(500);
+    // Equilibrate
+    integ.step(1500);
+
+    double TOL = 1.5;
+    try {
+        if (platform.getPropertyValue(context, "Precision") != "double") {
+            TOL = 2.0;
+        }
+    } catch(OpenMMException) {
+        // The defaults above are for double precision, which is assumed in this case
+    }
 
     // Compute the internal and center of mass temperatures.
-
     double totalKE = 0;
-    const int numSteps = 4000;
+    const int numSteps = 500;
     double meanTemp = 0.0;
     double meanDrudeTemp = 0.0;
     double meanConserved = 0.0;
@@ -174,15 +171,15 @@ void testWaterBox(Platform& platform) {
         double conserved = PE + fullKE + heatBathEnergy;
         meanConserved = (i*meanConserved + conserved)/(i+1);
         totalKE += KE;
-        ASSERT(fabs(meanConserved - conserved) < 0.6);
+        ASSERT(fabs(meanConserved - conserved) < TOL);
     }
     totalKE /= numSteps;
-    ASSERT_USUALLY_EQUAL_TOL(temperature, meanTemp,  0.004);
-    ASSERT_USUALLY_EQUAL_TOL(temperatureDrude, meanDrudeTemp,  0.004);
+    ASSERT_USUALLY_EQUAL_TOL(temperature, meanTemp,  0.03);
+    ASSERT_USUALLY_EQUAL_TOL(temperatureDrude, meanDrudeTemp,  0.03);
 }
 
 
-double testWaterBoxWithHardWallConstraint(Platform& platform, double hardWallConstraint){
+double testWaterBoxWithHardWallConstraint(double hardWallConstraint){
     // Create a box of SWM4-NDP water molecules.  This involves constraints, virtual sites,
     // and Drude particles.
     System system;
@@ -206,31 +203,21 @@ double testWaterBoxWithHardWallConstraint(Platform& platform, double hardWallCon
     double frequency = 25.0;
     double frequencyDrude = 25.0;
     int randomSeed = 100;
-    DrudeNoseHooverIntegrator integ(temperature, frequency, 
-                                    temperatureDrude, frequencyDrude, 0.0005, 
+    DrudeNoseHooverIntegrator integ(temperature, frequency,
+                                    temperatureDrude, frequencyDrude, 0.0005,
                                     chainLength, numMTS, numYS);
     integ.setMaxDrudeDistance(hardWallConstraint);
     Context context(system, integ, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temperature, randomSeed);
-    std::vector<Vec3> velocities = context.getState(State::Velocities).getVelocities();
-    for (int i = 0; i < numMolecules; i++){
-        Vec3 noize;
-        for (int j = 0; j < 3; j++){
-            noize[j] = float(((i+18311)*(j+18253) * 313419097822414) % 18313) / float(18313);
-            noize[j] *= sqrt(3 * BOLTZ * temperatureDrude / 0.4);
-        }
-        velocities[5*i+1] = velocities[5*i] + noize;
-    }
-    context.setVelocities(velocities);
     context.applyConstraints(1e-6);
+
     // Equilibrate.
-    
-    integ.step(10);
+    integ.step(50);
+
     // Compute the internal and center of mass temperatures.
-    
     double totalKE = 0;
-    const int numSteps = 10;
+    const int numSteps = 500;
     double meanTemp = 0.0;
     double meanDrudeTemp = 0.0;
     double meanConserved = 0.0;
@@ -238,40 +225,90 @@ double testWaterBoxWithHardWallConstraint(Platform& platform, double hardWallCon
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
         State state = context.getState(State::Energy | State::Positions);
-        double KE = state.getKineticEnergy();
-        double PE = state.getPotentialEnergy();
-        double fullKE = integ.computeTotalKineticEnergy();
-        double drudeKE = integ.computeDrudeKineticEnergy();
-        double temp = KE/(0.5*numStandardDof*BOLTZ);
-        double drudeTemp = drudeKE/(0.5*numDrudeDof*BOLTZ);
-        meanTemp = (i*meanTemp + temp)/(i+1);
-        meanDrudeTemp = (i*meanDrudeTemp + drudeTemp)/(i+1);
-        double heatBathEnergy = integ.computeHeatBathEnergy();
-        double conserved = PE + fullKE + heatBathEnergy;
-        meanConserved = (i*meanConserved + conserved)/(i+1);
         const auto & positions = state.getPositions();
         for(int mol = 0; mol < gridSize*gridSize*gridSize; ++mol) {
             auto dR = positions[5*mol+1] - positions[5*mol];
             maxR = std::max(maxR, std::sqrt(dR.dot(dR)));
         }
-        totalKE += KE;
     }
-    totalKE /= numSteps;
     return maxR;
 }
 
+void testInitialTemperature() {
+    // Check temperature initialization for a collection of randomly placed particles
+    const int numRealParticles = 50000;
+    const int numParticles = 2 * numRealParticles;
+    const int nDoF = 3 * numRealParticles;
+    const double targetTemperature = 300;
+    const double drudeTemperature = 1;
+    const double realMass = 10;
+    const double drudeMass = 1;
+    System system;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    std::vector<Vec3> positions(numParticles);
+    DrudeForce* drude = new DrudeForce();
+
+    for (int i = 0; i < numRealParticles; i++) {
+        system.addParticle(realMass);
+        system.addParticle(drudeMass);
+        positions[2*i][0] = genrand_real2(sfmt);
+        positions[2*i][1] = genrand_real2(sfmt);
+        positions[2*i][2] = genrand_real2(sfmt);
+        positions[2*i+1][0] = positions[2*i][0] + 0.01*genrand_real2(sfmt);
+        positions[2*i+1][1] = positions[2*i][1] + 0.01*genrand_real2(sfmt);
+        positions[2*i+1][2] = positions[2*i][2] + 0.01*genrand_real2(sfmt);
+        drude->addParticle(2*i+1, 2*i, -1, -1, -1, -1.0, 0.001, 1, 1);
+    }
+    system.addForce(drude);
+    CMMotionRemover* cmm = new CMMotionRemover(1);
+    system.addForce(cmm);
+
+    DrudeNoseHooverIntegrator integrator(targetTemperature, 25, drudeTemperature, 25, 0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(targetTemperature);
+    auto velocities = context.getState(State::Velocities).getVelocities();
+    double comKineticEnergy = 0;
+    double relKineticEnergy = 0;
+    for (int i = 0; i < numRealParticles; i++) {
+        int m1 = realMass;
+        int m2 = drudeMass;
+        Vec3 v1 = velocities[2*i];
+        Vec3 v2 = velocities[2*i + 1];
+        double invMass = 1.0 / (m1 + m2);
+        double redMass = m1 * m2 * invMass;
+        double fracM1 = m1 * invMass;
+        double fracM2 = m2 * invMass;
+        Vec3 comVelocity = fracM1 * v1 + fracM2 * v2;
+        Vec3 relVelocity = v2 - v1;
+
+        comKineticEnergy += 0.5 * (m1 + m2) * comVelocity.dot(comVelocity);
+        relKineticEnergy += 0.5 * redMass * relVelocity.dot(relVelocity);
+    }
+    double comTemperature = (2*comKineticEnergy / (nDoF*BOLTZ));
+    double relTemperature = (2*relKineticEnergy / (nDoF*BOLTZ));
+    ASSERT_USUALLY_EQUAL_TOL(targetTemperature, comTemperature, 0.01);
+    ASSERT_USUALLY_EQUAL_TOL(drudeTemperature, relTemperature, 0.01);
+}
+
+void setupKernels(int argc, char* argv[]);
+void runPlatformTests();
 
 int main(int argc, char* argv[]) {
     try {
-        registerKernelFactories();
+        setupKernels(argc, argv);
 
-        Platform& platform = initializePlatform(argc, argv);
-        testWaterBox(platform);
+        testWaterBox();
         double maxDrudeDistance = 0.005;
-        double observedDrudeDistance = testWaterBoxWithHardWallConstraint(platform, 0.0);
+        double observedDrudeDistance = testWaterBoxWithHardWallConstraint(0.0);
         ASSERT(observedDrudeDistance > maxDrudeDistance);
-        observedDrudeDistance = testWaterBoxWithHardWallConstraint(platform, maxDrudeDistance);
+        observedDrudeDistance = testWaterBoxWithHardWallConstraint(maxDrudeDistance);
+        // Remove later: just trying to find out why Jenkins is upset
+        if(observedDrudeDistance >= maxDrudeDistance) printf("Max distance %16.10f\n", observedDrudeDistance);
         ASSERT(observedDrudeDistance < maxDrudeDistance);
+        testInitialTemperature();
+        runPlatformTests();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

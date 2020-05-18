@@ -2,6 +2,8 @@
 // This file is part of the "Irrlicht Engine".
 // For conditions of distribution and use, see copyright notice in irrlicht.h
 
+// NOTE: This file has been changed from the orginal source distribution.
+
 #ifndef __IRR_TYPES_H_INCLUDED__
 #define __IRR_TYPES_H_INCLUDED__
 
@@ -80,7 +82,8 @@ typedef unsigned short wchar_t;
 
 //! define a break macro for debugging only in Win32 mode.
 #if defined(WIN32) && defined(_MSC_VER) && defined(_DEBUG)
-#define _IRR_DEBUG_BREAK_IF( _CONDITION_ ) if (_CONDITION_) {_asm int 3}
+// NOTE: This line has been changed and originally used '_asm int 3' to break into the debugger.
+#define _IRR_DEBUG_BREAK_IF( _CONDITION_ ) if (_CONDITION_) { __debugbreak(); }
 #else 
 #define _IRR_DEBUG_BREAK_IF( _CONDITION_ )
 #endif

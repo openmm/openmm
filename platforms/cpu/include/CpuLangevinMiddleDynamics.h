@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2013-2019 Stanford University and Simbios.
+/* Portions copyright (c) 2013-2020 Stanford University and Simbios.
  * Authors: Peter Eastman
  * Contributors: 
  *
@@ -23,17 +23,17 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __CPU_BAOAB_DYNAMICS_H__
-#define __CPU_BAOAB_DYNAMICS_H__
+#ifndef __CPU_LANGEVIN_MIDDLE_DYNAMICS_H__
+#define __CPU_LANGEVIN_MIDDLE_DYNAMICS_H__
 
-#include "ReferenceBAOABDynamics.h"
+#include "ReferenceLangevinMiddleDynamics.h"
 #include "CpuRandom.h"
 #include "openmm/internal/ThreadPool.h"
 #include "sfmt/SFMT.h"
 
 namespace OpenMM {
 
-class CpuBAOABDynamics : public ReferenceBAOABDynamics {
+class CpuLangevinMiddleDynamics : public ReferenceLangevinMiddleDynamics {
 public:
     /**
      * Constructor.
@@ -45,25 +45,22 @@ public:
      * @param threads        thread pool for parallelizing computation
      * @param random         random number generator
      */
-    CpuBAOABDynamics(int numberOfAtoms, double deltaT, double friction, double temperature, OpenMM::ThreadPool& threads, OpenMM::CpuRandom& random);
+    CpuLangevinMiddleDynamics(int numberOfAtoms, double deltaT, double friction, double temperature, OpenMM::ThreadPool& threads, OpenMM::CpuRandom& random);
 
     /**
      * Destructor.
      */
-    ~CpuBAOABDynamics();
+    ~CpuLangevinMiddleDynamics();
 
     /**
      * First update step.
      * 
      * @param numberOfAtoms       number of atoms
-     * @param atomCoordinates     atom coordinates
      * @param velocities          velocities
      * @param forces              forces
      * @param inverseMasses       inverse atom masses
-     * @param xPrime              xPrime
      */
-    void updatePart1(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
-                     std::vector<OpenMM::Vec3>& forces, std::vector<double>& inverseMasses, std::vector<OpenMM::Vec3>& xPrime);
+    void updatePart1(int numberOfAtoms, std::vector<OpenMM::Vec3>& velocities,  std::vector<OpenMM::Vec3>& forces, std::vector<double>& inverseMasses);
       
     /**
      * Second update step.
@@ -94,7 +91,6 @@ private:
     void threadUpdate1(int threadIndex);
     void threadUpdate2(int threadIndex);
     void threadUpdate3(int threadIndex);
-    void threadUpdate4(int threadIndex);
     OpenMM::ThreadPool& threads;
     OpenMM::CpuRandom& random;
     std::vector<OpenMM_SFMT::SFMT> threadRandom;
@@ -109,4 +105,4 @@ private:
 
 } // namespace OpenMM
 
-#endif // __CPU_BAOAB_DYNAMICS_H__
+#endif // __CPU_LANGEVIN_MIDDLE_DYNAMICS_H__

@@ -1,0 +1,38 @@
+PSF
+
+       1 !NTITLE
+ REMARKS Created by fftool
+
+       9 !NATOM
+       1 S    1    SPCE H    Hw     0.423800        1.0080           0        0.0000        0.0000
+       2 S    1    SPCE O    Ow    -0.847600       15.9990           0        0.0000        0.0000
+       3 S    1    SPCE H    Hw     0.423800        1.0080           0        0.0000        0.0000
+       4 S    2    meth C    CTO    0.145000       12.0110           0        0.0000        0.0000
+       5 S    2    meth H    H1O    0.040000        1.0080           0        0.0000        0.0000
+       6 S    2    meth H    H1O    0.040000        1.0080           0        0.0000        0.0000
+       7 S    2    meth H    H1O    0.040000        1.0080           0        0.0000        0.0000
+       8 S    2    meth O    OH    -0.683000       15.9990           0        0.0000        0.0000
+       9 S    2    meth H    HO     0.418000        1.0080           0        0.0000        0.0000
+
+       7 !NBOND: bonds
+       1       2       2       3       4       5       4       6
+       4       7       4       8       8       9
+
+       8 !NTHETA: angles
+       1       2       3       5       4       6       5       4       7
+       5       4       8       6       4       7       6       4       8
+       7       4       8       4       8       9
+
+       3 !NPHI: dihedrals
+       9       8       4       5       9       8       4       6
+       9       8       4       7
+
+       0 !NIMPHI: impropers
+
+       0 !NDON: donors
+
+       0 !NACC: acceptors
+
+       0 !NNB
+
+

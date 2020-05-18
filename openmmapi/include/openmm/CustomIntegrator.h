@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -236,7 +236,7 @@ namespace OpenMM {
  * </pre></tt>
  * 
  * The second one implements the algorithm used by the standard
- * BAOABLangevinIntegrator class.  kB is Boltzmann's constant.
+ * LangevinMiddleIntegrator class.  kB is Boltzmann's constant.
  * 
  * <tt><pre>
  * CustomIntegrator integrator(dt);
@@ -245,18 +245,14 @@ namespace OpenMM {
  * integrator.addGlobalVariable("kT", kB*temperature);
  * integrator.addPerDofVariable("x1", 0);
  * integrator.addUpdateContextState();
- * integrator.addComputePerDof("v", "v + 0.5*dt*f/m");
+ * integrator.addComputePerDof("v", "v + dt*f/m");
+ * integrator.addConstrainVelocities();
  * integrator.addComputePerDof("x", "x + 0.5*dt*v");
- * integrator.addComputePerDof("x1", "x");
- * integrator.addConstrainPositions();
- * integrator.addComputePerDof("v", "v + 2*(x-x1)/dt");
  * integrator.addComputePerDof("v", "a*v + b*sqrt(kT/m)*gaussian");
  * integrator.addComputePerDof("x", "x + 0.5*dt*v");
  * integrator.addComputePerDof("x1", "x");
  * integrator.addConstrainPositions();
- * integrator.addComputePerDof("v", "v + 2*(x-x1)/dt");
- * integrator.addComputePerDof("v", "v + 0.5*dt*f/m");
- * integrator.addConstrainVelocities();
+ * integrator.addComputePerDof("v", "v + (x-x1)/dt");
  * </pre></tt>
  * 
  * Another feature of CustomIntegrator is that it can use derivatives of the
@@ -672,6 +668,16 @@ protected:
      * Get whether computeKineticEnergy() expects forces to have been computed.
      */
     bool kineticEnergyRequiresForce() const;
+    /**
+     * This is called while writing checkpoints.  It gives the integrator a chance to write
+     * its own data.
+     */
+    void createCheckpoint(std::ostream& stream) const;
+    /**
+     * This is called while loading a checkpoint.  The integrator should read in whatever
+     * data it wrote in createCheckpoint() and update its internal state accordingly.
+     */
+    void loadCheckpoint(std::istream& stream);
 private:
     class ComputationInfo;
     class FunctionInfo;

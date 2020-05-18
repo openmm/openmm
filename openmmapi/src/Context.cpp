@@ -33,8 +33,6 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ForceImpl.h"
-#include "SimTKOpenMMRealType.h"
-#include "sfmt/SFMT.h"
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -183,34 +181,18 @@ void Context::setVelocities(const vector<Vec3>& velocities) {
 }
 
 void Context::setVelocitiesToTemperature(double temperature, int randomSeed) {
+    const Integrator& integrator = impl->getIntegrator();
     const System& system = impl->getSystem();
-    
-    // Generate the list of Gaussian random numbers.
-    
-    OpenMM_SFMT::SFMT sfmt;
-    init_gen_rand(randomSeed, sfmt);
-    vector<double> randoms;
-    while (randoms.size() < system.getNumParticles()*3) {
-        double x, y, r2;
-        do {
-            x = 2.0*genrand_real2(sfmt)-1.0;
-            y = 2.0*genrand_real2(sfmt)-1.0;
-            r2 = x*x + y*y;
-        } while (r2 >= 1.0 || r2 == 0.0);
-        double multiplier = sqrt((-2.0*log(r2))/r2);
-        randoms.push_back(x*multiplier);
-        randoms.push_back(y*multiplier);
-    }
-    
-    // Assign the velocities.
-    
-    vector<Vec3> velocities(system.getNumParticles(), Vec3());
-    int nextRandom = 0;
-    for (int i = 0; i < system.getNumParticles(); i++) {
-        double mass = system.getParticleMass(i);
-        if (mass != 0) {
-            double velocityScale = sqrt(BOLTZ*temperature/mass);
-            velocities[i] = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*velocityScale;
+    vector<Vec3> velocities = integrator.getVelocitiesForTemperature(system, temperature, randomSeed);
+    double offset = integrator.getVelocityTimeOffset();
+    if (offset != 0.0) {
+        impl->calcForcesAndEnergy(true, false, -1);
+        vector<Vec3> forces;
+        impl->getForces(forces);
+        for (int i = 0; i < system.getNumParticles(); i++) {
+            double mass = system.getParticleMass(i);
+            if (mass != 0.0)
+                velocities[i] -= (offset/mass)*forces[i];
         }
     }
     setVelocities(velocities);

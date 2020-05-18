@@ -226,7 +226,7 @@ class PdbStructure(object):
         print("END", file=output_stream)
 
     def _add_model(self, model):
-        if self.default_model == None:
+        if self.default_model is None:
             self.default_model = model
         self.models.append(model)
         self._current_model = model
@@ -292,7 +292,7 @@ class PdbStructure(object):
     def _add_atom(self, atom):
         """
         """
-        if self._current_model == None:
+        if self._current_model is None:
             self._add_model(Model(0))
         atom.model_number = self._current_model.number
         # Atom might be alternate position for existing atom
@@ -560,20 +560,20 @@ class Residue(object):
     def set_name_with_spaces(self, name, alt_loc=None):
         # Gromacs ffamber PDB files can have 4-character residue names
         # assert len(name) == 3
-        if alt_loc == None:
+        if alt_loc is None:
             alt_loc = self.primary_location_id
         loc = self.locations[alt_loc]
         loc.name_with_spaces = name
         loc.name = name.strip()
     def get_name_with_spaces(self, alt_loc=None):
-        if alt_loc == None:
+        if alt_loc is None:
             alt_loc = self.primary_location_id
         loc = self.locations[alt_loc]
         return loc.name_with_spaces
     name_with_spaces = property(get_name_with_spaces, set_name_with_spaces, doc='four-character residue name including spaces')
 
     def get_name(self, alt_loc=None):
-        if alt_loc == None:
+        if alt_loc is None:
             alt_loc = self.primary_location_id
         loc = self.locations[alt_loc]
         return loc.name
@@ -616,7 +616,7 @@ class Residue(object):
 
     # Three possibilities: primary alt_loc, certain alt_loc, or all alt_locs
     def iter_atoms(self, alt_loc=None):
-        if alt_loc == None:
+        if alt_loc is None:
             locs = [self.primary_location_id]
         elif alt_loc == "":
             locs = [self.primary_location_id]
@@ -629,7 +629,7 @@ class Residue(object):
             use_atom = False # start pessimistic
             for loc2 in atom.locations.keys():
                 # print "#%s#%s" % (loc2,locs)
-                if locs == None: # means all locations
+                if locs is None: # means all locations
                     use_atom = True
                 elif loc2 in locs:
                     use_atom = True
@@ -805,7 +805,7 @@ class Atom(object):
             try:
                 # Try to find a sensible element symbol from columns 76-77
                 self.element = element.get_by_symbol(self.element_symbol)
-            except KeyError:    
+            except KeyError:
                 self.element = None
         if pdbstructure is not None:
             pdbstructure._next_atom_number = self.serial_number+1
@@ -850,12 +850,12 @@ class Atom(object):
     # Hide existence of multiple alternate locations to avoid scaring casual users
     def get_location(self, location_id=None):
         id = location_id
-        if (id == None):
+        if id is None:
             id = self.default_location_id
         return self.locations[id]
     def set_location(self, new_location, location_id=None):
         id = location_id
-        if (id == None):
+        if id is None:
             id = self.default_location_id
         self.locations[id] = new_location
     location = property(get_location, set_location, doc='default Atom.Location object')
@@ -891,9 +891,9 @@ class Atom(object):
         """
         Produce a PDB line for this atom using a particular serial number and alternate location
         """
-        if serial_number == None:
+        if serial_number is None:
             serial_number = self.serial_number
-        if alternate_location_indicator == None:
+        if alternate_location_indicator is None:
             alternate_location_indicator = self.alternate_location_indicator
         # produce PDB line in three parts: names, numbers, and end
         # Accomodate 4-character residue names that use column 21
@@ -927,7 +927,7 @@ class Atom(object):
         alt_loc = None means write just the primary location
         alt_loc = "AB" means write locations "A" and "B"
         """
-        if alt_loc == None:
+        if alt_loc is None:
             locs = [self.default_location_id]
         elif alt_loc == "":
             locs = [self.default_location_id]

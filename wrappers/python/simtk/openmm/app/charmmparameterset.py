@@ -9,10 +9,10 @@ Structures at Stanford, funded under the NIH Roadmap for Medical Research,
 grant U54 GM072970. See https://simtk.org.  This code was originally part of
 the ParmEd program and was ported for use with OpenMM.
 
-Copyright (c) 2014 the Authors
+Copyright (c) 2014-2020 the Authors
 
 Author: Jason M. Swails
-Contributors: Jing Huang
+Contributors: Jing Huang, Peter Eastman
 Date: Sep. 17, 2014
 
 Permission is hereby granted, free of charge, to any person obtaining a
@@ -247,25 +247,25 @@ class CharmmParameterSet(object):
                 parameterset = line.strip()[1:78]
                 continue
             # Set section if this is a section header
-            if line.startswith('ATOMS'):
+            if line.startswith('ATOM'):
                 section = 'ATOMS'
                 continue
-            if line.startswith('BONDS'):
+            if line.startswith('BOND'):
                 section = 'BONDS'
                 continue
-            if line.startswith('ANGLES'):
+            if line.startswith('ANGL') or line.startswith('THET'):
                 section = 'ANGLES'
                 continue
-            if line.startswith('DIHEDRALS'):
+            if line.startswith('DIHE') or line.startswith('PHI'):
                 section = 'DIHEDRALS'
                 continue
-            if line.startswith('IMPROPER'):
+            if line.startswith('IMPR') or line.startswith('IMPH'):
                 section = 'IMPROPER'
                 continue
             if line.startswith('CMAP'):
                 section = 'CMAP'
                 continue
-            if line.startswith('NONBONDED'):
+            if line.startswith('NONB') or line.startswith('NBON'):
                 read_first_nonbonded = False
                 section = 'NONBONDED'
                 fields = line.upper().split()

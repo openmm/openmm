@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
- * Authors: Andreas Krämer and Andrew C. Simmonett                            *
+ * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,8 +29,30 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CudaTests.h"
-#include "TestNoseHooverThermostat.h"
+#include "SimTKOpenMMRealType.h"
+#include "openmm/DrudeForce.h"
+#include "openmm/DrudeIntegrator.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/System.h"
 
-void runPlatformTests() {
+#include <set>
+
+using namespace OpenMM;
+
+namespace OpenMM {
+    extern std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed);
+}
+
+std::vector<Vec3> DrudeIntegrator::getVelocitiesForTemperature(const System &system, double temperature, int randomSeedIn) const {
+    return assignDrudeVelocities(system, temperature, drudeTemperature, randomSeedIn);
+}
+
+double DrudeIntegrator::getMaxDrudeDistance() const {
+    return maxDrudeDistance;
+}
+
+void DrudeIntegrator::setMaxDrudeDistance(double distance) {
+    if (distance < 0)
+        throw OpenMMException("setMaxDrudeDistance: Distance cannot be negative");
+    maxDrudeDistance = distance;
 }

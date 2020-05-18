@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -568,6 +568,32 @@ public:
                nonbondedMethod == NonbondedForce::PME ||
                nonbondedMethod == NonbondedForce::LJPME;
     }
+    /**
+     * Get whether periodic boundary conditions should be applied to exceptions.  Usually this is not
+     * appropriate, because exceptions are normally used to represent bonded interactions (1-2, 1-3, and
+     * 1-4 pairs), but there are situations when it does make sense.  For example, you may want to simulate
+     * an infinite chain where one end of a molecule is bonded to the opposite end of the next periodic
+     * copy.
+     * 
+     * Regardless of this value, periodic boundary conditions are only applied to exceptions if they also
+     * are applied to other interactions.  If the nonbonded method is NoCutoff or CutoffNonPeriodic, this
+     * value is ignored.  Also note that cutoffs are never applied to exceptions, again because they are
+     * normally used to represent bonded interactions.
+     */
+    bool getExceptionsUsePeriodicBoundaryConditions() const;
+    /**
+     * Set whether periodic boundary conditions should be applied to exceptions.  Usually this is not
+     * appropriate, because exceptions are normally used to represent bonded interactions (1-2, 1-3, and
+     * 1-4 pairs), but there are situations when it does make sense.  For example, you may want to simulate
+     * an infinite chain where one end of a molecule is bonded to the opposite end of the next periodic
+     * copy.
+     * 
+     * Regardless of this value, periodic boundary conditions are only applied to exceptions if they also
+     * get applied to other interactions.  If the nonbonded method is NoCutoff or CutoffNonPeriodic, this
+     * value is ignored.  Also note that cutoffs are never applied to exceptions, again because they are
+     * normally used to represent bonded interactions.
+     */
+    void setExceptionsUsePeriodicBoundaryConditions(bool periodic);
 protected:
     ForceImpl* createImpl() const;
 private:
@@ -578,7 +604,7 @@ private:
     class ExceptionOffsetInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol, alpha, dalpha;
-    bool useSwitchingFunction, useDispersionCorrection;
+    bool useSwitchingFunction, useDispersionCorrection, exceptionsUsePeriodic;
     int recipForceGroup, nx, ny, nz, dnx, dny, dnz;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
     int getGlobalParameterIndex(const std::string& parameter) const;

@@ -33,7 +33,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/AndersenThermostat.h"
-#include "openmm/BAOABLangevinIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/CMMotionRemover.h"
@@ -57,6 +56,7 @@
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/Integrator.h"
 #include "openmm/LangevinIntegrator.h"
+#include "openmm/LangevinMiddleIntegrator.h"
 #include "openmm/LocalEnergyMinimizer.h"
 #include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/MonteCarloBarostat.h"

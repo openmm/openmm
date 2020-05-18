@@ -29,8 +29,13 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "sfmt/SFMT.h"
+#include "SimTKOpenMMRealType.h"
 #include "openmm/Integrator.h"
+#include "openmm/System.h"
 #include "openmm/internal/ContextImpl.h"
+
+#include <cmath>
 
 using namespace OpenMM;
 
@@ -63,3 +68,34 @@ double Integrator::getConstraintTolerance() const {
 void Integrator::setConstraintTolerance(double tol) {
     constraintTol = tol;
 }
+
+std::vector<Vec3> Integrator::getVelocitiesForTemperature(const System &system, double temperature, int randomSeed) const {
+    // Generate the list of Gaussian random numbers.
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(randomSeed, sfmt);
+    std::vector<double> randoms;
+    while (randoms.size() < system.getNumParticles()*3) {
+        double x, y, r2;
+        do {
+            x = 2.0*genrand_real2(sfmt)-1.0;
+            y = 2.0*genrand_real2(sfmt)-1.0;
+            r2 = x*x + y*y;
+        } while (r2 >= 1.0 || r2 == 0.0);
+        double multiplier = sqrt((-2.0*std::log(r2))/r2);
+        randoms.push_back(x*multiplier);
+        randoms.push_back(y*multiplier);
+    }
+
+    // Assign the velocities.
+    std::vector<Vec3> velocities(system.getNumParticles(), Vec3());
+    int nextRandom = 0;
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        double mass = system.getParticleMass(i);
+        if (mass != 0) {
+            double velocityScale = sqrt(BOLTZ*temperature/mass);
+            velocities[i] = Vec3(randoms[nextRandom++], randoms[nextRandom++], randoms[nextRandom++])*velocityScale;
+        }
+    }
+    return velocities;
+}
+

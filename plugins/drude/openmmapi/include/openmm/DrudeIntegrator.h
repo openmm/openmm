@@ -1,5 +1,5 @@
-#ifndef OPENMM_BAOABLANGEVININTEGRATOR_H_
-#define OPENMM_BAOABLANGEVININTEGRATOR_H_
+#ifndef OPENMM_DRUDEINTEGRATOR_H_
+#define OPENMM_DRUDEINTEGRATOR_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,69 +32,56 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Integrator.h"
+#include "openmm/Integrator.h"
 #include "openmm/Kernel.h"
-#include "internal/windowsExport.h"
+#include "openmm/internal/windowsExportDrude.h"
 
 namespace OpenMM {
 
 /**
- * This is an Integrator which simulates a System using Langevin dynamics, with
- * the BAOAB discretization of Leimkuhler and Matthews (http://dx.doi.org/10.1093/amrx/abs010).
- * This method tend to produce more accurate configurational sampling than other
- * discretizations, such as the one used in LangevinIntegrator.
+ * A base class to encapsulate features common to Drude integrators.
  */
 
-class OPENMM_EXPORT BAOABLangevinIntegrator : public Integrator {
+class OPENMM_EXPORT_DRUDE DrudeIntegrator : public Integrator {
 public:
     /**
-     * Create a BAOABLangevinIntegrator.
-     * 
-     * @param temperature    the temperature of the heat bath (in Kelvin)
-     * @param frictionCoeff  the friction coefficient which couples the system to the heat bath (in inverse picoseconds)
-     * @param stepSize       the step size with which to integrate the system (in picoseconds)
+     * Create a DrudeSCFIntegrator.
+     *
+     * @param stepSize       the step size with which to integrator the system (in picoseconds)
      */
-    BAOABLangevinIntegrator(double temperature, double frictionCoeff, double stepSize);
+    DrudeIntegrator(double stepSize) {};
     /**
-     * Get the temperature of the heat bath (in Kelvin).
+     * Advance a simulation through time by taking a series of time steps.
+     *
+     * @param steps   the number of time steps to take
+     */
+    virtual void step(int steps) override {};
+    /**
+     * Get the temperature of the heat bath applied to internal coordinates of Drude particles (in Kelvin).
      *
      * @return the temperature of the heat bath, measured in Kelvin
      */
-    double getTemperature() const {
-        return temperature;
+    double getDrudeTemperature() const {
+        return drudeTemperature;
     }
     /**
-     * Set the temperature of the heat bath (in Kelvin).
+     * Set the temperature of the heat bath applied to internal coordinates of Drude particles (in Kelvin).
      *
      * @param temp    the temperature of the heat bath, measured in Kelvin
      */
-    void setTemperature(double temp) {
-        temperature = temp;
+    void setDrudeTemperature(double temp) {
+        drudeTemperature = temp;
     }
     /**
-     * Get the friction coefficient which determines how strongly the system is coupled to
-     * the heat bath (in inverse ps).
-     *
-     * @return the friction coefficient, measured in 1/ps
+     * Get the maximum distance a Drude particle can ever move from its parent particle, measured in nm.  This is implemented
+     * with a hard wall constraint.  If this distance is set to 0 (the default), the hard wall constraint is omitted.
      */
-    double getFriction() const {
-        return friction;
-    }
+    double getMaxDrudeDistance() const;
     /**
-     * Set the friction coefficient which determines how strongly the system is coupled to
-     * the heat bath (in inverse ps).
-     *
-     * @param coeff    the friction coefficient, measured in 1/ps
+     * Set the maximum distance a Drude particle can ever move from its parent particle, measured in nm.  This is implemented
+     * with a hard wall constraint.  If this distance is set to 0 (the default), the hard wall constraint is omitted.
      */
-    void setFriction(double coeff) {
-        friction = coeff;
-    }
-    /**
-     * Get the random number seed.  See setRandomNumberSeed() for details.
-     */
-    int getRandomNumberSeed() const {
-        return randomNumberSeed;
-    }
+    void setMaxDrudeDistance(double distance);
     /**
      * Set the random number seed.  The precise meaning of this parameter is undefined, and is left up
      * to each Platform to interpret in an appropriate way.  It is guaranteed that if two simulations
@@ -104,53 +91,53 @@ public:
      * results on successive runs, even if those runs were initialized identically.
      *
      * If seed is set to 0 (which is the default value assigned), a unique seed is chosen when a Context
-     * is created from this Integrator. This is done to ensure that each Context receives unique random seeds
+     * is created from this Force. This is done to ensure that each Context receives unique random seeds
      * without you needing to set them explicitly.
      */
     void setRandomNumberSeed(int seed) {
         randomNumberSeed = seed;
     }
     /**
-     * Advance a simulation through time by taking a series of time steps.
-     * 
-     * @param steps   the number of time steps to take
+     * Get the random number seed.  See setRandomNumberSeed() for details.
      */
-    void step(int steps);
+    int getRandomNumberSeed() const {
+        return randomNumberSeed;
+    }
 protected:
     /**
      * This will be called by the Context when it is created.  It informs the Integrator
      * of what context it will be integrating, and gives it a chance to do any necessary initialization.
      * It will also get called again if the application calls reinitialize() on the Context.
      */
-    void initialize(ContextImpl& context);
+    virtual void initialize(ContextImpl& context) override {};
     /**
      * This will be called by the Context when it is destroyed to let the Integrator do any necessary
      * cleanup.  It will also get called again if the application calls reinitialize() on the Context.
      */
-    void cleanup();
-    /**
-     * When the user modifies the state, we need to mark that the forces need to be recalculated.
-     */
-    void stateChanged(State::DataType changed);
+    virtual void cleanup() override {};
     /**
      * Get the names of all Kernels used by this Integrator.
      */
-    std::vector<std::string> getKernelNames();
+    virtual std::vector<std::string> getKernelNames() override { return std::vector<std::string>(); }
     /**
      * Compute the kinetic energy of the system at the current time.
      */
-    double computeKineticEnergy();
+    virtual double computeKineticEnergy() override { return 0; }
     /**
-     * Computing kinetic energy for this integrator does not require forces.
+     * Return a list of velocities normally distributed around a target temperature, with the Drude
+     * temperatures assigned according to the Drude temperature assigned to the integrator.
+     *
+     * @param system the system whose velocities are to be initialized.
+     * @param temperature the target temperature in Kelvin.
+     * @param randomSeed the random number seed to use when selecting velocities 
      */
-    bool kineticEnergyRequiresForce() const;
-private:
-    double temperature, friction;
+    virtual std::vector<Vec3> getVelocitiesForTemperature(const System &system, double temperature,
+                                                          int randomSeed) const override;
+
     int randomNumberSeed;
-    bool forcesAreValid;
-    Kernel kernel;
+    double drudeTemperature, maxDrudeDistance;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_BAOABLANGEVININTEGRATOR_H_*/
+#endif /*OPENMM_DRUDEINTEGRATOR_H_*/

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2015-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -187,6 +187,23 @@ protected:
      * The implementation calls computeKineticEnergy() on whichever Integrator has been set as current.
      */
     double computeKineticEnergy();
+    /**
+     * Get the time interval by which velocities are offset from positions.  This is used to
+     * adjust velocities when setVelocitiesToTemperature() is called on a Context.
+     */
+    double getVelocityTimeOffset() const {
+        return getIntegrator(0).getVelocityTimeOffset();
+    }
+    /**
+     * This is called while writing checkpoints.  It gives the integrator a chance to write
+     * its own data.
+     */
+    void createCheckpoint(std::ostream& stream) const;
+    /**
+     * This is called while loading a checkpoint.  The integrator should read in whatever
+     * data it wrote in createCheckpoint() and update its internal state accordingly.
+     */
+    void loadCheckpoint(std::istream& stream);
 private:
     int currentIntegrator;
     std::vector<Integrator*> integrators;

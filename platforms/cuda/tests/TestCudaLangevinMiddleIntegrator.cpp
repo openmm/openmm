@@ -7,7 +7,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2019 Stanford University and the Authors.           *
- * Authors: Andreas Krämer and Andrew C. Simmonett                            *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,8 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferenceTests.h"
-#include "TestNoseHooverThermostat.h"
+#include "CudaTests.h"
+#include "TestLangevinMiddleIntegrator.h"
 
 void runPlatformTests() {
 }

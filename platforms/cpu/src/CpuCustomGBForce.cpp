@@ -246,7 +246,6 @@ void CpuCustomGBForce::calculateIxn(int numberOfAtoms, float* posq, vector<vecto
 void CpuCustomGBForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     // Compute this thread's subset of interactions.
 
-    int numThreads = threads.getNumThreads();
     threadEnergy[threadIndex] = 0;
     double& energy = threadEnergy[threadIndex];
     float* forces = &(*threadForce)[threadIndex][0];

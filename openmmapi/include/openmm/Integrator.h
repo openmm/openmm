@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 
 #include "State.h"
 #include "Vec3.h"
+#include <iosfwd>
 #include <map>
 #include <vector>
 #include "internal/windowsExport.h"
@@ -42,6 +43,7 @@ namespace OpenMM {
 
 class Context;
 class ContextImpl;
+class System;
 
 /**
  * An Integrator defines a method for simulating a System by integrating the equations of motion.
@@ -132,6 +134,35 @@ protected:
      */
     virtual bool kineticEnergyRequiresForce() const {
         return true;
+    }
+    /**
+     * Return a list of velocities normally distributed around a target temperature.  This may be
+     * overridden by Drude integrators to ensure that Drude pairs have their center of mass velocity
+     * assigned as a single entity, rather than treating both particles as being independent.
+     *
+     * @param system the system whose velocities are to be initialized.
+     * @param temperature the target temperature in Kelvin.
+     * @param randomSeed the random number seed to use when selecting velocities 
+     */
+    virtual std::vector<Vec3> getVelocitiesForTemperature(const System &system, double temperature, int randomSeed) const;
+    /**
+     * Get the time interval by which velocities are offset from positions.  This is used to
+     * adjust velocities when setVelocitiesToTemperature() is called on a Context.
+     */
+    virtual double getVelocityTimeOffset() const {
+        return 0.0;
+    }
+    /**
+     * This is called while writing checkpoints.  It gives the integrator a chance to write
+     * its own data.  The default implementation does nothing.
+     */
+    virtual void createCheckpoint(std::ostream& stream) const {
+    }
+    /**
+     * This is called while loading a checkpoint.  The integrator should read in whatever
+     * data it wrote in createCheckpoint() and update its internal state accordingly.
+     */
+    virtual void loadCheckpoint(std::istream& stream) {
     }
 private:
     double stepSize, constraintTol;

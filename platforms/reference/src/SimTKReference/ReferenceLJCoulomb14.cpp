@@ -38,7 +38,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceLJCoulomb14::ReferenceLJCoulomb14() {
+ReferenceLJCoulomb14::ReferenceLJCoulomb14() : periodic(false) {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -48,6 +48,13 @@ ReferenceLJCoulomb14::ReferenceLJCoulomb14() {
    --------------------------------------------------------------------------------------- */
 
 ReferenceLJCoulomb14::~ReferenceLJCoulomb14() {
+}
+
+void ReferenceLJCoulomb14::setPeriodic(OpenMM::Vec3* vectors) {
+    periodic = true;
+    periodicBoxVectors[0] = vectors[0];
+    periodicBoxVectors[1] = vectors[1];
+    periodicBoxVectors[2] = vectors[2];
 }
 
 /**---------------------------------------------------------------------------------------
@@ -68,33 +75,36 @@ ReferenceLJCoulomb14::~ReferenceLJCoulomb14() {
 void ReferenceLJCoulomb14::calculateBondIxn(vector<int>& atomIndices, vector<Vec3>& atomCoordinates,
                                      vector<double>& parameters, vector<Vec3>& forces,
                                      double* totalEnergy, double* energyParamDerivs) {
-   double deltaR[2][ReferenceForce::LastDeltaRIndex];
+    double deltaR[2][ReferenceForce::LastDeltaRIndex];
 
-   // get deltaR, R2, and R between 2 atoms
+    // get deltaR, R2, and R between 2 atoms
 
-   int atomAIndex = atomIndices[0];
-   int atomBIndex = atomIndices[1];
-   ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0]);  
+    int atomAIndex = atomIndices[0];
+    int atomBIndex = atomIndices[1];
+    if (periodic)
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], periodicBoxVectors, deltaR[0]);
+    else
+        ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0]);  
 
-   double inverseR  = 1.0/(deltaR[0][ReferenceForce::RIndex]);
-   double sig2      = inverseR*parameters[0];
-          sig2     *= sig2;
-   double sig6      = sig2*sig2*sig2;
+    double inverseR  = 1.0/(deltaR[0][ReferenceForce::RIndex]);
+    double sig2      = inverseR*parameters[0];
+           sig2     *= sig2;
+    double sig6      = sig2*sig2*sig2;
 
-   double dEdR      = parameters[1]*(12.0*sig6 - 6.0)*sig6;
-          dEdR     += ONE_4PI_EPS0*parameters[2]*inverseR;
-          dEdR     *= inverseR*inverseR;
+    double dEdR      = parameters[1]*(12.0*sig6 - 6.0)*sig6;
+           dEdR     += ONE_4PI_EPS0*parameters[2]*inverseR;
+           dEdR     *= inverseR*inverseR;
 
-   // accumulate forces
+    // accumulate forces
 
-   for (int ii = 0; ii < 3; ii++) {
-      double force        = dEdR*deltaR[0][ii];
-      forces[atomAIndex][ii] += force;
-      forces[atomBIndex][ii] -= force;
-   }
+    for (int ii = 0; ii < 3; ii++) {
+        double force        = dEdR*deltaR[0][ii];
+        forces[atomAIndex][ii] += force;
+        forces[atomBIndex][ii] -= force;
+    }
 
-   // accumulate energies
+    // accumulate energies
 
-   if (totalEnergy != NULL)
-       *totalEnergy += parameters[1]*(sig6 - 1.0)*sig6 + (ONE_4PI_EPS0*parameters[2]*inverseR);
+    if (totalEnergy != NULL)
+        *totalEnergy += parameters[1]*(sig6 - 1.0)*sig6 + (ONE_4PI_EPS0*parameters[2]*inverseR);
 }

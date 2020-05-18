@@ -66,7 +66,7 @@ public:
      */
     DrudeNoseHooverIntegrator(double temperature, double collisionFrequency, 
                               double drudeTemperature, double drudeCollisionFrequency, double stepSize, 
-                              int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 3);
+                              int chainLength = 3, int numMTS = 3, int numYoshidaSuzuki = 7);
 
     virtual ~DrudeNoseHooverIntegrator();
     /**
@@ -74,7 +74,7 @@ public:
      * of what context it will be integrating, and gives it a chance to do any necessary initialization.
      * It will also get called again if the application calls reinitialize() on the Context.
      */
-    void initialize(ContextImpl& context);
+    void initialize(ContextImpl& context) override;
     /**
      * Get the maximum distance a Drude particle can ever move from its parent particle, measured in nm.  This is implemented
      * with a hard wall constraint.  If this distance is set to 0 (the default), the hard wall constraint is omitted.
@@ -93,6 +93,18 @@ public:
      * Compute the kinetic energy of all (real and drude) particles at the current time.
      */
     double computeTotalKineticEnergy();
+    /**
+     * Return a list of velocities normally distributed around a target temperature, with the Drude
+     * temperatures assigned according to the Drude temperature assigned to the integrator.
+     *
+     * @param system the system whose velocities are to be initialized.
+     * @param temperature the target temperature in Kelvin.
+     * @param randomSeed the random number seed to use when selecting velocities 
+     */
+    virtual std::vector<Vec3> getVelocitiesForTemperature(const System &system, double temperature,
+                                                          int randomSeed) const override;
+protected:
+    double drudeTemperature;
 };
 
 } // namespace OpenMM

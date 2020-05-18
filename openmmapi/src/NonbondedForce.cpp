@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,7 +48,7 @@ using std::stringstream;
 using std::vector;
 
 NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), switchingDistance(-1.0), rfDielectric(78.3),
-        ewaldErrorTol(5e-4), alpha(0.0), dalpha(0.0), useSwitchingFunction(false), useDispersionCorrection(true), recipForceGroup(-1),
+        ewaldErrorTol(5e-4), alpha(0.0), dalpha(0.0), useSwitchingFunction(false), useDispersionCorrection(true), exceptionsUsePeriodic(false), recipForceGroup(-1),
         nx(0), ny(0), nz(0), dnx(0), dny(0), dnz(0) {
 }
 
@@ -346,4 +346,12 @@ void NonbondedForce::setReciprocalSpaceForceGroup(int group) {
 
 void NonbondedForce::updateParametersInContext(Context& context) {
     dynamic_cast<NonbondedForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+bool NonbondedForce::getExceptionsUsePeriodicBoundaryConditions() const {
+    return exceptionsUsePeriodic;
+}
+
+void NonbondedForce::setExceptionsUsePeriodicBoundaryConditions(bool periodic) {
+    exceptionsUsePeriodic = periodic;
 }
