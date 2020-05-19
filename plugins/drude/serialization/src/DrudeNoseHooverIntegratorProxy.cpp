@@ -49,7 +49,7 @@ void DrudeNoseHooverIntegratorProxy::serialize(const void* object, Serialization
     node.setDoubleProperty("stepSize", integrator.getStepSize());
     node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
     node.setDoubleProperty("maximumPairDistance", integrator.getMaximumPairDistance());
-    assert(not integrator.hasSubsystemThermostats());
+    assert(!integrator.hasSubsystemThermostats());
     node.setDoubleProperty("temperature", integrator.getTemperature());
     node.setDoubleProperty("relativeTemperature", integrator.getRelativeTemperature());
     node.setDoubleProperty("collisionFrequency", integrator.getCollisionFrequency());
