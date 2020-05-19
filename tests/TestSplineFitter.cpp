@@ -82,6 +82,22 @@ void testPeriodicSpline() {
         ASSERT_EQUAL_TOL(sin((double)i), SplineFitter::evaluateSpline(x, y, deriv, i), 0.05);
         ASSERT_EQUAL_TOL(cos((double)i), SplineFitter::evaluateSplineDerivative(x, y, deriv, i), 0.05);
     }
+    for (unsigned int i = 0; i < x.size(); i++)
+        x[i] = i/(x.size()-1.0);
+    double ya[] = {15.579, 16.235, 17.325, 18.741, 20.454, 22.517, 24.944, 27.554, 29.942, 31.657,
+                   32.486, 32.612, 32.494, 32.532, 32.785, 32.917, 32.402, 30.842, 28.229, 24.989,
+                   21.762, 19.074, 17.147, 15.970, 15.467, 15.579};
+    // scipy.interpolate.CubicSpline solution:
+    double sol[] = { 345.520,  271.991,  194.015,  174.449, 221.940, 250.291, 141.895, -131.620,
+                    -447.916, -600.465, -472.723, -144.892, 137.290, 180.733, -53.971, -418.600,
+                    -697.879, -708.635, -416.330,   22.704, 374.262, 501.498, 473.496,  417.019,
+                     385.928,  345.520};
+    y.assign(begin(ya), end(ya));
+    SplineFitter::createPeriodicSpline(x, y, deriv);
+    ASSERT_EQUAL_TOL(SplineFitter::evaluateSplineDerivative(x, y, deriv, x[0]),
+                     SplineFitter::evaluateSplineDerivative(x, y, deriv, x[x.size()-1]), 1e-6);
+    for (int i = 0; i < x.size(); i++)
+        ASSERT_EQUAL_TOL(deriv[i], sol[i], 1e-3);
 }
 
 void test2DSpline() {
@@ -177,4 +193,3 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
-
