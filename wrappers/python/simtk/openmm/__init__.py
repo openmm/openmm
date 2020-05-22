@@ -18,7 +18,7 @@ if sys.platform == 'win32':
 
 from simtk.openmm.openmm import *
 from simtk.openmm.vec3 import Vec3
-from simtk.openmm.mtsintegrator import MTSIntegrator
+from simtk.openmm.mtsintegrator import MTSIntegrator, MTSLangevinIntegrator
 from simtk.openmm.amd import AMDIntegrator, AMDForceGroupIntegrator, DualAMDIntegrator
 
 if os.getenv('OPENMM_PLUGIN_DIR') is None and os.path.isdir(version.openmm_library_path):
