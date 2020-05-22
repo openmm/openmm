@@ -56,7 +56,7 @@ class fvec4 {
 public:
     __m128 val;
     
-    fvec4() {}
+    fvec4() = default;
     fvec4(float v) {
         val = {v, v, v, v};
     }
