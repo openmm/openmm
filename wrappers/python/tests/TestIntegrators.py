@@ -121,6 +121,41 @@ class TestIntegrators(unittest.TestCase):
             context.setPositions(pdb.positions)
             integrator.step(10)
 
+    def testMTSLangevinIntegrator(self):
+        """Test the MTSLangevinIntegrator on an explicit solvent system"""
+        # Create a periodic solvated system with PME
+        pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
+        system = ff.createSystem(pdb.topology, cutoffMethod=PME)
+
+        # Split forces into groups
+        for force in system.getForces():
+            if force.__class__.__name__ == 'NonbondedForce':
+                force.setForceGroup(1)
+                force.setReciprocalSpaceForceGroup(2)
+            else:
+                force.setForceGroup(0)
+
+        # Create an integrator
+        integrator = MTSLangevinIntegrator(300*kelvin, 1/picosecond, 4*femtoseconds, [(2,1), (1,2), (0,4)])
+
+        # Run some equilibration.
+        context = Context(system, integrator)
+        context.setPositions(pdb.positions)
+        context.setVelocitiesToTemperature(300*kelvin)
+        integrator.step(500)
+
+        # See if the temperature is correct.
+        totalEnergy = 0*kilojoules_per_mole
+        steps = 50
+        for i in range(steps):
+            integrator.step(10)
+            totalEnergy += context.getState(getEnergy=True).getKineticEnergy()
+        averageEnergy = totalEnergy/steps
+        dofs = 3*system.getNumParticles() - system.getNumConstraints() - 3
+        temperature = averageEnergy*2/(dofs*MOLAR_GAS_CONSTANT_R)
+        self.assertTrue(290*kelvin < temperature < 310*kelvin)
+
     def testNoseHooverIntegrator(self):
         """Test partial thermostating in the NoseHooverIntegrator (only API)"""
         pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
