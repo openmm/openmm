@@ -68,7 +68,7 @@ class fvec4 {
 public:
     __m128 val;
     
-    fvec4() {}
+    fvec4() = default;
     fvec4(float v) : val(_mm_set1_ps(v)) {}
     fvec4(float v1, float v2, float v3, float v4) : val(_mm_set_ps(v4, v3, v2, v1)) {}
     fvec4(__m128 v) : val(v) {}

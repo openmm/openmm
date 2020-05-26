@@ -74,7 +74,7 @@ class fvec4 {
 public:
     float32x4_t val;
 
-    fvec4() {}
+    fvec4() = default;
     fvec4(float v) : val(vdupq_n_f32(v)) {}
     fvec4(float v1, float v2, float v3, float v4) {
         float v[] = {v1, v2, v3, v4};

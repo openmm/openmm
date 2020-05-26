@@ -8,7 +8,7 @@
  *                                                                            *
  * Portions copyright (c) 2014-2015 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
- * Contributors:                                                              *
+ * Contributors: Daniel Towner                                                *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
  * copy of this software and associated documentation files (the "Software"), *
@@ -35,6 +35,9 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/vectorize.h"
+
+#include "TestVectorizeGeneric.h"
+
 #include <iostream>
 
 using namespace OpenMM;
@@ -203,45 +206,6 @@ void testTranspose() {
     ASSERT_VEC4_EQUAL(h[3], 0.4, 0.8, 1.2, 1.6);
 }
 
-void testUtility() {
-    fvec4 f1(7, 2, -5, 13);
-    fvec4 f2(1, 2, 4, 7);
-    fvec4 f3(0.5, 1.0, 1.5, 2.0);
-
-    // Reduce-add across three vectors into a single vec3.
-    const auto computedVec3 = reduceToVec3(f1, f2, f3);
-    ASSERT_EQUAL(17, computedVec3[0]);
-    ASSERT_EQUAL(14, computedVec3[1]);
-    ASSERT_EQUAL(5,  computedVec3[2]);
-
-    // Gather values from a table. Variants for both one vector and two vector gathers are provided.
-    float table[2048];
-    for (int i=0; i<2048;++i)
-        table[i] = -i; // Same index to make it easy to debug, but negative to avoid copying idx.
-
-    // Single vector gather.
-    const int vidx[4] = {156, 1987, 33, 1003};
-    fvec4 g(table, vidx);
-    ASSERT_VEC4_EQUAL(g, -156, -1987, -33, -1003);
-
-    // Pair-wise vector gather.
-    fvec4 p0, p1;
-    gatherVecPair(table, ivec4(57, 105, 1976, 91), p0, p1);
-    ASSERT_VEC4_EQUAL(p0, -57, -105, -1976, -91);
-    ASSERT_VEC4_EQUAL(p1, -58, -106, -1977, -92);
-
-    // Verify building blend mask from integer. The mask isn't checked directly, as different platforms
-    // use different types of mask. Instead, check the side effect of using the mask in a blend.
-    const auto elements = fvec4(1, 2, 3, 4);
-    const auto maskZero = fvec4::expandBitsToMask(0);
-    ASSERT_VEC4_EQUAL_INT(blendZero(elements, maskZero), 0, 0, 0, 0);
-    const auto maskOne = fvec4::expandBitsToMask(0b1111);
-    ASSERT_VEC4_EQUAL_INT(blendZero(elements, maskOne), 1, 2, 3, 4);
-    const auto maskMix = fvec4::expandBitsToMask(0b1001);
-    ASSERT_VEC4_EQUAL_INT(blendZero(elements, maskMix), 1, 0, 0, 4);
-
-}
-
 int main(int argc, char* argv[]) {
     try {
         if (!isVec4Supported()) {
@@ -249,12 +213,10 @@ int main(int argc, char* argv[]) {
             return 0;
         }
         testLoadStore();
-        testArithmetic();
         testLogic();
-        testComparisons();
-        testMathFunctions();
-        testTranspose();
-        testUtility();
+
+        TestFvec<fvec4>::testAll();
+
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

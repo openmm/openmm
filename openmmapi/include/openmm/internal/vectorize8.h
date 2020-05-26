@@ -46,7 +46,7 @@ class fvec8 {
 public:
     __m256 val;
 
-    fvec8() {}
+    fvec8() = default;
     fvec8(float v) : val(_mm256_set1_ps(v)) {}
     fvec8(float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8) : val(_mm256_set_ps(v8, v7, v6, v5, v4, v3, v2, v1)) {}
     fvec8(__m256 v) : val(v) {}
