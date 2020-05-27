@@ -87,13 +87,13 @@ public:
     virtual void step(int steps) = 0;
     /**
      * Get which force groups to use for integration.  By default, all force groups
-     * are included.  This is interpreted as a set if bit flags: the forces from group i
+     * are included.  This is interpreted as a set of bit flags: the forces from group i
      * will be included if (groups&(1<<i)) != 0.
      */
     virtual int getIntegrationForceGroups() const;
     /**
      * Set which force groups to use for integration.  By default, all force groups
-     * are included.  This is interpreted as a set if bit flags: the forces from group i
+     * are included.  This is interpreted as a set of bit flags: the forces from group i
      * will be included if (groups&(1<<i)) != 0.
      */
     virtual void setIntegrationForceGroups(int groups);
