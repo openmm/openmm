@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -231,6 +231,34 @@ void testLargeForces() {
     ASSERT(maxdist < 10.0);
 }
 
+void testForceGroups() {
+    // Create a system with two forces, only one of which is in the standard
+    // integration force groups.
+
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    HarmonicBondForce* bonds1 = new HarmonicBondForce();
+    HarmonicBondForce* bonds2 = new HarmonicBondForce();
+    system.addForce(bonds1);
+    system.addForce(bonds2);
+    bonds1->addBond(0, 1, 2.0, 1);
+    bonds2->addBond(0, 1, 4.0, 1);
+    bonds1->setForceGroup(1);
+    bonds2->setForceGroup(2);
+
+    // Minimize it and check that the bond has the correct length.
+
+    VerletIntegrator integrator(0.01);
+    integrator.setIntegrationForceGroups(1<<1);
+    Context context(system, integrator, platform);
+    context.setPositions({Vec3(0, 0, 0), Vec3(5, 0, 0)});
+    LocalEnergyMinimizer::minimize(context, 1e-5);
+    State state = context.getState(State::Positions);
+    Vec3 delta = state.getPositions()[0]-state.getPositions()[1];
+    ASSERT_EQUAL_TOL(2.0, sqrt(delta.dot(delta)), 1e-4);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -240,6 +268,7 @@ int main(int argc, char* argv[]) {
         testLargeSystem();
         testVirtualSites();
         testLargeForces();
+        testForceGroups();
         runPlatformTests();
     }
     catch(const exception& e) {

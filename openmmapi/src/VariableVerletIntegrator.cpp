@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -74,7 +74,7 @@ void VariableVerletIntegrator::step(int steps) {
         throw OpenMMException("This Integrator is not bound to a context!");
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
-        context->calcForcesAndEnergy(true, false);
+        context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
         setStepSize(kernel.getAs<IntegrateVariableVerletStepKernel>().execute(*context, *this, std::numeric_limits<double>::infinity()));
     }
 }
@@ -84,7 +84,7 @@ void VariableVerletIntegrator::stepTo(double time) {
         throw OpenMMException("This Integrator is not bound to a context!");  
     while (time > context->getTime()) {
         context->updateContextState();
-        context->calcForcesAndEnergy(true, false);
+        context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
         setStepSize(kernel.getAs<IntegrateVariableVerletStepKernel>().execute(*context, *this, time));
     }
 }

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -516,7 +516,7 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
 
     // Compute the forces and energy for this configuration.
 
-    double energy = context.calcForcesAndEnergy(true, true);
+    double energy = context.calcForcesAndEnergy(true, true, context.getIntegrator().getIntegrationForceGroups());
     long long* force = (long long*) cc.getPinnedBuffer();
     cc.getLongForceBuffer().download(force);
     double forceScale = -1.0/0x100000000;

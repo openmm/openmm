@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,6 +31,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
+#include "openmm/CustomExternalForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
@@ -286,6 +287,31 @@ void testInitialTemperature() {
     ASSERT_USUALLY_EQUAL_TOL(targetTemperature, temperature, 0.01);
 }
 
+void testForceGroups() {
+    System system;
+    system.addParticle(1.0);
+    LangevinIntegrator integrator(0.0, 1.0, 0.01);
+    integrator.setIntegrationForceGroups(1<<1);
+    CustomExternalForce* f1 = new CustomExternalForce("x");
+    f1->addParticle(0);
+    f1->setForceGroup(1);
+    CustomExternalForce* f2 = new CustomExternalForce("y");
+    f2->addParticle(0);
+    f2->setForceGroup(2);
+    system.addForce(f1);
+    system.addForce(f2);
+    Context context(system, integrator, platform);
+    context.setPositions(vector<Vec3>(1));
+
+    // Take one step and verify that the position was updated based only on f1.
+
+    integrator.step(1);
+    Vec3 pos = context.getState(State::Positions).getPositions()[0];
+    ASSERT(pos[0] < 0);
+    ASSERT(pos[1] == 0);
+    ASSERT(pos[2] == 0);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -297,6 +323,7 @@ int main(int argc, char* argv[]) {
         testConstrainedMasslessParticles();
         testRandomSeed();
         testInitialTemperature();
+        testForceGroups();
         runPlatformTests();
     }
     catch(const exception& e) {
