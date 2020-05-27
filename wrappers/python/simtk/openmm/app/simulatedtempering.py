@@ -12,7 +12,7 @@ Portions copyright (c) 2015 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
-Permission is hereby granted, free of charge, to any person obtaining a
+Permission is hereby granted, free of charge, to any person obtaining a 
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -55,29 +55,29 @@ except: have_numpy = False
 
 class SimulatedTempering(object):
     """SimulatedTempering implements the simulated tempering algorithm for accelerated sampling.
-
+    
     It runs a simulation while allowing the temperature to vary.  At high temperatures, it can more easily cross
     energy barriers to explore a wider area of conformation space.  At low temperatures, it can thoroughly
     explore each local region.  For details, see Marinari, E. and Parisi, G., Europhys. Lett. 19(6). pp. 451-458 (1992).
-
+    
     The set of temperatures to sample can be specified in two ways.  First, you can explicitly provide a list
     of temperatures by using the "temperatures" argument.  Alternatively, you can specify the minimum and
     maximum temperatures, and the total number of temperatures to use.  The temperatures are chosen spaced
     exponentially between the two extremes.  For example,
-
+    
     st = SimulatedTempering(simulation, numTemperatures=15, minTemperature=300*kelvin, maxTemperature=450*kelvin)
-
+    
     After creating the SimulatedTempering object, call step() on it to run the simulation.
-
+    
     Transitions between temperatures are performed at regular intervals, as specified by the "tempChangeInterval"
     argument.  For each transition, a new temperature is selected using the independence sampling method, as
     described in Chodera, J. and Shirts, M., J. Chem. Phys. 135, 194110 (2011).
-
+    
     Simulated tempering requires a "weight factor" for each temperature.  Ideally, these should be chosen so
     the simulation spends equal time at every temperature.  You can specify the list of weights to use with the
     optional "weights" argument.  If this is omitted, weights are selected automatically using the Wang-Landau
     algorithm as described in Wang, F. and Landau, D. P., Phys. Rev. Lett. 86(10), pp. 2050-2053 (2001).
-
+    
     To properly analyze the results of the simulation, it is important to know the temperature and weight factors
     at every point in time.  The SimulatedTempering object functions as a reporter, writing this information
     to a file or stdout at regular intervals (which should match the interval at which you save frames from the
@@ -87,7 +87,7 @@ class SimulatedTempering(object):
 
     def __init__(self, simulation, temperatures=None, numTemperatures=None, minTemperature=None, maxTemperature=None, weights=None, tempChangeInterval=25, reportInterval=1000, reportFile=stdout):
         """Create a new SimulatedTempering.
-
+        
         Parameters
         ----------
         simulation: Simulation
@@ -108,7 +108,7 @@ class SimulatedTempering(object):
             The interval (in time steps) at which to write information to the report file
         reportFile: string or file
             The file to write reporting information to, specified as a file name or file object
-        """
+        """        
         self.simulation = simulation
         if temperatures is None:
             if unit.is_quantity(minTemperature):
@@ -143,9 +143,9 @@ class SimulatedTempering(object):
                 self._out = open(reportFile, 'w', 1)
         else:
             self._out = reportFile
-
+        
         # Initialize the weights.
-
+        
         if weights is None:
             self._weights = [0.0]*numTemperatures
             self._updateWeights = True
@@ -157,12 +157,12 @@ class SimulatedTempering(object):
             self._updateWeights = False
 
         # Select the initial temperature.
-
+        
         self.currentTemperature = 0
         self.simulation.integrator.setTemperature(self.temperatures[self.currentTemperature])
-
+        
         # Add a reporter to the simulation which will handle the updates and reports.
-
+        
         class STReporter(object):
             def __init__(self, st):
                 self.st = st
@@ -181,11 +181,11 @@ class SimulatedTempering(object):
                     st._attemptTemperatureChange(state)
                 if simulation.currentStep%st.reportInterval == 0:
                     st._writeReport()
-
+        
         simulation.reporters.append(STReporter(self))
-
+        
         # Write out the header line.
-
+        
         headers = ['Steps', 'Temperature (K)']
         for t in self.temperatures:
             headers.append('%gK Weight' % t.value_in_unit(unit.kelvin))
@@ -194,7 +194,7 @@ class SimulatedTempering(object):
     def __del__(self):
         if self._openedFile:
             self._out.close()
-
+    
     @property
     def weights(self):
         return [x-self._weights[0] for x in self._weights]
@@ -202,10 +202,10 @@ class SimulatedTempering(object):
     def step(self, steps):
         """Advance the simulation by integrating a specified number of time steps."""
         self.simulation.step(steps)
-
+    
     def _attemptTemperatureChange(self, state):
         """Attempt to move to a different temperature."""
-
+        
         # Compute the probability for each temperature.  This is done in log space to avoid overflow.
 
         logProbability = [(self._weights[i]-self.inverseTemperatures[i]*state.getPotentialEnergy()) for i in range(len(self._weights))]
@@ -217,7 +217,7 @@ class SimulatedTempering(object):
             if r < probability[j]:
                 if j != self.currentTemperature:
                     # Rescale the velocities.
-
+                    
                     scale = math.sqrt(self.temperatures[j]/self.temperatures[self.currentTemperature])
                     if have_numpy:
                         velocities = scale*state.getVelocities(asNumpy=True).value_in_unit(unit.nanometers/unit.picoseconds)
@@ -226,26 +226,26 @@ class SimulatedTempering(object):
                     self.simulation.context.setVelocities(velocities)
 
                     # Select this temperature.
-
+                    
                     self._hasMadeTransition = True
                     self.currentTemperature = j
                     self.simulation.integrator.setTemperature(self.temperatures[j])
                 if self._updateWeights:
                     # Update the weight factors.
-
+                    
                     self._weights[j] -= self._weightUpdateFactor
                     self._histogram[j] += 1
                     minCounts = min(self._histogram)
                     if minCounts > 20 and minCounts >= 0.2*sum(self._histogram)/len(self._histogram):
                         # Reduce the weight update factor and reset the histogram.
-
+                        
                         self._weightUpdateFactor *= 0.5
                         self._histogram = [0]*len(self.temperatures)
                         self._weights = [x-self._weights[0] for x in self._weights]
                     elif not self._hasMadeTransition and probability[self.currentTemperature] > 0.99:
                         # Rapidly increase the weight update factor at the start of the simulation to find
                         # a reasonable starting value.
-
+                        
                         self._weightUpdateFactor *= 2.0
                         self._histogram = [0]*len(self.temperatures)
                 return

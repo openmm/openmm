@@ -40,7 +40,7 @@ namespace OpenMM {
 /**
  * This is a proxy for serializing Continuous1DFunction objects.
  */
-
+    
 class OPENMM_EXPORT Continuous1DFunctionProxy : public SerializationProxy {
 public:
     Continuous1DFunctionProxy();
@@ -51,7 +51,7 @@ public:
 /**
  * This is a proxy for serializing Continuous2DFunction objects.
  */
-
+    
 class OPENMM_EXPORT Continuous2DFunctionProxy : public SerializationProxy {
 public:
     Continuous2DFunctionProxy();
@@ -62,7 +62,7 @@ public:
 /**
  * This is a proxy for serializing Continuous3DFunction objects.
  */
-
+    
 class OPENMM_EXPORT Continuous3DFunctionProxy : public SerializationProxy {
 public:
     Continuous3DFunctionProxy();
@@ -73,7 +73,7 @@ public:
 /**
  * This is a proxy for serializing Discrete1DFunction objects.
  */
-
+    
 class OPENMM_EXPORT Discrete1DFunctionProxy : public SerializationProxy {
 public:
     Discrete1DFunctionProxy();
@@ -84,7 +84,7 @@ public:
 /**
  * This is a proxy for serializing Discrete2DFunction objects.
  */
-
+    
 class OPENMM_EXPORT Discrete2DFunctionProxy : public SerializationProxy {
 public:
     Discrete2DFunctionProxy();
@@ -95,7 +95,7 @@ public:
 /**
  * This is a proxy for serializing Discrete3DFunction objects.
  */
-
+    
 class OPENMM_EXPORT Discrete3DFunctionProxy : public SerializationProxy {
 public:
     Discrete3DFunctionProxy();
