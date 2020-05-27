@@ -12,6 +12,8 @@
 // for min(), max() below
 #include <cmath>
 // for abs() below
+#include <limits>
+// for numeric_limits
 
 using namespace TNT;
 using namespace std;
@@ -247,6 +249,7 @@ class SVD
       int pp = p-1;
       int iter = 0;
       Real eps(pow(2.0,-52.0));
+      Real tiny = numeric_limits<Real>::min();
       while (p > 0) {
          int k=0;
 		 int kase=0;
@@ -267,7 +270,7 @@ class SVD
             if (k == -1) {
                break;
             }
-            if (abs(e[k]) <= eps*(abs(s[k]) + abs(s[k+1]))) {
+            if (abs(e[k]) <= tiny + eps*(abs(s[k]) + abs(s[k+1]))) {
                e[k] = 0.0;
                break;
             }
@@ -282,7 +285,7 @@ class SVD
                }
                Real t( (ks != p ? abs(e[ks]) : 0.) + 
                           (ks != k+1 ? abs(e[ks-1]) : 0.));
-               if (abs(s[ks]) <= eps*t)  {
+               if (abs(s[ks]) <= tiny + eps*t)  {
                   s[ks] = 0.0;
                   break;
                }

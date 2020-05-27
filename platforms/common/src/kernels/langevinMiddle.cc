@@ -28,7 +28,7 @@ KERNEL void integrateLangevinMiddlePart2(int numAtoms, GLOBAL mixed4* RESTRICT v
         ) {
     mixed vscale = paramBuffer[VelScale];
     mixed noisescale = paramBuffer[NoiseScale];
-    mixed halfdt = 0.5*dt[0].y;
+    mixed halfdt = 0.5f*dt[0].y;
     int index = GLOBAL_ID;
     randomIndex += index;
     while (index < numAtoms) {

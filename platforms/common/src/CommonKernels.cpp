@@ -5640,20 +5640,68 @@ double CommonIntegrateLangevinMiddleStepKernel::computeKineticEnergy(ContextImpl
     return cc.getIntegrationUtilities().computeKineticEnergy(0.0);
 }
 
-void CommonIntegrateVelocityVerletStepKernel::initialize(const System& system, const NoseHooverIntegrator& integrator) {
+void CommonIntegrateNoseHooverStepKernel::initialize(const System& system, const NoseHooverIntegrator& integrator) {
     cc.initializeContexts();
+    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
     map<string, string> defines;
     defines["BOLTZ"] = cc.doubleToString(BOLTZ);
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::velocityVerlet, defines);
-    kernel1 = program->createKernel("integrateVelocityVerletPart1");
-    kernel2 = program->createKernel("integrateVelocityVerletPart2");
-    kernel3 = program->createKernel("integrateVelocityVerletPart3");
-    kernelHardWall = program->createKernel("integrateVelocityVerletHardWall");
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::noseHooverIntegrator, defines);
+    kernel1 = program->createKernel("integrateNoseHooverMiddlePart1");
+    kernel2 = program->createKernel("integrateNoseHooverMiddlePart2");
+    kernel3 = program->createKernel("integrateNoseHooverMiddlePart3");
+    kernel4 = program->createKernel("integrateNoseHooverMiddlePart4");
+    if (useDouble) {
+        oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+    } else {
+        oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+    }
+    kernelHardWall = program->createKernel("integrateNoseHooverHardWall");
     prevMaxPairDistance = -1.0f;
     maxPairDistanceBuffer.initialize<float>(cc, 1, "maxPairDistanceBuffer");
+
+    int workGroupSize = std::min(cc.getMaxThreadBlockSize(), 512);
+    defines["WORK_GROUP_SIZE"] = std::to_string(workGroupSize);
+
+    defines["BEGIN_YS_LOOP"] = "const real arr[1] = {1.0};"
+                               "for(int i=0;i<1;++i) {"
+                               "const real ys = arr[i];";
+    defines["END_YS_LOOP"] = "}";
+    program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
+    propagateKernels[1] = program->createKernel("propagateNoseHooverChain");
+
+    defines["BEGIN_YS_LOOP"] = "const real arr[3] = {0.828981543588751, -0.657963087177502, 0.828981543588751};"
+                               "for(int i=0;i<3;++i) {"
+                               "const real ys = arr[i];";
+    program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
+    propagateKernels[3] = program->createKernel("propagateNoseHooverChain");
+
+    defines["BEGIN_YS_LOOP"] = "const real arr[5] = {0.2967324292201065, 0.2967324292201065, -0.186929716880426, 0.2967324292201065, 0.2967324292201065};"
+                               "for(int i=0;i<5;++i) {"
+                               "const real ys = arr[i];";
+    program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
+    propagateKernels[5] = program->createKernel("propagateNoseHooverChain");
+
+    defines["BEGIN_YS_LOOP"] = "const real arr[7] = {0.784513610477560, 0.235573213359357, -1.17767998417887, 1.31518632068391,-1.17767998417887, 0.235573213359357, 0.784513610477560};"
+                               "for(int i=0;i<7;++i) {"
+                               "const real ys = arr[i];";
+    program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
+    propagateKernels[7] = program->createKernel("propagateNoseHooverChain");
+    program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
+    reduceEnergyKernel = program->createKernel("reduceEnergyPair");
+
+    computeHeatBathEnergyKernel = program->createKernel("computeHeatBathEnergy");
+    computeAtomsKineticEnergyKernel = program->createKernel("computeAtomsKineticEnergy");
+    computePairsKineticEnergyKernel = program->createKernel("computePairsKineticEnergy");
+    scaleAtomsVelocitiesKernel = program->createKernel("scaleAtomsVelocities");
+    scalePairsVelocitiesKernel = program->createKernel("scalePairsVelocities");
+    int energyBufferSize = cc.getEnergyBuffer().getSize();
+    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
+        energyBuffer.initialize<mm_double2>(cc, energyBufferSize, "energyBuffer");
+    else
+        energyBuffer.initialize<mm_float2>(cc, energyBufferSize, "energyBuffer");
 }
 
-void CommonIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
+void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     double dt = integrator.getStepSize();
@@ -5700,32 +5748,39 @@ void CommonIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, cons
         pairListBuffer.upload(tmp);
         pairTemperatureBuffer.upload(tmp2);
     }
-
+    int totalAtoms = cc.getNumAtoms();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         kernel1->addArg(numAtoms);
         kernel1->addArg(numPairs);
         kernel1->addArg(paddedNumAtoms);
-        kernel1->addArg(cc.getIntegrationUtilities().getStepSize());
-        kernel1->addArg(cc.getPosq());
         kernel1->addArg(cc.getVelm());
         kernel1->addArg(cc.getLongForceBuffer());
-        kernel1->addArg(integration.getPosDelta());
+        kernel1->addArg(integration.getStepSize());
         kernel1->addArg(numAtoms > 0 ? atomListBuffer : cc.getEnergyBuffer()); // The array is not used if num == 0
         kernel1->addArg(numPairs > 0 ? pairListBuffer : cc.getEnergyBuffer()); // The array is not used if num == 0
-        if (cc.getUseMixedPrecision())
-            kernel1->addArg(cc.getPosqCorrection());
-        kernel2->addArg(numParticles);
-        kernel2->addArg(cc.getIntegrationUtilities().getStepSize());
-        kernel2->addArg(cc.getPosq());
+        kernel2->addArg(totalAtoms);
         kernel2->addArg(cc.getVelm());
         kernel2->addArg(integration.getPosDelta());
+        kernel2->addArg(oldDelta);
+        kernel2->addArg(integration.getStepSize());
+        kernel3->addArg(totalAtoms);
+        kernel3->addArg(cc.getVelm());
+        kernel3->addArg(integration.getPosDelta());
+        kernel3->addArg(oldDelta);
+        kernel3->addArg(integration.getStepSize());
+        kernel4->addArg(totalAtoms);
+        kernel4->addArg(cc.getPosq());
+        kernel4->addArg(cc.getVelm());
+        kernel4->addArg(integration.getPosDelta());
+        kernel4->addArg(oldDelta);
+        kernel4->addArg(integration.getStepSize());
         if (cc.getUseMixedPrecision())
-            kernel2->addArg(cc.getPosqCorrection());
+            kernel4->addArg(cc.getPosqCorrection());
         if (numPairs > 0) {
             kernelHardWall->addArg(numPairs);
             kernelHardWall->addArg(maxPairDistanceBuffer);
-            kernelHardWall->addArg(cc.getIntegrationUtilities().getStepSize());
+            kernelHardWall->addArg(integration.getStepSize());
             kernelHardWall->addArg(cc.getPosq());
             kernelHardWall->addArg(cc.getVelm());
             kernelHardWall->addArg(pairListBuffer);
@@ -5733,78 +5788,50 @@ void CommonIntegrateVelocityVerletStepKernel::execute(ContextImpl& context, cons
             if (cc.getUseMixedPrecision())
                 kernelHardWall->addArg(cc.getPosqCorrection());
         }
-        kernel3->addArg(numAtoms);
-        kernel3->addArg(numPairs);
-        kernel3->addArg(paddedNumAtoms);
-        kernel3->addArg(cc.getIntegrationUtilities().getStepSize());
-        kernel3->addArg(cc.getPosq());
-        kernel3->addArg(cc.getVelm());
-        kernel3->addArg(cc.getLongForceBuffer());
-        kernel3->addArg(integration.getPosDelta());
-        kernel3->addArg(numAtoms > 0 ? atomListBuffer : cc.getEnergyBuffer()); // The array is not used if num == 0
-        kernel3->addArg(numPairs > 0 ? pairListBuffer : cc.getEnergyBuffer()); // The array is not used if num == 0
-        if (cc.getUseMixedPrecision())
-            kernel3->addArg(cc.getPosqCorrection());
     }
 
     /*
-     * Carry out the integration
+     * Carry out the LF-middle integration (c.f. J. Phys. Chem. A 2019, 123, 6056−6079)
      */
-
-    // Advance the velocities a half step
+    // Velocity update
     kernel1->execute(std::max(numAtoms, numPairs));
-    integration.applyConstraints(integrator.getConstraintTolerance());
-    // Advance particle positions a full step
+    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+    // Position update
     kernel2->execute(numParticles);
+    // Apply the thermostat
+    int numChains = integrator.getNumThermostats();
+    for(int chain = 0; chain < numChains; ++chain) {
+        const auto &thermostatChain = integrator.getThermostat(chain);
+        auto KEs = computeMaskedKineticEnergy(context, thermostatChain, false);
+        auto scaleFactors = propagateChain(context, thermostatChain, KEs, dt);
+        scaleVelocities(context, thermostatChain, scaleFactors);
+    }
+    // Position update
+    kernel3->execute(numParticles);
+    integration.applyConstraints(integrator.getConstraintTolerance());
+    // Apply constraint forces
+    kernel4->execute(numAtoms);
     // Make sure any Drude-like particles have not wandered too far from home
     if (numPairs > 0) kernelHardWall->execute(numPairs);
     integration.computeVirtualSites();
-    context.calcForcesAndEnergy(true, false);
-    forcesAreValid = true;
-    // Update velocities another half step
-    kernel3->execute(std::max(numAtoms, numPairs));
-    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
 
+    // Update the time and step count.
     cc.setTime(cc.getTime()+dt);
     cc.setStepCount(cc.getStepCount()+1);
     cc.reorderAtoms();
+
+    // Reduce UI lag.
+#ifdef WIN32
+    cc.flushQueue();
+#endif
 }
 
-double CommonIntegrateVelocityVerletStepKernel::computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) {
+double CommonIntegrateNoseHooverStepKernel::computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) {
     return cc.getIntegrationUtilities().computeKineticEnergy(0);
 }
 
-void CommonNoseHooverChainKernel::initialize() {
-    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
-    map<string, string> defines;
-    int workGroupSize = std::min(cc.getMaxThreadBlockSize(), 512);
-    defines["WORK_GROUP_SIZE"] = std::to_string(workGroupSize);
-    defines["BEGIN_YS_LOOP"] = "const real arr[1] = {1.0}; for(int i=0;i<1;++i) { const real ys = arr[i];";
-    defines["END_YS_LOOP"] = "}";
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
-    propagateKernels[1] = program->createKernel("propagateNoseHooverChain");
-    defines["BEGIN_YS_LOOP"] = "const real arr[3] = {0.828981543588751, -0.657963087177502, 0.828981543588751}; for(int i=0;i<3;++i) { const real ys = arr[i];";
-    program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
-    propagateKernels[3] = program->createKernel("propagateNoseHooverChain");
-    defines["BEGIN_YS_LOOP"] = "const real arr[5] = {0.2967324292201065, 0.2967324292201065, -0.186929716880426, 0.2967324292201065, 0.2967324292201065}; for(int i=0;i<5;++i) { const real ys = arr[i];";
-    program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
-    propagateKernels[5] = program->createKernel("propagateNoseHooverChain");
-    program = cc.compileProgram(CommonKernelSources::noseHooverChain, defines);
-    reduceEnergyKernel = program->createKernel("reduceEnergyPair");
 
-    computeHeatBathEnergyKernel = program->createKernel("computeHeatBathEnergy");
-    computeAtomsKineticEnergyKernel = program->createKernel("computeAtomsKineticEnergy");
-    computePairsKineticEnergyKernel = program->createKernel("computePairsKineticEnergy");
-    scaleAtomsVelocitiesKernel = program->createKernel("scaleAtomsVelocities");
-    scalePairsVelocitiesKernel = program->createKernel("scalePairsVelocities");
-    int energyBufferSize = cc.getEnergyBuffer().getSize();
-    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
-        energyBuffer.initialize<mm_double2>(cc, energyBufferSize, "energyBuffer");
-    else
-        energyBuffer.initialize<mm_float2>(cc, energyBufferSize, "energyBuffer");
-}
-
-std::pair<double, double> CommonNoseHooverChainKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> kineticEnergies, double timeStep) {
+std::pair<double, double> CommonIntegrateNoseHooverStepKernel::propagateChain(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> kineticEnergies, double timeStep) {
     bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
     int chainID = nhc.getChainID();
     int nAtoms = nhc.getThermostatedAtoms().size();
@@ -5813,11 +5840,9 @@ std::pair<double, double> CommonNoseHooverChainKernel::propagateChain(ContextImp
     int numYS = nhc.getNumYoshidaSuzukiTimeSteps();
     int numMTS = nhc.getNumMultiTimeSteps();
 
-    if (numYS != 1 && numYS != 3 && numYS != 5) {
-        throw OpenMMException("Number of Yoshida Suzuki time steps has to be 1, 3, or 5.");
+    if (numYS != 1 && numYS != 3 && numYS != 5 && numYS != 7) {
+        throw OpenMMException("Number of Yoshida Suzuki time steps has to be 1, 3, 5, or 7.");
     }
-
-    auto & chainState = cc.getIntegrationUtilities().getNoseHooverChainState();
 
     if (!scaleFactorBuffer.isInitialized() || scaleFactorBuffer.getSize() == 0) {
         if (useDouble) {
@@ -5973,14 +5998,12 @@ std::pair<double, double> CommonNoseHooverChainKernel::propagateChain(ContextImp
     return {0, 0};
 }
 
-double CommonNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
+double CommonIntegrateNoseHooverStepKernel::computeHeatBathEnergy(ContextImpl& context, const NoseHooverChain &nhc) {
 
     bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
 
     int chainID = nhc.getChainID();
     int chainLength = nhc.getChainLength();
-
-    auto & chainState = cc.getIntegrationUtilities().getNoseHooverChainState();
 
     bool absChainIsValid = chainState.count(2*chainID) != 0 &&
                            chainState[2*chainID].isInitialized() &&
@@ -6058,7 +6081,7 @@ double CommonNoseHooverChainKernel::computeHeatBathEnergy(ContextImpl& context, 
         return *((float*) pinnedBuffer);
 }
 
-std::pair<double, double> CommonNoseHooverChainKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &nhc, bool downloadValue) {
+std::pair<double, double> CommonIntegrateNoseHooverStepKernel::computeMaskedKineticEnergy(ContextImpl& context, const NoseHooverChain &nhc, bool downloadValue) {
 
     bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
 
@@ -6153,7 +6176,7 @@ std::pair<double, double> CommonNoseHooverChainKernel::computeMaskedKineticEnerg
     return KEs;
 }
 
-void CommonNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> scaleFactor) {
+void CommonIntegrateNoseHooverStepKernel::scaleVelocities(ContextImpl& context, const NoseHooverChain &nhc, std::pair<double, double> scaleFactor) {
     // For now we assume that the atoms and pairs info is valid, because compute{Atoms|Pairs}KineticEnergy must have been
     // called before this kernel.  If that ever ceases to be true, some sanity checks are needed here.
 
@@ -6181,6 +6204,54 @@ void CommonNoseHooverChainKernel::scaleVelocities(ContextImpl& context, const No
         scalePairsVelocitiesKernel->setArg(1, nPairs);
         scalePairsVelocitiesKernel->setArg(3, pairlists[chainID]);
         scalePairsVelocitiesKernel->execute(nPairs);
+    }
+}
+
+void CommonIntegrateNoseHooverStepKernel::createCheckpoint(ContextImpl& context, ostream& stream) const {
+    int numChains = chainState.size();
+    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
+    stream.write((char*) &numChains, sizeof(int));
+    for (auto& state : chainState){
+        int chainID = state.first;
+        int chainLength = state.second.getSize();
+        stream.write((char*) &chainID, sizeof(int));
+        stream.write((char*) &chainLength, sizeof(int));
+        if (useDouble) {
+            vector<mm_double2> stateVec;
+            state.second.download(stateVec);
+            stream.write((char*) stateVec.data(), sizeof(mm_double2)*chainLength);
+        }
+        else {
+            vector<mm_float2> stateVec;
+            state.second.download(stateVec);
+            stream.write((char*) stateVec.data(), sizeof(mm_float2)*chainLength);
+        }
+    }
+}
+
+void CommonIntegrateNoseHooverStepKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    int numChains;
+    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
+    stream.read((char*) &numChains, sizeof(int));
+    chainState.clear();
+    for (int i = 0; i < numChains; i++) {
+        int chainID, chainLength;
+        stream.read((char*) &chainID, sizeof(int));
+        stream.read((char*) &chainLength, sizeof(int));
+        if (useDouble) {
+            chainState[chainID] = ComputeArray();
+            chainState[chainID].initialize<mm_double2>(cc, chainLength, "chainState" + to_string(chainID));
+            vector<mm_double2> stateVec(chainLength);
+            stream.read((char*) &stateVec[0], sizeof(mm_double2)*chainLength);
+            chainState[chainID].upload(stateVec);
+        }
+        else {
+            chainState[chainID] = ComputeArray();
+            chainState[chainID].initialize<mm_float2>(cc, chainLength, "chainState" + to_string(chainID));
+            vector<mm_float2> stateVec(chainLength);
+            stream.read((char*) &stateVec[0], sizeof(mm_float2)*chainLength);
+            chainState[chainID].upload(stateVec);
+        }
     }
 }
 

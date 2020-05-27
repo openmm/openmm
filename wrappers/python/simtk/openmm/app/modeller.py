@@ -1028,44 +1028,14 @@ class Modeller(object):
             This is useful when the Topology represents one piece of a larger
             molecule, so chains are not terminated properly.
         """
-        # Create copies of all residue templates that have had all extra points removed.
-
-        templatesNoEP = {}
-        for resName, template  in forcefield._templates.items():
-            if any(atom.element is None for atom in template.atoms):
-                index = 0
-                newIndex = {}
-                newTemplate = ForceField._TemplateData(resName)
-                for i, atom in enumerate(template.atoms):
-                    if atom.element is not None:
-                        newIndex[i] = index
-                        index += 1
-                        newAtom = ForceField._TemplateAtomData(atom.name, atom.type, atom.element)
-                        newAtom.externalBonds = atom.externalBonds
-                        newTemplate.atoms.append(newAtom)
-                for b1, b2 in template.bonds:
-                    if b1 in newIndex and b2 in newIndex:
-                        newTemplate.bonds.append((newIndex[b1], newIndex[b2]))
-                        newTemplate.atoms[newIndex[b1]].bondedTo.append(newIndex[b2])
-                        newTemplate.atoms[newIndex[b2]].bondedTo.append(newIndex[b1])
-                for b in template.externalBonds:
-                    if b in newIndex:
-                        newTemplate.externalBonds.append(newIndex[b])
-                templatesNoEP[template] = newTemplate
-
-        # Record which atoms are bonded to each other atom, with and without extra particles.
+        # Record which atoms are bonded to each other atom.
 
         bondedToAtom = []
-        bondedToAtomNoEP = []
         for atom in self.topology.atoms():
             bondedToAtom.append(set())
-            bondedToAtomNoEP.append(set())
         for atom1, atom2 in self.topology.bonds():
             bondedToAtom[atom1.index].add(atom2.index)
             bondedToAtom[atom2.index].add(atom1.index)
-            if atom1.element is not None and atom2.element is not None:
-                bondedToAtomNoEP[atom1.index].add(atom2.index)
-                bondedToAtomNoEP[atom2.index].add(atom1.index)
 
         # If the force field has a DrudeForce, record the types of Drude particles and their parents since we'll
         # need them for picking particle positions.
@@ -1075,6 +1045,10 @@ class Modeller(object):
             if isinstance(force, DrudeGenerator):
                 for type in force.typeMap:
                     drudeTypeMap[type] = force.typeMap[type][0]
+
+        # Identify the template to use for each residue.
+
+        templates = forcefield._matchAllResiduesToTemplates(ForceField._SystemData(self.topology), self.topology, {}, False, True, False)
 
         # Create the new Topology.
 
@@ -1087,16 +1061,8 @@ class Modeller(object):
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
                 newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
-
-                # Look for a matching template.
-
-                matchFound = False
-                signature = _createResidueSignature([atom.element for atom in residue.atoms()])
-                if signature in forcefield._templateSignatures:
-                    for t in forcefield._templateSignatures[signature]:
-                        if compiled.matchResidueToTemplate(residue, t, bondedToAtom, ignoreExternalBonds) is not None:
-                            matchFound = True
-                if matchFound:
+                template = templates[residue.index]
+                if len(template.atoms) == len(list(residue.atoms())):
                     # Just copy the residue over.
 
                     for atom in residue.atoms():
@@ -1104,28 +1070,17 @@ class Modeller(object):
                         newAtoms[atom] = newAtom
                         newPositions.append(deepcopy(self.positions[atom.index]))
                 else:
-                    # There's no matching template.  Try to find one that matches based on everything except
-                    # extra points.
+                    # Record the corresponding atoms.
 
-                    template = None
-                    residueNoEP = Residue(residue.name, residue.index, residue.chain, residue.id, residue.insertionCode)
-                    residueNoEP._atoms = [atom for atom in residue.atoms() if atom.element is not None]
-                    if signature in forcefield._templateSignatures:
-                        for t in forcefield._templateSignatures[signature]:
-                            if t in templatesNoEP:
-                                matches = compiled.matchResidueToTemplate(residueNoEP, templatesNoEP[t], bondedToAtomNoEP, ignoreExternalBonds)
-                                if matches is not None:
-                                    template = t;
-                                    # Record the corresponding atoms.
-                                    matchingAtoms = {}
-                                    for atom, match in zip(residueNoEP.atoms(), matches):
-                                        templateAtomName = templatesNoEP[t].atoms[match].name
-                                        for templateAtom in template.atoms:
-                                            if templateAtom.name == templateAtomName:
-                                                matchingAtoms[templateAtom] = atom
-                                    break
-                    if template is None:
-                        raise ValueError('Residue %d (%s) does not match any template defined by the ForceField.' % (residue.index+1, residue.name))
+                    matches = compiled.matchResidueToTemplate(residue, template, bondedToAtom, ignoreExternalBonds, True)
+                    atomsNoEP = [a for a in residue.atoms() if a.element is not None]
+                    templateAtomsNoEP = [a for a in template.atoms if a.element is not None]
+                    matchingAtoms = {}
+                    for atom, match in zip(atomsNoEP, matches):
+                        templateAtomName = templateAtomsNoEP[match].name
+                        for templateAtom in template.atoms:
+                            if templateAtom.name == templateAtomName:
+                                matchingAtoms[templateAtom] = atom
 
                     # Add the regular atoms.
 

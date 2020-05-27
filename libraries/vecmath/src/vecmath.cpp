@@ -1,4 +1,4 @@
-#if defined(__ANDROID__)
+#if defined(__ARM__) || defined(__ARM64__)
     #include "neon_mathfun.h"
 #else
     #if !defined(__PNACL__)

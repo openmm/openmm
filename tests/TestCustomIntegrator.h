@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -48,6 +48,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <sstream>
 #include <vector>
 
 using namespace OpenMM;
@@ -1156,6 +1157,31 @@ void testInitialTemperature() {
     ASSERT_USUALLY_EQUAL_TOL(targetTemperature, temperature, 0.01);
 }
 
+void testCheckpoint() {
+    // Test that integrator variables get loaded correctly from checkpoints.
+    System system;
+    system.addParticle(1.0);
+    CustomIntegrator integrator(0.001);
+    integrator.addGlobalVariable("a", 1.0);
+    integrator.addPerDofVariable("b", 2.0);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1, Vec3());
+    context.setPositions(positions);
+    integrator.setGlobalVariable(0, 5.0);
+    vector<Vec3> b1(1, Vec3(1, 2, 3));
+    integrator.setPerDofVariable(0, b1);
+    stringstream checkpoint; 
+    context.createCheckpoint(checkpoint);
+    integrator.setGlobalVariable(0, 10.0);
+    vector<Vec3> b2(1, Vec3(4, 5, 6));
+    integrator.setPerDofVariable(0, b2);
+    context.loadCheckpoint(checkpoint);
+    ASSERT_EQUAL(5.0, integrator.getGlobalVariable(0));
+    vector<Vec3> b3;
+    integrator.getPerDofVariable(0, b3);
+    ASSERT_EQUAL_VEC(b1[0], b3[0], 1e-6);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -1184,6 +1210,7 @@ int main(int argc, char* argv[]) {
         testVectorFunctions();
         testRecordEnergy();
         testInitialTemperature();
+        testCheckpoint();
         runPlatformTests();
     }
     catch(const exception& e) {

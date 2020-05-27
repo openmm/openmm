@@ -251,6 +251,34 @@ class TestForceField(unittest.TestCase):
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
 
+    def test_DrudeMass(self):
+        """Test that setting the mass of Drude particles works correctly."""
+
+        forcefield = ForceField('charmm_polar_2013.xml')
+        pdb = PDBFile('systems/ala_ala_ala.pdb')
+        modeller = Modeller(pdb.topology, pdb.positions)
+        modeller.addExtraParticles(forcefield)
+        system = forcefield.createSystem(modeller.topology, drudeMass=0)
+        trueMass = [system.getParticleMass(i) for i in range(system.getNumParticles())]
+        drudeMass = 0.3*amu
+        system = forcefield.createSystem(modeller.topology, drudeMass=drudeMass)
+        adjustedMass = [system.getParticleMass(i) for i in range(system.getNumParticles())]
+        drudeForce = [f for f in system.getForces() if isinstance(f, DrudeForce)][0]
+        drudeParticles = set()
+        parentParticles = set()
+        for i in range(drudeForce.getNumParticles()):
+            params = drudeForce.getParticleParameters(i)
+            drudeParticles.add(params[0])
+            parentParticles.add(params[1])
+        for i in range(system.getNumParticles()):
+            if i in drudeParticles:
+                self.assertEqual(0*amu, trueMass[i])
+                self.assertEqual(drudeMass, adjustedMass[i])
+            elif i in parentParticles:
+                self.assertEqual(trueMass[i]-drudeMass, adjustedMass[i])
+            else:
+                self.assertEqual(trueMass[i], adjustedMass[i])
+
     def test_Forces(self):
         """Compute forces and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
 

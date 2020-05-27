@@ -53,7 +53,15 @@ public:
     int getBlockSize() const;
     const std::vector<int>& getSortedAtoms() const;
     const std::vector<int>& getBlockNeighbors(int blockIndex) const;
-    const std::vector<char>& getBlockExclusions(int blockIndex) const;
+
+    /**
+     * Bitset for a single block, marking which indexes should be excluded. This data type needs to be big
+     * enough to store all the bits for any possible block size.
+     */
+    using BlockExclusionMask = int16_t;
+
+    const std::vector<BlockExclusionMask>& getBlockExclusions(int blockIndex) const;
+
     /**
      * This routine contains the code executed by each thread.
      */
@@ -64,7 +72,7 @@ private:
     std::vector<int> sortedAtoms;
     std::vector<float> sortedPositions;
     std::vector<std::vector<int> > blockNeighbors;
-    std::vector<std::vector<char> > blockExclusions;
+    std::vector<std::vector<BlockExclusionMask> > blockExclusions;
     // The following variables are used to make information accessible to the individual threads.
     float minx, maxx, miny, maxy, minz, maxz;
     std::vector<std::pair<int, int> > atomBins;

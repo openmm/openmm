@@ -363,7 +363,7 @@ void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, i
             const int blockSize = neighborList->getBlockSize();
             const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
-            const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
+            const auto& blockExclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
                 for (int k = 0; k < blockSize; k++) {
@@ -458,7 +458,7 @@ void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& da
             const int blockSize = neighborList->getBlockSize();
             const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
-            const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
+            const auto& blockExclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
                 for (int k = 0; k < blockSize; k++) {
@@ -545,7 +545,7 @@ void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, 
             const int blockSize = neighborList->getBlockSize();
             const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
-            const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
+            const auto& blockExclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
                 for (int k = 0; k < blockSize; k++) {

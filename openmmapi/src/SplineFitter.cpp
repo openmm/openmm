@@ -86,8 +86,8 @@ void SplineFitter::createPeriodicSpline(const vector<double>& x, const vector<do
 
     // Create the system of equations to solve.
 
-    vector<double> a(n), b(n), c(n), rhs(n);
-    a[0] = 0.0;
+    vector<double> a(n-1), b(n-1), c(n-1), rhs(n-1);
+    a[0] = x[n-1]-x[n-2];
     b[0] = 2.0*(x[1]-x[0]+x[n-1]-x[n-2]);
     c[0] = x[1]-x[0];
     rhs[0] = 6.0*((y[1]-y[0])/(x[1]-x[0]) - (y[n-1]-y[n-2])/(x[n-1]-x[n-2]));
@@ -97,17 +97,14 @@ void SplineFitter::createPeriodicSpline(const vector<double>& x, const vector<do
         c[i] = x[i+1]-x[i];
         rhs[i] = 6.0*((y[i+1]-y[i])/(x[i+1]-x[i]) - (y[i]-y[i-1])/(x[i]-x[i-1]));
     }
-    a[n-1] = 0.0;
-    b[n-1] = 1.0;
-    c[n-1] = 0.0;
-    rhs[n-1] = 0.0;
-    double beta = x[n-1]-x[n-2];
-    double alpha = -1.0;
+    double beta = a[0];
+    double alpha = c[n-2];
     double gamma = -b[0];
 
     // This is a cyclic tridiagonal matrix.  We solve it using the Sherman-Morrison method,
     // which involves solving two tridiagonal systems.
 
+    n--;
     b[0] -= gamma;
     b[n-1] -= alpha*beta/gamma;
     solveTridiagonalMatrix(a, b, c, rhs, deriv);
@@ -118,6 +115,7 @@ void SplineFitter::createPeriodicSpline(const vector<double>& x, const vector<do
     double scale = (deriv[0]+beta*deriv[n-1]/gamma)/(1.0+z[0]+beta*z[n-1]/gamma);
     for (int i = 0; i < n; i++)
         deriv[i] -= scale*z[i];
+    deriv[n] = deriv[0];
 }
 
 double SplineFitter::evaluateSpline(const vector<double>& x, const vector<double>& y, const vector<double>& deriv, double t) {

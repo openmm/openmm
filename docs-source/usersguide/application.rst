@@ -1123,6 +1123,13 @@ algorithm\ :cite:`Tuckerman1992`.  This allows some forces in the system to be e
 frequently than others.  For details on how to use it, consult the API
 documentation.
 
+Multiple Time Step Langevin Integrator
+--------------------------------------
+
+:class:`MTSLangevinIntegrator` is similar to :class:`MTSIntegrator`, but it uses
+the Langevin method to perform constant temperature dynamics.  For details on
+how to use it, consult the API documentation.
+
 Compound Integrator
 -------------------
 

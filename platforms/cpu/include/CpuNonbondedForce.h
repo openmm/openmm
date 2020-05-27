@@ -205,7 +205,7 @@ protected:
 
         static const float TWO_OVER_SQRT_PI;
         static const int NUM_TABLE_POINTS;
-            
+
       /**---------------------------------------------------------------------------------------
       
          Calculate LJ Coulomb pair ixn between two atoms

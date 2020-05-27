@@ -1,6 +1,6 @@
 
 /* Portions copyright (c) 2006-2015 Stanford University and Simbios.
- * Contributors: Pande Group
+ * Contributors: Daniel Towner
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -24,9 +24,21 @@
 
 #include "CpuNonbondedForceFvec.h"
 
-// Very minimal file. It exists purely to be able to compile it in SIMD-4.
+OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec4();
+OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec8();
 
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec4()   {
-    return new OpenMM::CpuNonbondedForceFvec<fvec4>();
+bool isVec8Supported();
+
+OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec() {
+    if (isVec8Supported())
+        return createCpuNonbondedForceVec8();
+    else
+        return createCpuNonbondedForceVec4();
 }
 
+int getVecBlockSize() {
+    if (isVec8Supported())
+        return 8;
+    else
+        return 4;
+}

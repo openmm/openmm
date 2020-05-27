@@ -472,16 +472,11 @@ private:
     int numParticles;
 };
 
-bool isVec8Supported();
-CpuNonbondedForce* createCpuNonbondedForceVec4();
-CpuNonbondedForce* createCpuNonbondedForceVec8();
+CpuNonbondedForce* createCpuNonbondedForceVec();
 
 CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
         data(data), hasInitializedPme(false), hasInitializedDispersionPme(false), nonbonded(NULL) {
-    if (isVec8Supported())
-        nonbonded = createCpuNonbondedForceVec8();
-    else
-        nonbonded = createCpuNonbondedForceVec4();
+    nonbonded = createCpuNonbondedForceVec();
 }
 
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
