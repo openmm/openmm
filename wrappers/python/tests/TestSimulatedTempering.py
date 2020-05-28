@@ -35,7 +35,7 @@ class TestSimulatedTempering(unittest.TestCase):
         
         distances = [[] for i in range(10)]
         count = 0
-        for i in range(7000):
+        for i in range(20000):
             st.step(5)
             pos = simulation.context.getState(getPositions=True).getPositions().value_in_unit(nanometers)
             r = norm(pos[0]-pos[1])
