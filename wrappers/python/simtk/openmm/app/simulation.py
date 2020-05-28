@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2015 Stanford University and the Authors.
+Portions copyright (c) 2012-2020 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -250,7 +250,8 @@ class Simulation(object):
             if next[4]:
                 getEnergy = True
         state = self.context.getState(getPositions=getPositions, getVelocities=getVelocities, getForces=getForces,
-                                      getEnergy=getEnergy, getParameters=True, enforcePeriodicBox=periodic)
+                                      getEnergy=getEnergy, getParameters=True, enforcePeriodicBox=periodic,
+                                      groups=self.context.getIntegrator().getIntegrationForceGroups())
         for reporter, next in reports:
             reporter.report(self, state)
 
