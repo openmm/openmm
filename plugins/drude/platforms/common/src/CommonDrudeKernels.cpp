@@ -282,7 +282,7 @@ void CommonIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
         if (cc.getUseMixedPrecision())
             kernel2->addArg(cc.getPosqCorrection());
         else
-            kernel2->addArg(NULL);
+            kernel2->addArg(nullptr);
         kernel2->addArg(integration.getPosDelta());
         kernel2->addArg(cc.getVelm());
         kernel2->addArg(integration.getStepSize());
@@ -290,7 +290,7 @@ void CommonIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const
         if (cc.getUseMixedPrecision())
             hardwallKernel->addArg(cc.getPosqCorrection());
         else
-            hardwallKernel->addArg(NULL);
+            hardwallKernel->addArg(nullptr);
         hardwallKernel->addArg(cc.getVelm());
         hardwallKernel->addArg(pairParticles);
         hardwallKernel->addArg(integration.getStepSize());
