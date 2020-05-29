@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2020 Stanford University and the Authors.      *
  * Authors: Andreas Krämer and Andrew C. Simmonett                            *
  * Contributors:                                                              *
  *                                                                            *
@@ -337,7 +337,7 @@ void NoseHooverIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         if(context->updateContextState())
             forcesAreValid = false;
-        context->calcForcesAndEnergy(true, false);
+        context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
         kernel.getAs<IntegrateNoseHooverStepKernel>().execute(*context, *this, forcesAreValid);
     }
 }

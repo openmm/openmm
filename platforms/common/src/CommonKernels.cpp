@@ -5709,7 +5709,7 @@ void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const No
 
     // If the atom reordering has occured, the forces from the previous step are permuted and thus invalid.
     // They need to be either sorted or recomputed; here we choose the latter.
-    if (!forcesAreValid || cc.getAtomsWereReordered()) context.calcForcesAndEnergy(true, false);
+    if (!forcesAreValid || cc.getAtomsWereReordered()) context.calcForcesAndEnergy(true, false, integrator.getIntegrationForceGroups());
 
     const auto& atomList = integrator.getAllThermostatedIndividualParticles();
     const auto& pairList = integrator.getAllThermostatedPairs();
@@ -6770,7 +6770,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
 
         // Record the variable names and flags for the force and energy in each step.
 
-        forceGroupFlags.resize(numSteps, -1);
+        forceGroupFlags.resize(numSteps, integrator.getIntegrationForceGroups());
         vector<string> forceGroupName;
         vector<string> energyGroupName;
         for (int i = 0; i < 32; i++) {

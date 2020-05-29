@@ -26,6 +26,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "openmm/Integrator.h"
 #include "openmm/OpenMMException.h"
 #include "SimTKOpenMMUtilities.h"
 #include "openmm/internal/ContextImpl.h"
@@ -55,7 +56,7 @@ void ReferenceNoseHooverDynamics::step1(OpenMM::ContextImpl &context, const Open
                                           double maxPairDistance) {
 
     // first-time-through initialization
-    if (!forcesAreValid) context.calcForcesAndEnergy(true, false);
+    if (!forcesAreValid) context.calcForcesAndEnergy(true, false, context.getIntegrator().getIntegrationForceGroups());
 
     if (getTimeStep() == 0) {
        // invert masses

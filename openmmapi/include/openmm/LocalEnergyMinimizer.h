@@ -43,6 +43,10 @@ namespace OpenMM {
  * force to the potential function.  The strength of the restraining force is steadily increased
  * until the minimum energy configuration satisfies all constraints to within the tolerance
  * specified by the Context's Integrator.
+ * 
+ * Energy minimization is done using the force groups defined by the Integrator.
+ * If you have called setIntegrationForceGroups() on it to restrict the set of forces
+ * used for integration, only the energy of the included forces will be minimized.
  */
 
 class OPENMM_EXPORT LocalEnergyMinimizer {

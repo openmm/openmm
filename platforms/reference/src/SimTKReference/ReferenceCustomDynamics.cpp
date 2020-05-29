@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2011-2017 Stanford University and Simbios.
+/* Portions copyright (c) 2011-2020 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -171,7 +171,7 @@ void ReferenceCustomDynamics::initialize(ContextImpl& context, vector<double>& m
 
     // Record the force group flags for each step.
 
-    forceGroupFlags.resize(numSteps, -1);
+    forceGroupFlags.resize(numSteps, integrator.getIntegrationForceGroups());
     for (int i = 0; i < numSteps; i++)
         if (forceGroup[i] > -1)
             forceGroupFlags[i] = 1<<forceGroup[i];

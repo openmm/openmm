@@ -1623,7 +1623,8 @@ Force Groups
 ************
 
 It is possible to split the Force objects in a System into groups.  Those groups
-can then be evaluated independently of each other.  Some Force classes also
+can then be evaluated independently of each other.  This is done by calling
+:code:`setForceGroup()` on the Force.  Some Force classes also
 provide finer grained control over grouping.  For example, NonbondedForce allows
 direct space computations to be in one group and reciprocal space computations
 in a different group.
@@ -1631,8 +1632,15 @@ in a different group.
 The most important use of force groups is for implementing multiple time step
 algorithms with CustomIntegrator.  For example, you might evaluate the slowly
 changing nonbonded interactions less frequently than the quickly changing bonded
-ones.  It also is useful if you want the ability to query a subset of the forces
-acting on the system.
+ones.  This can be done by putting the slow and fast forces into separate
+groups, then using a :class:`MTSIntegrator` or :class:`MTSLangevinIntegrator`
+that evaluates the groups at different frequencies.
+
+Another important use is to define forces that are not used when integrating
+the equations of motion, but can still be queried efficiently.  To do this,
+call :code:`setIntegrationForceGroups()` on the :class:`Integrator`.  Any groups
+omitted will be ignored during simulation, but can be queried at any time by
+calling :code:`getState()`.
 
 Virtual Sites
 *************
