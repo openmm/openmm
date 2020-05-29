@@ -549,7 +549,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     if (context.getUseMixedPrecision())
         vsitePositionKernel->addArg(context.getPosqCorrection());
     else
-        vsitePositionKernel->addArg(NULL);
+        vsitePositionKernel->addArg(nullptr);
     vsitePositionKernel->addArg(vsite2AvgAtoms);
     vsitePositionKernel->addArg(vsite2AvgWeights);
     vsitePositionKernel->addArg(vsite3AvgAtoms);
@@ -565,7 +565,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     if (context.getUseMixedPrecision())
         vsiteForceKernel->addArg(context.getPosqCorrection());
     else
-        vsiteForceKernel->addArg(NULL);
+        vsiteForceKernel->addArg(nullptr);
     vsiteForceKernel->addArg(); // Skip argument 2: the force array hasn't been created yet.
     vsiteForceKernel->addArg(vsite2AvgAtoms);
     vsiteForceKernel->addArg(vsite2AvgWeights);

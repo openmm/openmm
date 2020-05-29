@@ -6957,7 +6957,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 if (cc.getUseMixedPrecision())
                     kernel->addArg(cc.getPosqCorrection());
                 else
-                    kernel->addArg(NULL);
+                    kernel->addArg(nullptr);
                 kernel->addArg(integration.getPosDelta());
                 kernel->addArg(cc.getVelm());
                 kernel->addArg(cc.getLongForceBuffer());
@@ -6992,7 +6992,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 if (cc.getUseMixedPrecision())
                     kernel->addArg(cc.getPosqCorrection());
                 else
-                    kernel->addArg(NULL);
+                    kernel->addArg(nullptr);
                 kernel->addArg(integration.getPosDelta());
             }
         }
@@ -7048,7 +7048,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         if (cc.getUseMixedPrecision())
             kineticEnergyKernel->addArg(cc.getPosqCorrection());
         else
-            kineticEnergyKernel->addArg(NULL);
+            kineticEnergyKernel->addArg(nullptr);
         kineticEnergyKernel->addArg(integration.getPosDelta());
         kineticEnergyKernel->addArg(cc.getVelm());
         kineticEnergyKernel->addArg(cc.getLongForceBuffer());
