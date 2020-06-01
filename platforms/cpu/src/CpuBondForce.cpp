@@ -41,7 +41,7 @@ CpuBondForce::CpuBondForce() {
 void CpuBondForce::initialize(int numAtoms, int numBonds, int numAtomsPerBond, vector<vector<int> >& bondAtoms, ThreadPool& threads) {
     this->numBonds = numBonds;
     this->numAtomsPerBond = numAtomsPerBond;
-    this->bondAtoms = &bondAtoms[0];
+    this->bondAtoms = bondAtoms.empty() ? nullptr : bondAtoms.data();
     this->threads = &threads;
     int numThreads = threads.getNumThreads();
     int targetBondsPerThread = numBonds/numThreads;
