@@ -1015,12 +1015,23 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
 void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
     if (force.getNumParticles() != numParticles)
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Identify which exceptions are 1-4 interactions.
+
+    set<int> exceptionsWithOffsets;
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        exceptionsWithOffsets.insert(exception);
+    }
     vector<int> nb14s;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-        if (chargeProd != 0.0 || epsilon != 0.0)
+        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
             nb14s.push_back(i);
     }
     if (nb14s.size() != num14)
