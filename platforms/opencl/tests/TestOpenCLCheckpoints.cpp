@@ -95,9 +95,12 @@ void testCheckpoint() {
     
     // Create a new Context that uses multiple devices.
 
-    string deviceIndex = platform.getPropertyValue(context, OpenCLPlatform::OpenCLDeviceIndex());
     map<string, string> props;
+    string deviceIndex = platform.getPropertyValue(context, OpenCLPlatform::OpenCLDeviceIndex());
     props[OpenCLPlatform::OpenCLDeviceIndex()] = deviceIndex+","+deviceIndex;
+    string platformIndex = platform.getPropertyValue(context, OpenCLPlatform::OpenCLPlatformIndex());
+    props[OpenCLPlatform::OpenCLPlatformIndex()] = platformIndex;
+
     VerletIntegrator integrator2(0.001);
     Context context2(system, integrator2, platform, props);
     context2.setPositions(positions);
