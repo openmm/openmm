@@ -18,6 +18,10 @@ DEVICE int reduceMax(int val, LOCAL_ARG int* temp) {
     for (int mask = 16; mask > 0; mask /= 2)
         val = max(val, __shfl_xor_sync(0xffffffff, val, mask));
     return val;
+#elif defined(USE_HIP)
+    for (int mask = 16; mask > 0; mask /= 2)
+        val = max(val, __shfl_xor(val, mask, 32));
+    return val;
 #else
     int indexInWarp = LOCAL_ID%32;
     temp[LOCAL_ID] = val;
