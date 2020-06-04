@@ -7,7 +7,9 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (C) 2020 Advanced Micro Devices, Inc. All Rights        *
+ * Reserved.                                                                  *
+ * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
  * Portions Copyright© 2020 Advanced Micro Devices, Inc. All rights reserved  *
  *                                                                            *
