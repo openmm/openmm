@@ -338,12 +338,10 @@ void TestFvec<FVEC>::testBinaryOps() const {
     ASSERT_VEC_ALMOST_EQUAL(f / v0, applyBinaryFn(fdup, v0, std::divides<float>()));
 
     // Binary functions.
-    using std::min;
-    using std::max;
     ASSERT_VEC_EQUAL(min(v0, v1),
-                     applyBinaryFn(v0, v1, [](float x, float y) { return min(x, y); }));
+                     applyBinaryFn(v0, v1, [](float x, float y) { return std::min<float>(x, y); }));
     ASSERT_VEC_EQUAL(max(v0, v1),
-                     applyBinaryFn(v0, v1, [](float x, float y) { return max(x, y); }));
+                     applyBinaryFn(v0, v1, [](float x, float y) { return std::max<float>(x, y); }));
 }
 
 template<typename FVEC>

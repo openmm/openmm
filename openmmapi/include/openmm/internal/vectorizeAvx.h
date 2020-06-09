@@ -1,5 +1,5 @@
-#ifndef OPENMM_VECTORIZE8_H_
-#define OPENMM_VECTORIZE8_H_
+#ifndef OPENMM_VECTORIZEAVX_H_
+#define OPENMM_VECTORIZEAVX_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -57,9 +57,7 @@ public:
      * @param table The table from which to do a lookup.
      * @param indexes The indexes to gather.
      */
-    fvec8(const float* table, const int idx[8]) {
-        // :TODO: Using int32_t explicitly as the index type could allow the real gather instruction to be used.
-        // Use gather and static assert? Conditional code?
+    fvec8(const float* table, const int32_t idx[8]) {
         val = _mm256_setr_ps(table[idx[0]], table[idx[1]], table[idx[2]], table[idx[3]], table[idx[4]], table[idx[5]], table[idx[6]], table[idx[7]]);
     }
 
@@ -415,4 +413,4 @@ static inline fvec4 reduceToVec3(fvec8 x, fvec8 y, fvec8 z) {
     return laneResult.lowerVec() + laneResult.upperVec();
 }
 
-#endif /*OPENMM_VECTORIZE8_H_*/
+#endif /*OPENMM_VECTORIZEAVX_H_*/

@@ -1,6 +1,3 @@
-#ifndef OPENMM_CPU_NEIGHBORLIST_H_
-#define OPENMM_CPU_NEIGHBORLIST_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2014-2015 Stanford University and the Authors.      *
+ * Authors: Daniel Towner                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -32,60 +29,41 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "AlignedArray.h"
-#include "openmm/Vec3.h"
-#include "windowsExportCpu.h"
-#include "openmm/internal/ThreadPool.h"
-#include <atomic>
-#include <set>
-#include <utility>
-#include <vector>
+/**
+ * This tests vectorized operations.
+ */
 
-namespace OpenMM {
+#include "openmm/internal/AssertionUtilities.h"
 
-class OPENMM_EXPORT_CPU CpuNeighborList {
-public:
-    class Voxels;
-    CpuNeighborList(int blockSize);
-    void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
-            const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads);
-    int getNumBlocks() const;
-    int getBlockSize() const;
-    const std::vector<int32_t>& getSortedAtoms() const;
-    const std::vector<int>& getBlockNeighbors(int blockIndex) const;
+#include <iostream>
 
-    /**
-     * Bitset for a single block, marking which indexes should be excluded. This data type needs to be big
-     * enough to store all the bits for any possible block size.
-     */
-    using BlockExclusionMask = int16_t;
+#ifndef __AVX2__
+int main () {
+    std::cout << "AVX2 CPU is not supported. Exiting." << std::endl;
+    return 0;
+}
+#else
 
-    const std::vector<BlockExclusionMask>& getBlockExclusions(int blockIndex) const;
+#include "openmm/internal/vectorizeAvx2.h"
+#include "TestVectorizeGeneric.h"
 
-    /**
-     * This routine contains the code executed by each thread.
-     */
-    void threadComputeNeighborList(ThreadPool& threads, int threadIndex);
-    void runThread(int index);
-private:
-    int blockSize;
-    std::vector<int> sortedAtoms;
-    std::vector<float> sortedPositions;
-    std::vector<std::vector<int> > blockNeighbors;
-    std::vector<std::vector<BlockExclusionMask> > blockExclusions;
-    // The following variables are used to make information accessible to the individual threads.
-    float minx, maxx, miny, maxy, minz, maxz;
-    std::vector<std::pair<int, int> > atomBins;
-    Voxels* voxels;
-    const std::vector<std::set<int> >* exclusions;
-    const float* atomLocations;
-    Vec3 periodicBoxVectors[3];
-    int numAtoms;
-    bool usePeriodic;
-    float maxDistance;
-    std::atomic<int> atomicCounter;
-};
+using namespace OpenMM;
 
-} // namespace OpenMM
+int main(int argc, char* argv[]) {
+    try {
+        if (!isAvx2Supported()) {
+            std::cout << "CPU is not supported. Exiting." << std::endl;
+            return 0;
+        }
 
-#endif // OPENMM_CPU_NEIGHBORLIST_H_
+        TestFvec<fvecAvx2>::testAll();
+    }
+    catch(const std::exception& e) {
+        std::cout << "exception: " << e.what() << std::endl;
+        return 1;
+    }
+    std::cout << "Done" << std::endl;
+    return 0;
+}
+
+#endif

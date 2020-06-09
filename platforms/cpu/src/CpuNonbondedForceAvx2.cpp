@@ -1,6 +1,6 @@
 
 /* Portions copyright (c) 2006-2015 Stanford University and Simbios.
- * Contributors: Pande Group
+ * Contributors: Daniel Towner
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -25,31 +25,20 @@
 #include "CpuNonbondedForceFvec.h"
 #include "openmm/OpenMMException.h"
 
-#ifdef __AVX__
+#ifdef __AVX2__
 
-#include "openmm/internal/vectorize8.h"
-
-bool isVec8Supported() {
-    // Make sure the CPU supports AVX.
-    int cpuInfo[4];
-    cpuid(cpuInfo, 0);
-    if (cpuInfo[0] >= 1) {
-        cpuid(cpuInfo, 1);
-        return ((cpuInfo[2] & ((int) 1 << 28)) != 0);
-    }
-    return false;
-}
-
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec8() {
-    return new OpenMM::CpuNonbondedForceFvec<fvec8>();
+#include "openmm/internal/vectorizeAvx2.h"
+OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx2() {
+    return new OpenMM::CpuNonbondedForceFvec<fvecAvx2>();
 }
 
 #else
-bool isVec8Supported() {
+
+bool isAvx2Supported() {
     return false;
 }
 
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec8() {
-   throw OpenMM::OpenMMException("Internal error: OpenMM was compiled without AVX support");
+OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx2() {
+   throw OpenMM::OpenMMException("Internal error: OpenMM was compiled without AVX2 support");
 }
 #endif

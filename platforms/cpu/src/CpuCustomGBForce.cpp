@@ -361,7 +361,7 @@ void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, i
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
-            const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
+            const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const auto& blockExclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
@@ -456,7 +456,7 @@ void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& da
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
-            const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
+            const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const auto& blockExclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
@@ -543,7 +543,7 @@ void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, 
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
-            const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
+            const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
             const auto& blockExclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {

@@ -34,7 +34,7 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-#include "openmm/internal/vectorize8.h"
+#include "openmm/internal/vectorizeAvx.h"
 #include <iostream>
 
 #include "TestVectorizeGeneric.h"

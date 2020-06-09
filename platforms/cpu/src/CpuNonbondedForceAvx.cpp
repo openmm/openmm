@@ -1,6 +1,6 @@
 
 /* Portions copyright (c) 2006-2015 Stanford University and Simbios.
- * Contributors: Daniel Towner
+ * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -23,28 +23,33 @@
  */
 
 #include "CpuNonbondedForceFvec.h"
+#include "openmm/OpenMMException.h"
 
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec4();
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx();
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx2();
+#ifdef __AVX__
 
-bool isAvxSupported();
-bool isAvx2Supported();
+#include "openmm/internal/vectorizeAvx.h"
 
-#include <iostream>
-
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec() {
-    if (isAvx2Supported())
-        return createCpuNonbondedForceAvx2();
-    else if (isAvxSupported())
-        return createCpuNonbondedForceAvx();
-    else
-        return createCpuNonbondedForceVec4();
+bool isAvxSupported() {
+    // Make sure the CPU supports AVX.
+    int cpuInfo[4];
+    cpuid(cpuInfo, 0);
+    if (cpuInfo[0] >= 1) {
+        cpuid(cpuInfo, 1);
+        return ((cpuInfo[2] & ((int) 1 << 28)) != 0);
+    }
+    return false;
 }
 
-int getVecBlockSize() {
-    if (isAvx2Supported() || isAvxSupported())
-        return 8;
-    else
-        return 4;
+OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx() {
+    return new OpenMM::CpuNonbondedForceFvec<fvec8>();
 }
+
+#else
+bool isAvxSupported() {
+    return false;
+}
+
+OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx() {
+   throw OpenMM::OpenMMException("Internal error: OpenMM was compiled without AVX support");
+}
+#endif
