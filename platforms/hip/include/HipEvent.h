@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAEVENT_H_
-#define OPENMM_CUDAEVENT_H_
+#ifndef OPENMM_HIPEVENT_H_
+#define OPENMM_HIPEVENT_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -58,4 +58,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAEVENT_H_*/
+#endif /*OPENMM_HIPEVENT_H_*/

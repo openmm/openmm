@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAKERNELSOURCES_H_
-#define OPENMM_CUDAKERNELSOURCES_H_
+#ifndef OPENMM_HIPKERNELSOURCES_H_
+#define OPENMM_HIPKERNELSOURCES_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -50,4 +50,4 @@ public:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAKERNELSOURCES_H_*/
+#endif /*OPENMM_HIPKERNELSOURCES_H_*/

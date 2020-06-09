@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAINTEGRATIONUTILITIES_H_
-#define OPENMM_CUDAINTEGRATIONUTILITIES_H_
+#ifndef OPENMM_HIPINTEGRATIONUTILITIES_H_
+#define OPENMM_HIPINTEGRATIONUTILITIES_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -77,4 +77,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAINTEGRATIONUTILITIES_H_*/
+#endif /*OPENMM_HIPINTEGRATIONUTILITIES_H_*/

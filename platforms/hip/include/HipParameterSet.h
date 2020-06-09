@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAPARAMETERSET_H_
-#define OPENMM_CUDAPARAMETERSET_H_
+#ifndef OPENMM_HIPPARAMETERSET_H_
+#define OPENMM_HIPPARAMETERSET_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -69,4 +69,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAPARAMETERSET_H_*/
+#endif /*OPENMM_HIPPARAMETERSET_H_*/

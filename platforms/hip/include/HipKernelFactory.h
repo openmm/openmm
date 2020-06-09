@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAKERNELFACTORY_H_
-#define OPENMM_CUDAKERNELFACTORY_H_
+#ifndef OPENMM_HIPKERNELFACTORY_H_
+#define OPENMM_HIPKERNELFACTORY_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -44,4 +44,4 @@ public:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAKERNELFACTORY_H_*/
+#endif /*OPENMM_HIPKERNELFACTORY_H_*/

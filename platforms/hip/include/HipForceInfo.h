@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAFORCEINFO_H_
-#define OPENMM_CUDAFORCEINFO_H_
+#ifndef OPENMM_HIPFORCEINFO_H_
+#define OPENMM_HIPFORCEINFO_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -45,4 +45,4 @@ class OPENMM_EXPORT_COMMON HipForceInfo : public ComputeForceInfo {
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAFORCEINFO_H_*/
+#endif /*OPENMM_HIPFORCEINFO_H_*/

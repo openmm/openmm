@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAEXPRESSIONUTILITIES_H_
-#define OPENMM_CUDAEXPRESSIONUTILITIES_H_
+#ifndef OPENMM_HIPEXPRESSIONUTILITIES_H_
+#define OPENMM_HIPEXPRESSIONUTILITIES_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -47,4 +47,4 @@ public:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAEXPRESSIONUTILITIES_H_*/
+#endif /*OPENMM_HIPEXPRESSIONUTILITIES_H_*/

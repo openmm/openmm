@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAARRAY_H_
-#define OPENMM_CUDAARRAY_H_
+#ifndef OPENMM_HIPARRAY_H_
+#define OPENMM_HIPARRAY_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -179,4 +179,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAARRAY_H_*/
+#endif /*OPENMM_HIPARRAY_H_*/

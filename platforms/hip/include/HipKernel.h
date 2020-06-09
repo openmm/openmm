@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAKERNEL_H_
-#define OPENMM_CUDAKERNEL_H_
+#ifndef OPENMM_HIPKERNEL_H_
+#define OPENMM_HIPKERNEL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -109,4 +109,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAKERNEL_H_*/
+#endif /*OPENMM_HIPKERNEL_H_*/

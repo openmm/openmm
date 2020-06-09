@@ -1,5 +1,5 @@
-#ifndef __OPENMM_CUDAFFT3D_H__
-#define __OPENMM_CUDAFFT3D_H__
+#ifndef __OPENMM_HIPFFT3D_H__
+#define __OPENMM_HIPFFT3D_H__
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -100,4 +100,4 @@ private:
 
 } // namespace OpenMM
 
-#endif // __OPENMM_CUDAFFT3D_H__
+#endif // __OPENMM_HIPFFT3D_H__

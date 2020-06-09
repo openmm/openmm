@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAPROGRAM_H_
-#define OPENMM_CUDAPROGRAM_H_
+#ifndef OPENMM_HIPPROGRAM_H_
+#define OPENMM_HIPPROGRAM_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -60,4 +60,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAPROGRAM_H_*/
+#endif /*OPENMM_HIPPROGRAM_H_*/

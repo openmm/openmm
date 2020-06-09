@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAPARALLELKERNELS_H_
-#define OPENMM_CUDAPARALLELKERNELS_H_
+#ifndef OPENMM_HIPPARALLELKERNELS_H_
+#define OPENMM_HIPPARALLELKERNELS_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -611,4 +611,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAPARALLELKERNELS_H_*/
+#endif /*OPENMM_HIPPARALLELKERNELS_H_*/

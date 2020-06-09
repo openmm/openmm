@@ -1,5 +1,5 @@
-#ifndef __OPENMM_CUDASORT_H__
-#define __OPENMM_CUDASORT_H__
+#ifndef __OPENMM_HIPSORT_H__
+#define __OPENMM_HIPSORT_H__
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -143,4 +143,4 @@ public:
 
 } // namespace OpenMM
 
-#endif // __OPENMM_CUDASORT_H__
+#endif // __OPENMM_HIPSORT_H__

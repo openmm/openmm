@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDANONBONDEDUTILITIES_H_
-#define OPENMM_CUDANONBONDEDUTILITIES_H_
+#ifndef OPENMM_HIPNONBONDEDUTILITIES_H_
+#define OPENMM_HIPNONBONDEDUTILITIES_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -428,4 +428,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDANONBONDEDUTILITIES_H_*/
+#endif /*OPENMM_HIPNONBONDEDUTILITIES_H_*/
