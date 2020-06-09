@@ -501,7 +501,7 @@ int CpuNeighborList::getBlockSize() const {
     return blockSize;
 }
 
-const std::vector<int>& CpuNeighborList::getSortedAtoms() const {
+const std::vector<int32_t>& CpuNeighborList::getSortedAtoms() const {
     return sortedAtoms;
 }
 

@@ -74,7 +74,7 @@ public:
      * @param table The table from which to do a lookup.
      * @param indexes The indexes to gather.
      */
-    fvec4(const float* table, const int idx[4])
+    fvec4(const float* table, const int32_t idx[4])
         : fvec4(table[idx[0]], table[idx[1]], table[idx[2]], table[idx[3]]) { }
 
     operator __m128() const {

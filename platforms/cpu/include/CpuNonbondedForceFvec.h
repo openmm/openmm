@@ -140,7 +140,7 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnHandler(int blockIndex, float
         using std::min;
         using std::max;
 
-        const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
+        const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
         float minx, maxx, miny, maxy, minz, maxz;
         minx = maxx = posq[4*blockAtom[0]];
         miny = maxy = posq[4*blockAtom[0]+1];
@@ -183,7 +183,7 @@ template <int PERIODIC_TYPE, BlockType BLOCK_TYPE>
 void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter) {
     // Load the positions and parameters of the atoms in the block.
 
-    const int* blockAtom = &neighborList->getSortedAtoms()[blockSize * blockIndex];
+    const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize * blockIndex];
     fvec4 blockAtomPosq[blockSize];
     FVEC blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
     FVEC blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge;
