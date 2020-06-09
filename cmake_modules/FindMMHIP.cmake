@@ -51,18 +51,21 @@ IF(HIP_FOUND)
     # set HIP link directories
     # this includes HIP, rocFFT, and the roctracer
     SET(MMHIP_LINK_DIRS ${HIP_ROOT_PATH}/lib ${HIP_ROOT_PATH}/../rocfft/lib ${HIP_ROOT_PATH}/../hsa/lib ${HIP_ROOT_PATH}/../roctracer/lib)
-    # set HIP libraries
-    # this includes HIP, rocFFT, and the roctracer
-    SET(MMHIP_LIBS hip_hcc rocfft roctracer64)
 
     # determine compiler and add as compile-time define, such that we can know
     # what compiler we're using in host-code compiled with g++
     IF(${HIP_COMPILER} STREQUAL "clang")
         MESSAGE(STATUS "Using HIP-Clang compiler")
         SET(HIPCXXFLAGS "${HIPCXXFLAGS} -DHIP_USING_HIPCLANG")
+        # set HIP libraries
+        # this includes HIP, rocFFT, and the roctracer
+        SET(MMHIP_LIBS amdhip64 rocfft roctracer64)
     ELSEIF(${HIP_COMPILER} STREQUAL "hcc")
         MESSAGE(STATUS "Using HCC compiler")
         SET(HIPCXXFLAGS "${HIPCXXFLAGS} -DHIP_USING_HCC")
+        # set HIP libraries
+        # this includes HIP, rocFFT, and the roctracer
+        SET(MMHIP_LIBS hip_hcc rocfft roctracer64)
     ELSE()
         MESSAGE(FATAL_ERROR "HIP compiler ${HIP_COMPILER} not recognized!")
     ENDIF()
