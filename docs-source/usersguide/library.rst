@@ -3644,7 +3644,7 @@ The equations of motion can be integrated with two different methods:
 #. In the extended Lagrangian method, the positions of the Drude particles are
    treated as dynamical variables, just like any other particles.  A small amount
    of mass is transferred from the parent particles to the Drude particles,
-   allowing them to be integrated normally.  A dual Langevin integrator is used to
+   allowing them to be integrated normally.  A dual Langevin or Nose-Hoover integrator is used to
    maintain the center of mass of each Drude particle pair at the system
    temperature, while using a much lower temperature for their relative internal
    motion.  In practice, this produces dipole moments very close to those from the

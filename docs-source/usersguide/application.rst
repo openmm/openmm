@@ -650,8 +650,8 @@ such as :file:`charmm36/water.xml`, which specifies the default CHARMM water mod
 .. warning:: Drude polarizable sites and lone pairs are not yet supported
              by `ParmEd <https://github.com/parmed/parmed>`_ and the CHARMM36 forcefields
              that depend on these features are not included in this port.
-             To use the CHARMM 2013 polarizable force field\ :cite:`Lopes2013`,
-             include the single file :file:`charmm_polar_2013.xml`.
+             To use the CHARMM 2019 polarizable force field\ :cite:`Lopes2013`,
+             include the single file :file:`charmm_polar_2019.xml`.
 
 .. tip:: The solvent model XML files included under the :file:`charmm36/` directory
          include both water *and* ions compatible with that water model, so if you
@@ -712,17 +712,20 @@ recommended for most simulations.
 CHARMM Polarizable Force Field
 ------------------------------
 
-To use the CHARMM 2013 polarizable force field\ :cite:`Lopes2013`, include the
-single file :file:`charmm_polar_2013.xml`.  It includes parameters for proteins,
+To use the CHARMM 2019 polarizable force field\ :cite:`Lopes2013`, include the
+single file :file:`charmm_polar_2019.xml`.  It includes parameters for proteins, lipids,
 water, and ions.  When using this force field, remember to add extra particles to
 the :class:`Topology` as described in section :ref:`adding-or-removing-extra-particles`.
+This force field also requires that you use one of the special integrators that
+supports Drude particles.  The options are DrudeLangevinIntegrator, DrudeNoseHooverIntegrator,
+and DrudeSCFIntegrator.
 
-Older Amber Force Fields
-------------------------
+Older Force Fields
+------------------
 
-OpenMM includes several older Amber force fields as well.  For most simulations
-Amber14 is preferred over any of these, but they are still useful for reproducing
-older results.
+OpenMM includes several older force fields as well.  For most simulations, the
+newer force fields described above are preferred over any of these, but they are
+still useful for reproducing older results.
 
 .. tabularcolumns:: |l|L|
 
@@ -735,6 +738,7 @@ File                           Force Field
 :code:`amber99sbnmr.xml`       Amber99SB with modifications to fit NMR data\ :cite:`Li2010`
 :code:`amber03.xml`            Amber03\ :cite:`Duan2003`
 :code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
+:code:`charmm_polar_2013.xml`  2013 version of the CHARMM polarizable force field\ :cite:`Lopes2013`
 =============================  ================================================================================
 
 Several of these force fields support implicit solvent.  To enable it, also
