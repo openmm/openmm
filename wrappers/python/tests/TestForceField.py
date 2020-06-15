@@ -1041,19 +1041,22 @@ END"""))
         # ENER EXTERN:        VDWaals         ELEC       HBONds          ASP         USER
         # ENER EWALD:          EWKSum       EWSElf       EWEXcl       EWQCor       EWUTil
         #  ----------       ---------    ---------    ---------    ---------    ---------
-        # ENER>        0    102.46525      0.00000     13.22189
+        # ENER>        0    102.83992      0.00000     13.06415
         # ENER INTERN>       54.72574     40.21459     11.61009     26.10373      0.14113
         # ENER CROSS>        -3.37113      0.00000      0.00000      0.00000
-        # ENER EXTERN>       22.74761    -23.94811      0.00000      0.00000      0.00000
-        # ENER EWALD>        55.93962  -7324.67582   7242.97779      0.00000      0.00000
+        # ENER EXTERN>       22.74761    -24.21667      0.00000      0.00000      0.00000
+        # ENER EWALD>        56.14258  -7279.07968   7197.82192      0.00000      0.00000
         #  ----------       ---------    ---------    ---------    ---------    ---------
 
         # First check the total energy.
         
         energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilocalories_per_mole)
-        self.assertAlmostEqual(102.46525, energy, delta=energy*5e-3)
+        self.assertAlmostEqual(102.83992, energy, delta=energy*1e-3)
 
-        # Now check individual components.  CHARMM and OpenMM split them up a little differently.
+        # Now check individual components.  CHARMM and OpenMM split them up a little differently.  I've tried to
+        # match things up, but I think there's still some inconsistency in where forces related to Drude particles
+        # are categorized.  That's why the Coulomb and bonds terms match less accurately than the other terms
+        # (and less accurately than the total energy, which agrees well).
 
         coulomb = 0
         vdw = 0
@@ -1078,12 +1081,12 @@ END"""))
                 impropers += energy
             elif isinstance(f, CMAPTorsionForce):
                 cmap += energy
-        self.assertAlmostEqual(-23.94811+55.93962-7324.67582+7242.97779, coulomb, delta=abs(coulomb)*5e-2) # ELEC+EWKSum+EWSElf+EWEXcl
-        self.assertAlmostEqual(22.74761, vdw, delta=vdw*5e-3) # VDWaals
+        self.assertAlmostEqual(-24.21667+56.14258-7279.07968+7197.82192, coulomb, delta=abs(coulomb)*5e-2) # ELEC+EWKSum+EWSElf+EWEXcl
+        self.assertAlmostEqual(22.74761, vdw, delta=vdw*1e-3) # VDWaals
         self.assertAlmostEqual(54.72574+11.61009, bonds, delta=bonds*2e-2) # BONDs+UREY-b
-        self.assertAlmostEqual(40.21459, angles, delta=angles*5e-3) # ANGLes
-        self.assertAlmostEqual(26.10373, propers, delta=propers*5e-3) # DIHEdrals
-        self.assertAlmostEqual(0.14113, impropers, delta=impropers*5e-3) # IMPRopers
+        self.assertAlmostEqual(40.21459, angles, delta=angles*1e-3) # ANGLes
+        self.assertAlmostEqual(26.10373, propers, delta=propers*1e-3) # DIHEdrals
+        self.assertAlmostEqual(0.14113, impropers, delta=impropers*1e-3) # IMPRopers
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
