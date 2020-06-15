@@ -1059,6 +1059,34 @@ sampling, and therefore is preferred for most applications.  Also note that
 :code:`LangevinIntegrator`\ , like :code:`LangevinMiddleIntegrator`\ , is a leapfrog
 integrator, so the velocities are offset by half a time step from the positions.
 
+Nosé-Hoover Integrator
+----------------------
+
+The :code:`NoseHooverIntegrator` uses the same "middle" leapfrog propagation
+algorithm as :code:`LangevinMiddleIntegrator`, but replaces the stochastic
+temperature control with a velocity scaling algorithm that produces more
+accurate transport properties :cite:`Basconi2013`.  This velocity scaling
+results from propagating a chain of extra variables, which slightly reduces the
+computational efficiency with respect to :code:`LangevinMiddleIntegrator`.  The
+thermostated integrator is minimally created with syntax analogous to the
+:code:`LangevinMiddleIntegrator` example above::
+
+    NoseHooverIntegrator integrator(300*kelvin, 1/picosecond,
+                                    0.004*picoseconds);
+
+The first argument specifies the target temperature.  The second specifies the
+frequency of interaction with the heat bath: a lower value interacts minimally,
+yielding the microcanonical ensemble in the limit of a zero frequency, while a
+larger frequency will perturb the system greater, keeping it closer to the
+target temperature.  The third argument is the integration timestep that, like
+the other arguments, must be specified with units.  For initial equilibration
+to the target temperature, a larger interaction frequency is recommended,
+*e.g.* 25 ps\ :sup:`-1`.
+
+This integrator supports lots of other options, including the ability to couple
+different parts of the system to thermostats at different temperatures. See the
+API documentation for details.
+
 Leapfrog Verlet Integrator
 --------------------------
 

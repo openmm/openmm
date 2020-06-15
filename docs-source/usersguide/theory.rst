@@ -1391,6 +1391,52 @@ twice per time step, compared to only once for LangevinIntegrator.  This
 can make it slightly slower for systems that involve constraints.  However, this
 usually is more than compensated by allowing you to use a larger time step.
 
+.. _nosehoover-integrators-theory:
+
+NoseHooverIntegrator
+********************
+
+Like LangevinMiddleIntegerator, this uses the LFMiddle discretization.
+:cite:`Zhang2019` In each step, the positions and velocities are updated as
+follows:
+
+
+.. math::
+   \mathbf{v}_{i}(t+\Delta t/2) = \mathbf{v}_{i}(t-\Delta t/2) + \mathbf{f}_{i}(t)\Delta t/{m}_{i}
+
+
+.. math::
+   \mathbf{r}_{i}(t+\Delta t/2) = \mathbf{r}_{i}(t) + \mathbf{v}_{i}(t+\Delta t/2)\Delta t/2
+
+
+.. math::
+   \mathbf{v'}_{i}(t+\Delta t/2) = \mathrm{scale}\times\mathbf{v}_{i}(t+\Delta t/2)
+
+
+.. math::
+   \mathbf{r}_{i}(t+\Delta t) = \mathbf{r}_{i}(t+\Delta t/2) + \mathbf{v'}_{i}(t+\Delta t/2)\Delta t/2
+
+
+The universal scale factor used in the third step is determined by propagating
+auxilliary degrees of freedom alongside the regular particles.  The original
+Nosé-Hoover formulation used a single harmonic oscillator for the heat bath,
+but this is problematic in small or stiff systems, which are non-ergodic, so
+the chain formulation extends this by replacing the single oscillator
+thermostat with a chain of connected oscillators.  :cite:`Martyna1992`  For
+large systems a single oscillator (*i.e.* a chain length of one) will suffice,
+but longer chains are necessary to properly thermostat non-ergodic systems.
+The OpenMM default is to use a chain length of three to cover the latter case,
+but this can be safely reduced to increase efficiency in large systems.
+
+The heat bath propagation is performed using a multi-timestep algorithm.  Each
+propagation step is discretized into substeps using a factorization from
+Yoshida and Suzuki; the default discretization uses a :math:`\mathcal{O}(\Delta
+t^6)` approach that uses 7 points, but 1, 3 or 5 points may also be used to
+increase performace, at the expense of accuracy.  Each step is further
+subdivided into multi-timesteps with a default of 3 multi time steps per
+propagation; as with the number of Yoshida-Suziki points this value may be
+increase to increase accuracy but with additional computational expense.
+
 BrownianIntegrator
 ******************
 

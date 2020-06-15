@@ -3634,7 +3634,7 @@ the Drude particle and the spring constant *k* by
 A damped interaction\ :cite:`Thole1981` is used between dipoles that are
 bonded to each other.
 
-The equations of motion can be integrated with two different methods:
+The equations of motion can be integrated with three different methods:
 
 #. In the Self Consistent Field (SCF) method, the ordinary particles are first
    updated as usual.  A local energy minimization is then performed to select new
@@ -3649,3 +3649,20 @@ The equations of motion can be integrated with two different methods:
    temperature, while using a much lower temperature for their relative internal
    motion.  In practice, this produces dipole moments very close to those from the
    SCF solution while being much faster to compute.
+#. The Nosé-Hoover dual thermostat method.  In this approach the motion of
+   non-Drude sites and center of mass motion of Drude pairs are thermostated to
+   the target temperature with one thermostat.  Another thermostat is used to keep
+   relative motion of Drude pairs to a different, typically much lower,
+   temperature to maintain separation of nuclear and electronic degrees of
+   freedom.  The minimal specification is as follows::
+
+      DrudeNoseHooverIntegrator integrator(temperature, frequency,
+                                           temperatureDrude, frequencyDrude,
+                                           1*femtoseconds)
+
+   Where the first and third arguments specify the center-of-mass temperature and
+   relative temperature for each Drude pair, respecitvely.  The second and fourth
+   arguments describe the frequency of interaction with the center-of-mass and
+   relative heat baths, respectively, and should be specified with inverse time
+   units.  The fifth argument is the timestep.  The multi-timestep and Nosé-Hoover
+   chain length may also be specified, but sensible defaults are provided.
