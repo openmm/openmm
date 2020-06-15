@@ -109,10 +109,8 @@ CpuNonbondedForceFvec<FVEC>::approximateFunctionFromTable(const std::vector<floa
     FVEC s1, s2;
     gatherVecPair(table.data(), index, s1, s2);
 
-    const auto coeff2 = x1-FVEC(index);
-    const auto coeff1 = 1.0f-coeff2;
-
-    return coeff1*s1 + coeff2*s2;
+    const auto coeff2 = x1 - FVEC(index);
+    return (s1 - coeff2 * s1) + coeff2 * s2;
 }
 
 template<typename FVEC>
@@ -216,6 +214,8 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
     // Loop over neighbors for this block.
     const auto& neighbors = neighborList->getBlockNeighbors(blockIndex);
     const auto& exclusions = neighborList->getBlockExclusions(blockIndex);
+    FVEC partialEnergy = {};
+
     for (int i = 0; i < (int) neighbors.size(); i++) {
         // Load the next neighbor.
         
@@ -230,7 +230,7 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
         getDeltaR<PERIODIC_TYPE>(atomPos, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, boxSize, invBoxSize);
 
         const auto exclNotMask = FVEC::expandBitsToMask(~exclusions[i]);
-        const auto include = blendZero(r2 < cutoffDistance*cutoffDistance, exclNotMask);
+        const auto include = blendZero(r2 < cutoffDistanceSquared, exclNotMask);
         if (!any(include))
             continue; // No interactions to compute.
 
@@ -296,7 +296,8 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
                     energy += chargeProd*inverseR;
             }
             energy = blendZero(energy, include);
-            *totalEnergy += reduceAdd(energy);
+
+            partialEnergy += energy;
         }
 
         // Accumulate forces.
@@ -313,6 +314,9 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
         newAtomForce.store(atomForce);
     }
     
+    if (totalEnergy)
+        *totalEnergy += reduceAdd(partialEnergy);
+
     // Record the forces on the block atoms.
     fvec4 f[blockSize];
     transpose(blockAtomForceX, blockAtomForceY, blockAtomForceZ, 0.0f, f);

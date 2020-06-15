@@ -101,4 +101,36 @@ inline fvecAvx2 fvecAvx2::expandBitsToMask(int bitmask) {
     return _mm256_castsi256_ps(msb);
 }
 
+/**
+ * Given a table of floating-point values and a set of indexes, perform a gather read into a pair
+ * of vectors. The first result vector contains the values at the given indexes, and the second
+ * result vector contains the values from each respective index+1.
+ */
+static inline void gatherVecPair(const float* table, ivec8 index, fvecAvx2& out0, fvecAvx2& out1) {
+    const double* tableAsDbl = (const double*)table;
+
+    // The input is a set of 8 indexes, each of which refers to a pair of floating point
+    // values. The most efficient way to load from indexes in a vector is the gather instruction,
+    // and the 64-bit variant should be used to get the pairs.
+
+    // Given indexes ABCDEFGH, load the pairs corresponding to A C E G. This gives a set of
+    // 4 pairs. The high indexes (in the upper part of each 64-bit index) are cleared.
+    const auto lowerIdx = _mm256_and_si256(index, _mm256_set1_epi64x(0xFFFFFFFF));
+    const auto lowerGather = _mm256_castpd_ps(_mm256_i64gather_pd(tableAsDbl, lowerIdx, 4));
+
+    // Load indexes B D F H, this time by shifting the high 32-bit indexes into the lower 32-bits.
+    const auto upperIdx = _mm256_srli_epi64(index, 32);
+    const auto upperGather = _mm256_castpd_ps(_mm256_i64gather_pd(tableAsDbl, upperIdx, 4));
+
+    // All the first values must now be brought together. The lower values are already in the
+    // correct place, but the upper gather values must be moved over and blended in.
+    const auto swapUpper = _mm256_permute_ps(upperGather, 0b10110001);
+    out0 = fvecAvx2(_mm256_blend_ps(lowerGather, swapUpper, 0b10101010));
+
+    // And the same for the upper values.
+    const auto swapLower = _mm256_permute_ps(lowerGather, 0b10110001);
+    out1 = fvecAvx2(_mm256_blend_ps(swapLower, upperGather, 0b10101010));
+
+}
+
 #endif /*OPENMM_VECTORIZE_AVX2_H_*/
