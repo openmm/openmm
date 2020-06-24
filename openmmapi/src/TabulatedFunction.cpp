@@ -57,8 +57,9 @@ void Continuous1DFunction::setFunctionParameters(const vector<double>& values, d
     if (periodic) {
         if (n < 3)
             throw OpenMMException("Continuous1DFunction: a periodic tabulated function must have at least three points");
-        if (values[0] != values[n-1])
-            throw OpenMMException("Continuous1DFunction: with periodic=true, the first and last points must have the same value");
+       // Note: value-matching at boundary is eventually checked at spline creation.
+       // if (values[0] != values[n-1])
+       //     throw OpenMMException("Continuous1DFunction: with periodic=true, the first and last points must have the same value");
     }
     else if (n < 2)
         throw OpenMMException("Continuous1DFunction: a non-periodic tabulated function must have at least two points");
@@ -93,8 +94,7 @@ void Continuous2DFunction::setFunctionParameters(int xsize, int ysize, const vec
     if (periodic) {
         if (xsize < 3 || ysize < 3)
            throw OpenMMException("Continuous2DFunction: must have at least three points along each axis if periodic");
-
-        // Note: value-matching at boundary is eventually checked at 2D-spline creation time.
+        // Note: value-matching at boundary is eventually checked at 2D-spline creation.
     }
     else if (xsize < 2 || ysize < 2)
         throw OpenMMException("Continuous2DFunction: must have at least two points along each axis");
@@ -142,8 +142,7 @@ void Continuous3DFunction::setFunctionParameters(int xsize, int ysize, int zsize
     if (periodic) {
        if (xsize < 3 || ysize < 3 || zsize < 3)
            throw OpenMMException("Continuous3DFunction: must have at least three points along each axis if periodic");
-
-       // Note: value-matching at boundary is eventually checked at 3D-spline creation time.
+       // Note: value-matching at boundary is eventually checked at 3D-spline creation.
     }
     else if (xsize < 2 || ysize < 2 || zsize < 2)
         throw OpenMMException("Continuous3DFunction: must have at least two points along each axis");

@@ -37,6 +37,8 @@
 using namespace OpenMM;
 using namespace std;
 
+#define not_equal(a, b) (abs((a)-(b)) > 1e-15 + 1e-15*abs(b))  // same as scipy.interpolate()
+
 void SplineFitter::createSpline(const vector<double>& x, const vector<double>& y, bool periodic, vector<double>& deriv) {
     if (periodic)
         SplineFitter::createPeriodicSpline(x, y, deriv);
@@ -87,7 +89,7 @@ void SplineFitter::createPeriodicSpline(const vector<double>& x, const vector<do
         throw OpenMMException("createPeriodicSpline: x and y vectors must have same length");
     if (n < 3)
         throw OpenMMException("createPeriodicSpline: the length of the input array must be at least 3");
-    if (y[0] != y[n-1])
+    if (not_equal(y[0], y[n-1]))
         throw OpenMMException("createPeriodicSpline: the first and last points must have the same value");
     deriv.resize(n);
 
