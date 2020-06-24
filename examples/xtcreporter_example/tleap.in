@@ -1,0 +1,6 @@
+source leaprc.protein.ff14SB
+source leaprc.water.tip3p
+
+foo = sequence { ACE ALA NME }
+solvatebox foo TIP3PBOX 10.0
+saveamberparm foo ala2.prmtop ala2.incprd
