@@ -239,19 +239,17 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                     out << "{\n";
                     if (dynamic_cast<const Continuous1DFunction*>(functions[i]) != NULL) {
                         int periodic = functionParams[i][4];
+                        out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
                         if (periodic) {
-                            out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
                             out << "x = (x - " << paramsFloat[0] << ")*" << paramsFloat[5]<< ";\n";
                             out << "x = (x - floor(x))*" << paramsFloat[6] << ";\n";
-                            out << "int index = (int) (floor(x));\n";
                         }
                         else {
-                            out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
                             out << "if (x >= " << paramsFloat[0] << " && x <= " << paramsFloat[1] << ") {\n";
                             out << "x = (x - " << paramsFloat[0] << ")*" << paramsFloat[2] << ";\n";
-                            out << "int index = (int) (floor(x));\n";
-                            out << "index = min(index, (int) " << paramsInt[3] << ");\n";
                         }
+                        out << "int index = (int) (floor(x));\n";
+                        out << "index = min(index, (int) " << paramsInt[3] << ");\n";
                         out << "float4 coeff = " << functionNames[i].second << "[index];\n";
                         out << "real b = x-index;\n";
                         out << "real a = 1.0f-b;\n";
@@ -266,11 +264,20 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                             out << "}\n";
                       }
                     else if (dynamic_cast<const Continuous2DFunction*>(functions[i]) != NULL) {
+                        int periodic = functionParams[i][8];
                         out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
                         out << "real y = " << getTempName(node.getChildren()[1], temps) << suffix << ";\n";
-                        out << "if (x >= " << paramsFloat[2] << " && x <= " << paramsFloat[3] << " && y >= " << paramsFloat[4] << " && y <= " << paramsFloat[5] << ") {\n";
-                        out << "x = (x - " << paramsFloat[2] << ")*" << paramsFloat[6] << ";\n";
-                        out << "y = (y - " << paramsFloat[4] << ")*" << paramsFloat[7] << ";\n";
+                        if (periodic) {
+                            out << "x = (x - " << paramsFloat[2] << ")*" << paramsFloat[9] << ";\n";
+                            out << "y = (y - " << paramsFloat[4] << ")*" << paramsFloat[10] << ";\n";
+                            out << "x = (x - floor(x))*" << paramsFloat[0] << ";\n";
+                            out << "y = (y - floor(y))*" << paramsFloat[1] << ";\n";
+                        }
+                        else {
+                            out << "if (x >= " << paramsFloat[2] << " && x <= " << paramsFloat[3] << " && y >= " << paramsFloat[4] << " && y <= " << paramsFloat[5] << ") {\n";
+                            out << "x = (x - " << paramsFloat[2] << ")*" << paramsFloat[6] << ";\n";
+                            out << "y = (y - " << paramsFloat[4] << ")*" << paramsFloat[7] << ";\n";
+                        }
                         out << "int s = min((int) floor(x), " << paramsInt[0] << "-1);\n";
                         out << "int t = min((int) floor(y), " << paramsInt[1] << "-1);\n";
                         out << "int coeffIndex = 4*(s+" << paramsInt[0] << "*t);\n";
@@ -304,16 +311,28 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                             else
                                 throw OpenMMException("Unsupported derivative order for Continuous2DFunction");
                         }
-                        out << "}\n";
+                        if (!periodic)
+                            out << "}\n";
                     }
                     else if (dynamic_cast<const Continuous3DFunction*>(functions[i]) != NULL) {
+                        int periodic = functionParams[i][12];
                         out << "real x = " << getTempName(node.getChildren()[0], temps) << suffix << ";\n";
                         out << "real y = " << getTempName(node.getChildren()[1], temps) << suffix << ";\n";
                         out << "real z = " << getTempName(node.getChildren()[2], temps) << suffix << ";\n";
-                        out << "if (x >= " << paramsFloat[3] << " && x <= " << paramsFloat[4] << " && y >= " << paramsFloat[5] << " && y <= " << paramsFloat[6] << " && z >= " << paramsFloat[7] << " && z <= " << paramsFloat[8] << ") {\n";
-                        out << "x = (x - " << paramsFloat[3] << ")*" << paramsFloat[9] << ";\n";
-                        out << "y = (y - " << paramsFloat[5] << ")*" << paramsFloat[10] << ";\n";
-                        out << "z = (z - " << paramsFloat[7] << ")*" << paramsFloat[11] << ";\n";
+                        if (periodic) {
+                            out << "x = (x - " << paramsFloat[3] << ")*" << paramsFloat[13] << ";\n";
+                            out << "y = (y - " << paramsFloat[5] << ")*" << paramsFloat[14] << ";\n";
+                            out << "z = (z - " << paramsFloat[7] << ")*" << paramsFloat[15] << ";\n";
+                            out << "x = (x - floor(x))*" << paramsFloat[0] << ";\n";
+                            out << "y = (y - floor(y))*" << paramsFloat[1] << ";\n";
+                            out << "z = (z - floor(z))*" << paramsFloat[2] << ";\n";
+                        }
+                        else {
+                            out << "if (x >= " << paramsFloat[3] << " && x <= " << paramsFloat[4] << " && y >= " << paramsFloat[5] << " && y <= " << paramsFloat[6] << " && z >= " << paramsFloat[7] << " && z <= " << paramsFloat[8] << ") {\n";
+                            out << "x = (x - " << paramsFloat[3] << ")*" << paramsFloat[9] << ";\n";
+                            out << "y = (y - " << paramsFloat[5] << ")*" << paramsFloat[10] << ";\n";
+                            out << "z = (z - " << paramsFloat[7] << ")*" << paramsFloat[11] << ";\n";
+                        }
                         out << "int s = min((int) floor(x), " << paramsInt[0] << "-1);\n";
                         out << "int t = min((int) floor(y), " << paramsInt[1] << "-1);\n";
                         out << "int u = min((int) floor(z), " << paramsInt[2] << "-1);\n";
@@ -370,7 +389,8 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                             else
                                 throw OpenMMException("Unsupported derivative order for Continuous3DFunction");
                         }
-                        out << "}\n";
+                        if (!periodic)
+                            out << "}\n";
                     }
                     else if (dynamic_cast<const Discrete1DFunction*>(functions[i]) != NULL) {
                         for (int j = 0; j < nodes.size(); j++) {
@@ -730,16 +750,12 @@ vector<float> ExpressionUtilities::computeFunctionCoefficients(const TabulatedFu
         vector<double> values;
         double min, max;
         fn.getFunctionParameters(values, min, max);
-        bool periodic;
-        periodic = fn.getPeriodic();
+        bool periodic = fn.getPeriodic();
         int numValues = values.size();
         vector<double> x(numValues), derivs;
         for (int i = 0; i < numValues; i++)
             x[i] = min+i*(max-min)/(numValues-1);
-        if (periodic)
-            SplineFitter::createPeriodicSpline(x, values, derivs);
-        else
-            SplineFitter::createNaturalSpline(x, values, derivs);
+        SplineFitter::createSpline(x, values, periodic, derivs);
         vector<float> f(4*(numValues-1));
         for (int i = 0; i < (int) values.size()-1; i++) {
             f[4*i] = (float) values[i];
@@ -758,13 +774,14 @@ vector<float> ExpressionUtilities::computeFunctionCoefficients(const TabulatedFu
         int xsize, ysize;
         double xmin, xmax, ymin, ymax;
         fn.getFunctionParameters(xsize, ysize, values, xmin, xmax, ymin, ymax);
+        bool periodic = fn.getPeriodic();
         vector<double> x(xsize), y(ysize);
         for (int i = 0; i < xsize; i++)
             x[i] = xmin+i*(xmax-xmin)/(xsize-1);
         for (int i = 0; i < ysize; i++)
             y[i] = ymin+i*(ymax-ymin)/(ysize-1);
         vector<vector<double> > c;
-        SplineFitter::create2DNaturalSpline(x, y, values, c);
+        SplineFitter::create2DSpline(x, y, values, periodic, c);
         vector<float> f(16*c.size());
         for (int i = 0; i < (int) c.size(); i++) {
             for (int j = 0; j < 16; j++)
@@ -781,6 +798,7 @@ vector<float> ExpressionUtilities::computeFunctionCoefficients(const TabulatedFu
         int xsize, ysize, zsize;
         double xmin, xmax, ymin, ymax, zmin, zmax;
         fn.getFunctionParameters(xsize, ysize, zsize, values, xmin, xmax, ymin, ymax, zmin, zmax);
+        bool periodic = fn.getPeriodic();
         vector<double> x(xsize), y(ysize), z(zsize);
         for (int i = 0; i < xsize; i++)
             x[i] = xmin+i*(xmax-xmin)/(xsize-1);
@@ -789,7 +807,7 @@ vector<float> ExpressionUtilities::computeFunctionCoefficients(const TabulatedFu
         for (int i = 0; i < zsize; i++)
             z[i] = zmin+i*(zmax-zmin)/(zsize-1);
         vector<vector<double> > c;
-        SplineFitter::create3DNaturalSpline(x, y, z, values, c);
+        SplineFitter::create3DSpline(x, y, z, values, periodic, c);
         vector<float> f(64*c.size());
         for (int i = 0; i < (int) c.size(); i++) {
             for (int j = 0; j < 64; j++)
@@ -850,11 +868,11 @@ vector<vector<double> > ExpressionUtilities::computeFunctionParameters(const vec
             vector<double> values;
             double min, max;
             fn.getFunctionParameters(values, min, max);
+            int periodic = (int) fn.getPeriodic();
             params[i].push_back(min);
             params[i].push_back(max);
             params[i].push_back((values.size()-1)/(max-min));
             params[i].push_back(values.size()-2);
-            int periodic = (int) fn.getPeriodic();
             params[i].push_back(periodic);
             params[i].push_back(1.0/(max-min));
             params[i].push_back(values.size()-1);
@@ -865,6 +883,7 @@ vector<vector<double> > ExpressionUtilities::computeFunctionParameters(const vec
             int xsize, ysize;
             double xmin, xmax, ymin, ymax;
             fn.getFunctionParameters(xsize, ysize, values, xmin, xmax, ymin, ymax);
+            int periodic = (int) fn.getPeriodic();
             params[i].push_back(xsize-1);
             params[i].push_back(ysize-1);
             params[i].push_back(xmin);
@@ -873,6 +892,9 @@ vector<vector<double> > ExpressionUtilities::computeFunctionParameters(const vec
             params[i].push_back(ymax);
             params[i].push_back((xsize-1)/(xmax-xmin));
             params[i].push_back((ysize-1)/(ymax-ymin));
+            params[i].push_back(periodic);
+            params[i].push_back(1.0/(xmax-xmin));
+            params[i].push_back(1.0/(ymax-ymin));
         }
         else if (dynamic_cast<const Continuous3DFunction*>(functions[i]) != NULL) {
             const Continuous3DFunction& fn = dynamic_cast<const Continuous3DFunction&>(*functions[i]);
@@ -880,6 +902,7 @@ vector<vector<double> > ExpressionUtilities::computeFunctionParameters(const vec
             int xsize, ysize, zsize;
             double xmin, xmax, ymin, ymax, zmin, zmax;
             fn.getFunctionParameters(xsize, ysize, zsize, values, xmin, xmax, ymin, ymax, zmin, zmax);
+            int periodic = (int) fn.getPeriodic();
             params[i].push_back(xsize-1);
             params[i].push_back(ysize-1);
             params[i].push_back(zsize-1);
@@ -892,6 +915,10 @@ vector<vector<double> > ExpressionUtilities::computeFunctionParameters(const vec
             params[i].push_back((xsize-1)/(xmax-xmin));
             params[i].push_back((ysize-1)/(ymax-ymin));
             params[i].push_back((zsize-1)/(zmax-zmin));
+            params[i].push_back(periodic);
+            params[i].push_back(1.0/(xmax-xmin));
+            params[i].push_back(1.0/(ymax-ymin));
+            params[i].push_back(1.0/(zmax-zmin));
         }
         else if (dynamic_cast<const Discrete1DFunction*>(functions[i]) != NULL) {
             const Discrete1DFunction& fn = dynamic_cast<const Discrete1DFunction&>(*functions[i]);
