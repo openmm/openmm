@@ -68,11 +68,11 @@ void testContinuous1DFunction() {
 void testPeriodicContinuous1DFunction() {
     // Create a function.
 
-    double min = 0.5, max = 1.5;
+    double min = 0.0, max = 2.0*M_PI;
     vector<double> values(60);
-    for (int i = 0; i < (int) values.size()-1; i++)
-        values[i] = sin((double) i);
-    values[values.size()-1] = values[0];
+    for (int i = 0; i < (int) values.size(); i++)
+        values[i] = sin(2.0*M_PI*i/(values.size()-1));
+
     Continuous1DFunction function(values, min, max, true);
 
     // Serialize and then deserialize it.
@@ -127,6 +127,41 @@ void testContinuous2DFunction() {
         ASSERT_EQUAL(values[j], values2[j]);
 }
 
+void testPeriodicContinuous2DFunction() {
+    // Create a function.
+
+    int xsize = 5, ysize = 12;
+    double xmin = 0.0, xmax = 2.0*M_PI, ymin = 0.0, ymax = 2.0*M_PI;
+    vector<double> values(xsize*ysize);
+    for (int i = 0; i < xsize; i++)
+        for (int j = 0; j < (int) ysize; j++)
+            values[i+j*xsize] = sin(2.0*M_PI*i/(xsize-1))*cos(2.0*M_PI*j/(ysize-1));
+
+    Continuous2DFunction function(xsize, ysize, values, xmin, xmax, ymin, ymax, true);
+
+    // Serialize and then deserialize it.
+
+    stringstream buffer;
+    XmlSerializer::serialize<Continuous2DFunction>(&function, "Function", buffer);
+    Continuous2DFunction* copy = XmlSerializer::deserialize<Continuous2DFunction>(buffer);
+
+    // Compare the two forces to see if they are identical.
+
+    int xsize2, ysize2;
+    double xmin2, xmax2, ymin2, ymax2;
+    vector<double> values2;
+    copy->getFunctionParameters(xsize2, ysize2, values2, xmin2, xmax2, ymin2, ymax2);
+    ASSERT_EQUAL(xsize, xsize2);
+    ASSERT_EQUAL(ysize, ysize2);
+    ASSERT_EQUAL(xmin, xmin2);
+    ASSERT_EQUAL(xmax, xmax2);
+    ASSERT_EQUAL(ymin, ymin2);
+    ASSERT_EQUAL(ymax, ymax2);
+    ASSERT_EQUAL(values.size(), values2.size());
+    for (int j = 0; j < (int) values.size(); j++)
+        ASSERT_EQUAL(values[j], values2[j]);
+}
+
 void testContinuous3DFunction() {
     // Create a function.
 
@@ -136,6 +171,44 @@ void testContinuous3DFunction() {
     for (int i = 0; i < (int) values.size(); i++)
         values[i] = sin((double) i);
     Continuous3DFunction function(xsize, ysize, zsize, values, xmin, xmax, ymin, ymax, zmin, zmax);
+
+    // Serialize and then deserialize it.
+
+    stringstream buffer;
+    XmlSerializer::serialize<Continuous3DFunction>(&function, "Function", buffer);
+    Continuous3DFunction* copy = XmlSerializer::deserialize<Continuous3DFunction>(buffer);
+
+    // Compare the two forces to see if they are identical.
+
+    int xsize2, ysize2, zsize2;
+    double xmin2, xmax2, ymin2, ymax2, zmin2, zmax2;
+    vector<double> values2;
+    copy->getFunctionParameters(xsize2, ysize2, zsize2, values2, xmin2, xmax2, ymin2, ymax2, zmin2, zmax2);
+    ASSERT_EQUAL(xsize, xsize2);
+    ASSERT_EQUAL(ysize, ysize2);
+    ASSERT_EQUAL(zsize, zsize2);
+    ASSERT_EQUAL(xmin, xmin2);
+    ASSERT_EQUAL(xmax, xmax2);
+    ASSERT_EQUAL(ymin, ymin2);
+    ASSERT_EQUAL(ymax, ymax2);
+    ASSERT_EQUAL(zmin, zmin2);
+    ASSERT_EQUAL(zmax, zmax2);
+    ASSERT_EQUAL(values.size(), values2.size());
+    for (int j = 0; j < (int) values.size(); j++)
+        ASSERT_EQUAL(values[j], values2[j]);
+}
+
+void testPeriodicContinuous3DFunction() {
+    // Create a function.
+
+    int xsize = 5, ysize = 4, zsize = 3;
+    double xmin = 0.0, xmax = 2.0*M_PI, ymin = 0.0, ymax = 2.0*M_PI, zmin = 0.0, zmax = 2.0*M_PI;
+    vector<double> values(xsize*ysize*zsize);
+    for (int i = 0; i < xsize; i++)
+        for (int j = 0; j < ysize; j++)
+            for (int k = 0; k < zsize; k++)
+                values[i+j*xsize+k*xsize*ysize] = sin(2.0*M_PI*i/(xsize-1))*cos(2.0*M_PI*j/(ysize-1))*sin(2.0*M_PI*k/(zsize-1));
+    Continuous3DFunction function(xsize, ysize, zsize, values, xmin, xmax, ymin, ymax, zmin, zmax, true);
 
     // Serialize and then deserialize it.
 
@@ -244,8 +317,11 @@ void testDiscrete3DFunction() {
 int main() {
     try {
         testContinuous1DFunction();
+        testPeriodicContinuous1DFunction();
         testContinuous2DFunction();
+        testPeriodicContinuous2DFunction();
         testContinuous3DFunction();
+        testPeriodicContinuous3DFunction();
         testDiscrete1DFunction();
         testDiscrete2DFunction();
         testDiscrete3DFunction();
