@@ -63,22 +63,35 @@ void testContinuous1DFunction() {
     ASSERT_EQUAL(values.size(), values2.size());
     for (int j = 0; j < (int) values.size(); j++)
         ASSERT_EQUAL(values[j], values2[j]);
+}
 
-    // Same test with periodic function:
+void testPeriodicContinuous1DFunction() {
+    // Create a function.
 
-    values.push_back(values[0]);
-    function.setPeriodic(true);
-    function.setFunctionParameters(values, min, max);
-    stringstream newBuffer;
-    XmlSerializer::serialize<Continuous1DFunction>(&function, "Function", newBuffer);
-    Continuous1DFunction* newCopy = XmlSerializer::deserialize<Continuous1DFunction>(newBuffer);
-    newCopy->getFunctionParameters(values2, min2, max2);
+    double min = 0.5, max = 1.5;
+    vector<double> values(60);
+    for (int i = 0; i < (int) values.size()-1; i++)
+        values[i] = sin((double) i);
+    values[values.size()-1] = values[0];
+    Continuous1DFunction function(values, min, max, true);
+
+    // Serialize and then deserialize it.
+
+    stringstream buffer;
+    XmlSerializer::serialize<Continuous1DFunction>(&function, "Function", buffer);
+    Continuous1DFunction* copy = XmlSerializer::deserialize<Continuous1DFunction>(buffer);
+
+    // Compare the two forces to see if they are identical.
+
+    double min2, max2;
+    vector<double> values2;
+    copy->getFunctionParameters(values2, min2, max2);
     ASSERT_EQUAL(min, min2);
     ASSERT_EQUAL(max, max2);
     ASSERT_EQUAL(values.size(), values2.size());
     for (int j = 0; j < (int) values.size(); j++)
         ASSERT_EQUAL(values[j], values2[j]);
-    
+
 }
 
 void testContinuous2DFunction() {

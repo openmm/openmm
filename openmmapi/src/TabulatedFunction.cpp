@@ -39,10 +39,6 @@ bool TabulatedFunction::getPeriodic() const {
     return periodic;
 }
 
-void TabulatedFunction::setPeriodic(bool periodic) {
-    this->periodic = periodic;
-}
-
 Continuous1DFunction::Continuous1DFunction(const vector<double>& values, double min, double max, bool periodic) {
     this->periodic = periodic;
     setFunctionParameters(values, min, max);

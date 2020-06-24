@@ -68,12 +68,6 @@ public:
      *
      */
     bool getPeriodic() const;
-    /**
-     * Set the periodicity status for the tabulated function.
-     *
-     * @param periodic       whether the function is periodic with period L = max - min
-     */
-    void setPeriodic(bool periodic);
 protected:
     bool periodic;
 };

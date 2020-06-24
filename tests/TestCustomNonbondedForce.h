@@ -355,14 +355,26 @@ void testContinuous1DFunction() {
         double energy = (x < 1.0 || x > 6.0 ? 0.0 : sin(x-1.0))+1.0;
         ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 1e-4);
     }
+}
 
+void testPeriodicContinuous1DFunction() {
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* forceField = new CustomNonbondedForce("fn(r)+1");
+    forceField->addParticle(vector<double>());
+    forceField->addParticle(vector<double>());
+    vector<double> table;
     double twoPi = 8.0*atan(1.0);
     for (int i = 0; i < 20; i++)
-        table[i] = sin(i*twoPi/20.0);
-    table[20] = table[0];
-    continuous1DFunction->setFunctionParameters(table, 1.0, twoPi+1.0);
-    continuous1DFunction->setPeriodic(true);
-    context.reinitialize();
+        table.push_back(sin(i*twoPi/20.0));
+    table.push_back(table[0]);
+    Continuous1DFunction* continuous1DFunction = new Continuous1DFunction(table, 1.0, twoPi+1.0);
+    forceField->addTabulatedFunction("fn", continuous1DFunction);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
     for (int i = 1; i < 30; i++) {
         double x = (7.0/30.0)*i;
