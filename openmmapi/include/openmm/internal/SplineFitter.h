@@ -44,6 +44,18 @@ namespace OpenMM {
 class OPENMM_EXPORT SplineFitter {
 public:
     /**
+     * Fit a cubic spline to a set of data points.  The resulting spline interpolates all the
+     * data points and has a continuous second derivative everywhere. The second derivatives are
+     * identical at the end points if periodic=true or 0 at the end points if periodic=false.
+     *
+     * @param x        the values of the independent variable at the data points to interpolate.  They must
+     *                 be strictly increasing: x[i] > x[i-1].
+     * @param y        the values of the dependent variable at the data points to interpolate
+     * @param periodic whether the interpolated function is periodic
+     * @param deriv    on exit, this contains the second derivative of the spline at each of the data points
+     */
+    static void createSpline(const std::vector<double>& x, const std::vector<double>& y, bool periodic, std::vector<double>& deriv);
+    /**
      * Fit a natural cubic spline to a set of data points.  The resulting spline interpolates all the
      * data points, has a continuous second derivative everywhere, and has a second derivative of 0 at
      * its end points.
@@ -87,6 +99,21 @@ public:
      */
     static double evaluateSplineDerivative(const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& deriv, double t);
     /**
+     * Fit a cubic spline surface f(x,y) to a 2D set of data points.  The resulting spline interpolates all the
+     * data points and has a continuous second derivative everywhere. The second derivatives are identical at
+     * the boundary if periodic=true or 0 at the boundary if periodic=false.
+     *
+     * @param x        the values of the first independent variable at the data points to interpolate.  They must
+     *                 be strictly increasing: x[i] > x[i-1].
+     * @param y        the values of the second independent variable at the data points to interpolate.  They must
+     *                 be strictly increasing: y[i] > y[i-1].
+     * @param values   the values of the dependent variable at the data points to interpolate.  They must be ordered
+     *                 so that values[i+xsize*j] = f(x[i],y[j]), where xsize is the length of x.
+     * @param periodic whether the interpolated function is periodic
+     * @param c        on exit, this contains the spline coefficients at each of the data points
+     */
+    static void create2DSpline(const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& values, bool periodic, std::vector<std::vector<double> >& c);
+    /**
      * Fit a natural cubic spline surface f(x,y) to a 2D set of data points.  The resulting spline interpolates all the
      * data points, has a continuous second derivative everywhere, and has a second derivative of 0 at the boundary.
      *
@@ -124,6 +151,24 @@ public:
      * @param dy     on exit, the y derivative of the spline at the specified point
      */
     static void evaluate2DSplineDerivatives(const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& values, const std::vector<std::vector<double> >& c, double u, double v, double& dx, double& dy);
+    /**
+     * Fit a cubic spline surface f(x,y,z) to a 3D set of data points.  The resulting spline interpolates all the
+     * data points and has a continuous second derivative everywhere. The second derivatives are identical at
+     * the boundary if periodic=true or 0 at the boundary if periodic=false.
+     *
+     * @param x        the values of the first independent variable at the data points to interpolate.  They must
+     *                 be strictly increasing: x[i] > x[i-1].
+     * @param y        the values of the second independent variable at the data points to interpolate.  They must
+     *                 be strictly increasing: y[i] > y[i-1].
+     * @param z        the values of the third independent variable at the data points to interpolate.  They must
+     *                 be strictly increasing: z[i] > z[i-1].
+     * @param values   the values of the dependent variable at the data points to interpolate.  They must be ordered
+     *                 so that values[i+xsize*j+xsize*ysize*k] = f(x[i],y[j],z[k]), where xsize is the length of x
+     *                 and ysize is the length of y.
+     * @param periodic whether the interpolated function is periodic
+     * @param c        on exit, this contains the spline coefficients at each of the data points
+     */
+    static void create3DSpline(const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& z, const std::vector<double>& values, bool periodic, std::vector<std::vector<double> >& c);
     /**
      * Fit a natural cubic spline surface f(x,y,z) to a 3D set of data points.  The resulting spline interpolates all the
      * data points, has a continuous second derivative everywhere, and has a second derivative of 0 at the boundary.

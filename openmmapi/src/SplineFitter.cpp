@@ -37,6 +37,13 @@
 using namespace OpenMM;
 using namespace std;
 
+void SplineFitter::createSpline(const vector<double>& x, const vector<double>& y, bool periodic, vector<double>& deriv) {
+    if (periodic)
+        SplineFitter::createPeriodicSpline(x, y, deriv);
+    else
+        SplineFitter::createNaturalSpline(x, y, deriv);
+}
+
 void SplineFitter::createNaturalSpline(const vector<double>& x, const vector<double>& y, vector<double>& deriv) {
     int n = x.size();
     if (y.size() != n)
@@ -183,16 +190,16 @@ void SplineFitter::solveTridiagonalMatrix(const vector<double>& a, const vector<
         sol[i] = (rhs[i]-a[i]*sol[i-1])/beta;
     }
 
-    // Perform backsubstitation.
+    // Perform backsubstitution.
 
     for (int i = n-2; i >= 0; i--)
         sol[i] -= gamma[i+1]*sol[i+1];
 }
 
-void SplineFitter::create2DNaturalSpline(const vector<double>& x, const vector<double>& y, const vector<double>& values, vector<vector<double> >& c) {
+void SplineFitter::create2DSpline(const vector<double>& x, const vector<double>& y, const vector<double>& values, bool periodic, vector<vector<double> >& c) {
     int xsize = x.size(), ysize = y.size();
-    if (xsize < 2 || ysize < 2)
-        throw OpenMMException("create2DNaturalSpline: must have at least two points along each axis");
+    // if (xsize < 2 || ysize < 2)
+    //     throw OpenMMException("create2DNaturalSpline: must have at least two points along each axis");
     if (values.size() != xsize*ysize)
         throw OpenMMException("create2DNaturalSpline: incorrect number of values");
     vector<double> d1(xsize*ysize), d2(xsize*ysize), d12(xsize*ysize);
@@ -203,7 +210,7 @@ void SplineFitter::create2DNaturalSpline(const vector<double>& x, const vector<d
     for (int i = 0; i < ysize; i++) {
         for (int j = 0; j < xsize; j++)
             t[j] = values[j+xsize*i];
-        SplineFitter::createNaturalSpline(x, t, deriv);
+        SplineFitter::createSpline(x, t, periodic, deriv);
         for (int j = 0; j < xsize; j++)
             d1[j+xsize*i] = SplineFitter::evaluateSplineDerivative(x, t, deriv, x[j]);
     }
@@ -215,7 +222,7 @@ void SplineFitter::create2DNaturalSpline(const vector<double>& x, const vector<d
     for (int i = 0; i < xsize; i++) {
         for (int j = 0; j < ysize; j++)
             t[j] = values[i+xsize*j];
-        SplineFitter::createNaturalSpline(y, t, deriv);
+        SplineFitter::createSpline(y, t, periodic, deriv);
         for (int j = 0; j < ysize; j++)
             d2[i+xsize*j] = SplineFitter::evaluateSplineDerivative(y, t, deriv, y[j]);
     }
@@ -227,7 +234,7 @@ void SplineFitter::create2DNaturalSpline(const vector<double>& x, const vector<d
     for (int i = 0; i < ysize; i++) {
         for (int j = 0; j < xsize; j++)
             t[j] = d2[j+xsize*i];
-        SplineFitter::createNaturalSpline(x, t, deriv);
+        SplineFitter::createSpline(x, t, periodic, deriv);
         for (int j = 0; j < xsize; j++)
             d12[j+xsize*i] = SplineFitter::evaluateSplineDerivative(x, t, deriv, x[j]);
     }
@@ -283,6 +290,10 @@ void SplineFitter::create2DNaturalSpline(const vector<double>& x, const vector<d
             }
         }
     }
+}
+
+void SplineFitter::create2DNaturalSpline(const vector<double>& x, const vector<double>& y, const vector<double>& values, vector<vector<double> >& c) {
+    SplineFitter::create2DSpline(x, y, values, false, c);
 }
 
 double SplineFitter::evaluate2DSpline(const vector<double>& x, const vector<double>& y, const vector<double>& values, const vector<vector<double> >& c, double u, double v) {
@@ -369,11 +380,11 @@ void SplineFitter::evaluate2DSplineDerivatives(const vector<double>& x, const ve
     dy /= deltay;
 }
 
-void SplineFitter::create3DNaturalSpline(const vector<double>& x, const vector<double>& y, const vector<double>& z, const vector<double>& values, vector<vector<double> >& c) {
+void SplineFitter::create3DSpline(const vector<double>& x, const vector<double>& y, const vector<double>& z, const vector<double>& values, bool periodic, vector<vector<double> >& c) {
     int xsize = x.size(), ysize = y.size(), zsize = z.size();
     int xysize = xsize*ysize;
-    if (xsize < 2 || ysize < 2 || zsize < 2)
-        throw OpenMMException("create2DNaturalSpline: must have at least two points along each axis");
+    // if (xsize < 2 || ysize < 2 || zsize < 2)
+    //     throw OpenMMException("create2DNaturalSpline: must have at least two points along each axis");
     if (values.size() != xsize*ysize*zsize)
         throw OpenMMException("create2DNaturalSpline: incorrect number of values");
     vector<double> d1(xsize*ysize*zsize), d2(xsize*ysize*zsize), d3(xsize*ysize*zsize);
@@ -386,7 +397,7 @@ void SplineFitter::create3DNaturalSpline(const vector<double>& x, const vector<d
         for (int j = 0; j < zsize; j++) {
             for (int k = 0; k < xsize; k++)
                 t[k] = values[k+xsize*i+xysize*j];
-            SplineFitter::createNaturalSpline(x, t, deriv);
+            SplineFitter::createSpline(x, t, periodic, deriv);
             for (int k = 0; k < xsize; k++)
                 d1[k+xsize*i+xysize*j] = SplineFitter::evaluateSplineDerivative(x, t, deriv, x[k]);
         }
@@ -400,7 +411,7 @@ void SplineFitter::create3DNaturalSpline(const vector<double>& x, const vector<d
         for (int j = 0; j < zsize; j++) {
             for (int k = 0; k < ysize; k++)
                 t[k] = values[i+xsize*k+xysize*j];
-            SplineFitter::createNaturalSpline(y, t, deriv);
+            SplineFitter::createSpline(y, t, periodic, deriv);
             for (int k = 0; k < ysize; k++)
                 d2[i+xsize*k+xysize*j] = SplineFitter::evaluateSplineDerivative(y, t, deriv, y[k]);
         }
@@ -414,7 +425,7 @@ void SplineFitter::create3DNaturalSpline(const vector<double>& x, const vector<d
         for (int j = 0; j < ysize; j++) {
             for (int k = 0; k < zsize; k++)
                 t[k] = values[i+xsize*j+xysize*k];
-            SplineFitter::createNaturalSpline(z, t, deriv);
+            SplineFitter::createSpline(z, t, periodic, deriv);
             for (int k = 0; k < zsize; k++)
                 d3[i+xsize*j+xysize*k] = SplineFitter::evaluateSplineDerivative(z, t, deriv, z[k]);
         }
@@ -428,7 +439,7 @@ void SplineFitter::create3DNaturalSpline(const vector<double>& x, const vector<d
         for (int j = 0; j < zsize; j++) {
             for (int k = 0; k < xsize; k++)
                 t[k] = d2[k+xsize*i+xysize*j];
-            SplineFitter::createNaturalSpline(x, t, deriv);
+            SplineFitter::createSpline(x, t, periodic, deriv);
             for (int k = 0; k < xsize; k++)
                 d12[k+xsize*i+xysize*j] = SplineFitter::evaluateSplineDerivative(x, t, deriv, x[k]);
         }
@@ -442,7 +453,7 @@ void SplineFitter::create3DNaturalSpline(const vector<double>& x, const vector<d
         for (int j = 0; j < xsize; j++) {
             for (int k = 0; k < ysize; k++)
                 t[k] = d3[j+xsize*k+xysize*i];
-            SplineFitter::createNaturalSpline(y, t, deriv);
+            SplineFitter::createSpline(y, t, periodic, deriv);
             for (int k = 0; k < ysize; k++)
                 d23[j+xsize*k+xysize*i] = SplineFitter::evaluateSplineDerivative(y, t, deriv, y[k]);
         }
@@ -456,7 +467,7 @@ void SplineFitter::create3DNaturalSpline(const vector<double>& x, const vector<d
         for (int j = 0; j < ysize; j++) {
             for (int k = 0; k < zsize; k++)
                 t[k] = d1[i+xsize*j+xysize*k];
-            SplineFitter::createNaturalSpline(z, t, deriv);
+            SplineFitter::createSpline(z, t, periodic, deriv);
             for (int k = 0; k < zsize; k++)
                 d13[i+xsize*j+xysize*k] = SplineFitter::evaluateSplineDerivative(z, t, deriv, z[k]);
         }
@@ -470,7 +481,7 @@ void SplineFitter::create3DNaturalSpline(const vector<double>& x, const vector<d
         for (int j = 0; j < zsize; j++) {
             for (int k = 0; k < xsize; k++)
                 t[k] = d23[k+xsize*i+xysize*j];
-            SplineFitter::createNaturalSpline(x, t, deriv);
+            SplineFitter::createSpline(x, t, periodic, deriv);
             for (int k = 0; k < xsize; k++)
                 d123[k+xsize*i+xysize*j] = SplineFitter::evaluateSplineDerivative(x, t, deriv, x[k]);
         }
@@ -597,6 +608,10 @@ void SplineFitter::create3DNaturalSpline(const vector<double>& x, const vector<d
             }
         }
     }
+}
+
+void SplineFitter::create3DNaturalSpline(const vector<double>& x, const vector<double>& y, const vector<double>& z, const vector<double>& values, vector<vector<double> >& c) {
+    SplineFitter::create3DSpline(x, y, z, values, false, c);
 }
 
 double SplineFitter::evaluate3DSpline(const vector<double>& x, const vector<double>& y, const vector<double>& z, const vector<double>& values, const vector<vector<double> >& c, double u, double v, double w) {
