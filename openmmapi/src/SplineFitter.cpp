@@ -200,8 +200,12 @@ void SplineFitter::solveTridiagonalMatrix(const vector<double>& a, const vector<
 
 void SplineFitter::create2DSpline(const vector<double>& x, const vector<double>& y, const vector<double>& values, bool periodic, vector<vector<double> >& c) {
     int xsize = x.size(), ysize = y.size();
-    // if (xsize < 2 || ysize < 2)
-    //     throw OpenMMException("create2DNaturalSpline: must have at least two points along each axis");
+    if (periodic) {
+        if (xsize < 3 || ysize < 3)
+            throw OpenMMException("create2DNaturalSpline: periodic spline must have at least three points along each axis");
+    }
+    else if (xsize < 2 || ysize < 2)
+        throw OpenMMException("create2DNaturalSpline: must have at least two points along each axis");
     if (values.size() != xsize*ysize)
         throw OpenMMException("create2DNaturalSpline: incorrect number of values");
     vector<double> d1(xsize*ysize), d2(xsize*ysize), d12(xsize*ysize);
@@ -385,8 +389,12 @@ void SplineFitter::evaluate2DSplineDerivatives(const vector<double>& x, const ve
 void SplineFitter::create3DSpline(const vector<double>& x, const vector<double>& y, const vector<double>& z, const vector<double>& values, bool periodic, vector<vector<double> >& c) {
     int xsize = x.size(), ysize = y.size(), zsize = z.size();
     int xysize = xsize*ysize;
-    // if (xsize < 2 || ysize < 2 || zsize < 2)
-    //     throw OpenMMException("create2DNaturalSpline: must have at least two points along each axis");
+    if (periodic) {
+        if (xsize < 3 || ysize < 3 || zsize < 3)
+            throw OpenMMException("create3DNaturalSpline: periodic spline must have at least three points along each axis");
+    }
+    else if (xsize < 2 || ysize < 2 || zsize < 2)
+        throw OpenMMException("create3DNaturalSpline: must have at least two points along each axis");
     if (values.size() != xsize*ysize*zsize)
         throw OpenMMException("create2DNaturalSpline: incorrect number of values");
     vector<double> d1(xsize*ysize*zsize), d2(xsize*ysize*zsize), d3(xsize*ysize*zsize);
