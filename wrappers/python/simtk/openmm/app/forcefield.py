@@ -86,8 +86,8 @@ def _parseFunctions(element):
                 params[key] = int(function.attrib[key])
             elif key.endswith('min') or key.endswith('max'):
                 params[key] = float(function.attrib[key])
-        if functionType == 'Continuous1D':
-            params['periodic'] = bool(eval(function.attrib.get('periodic', 'False')))
+        if functionType.startswith('Continuous'):
+            params['periodic'] = eval(function.attrib.get('periodic', 'False').title())
         functions.append((function.attrib['name'], functionType, values, params))
     return functions
 
@@ -95,11 +95,33 @@ def _createFunctions(force, functions):
     """Add TabulatedFunctions to a Force based on the information that was recorded by _parseFunctions()."""
     for (name, type, values, params) in functions:
         if type == 'Continuous1D':
-            force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max'], params['periodic']))
+            force.addTabulatedFunction(
+                name,
+                mm.Continuous1DFunction(values, params['min'], params['max'], params['periodic']),
+            )
         elif type == 'Continuous2D':
-            force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax']))
+            force.addTabulatedFunction(
+                name,
+                mm.Continuous2DFunction(
+                    params['xsize'], params['ysize'],
+                    values,
+                    params['xmin'], params['xmax'],
+                    params['ymin'], params['ymax'],
+                    params['periodic'],
+                ),
+            )
         elif type == 'Continuous3D':
-            force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], params['zsize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax'], params['zmin'], params['zmax']))
+            force.addTabulatedFunction(
+                name,
+                mm.Continuous2DFunction(
+                    params['xsize'], params['ysize'], params['zsize'],
+                    values,
+                    params['xmin'], params['xmax'],
+                    params['ymin'], params['ymax'],
+                    params['zmin'], params['zmax'],
+                    params['periodic'],
+                ),
+            )
         elif type == 'Discrete1D':
             force.addTabulatedFunction(name, mm.Discrete1DFunction(values))
         elif type == 'Discrete2D':
