@@ -1,5 +1,5 @@
 """
-pdbreporter.py: Outputs simulation trajectories in PDB format
+xtcreporter.py: Outputs simulation trajectories in XTC format
 
 This is part of the OpenMM molecular simulation toolkit originating from
 Simbios, the NIH National Center for Physics-Based Simulation of
