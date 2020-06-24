@@ -21,7 +21,6 @@ simulation.minimizeEnergy()
 print('Heating from 0 to 300K')
 simulation.reporters.append(StateDataReporter(stdout, 100, step=True,
         potentialEnergy=True, temperature=True))
-# Initialize the simulation XTC writer from some random state, and then replace the xyz coordinates
 simulation.reporters.append(XTCReporter('traj.xtc', 1000, True))
 for temp in np.arange(0.0,301.0):
     integrator.setTemperature(temp*kelvin)
