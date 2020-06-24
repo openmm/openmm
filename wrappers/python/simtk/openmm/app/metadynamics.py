@@ -72,7 +72,7 @@ class Metadynamics(object):
     directory, and also load in and apply the biases added by other processes.
     """
 
-    def __init__(self, system, variables, temperature, biasFactor, height, frequency, saveFrequency=None, biasDir=None, gridExpansion=20):
+    def __init__(self, system, variables, temperature, biasFactor, height, frequency, saveFrequency=None, biasDir=None):
         """Create a Metadynamics object.
 
         Parameters
@@ -100,9 +100,6 @@ class Metadynamics(object):
         biasDir: str (optional)
             the directory to which biases should be written, and from which biases written by
             other processes should be loaded
-        gridExpansion: int (optional)
-            the number of extra grid points to be used in periodic directions of multidimensional
-            tabulated functions. This aims at avoiding boundary discontinuity artifacts.
         """
         if not unit.is_quantity(temperature):
             temperature = temperature*unit.kelvin
@@ -123,35 +120,26 @@ class Metadynamics(object):
         self.saveFrequency = saveFrequency
         self._id = np.random.randint(0x7FFFFFFF)
         self._saveIndex = 0
-        self._expansion_variables = []
-        for v in variables:
-            expanded = v.periodic and len(variables) > 1
-            extraWidth = min(gridExpansion, v.gridWidth - 1) if expanded else 0
-            extraRange = extraWidth*(v.maxValue - v.minValue)/(v.gridWidth - 1)
-            actualWidth = v.gridWidth + 2*extraWidth
-            actualMin = v.minValue - extraRange
-            actualMax = v.maxValue + extraRange
-            arraySlice = slice(extraWidth, v.gridWidth + extraWidth)
-            self._expansion_variables.append(
-                _ExpansionData(expanded, extraWidth, actualWidth, actualMin, actualMax, arraySlice),
-            )
-        self._selfBias = np.zeros(tuple(v.actualWidth for v in reversed(self._expansion_variables)))
-        self._totalBias = np.zeros(tuple(v.actualWidth for v in reversed(self._expansion_variables)))
+        self._selfBias = np.zeros(tuple(v.gridWidth for v in reversed(variables)))
+        self._totalBias = np.zeros(tuple(v.gridWidth for v in reversed(variables)))
         self._loadedBiases = {}
         self._deltaT = temperature*(biasFactor-1)
         varNames = ['cv%d' % i for i in range(len(variables))]
         self._force = mm.CustomCVForce('table(%s)' % ', '.join(varNames))
         for name, var in zip(varNames, variables):
             self._force.addCollectiveVariable(name, var.force)
-        widths = [ev.actualWidth for ev in self._expansion_variables]
-        mins = [ev.actualMin for ev in self._expansion_variables]
-        maxs = [ev.actualMax for ev in self._expansion_variables]
+        self._widths = [v.gridWidth for v in variables]
+        self._limits = sum(([v.minValue, v.maxValue] for v in variables), [])
+        numPeriodics = sum(v.periodic for v in variables)
+        if numPeriodics not in [0, len(variables)]:
+            raise ValueError('Metadynamics cannot handle mixed periodic/non-periodic variables')
+        periodic = numPeriodics == len(variables)
         if len(variables) == 1:
-            self._table = mm.Continuous1DFunction(self._totalBias.flatten(), mins[0], maxs[0], variables[0].periodic)
+            self._table = mm.Continuous1DFunction(self._totalBias.flatten(), *self._limits, periodic)
         elif len(variables) == 2:
-            self._table = mm.Continuous2DFunction(widths[0], widths[1], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1])
+            self._table = mm.Continuous2DFunction(*self._widths, self._totalBias.flatten(), *self._limits, periodic)
         elif len(variables) == 3:
-            self._table = mm.Continuous3DFunction(widths[0], widths[1], widths[2], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1], mins[2], maxs[2])
+            self._table = mm.Continuous3DFunction(*self._widths, self._totalBias.flatten(), *self._limits, periodic)
         else:
             raise ValueError('Metadynamics requires 1, 2, or 3 collective variables')
         self._force.addTabulatedFunction('table', self._table)
@@ -194,12 +182,7 @@ class Metadynamics(object):
         variables.  The values are in kJ/mole.  The i'th position along an axis corresponds to
         minValue + i*(maxValue-minValue)/gridWidth.
         """
-        f = -((self.temperature+self._deltaT)/self._deltaT)*self._totalBias*unit.kilojoules_per_mole
-        if len(self.variables) == 1:
-            return f
-        else:
-            s = [ev.slice for ev in self._expansion_variables]
-            return f[s[1], s[0]] if len(self.variables) == 2 else f[s[2], s[1], s[0]]
+        return -((self.temperature+self._deltaT)/self._deltaT)*self._totalBias*unit.kilojoules_per_mole
 
     def getCollectiveVariables(self, simulation):
         """Get the current values of all collective variables in a Simulation."""
@@ -210,18 +193,15 @@ class Metadynamics(object):
         # Compute a Gaussian along each axis.
 
         axisGaussians = []
-        for i, (v, ev) in enumerate(zip(self.variables, self._expansion_variables)):
+        for i,v in enumerate(self.variables):
             x = (position[i]-v.minValue) / (v.maxValue-v.minValue)
             if v.periodic:
                 x = x % 1.0
             dist = np.abs(np.linspace(0, 1.0, num=v.gridWidth) - x)
             if v.periodic:
                 dist = np.min(np.array([dist, np.abs(dist-1)]), axis=0)
-            values = np.exp(-0.5*dist*dist/v._scaledVariance)
-            if ev.expanded:
-                n = ev.extraWidth + 1
-                values = np.hstack((values[-n:-1], values, values[1:n]))
-            axisGaussians.append(values)
+                dist[-1] = dist[0]
+            axisGaussians.append(np.exp(-0.5*dist*dist/v._scaledVariance))
 
         # Compute their outer product.
 
@@ -235,16 +215,10 @@ class Metadynamics(object):
         height = height.value_in_unit(unit.kilojoules_per_mole)
         self._selfBias += height*gaussian
         self._totalBias += height*gaussian
-        widths = [ev.actualWidth for ev in self._expansion_variables]
-        mins = [ev.actualMin for ev in self._expansion_variables]
-        maxs = [ev.actualMax for ev in self._expansion_variables]
         if len(self.variables) == 1:
-            self._totalBias[-1] = self._totalBias[0]
-            self._table.setFunctionParameters(self._totalBias.flatten(), mins[0], maxs[0])
-        elif len(self.variables) == 2:
-            self._table.setFunctionParameters(widths[0], widths[1], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1])
-        elif len(self.variables) == 3:
-            self._table.setFunctionParameters(widths[0], widths[1], widths[2], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1], mins[2], maxs[2])
+            self._table.setFunctionParameters(self._totalBias.flatten(), *self._limits)
+        else:
+            self._table.setFunctionParameters(*self._widths, self._totalBias.flatten(), *self._limits)
         self._force.updateParametersInContext(context)
 
     def _syncWithDisk(self):
@@ -333,7 +307,3 @@ class BiasVariable(object):
             return quantity
 
 _LoadedBias = namedtuple('LoadedBias', ['id', 'index', 'bias'])
-_ExpansionData = namedtuple(
-    'ExpansionData',
-    ['expanded', 'extraWidth', 'actualWidth', 'actualMin', 'actualMax', 'slice'],
-)
