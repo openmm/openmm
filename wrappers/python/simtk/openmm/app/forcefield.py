@@ -87,7 +87,11 @@ def _parseFunctions(element):
             elif key.endswith('min') or key.endswith('max'):
                 params[key] = float(function.attrib[key])
         if functionType.startswith('Continuous'):
-            params['periodic'] = eval(function.attrib.get('periodic', 'False').title())
+            periodicStr = function.attrib.get('periodic', 'false').lower()
+            if periodicStr in ['true', 'false', 'yes', 'no', '1', '0']:
+                params['periodic'] = periodicStr in ['true', 'yes', '1']
+            else:
+                raise ValueError('ForceField: non-boolean value for periodic attribute in tabulated function definition')
         functions.append((function.attrib['name'], functionType, values, params))
     return functions
 
