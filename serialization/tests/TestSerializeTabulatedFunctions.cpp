@@ -66,6 +66,7 @@ void testContinuous1DFunction() {
     ASSERT_EQUAL(values.size(), values2.size());
     for (int j = 0; j < (int) values.size(); j++)
         ASSERT_EQUAL(values[j], values2[j]);
+    ASSERT(!copy->getPeriodic());
 }
 
 void testPeriodicContinuous1DFunction() {
@@ -94,7 +95,7 @@ void testPeriodicContinuous1DFunction() {
     ASSERT_EQUAL(values.size(), values2.size());
     for (int j = 0; j < (int) values.size(); j++)
         ASSERT_EQUAL(values[j], values2[j]);
-
+    ASSERT(copy->getPeriodic());
 }
 
 void testContinuous2DFunction() {
@@ -128,6 +129,7 @@ void testContinuous2DFunction() {
     ASSERT_EQUAL(values.size(), values2.size());
     for (int j = 0; j < (int) values.size(); j++)
         ASSERT_EQUAL(values[j], values2[j]);
+    ASSERT(!copy->getPeriodic());
 }
 
 void testPeriodicContinuous2DFunction() {
@@ -163,6 +165,7 @@ void testPeriodicContinuous2DFunction() {
     ASSERT_EQUAL(values.size(), values2.size());
     for (int j = 0; j < (int) values.size(); j++)
         ASSERT_EQUAL(values[j], values2[j]);
+    ASSERT(copy->getPeriodic());
 }
 
 void testContinuous3DFunction() {
@@ -199,6 +202,7 @@ void testContinuous3DFunction() {
     ASSERT_EQUAL(values.size(), values2.size());
     for (int j = 0; j < (int) values.size(); j++)
         ASSERT_EQUAL(values[j], values2[j]);
+    ASSERT(!copy->getPeriodic());
 }
 
 void testPeriodicContinuous3DFunction() {
@@ -237,6 +241,7 @@ void testPeriodicContinuous3DFunction() {
     ASSERT_EQUAL(values.size(), values2.size());
     for (int j = 0; j < (int) values.size(); j++)
         ASSERT_EQUAL(values[j], values2[j]);
+    ASSERT(copy->getPeriodic());
 }
 
 void testDiscrete1DFunction() {
