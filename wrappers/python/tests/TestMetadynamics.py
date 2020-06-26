@@ -17,7 +17,7 @@ class TestMetadynamics(unittest.TestCase):
         cv = CustomBondForce('r')
         cv.addBond(0, 1)
         bias = BiasVariable(cv, 0.94, 1.06, 0.00431, gridWidth=31)
-        meta = Metadynamics(system, [bias], 300*kelvin, 2.0, 5.0, 10)
+        meta = Metadynamics(system, [bias], 300*kelvin, 3.0, 5.0, 10)
         integrator = LangevinIntegrator(300*kelvin, 10/picosecond, 0.001*picosecond)
         integrator.setRandomNumberSeed(4321)
         topology = Topology()

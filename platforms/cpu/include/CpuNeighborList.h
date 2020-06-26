@@ -51,7 +51,7 @@ public:
             const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads);
     int getNumBlocks() const;
     int getBlockSize() const;
-    const std::vector<int>& getSortedAtoms() const;
+    const std::vector<int32_t>& getSortedAtoms() const;
     const std::vector<int>& getBlockNeighbors(int blockIndex) const;
 
     /**

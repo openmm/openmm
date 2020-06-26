@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,7 +39,7 @@
 
 using namespace OpenMM;
 
-Integrator::Integrator() : owner(NULL), context(NULL) {
+Integrator::Integrator() : owner(NULL), context(NULL), forceGroups(0xFFFFFFFF) {
 }
 
 Integrator::~Integrator() {
@@ -67,6 +67,14 @@ double Integrator::getConstraintTolerance() const {
 
 void Integrator::setConstraintTolerance(double tol) {
     constraintTol = tol;
+}
+
+int Integrator::getIntegrationForceGroups() const {
+    return forceGroups;
+}
+
+void Integrator::setIntegrationForceGroups(int groups) {
+    forceGroups = groups;
 }
 
 std::vector<Vec3> Integrator::getVelocitiesForTemperature(const System &system, double temperature, int randomSeed) const {

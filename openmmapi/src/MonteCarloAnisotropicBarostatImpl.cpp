@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Lee-Ping Wang                                      *
  * Contributors:                                                              *
  *                                                                            *
@@ -72,7 +72,8 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     
     // Compute the current potential energy.
     
-    double initialEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
+    int groups = context.getIntegrator().getIntegrationForceGroups();
+    double initialEnergy = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
     double pressure;
     
     // Choose which axis to modify at random.
@@ -114,7 +115,7 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     
     // Compute the energy of the modified system.
     
-    double finalEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
+    double finalEnergy = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
     double kT = BOLTZ*context.getParameter(MonteCarloAnisotropicBarostat::Temperature());
     double w = finalEnergy-initialEnergy + pressure*deltaVolume - context.getMolecules().size()*kT*std::log(newVolume/volume);
     if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > std::exp(-w/kT)) {

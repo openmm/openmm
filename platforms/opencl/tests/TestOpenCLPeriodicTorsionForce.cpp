@@ -49,9 +49,13 @@ void testParallelComputation() {
     context1.setPositions(positions);
     State state1 = context1.getState(State::Forces | State::Energy);
     VerletIntegrator integrator2(0.01);
-    string deviceIndex = platform.getPropertyValue(context1, OpenCLPlatform::OpenCLDeviceIndex());
+
     map<string, string> props;
+    string deviceIndex = platform.getPropertyValue(context1, OpenCLPlatform::OpenCLDeviceIndex());
     props[OpenCLPlatform::OpenCLDeviceIndex()] = deviceIndex+","+deviceIndex;
+    string platformIndex = platform.getPropertyValue(context1, OpenCLPlatform::OpenCLPlatformIndex());
+    props[OpenCLPlatform::OpenCLPlatformIndex()] = platformIndex;
+
     Context context2(system, integrator2, platform, props);
     context2.setPositions(positions);
     State state2 = context2.getState(State::Forces | State::Energy);

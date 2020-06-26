@@ -5709,7 +5709,7 @@ void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const No
 
     // If the atom reordering has occured, the forces from the previous step are permuted and thus invalid.
     // They need to be either sorted or recomputed; here we choose the latter.
-    if (!forcesAreValid || cc.getAtomsWereReordered()) context.calcForcesAndEnergy(true, false);
+    if (!forcesAreValid || cc.getAtomsWereReordered()) context.calcForcesAndEnergy(true, false, integrator.getIntegrationForceGroups());
 
     const auto& atomList = integrator.getAllThermostatedIndividualParticles();
     const auto& pairList = integrator.getAllThermostatedPairs();
@@ -6770,7 +6770,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
 
         // Record the variable names and flags for the force and energy in each step.
 
-        forceGroupFlags.resize(numSteps, -1);
+        forceGroupFlags.resize(numSteps, integrator.getIntegrationForceGroups());
         vector<string> forceGroupName;
         vector<string> energyGroupName;
         for (int i = 0; i < 32; i++) {
@@ -6957,7 +6957,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 if (cc.getUseMixedPrecision())
                     kernel->addArg(cc.getPosqCorrection());
                 else
-                    kernel->addArg(NULL);
+                    kernel->addArg(nullptr);
                 kernel->addArg(integration.getPosDelta());
                 kernel->addArg(cc.getVelm());
                 kernel->addArg(cc.getLongForceBuffer());
@@ -6992,7 +6992,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 if (cc.getUseMixedPrecision())
                     kernel->addArg(cc.getPosqCorrection());
                 else
-                    kernel->addArg(NULL);
+                    kernel->addArg(nullptr);
                 kernel->addArg(integration.getPosDelta());
             }
         }
@@ -7048,7 +7048,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         if (cc.getUseMixedPrecision())
             kineticEnergyKernel->addArg(cc.getPosqCorrection());
         else
-            kineticEnergyKernel->addArg(NULL);
+            kineticEnergyKernel->addArg(nullptr);
         kineticEnergyKernel->addArg(integration.getPosDelta());
         kineticEnergyKernel->addArg(cc.getVelm());
         kineticEnergyKernel->addArg(cc.getLongForceBuffer());

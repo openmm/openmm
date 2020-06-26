@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -123,6 +123,7 @@ void CudaIntegrateRPMDStepKernel::initialize(const System& system, const RPMDInt
             groupsNotContracted -= 1<<group;
         }
     }
+    groupsNotContracted &= integrator.getIntegrationForceGroups();
     if (maxContractedCopies > 0) {
         contractedForces.initialize<long long>(cu, maxContractedCopies*paddedParticles*3, "rpmdContractedForces");
         contractedPositions.initialize(cu, maxContractedCopies*paddedParticles, elementSize, "rpmdContractedPositions");

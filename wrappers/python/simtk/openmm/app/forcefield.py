@@ -841,6 +841,7 @@ class ForceField(object):
                     newSite = deepcopy(site)
                     newSite.index = indexMap[site.index]
                     newSite.atoms = [indexMap[i] for i in site.atoms]
+                    newSite.excludeWith = indexMap[site.excludeWith]
                     newTemplate.virtualSites = [site for site in newTemplate.virtualSites if site.index != newSite.index]
                     newTemplate.virtualSites.append(newSite)
             return newTemplates
