@@ -293,6 +293,8 @@ class BiasVariable(object):
         self.minValue = self._standardize(minValue)
         self.maxValue = self._standardize(maxValue)
         self.biasWidth = self._standardize(biasWidth)
+        if not isinstance(periodic, Bool):
+            raise ValueError("BiasVariable: invalid argument")
         self.periodic = periodic
         if gridWidth is None:
             self.gridWidth = int(np.ceil(5*(maxValue-minValue)/biasWidth))
