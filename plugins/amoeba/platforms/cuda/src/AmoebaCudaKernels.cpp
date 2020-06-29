@@ -2341,12 +2341,12 @@ public:
     ForceInfo(const AmoebaVdwForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        int iv1, iv2;
+        int iv1, iv2, type1, type2;
         double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2;
         bool isAlchemical1, isAlchemical2;
-        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1, isAlchemical1);
-        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2, isAlchemical2);
-        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && isAlchemical1 == isAlchemical2);
+        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1, isAlchemical1, type1);
+        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2, isAlchemical2, type2);
+        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && isAlchemical1 == isAlchemical2 && type1 == type2);
     }
 private:
     const AmoebaVdwForce& force;
