@@ -34,6 +34,7 @@
 
 #include "openmm/Force.h"
 #include "internal/windowsExportAmoeba.h"
+#include <string>
 #include <vector>
 
 namespace OpenMM {

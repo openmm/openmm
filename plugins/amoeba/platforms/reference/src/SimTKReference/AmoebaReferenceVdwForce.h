@@ -26,6 +26,7 @@
 #define __AmoebaReferenceVdwForce_H__
 
 #include "openmm/Vec3.h"
+#include "openmm/AmoebaVdwForce.h"
 #include "ReferenceNeighborList.h"
 #include <string>
 #include <vector>
@@ -41,48 +42,6 @@ typedef double (AmoebaReferenceVdwForce::*CombiningFunctionEpsilon)(double x, do
 class AmoebaReferenceVdwForce {
 
 public:
-
-    /** 
-     * This is an enumeration of the different methods that may be used for handling long range Vdw forces.
-     */
-    enum NonbondedMethod {
-
-        /**
-         * No cutoff is applied to the interactions.  The full set of N^2 interactions is computed exactly.
-         * This necessarily means that periodic boundary conditions cannot be used.  This is the default.
-         */
-
-        NoCutoff = 0,
-
-        /**
-         * Interactions beyond the cutoff distance are ignored.  
-         */
-        CutoffNonPeriodic = 1,
-        /**
-         * Periodic boundary conditions are used, so that each particle interacts only with the nearest periodic copy of
-         * each other particle.  Interactions beyond the cutoff distance are ignored.  
-         */
-        CutoffPeriodic = 2,
-    };
-
-    /**
-     * This is an enumeration of the different alchemical methods used when applying softcore interactions.
-     */
-    enum AlchemicalMethod {
-        /**
-         * All vdW interactions are treated normally. This is the default.
-         */
-        None = 0,
-        /**
-         * Maintain full strength vdW interactions between two alchemical particles.
-         */
-        Decouple = 1,
-        /**
-         * Interactions between two alchemical particles are turned off at lambda=0.
-         */
-        Annihilate = 2,
-    };
-
  
     /**---------------------------------------------------------------------------------------
        
@@ -91,6 +50,8 @@ public:
        --------------------------------------------------------------------------------------- */
  
     AmoebaReferenceVdwForce();
+    
+    void initialize(const AmoebaVdwForce& force);
  
     /**---------------------------------------------------------------------------------------
        
@@ -109,46 +70,6 @@ public:
  
     ~AmoebaReferenceVdwForce() {};
  
-    /**---------------------------------------------------------------------------------------
-    
-       Get nonbonded method
-    
-       @return nonbonded method
-    
-       --------------------------------------------------------------------------------------- */
-    
-    NonbondedMethod getNonbondedMethod() const;
-
-    /**---------------------------------------------------------------------------------------
-    
-       Set nonbonded method
-    
-       @param nonbonded method
-    
-       --------------------------------------------------------------------------------------- */
-    
-    void setNonbondedMethod(NonbondedMethod nonbondedMethod);
-
-    /**---------------------------------------------------------------------------------------
-
-       Get alchemical method
-
-       @return alchemical method
-
-       --------------------------------------------------------------------------------------- */
-
-    AlchemicalMethod getAlchemicalMethod() const;
-
-    /**---------------------------------------------------------------------------------------
-
-       Set alchemical method
-
-       @param alchemical method
-
-       --------------------------------------------------------------------------------------- */
-
-    void setAlchemicalMethod(AlchemicalMethod alchemicalMethod);
-
 
     /**---------------------------------------------------------------------------------------
     
@@ -323,14 +244,18 @@ private:
 
     std::string _sigmaCombiningRule;
     std::string _epsilonCombiningRule;
-    NonbondedMethod _nonbondedMethod;
-    AlchemicalMethod _alchemicalMethod;
+    AmoebaVdwForce::NonbondedMethod _nonbondedMethod;
+    AmoebaVdwForce::AlchemicalMethod _alchemicalMethod;
+    AmoebaVdwForce::PotentialFunction potentialFunction;
     double _n;
     double _alpha;
     double _cutoff;
     double _taperCutoffFactor;
     double _taperCutoff;
     double _taperCoefficients[3];
+    std::vector<int> particleType;
+    std::vector<std::vector<double> > sigmaMatrix;
+    std::vector<std::vector<double> > epsilonMatrix;
     Vec3 _periodicBoxVectors[3];
     CombiningFunction _combineSigmas;
     double arithmeticSigmaCombiningRule(double sigmaI, double sigmaJ) const;

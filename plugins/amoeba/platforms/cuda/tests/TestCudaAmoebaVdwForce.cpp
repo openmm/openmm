@@ -138,13 +138,13 @@ void testVdw() {
         positions[ii][2] *= AngstromToNm;
     }
     for (int ii = 0; ii < amoebaVdwForce->getNumParticles();  ii++) {
-        int indexIV;
+        int indexIV, type;
         double sigma, epsilon, reduction;
         bool isAlchemical;
-        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical);
+        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical, type);
         sigma        *= AngstromToNm;
         epsilon      *= CalToJoule;
-        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical);
+        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical, type);
     }
     platformName = "CUDA";
     Context context(system, integrator, Platform::getPlatformByName(platformName));
@@ -169,11 +169,11 @@ void testVdw() {
     // Try changing the particle parameters and make sure it's still correct.
     
     for (int i = 0; i < numberOfParticles; i++) {
-        int indexIV;
+        int indexIV, type;
         double mass, sigma, epsilon, reduction;
         bool isAlchemical;
-        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction, isAlchemical);
-        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction, isAlchemical);
+        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction, isAlchemical, type);
+        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction, isAlchemical, type);
     }
     LangevinIntegrator integrator2(0.0, 0.1, 0.01);
     Context context2(system, integrator2, Platform::getPlatformByName(platformName));

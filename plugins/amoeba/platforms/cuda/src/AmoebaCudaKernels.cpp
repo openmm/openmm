@@ -2388,10 +2388,10 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     }
 
     for (int i = 0; i < force.getNumParticles(); i++) {
-        int ivIndex;
+        int ivIndex, type;
         double sigma, epsilon, reductionFactor;
         bool alchemical;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical);
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical, type);
         sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
         isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
         bondReductionAtomsVec[i] = ivIndex;
@@ -2518,10 +2518,10 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
     vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
     vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
     for (int i = 0; i < force.getNumParticles(); i++) {
-        int ivIndex;
+        int ivIndex, type;
         double sigma, epsilon, reductionFactor;
         bool alchemical;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical);
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical, type);
         sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
         isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
         bondReductionAtomsVec[i] = ivIndex;

@@ -109,6 +109,8 @@ void AmoebaVdwForceImpl::createParameterMatrix(const AmoebaVdwForce& force, vect
             type[i] = typeForParams[params];
         }
         numTypes = typeForParams.size();
+        typeSigma.resize(numTypes);
+        typeEpsilon.resize(numTypes);
         for (auto params : typeForParams) {
             typeSigma[params.second] = params.first.first;
             typeEpsilon[params.second] = params.first.second;
@@ -212,7 +214,7 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     vector<vector<double> > sigmaMatrix;
     vector<vector<double> > epsilonMatrix;
     createParameterMatrix(force, type, sigmaMatrix, epsilonMatrix);
-    int numTypes = type.size();
+    int numTypes = sigmaMatrix.size();
     vector<int> typeCounts(numTypes, 0);
     for (int i = 0; i < force.getNumParticles(); i++)
         typeCounts[type[i]]++;
@@ -277,14 +279,10 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
     // Double loop over different atom types.
     
     for (int i = 0; i < numTypes; i++) {
-        for (int j = 0; j <= i; j++) {
+        for (int j = 0; j < numTypes; j++) {
             double sigma = sigmaMatrix[i][j];
             double epsilon = epsilonMatrix[i][j];
-            int count;
-            if (i == j)
-                count = typeCounts[i]*(typeCounts[i]+1)/2;
-            else
-                count = typeCounts[i]*typeCounts[j];
+            int count = typeCounts[i]*typeCounts[j];
             // Below is an exact copy of stuff from the previous block.
             double rv = sigma;
             double termik = 2.0 * M_PI * count; // termik is equivalent to 2 * pi * count.
@@ -298,18 +296,18 @@ double AmoebaVdwForceImpl::calcDispersionCorrection(const System& system, const 
                 r2 = r*r;
                 double r3 = r2 * r;
                 double r6 = r3 * r3;
-                double r7 = r6 * r;
-                // The following is for buffered 14-7 only.
-                /*
-                double rho = r/rv;
-                double term1 = pow(((dhal + 1.0) / (dhal + rho)),7);
-                double term2 = ((ghal + 1.0) / (ghal + pow(rho,7))) - 2.0;
-                e = epsilon * term1 * term2;
-                */
-                double rho = r7 + ghal*rv7;
-                double tau = (dhal + 1.0) / (r + dhal * rv);
-                double tau7 = pow(tau, 7);
-                e = epsilon * rv7 * tau7 * ((ghal + 1.0) * rv7 / rho - 2.0);
+                if (force.getPotentialFunction() == AmoebaVdwForce::LennardJones) {
+                    double p6 = rv6 / r6;
+                    double p12 = p6 * p6;
+                    e = 4 * epsilon * (p12 - p6);
+                }
+                else {
+                    double r7 = r6 * r;
+                    double rho = r7 + ghal * rv7;
+                    double tau = (dhal+1.0) / (r+dhal*rv);
+                    double tau7 = pow(tau, 7);
+                    e = epsilon * rv7 * tau7 * ((ghal+1.0)*rv7/rho-2.0);
+                }
                 double taper = 0.0;
                 if (r < off) {
                     double r4 = r2 * r2;

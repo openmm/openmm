@@ -32,7 +32,6 @@
 #include "AmoebaReferenceStretchBendForce.h"
 #include "AmoebaReferenceOutOfPlaneBendForce.h"
 #include "AmoebaReferenceTorsionTorsionForce.h"
-#include "AmoebaReferenceVdwForce.h"
 #include "AmoebaReferenceWcaDispersionForce.h"
 #include "AmoebaReferenceGeneralizedKirkwoodForce.h"
 #include "openmm/internal/AmoebaTorsionTorsionForceImpl.h"
@@ -1021,12 +1020,12 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
 
     for (int ii = 0; ii < numParticles; ii++) {
 
-        int indexIV;
+        int indexIV, type;
         double sigma, epsilon, reduction;
         bool alchemical;
         std::vector<int> exclusions;
 
-        force.getParticleParameters(ii, indexIV, sigma, epsilon, reduction, alchemical);
+        force.getParticleParameters(ii, indexIV, sigma, epsilon, reduction, alchemical, type);
         force.getParticleExclusions(ii, exclusions);
         for (unsigned int jj = 0; jj < exclusions.size(); jj++) {
            allExclusions[ii].insert(exclusions[jj]);
@@ -1048,29 +1047,18 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
     alchemicalMethod       = force.getAlchemicalMethod();
     n                      = force.getSoftcorePower();
     alpha                  = force.getSoftcoreAlpha();
+    vdwForce.initialize(force);
 }
 
 double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
     vector<Vec3>& posData   = extractPositions(context);
     vector<Vec3>& forceData = extractForces(context);
-    AmoebaReferenceVdwForce vdwForce(sigmaCombiningRule, epsilonCombiningRule);
-    if (alchemicalMethod == AmoebaVdwForce::Decouple) {
-       vdwForce.setAlchemicalMethod(AmoebaReferenceVdwForce::Decouple);
-    } else if (alchemicalMethod == AmoebaVdwForce::Annihilate) {
-       vdwForce.setAlchemicalMethod(AmoebaReferenceVdwForce::Annihilate);
-    } else {
-       vdwForce.setAlchemicalMethod(AmoebaReferenceVdwForce::None);
-    }
-    vdwForce.setSoftcorePower(n);
-    vdwForce.setSoftcoreAlpha(alpha);
     double energy;
     double lambda = context.getParameter(AmoebaVdwForce::Lambda());
     if (useCutoff) {
-        vdwForce.setCutoff(cutoff);
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, allExclusions, extractBoxVectors(context), usePBC, cutoff, 0.0);
         if (usePBC) {
-            vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::CutoffPeriodic);
             Vec3* boxVectors = extractBoxVectors(context);
             double minAllowedSize = 1.999999*cutoff;
             if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
@@ -1080,14 +1068,11 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
             energy  = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, indexIVs, sigmas, epsilons, 
                                                        reductions, isAlchemical, *neighborList, forceData);
             energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
-        } else {
-            vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::CutoffNonPeriodic);
         }
-    } else {
-        vdwForce.setNonbondedMethod(AmoebaReferenceVdwForce::NoCutoff);
+    }
+    else
         energy = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, indexIVs, sigmas, epsilons, 
                                                   reductions, isAlchemical, allExclusions, forceData);
-    }
     return static_cast<double>(energy);
 }
 
@@ -1097,16 +1082,17 @@ void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& con
 
     // Record the values.
     for (int i = 0; i < numParticles; ++i) {
-        int indexIV;
+        int indexIV, type;
         double sigma, epsilon, reduction;
         bool alchemical;
-        force.getParticleParameters(i, indexIV, sigma, epsilon, reduction, alchemical);
+        force.getParticleParameters(i, indexIV, sigma, epsilon, reduction, alchemical, type);
         indexIVs[i] = indexIV;
         sigmas[i] = sigma;
         epsilons[i] = epsilon;
         reductions[i]= reduction;
         isAlchemical[i]= alchemical;
     }
+    vdwForce.initialize(force);
 }
 
 /* -------------------------------------------------------------------------- *

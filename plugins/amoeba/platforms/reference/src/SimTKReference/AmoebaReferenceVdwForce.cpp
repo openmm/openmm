@@ -25,6 +25,7 @@
 #include "AmoebaReferenceForce.h"
 #include "AmoebaReferenceVdwForce.h"
 #include "ReferenceForce.h"
+#include "openmm/internal/AmoebaVdwForceImpl.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -32,36 +33,29 @@
 using std::vector;
 using namespace OpenMM;
 
-AmoebaReferenceVdwForce::AmoebaReferenceVdwForce() : _nonbondedMethod(NoCutoff), _cutoff(1.0e+10), _taperCutoffFactor(0.9), _n(5), _alpha(0.7), _alchemicalMethod(None) {
+AmoebaReferenceVdwForce::AmoebaReferenceVdwForce() : _nonbondedMethod(AmoebaVdwForce::NoCutoff), _cutoff(1.0e+10), _taperCutoffFactor(0.9), _n(5), _alpha(0.7), _alchemicalMethod(AmoebaVdwForce::None) {
 
     setTaperCoefficients(_cutoff);
     setSigmaCombiningRule("ARITHMETIC");
     setEpsilonCombiningRule("GEOMETRIC");
 }
 
+void AmoebaReferenceVdwForce::initialize(const AmoebaVdwForce& force) {
+    _alchemicalMethod = force.getAlchemicalMethod();
+    _n = force.getSoftcorePower();
+    _alpha = force.getSoftcoreAlpha();
+    _nonbondedMethod = force.getNonbondedMethod();
+    potentialFunction = force.getPotentialFunction();
+    if (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff)
+        setCutoff(force.getCutoffDistance());
+    AmoebaVdwForceImpl::createParameterMatrix(force, particleType, sigmaMatrix, epsilonMatrix);
+}
 
-AmoebaReferenceVdwForce::AmoebaReferenceVdwForce(const std::string& sigmaCombiningRule, const std::string& epsilonCombiningRule) : _nonbondedMethod(NoCutoff), _cutoff(1.0e+10), _taperCutoffFactor(0.9),  _n(5), _alpha(0.7), _alchemicalMethod(None) {
+AmoebaReferenceVdwForce::AmoebaReferenceVdwForce(const std::string& sigmaCombiningRule, const std::string& epsilonCombiningRule) : _nonbondedMethod(AmoebaVdwForce::NoCutoff), _cutoff(1.0e+10), _taperCutoffFactor(0.9),  _n(5), _alpha(0.7), _alchemicalMethod(AmoebaVdwForce::None) {
 
     setTaperCoefficients(_cutoff);
     setSigmaCombiningRule(sigmaCombiningRule);
     setEpsilonCombiningRule(epsilonCombiningRule);
-}
-
-AmoebaReferenceVdwForce::NonbondedMethod AmoebaReferenceVdwForce::getNonbondedMethod() const {
-    return _nonbondedMethod;
-}
-
-void AmoebaReferenceVdwForce::setNonbondedMethod(AmoebaReferenceVdwForce::NonbondedMethod nonbondedMethod) {
-    _nonbondedMethod = nonbondedMethod;
-}
-
-AmoebaReferenceVdwForce::AlchemicalMethod AmoebaReferenceVdwForce::getAlchemicalMethod() const {
-    return _alchemicalMethod;
-}
-
-
-void AmoebaReferenceVdwForce::setAlchemicalMethod(AmoebaReferenceVdwForce::AlchemicalMethod alchemicalMethod){
-    _alchemicalMethod = alchemicalMethod;
 }
 
 void AmoebaReferenceVdwForce::setSoftcorePower(int n) {
@@ -219,7 +213,7 @@ double AmoebaReferenceVdwForce::calculatePairIxn(double combinedSigma, double co
     // get deltaR, R2, and R between 2 atoms
 
     double deltaR[ReferenceForce::LastDeltaRIndex];
-    if (_nonbondedMethod == CutoffPeriodic)
+    if (_nonbondedMethod == AmoebaVdwForce::CutoffPeriodic)
         ReferenceForce::getDeltaRPeriodic(particleJPosition, particleIPosition, _periodicBoxVectors, deltaR);
     else
         ReferenceForce::getDeltaR(particleJPosition, particleIPosition, deltaR);
@@ -227,25 +221,37 @@ double AmoebaReferenceVdwForce::calculatePairIxn(double combinedSigma, double co
     double r_ij_2       = deltaR[ReferenceForce::R2Index];
     double r_ij         = deltaR[ReferenceForce::RIndex];
 
-    double rho = r_ij / combinedSigma;
-    double rho2 = rho * rho;
-    double rho6 = rho2 * rho2 * rho2;
-    double rhoplus = rho + dhal;
-    double rhodec2 = rhoplus * rhoplus;
-    double rhodec = rhodec2 * rhodec2 * rhodec2;
-    double s1 = 1.0 / (softcore + rhodec * rhoplus);
-    double s2 = 1.0 / (softcore + rho6 * rho + 0.12);
-    double point72 = dhal1 * dhal1;
-    double t1 = dhal1 * point72 * point72 * point72 * s1;
-    double t2 = ghal1 * s2;
-    double t2min = t2 - 2;
-    double dt1 = -7.0 * rhodec * t1 * s1;
-    double dt2 = -7.0 * rho6 * t2 * s2;
-    double energy = combinedEpsilon * t1 * t2min;
-    double dEdR = combinedEpsilon * (dt1 * t2min + t1 * dt2) / combinedSigma;
+    double energy, dEdR;
+    if (potentialFunction == AmoebaVdwForce::LennardJones) {
+        double pp1 = combinedSigma / r_ij;
+        double pp2 = pp1 * pp1;
+        double pp3 = pp2 * pp1;
+        double pp6 = pp3 * pp3;
+        double pp12 = pp6 * pp6;
+        energy = 4 * combinedEpsilon * (pp12 - pp6);
+        dEdR = -24 * combinedEpsilon * (2*pp12 - pp6) / r_ij;
+    }
+    else {
+        double rho = r_ij / combinedSigma;
+        double rho2 = rho * rho;
+        double rho6 = rho2 * rho2 * rho2;
+        double rhoplus = rho + dhal;
+        double rhodec2 = rhoplus * rhoplus;
+        double rhodec = rhodec2 * rhodec2 * rhodec2;
+        double s1 = 1.0 / (softcore + rhodec * rhoplus);
+        double s2 = 1.0 / (softcore + rho6 * rho + 0.12);
+        double point72 = dhal1 * dhal1;
+        double t1 = dhal1 * point72 * point72 * point72 * s1;
+        double t2 = ghal1 * s2;
+        double t2min = t2 - 2;
+        double dt1 = -7.0 * rhodec * t1 * s1;
+        double dt2 = -7.0 * rho6 * t2 * s2;
+        energy = combinedEpsilon * t1 * t2min;
+        dEdR = combinedEpsilon * (dt1 * t2min + t1 * dt2) / combinedSigma;
+    }
 
     // tapering
-    if ((_nonbondedMethod == CutoffNonPeriodic || _nonbondedMethod == CutoffPeriodic) && r_ij > _taperCutoff) {
+    if (_nonbondedMethod == AmoebaVdwForce::CutoffPeriodic && r_ij > _taperCutoff) {
         double delta    = r_ij - _taperCutoff;
         double taper    = 1.0 + delta*delta*delta*(_taperCoefficients[C3] + delta*(_taperCoefficients[C4] + delta*_taperCoefficients[C5]));
         double dtaper   = delta*delta*(3.0*_taperCoefficients[C3] + delta*(4.0*_taperCoefficients[C4] + delta*5.0*_taperCoefficients[C5]));
@@ -309,31 +315,24 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
     double energy = 0.0;
     std::vector<unsigned int> exclusions(numParticles, 0);
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numParticles); ii++) {
- 
-        double sigmaI      = sigmas[ii];
-        double epsilonI    = epsilons[ii];
+
         bool isAlchemicalI = isAlchemical[ii];
         for (int jj : allExclusions[ii])
             exclusions[jj] = 1;
 
         for (unsigned int jj = ii+1; jj < static_cast<unsigned int>(numParticles); jj++) {
             if (exclusions[jj] == 0) {
-
-                double combinedSigma   = (this->*_combineSigmas)(sigmaI, sigmas[jj]);
-
-                double combinedEpsilon = (this->*_combineEpsilons)(epsilonI, epsilons[jj], sigmaI, sigmas[jj]);
-
-              
+                double combinedSigma = sigmaMatrix[particleType[ii]][particleType[jj]];
+                double combinedEpsilon = epsilonMatrix[particleType[ii]][particleType[jj]];
                 double softcore = 0.0;
 
-                if (this->_alchemicalMethod == Decouple && (isAlchemicalI != isAlchemical[jj])) {
+                if (this->_alchemicalMethod == AmoebaVdwForce::Decouple && (isAlchemicalI != isAlchemical[jj])) {
                    combinedEpsilon *= pow(lambda, this->_n);
                    softcore = this->_alpha * pow(1.0 - lambda, 2);
-                } else if (this->_alchemicalMethod == Annihilate && (isAlchemicalI || isAlchemical[jj])) {
+                } else if (this->_alchemicalMethod == AmoebaVdwForce::Annihilate && (isAlchemicalI || isAlchemical[jj])) {
                    combinedEpsilon *= pow(lambda, this->_n);
                    softcore = this->_alpha * pow(1.0 - lambda, 2);
                 }
-
 
                 Vec3 force;
                 energy += calculatePairIxn(combinedSigma, combinedEpsilon, softcore,
@@ -392,22 +391,20 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
         int siteI                   = pair.first;
         int siteJ                   = pair.second;
 
-        double combinedSigma   = (this->*_combineSigmas)(sigmas[siteI], sigmas[siteJ]);
-
-        double combinedEpsilon = (this->*_combineEpsilons)(epsilons[siteI], epsilons[siteJ], sigmas[siteI], sigmas[siteJ]);
+        double combinedSigma = sigmaMatrix[particleType[siteI]][particleType[siteJ]];
+        double combinedEpsilon = epsilonMatrix[particleType[siteI]][particleType[siteJ]];
 
         double softcore        = 0.0;
         int isAlchemicalI      = isAlchemical[siteI];
         int isAlchemicalJ      = isAlchemical[siteJ];
 
-        if (this->_alchemicalMethod == Decouple && (isAlchemicalI != isAlchemicalJ)) {
+        if (this->_alchemicalMethod == AmoebaVdwForce::Decouple && (isAlchemicalI != isAlchemicalJ)) {
            combinedEpsilon *= pow(lambda, this->_n);
            softcore = this->_alpha * pow(1.0 - lambda, 2);
-        } else if (this->_alchemicalMethod == Annihilate && (isAlchemicalI || isAlchemicalJ)) {
+        } else if (this->_alchemicalMethod == AmoebaVdwForce::Annihilate && (isAlchemicalI || isAlchemicalJ)) {
            combinedEpsilon *= pow(lambda, this->_n);
            softcore = this->_alpha * pow(1.0 - lambda, 2);
         }
-
 
         Vec3 force;
         energy += calculatePairIxn(combinedSigma, combinedEpsilon, softcore,
@@ -427,7 +424,6 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
         } else {
             addReducedForce(siteJ, indexIVs[siteJ], reductions[siteJ], 1.0, force, forces);
         }
-
     }
 
     return energy;

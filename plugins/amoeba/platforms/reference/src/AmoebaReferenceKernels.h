@@ -33,6 +33,7 @@
 #include "openmm/HippoNonbondedForce.h"
 #include "AmoebaReferenceMultipoleForce.h"
 #include "AmoebaReferenceHippoNonbondedForce.h"
+#include "AmoebaReferenceVdwForce.h"
 #include "ReferenceNeighborList.h"
 #include "SimTKOpenMMRealType.h"
 
@@ -501,6 +502,7 @@ private:
     int usePBC;
     double cutoff;
     double dispersionCoefficient;
+    AmoebaReferenceVdwForce vdwForce;
     AmoebaVdwForce::AlchemicalMethod alchemicalMethod;
     int n;
     double alpha;
