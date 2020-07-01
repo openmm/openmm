@@ -120,27 +120,31 @@ class Metadynamics(object):
         self.saveFrequency = saveFrequency
         self._id = np.random.randint(0x7FFFFFFF)
         self._saveIndex = 0
-        self._selfBias = np.zeros(tuple(v.gridWidth for v in variables))
-        self._totalBias = np.zeros(tuple(v.gridWidth for v in variables))
+        self._selfBias = np.zeros(tuple(v.gridWidth for v in reversed(variables)))
+        self._totalBias = np.zeros(tuple(v.gridWidth for v in reversed(variables)))
         self._loadedBiases = {}
         self._deltaT = temperature*(biasFactor-1)
         varNames = ['cv%d' % i for i in range(len(variables))]
         self._force = mm.CustomCVForce('table(%s)' % ', '.join(varNames))
         for name, var in zip(varNames, variables):
             self._force.addCollectiveVariable(name, var.force)
-        widths = [v.gridWidth for v in variables]
-        mins = [v.minValue for v in variables]
-        maxs = [v.maxValue for v in variables]
+        self._widths = [v.gridWidth for v in variables]
+        self._limits = sum(([v.minValue, v.maxValue] for v in variables), [])
+        numPeriodics = sum(v.periodic for v in variables)
+        if numPeriodics not in [0, len(variables)]:
+            raise ValueError('Metadynamics cannot handle mixed periodic/non-periodic variables')
+        periodic = numPeriodics == len(variables)
         if len(variables) == 1:
-            self._table = mm.Continuous1DFunction(self._totalBias.flatten(), mins[0], maxs[0])
+            self._table = mm.Continuous1DFunction(self._totalBias.flatten(), *self._limits, periodic)
         elif len(variables) == 2:
-            self._table = mm.Continuous2DFunction(widths[0], widths[1], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1])
+            self._table = mm.Continuous2DFunction(*self._widths, self._totalBias.flatten(), *self._limits, periodic)
         elif len(variables) == 3:
-            self._table = mm.Continuous3DFunction(widths[0], widths[1], widths[2], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1], mins[2], maxs[2])
+            self._table = mm.Continuous3DFunction(*self._widths, self._totalBias.flatten(), *self._limits, periodic)
         else:
             raise ValueError('Metadynamics requires 1, 2, or 3 collective variables')
         self._force.addTabulatedFunction('table', self._table)
-        self._force.setForceGroup(31)
+        freeGroups = set(range(32)) - set(force.getForceGroup() for force in system.getForces())
+        self._force.setForceGroup(max(freeGroups))
         system.addForce(self._force)
         self._syncWithDisk()
 
@@ -196,7 +200,8 @@ class Metadynamics(object):
             dist = np.abs(np.linspace(0, 1.0, num=v.gridWidth) - x)
             if v.periodic:
                 dist = np.min(np.array([dist, np.abs(dist-1)]), axis=0)
-            axisGaussians.append(np.exp(-dist*dist*v.gridWidth/v.biasWidth))
+                dist[-1] = dist[0]
+            axisGaussians.append(np.exp(-0.5*dist*dist/v._scaledVariance))
 
         # Compute their outer product.
 
@@ -210,15 +215,10 @@ class Metadynamics(object):
         height = height.value_in_unit(unit.kilojoules_per_mole)
         self._selfBias += height*gaussian
         self._totalBias += height*gaussian
-        widths = [v.gridWidth for v in self.variables]
-        mins = [v.minValue for v in self.variables]
-        maxs = [v.maxValue for v in self.variables]
         if len(self.variables) == 1:
-            self._table.setFunctionParameters(self._totalBias.flatten(), mins[0], maxs[0])
-        elif len(self.variables) == 2:
-            self._table.setFunctionParameters(widths[0], widths[1], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1])
-        elif len(self.variables) == 3:
-            self._table.setFunctionParameters(widths[0], widths[1], widths[2], self._totalBias.flatten(), mins[0], maxs[0], mins[1], maxs[1], mins[2], maxs[2])
+            self._table.setFunctionParameters(self._totalBias.flatten(), *self._limits)
+        else:
+            self._table.setFunctionParameters(*self._widths, self._totalBias.flatten(), *self._limits)
         self._force.updateParametersInContext(context)
 
     def _syncWithDisk(self):
@@ -275,29 +275,37 @@ class BiasVariable(object):
         ----------
         force: Force
             the Force object whose potential energy defines the collective variable
-        minValue: float
+        minValue: float or unit.Quantity
             the minimum value the collective variable can take.  If it should ever go below this,
             the bias force will be set to 0.
-        maxValue: float
+        maxValue: float or unit.Quantity
             the maximum value the collective variable can take.  If it should ever go above this,
             the bias force will be set to 0.
-        biasWidth: float
+        biasWidth: float or unit.Quantity
             the width (standard deviation) of the Gaussians added to the bias during metadynamics
-        periodic: bool
+        periodic: bool (optional)
             whether this is a periodic variable, such that minValue and maxValue are physical equivalent
-        gridWidth: int
+        gridWidth: int (optional)
             the number of grid points to use when tabulating the bias function.  If this is omitted,
             a reasonable value is chosen automatically.
         """
         self.force = force
-        self.minValue = minValue
-        self.maxValue = maxValue
-        self.biasWidth = biasWidth
+        self.minValue = self._standardize(minValue)
+        self.maxValue = self._standardize(maxValue)
+        self.biasWidth = self._standardize(biasWidth)
+        if not isinstance(periodic, bool):
+            raise ValueError("BiasVariable: invalid argument")
         self.periodic = periodic
         if gridWidth is None:
             self.gridWidth = int(np.ceil(5*(maxValue-minValue)/biasWidth))
         else:
             self.gridWidth = gridWidth
+        self._scaledVariance = (self.biasWidth/(self.maxValue-self.minValue))**2
 
+    def _standardize(self, quantity):
+        if unit.is_quantity(quantity):
+            return quantity.value_in_unit_system(unit.md_unit_system)
+        else:
+            return quantity
 
 _LoadedBias = namedtuple('LoadedBias', ['id', 'index', 'bias'])

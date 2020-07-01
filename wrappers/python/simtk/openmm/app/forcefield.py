@@ -86,6 +86,12 @@ def _parseFunctions(element):
                 params[key] = int(function.attrib[key])
             elif key.endswith('min') or key.endswith('max'):
                 params[key] = float(function.attrib[key])
+        if functionType.startswith('Continuous'):
+            periodicStr = function.attrib.get('periodic', 'false').lower()
+            if periodicStr in ['true', 'false', 'yes', 'no', '1', '0']:
+                params['periodic'] = periodicStr in ['true', 'yes', '1']
+            else:
+                raise ValueError('ForceField: non-boolean value for periodic attribute in tabulated function definition')
         functions.append((function.attrib['name'], functionType, values, params))
     return functions
 
@@ -93,11 +99,33 @@ def _createFunctions(force, functions):
     """Add TabulatedFunctions to a Force based on the information that was recorded by _parseFunctions()."""
     for (name, type, values, params) in functions:
         if type == 'Continuous1D':
-            force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max']))
+            force.addTabulatedFunction(
+                name,
+                mm.Continuous1DFunction(values, params['min'], params['max'], params['periodic']),
+            )
         elif type == 'Continuous2D':
-            force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax']))
+            force.addTabulatedFunction(
+                name,
+                mm.Continuous2DFunction(
+                    params['xsize'], params['ysize'],
+                    values,
+                    params['xmin'], params['xmax'],
+                    params['ymin'], params['ymax'],
+                    params['periodic'],
+                ),
+            )
         elif type == 'Continuous3D':
-            force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], params['zsize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax'], params['zmin'], params['zmax']))
+            force.addTabulatedFunction(
+                name,
+                mm.Continuous2DFunction(
+                    params['xsize'], params['ysize'], params['zsize'],
+                    values,
+                    params['xmin'], params['xmax'],
+                    params['ymin'], params['ymax'],
+                    params['zmin'], params['zmax'],
+                    params['periodic'],
+                ),
+            )
         elif type == 'Discrete1D':
             force.addTabulatedFunction(name, mm.Discrete1DFunction(values))
         elif type == 'Discrete2D':
@@ -3187,7 +3215,7 @@ class CustomManyParticleGenerator(object):
             force.setTypeFilter(index, types)
         for (name, type, values, params) in self.functions:
             if type == 'Continuous1D':
-                force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max']))
+                force.addTabulatedFunction(name, mm.Continuous1DFunction(values, params['min'], params['max'], params['periodic']))
             elif type == 'Continuous2D':
                 force.addTabulatedFunction(name, mm.Continuous2DFunction(params['xsize'], params['ysize'], values, params['xmin'], params['xmax'], params['ymin'], params['ymax']))
             elif type == 'Continuous3D':

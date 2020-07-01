@@ -63,6 +63,13 @@ public:
      * @deprecated This will be removed in a future release.
      */
     virtual TabulatedFunction* Copy() const = 0;
+    /**
+     * Get the periodicity status of the tabulated function.
+     *
+     */
+    bool getPeriodic() const;
+protected:
+    bool periodic;
 };
 
 /**
@@ -78,8 +85,9 @@ public:
      *                       The function is assumed to be zero for x &lt; min or x &gt; max.
      * @param min            the value of x corresponding to the first element of values
      * @param max            the value of x corresponding to the last element of values
+     * @param periodic       whether the interpolated function is periodic
      */
-    Continuous1DFunction(const std::vector<double>& values, double min, double max);
+    Continuous1DFunction(const std::vector<double>& values, double min, double max, bool periodic=false);
     /**
      * Get the parameters for the tabulated function.
      *
@@ -102,7 +110,7 @@ public:
     void setFunctionParameters(const std::vector<double>& values, double min, double max);
     /**
      * Create a deep copy of the tabulated function.
-     * 
+     *
      * @deprecated This will be removed in a future release.
      */
     Continuous1DFunction* Copy() const;
@@ -129,8 +137,9 @@ public:
      * @param xmax       the value of x corresponding to the last element of values
      * @param ymin       the value of y corresponding to the first element of values
      * @param ymax       the value of y corresponding to the last element of values
+     * @param periodic       whether the interpolated function is periodic
      */
-    Continuous2DFunction(int xsize, int ysize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax);
+    Continuous2DFunction(int xsize, int ysize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax, bool periodic=false);
     /**
      * Get the parameters for the tabulated function.
      *
@@ -163,7 +172,7 @@ public:
     void setFunctionParameters(int xsize, int ysize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax);
     /**
      * Create a deep copy of the tabulated function
-     * 
+     *
      * @deprecated This will be removed in a future release.
      */
     Continuous2DFunction* Copy() const;
@@ -196,8 +205,9 @@ public:
      * @param ymax       the value of y corresponding to the last element of values
      * @param zmin       the value of z corresponding to the first element of values
      * @param zmax       the value of z corresponding to the last element of values
+     * @param periodic       whether the interpolated function is periodic
      */
-    Continuous3DFunction(int xsize, int ysize, int zsize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax, double zmin, double zmax);
+    Continuous3DFunction(int xsize, int ysize, int zsize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax, double zmin, double zmax, bool periodic=false);
     /**
      * Get the parameters for the tabulated function.
      *
@@ -240,7 +250,7 @@ public:
     void setFunctionParameters(int xsize, int ysize, int zsize, const std::vector<double>& values, double xmin, double xmax, double ymin, double ymax, double zmin, double zmax);
     /**
      * Create a deep copy of the tabulated function
-     * 
+     *
      * @deprecated This will be removed in a future release.
      */
     Continuous3DFunction* Copy() const;
@@ -277,7 +287,7 @@ public:
     void setFunctionParameters(const std::vector<double>& values);
     /**
      * Create a deep copy of the tabulated function
-     * 
+     *
      * @deprecated This will be removed in a future release.
      */
     Discrete1DFunction* Copy() const;
@@ -321,7 +331,7 @@ public:
     void setFunctionParameters(int xsize, int ysize, const std::vector<double>& values);
     /**
      * Create a deep copy of the tabulated function
-     * 
+     *
      * @deprecated This will be removed in a future release.
      */
     Discrete2DFunction* Copy() const;
@@ -369,7 +379,7 @@ public:
     void setFunctionParameters(int xsize, int ysize, int zsize, const std::vector<double>& values);
     /**
      * Create a deep copy of the tabulated function
-     * 
+     *
      * @deprecated This will be removed in a future release.
      */
     Discrete3DFunction* Copy() const;
