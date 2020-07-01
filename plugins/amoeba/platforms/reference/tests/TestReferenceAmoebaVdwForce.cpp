@@ -2168,6 +2168,43 @@ void testCompareToCustom(AmoebaVdwForce::PotentialFunction potential) {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
 }
 
+void testParticleTypes() {
+    System system;
+    for (int i = 0; i < 4; i++)
+        system.addParticle(1.0);
+    AmoebaVdwForce* vdw = new AmoebaVdwForce();
+    system.addForce(vdw);
+    vdw->setPotentialFunction(AmoebaVdwForce::LennardJones);
+    vdw->setSigmaCombiningRule("ARITHMETIC");
+    vdw->setEpsilonCombiningRule("GEOMETRIC");
+    vdw->addParticle(0, 0, 1.0);
+    vdw->addParticle(1, 2, 1.0);
+    vdw->addParticle(2, 0, 1.0);
+    vdw->addParticle(3, 1, 1.0);
+    vdw->addParticleType(0.3, 1.0);
+    vdw->addParticleType(0.4, 1.1);
+    vdw->addParticleType(0.5, 1.2);
+    vdw->addTypePair(2, 0, 0.6, 1.5);
+    vector<Vec3> positions;
+    positions.push_back(Vec3(0, 0, 0));
+    positions.push_back(Vec3(1, 0, 0));
+    positions.push_back(Vec3(0, 1, 0));
+    positions.push_back(Vec3(1, 1, 0));
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    context.setPositions(positions);
+    State state = context.getState(State::Energy);
+    vector<double> r = {1.0, 1.0, sqrt(2.0), sqrt(2.0), 1.0, 1.0};
+    vector<double> sigma = {0.6, 0.3+0.3, 0.3+0.4, 0.6, 0.5+0.4, 0.3+0.4};
+    vector<double> epsilon = {1.5, sqrt(1.0*1.0), sqrt(1.0*1.1), 1.5, sqrt(1.1*1.2), sqrt(1.0*1.1)};
+    double expectedEnergy = 0;
+    for (int i = 0; i < 6; i++) {
+        double p = sigma[i]/r[i];
+        expectedEnergy += 4*epsilon[i]*(pow(p, 12) - pow(p, 6));
+    }
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
+}
+
 int main(int numberOfArguments, char* argv[]) {
 
     try {
@@ -2227,6 +2264,10 @@ int main(int numberOfArguments, char* argv[]) {
         testCompareToCustom(AmoebaVdwForce::Buffered147);
         testCompareToCustom(AmoebaVdwForce::LennardJones);
         
+        // Test specifying parameters by particle type.
+        
+        testParticleTypes();
+
         // Set lambda and the softcore power (n) to any values (softcore alpha set to 0). 
         // The energy and forces are equal to scaling testVdwAmmoniaCubicMeanHhg by lambda^n;
         int n = 5;
@@ -2245,7 +2286,6 @@ int main(int numberOfArguments, char* argv[]) {
         lambda = 0.0;
         alpha = 0.7;
         testVdwAlchemical(n, alpha, lambda, method);
-    
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

@@ -139,7 +139,7 @@ void AmoebaVdwForceImpl::createParameterMatrix(const AmoebaVdwForce& force, vect
               sigma = iSigma+jSigma;
             else if (sigmaCombiningRule == "GEOMETRIC")
               sigma = 2*sqrt(iSigma*jSigma);
-            else {
+            else if (sigmaCombiningRule == "CUBIC-MEAN") {
               double iSigma2 = iSigma*iSigma;
               double jSigma2 = jSigma*jSigma;
               if ((iSigma2+jSigma2) != 0.0)
@@ -147,6 +147,8 @@ void AmoebaVdwForceImpl::createParameterMatrix(const AmoebaVdwForce& force, vect
               else
                 sigma = 0.0;
             }
+            else
+                throw OpenMMException("AmoebaVdwForce: Unknown value for sigma combining rule: "+sigmaCombiningRule);
             sigmaMatrix[i][j] = sigma;
             sigmaMatrix[j][i] = sigma;
 
@@ -173,13 +175,15 @@ void AmoebaVdwForceImpl::createParameterMatrix(const AmoebaVdwForce& force, vect
               double eps_s = sqrt(iEpsilon*jEpsilon);
               epsilon = (eps_s == 0.0 ? 0.0 : 2*eps_s*iSigma3*jSigma3/(iSigma6+jSigma6));
             }
-            else {
+            else if (epsilonCombiningRule == "HHG") {
               double epsilonS = sqrt(iEpsilon)+sqrt(jEpsilon);
               if (epsilonS != 0.0)
                 epsilon = 4*(iEpsilon*jEpsilon) / (epsilonS*epsilonS);
               else
                 epsilon = 0.0;
             }
+            else
+                throw OpenMMException("AmoebaVdwForce: Unknown value for epsilon combining rule: "+epsilonCombiningRule);
             epsilonMatrix[i][j] = epsilon;
             epsilonMatrix[j][i] = epsilon;
         }

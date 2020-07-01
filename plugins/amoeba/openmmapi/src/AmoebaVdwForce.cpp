@@ -88,14 +88,14 @@ int AmoebaVdwForce::addParticleType(double sigma, double epsilon) {
 
 void AmoebaVdwForce::getParticleTypeParameters(int typeIndex, double& sigma, double& epsilon) const {
     ASSERT_VALID_INDEX(typeIndex, types);
-    sigma = pairs[typeIndex].sigma;
-    epsilon = pairs[typeIndex].epsilon;
+    sigma = types[typeIndex].sigma;
+    epsilon = types[typeIndex].epsilon;
 }
 
 void AmoebaVdwForce::setParticleTypeParameters(int typeIndex, double sigma, double epsilon) {
     ASSERT_VALID_INDEX(typeIndex, types);
-    pairs[typeIndex].sigma = sigma;
-    pairs[typeIndex].epsilon = epsilon;
+    types[typeIndex].sigma = sigma;
+    types[typeIndex].epsilon = epsilon;
 }
 
 int AmoebaVdwForce::addTypePair(int type1, int type2, double sigma, double epsilon) {
