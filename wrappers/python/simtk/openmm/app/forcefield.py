@@ -4509,11 +4509,20 @@ class AmoebaVdwGenerator(object):
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
+        potentialMap = {'BUFFERED-14-7':0, 'LENNARD-JONES':1}
         sigmaMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'CUBIC-MEAN':1}
         epsilonMap = {'ARITHMETIC':1, 'GEOMETRIC':1, 'HARMONIC':1, 'W-H':1, 'HHG':1}
 
         force = mm.AmoebaVdwForce()
         sys.addForce(force)
+
+        # Potential function
+
+        if (self.type.upper() in potentialMap):
+            force.setPotentialFunction(potentialMap[self.type.upper()])
+        else:
+            stringList = ' '.join(str(x) for x in potentialMap.keys())
+            raise ValueError("AmoebaVdwGenerator: potential type %s not recognized; valid values are %s; using default." % (self.type, stringList))
 
         # sigma and epsilon combining rules
 
