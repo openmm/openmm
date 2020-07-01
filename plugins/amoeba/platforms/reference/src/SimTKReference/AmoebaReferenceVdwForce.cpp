@@ -34,10 +34,7 @@ using std::vector;
 using namespace OpenMM;
 
 AmoebaReferenceVdwForce::AmoebaReferenceVdwForce() : _nonbondedMethod(AmoebaVdwForce::NoCutoff), _cutoff(1.0e+10), _taperCutoffFactor(0.9), _n(5), _alpha(0.7), _alchemicalMethod(AmoebaVdwForce::None) {
-
     setTaperCoefficients(_cutoff);
-    setSigmaCombiningRule("ARITHMETIC");
-    setEpsilonCombiningRule("GEOMETRIC");
 }
 
 void AmoebaReferenceVdwForce::initialize(const AmoebaVdwForce& force) {
@@ -49,31 +46,24 @@ void AmoebaReferenceVdwForce::initialize(const AmoebaVdwForce& force) {
     if (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff)
         setCutoff(force.getCutoffDistance());
     AmoebaVdwForceImpl::createParameterMatrix(force, particleType, sigmaMatrix, epsilonMatrix);
+    int numParticles = force.getNumParticles();
+    indexIVs.resize(numParticles);
+    reductions.resize(numParticles);
+    isAlchemical.resize(numParticles);
+    allExclusions.clear();
+    allExclusions.resize(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        int type;
+        double sigma, epsilon;
+        bool alchemical;
+        vector<int> exclusions;
+        force.getParticleParameters(i, indexIVs[i], sigma, epsilon, reductions[i], alchemical, type);
+        isAlchemical[i] = alchemical;
+        force.getParticleExclusions(i, exclusions);
+        for (unsigned int j = 0; j < exclusions.size(); j++)
+           allExclusions[i].insert(exclusions[j]);
+    }
 }
-
-AmoebaReferenceVdwForce::AmoebaReferenceVdwForce(const std::string& sigmaCombiningRule, const std::string& epsilonCombiningRule) : _nonbondedMethod(AmoebaVdwForce::NoCutoff), _cutoff(1.0e+10), _taperCutoffFactor(0.9),  _n(5), _alpha(0.7), _alchemicalMethod(AmoebaVdwForce::None) {
-
-    setTaperCoefficients(_cutoff);
-    setSigmaCombiningRule(sigmaCombiningRule);
-    setEpsilonCombiningRule(epsilonCombiningRule);
-}
-
-void AmoebaReferenceVdwForce::setSoftcorePower(int n) {
-    _n = n;
-}
-
-int AmoebaReferenceVdwForce::getSoftcorePower() const {
-    return _n;
-}
-
-void AmoebaReferenceVdwForce::setSoftcoreAlpha(double alpha) {
-    _alpha = alpha;
-}
-
-double AmoebaReferenceVdwForce::getSoftcoreAlpha() const {
-    return _alpha;
-}
-
 
 void AmoebaReferenceVdwForce::setTaperCoefficients(double cutoff) {
     _taperCutoff = cutoff*_taperCutoffFactor;
@@ -93,98 +83,14 @@ void AmoebaReferenceVdwForce::setCutoff(double cutoff) {
     setTaperCoefficients(_cutoff);
 }
 
-double AmoebaReferenceVdwForce::getCutoff() const {
-    return _cutoff;
-}
-
 void AmoebaReferenceVdwForce::setPeriodicBox(OpenMM::Vec3* vectors) {
     _periodicBoxVectors[0] = vectors[0];
     _periodicBoxVectors[1] = vectors[1];
     _periodicBoxVectors[2] = vectors[2];
 }
 
-void AmoebaReferenceVdwForce::setSigmaCombiningRule(const std::string& sigmaCombiningRule) {
-
-    _sigmaCombiningRule = sigmaCombiningRule;
-
-    // convert to upper case and set combining function
-
-    std::transform(_sigmaCombiningRule.begin(), _sigmaCombiningRule.end(), _sigmaCombiningRule.begin(),  (int(*)(int)) std::toupper);
-    if (_sigmaCombiningRule == "GEOMETRIC") {
-        _combineSigmas = &AmoebaReferenceVdwForce::geometricSigmaCombiningRule;
-    } else if (_sigmaCombiningRule == "CUBIC-MEAN") {
-        _combineSigmas = &AmoebaReferenceVdwForce::cubicMeanSigmaCombiningRule;
-    } else {
-        _combineSigmas = &AmoebaReferenceVdwForce::arithmeticSigmaCombiningRule;
-    }
-}
-
-std::string AmoebaReferenceVdwForce::getSigmaCombiningRule() const {
-    return _sigmaCombiningRule;
-}
-
-double AmoebaReferenceVdwForce::arithmeticSigmaCombiningRule(double sigmaI, double sigmaJ) const {
-    return (sigmaI + sigmaJ);
-}
-
-double AmoebaReferenceVdwForce::geometricSigmaCombiningRule(double sigmaI, double sigmaJ) const {
-    return 2.0*sqrt(sigmaI*sigmaJ);
-}
-
-double AmoebaReferenceVdwForce::cubicMeanSigmaCombiningRule(double sigmaI, double sigmaJ) const {
-    double sigmaI2 = sigmaI*sigmaI;
-    double sigmaJ2 = sigmaJ*sigmaJ;
-
-    return sigmaI != 0.0 && sigmaJ != 0.0 ? 2.0*(sigmaI2*sigmaI + sigmaJ2*sigmaJ)/(sigmaI2 + sigmaJ2) : 0.0;
-}
-
-void AmoebaReferenceVdwForce::setEpsilonCombiningRule(const std::string& epsilonCombiningRule) {
-
-    _epsilonCombiningRule = epsilonCombiningRule;
-    std::transform(_epsilonCombiningRule.begin(), _epsilonCombiningRule.end(), _epsilonCombiningRule.begin(),  (int(*)(int)) std::toupper);
-
-    // convert to upper case and set combining function
-
-    if (_epsilonCombiningRule == "ARITHMETIC") {
-         _combineEpsilons = &AmoebaReferenceVdwForce::arithmeticEpsilonCombiningRule;
-    } else if (_epsilonCombiningRule == "HARMONIC") {
-         _combineEpsilons = &AmoebaReferenceVdwForce::harmonicEpsilonCombiningRule;
-    } else if (_epsilonCombiningRule == "W-H") {
-         _combineEpsilons = &AmoebaReferenceVdwForce::whEpsilonCombiningRule;
-    } else if (_epsilonCombiningRule == "HHG") {
-         _combineEpsilons = &AmoebaReferenceVdwForce::hhgEpsilonCombiningRule;
-    } else {
-         _combineEpsilons = &AmoebaReferenceVdwForce::geometricEpsilonCombiningRule;
-    }
-}
-
-std::string AmoebaReferenceVdwForce::getEpsilonCombiningRule() const {
-    return _epsilonCombiningRule;
-}
-
-double AmoebaReferenceVdwForce::arithmeticEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
-    return 0.5*(epsilonI + epsilonJ);
-}
-
-double AmoebaReferenceVdwForce::geometricEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
-    return sqrt(epsilonI*epsilonJ);
-}
-
-double AmoebaReferenceVdwForce::harmonicEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
-    return (epsilonI != 0.0 && epsilonJ != 0.0) ? 2.0*(epsilonI*epsilonJ)/(epsilonI + epsilonJ) : 0.0;
-}
-double AmoebaReferenceVdwForce::whEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
-    double  sigmaI3 = sigmaI * sigmaI * sigmaI;
-    double  sigmaJ3 = sigmaJ * sigmaJ * sigmaJ;
-    double  sigmaI6 = sigmaI3 * sigmaI3;
-    double  sigmaJ6 = sigmaJ3 * sigmaJ3;
-    double  eps_s = sqrt(epsilonI*epsilonJ);
-    return (epsilonI != 0.0 && epsilonJ != 0.0) ? 2.0*eps_s*sigmaI3*sigmaJ3/(sigmaI6+sigmaJ6) : 0.0;
-}
-
-double AmoebaReferenceVdwForce::hhgEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const {
-    double denominator = sqrt(epsilonI) + sqrt(epsilonJ);
-    return (epsilonI != 0.0 && epsilonJ != 0.0) ? 4.0*(epsilonI*epsilonJ)/(denominator*denominator) : 0.0;
+std::vector<std::set<int> >& AmoebaReferenceVdwForce::getExclusions() {
+    return allExclusions;
 }
 
 void AmoebaReferenceVdwForce::addReducedForce(unsigned int particleI, unsigned int particleIV,
@@ -217,8 +123,6 @@ double AmoebaReferenceVdwForce::calculatePairIxn(double combinedSigma, double co
         ReferenceForce::getDeltaRPeriodic(particleJPosition, particleIPosition, _periodicBoxVectors, deltaR);
     else
         ReferenceForce::getDeltaR(particleJPosition, particleIPosition, deltaR);
-
-    double r_ij_2       = deltaR[ReferenceForce::R2Index];
     double r_ij         = deltaR[ReferenceForce::RIndex];
 
     double energy, dEdR;
@@ -282,20 +186,14 @@ void AmoebaReferenceVdwForce::setReducedPositions(int numParticles,
             reducedPositions[ii]   = Vec3(reductions[ii]*(particlePositions[ii][0] - particlePositions[reductionIndex][0]) + particlePositions[reductionIndex][0], 
                                           reductions[ii]*(particlePositions[ii][1] - particlePositions[reductionIndex][1]) + particlePositions[reductionIndex][1], 
                                           reductions[ii]*(particlePositions[ii][2] - particlePositions[reductionIndex][2]) + particlePositions[reductionIndex][2]); 
-        } else {
-            reducedPositions[ii]   = Vec3(particlePositions[ii][0], particlePositions[ii][1], particlePositions[ii][2]); 
         }
+        else
+            reducedPositions[ii]   = Vec3(particlePositions[ii][0], particlePositions[ii][1], particlePositions[ii][2]); 
     }
 }
 
 double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double lambda,
                                                         const vector<Vec3>& particlePositions,
-                                                        const std::vector<int>& indexIVs, 
-                                                        const std::vector<double>& sigmas,
-                                                        const std::vector<double>& epsilons,
-                                                        const std::vector<double>& reductions,
-                                                        const std::vector<bool>& isAlchemical,
-                                                        const std::vector< std::set<int> >& allExclusions,
                                                         vector<Vec3>& forces) const {
 
     // set reduced coordinates
@@ -365,11 +263,6 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
 
 double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double lambda,
                                                         const vector<Vec3>& particlePositions,
-                                                        const std::vector<int>& indexIVs, 
-                                                        const std::vector<double>& sigmas,
-                                                        const std::vector<double>& epsilons,
-                                                        const std::vector<double>& reductions,
-                                                        const std::vector<bool>& isAlchemical,
                                                         const NeighborList& neighborList,
                                                         vector<Vec3>& forces) const {
 

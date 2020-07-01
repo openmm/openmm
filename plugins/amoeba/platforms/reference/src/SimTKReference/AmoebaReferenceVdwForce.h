@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,6 +28,7 @@
 #include "openmm/Vec3.h"
 #include "openmm/AmoebaVdwForce.h"
 #include "ReferenceNeighborList.h"
+#include <set>
 #include <string>
 #include <vector>
 
@@ -54,123 +55,14 @@ public:
     void initialize(const AmoebaVdwForce& force);
  
     /**---------------------------------------------------------------------------------------
-       
-       Constructor
-       
-       --------------------------------------------------------------------------------------- */
- 
-    AmoebaReferenceVdwForce(const std::string& sigmaCombiningRule,
-                            const std::string& epsilonCombiningRule);
- 
-    /**---------------------------------------------------------------------------------------
-       
-       Destructor
-       
-       --------------------------------------------------------------------------------------- */
- 
-    ~AmoebaReferenceVdwForce() {};
- 
-
-    /**---------------------------------------------------------------------------------------
     
-       Get cutoff
-    
-       @return cutoff
-    
-       --------------------------------------------------------------------------------------- */
-    
-    double getCutoff() const;
-
-    /**---------------------------------------------------------------------------------------
-    
-       Set cutof
+       Set cutoff
     
        @param cutoff
     
        --------------------------------------------------------------------------------------- */
     
     void setCutoff(double cutoff);
-
-    /**---------------------------------------------------------------------------------------
-   
-       Get softcore power
-   
-       @return n
-   
-       --------------------------------------------------------------------------------------- */
-   
-    int getSoftcorePower() const;
-
-    /**---------------------------------------------------------------------------------------
-   
-       Set softcore power
-   
-       @param n
-
-       --------------------------------------------------------------------------------------- */
-
-    void setSoftcorePower(int n);
-
-   /**---------------------------------------------------------------------------------------
-
-       Get softcore alpha
-  
-       @return alpha
-  
-       --------------------------------------------------------------------------------------- */
-  
-    double getSoftcoreAlpha() const;
-
-    /**---------------------------------------------------------------------------------------
-  
-       Set softcore alpha 
-  
-       @param alpha
-
-       --------------------------------------------------------------------------------------- */
-
-    void setSoftcoreAlpha(double alpha);
-
-
-    /**---------------------------------------------------------------------------------------
-    
-       Set sigma combining rule
-    
-       @param sigmaCombiningRule      rule: GEOMETRIC, CUBIC-MEAN, ARITHMETIC (default)
-    
-       --------------------------------------------------------------------------------------- */
-    
-    void setSigmaCombiningRule(const std::string& sigmaCombiningRule);
-
-    /**---------------------------------------------------------------------------------------
-    
-       Get sigma combining rule
-    
-       @return sigmaCombiningRule
-    
-       --------------------------------------------------------------------------------------- */
-    
-    std::string getSigmaCombiningRule() const;
-
-    /**---------------------------------------------------------------------------------------
-    
-       Set epsilon combining rule
-    
-       @param epsilonCombiningRule      rule: GEOMETRIC, CUBIC-MEAN, ARITHMETIC (default)
-    
-       --------------------------------------------------------------------------------------- */
-    
-    void setEpsilonCombiningRule(const std::string& epsilonCombiningRule);
-
-    /**---------------------------------------------------------------------------------------
-    
-       Get epsilon combining rule
-    
-       @return epsilonCombiningRule
-    
-       --------------------------------------------------------------------------------------- */
-    
-    std::string getEpsilonCombiningRule() const;
 
     /**---------------------------------------------------------------------------------------
     
@@ -181,6 +73,14 @@ public:
        --------------------------------------------------------------------------------------- */
     
     void setPeriodicBox(OpenMM::Vec3* vectors);
+ 
+    /**---------------------------------------------------------------------------------------
+    
+       Get the set of exclusions for each particle.
+    
+       --------------------------------------------------------------------------------------- */
+    
+    std::vector<std::set<int> >& getExclusions();
 
     /**---------------------------------------------------------------------------------------
     
@@ -189,12 +89,6 @@ public:
        @param numParticles            number of particles
        @param lambda                  lambda value
        @param particlePositions       Cartesian coordinates of particles
-       @param indexIVs                position index for associated reducing particle
-       @param sigmas                  particle sigmas 
-       @param epsilons                particle epsilons
-       @param reductions              particle reduction factors
-       @param isAlchemical            particle alchemical flag
-       @param vdwExclusions           particle exclusions
        @param forces                  add forces to this vector
     
        @return energy
@@ -202,11 +96,6 @@ public:
        --------------------------------------------------------------------------------------- */
     
     double calculateForceAndEnergy(int numParticles, double lambda, const std::vector<OpenMM::Vec3>& particlePositions,
-                                   const std::vector<int>& indexIVs, 
-                                   const std::vector<double>& sigmas, const std::vector<double>& epsilons,
-                                   const std::vector<double>& reductions,
-                                   const std::vector<bool>& isAlchemical,
-                                   const std::vector< std::set<int> >& vdwExclusions,
                                    std::vector<OpenMM::Vec3>& forces) const;
          
     /**---------------------------------------------------------------------------------------
@@ -216,11 +105,6 @@ public:
        @param numParticles            number of particles
        @param lambda                  lambda value
        @param particlePositions       Cartesian coordinates of particles
-       @param indexIVs                position index for associated reducing particle
-       @param sigmas                  particle sigmas 
-       @param epsilons                particle epsilons
-       @param reductions              particle reduction factors
-       @param isAlchemical            particle alchemical flag
        @param neighborList            neighbor list
        @param forces                  add forces to this vector
     
@@ -229,12 +113,7 @@ public:
        --------------------------------------------------------------------------------------- */
     
     double calculateForceAndEnergy(int numParticles, double lambda, const std::vector<OpenMM::Vec3>& particlePositions, 
-                                   const std::vector<int>& indexIVs, 
-                                   const std::vector<double>& sigmas, const std::vector<double>& epsilons,
-                                   const std::vector<double>& reductions,
-                                   const std::vector<bool>& isAlchemical,
-                                   const NeighborList& neighborList,
-                                   std::vector<OpenMM::Vec3>& forces) const;
+                                   const NeighborList& neighborList, std::vector<OpenMM::Vec3>& forces) const;
          
 private:
     // taper coefficient indices
@@ -242,8 +121,6 @@ private:
     static const int C4=1;
     static const int C5=2;
 
-    std::string _sigmaCombiningRule;
-    std::string _epsilonCombiningRule;
     AmoebaVdwForce::NonbondedMethod _nonbondedMethod;
     AmoebaVdwForce::AlchemicalMethod _alchemicalMethod;
     AmoebaVdwForce::PotentialFunction potentialFunction;
@@ -256,19 +133,11 @@ private:
     std::vector<int> particleType;
     std::vector<std::vector<double> > sigmaMatrix;
     std::vector<std::vector<double> > epsilonMatrix;
+    std::vector<int> indexIVs;
+    std::vector<double> reductions;
+    std::vector<bool> isAlchemical;
+    std::vector<std::set<int> > allExclusions;
     Vec3 _periodicBoxVectors[3];
-    CombiningFunction _combineSigmas;
-    double arithmeticSigmaCombiningRule(double sigmaI, double sigmaJ) const;
-    double  geometricSigmaCombiningRule(double sigmaI, double sigmaJ) const;
-    double  cubicMeanSigmaCombiningRule(double sigmaI, double sigmaJ) const;
-
-    CombiningFunctionEpsilon _combineEpsilons;
-    double arithmeticEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
-    double  geometricEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
-    double  harmonicEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
-    double  whEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
-    double  hhgEpsilonCombiningRule(double epsilonI, double epsilonJ, double sigmaI, double sigmaJ) const;
-
 
     /**---------------------------------------------------------------------------------------
     

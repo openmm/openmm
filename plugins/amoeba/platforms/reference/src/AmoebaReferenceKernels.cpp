@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -1000,9 +1000,8 @@ ReferenceCalcAmoebaVdwForceKernel::ReferenceCalcAmoebaVdwForceKernel(const std::
 }
 
 ReferenceCalcAmoebaVdwForceKernel::~ReferenceCalcAmoebaVdwForceKernel() {
-    if (neighborList) {
+    if (neighborList)
         delete neighborList;
-    } 
 }
 
 void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
@@ -1010,43 +1009,11 @@ void ReferenceCalcAmoebaVdwForceKernel::initialize(const System& system, const A
     // per-particle parameters
 
     numParticles = system.getNumParticles();
-
-    indexIVs.resize(numParticles);
-    allExclusions.resize(numParticles);
-    sigmas.resize(numParticles);
-    epsilons.resize(numParticles);
-    reductions.resize(numParticles);
-    isAlchemical.resize(numParticles);
-
-    for (int ii = 0; ii < numParticles; ii++) {
-
-        int indexIV, type;
-        double sigma, epsilon, reduction;
-        bool alchemical;
-        std::vector<int> exclusions;
-
-        force.getParticleParameters(ii, indexIV, sigma, epsilon, reduction, alchemical, type);
-        force.getParticleExclusions(ii, exclusions);
-        for (unsigned int jj = 0; jj < exclusions.size(); jj++) {
-           allExclusions[ii].insert(exclusions[jj]);
-        }
-
-        indexIVs[ii]      = indexIV;
-        sigmas[ii]        = sigma;
-        epsilons[ii]      = epsilon;
-        reductions[ii]    = reduction;
-        isAlchemical[ii]  = alchemical;
-    }   
-    sigmaCombiningRule     = force.getSigmaCombiningRule();
-    epsilonCombiningRule   = force.getEpsilonCombiningRule();
     useCutoff              = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
     usePBC                 = (force.getNonbondedMethod() == AmoebaVdwForce::CutoffPeriodic);
     cutoff                 = force.getCutoffDistance();
     neighborList           = useCutoff ? new NeighborList() : NULL;
     dispersionCoefficient  = force.getUseDispersionCorrection() ?  AmoebaVdwForceImpl::calcDispersionCorrection(system, force) : 0.0;
-    alchemicalMethod       = force.getAlchemicalMethod();
-    n                      = force.getSoftcorePower();
-    alpha                  = force.getSoftcoreAlpha();
     vdwForce.initialize(force);
 }
 
@@ -1057,41 +1024,25 @@ double ReferenceCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool inc
     double energy;
     double lambda = context.getParameter(AmoebaVdwForce::Lambda());
     if (useCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, allExclusions, extractBoxVectors(context), usePBC, cutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, vdwForce.getExclusions(), extractBoxVectors(context), usePBC, cutoff, 0.0);
         if (usePBC) {
             Vec3* boxVectors = extractBoxVectors(context);
             double minAllowedSize = 1.999999*cutoff;
-            if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
+            if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
                 throw OpenMMException("The periodic box size has decreased to less than twice the cutoff.");
-            }
             vdwForce.setPeriodicBox(boxVectors);
-            energy  = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, indexIVs, sigmas, epsilons, 
-                                                       reductions, isAlchemical, *neighborList, forceData);
+            energy  = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, *neighborList, forceData);
             energy += dispersionCoefficient/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]);
         }
     }
     else
-        energy = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, indexIVs, sigmas, epsilons, 
-                                                  reductions, isAlchemical, allExclusions, forceData);
+        energy = vdwForce.calculateForceAndEnergy(numParticles, lambda, posData, forceData);
     return static_cast<double>(energy);
 }
 
 void ReferenceCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force) {
     if (numParticles != force.getNumParticles())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
-
-    // Record the values.
-    for (int i = 0; i < numParticles; ++i) {
-        int indexIV, type;
-        double sigma, epsilon, reduction;
-        bool alchemical;
-        force.getParticleParameters(i, indexIV, sigma, epsilon, reduction, alchemical, type);
-        indexIVs[i] = indexIV;
-        sigmas[i] = sigma;
-        epsilons[i] = epsilon;
-        reductions[i]= reduction;
-        isAlchemical[i]= alchemical;
-    }
     vdwForce.initialize(force);
 }
 
