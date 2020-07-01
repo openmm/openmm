@@ -18,6 +18,10 @@ static __inline__ __device__ float real_shfl(float var, int srcLane) {
     return SHFL(var, srcLane);
 }
 
+static __inline__ __device__ float real_shfl(int var, int srcLane) {
+    return SHFL(var, srcLane);
+}
+
 static __inline__ __device__ double real_shfl(double var, int srcLane) {
     int hi, lo;
     asm volatile("mov.b64 { %0, %1 }, %2;" : "=r"(lo), "=r"(hi) : "d"(var));
