@@ -128,11 +128,8 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew cask uninstall oclint;
       brew install fftw;
-      brew install python3;
+      brew upgrade python;
       brew install -y https://raw.githubusercontent.com/Homebrew/homebrew-core/5b680fb58fedfb00cd07a7f69f5a621bb9240f3b/Formula/doxygen.rb;
-      pip3 install virtualenv;
-      virtualenv -p python3 ~/venv;
-      source ~/venv/bin/activate;
       sudo pip install -U pytest --ignore-installed six;
     fi
   # The cmake version installed by apt on ARM and PPC is very old,
