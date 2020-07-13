@@ -173,7 +173,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                     }
                 }
                 int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*processingElementsPerComputeUnit*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
-                if (maxSize >= minThreadBlockSize && speed > bestSpeed) {
+                if (maxSize >= minThreadBlockSize && (speed > bestSpeed || (supported && !bestSupported))) {
                     bestDevice = i;
                     bestSpeed = speed;
                     bestPlatform = j;
