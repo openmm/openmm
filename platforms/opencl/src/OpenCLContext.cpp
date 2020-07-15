@@ -69,6 +69,14 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
     std::cerr << "OpenCL internal error: " << errinfo << std::endl;
 }
 
+static bool isSupported(cl::Platform platform) {
+    string vendor = platform.getInfo<CL_PLATFORM_VENDOR>();
+    return (vendor.find("NVIDIA") == 0 ||
+            vendor.find("Advanced Micro Devices") == 0 ||
+            vendor.find("Apple") == 0 ||
+            vendor.find("Intel") == 0);
+}
+
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData, OpenCLContext* originalContext) :
         ComputeContext(system), platformData(platformData), numForceBuffers(0), hasAssignedPosqCharges(false),
         integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL) {
@@ -99,11 +107,16 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         int bestSpeed = -1;
         int bestDevice = -1;
         int bestPlatform = -1;
+        bool bestSupported = false;
         for (int j = 0; j < platforms.size(); j++) {
             // If they supplied a valid platformIndex, we only look through that platform
             if (j != platformIndex && platformIndex != -1)
                 continue;
 
+            // Always prefer a supported platform over an unsupported one.
+            bool supported = isSupported(platforms[j]);
+            if (!supported && bestSupported)
+                continue;
             string platformVendor = platforms[j].getInfo<CL_PLATFORM_VENDOR>();
             vector<cl::Device> devices;
             try {
@@ -160,10 +173,11 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                     }
                 }
                 int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*processingElementsPerComputeUnit*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
-                if (maxSize >= minThreadBlockSize && speed > bestSpeed) {
+                if (maxSize >= minThreadBlockSize && (speed > bestSpeed || (supported && !bestSupported))) {
                     bestDevice = i;
                     bestSpeed = speed;
                     bestPlatform = j;
+                    bestSupported = supported;
                 }
             }
         }
@@ -173,6 +187,9 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
 
         if (bestDevice == -1)
             throw OpenMMException("No compatible OpenCL device is available");
+        
+        if (!bestSupported)
+            cout << "WARNING: Using an unsupported OpenCL implementation.  Results may be incorrect." << endl;
 
         vector<cl::Device> devices;
         platforms[bestPlatform].getDevices(CL_DEVICE_TYPE_ALL, &devices);
