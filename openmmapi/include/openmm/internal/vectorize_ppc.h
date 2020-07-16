@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Heng Ma                                            *
  * Contributors:                                                              *
  *                                                                            *
@@ -66,7 +66,7 @@ public:
     }
     fvec4(__m128 v) : val(v) {}
     fvec4(const float* v) {
-        val = *((__m128*) v);
+        val = (__m128) {v[0], v[1], v[2], v[3]};
     }
 
     /**
@@ -85,7 +85,10 @@ public:
         return val[i];
     }
     void store(float* v) const {
-        *((__m128*) v) = val;
+        v[0] = val[0];
+        v[1] = val[1];
+        v[2] = val[2];
+        v[3] = val[3];
     }
 
     /**
@@ -162,7 +165,7 @@ public:
     }
     ivec4(__m128i v) : val(v) {}
     ivec4(const int* v) {
-        val = *((__m128i*) v);
+        val = (__m128i) {v[0], v[1], v[2], v[3]};
     }
     operator __m128i() const {
         return val;
@@ -171,7 +174,10 @@ public:
         return val[i];
     }
     void store(int* v) const {
-        *((__m128i*) v) = val;
+        v[0] = val[0];
+        v[1] = val[1];
+        v[2] = val[2];
+        v[3] = val[3];
     }
     ivec4 operator+(ivec4 other) const {
         return vec_add(val, other.val);
