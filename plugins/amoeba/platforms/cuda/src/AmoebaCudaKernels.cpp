@@ -2437,6 +2437,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     
     // Create the interaction kernel.
     
+    map<string, string> replacements;
     replacements["VDW_ALCHEMICAL_METHOD"] = cu.intToString(force.getAlchemicalMethod()); 
     replacements["VDW_SOFTCORE_POWER"] = cu.intToString(force.getSoftcorePower());
     replacements["VDW_SOFTCORE_ALPHA"] = cu.doubleToString(force.getSoftcoreAlpha()); 
