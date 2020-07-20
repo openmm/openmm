@@ -104,8 +104,10 @@ void AmoebaVdwForceImpl::createParameterMatrix(const AmoebaVdwForce& force, vect
             force.getParticleParameters(i, parent, sigma, epsilon, reduction, isAlchemical, typeIndex);
             pair<double, double> params = make_pair(sigma, epsilon);
             map<pair<double, double>, int>::iterator entry = typeForParams.find(params);
-            if (entry == typeForParams.end())
-                typeForParams[params] = typeForParams.size();
+            if (entry == typeForParams.end()) {
+                int index = typeForParams.size();
+                typeForParams[params] = index;
+            }
             type[i] = typeForParams[params];
         }
         numTypes = typeForParams.size();
