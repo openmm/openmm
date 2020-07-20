@@ -5,7 +5,7 @@
     unsigned int includeInteraction = (!isExcluded);
 #endif
     real tempForce = 0.0f;
-    real2 pairSigmaEpsilon = sigmaEpsilon[atomType1+atomType2*NUM_TYPES];
+    float2 pairSigmaEpsilon = sigmaEpsilon[atomType1+atomType2*NUM_TYPES];
     real sigma = pairSigmaEpsilon.x;
     real epsilon = pairSigmaEpsilon.y;
     real softcore = 0.0f;
