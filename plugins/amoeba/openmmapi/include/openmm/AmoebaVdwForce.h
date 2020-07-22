@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,17 +34,31 @@
 
 #include "openmm/Force.h"
 #include "internal/windowsExportAmoeba.h"
+#include <string>
 #include <vector>
 
 namespace OpenMM {
 
 /**
- * This class implements a buffered 14-7 potential used to model van der Waals forces.
+ * This class models van der Waals forces in the AMOEBA force field.  It can use
+ * either buffered 14-7 potential or a Lennard-Jones 12-6 potential.
  *
- * To use it, create an AmoebaVdwForce object then call addParticle() once for each particle.  After
- * a particle has been added, you can modify its force field parameters by calling setParticleParameters().
- * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
- *
+ * This class can operate in two different modes.  In one mode, force field parameters
+ * are defined for each particle.  When two particles interact, a combining rule is
+ * used to calculate the interaction parameters based on the parameters for the two
+ * particles.  To use the class in this mode, call the version of addParticle() that
+ * takes sigma and epsilon values.  It should be called once for each particle in the
+ * System.
+ * 
+ * In the other mode, each particle has a type index, and parameters are specified for
+ * each type rather than each individual particle.  By default this mode also uses a
+ * combining rule, but you can override it by defining alternate parameters to use for
+ * specific pairs of particle types.  To use the class in this mode, call the version of
+ * addParticle() that takes a type index.  It should be called once for each particle
+ * in the System.  You also must call addParticleType() once for each type.  If you
+ * wish to override the combining for particular pairs of types, do so by calling
+ * addTypePair().
+ * 
  * A unique feature of this class is that the interaction site for a particle does not need to be
  * exactly at the particle's location.  Instead, it can be placed a fraction of the distance from that
  * particle to another one.  This is typically done for hydrogens to place the interaction site slightly
@@ -92,6 +106,20 @@ public:
     };
 
     /**
+     * This is an enumeration of the different potential functions that can be used.
+     */
+    enum PotentialFunction {
+        /**
+         * Use a buffered 14-7 potential.  This is the default.
+         */
+        Buffered147 = 0,
+        /**
+         * Use a Lennard-Jones 12-6 potential.
+         */
+        LennardJones = 1,
+    };
+
+    /**
      * This is an enumeration of the different alchemical methods used when applying softcore interactions.
      */
     enum AlchemicalMethod {
@@ -122,6 +150,20 @@ public:
     }
 
     /**
+     * Get the number of particle types.
+     */
+    int getNumParticleTypes() const {
+        return types.size();
+    }
+
+    /**
+     * Get the number of type pairs.
+     */
+    int getNumTypePairs() const {
+        return pairs.size();
+    }
+
+    /**
      * Set the force field parameters for a vdw particle.
      *
      * @param particleIndex   the particle index
@@ -131,9 +173,10 @@ public:
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
      * @param isAlchemical    if true, this vdW particle is undergoing an alchemical change.
+     * @param typeIndex       the index of the particle type for this particle
      */
     void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon, 
-                               double reductionFactor, bool isAlchemical = false);
+                               double reductionFactor, bool isAlchemical=false, int typeIndex=-1);
 
     /**
      * Get the force field parameters for a vdw particle.
@@ -145,13 +188,14 @@ public:
      * @param[out] reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                             at which the interaction site should be placed
      * @param[out] isAlchemical    if true, this vdW particle is undergoing an alchemical change.
+     * @param[out] typeIndex       the index of the particle type for this particle
      */
     void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon, 
-                               double& reductionFactor, bool& isAlchemical) const;
-
+                               double& reductionFactor, bool& isAlchemical, int& typeIndex) const;
 
     /**
-     * Add the force field parameters for a vdw particle.
+     * Add the force field parameters for a vdw particle.  This version is used when parameters
+     * are defined for each particle.
      *
      * @param parentIndex     the index of the parent particle
      * @param sigma           vdw sigma
@@ -163,6 +207,82 @@ public:
      */
     int addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical = false);
 
+    /**
+     * Add the force field parameters for a vdw particle. This version is used when parameters
+     * are defined by particle type.
+     *
+     * @param parentIndex     the index of the parent particle
+     * @param typeIndex       the index of the particle type for this particle
+     * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
+     *                        at which the interaction site should be placed
+     * @param isAlchemical    if true, this vdW particle is undergoing an alchemical change.
+     * @return index of added particle
+     */
+    int addParticle(int parentIndex, int typeIndex, double reductionFactor, bool isAlchemical = false);
+
+    /**
+     * Add a particle type.
+     * 
+     * @param sigma     the sigma value for particles of this type
+     * @param epsilon   the epsilon value for particles of this type
+     * @return the index of the particle type that was just added.
+     */
+    int addParticleType(double sigma, double epsilon);
+
+    /**
+     * Get the force field parameters for a particle type.
+     * 
+     * @param typeIndex      the index of the particle type
+     * @param[out] sigma     the sigma value for particles of this type
+     * @param[out] epsilon   the epsilon value for particles of this type
+     */
+    void getParticleTypeParameters(int typeIndex, double& sigma, double& epsilon) const;
+
+    /**
+     * Set the force field parameters for a particle type.
+     * 
+     * @param typeIndex the index of the particle type
+     * @param sigma     the sigma value for particles of this type
+     * @param epsilon   the epsilon value for particles of this type
+     */
+    void setParticleTypeParameters(int typeIndex, double sigma, double epsilon);
+
+    /**
+     * Add a type pair.  This overrides the standard combining rule for interactions
+     * between particles of two particular types.
+     * 
+     * @param type1     the index of the first particle type
+     * @param type2     the index of the second particle type
+     * @param sigma     the sigma value for interactions between particles of these two types
+     * @param epsilon   the epsilon  value for interactions between particles of these two types
+     * @return the index of the type pair that was just added.
+     */
+    int addTypePair(int type1, int type2, double sigma, double epsilon);
+
+    /**
+     * Get the force field parameters for a type pair.  This overrides the standard
+     * combining rule for interactions between particles of two particular types.
+     * 
+     * @param pairIndex      the index of the type pair
+     * @param[out] type1     the index of the first particle type
+     * @param[out] type2     the index of the second particle type
+     * @param[out] sigma     the sigma value for interactions between particles of these two types
+     * @param[out] epsilon   the epsilon  value for interactions between particles of these two types
+     */
+    void getTypePairParameters(int pairIndex, int& type1, int& type2, double& sigma, double& epsilon) const;
+
+    /**
+     * Set the force field parameters for a type pair.  This overrides the standard
+     * combining rule for interactions between particles of two particular types.
+     * 
+     * @param pairIndex the index of the type pair
+     * @param type1     the index of the first particle type
+     * @param type2     the index of the second particle type
+     * @param sigma     the sigma value for interactions between particles of these two types
+     * @param epsilon   the epsilon  value for interactions between particles of these two types
+     */
+    void setTypePairParameters(int pairIndex, int type1, int type2, double sigma, double epsilon);
+    
     /**
      * Set sigma combining rule
      *
@@ -209,6 +329,13 @@ public:
      */
     void setUseDispersionCorrection(bool useCorrection) {
         useDispersionCorrection = useCorrection;
+    }
+    
+    /**
+     * Get whether parameters were specified by particle or by particle type.
+     */
+    bool getUseParticleTypes() const {
+        return useTypes;
     }
 
     /**
@@ -269,6 +396,20 @@ public:
     void setNonbondedMethod(NonbondedMethod method);
 
     /**
+     * Get the potential function to use.
+     */
+    PotentialFunction getPotentialFunction() const {
+        return potentialFunction;
+    }
+
+    /**
+     * Set the potential function to use.
+     */
+    void setPotentialFunction(PotentialFunction potential) {
+        potentialFunction = potential;
+    }
+
+    /**
      * Set the softcore power on lambda (default = 5).
      */
     void setSoftcorePower(int n);
@@ -322,9 +463,12 @@ protected:
 private:
 
     class VdwInfo;
+    class ParticleTypeInfo;
+    class TypePairInfo;
     NonbondedMethod nonbondedMethod;
+    PotentialFunction potentialFunction;
     double cutoff;
-    bool useDispersionCorrection;
+    bool useDispersionCorrection, useTypes;
     AlchemicalMethod alchemicalMethod;
     int n;
     double alpha;
@@ -334,7 +478,8 @@ private:
 
     std::vector< std::vector<int> > exclusions;
     std::vector<VdwInfo> parameters;
-    std::vector< std::vector< std::vector<double> > > sigEpsTable;
+    std::vector<ParticleTypeInfo> types;
+    std::vector<TypePairInfo> pairs;
 };
 
 /**
@@ -343,7 +488,7 @@ private:
  */
 class AmoebaVdwForce::VdwInfo {
 public:
-    int parentIndex;
+    int parentIndex, typeIndex;
     double reductionFactor, sigma, epsilon, cutoff;
     bool isAlchemical;
     VdwInfo() {
@@ -353,8 +498,36 @@ public:
         epsilon              = 0.0;
         isAlchemical         = false;
     }
-    VdwInfo(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical) :
-        parentIndex(parentIndex), reductionFactor(reductionFactor), sigma(sigma), epsilon(epsilon), isAlchemical(isAlchemical)  {
+    VdwInfo(int parentIndex, double sigma, double epsilon, int typeIndex, double reductionFactor, bool isAlchemical) :
+        parentIndex(parentIndex), reductionFactor(reductionFactor), sigma(sigma), epsilon(epsilon), typeIndex(typeIndex), isAlchemical(isAlchemical) {
+    }
+};
+
+/**
+ * This is an internal class used to record information about a particle type.
+ * @private
+ */
+class AmoebaVdwForce::ParticleTypeInfo {
+public:
+    double sigma, epsilon;
+    ParticleTypeInfo() : sigma(1.0), epsilon(0.0) {
+    }
+    ParticleTypeInfo(double sigma, double epsilon) : sigma(sigma), epsilon(epsilon) {
+    }
+};
+
+/**
+ * This is an internal class used to record information about a type pair.
+ * @private
+ */
+class AmoebaVdwForce::TypePairInfo {
+public:
+    int type1, type2;
+    double sigma, epsilon;
+    TypePairInfo() : type1(-1), type2(-1), sigma(1.0), epsilon(0.0) {
+    }
+    TypePairInfo(int type1, int type2, double sigma, double epsilon) :
+        type1(type1), type2(type2), sigma(sigma), epsilon(epsilon) {
     }
 };
 

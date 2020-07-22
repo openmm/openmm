@@ -66,6 +66,18 @@ public:
     }
     std::vector<std::string> getKernelNames();
     /**
+     * Compute the matrix of sigma and epsilon to use between every pair of particle types.
+     * 
+     * @param force               the force for which to calculate it
+     * @param[out] type           on exit, this contains the type index of every particle
+     * @param[out] sigmaMatrix    on exit, sigma[i][j] contains the value to use for interactions between particles
+     *                            of types i and j
+     * @param[out] epsilonMatrix  on exit, epsilon[i][j] contains the value to use for interactions between particles
+     *                            of types i and j
+     */
+    static void createParameterMatrix(const AmoebaVdwForce& force, std::vector<int>& type,
+        std::vector<std::vector<double> >& sigmaMatrix, std::vector<std::vector<double> >& epsilonMatrix);
+    /**
      * Compute the coefficient which, when divided by the periodic box volume, gives the
      * long range dispersion correction to the energy.
      */
