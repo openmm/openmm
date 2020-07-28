@@ -1017,6 +1017,22 @@ public:
      * Load the chain states from a checkpoint.
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
+    /**
+     * Get the internal states of all chains.
+     * 
+     * @param context       the context for which to get the states
+     * @param positions     element [i][j] contains the position of bead j for chain i
+     * @param velocities    element [i][j] contains the velocity of bead j for chain i
+     */
+    void getChainStates(ContextImpl& context, std::vector<std::vector<double> >& positions, std::vector<std::vector<double> >& velocities) const;
+    /**
+     * Set the internal states of all chains.
+     * 
+     * @param context       the context for which to get the states
+     * @param positions     element [i][j] contains the position of bead j for chain i
+     * @param velocities    element [i][j] contains the velocity of bead j for chain i
+     */
+    void setChainStates(ContextImpl& context, const std::vector<std::vector<double> >& positions, const std::vector<std::vector<double> >& velocities);
 private:
     ComputeContext& cc;
     float prevMaxPairDistance;

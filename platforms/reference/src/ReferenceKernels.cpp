@@ -2378,6 +2378,16 @@ void ReferenceIntegrateNoseHooverStepKernel::loadCheckpoint(ContextImpl& context
     }
 }
 
+void ReferenceIntegrateNoseHooverStepKernel::getChainStates(ContextImpl& context, vector<vector<double> >& positions, vector<vector<double> >& velocities) const {
+    positions = chainPositions;
+    velocities = chainVelocities;
+}
+
+void ReferenceIntegrateNoseHooverStepKernel::setChainStates(ContextImpl& context, const vector<vector<double> >& positions, const vector<vector<double> >& velocities) {
+    chainPositions = positions;
+    chainVelocities = velocities;
+}
+
 ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
     if (dynamics)
         delete dynamics;
