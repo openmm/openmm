@@ -140,3 +140,22 @@ void CompoundIntegrator::loadCheckpoint(std::istream& stream) {
     for (int i = 0; i < integrators.size(); i++)
         integrators[i]->loadCheckpoint(stream);
 }
+
+void CompoundIntegrator::serializeParameters(SerializationNode& node) const {
+    node.setIntProperty("version", 1);
+    node.setIntProperty("currentIntegrator", currentIntegrator);
+    for (int i = 0; i < getNumIntegrators(); i++) {
+        SerializationNode& child = node.createChildNode("IntegratorParameters");
+        integrators[i]->serializeParameters(child);
+    }
+}
+
+void CompoundIntegrator::deserializeParameters(const SerializationNode& node) {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
+    if (node.getChildren().size() != getNumIntegrators())
+        throw OpenMMException("State has wrong number of integrators for CompoundIntegrator");
+    setCurrentIntegrator(node.getIntProperty("currentIntegrator"));
+    for (int i = 0; i < node.getChildren().size(); i++)
+        integrators[i]->deserializeParameters(node.getChildren()[i]);
+}

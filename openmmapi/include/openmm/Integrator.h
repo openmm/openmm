@@ -34,6 +34,7 @@
 
 #include "State.h"
 #include "Vec3.h"
+#include "openmm/serialization/SerializationNode.h"
 #include <iosfwd>
 #include <map>
 #include <vector>
@@ -175,6 +176,21 @@ protected:
      * data it wrote in createCheckpoint() and update its internal state accordingly.
      */
     virtual void loadCheckpoint(std::istream& stream) {
+    }
+    /**
+     * This is called while creating a State.  The Integrator should store the values
+     * of all time-varying parameters into the SerializationNode so they can be saved
+     * as part of the state.
+     */
+    virtual void serializeParameters(SerializationNode& node) const {
+    }
+    /**
+     * This is called when loading a previously saved State.  The Integrator should
+     * load the values of all time-varying parameters from the SerializationNode.  If
+     * the node contains parameters that are not defined for this Integrator, it should
+     * throw an exception.
+     */
+    virtual void deserializeParameters(const SerializationNode& node) {
     }
 private:
     double stepSize, constraintTol;

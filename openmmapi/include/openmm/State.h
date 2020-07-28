@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "Vec3.h"
+#include "openmm/serialization/SerializationNode.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -58,7 +59,7 @@ public:
      * This is an enumeration of the types of data which may be stored in a State.  When you create
      * a State, use these values to specify which data types it should contain.
      */
-    enum DataType {Positions=1, Velocities=2, Forces=4, Energy=8, Parameters=16, ParameterDerivatives=32};
+    enum DataType {Positions=1, Velocities=2, Forces=4, Energy=8, Parameters=16, ParameterDerivatives=32, IntegratorParameters=64};
     /**
      * Construct an empty State containing no data.  This exists so State objects can be used in STL containers.
      */
@@ -124,6 +125,8 @@ public:
      */
     int getDataTypes() const;
 private:
+    friend class Context;
+    friend class StateProxy;
     State(double time);
     void setPositions(const std::vector<Vec3>& pos);
     void setVelocities(const std::vector<Vec3>& vel);
@@ -132,6 +135,8 @@ private:
     void setEnergyParameterDerivatives(const std::map<std::string, double>& derivs);
     void setEnergy(double ke, double pe);
     void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
+    SerializationNode& updateIntegratorParameters();
+    const SerializationNode& getIntegratorParameters() const;
     int types;
     double time, ke, pe;
     std::vector<Vec3> positions;
@@ -139,6 +144,7 @@ private:
     std::vector<Vec3> forces;
     Vec3 periodicBoxVectors[3];
     std::map<std::string, double> parameters, energyParameterDerivatives;
+    SerializationNode integratorParameters;
 };
 
 /**
@@ -157,6 +163,7 @@ public:
     void setEnergyParameterDerivatives(const std::map<std::string, double>& params);
     void setEnergy(double ke, double pe);
     void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
+    SerializationNode& updateIntegratorParameters();
 private:
     State state;
 };

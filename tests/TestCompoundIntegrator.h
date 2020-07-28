@@ -239,6 +239,35 @@ void testCheckpoint() {
     ASSERT_EQUAL_VEC(b1[0], b3[0], 1e-6);
 }
 
+void testSaveParameters() {
+    // Test that integrator variables get loaded correctly from States.
+    System system;
+    system.addParticle(1.0);
+    CustomIntegrator* custom = new CustomIntegrator(0.001);
+    custom->addGlobalVariable("a", 1.0);
+    custom->addPerDofVariable("b", 2.0);
+    CompoundIntegrator integrator;
+    integrator.addIntegrator(custom);
+    integrator.addIntegrator(new VerletIntegrator(0.005));
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1, Vec3());
+    context.setPositions(positions);
+    custom->setGlobalVariable(0, 5.0);
+    vector<Vec3> b1(1, Vec3(1, 2, 3));
+    custom->setPerDofVariable(0, b1);
+    State savedState = context.getState(State::IntegratorParameters); 
+    custom->setGlobalVariable(0, 10.0);
+    vector<Vec3> b2(1, Vec3(4, 5, 6));
+    custom->setPerDofVariable(0, b2);
+    integrator.setCurrentIntegrator(1);
+    context.setState(savedState);
+    ASSERT_EQUAL(0, integrator.getCurrentIntegrator());
+    ASSERT_EQUAL(5.0, custom->getGlobalVariable(0));
+    vector<Vec3> b3;
+    custom->getPerDofVariable(0, b3);
+    ASSERT_EQUAL_VEC(b1[0], b3[0], 1e-6);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -248,6 +277,7 @@ int main(int argc, char* argv[]) {
         testChangingParameters();
         testDifferentStepSizes();
         testCheckpoint();
+        testSaveParameters();
         runPlatformTests();
     }
     catch(const exception& e) {

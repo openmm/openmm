@@ -81,6 +81,16 @@ const map<string, double>& State::getEnergyParameterDerivatives() const {
         throw OpenMMException("Invoked getEnergyParameterDerivatives() on a State which does not contain parameter derivatives.");
     return energyParameterDerivatives;
 }
+const SerializationNode& State::getIntegratorParameters() const {
+    if ((types&IntegratorParameters) == 0)
+        throw OpenMMException("Invoked getPIntegratorarameters() on a State which does not contain integrator parameters.");
+    return integratorParameters;
+}
+SerializationNode& State::updateIntegratorParameters() {
+    types |= IntegratorParameters;
+    integratorParameters.setName("IntegratorParameters");
+    return integratorParameters;
+}
 int State::getDataTypes() const {
     return types;
 }
@@ -158,4 +168,8 @@ void State::StateBuilder::setEnergy(double ke, double pe) {
 
 void State::StateBuilder::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
     state.setPeriodicBoxVectors(a, b, c);
+}
+
+SerializationNode& State::StateBuilder::updateIntegratorParameters() {
+    return state.updateIntegratorParameters();
 }

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -89,6 +89,9 @@ void StateProxy::serialize(const void* object, SerializationNode& node) const {
             forcesNode.createChildNode("Force").setDoubleProperty("x", stateForces[i][0]).setDoubleProperty("y", stateForces[i][1]).setDoubleProperty("z", stateForces[i][2]);
         }
     }
+    if ((s.getDataTypes()&State::IntegratorParameters) != 0) {
+        node.getChildren().push_back(s.getIntegratorParameters());
+    }
 }
 
 void* StateProxy::deserialize(const SerializationNode& node) const {
@@ -137,6 +140,9 @@ void* StateProxy::deserialize(const SerializationNode& node) const {
                 outForces.push_back(Vec3(particle.getDoubleProperty("x"),particle.getDoubleProperty("y"),particle.getDoubleProperty("z")));
             builder.setForces(outForces);
             arraySizes.push_back(outForces.size());
+        }
+        else if (child.getName() == "IntegratorParameters") {
+            builder.updateIntegratorParameters() = child;
         }
     }
     for (int i = 1; i < arraySizes.size(); i++) {

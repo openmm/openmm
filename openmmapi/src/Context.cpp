@@ -147,6 +147,9 @@ State Context::getState(int types, bool enforcePeriodicBox, int groups) const {
         impl->getVelocities(velocities);
         builder.setVelocities(velocities);
     }
+    if (types&State::IntegratorParameters) {
+        getIntegrator().serializeParameters(builder.updateIntegratorParameters());
+    }
     return builder.getState();
 }
 
@@ -162,6 +165,8 @@ void Context::setState(const State& state) {
     if ((state.getDataTypes()&State::Parameters) != 0)
         for (auto& param : state.getParameters())
             setParameter(param.first, param.second);
+    if ((state.getDataTypes()&State::IntegratorParameters) != 0)
+        getIntegrator().deserializeParameters(state.getIntegratorParameters());
 }
 
 void Context::setTime(double time) {
