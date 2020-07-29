@@ -6268,41 +6268,41 @@ void CommonIntegrateNoseHooverStepKernel::getChainStates(ContextImpl& context, v
             vector<mm_double2> stateVec;
             state.download(stateVec);
             for (int j = 0; j < stateVec.size(); j++) {
-                positions[i].push_back(stateVec[i].x);
-                velocities[i].push_back(stateVec[i].y);
+                positions[i].push_back(stateVec[j].x);
+                velocities[i].push_back(stateVec[j].y);
             }
         }
         else {
             vector<mm_float2> stateVec;
             state.download(stateVec);
             for (int j = 0; j < stateVec.size(); j++) {
-                positions[i].push_back((float) stateVec[i].x);
-                velocities[i].push_back((float) stateVec[i].y);
+                positions[i].push_back((float) stateVec[j].x);
+                velocities[i].push_back((float) stateVec[j].y);
             }
         }
     }
 }
 
 void CommonIntegrateNoseHooverStepKernel::setChainStates(ContextImpl& context, const vector<vector<double> >& positions, const vector<vector<double> >& velocities) {
-    int numChains = chainState.size();
+    int numChains = positions.size();
     bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
-    if (positions.size() != numChains || velocities.size() != numChains)
-        throw OpenMMException("setChainStates(): wrong number of chains");
+    chainState.clear();
     for (int i = 0; i < numChains; i++) {
-        ComputeArray& state = chainState[i];
-        if (positions[i].size() != state.getSize() || velocities[i].size() != state.getSize())
-            throw OpenMMException("setChainStates(): wrong number of beads in chain");
+        int chainLength = positions[i].size();
+        chainState[i] = ComputeArray();
         if (useDouble) {
+            chainState[i].initialize<mm_double2>(cc, chainLength, "chainState"+cc.intToString(i));
             vector<mm_double2> stateVec;
-            for (int j = 0; j < state.getSize(); j++)
+            for (int j = 0; j < chainLength; j++)
                 stateVec.push_back(mm_double2(positions[i][j], velocities[i][j]));
-            state.upload(stateVec);
+            chainState[i].upload(stateVec);
         }
         else {
+            chainState[i].initialize<mm_float2>(cc, chainLength, "chainState"+cc.intToString(i));
             vector<mm_float2> stateVec;
-            for (int j = 0; j < state.getSize(); j++)
+            for (int j = 0; j < chainLength; j++)
                 stateVec.push_back(mm_float2((float) positions[i][j], (float) velocities[i][j]));
-            state.upload(stateVec);
+            chainState[i].upload(stateVec);
         }
     }
 }
