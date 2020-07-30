@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -347,4 +347,34 @@ void CustomIntegrator::setKineticEnergyExpression(const string& expression) {
     kineticEnergy = expression;
     Lepton::CompiledExpression expr = Lepton::Parser::parse(kineticEnergy).createCompiledExpression();
     keNeedsForce = (expr.getVariables().find("f") != expr.getVariables().end());
+}
+
+void CustomIntegrator::serializeParameters(SerializationNode& node) const {
+    node.setIntProperty("version", 1);
+    SerializationNode& globalVariablesNode = node.createChildNode("GlobalVariables");
+    for (int i = 0; i < getNumGlobalVariables(); i++)
+        globalVariablesNode.setDoubleProperty(getGlobalVariableName(i), getGlobalVariable(i));
+    SerializationNode& perDofVariablesNode = node.createChildNode("PerDofVariables");
+    for (int i = 0; i < getNumPerDofVariables(); i++) {
+        SerializationNode& perDofValuesNode = perDofVariablesNode.createChildNode(getPerDofVariableName(i));
+        vector<Vec3> perDofValues;
+        getPerDofVariable(i, perDofValues);
+        for (int j = 0; j < perDofValues.size(); j++)
+            perDofValuesNode.createChildNode("Value").setDoubleProperty("x",perDofValues[j][0]).setDoubleProperty("y",perDofValues[j][1]).setDoubleProperty("z",perDofValues[j][2]);
+    }
+}
+
+void CustomIntegrator::deserializeParameters(const SerializationNode& node) {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
+    const SerializationNode& globalVariablesNode = node.getChildNode("GlobalVariables");
+    for (auto& prop : globalVariablesNode.getProperties())
+        setGlobalVariableByName(prop.first, globalVariablesNode.getDoubleProperty(prop.first));
+    const SerializationNode& perDofVariablesNode = node.getChildNode("PerDofVariables");
+    for (auto& var : perDofVariablesNode.getChildren()) {
+        vector<Vec3> perDofValues;
+        for (auto& child : var.getChildren())
+            perDofValues.push_back(Vec3(child.getDoubleProperty("x"), child.getDoubleProperty("y"), child.getDoubleProperty("z")));
+        setPerDofVariableByName(var.getName(), perDofValues);
+    }
 }

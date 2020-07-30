@@ -312,7 +312,7 @@ class Simulation(object):
             a File-like object to write the state to, or alternatively a
             filename
         """
-        state = self.context.getState(getPositions=True, getVelocities=True, getParameters=True)
+        state = self.context.getState(getPositions=True, getVelocities=True, getParameters=True, getIntegratorParameters=True)
         xml = mm.XmlSerializer.serialize(state)
         if isinstance(file, str):
             with open(file, 'w') as f:

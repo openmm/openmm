@@ -11,7 +11,8 @@
 
     def getState(self, getPositions=False, getVelocities=False,
                  getForces=False, getEnergy=False, getParameters=False,
-                 getParameterDerivatives=False, enforcePeriodicBox=False, groups=-1):
+                 getParameterDerivatives=False, getIntegratorParameters=False,
+                 enforcePeriodicBox=False, groups=-1):
         """Get a State object recording the current state information stored in this context.
 
         Parameters
@@ -28,6 +29,8 @@
             whether to store context parameters in the State
         getParameterDerivatives : bool=False
             whether to store parameter derivatives in the State
+        getIntegratorParameters : bool=False
+            whether to store integrator parameters in the State
         enforcePeriodicBox : bool=False
             if false, the position of each particle will be whatever position
             is stored in the Context, regardless of periodic boundary conditions.
@@ -64,6 +67,8 @@
             types += State.Parameters
         if getParameterDerivatives:
             types += State.ParameterDerivatives
+        if getIntegratorParameters:
+            types += State.IntegratorParameters
         state = _openmm.Context_getState(self, types, enforcePeriodicBox, groups_mask)
         return state
 
