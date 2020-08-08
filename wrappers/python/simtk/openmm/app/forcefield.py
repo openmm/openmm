@@ -117,7 +117,7 @@ def _createFunctions(force, functions):
         elif type == 'Continuous3D':
             force.addTabulatedFunction(
                 name,
-                mm.Continuous2DFunction(
+                mm.Continuous3DFunction(
                     params['xsize'], params['ysize'], params['zsize'],
                     values,
                     params['xmin'], params['xmax'],
@@ -131,7 +131,7 @@ def _createFunctions(force, functions):
         elif type == 'Discrete2D':
             force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], values))
         elif type == 'Discrete3D':
-            force.addTabulatedFunction(name, mm.Discrete2DFunction(params['xsize'], params['ysize'], params['zsize'], values))
+            force.addTabulatedFunction(name, mm.Discrete3DFunction(params['xsize'], params['ysize'], params['zsize'], values))
 
 # Enumerated values for nonbonded method
 
