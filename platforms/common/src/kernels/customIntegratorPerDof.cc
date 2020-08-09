@@ -3,8 +3,8 @@ typedef double TempType;
 typedef double3 TempType3;
 typedef double4 TempType4;
 
-#define make_TempType3(a...) make_double3(a)
-#define make_TempType4(a...) make_double4(a)
+#define make_TempType3 make_double3
+#define make_TempType4 make_double4
 #define convertToTempType3(a) make_double3((a).x, (a).y, (a).z)
 #define convertToTempType4(a) make_double4((a).x, (a).y, (a).z, (a).w)
 
@@ -16,8 +16,8 @@ typedef float TempType;
 typedef float3 TempType3;
 typedef float4 TempType4;
 
-#define make_TempType3(a...) make_float3(a)
-#define make_TempType4(a...) make_float4(a)
+#define make_TempType3 make_float3
+#define make_TempType4 make_float4
 #define convertToTempType3(a) make_float3((a).x, (a).y, (a).z)
 #define convertToTempType4(a) make_float4((a).x, (a).y, (a).z, (a).w)
 #endif

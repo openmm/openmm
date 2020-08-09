@@ -5709,7 +5709,7 @@ void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const No
 
     // If the atom reordering has occured, the forces from the previous step are permuted and thus invalid.
     // They need to be either sorted or recomputed; here we choose the latter.
-    if (!forcesAreValid || cc.getAtomsWereReordered()) context.calcForcesAndEnergy(true, false);
+    if (!forcesAreValid || cc.getAtomsWereReordered()) context.calcForcesAndEnergy(true, false, integrator.getIntegrationForceGroups());
 
     const auto& atomList = integrator.getAllThermostatedIndividualParticles();
     const auto& pairList = integrator.getAllThermostatedPairs();
@@ -6255,6 +6255,58 @@ void CommonIntegrateNoseHooverStepKernel::loadCheckpoint(ContextImpl& context, i
     }
 }
 
+void CommonIntegrateNoseHooverStepKernel::getChainStates(ContextImpl& context, vector<vector<double> >& positions, vector<vector<double> >& velocities) const {
+    int numChains = chainState.size();
+    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
+    positions.clear();
+    velocities.clear();
+    positions.resize(numChains);
+    velocities.resize(numChains);
+    for (int i = 0; i < numChains; i++) {
+        const ComputeArray& state = chainState.at(i);
+        if (useDouble) {
+            vector<mm_double2> stateVec;
+            state.download(stateVec);
+            for (int j = 0; j < stateVec.size(); j++) {
+                positions[i].push_back(stateVec[j].x);
+                velocities[i].push_back(stateVec[j].y);
+            }
+        }
+        else {
+            vector<mm_float2> stateVec;
+            state.download(stateVec);
+            for (int j = 0; j < stateVec.size(); j++) {
+                positions[i].push_back((float) stateVec[j].x);
+                velocities[i].push_back((float) stateVec[j].y);
+            }
+        }
+    }
+}
+
+void CommonIntegrateNoseHooverStepKernel::setChainStates(ContextImpl& context, const vector<vector<double> >& positions, const vector<vector<double> >& velocities) {
+    int numChains = positions.size();
+    bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
+    chainState.clear();
+    for (int i = 0; i < numChains; i++) {
+        int chainLength = positions[i].size();
+        chainState[i] = ComputeArray();
+        if (useDouble) {
+            chainState[i].initialize<mm_double2>(cc, chainLength, "chainState"+cc.intToString(i));
+            vector<mm_double2> stateVec;
+            for (int j = 0; j < chainLength; j++)
+                stateVec.push_back(mm_double2(positions[i][j], velocities[i][j]));
+            chainState[i].upload(stateVec);
+        }
+        else {
+            chainState[i].initialize<mm_float2>(cc, chainLength, "chainState"+cc.intToString(i));
+            vector<mm_float2> stateVec;
+            for (int j = 0; j < chainLength; j++)
+                stateVec.push_back(mm_float2((float) positions[i][j], (float) velocities[i][j]));
+            chainState[i].upload(stateVec);
+        }
+    }
+}
+
 void CommonIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
     cc.initializeContexts();
     cc.setAsCurrent();
@@ -6770,7 +6822,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
 
         // Record the variable names and flags for the force and energy in each step.
 
-        forceGroupFlags.resize(numSteps, -1);
+        forceGroupFlags.resize(numSteps, integrator.getIntegrationForceGroups());
         vector<string> forceGroupName;
         vector<string> energyGroupName;
         for (int i = 0; i < 32; i++) {
@@ -6957,7 +7009,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 if (cc.getUseMixedPrecision())
                     kernel->addArg(cc.getPosqCorrection());
                 else
-                    kernel->addArg(NULL);
+                    kernel->addArg(nullptr);
                 kernel->addArg(integration.getPosDelta());
                 kernel->addArg(cc.getVelm());
                 kernel->addArg(cc.getLongForceBuffer());
@@ -6992,7 +7044,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
                 if (cc.getUseMixedPrecision())
                     kernel->addArg(cc.getPosqCorrection());
                 else
-                    kernel->addArg(NULL);
+                    kernel->addArg(nullptr);
                 kernel->addArg(integration.getPosDelta());
             }
         }
@@ -7048,7 +7100,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
         if (cc.getUseMixedPrecision())
             kineticEnergyKernel->addArg(cc.getPosqCorrection());
         else
-            kineticEnergyKernel->addArg(NULL);
+            kineticEnergyKernel->addArg(nullptr);
         kineticEnergyKernel->addArg(integration.getPosDelta());
         kineticEnergyKernel->addArg(cc.getVelm());
         kineticEnergyKernel->addArg(cc.getLongForceBuffer());

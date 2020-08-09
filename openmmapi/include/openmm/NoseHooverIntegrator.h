@@ -9,9 +9,9 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2020 Stanford University and the Authors.      *
  * Authors: Andreas Krämer and Andrew C. Simmonett                            *
- * Contributors:                                                              *
+ * Contributors: Peter Eastman                                                *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
  * copy of this software and associated documentation files (the "Software"), *
@@ -270,6 +270,19 @@ protected:
      * data it wrote in createCheckpoint() and update its internal state accordingly.
      */
     void loadCheckpoint(std::istream& stream);
+    /**
+     * This is called while creating a State.  The Integrator should store the values
+     * of all time-varying parameters into the SerializationNode so they can be saved
+     * as part of the state.
+     */
+    void serializeParameters(SerializationNode& node) const;
+    /**
+     * This is called when loading a previously saved State.  The Integrator should
+     * load the values of all time-varying parameters from the SerializationNode.  If
+     * the node contains parameters that are not defined for this Integrator, it should
+     * throw an exception.
+     */
+    void deserializeParameters(const SerializationNode& node);
 
     std::vector<NoseHooverChain> noseHooverChains;
     std::vector<int> allAtoms;

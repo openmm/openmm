@@ -11,7 +11,8 @@
 
     def getState(self, getPositions=False, getVelocities=False,
                  getForces=False, getEnergy=False, getParameters=False,
-                 getParameterDerivatives=False, enforcePeriodicBox=False, groups=-1):
+                 getParameterDerivatives=False, getIntegratorParameters=False,
+                 enforcePeriodicBox=False, groups=-1):
         """Get a State object recording the current state information stored in this context.
 
         Parameters
@@ -28,6 +29,8 @@
             whether to store context parameters in the State
         getParameterDerivatives : bool=False
             whether to store parameter derivatives in the State
+        getIntegratorParameters : bool=False
+            whether to store integrator parameters in the State
         enforcePeriodicBox : bool=False
             if false, the position of each particle will be whatever position
             is stored in the Context, regardless of periodic boundary conditions.
@@ -64,6 +67,8 @@
             types += State.Parameters
         if getParameterDerivatives:
             types += State.ParameterDerivatives
+        if getIntegratorParameters:
+            types += State.IntegratorParameters
         state = _openmm.Context_getState(self, types, enforcePeriodicBox, groups_mask)
         return state
 
@@ -104,6 +109,33 @@ Parameters:
     stream << checkpoint;
     self->loadCheckpoint(stream);
   }
+}
+
+%extend OpenMM::Integrator {
+  %pythoncode %{
+    def setIntegrationForceGroups(self, groups):
+        """Set which force groups to use for integration.  By default, all force groups are included.
+
+        Parameters
+        ----------
+        groups : set or int
+            a set of indices for which force groups to include when integrating the equations of motion.
+            Alternatively, the groups can be passed as a single unsigned integer interpreted as a bitmask,
+            in which case group i will be included if (groups&(1<<i)) != 0.
+        """
+        try:
+            # is the input integer-like?
+            groups_mask = int(groups)
+        except TypeError:
+            if isinstance(groups, set):
+                groups_mask = functools.reduce(operator.or_,
+                        ((1<<x) & 0xffffffff for x in groups))
+            else:
+                raise TypeError('%s is neither an int nor set' % groups)
+        if groups_mask >= 0x80000000:
+            groups_mask -= 0x100000000
+        _openmm.Integrator_setIntegrationForceGroups(self, groups_mask)
+    %}
 }
 
 %extend OpenMM::RPMDIntegrator {

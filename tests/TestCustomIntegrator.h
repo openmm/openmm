@@ -597,6 +597,7 @@ void testForceGroups() {
     integrator.addComputeGlobal("oute", "energy");
     integrator.addComputeGlobal("oute1", "energy1");
     integrator.addComputeGlobal("oute2", "energy2");
+    integrator.setIntegrationForceGroups((1<<1) + (1<<2));
     HarmonicBondForce* bonds = new HarmonicBondForce();
     bonds->addBond(0, 1, 1.5, 1.1);
     bonds->setForceGroup(1);
@@ -606,6 +607,10 @@ void testForceGroups() {
     nb->addParticle(0.2, 1, 0);
     nb->setForceGroup(2);
     system.addForce(nb);
+    CustomExternalForce* external = new CustomExternalForce("x");
+    external->addParticle(0);
+    external->setForceGroup(3);
+    system.addForce(external);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(-1, 0, 0);
@@ -633,13 +638,13 @@ void testForceGroups() {
     
     // Make sure they also match the values returned by the Context.
     
-    State s = context.getState(State::Forces | State::Energy, false);
+    State s = context.getState(State::Forces | State::Energy, false, 6);
     State s1 = context.getState(State::Forces | State::Energy, false, 2);
     State s2 = context.getState(State::Forces | State::Energy, false, 4);
     vector<Vec3> c, c1, c2;
-    c = context.getState(State::Forces, false).getForces();
-    c1 = context.getState(State::Forces, false, 2).getForces();
-    c2 = context.getState(State::Forces, false, 4).getForces();
+    c = s.getForces();
+    c1 = s1.getForces();
+    c2 = s2.getForces();
     ASSERT_EQUAL_VEC(f[0], c[0], 1e-5);
     ASSERT_EQUAL_VEC(f[1], c[1], 1e-5);
     ASSERT_EQUAL_VEC(f1[0], c1[0], 1e-5);
@@ -1182,6 +1187,30 @@ void testCheckpoint() {
     ASSERT_EQUAL_VEC(b1[0], b3[0], 1e-6);
 }
 
+void testSaveParameters() {
+    // Test that integrator variables get loaded correctly from States.
+    System system;
+    system.addParticle(1.0);
+    CustomIntegrator integrator(0.001);
+    integrator.addGlobalVariable("a", 1.0);
+    integrator.addPerDofVariable("b", 2.0);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1, Vec3());
+    context.setPositions(positions);
+    integrator.setGlobalVariable(0, 5.0);
+    vector<Vec3> b1(1, Vec3(1, 2, 3));
+    integrator.setPerDofVariable(0, b1);
+    State savedState = context.getState(State::IntegratorParameters); 
+    integrator.setGlobalVariable(0, 10.0);
+    vector<Vec3> b2(1, Vec3(4, 5, 6));
+    integrator.setPerDofVariable(0, b2);
+    context.setState(savedState);
+    ASSERT_EQUAL(5.0, integrator.getGlobalVariable(0));
+    vector<Vec3> b3;
+    integrator.getPerDofVariable(0, b3);
+    ASSERT_EQUAL_VEC(b1[0], b3[0], 1e-6);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -1211,6 +1240,7 @@ int main(int argc, char* argv[]) {
         testRecordEnergy();
         testInitialTemperature();
         testCheckpoint();
+        testSaveParameters();
         runPlatformTests();
     }
     catch(const exception& e) {

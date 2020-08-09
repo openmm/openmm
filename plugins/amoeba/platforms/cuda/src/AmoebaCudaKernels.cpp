@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -1782,7 +1782,7 @@ void CudaCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& cont
         }
     }
     if (!multipolesAreValid)
-        context.calcForcesAndEnergy(false, false, -1);
+        context.calcForcesAndEnergy(false, false, context.getIntegrator().getIntegrationForceGroups());
 }
 
 
@@ -2341,12 +2341,12 @@ public:
     ForceInfo(const AmoebaVdwForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        int iv1, iv2;
+        int iv1, iv2, type1, type2;
         double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2;
         bool isAlchemical1, isAlchemical2;
-        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1, isAlchemical1);
-        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2, isAlchemical2);
-        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && isAlchemical1 == isAlchemical2);
+        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1, isAlchemical1, type1);
+        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2, isAlchemical2, type2);
+        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && isAlchemical1 == isAlchemical2 && type1 == type2);
     }
 private:
     const AmoebaVdwForce& force;
@@ -2366,40 +2366,51 @@ CudaCalcAmoebaVdwForceKernel::~CudaCalcAmoebaVdwForceKernel() {
 
 void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
     cu.setAsCurrent();
-    sigmaEpsilon.initialize<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
-    bondReductionAtoms.initialize<int>(cu, cu.getPaddedNumAtoms(), "bondReductionAtoms");
-    bondReductionFactors.initialize<float>(cu, cu.getPaddedNumAtoms(), "bondReductionFactors");
-    tempPosq.initialize(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "tempPosq");
-    tempForces.initialize<long long>(cu, 3*cu.getPaddedNumAtoms(), "tempForces");
+    int paddedNumAtoms = cu.getPaddedNumAtoms();
+    bondReductionAtoms.initialize<int>(cu, paddedNumAtoms, "bondReductionAtoms");
+    bondReductionFactors.initialize<float>(cu, paddedNumAtoms, "bondReductionFactors");
+    tempPosq.initialize(cu, paddedNumAtoms, cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "tempPosq");
+    tempForces.initialize<long long>(cu, 3*paddedNumAtoms, "tempForces");
     
     // Record atom parameters.
-    vector<float2> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float2(0, 1));
-    vector<float> isAlchemicalVec(cu.getPaddedNumAtoms(), 0);
-    vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
-    vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
+    vector<int> atomTypeVec;
+    vector<vector<double> > sigmaMatrix, epsilonMatrix;
+    AmoebaVdwForceImpl::createParameterMatrix(force, atomTypeVec, sigmaMatrix, epsilonMatrix);
+    atomTypeVec.resize(paddedNumAtoms, 0);
+    int numTypes = sigmaMatrix.size();
+    atomType.initialize<int>(cu, paddedNumAtoms, "atomType");
+    sigmaEpsilon.initialize<float2>(cu, numTypes*numTypes, "sigmaEpsilon");
+    vector<float2> sigmaEpsilonVec(sigmaEpsilon.getSize());
+    for (int i = 0; i < numTypes; i++)
+        for (int j = 0; j < numTypes; j++)
+            sigmaEpsilonVec[i*numTypes+j] = make_float2((float) sigmaMatrix[i][j], (float) epsilonMatrix[i][j]);
+    atomType.upload(atomTypeVec);
+    sigmaEpsilon.upload(sigmaEpsilonVec);
+    
+    vector<float> isAlchemicalVec(paddedNumAtoms, 0);
+    vector<int> bondReductionAtomsVec(paddedNumAtoms, 0);
+    vector<float> bondReductionFactorsVec(paddedNumAtoms, 0);
     vector<vector<int> > exclusions(cu.getNumAtoms());
 
     // Handle Alchemical parameters.
     hasAlchemical = force.getAlchemicalMethod() != AmoebaVdwForce::None;
     if (hasAlchemical) {
-       isAlchemical.initialize<float>(cu, cu.getPaddedNumAtoms(), "isAlchemical");
+       isAlchemical.initialize<float>(cu, paddedNumAtoms, "isAlchemical");
        vdwLambda.initialize<float>(cu, 1, "vdwLambda");
        CHECK_RESULT(cuMemHostAlloc(&vdwLambdaPinnedBuffer, sizeof(float), 0), "Error allocating vdwLambda pinned buffer");
     }
 
     for (int i = 0; i < force.getNumParticles(); i++) {
-        int ivIndex;
+        int ivIndex, type;
         double sigma, epsilon, reductionFactor;
         bool alchemical;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical);
-        sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical, type);
         isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;
         force.getParticleExclusions(i, exclusions[i]);
         exclusions[i].push_back(i);
     }
-    sigmaEpsilon.upload(sigmaEpsilonVec);
     bondReductionAtoms.upload(bondReductionAtomsVec);
     bondReductionFactors.upload(bondReductionFactorsVec);
     if (force.getUseDispersionCorrection())
@@ -2412,7 +2423,8 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     // this force, so it will have its own neighbor list and interaction kernel.
     
     nonbonded = new CudaNonbondedUtilities(cu);
-    nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon.getDevicePointer()));
+    nonbonded->addParameter(CudaNonbondedUtilities::ParameterInfo("atomType", "int", 1, sizeof(int), atomType.getDevicePointer()));
+    nonbonded->addArgument(CudaNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon.getDevicePointer()));
 
     if (hasAlchemical) {
        isAlchemical.upload(isAlchemicalVec);
@@ -2426,32 +2438,11 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     // Create the interaction kernel.
     
     map<string, string> replacements;
-    string sigmaCombiningRule = force.getSigmaCombiningRule();
-    if (sigmaCombiningRule == "ARITHMETIC")
-        replacements["SIGMA_COMBINING_RULE"] = "1";
-    else if (sigmaCombiningRule == "GEOMETRIC")
-        replacements["SIGMA_COMBINING_RULE"] = "2";
-    else if (sigmaCombiningRule == "CUBIC-MEAN")
-        replacements["SIGMA_COMBINING_RULE"] = "3";
-    else
-        throw OpenMMException("Illegal combining rule for sigma: "+sigmaCombiningRule);
-    string epsilonCombiningRule = force.getEpsilonCombiningRule();
-    if (epsilonCombiningRule == "ARITHMETIC")
-        replacements["EPSILON_COMBINING_RULE"] = "1";
-    else if (epsilonCombiningRule == "GEOMETRIC")
-        replacements["EPSILON_COMBINING_RULE"] = "2";
-    else if (epsilonCombiningRule =="HARMONIC")
-        replacements["EPSILON_COMBINING_RULE"] = "3";
-    else if (epsilonCombiningRule == "W-H")
-        replacements["EPSILON_COMBINING_RULE"] = "4";
-    else if (epsilonCombiningRule == "HHG")
-        replacements["EPSILON_COMBINING_RULE"] = "5";
-    else
-        throw OpenMMException("Illegal combining rule for sigma: "+sigmaCombiningRule);
-
     replacements["VDW_ALCHEMICAL_METHOD"] = cu.intToString(force.getAlchemicalMethod()); 
     replacements["VDW_SOFTCORE_POWER"] = cu.intToString(force.getSoftcorePower());
     replacements["VDW_SOFTCORE_ALPHA"] = cu.doubleToString(force.getSoftcoreAlpha()); 
+    replacements["POTENTIAL_FUNCTION"] = cu.intToString(force.getPotentialFunction());
+    replacements["NUM_TYPES"] = cu.intToString(numTypes);
 
     double cutoff = force.getCutoffDistance();
     double taperCutoff = cutoff*0.9;
@@ -2467,7 +2458,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     // Create the other kernels.
     
     map<string, string> defines;
-    defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = cu.intToString(paddedNumAtoms);
     CUmodule module = cu.createModule(CudaAmoebaKernelSources::amoebaVdwForce1, defines);
     prepareKernel = cu.getKernel(module, "prepareToComputeForce");
     spreadKernel = cu.getKernel(module, "spreadForces");
@@ -2512,22 +2503,33 @@ void CudaCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context,
     if (force.getNumParticles() != cu.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     
+    vector<int> atomTypeVec;
+    vector<vector<double> > sigmaMatrix, epsilonMatrix;
+    AmoebaVdwForceImpl::createParameterMatrix(force, atomTypeVec, sigmaMatrix, epsilonMatrix);
+    atomTypeVec.resize(cu.getPaddedNumAtoms(), 0);
+    int numTypes = sigmaMatrix.size();
+    if (sigmaEpsilon.getSize() != numTypes*numTypes)
+        throw OpenMMException("updateParametersInContext: The number of particle types has changed");
+    vector<float2> sigmaEpsilonVec(sigmaEpsilon.getSize());
+    for (int i = 0; i < numTypes; i++)
+        for (int j = 0; j < numTypes; j++)
+            sigmaEpsilonVec[i*numTypes+j] = make_float2((float) sigmaMatrix[i][j], (float) epsilonMatrix[i][j]);
+    atomType.upload(atomTypeVec);
+    sigmaEpsilon.upload(sigmaEpsilonVec);
+
     // Record the per-particle parameters.
-    vector<float2> sigmaEpsilonVec(cu.getPaddedNumAtoms(), make_float2(0, 1));
     vector<float> isAlchemicalVec(cu.getPaddedNumAtoms(), 0);
     vector<int> bondReductionAtomsVec(cu.getPaddedNumAtoms(), 0);
     vector<float> bondReductionFactorsVec(cu.getPaddedNumAtoms(), 0);
     for (int i = 0; i < force.getNumParticles(); i++) {
-        int ivIndex;
+        int ivIndex, type;
         double sigma, epsilon, reductionFactor;
         bool alchemical;
-        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical);
-        sigmaEpsilonVec[i] = make_float2((float) sigma, (float) epsilon);
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical, type);
         isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
         bondReductionAtomsVec[i] = ivIndex;
         bondReductionFactorsVec[i] = (float) reductionFactor;
     }
-    sigmaEpsilon.upload(sigmaEpsilonVec);
     if (hasAlchemical) isAlchemical.upload(isAlchemicalVec);
     bondReductionAtoms.upload(bondReductionAtomsVec);
     bondReductionFactors.upload(bondReductionFactorsVec);
@@ -3650,7 +3652,7 @@ void CudaCalcHippoNonbondedForceKernel::ensureMultipolesValid(ContextImpl& conte
         }
     }
     if (!multipolesAreValid)
-        context.calcForcesAndEnergy(false, false, -1);
+        context.calcForcesAndEnergy(false, false, context.getIntegrator().getIntegrationForceGroups());
 }
 
 void CudaCalcHippoNonbondedForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {

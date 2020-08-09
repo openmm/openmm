@@ -6,9 +6,9 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2020 Stanford University and the Authors.      *
  * Authors: Andreas Krämer and Andrew C. Simmonett                            *
- * Contributors:                                                              *
+ * Contributors: Peter Eastman                                                *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
  * copy of this software and associated documentation files (the "Software"), *
@@ -337,7 +337,7 @@ void NoseHooverIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         if(context->updateContextState())
             forcesAreValid = false;
-        context->calcForcesAndEnergy(true, false);
+        context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
         kernel.getAs<IntegrateNoseHooverStepKernel>().execute(*context, *this, forcesAreValid);
     }
 }
@@ -348,4 +348,30 @@ void NoseHooverIntegrator::createCheckpoint(std::ostream& stream) const {
 
 void NoseHooverIntegrator::loadCheckpoint(std::istream& stream) {
     kernel.getAs<IntegrateNoseHooverStepKernel>().loadCheckpoint(*context, stream);
+}
+
+void NoseHooverIntegrator::serializeParameters(SerializationNode& node) const {
+    node.setIntProperty("version", 1);
+    vector<vector<double> > positions, velocities;
+    kernel.getAs<IntegrateNoseHooverStepKernel>().getChainStates(*context, positions, velocities);
+    for (int i = 0; i < positions.size(); i++) {
+        SerializationNode& chain = node.createChildNode("Chain");
+        for (int j = 0; j < positions[i].size(); j++)
+            chain.createChildNode("Bead").setDoubleProperty("position", positions[i][j]).setDoubleProperty("velocity", velocities[i][j]);
+    }
+}
+
+void NoseHooverIntegrator::deserializeParameters(const SerializationNode& node) {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
+    int numChains = node.getChildren().size();
+    vector<vector<double> > positions(numChains), velocities(numChains);
+    for (int i = 0; i < numChains; i++) {
+        auto& chain = node.getChildren()[i];
+        for (auto& bead : chain.getChildren()) {
+            positions[i].push_back(bead.getDoubleProperty("position"));
+            velocities[i].push_back(bead.getDoubleProperty("velocity"));
+        }
+    }
+    kernel.getAs<IntegrateNoseHooverStepKernel>().setChainStates(*context, positions, velocities);
 }

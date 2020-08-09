@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,6 +33,7 @@
 #include "openmm/HippoNonbondedForce.h"
 #include "AmoebaReferenceMultipoleForce.h"
 #include "AmoebaReferenceHippoNonbondedForce.h"
+#include "AmoebaReferenceVdwForce.h"
 #include "ReferenceNeighborList.h"
 #include "SimTKOpenMMRealType.h"
 
@@ -501,17 +502,7 @@ private:
     int usePBC;
     double cutoff;
     double dispersionCoefficient;
-    AmoebaVdwForce::AlchemicalMethod alchemicalMethod;
-    int n;
-    double alpha;
-    std::vector<int> indexIVs;
-    std::vector< std::set<int> > allExclusions;
-    std::vector<double> sigmas;
-    std::vector<double> epsilons;
-    std::vector<double> reductions;
-    std::vector<bool> isAlchemical;
-    std::string sigmaCombiningRule;
-    std::string epsilonCombiningRule;
+    AmoebaReferenceVdwForce vdwForce;
     const System& system;
     NeighborList* neighborList;
 };

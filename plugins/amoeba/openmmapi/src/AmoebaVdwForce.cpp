@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,35 +33,90 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/AmoebaVdwForce.h"
 #include "openmm/internal/AmoebaVdwForceImpl.h"
+#include "openmm/internal/AssertionUtilities.h"
 
 using namespace OpenMM;
 using std::string;
 using std::vector;
 
-AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true), alchemicalMethod(None), n(5), alpha(0.7) {
+AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), potentialFunction(Buffered147),
+        sigmaCombiningRule("CUBIC-MEAN"), epsilonCombiningRule("HHG"), cutoff(1.0e+10), useDispersionCorrection(true),
+        useTypes(false), alchemicalMethod(None), n(5), alpha(0.7) {
 }
 
 int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical) {
-    parameters.push_back(VdwInfo(parentIndex, sigma, epsilon, reductionFactor, isAlchemical));
+    if (useTypes)
+        throw OpenMMException("AmoebaVdwForce: must use the same version of addParticle() for all particles");
+    parameters.push_back(VdwInfo(parentIndex, sigma, epsilon, -1, reductionFactor, isAlchemical));
+    return parameters.size()-1;
+}
+
+int AmoebaVdwForce::addParticle(int parentIndex, int typeIndex, double reductionFactor, bool isAlchemical) {
+    if (parameters.size() > 0 && !useTypes)
+        throw OpenMMException("AmoebaVdwForce: must use the same version of addParticle() for all particles");
+    useTypes = true;
+    parameters.push_back(VdwInfo(parentIndex, 1.0, 0.0, typeIndex, reductionFactor, isAlchemical));
     return parameters.size()-1;
 }
 
 void AmoebaVdwForce::getParticleParameters(int particleIndex, int& parentIndex,
-                                           double& sigma, double& epsilon, double& reductionFactor, bool& isAlchemical) const {
+                                           double& sigma, double& epsilon, double& reductionFactor, bool& isAlchemical, int& typeIndex) const {
+    ASSERT_VALID_INDEX(particleIndex, parameters);
     parentIndex     = parameters[particleIndex].parentIndex;
     sigma           = parameters[particleIndex].sigma;
     epsilon         = parameters[particleIndex].epsilon;
     reductionFactor = parameters[particleIndex].reductionFactor;
     isAlchemical    = parameters[particleIndex].isAlchemical;
+    typeIndex       = parameters[particleIndex].typeIndex;
 }
 
 void AmoebaVdwForce::setParticleParameters(int particleIndex, int parentIndex,
-                                           double sigma, double epsilon, double reductionFactor, bool isAlchemical) {
+                                           double sigma, double epsilon, double reductionFactor, bool isAlchemical, int typeIndex) {
+    ASSERT_VALID_INDEX(particleIndex, parameters);
     parameters[particleIndex].parentIndex     = parentIndex;
     parameters[particleIndex].sigma           = sigma;
     parameters[particleIndex].epsilon         = epsilon;
     parameters[particleIndex].reductionFactor = reductionFactor;
     parameters[particleIndex].isAlchemical    = isAlchemical;
+    parameters[particleIndex].typeIndex       = typeIndex;
+}
+
+int AmoebaVdwForce::addParticleType(double sigma, double epsilon) {
+    types.push_back(ParticleTypeInfo(sigma, epsilon));
+    return types.size()-1;
+}
+
+void AmoebaVdwForce::getParticleTypeParameters(int typeIndex, double& sigma, double& epsilon) const {
+    ASSERT_VALID_INDEX(typeIndex, types);
+    sigma = types[typeIndex].sigma;
+    epsilon = types[typeIndex].epsilon;
+}
+
+void AmoebaVdwForce::setParticleTypeParameters(int typeIndex, double sigma, double epsilon) {
+    ASSERT_VALID_INDEX(typeIndex, types);
+    types[typeIndex].sigma = sigma;
+    types[typeIndex].epsilon = epsilon;
+}
+
+int AmoebaVdwForce::addTypePair(int type1, int type2, double sigma, double epsilon) {
+    pairs.push_back(TypePairInfo(type1, type2, sigma, epsilon));
+    return pairs.size()-1;
+}
+
+void AmoebaVdwForce::getTypePairParameters(int pairIndex, int& type1, int& type2, double& sigma, double& epsilon) const {
+    ASSERT_VALID_INDEX(pairIndex, pairs);
+    type1 = pairs[pairIndex].type1;
+    type2 = pairs[pairIndex].type2;
+    sigma = pairs[pairIndex].sigma;
+    epsilon = pairs[pairIndex].epsilon;
+}
+
+void AmoebaVdwForce::setTypePairParameters(int pairIndex, int type1, int type2, double sigma, double epsilon) {
+    ASSERT_VALID_INDEX(pairIndex, pairs);
+    pairs[pairIndex].type1 = type1;
+    pairs[pairIndex].type2 = type2;
+    pairs[pairIndex].sigma = sigma;
+    pairs[pairIndex].epsilon = epsilon;
 }
 
 void AmoebaVdwForce::setSigmaCombiningRule(const std::string& inputSigmaCombiningRule) {

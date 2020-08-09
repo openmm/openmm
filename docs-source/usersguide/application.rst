@@ -650,8 +650,8 @@ such as :file:`charmm36/water.xml`, which specifies the default CHARMM water mod
 .. warning:: Drude polarizable sites and lone pairs are not yet supported
              by `ParmEd <https://github.com/parmed/parmed>`_ and the CHARMM36 forcefields
              that depend on these features are not included in this port.
-             To use the CHARMM 2013 polarizable force field\ :cite:`Lopes2013`,
-             include the single file :file:`charmm_polar_2013.xml`.
+             To use the CHARMM 2019 polarizable force field\ :cite:`Lopes2013`,
+             include the single file :file:`charmm_polar_2019.xml`.
 
 .. tip:: The solvent model XML files included under the :file:`charmm36/` directory
          include both water *and* ions compatible with that water model, so if you
@@ -712,17 +712,20 @@ recommended for most simulations.
 CHARMM Polarizable Force Field
 ------------------------------
 
-To use the CHARMM 2013 polarizable force field\ :cite:`Lopes2013`, include the
-single file :file:`charmm_polar_2013.xml`.  It includes parameters for proteins,
+To use the CHARMM 2019 polarizable force field\ :cite:`Lopes2013`, include the
+single file :file:`charmm_polar_2019.xml`.  It includes parameters for proteins, lipids,
 water, and ions.  When using this force field, remember to add extra particles to
 the :class:`Topology` as described in section :ref:`adding-or-removing-extra-particles`.
+This force field also requires that you use one of the special integrators that
+supports Drude particles.  The options are DrudeLangevinIntegrator, DrudeNoseHooverIntegrator,
+and DrudeSCFIntegrator.
 
-Older Amber Force Fields
-------------------------
+Older Force Fields
+------------------
 
-OpenMM includes several older Amber force fields as well.  For most simulations
-Amber14 is preferred over any of these, but they are still useful for reproducing
-older results.
+OpenMM includes several older force fields as well.  For most simulations, the
+newer force fields described above are preferred over any of these, but they are
+still useful for reproducing older results.
 
 .. tabularcolumns:: |l|L|
 
@@ -735,6 +738,7 @@ File                           Force Field
 :code:`amber99sbnmr.xml`       Amber99SB with modifications to fit NMR data\ :cite:`Li2010`
 :code:`amber03.xml`            Amber03\ :cite:`Duan2003`
 :code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
+:code:`charmm_polar_2013.xml`  2013 version of the CHARMM polarizable force field\ :cite:`Lopes2013`
 =============================  ================================================================================
 
 Several of these force fields support implicit solvent.  To enable it, also
@@ -1059,6 +1063,34 @@ sampling, and therefore is preferred for most applications.  Also note that
 :code:`LangevinIntegrator`\ , like :code:`LangevinMiddleIntegrator`\ , is a leapfrog
 integrator, so the velocities are offset by half a time step from the positions.
 
+Nosé-Hoover Integrator
+----------------------
+
+The :code:`NoseHooverIntegrator` uses the same "middle" leapfrog propagation
+algorithm as :code:`LangevinMiddleIntegrator`, but replaces the stochastic
+temperature control with a velocity scaling algorithm that produces more
+accurate transport properties :cite:`Basconi2013`.  This velocity scaling
+results from propagating a chain of extra variables, which slightly reduces the
+computational efficiency with respect to :code:`LangevinMiddleIntegrator`.  The
+thermostated integrator is minimally created with syntax analogous to the
+:code:`LangevinMiddleIntegrator` example above::
+
+    NoseHooverIntegrator integrator(300*kelvin, 1/picosecond,
+                                    0.004*picoseconds);
+
+The first argument specifies the target temperature.  The second specifies the
+frequency of interaction with the heat bath: a lower value interacts minimally,
+yielding the microcanonical ensemble in the limit of a zero frequency, while a
+larger frequency will perturb the system greater, keeping it closer to the
+target temperature.  The third argument is the integration timestep that, like
+the other arguments, must be specified with units.  For initial equilibration
+to the target temperature, a larger interaction frequency is recommended,
+*e.g.* 25 ps\ :sup:`-1`.
+
+This integrator supports lots of other options, including the ability to couple
+different parts of the system to thermostats at different temperatures. See the
+API documentation for details.
+
 Leapfrog Verlet Integrator
 --------------------------
 
@@ -1122,6 +1154,13 @@ The :class:`MTSIntegrator` class implements the rRESPA multiple time step
 algorithm\ :cite:`Tuckerman1992`.  This allows some forces in the system to be evaluated more
 frequently than others.  For details on how to use it, consult the API
 documentation.
+
+Multiple Time Step Langevin Integrator
+--------------------------------------
+
+:class:`MTSLangevinIntegrator` is similar to :class:`MTSIntegrator`, but it uses
+the Langevin method to perform constant temperature dynamics.  For details on
+how to use it, consult the API documentation.
 
 Compound Integrator
 -------------------

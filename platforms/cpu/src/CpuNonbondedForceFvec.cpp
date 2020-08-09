@@ -25,19 +25,25 @@
 #include "CpuNonbondedForceFvec.h"
 
 OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec4();
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec8();
+OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx();
+OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx2();
 
-bool isVec8Supported();
+bool isAvxSupported();
+bool isAvx2Supported();
+
+#include <iostream>
 
 OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec() {
-    if (isVec8Supported())
-        return createCpuNonbondedForceVec8();
+    if (isAvx2Supported())
+        return createCpuNonbondedForceAvx2();
+    else if (isAvxSupported())
+        return createCpuNonbondedForceAvx();
     else
         return createCpuNonbondedForceVec4();
 }
 
 int getVecBlockSize() {
-    if (isVec8Supported())
+    if (isAvx2Supported() || isAvxSupported())
         return 8;
     else
         return 4;

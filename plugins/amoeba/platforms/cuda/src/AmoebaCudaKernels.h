@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -584,7 +584,7 @@ private:
     CudaArray isAlchemical;
 
     double dispersionCoefficient;
-    CudaArray sigmaEpsilon;
+    CudaArray sigmaEpsilon, atomType;
     CudaArray bondReductionAtoms;
     CudaArray bondReductionFactors;
     CudaArray tempPosq;

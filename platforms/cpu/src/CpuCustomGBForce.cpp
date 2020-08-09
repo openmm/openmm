@@ -361,9 +361,9 @@ void CpuCustomGBForce::calculateParticlePairValue(int index, ThreadData& data, i
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
-            const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
+            const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
-            const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
+            const auto& blockExclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
                 for (int k = 0; k < blockSize; k++) {
@@ -456,9 +456,9 @@ void CpuCustomGBForce::calculateParticlePairEnergyTerm(int index, ThreadData& da
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
-            const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
+            const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
-            const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
+            const auto& blockExclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
                 for (int k = 0; k < blockSize; k++) {
@@ -543,9 +543,9 @@ void CpuCustomGBForce::calculateChainRuleForces(ThreadData& data, int numAtoms, 
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
-            const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
+            const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
-            const vector<char>& blockExclusions = neighborList->getBlockExclusions(blockIndex);
+            const auto& blockExclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
                 for (int k = 0; k < blockSize; k++) {

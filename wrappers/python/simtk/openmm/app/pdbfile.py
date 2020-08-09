@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2018 Stanford University and the Authors.
+Portions copyright (c) 2012-2020 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -139,8 +139,10 @@ class PDBFile(object):
                             element = elem.potassium
                         elif upper.startswith('ZN'):
                             element = elem.zinc
-                        elif( len( residue ) == 1 and upper.startswith('CA') ):
+                        elif len(residue) == 1 and upper.startswith('CA'):
                             element = elem.calcium
+                        elif upper.startswith('D') and any(a.name == atomName[1:] for a in residue.iter_atoms()):
+                            pass # A Drude particle
                         else:
                             try:
                                 element = elem.get_by_symbol(upper[0])
@@ -258,7 +260,7 @@ class PDBFile(object):
                 map[atom.attrib[id]] = name
 
     @staticmethod
-    def writeFile(topology, positions, file=sys.stdout, keepIds=False, extraParticleIdentifier=' '):
+    def writeFile(topology, positions, file=sys.stdout, keepIds=False, extraParticleIdentifier='EP'):
         """Write a PDB file containing a single model.
 
         Parameters
@@ -274,7 +276,7 @@ class PDBFile(object):
             rather than generating new ones.  Warning: It is up to the caller to
             make sure these are valid IDs that satisfy the requirements of the
             PDB format.  Otherwise, the output file will be invalid.
-        extraParticleIdentifier : string=' '
+        extraParticleIdentifier : string='EP'
             String to write in the element column of the ATOM records for atoms whose element is None (extra particles)
         """
         PDBFile.writeHeader(topology, file)
@@ -301,7 +303,7 @@ class PDBFile(object):
                     a*10, b*10, c*10, alpha*RAD_TO_DEG, beta*RAD_TO_DEG, gamma*RAD_TO_DEG), file=file)
 
     @staticmethod
-    def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False, extraParticleIdentifier=' '):
+    def writeModel(topology, positions, file=sys.stdout, modelIndex=None, keepIds=False, extraParticleIdentifier='EP'):
         """Write out a model to a PDB file.
 
         Parameters
@@ -321,7 +323,7 @@ class PDBFile(object):
             make sure these are valid IDs that satisfy the requirements of the
             PDB format.  No guarantees are made about what will happen if they
             are not, and the output file could be invalid.
-        extraParticleIdentifier : string=' '
+        extraParticleIdentifier : string='EP'
             String to write in the element column of the ATOM records for atoms whose element is None (extra particles)
         """
 

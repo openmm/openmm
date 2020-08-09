@@ -9,6 +9,7 @@ pipeline {
                         docker {
                             image "swails/openmm-all:latest"
                             label "cuda && docker"
+                            args '--gpus all'
                             alwaysPull true
                         }
                     }
@@ -26,6 +27,7 @@ pipeline {
                         docker {
                             image "swails/openmm-all:latest"
                             label "cuda && docker"
+                            args '--gpus all'
                             alwaysPull true
                         }
                     }

@@ -193,9 +193,9 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
             const int blockSize = neighborList->getBlockSize();
-            const int* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
+            const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
-            const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
+            const auto& exclusions = neighborList->getBlockExclusions(blockIndex);
             for (int i = 0; i < (int) neighbors.size(); i++) {
                 int first = neighbors[i];
                 for (int j = 0; j < (int) paramNames.size(); j++)

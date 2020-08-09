@@ -80,7 +80,7 @@ class TestPdbFile(unittest.TestCase):
         output = StringIO()
         PDBFile.writeFile(pdb.topology, pdb.positions, output)
         input = StringIO(output.getvalue())
-        pdb = PDBFile(input, extraParticleIdentifier = '')
+        pdb = PDBFile(input)
         for atom in pdb.topology.atoms():
             if atom.index > 2:
                 self.assertEqual(None, atom.element)

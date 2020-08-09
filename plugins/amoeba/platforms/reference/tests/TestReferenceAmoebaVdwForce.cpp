@@ -35,6 +35,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
+#include "openmm/CustomNonbondedForce.h"
 #include "OpenMMAmoeba.h"
 #include "openmm/System.h"
 #include "openmm/AmoebaVdwForce.h"
@@ -140,13 +141,13 @@ void testVdw() {
         positions[ii][2] *= AngstromToNm;
     }
     for (int ii = 0; ii < amoebaVdwForce->getNumParticles();  ii++) {
-        int indexIV;
+        int indexIV, type;
         double sigma, epsilon, reduction;
         bool isAlchemical;
-        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical);
+        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical, type);
         sigma        *= AngstromToNm;
         epsilon      *= CalToJoule;
-        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical);
+        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical, type);
     }
     platformName = "Reference";
     Context context(system, integrator, Platform::getPlatformByName(platformName));
@@ -172,11 +173,11 @@ void testVdw() {
     // Try changing the particle parameters and make sure it's still correct.
     
     for (int i = 0; i < numberOfParticles; i++) {
-        int indexIV;
+        int indexIV, type;
         double mass, sigma, epsilon, reduction;
         bool isAlchemical;
-        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction, isAlchemical);
-        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction, isAlchemical);
+        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction, isAlchemical, type);
+        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction, isAlchemical, type);
     }
     LangevinIntegrator integrator2(0.0, 0.1, 0.01);
     Context context2(system, integrator2, Platform::getPlatformByName(platformName));
@@ -2116,6 +2117,94 @@ void testTriclinic() {
     }
 }
 
+void testCompareToCustom(AmoebaVdwForce::PotentialFunction potential) {
+    const int numParticles = 10;
+    const double cutoff = 1.0;
+    System system;
+    AmoebaVdwForce* vdw = new AmoebaVdwForce();
+    vdw->setNonbondedMethod(AmoebaVdwForce::CutoffPeriodic);
+    vdw->setCutoff(cutoff);
+    vdw->setPotentialFunction(potential);
+    vdw->setSigmaCombiningRule("ARITHMETIC");
+    vdw->setEpsilonCombiningRule("GEOMETRIC");
+    vdw->setUseDispersionCorrection(true);
+    system.addForce(vdw);
+    CustomNonbondedForce* custom;
+    if (potential == AmoebaVdwForce::LennardJones)
+        custom = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6); sigma=sigma1+sigma2; eps=sqrt(eps1*eps2)");
+    else
+        custom = new CustomNonbondedForce("eps*((1.07/(p+0.07))^7 * ((1.12/(p^7+0.12))-2)); p=r/sigma; sigma=sigma1+sigma2; eps=sqrt(eps1*eps2)");
+    custom->addPerParticleParameter("sigma");
+    custom->addPerParticleParameter("eps");
+    custom->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    custom->setCutoffDistance(cutoff);
+    custom->setUseLongRangeCorrection(true);
+    custom->setUseSwitchingFunction(true);
+    custom->setSwitchingDistance(0.9*cutoff);
+    custom->setForceGroup(1);
+    system.addForce(custom);
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        if (i%2 == 0) {
+            vdw->addParticle(i, 0.2, 1.0, 0.0);
+            custom->addParticle({0.2, 1.0});
+        }
+        else {
+            vdw->addParticle(i, 0.25, 0.5, 0.0);
+            custom->addParticle({0.25, 0.5});
+        }
+        positions.push_back(2*Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt)));
+    }
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    context.setPositions(positions);
+    State state1 = context.getState(State::Energy | State::Forces, true, 1);
+    State state2 = context.getState(State::Energy | State::Forces, true, 2);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-3);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
+}
+
+void testParticleTypes() {
+    System system;
+    for (int i = 0; i < 4; i++)
+        system.addParticle(1.0);
+    AmoebaVdwForce* vdw = new AmoebaVdwForce();
+    system.addForce(vdw);
+    vdw->setPotentialFunction(AmoebaVdwForce::LennardJones);
+    vdw->setSigmaCombiningRule("ARITHMETIC");
+    vdw->setEpsilonCombiningRule("GEOMETRIC");
+    vdw->addParticle(0, 0, 1.0);
+    vdw->addParticle(1, 2, 1.0);
+    vdw->addParticle(2, 0, 1.0);
+    vdw->addParticle(3, 1, 1.0);
+    vdw->addParticleType(0.3, 1.0);
+    vdw->addParticleType(0.4, 1.1);
+    vdw->addParticleType(0.5, 1.2);
+    vdw->addTypePair(2, 0, 0.6, 1.5);
+    vector<Vec3> positions;
+    positions.push_back(Vec3(0, 0, 0));
+    positions.push_back(Vec3(1, 0, 0));
+    positions.push_back(Vec3(0, 1, 0));
+    positions.push_back(Vec3(1, 1, 0));
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    context.setPositions(positions);
+    State state = context.getState(State::Energy);
+    vector<double> r = {1.0, 1.0, sqrt(2.0), sqrt(2.0), 1.0, 1.0};
+    vector<double> sigma = {0.6, 0.3+0.3, 0.3+0.4, 0.6, 0.5+0.4, 0.3+0.4};
+    vector<double> epsilon = {1.5, sqrt(1.0*1.0), sqrt(1.0*1.1), 1.5, sqrt(1.1*1.2), sqrt(1.0*1.1)};
+    double expectedEnergy = 0;
+    for (int i = 0; i < 6; i++) {
+        double p = sigma[i]/r[i];
+        expectedEnergy += 4*epsilon[i]*(pow(p, 12) - pow(p, 6));
+    }
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
+}
+
 int main(int numberOfArguments, char* argv[]) {
 
     try {
@@ -2169,6 +2258,15 @@ int main(int numberOfArguments, char* argv[]) {
         // test triclinic boxes
         
         testTriclinic();
+        
+        // Compare to an equivalent CustomNonbondedForce.
+
+        testCompareToCustom(AmoebaVdwForce::Buffered147);
+        testCompareToCustom(AmoebaVdwForce::LennardJones);
+        
+        // Test specifying parameters by particle type.
+        
+        testParticleTypes();
 
         // Set lambda and the softcore power (n) to any values (softcore alpha set to 0). 
         // The energy and forces are equal to scaling testVdwAmmoniaCubicMeanHhg by lambda^n;
@@ -2188,7 +2286,6 @@ int main(int numberOfArguments, char* argv[]) {
         lambda = 0.0;
         alpha = 0.7;
         testVdwAlchemical(n, alpha, lambda, method);
-    
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,8 +42,9 @@ AmoebaVdwForceProxy::AmoebaVdwForceProxy() : SerializationProxy("AmoebaVdwForce"
 }
 
 void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 3);
+    node.setIntProperty("version", 4);
     const AmoebaVdwForce& force = *reinterpret_cast<const AmoebaVdwForce*>(object);
+    bool useTypes = force.getUseParticleTypes();
 
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("SigmaCombiningRule", force.getSigmaCombiningRule());
@@ -54,31 +55,49 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
     node.setDoubleProperty("n", force.getSoftcorePower());
     node.setDoubleProperty("alpha", force.getSoftcoreAlpha());
     node.setIntProperty("alchemicalMethod", (int) force.getAlchemicalMethod());
+    node.setIntProperty("potentialFunction", (int) force.getPotentialFunction());
+    node.setBoolProperty("useTypes", useTypes);
 
     SerializationNode& particles = node.createChildNode("VdwParticles");
-    for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
-
-        int ivIndex;
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        int ivIndex, typeIndex;
         double sigma, epsilon, reductionFactor;
         bool isAlchemical;
-        force.getParticleParameters(ii, ivIndex, sigma, epsilon, reductionFactor, isAlchemical);
-
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, isAlchemical, typeIndex);
         SerializationNode& particle = particles.createChildNode("Particle");
-        particle.setIntProperty("ivIndex", ivIndex).setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon).setDoubleProperty("reductionFactor", reductionFactor).setBoolProperty("isAlchemical",isAlchemical);
+        if (useTypes)
+            particle.setIntProperty("ivIndex", ivIndex).setIntProperty("type", typeIndex).setDoubleProperty("reductionFactor", reductionFactor).setBoolProperty("isAlchemical", isAlchemical);
+        else
+            particle.setIntProperty("ivIndex", ivIndex).setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon).setDoubleProperty("reductionFactor", reductionFactor).setBoolProperty("isAlchemical", isAlchemical); 
 
         std::vector< int > exclusions;
-        force.getParticleExclusions(ii,  exclusions);
-
+        force.getParticleExclusions(i,  exclusions);
         SerializationNode& particleExclusions = particle.createChildNode("ParticleExclusions");
-        for (unsigned int jj = 0; jj < exclusions.size(); jj++) {
-            particleExclusions.createChildNode("excl").setIntProperty("index", exclusions[jj]);
+        for (int j = 0; j < exclusions.size(); j++)
+            particleExclusions.createChildNode("excl").setIntProperty("index", exclusions[j]);
+    }
+    if (useTypes) {
+        SerializationNode& types = node.createChildNode("ParticleTypes");
+        for (int i = 0; i < force.getNumParticleTypes(); i++) {
+            double sigma, epsilon;
+            force.getParticleTypeParameters(i, sigma, epsilon);
+            SerializationNode& type = types.createChildNode("Type");
+            type.setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon);
+        }
+        SerializationNode& pairs = node.createChildNode("TypePairs");
+        for (int i = 0; i < force.getNumParticleTypes(); i++) {
+            int type1, type2;
+            double sigma, epsilon;
+            force.getTypePairParameters(i, type1, type2, sigma, epsilon);
+            SerializationNode& pair = pairs.createChildNode("Pair");
+            pair.setIntProperty("type1", type1).setIntProperty("type2", type2).setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon);
         }
     }
 }
 
 void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 3)
+    if (version < 1 || version > 4)
         throw OpenMMException("Unsupported version number");
     AmoebaVdwForce* force = new AmoebaVdwForce();
     try {
@@ -94,15 +113,24 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
            force->setSoftcorePower(node.getDoubleProperty("n"));
            force->setSoftcoreAlpha(node.getDoubleProperty("alpha"));
         }
+        
+        bool useTypes = false;
+        if (version > 3) {
+            useTypes = node.getBoolProperty("useTypes");
+           force->setPotentialFunction((AmoebaVdwForce::PotentialFunction) node.getIntProperty("potentialFunction"));
+        }
 
         const SerializationNode& particles = node.getChildNode("VdwParticles");
-        for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
-            const SerializationNode& particle = particles.getChildren()[ii];
+        for (int i = 0; i < particles.getChildren().size(); i++) {
+            const SerializationNode& particle = particles.getChildren()[i];
 
             if (version < 3) 
                force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"), 
                                   particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"));
-            else 
+            else if (useTypes)
+               force->addParticle(particle.getIntProperty("ivIndex"), particle.getIntProperty("type"), 
+                                  particle.getDoubleProperty("reductionFactor"), particle.getBoolProperty("isAlchemical"));
+            else
                force->addParticle(particle.getIntProperty("ivIndex"), particle.getDoubleProperty("sigma"), 
                                   particle.getDoubleProperty("epsilon"), particle.getDoubleProperty("reductionFactor"), 
                                   particle.getBoolProperty("isAlchemical"));
@@ -110,13 +138,19 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
             // exclusions
 
             const SerializationNode& particleExclusions = particle.getChildNode("ParticleExclusions");
-            std::vector< int > exclusions;
-            for (unsigned int jj = 0; jj < particleExclusions.getChildren().size(); jj++) {
-                exclusions.push_back(particleExclusions.getChildren()[jj].getIntProperty("index"));
-            }
-            force->setParticleExclusions(ii, exclusions);
+            std::vector<int> exclusions;
+            for (int j = 0; j < particleExclusions.getChildren().size(); j++)
+                exclusions.push_back(particleExclusions.getChildren()[j].getIntProperty("index"));
+            force->setParticleExclusions(i, exclusions);
         }
-
+        if (useTypes) {
+            const SerializationNode& types = node.getChildNode("ParticleTypes");
+            for (const auto& type : types.getChildren())
+                force->addParticleType(type.getDoubleProperty("sigma"), type.getDoubleProperty("epsilon"));
+            const SerializationNode& pairs = node.getChildNode("TypePairs");
+            for (const auto& pair : pairs.getChildren())
+                force->addTypePair(pair.getIntProperty("type1"), pair.getIntProperty("type2"), pair.getDoubleProperty("sigma"), pair.getDoubleProperty("epsilon"));
+        }
     }
     catch (...) {
         delete force;

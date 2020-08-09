@@ -34,6 +34,7 @@
 
 #include "State.h"
 #include "Vec3.h"
+#include "openmm/serialization/SerializationNode.h"
 #include <iosfwd>
 #include <map>
 #include <vector>
@@ -85,6 +86,18 @@ public:
      * @param steps   the number of time steps to take
      */
     virtual void step(int steps) = 0;
+    /**
+     * Get which force groups to use for integration.  By default, all force groups
+     * are included.  This is interpreted as a set of bit flags: the forces from group i
+     * will be included if (groups&(1<<i)) != 0.
+     */
+    virtual int getIntegrationForceGroups() const;
+    /**
+     * Set which force groups to use for integration.  By default, all force groups
+     * are included.  This is interpreted as a set of bit flags: the forces from group i
+     * will be included if (groups&(1<<i)) != 0.
+     */
+    virtual void setIntegrationForceGroups(int groups);
 protected:
     friend class Context;
     friend class ContextImpl;
@@ -164,8 +177,24 @@ protected:
      */
     virtual void loadCheckpoint(std::istream& stream) {
     }
+    /**
+     * This is called while creating a State.  The Integrator should store the values
+     * of all time-varying parameters into the SerializationNode so they can be saved
+     * as part of the state.
+     */
+    virtual void serializeParameters(SerializationNode& node) const {
+    }
+    /**
+     * This is called when loading a previously saved State.  The Integrator should
+     * load the values of all time-varying parameters from the SerializationNode.  If
+     * the node contains parameters that are not defined for this Integrator, it should
+     * throw an exception.
+     */
+    virtual void deserializeParameters(const SerializationNode& node) {
+    }
 private:
     double stepSize, constraintTol;
+    int forceGroups;
 };
 
 } // namespace OpenMM

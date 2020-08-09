@@ -74,12 +74,9 @@ class fvec4 {
 public:
     float32x4_t val;
 
-    fvec4() {}
+    fvec4() = default;
     fvec4(float v) : val(vdupq_n_f32(v)) {}
-    fvec4(float v1, float v2, float v3, float v4) {
-        float v[] = {v1, v2, v3, v4};
-        val = vld1q_f32(v);
-    }
+    fvec4(float v1, float v2, float v3, float v4) : val {v1, v2, v3, v4} {}
     fvec4(float32x4_t v) : val(v) {}
     fvec4(const float* v) : val(vld1q_f32(v)) {}
     operator float32x4_t() const {
@@ -92,7 +89,7 @@ public:
       * @param table The table from which to do a lookup.
       * @param indexes The indexes to gather.
       */
-    fvec4(const float* table, const int idx[4])
+    fvec4(const float* table, const int32_t idx[4])
         : fvec4(table[idx[0]], table[idx[1]], table[idx[2]], table[idx[3]]) { }
 
     float operator[](int i) const {
@@ -121,16 +118,16 @@ public:
         v[2] = vgetq_lane_f32(val, 2);
     }
 
-    fvec4 operator+(const fvec4& other) const {
+    fvec4 operator+(fvec4 other) const {
         return vaddq_f32(val, other);
     }
-    fvec4 operator-(const fvec4& other) const {
+    fvec4 operator-(fvec4 other) const {
         return vsubq_f32(val, other);
     }
-    fvec4 operator*(const fvec4& other) const {
+    fvec4 operator*(fvec4 other) const {
         return vmulq_f32(val, other);
     }
-    fvec4 operator/(const fvec4& other) const {
+    fvec4 operator/(fvec4 other) const {
         // NEON does not have a divide float-point operator, so we get the reciprocal and multiply.
 
         float32x4_t reciprocal = vrecpeq_f32(other);
@@ -139,45 +136,34 @@ public:
         fvec4 result = vmulq_f32(val,reciprocal);
         return result;
     }
-    void operator+=(const fvec4& other) {
+    void operator+=(fvec4 other) {
         val = vaddq_f32(val, other);
     }
-    void operator-=(const fvec4& other) {
+    void operator-=(fvec4 other) {
         val = vsubq_f32(val, other);
     }
-    void operator*=(const fvec4& other) {
+    void operator*=(fvec4 other) {
         val = vmulq_f32(val, other);
     }
-    void operator/=(const fvec4& other) {
+    void operator/=(fvec4 other) {
         val = *this/other;
     }
     fvec4 operator-() const {
         return vnegq_f32(val);
     }
-    fvec4 operator&(const fvec4& other) const {
+    fvec4 operator&(fvec4 other) const {
         return vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(val), vreinterpretq_u32_f32(other)));
     }
-    fvec4 operator|(const fvec4& other) const {
+    fvec4 operator|(fvec4 other) const {
         return vreinterpretq_f32_u32(vorrq_u32(vreinterpretq_u32_f32(val), vreinterpretq_u32_f32(other)));
     }
-    fvec4 operator==(const fvec4& other) const {
-        return vcvtq_f32_s32(vreinterpretq_s32_u32(vceqq_f32(val, other)));
-    }
-    fvec4 operator!=(const fvec4& other) const {
-        return vcvtq_f32_s32(vreinterpretq_s32_u32(vmvnq_u32(vceqq_f32(val, other)))); // not(equals(val, other))
-    }
-    fvec4 operator>(const fvec4& other) const {
-        return vcvtq_f32_s32(vreinterpretq_s32_u32(vcgtq_f32(val, other)));
-    }
-    fvec4 operator<(const fvec4& other) const {
-        return vcvtq_f32_s32(vreinterpretq_s32_u32(vcltq_f32(val, other)));
-    }
-    fvec4 operator>=(const fvec4& other) const {
-        return vcvtq_f32_s32(vreinterpretq_s32_u32(vcgeq_f32(val, other)));
-    }
-    fvec4 operator<=(const fvec4& other) const {
-        return vcvtq_f32_s32(vreinterpretq_s32_u32(vcleq_f32(val, other)));
-    }
+
+    ivec4 operator==(fvec4 other) const;
+    ivec4 operator!=(fvec4 other) const;
+    ivec4 operator>(fvec4 other) const;
+    ivec4 operator<(fvec4 other) const;
+    ivec4 operator>=(fvec4 other) const;
+    ivec4 operator<=(fvec4 other) const;
     operator ivec4() const;
 
     /**
@@ -198,10 +184,7 @@ public:
 
     ivec4() {}
     ivec4(int v) : val(vdupq_n_s32(v)) {}
-    ivec4(int v1, int v2, int v3, int v4) {
-        int v[] = {v1, v2, v3, v4};
-        val = vld1q_s32(v);
-    }
+    ivec4(int v1, int v2, int v3, int v4) : val {v1, v2, v3, v4} {}
     ivec4(int32x4_t v) : val(v) {}
     ivec4(const int* v) : val(vld1q_s32(v)) {}
     operator int32x4_t() const {
@@ -223,49 +206,49 @@ public:
     void store(int* v) const {
         vst1q_s32(v, val);
     }
-    ivec4 operator+(const ivec4& other) const {
+    ivec4 operator+(ivec4 other) const {
         return vaddq_s32(val, other);
     }
-    ivec4 operator-(const ivec4& other) const {
+    ivec4 operator-(ivec4 other) const {
         return vsubq_s32(val, other);
     }
-    ivec4 operator*(const ivec4& other) const {
+    ivec4 operator*(ivec4 other) const {
         return vmulq_s32(val, other);
     }
-    void operator+=(const ivec4& other) {
+    void operator+=(ivec4 other) {
         val = vaddq_s32(val, other);
     }
-    void operator-=(const ivec4& other) {
+    void operator-=(ivec4 other) {
         val = vsubq_s32(val, other);
     }
-    void operator*=(const ivec4& other) {
+    void operator*=(ivec4 other) {
         val = vmulq_s32(val, other);
     }
     ivec4 operator-() const {
         return vnegq_s32(val);
     }
-    ivec4 operator&(const ivec4& other) const {
+    ivec4 operator&(ivec4 other) const {
         return vandq_s32(val, other);
     }
-    ivec4 operator|(const ivec4& other) const {
+    ivec4 operator|(ivec4 other) const {
         return vorrq_s32(val, other);
     }
-    ivec4 operator==(const ivec4& other) const {
+    ivec4 operator==(ivec4 other) const {
         return vreinterpretq_s32_u32(vceqq_s32(val, other));
     }
-    ivec4 operator!=(const ivec4& other) const {
+    ivec4 operator!=(ivec4 other) const {
         return vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(val, other))); // not(equal(val, other))
     }
-    ivec4 operator>(const ivec4& other) const {
+    ivec4 operator>(ivec4 other) const {
         return vreinterpretq_s32_u32(vcgtq_s32(val, other));
     }
-    ivec4 operator<(const ivec4& other) const {
+    ivec4 operator<(ivec4 other) const {
         return vreinterpretq_s32_u32(vcltq_s32(val, other));
     }
-    ivec4 operator>=(const ivec4& other) const {
+    ivec4 operator>=(ivec4 other) const {
         return vreinterpretq_s32_u32(vcgeq_s32(val, other));
     }
-    ivec4 operator<=(const ivec4& other) const {
+    ivec4 operator<=(ivec4 other) const {
         return vreinterpretq_s32_u32(vcleq_s32(val, other));
     }
     operator fvec4() const;
@@ -287,54 +270,84 @@ inline ivec4 fvec4::expandBitsToMask(int bitmask) {
                  bitmask & 4 ? -1 : 0,
                  bitmask & 8 ? -1 : 0);
 }
+
+// Comparison operators
+inline ivec4 fvec4::operator==(fvec4 other) const {
+    return vreinterpretq_s32_u32(vceqq_f32(val, other));
+}
+
+inline ivec4 fvec4::operator!=(fvec4 other) const {
+    return vreinterpretq_s32_u32(vmvnq_u32(vceqq_f32(val, other))); // not(equals(val, other))
+}
+
+inline ivec4 fvec4::operator>(fvec4 other) const {
+    return vreinterpretq_s32_u32(vcgtq_f32(val, other));
+}
+
+inline ivec4 fvec4::operator<(fvec4 other) const {
+    return vreinterpretq_s32_u32(vcltq_f32(val, other));
+}
+
+inline ivec4 fvec4::operator>=(fvec4 other) const {
+    return vreinterpretq_s32_u32(vcgeq_f32(val, other));
+}
+
+inline ivec4 fvec4::operator<=(fvec4 other) const {
+    return vreinterpretq_s32_u32(vcleq_f32(val, other));
+}
+
 // Functions that operate on fvec4s.
 
-static inline fvec4 min(const fvec4& v1, const fvec4& v2) {
+static inline fvec4 min(fvec4 v1, fvec4 v2) {
     return vminq_f32(v1, v2);
 }
 
-static inline fvec4 max(const fvec4& v1, const fvec4& v2) {
+static inline fvec4 max(fvec4 v1, fvec4 v2) {
     return vmaxq_f32(v1, v2);
 }
 
-static inline fvec4 abs(const fvec4& v) {
+static inline fvec4 abs(fvec4 v) {
     return vabsq_f32(v);
 }
 
-static inline fvec4 rsqrt(const fvec4& v) {
+static inline fvec4 rsqrt(fvec4 v) {
     float32x4_t recipSqrt = vrsqrteq_f32(v);
     recipSqrt = vmulq_f32(recipSqrt, vrsqrtsq_f32(vmulq_f32(recipSqrt, v), recipSqrt));
     recipSqrt = vmulq_f32(recipSqrt, vrsqrtsq_f32(vmulq_f32(recipSqrt, v), recipSqrt));
     return recipSqrt;
 }
 
-static inline fvec4 sqrt(const fvec4& v) {
+static inline fvec4 sqrt(fvec4 v) {
     return rsqrt(v)*v;
 }
 
-static inline fvec4 exp(const fvec4& v) {
+static inline fvec4 exp(fvec4 v) {
     return fvec4(exp_ps(v.val));
 }
 
-static inline fvec4 log(const fvec4& v) {
+static inline fvec4 log(fvec4 v) {
     return fvec4(log_ps(v.val));
 }
 
-static inline float dot3(const fvec4& v1, const fvec4& v2) {
+static inline float dot3(fvec4 v1, fvec4 v2) {
     fvec4 result = v1*v2;
     return vgetq_lane_f32(result, 0) + vgetq_lane_f32(result, 1) + vgetq_lane_f32(result, 2);
 }
 
-static inline float dot4(const fvec4& v1, const fvec4& v2) {
+static inline float dot4(fvec4 v1, fvec4 v2) {
     fvec4 result = v1*v2;
     return vgetq_lane_f32(result, 0) + vgetq_lane_f32(result, 1) + vgetq_lane_f32(result, 2) + vgetq_lane_f32(result,3);
 }
 
-static inline float reduceAdd(const fvec4 v) {
+static inline float reduceAdd(fvec4 v) {
+#ifdef __ARM64__
+    return vaddvq_f32(v);
+#else
     return dot4(v, fvec4(1.0f));
+#endif
 }
 
-static inline fvec4 cross(const fvec4& v1, const fvec4& v2) {
+static inline fvec4 cross(fvec4 v1, fvec4 v2) {
     return fvec4(v1[1]*v2[2] - v1[2]*v2[1],
                  v1[2]*v2[0] - v1[0]*v2[2],
                  v1[0]*v2[1] - v1[1]*v2[0], 0);
@@ -362,71 +375,79 @@ static inline void transpose(const fvec4 in[4], fvec4& v0, fvec4& v1, fvec4& v2,
 /**
  * Out-of-place transpose from named variables into an array.
  */
-static inline void transpose(const fvec4 v0, const fvec4 v1, const fvec4 v2, const fvec4 v3, fvec4 out[4]) {
+static inline void transpose(fvec4 v0, fvec4 v1, fvec4 v2, fvec4 v3, fvec4 out[4]) {
     out[0] = v0; out[1] = v1; out[2] = v2; out[3] = v3;
     transpose(out[0], out[1], out[2], out[3]);
 }
 
 // Functions that operate on ivec4s.
 
-static inline ivec4 min(const ivec4& v1, const ivec4& v2) {
+static inline ivec4 min(ivec4 v1, ivec4 v2) {
     return vminq_s32(v1, v2);
 }
 
-static inline ivec4 max(const ivec4& v1, const ivec4& v2) {
+static inline ivec4 max(ivec4 v1, ivec4 v2) {
     return vmaxq_s32(v1, v2);
 }
 
-static inline ivec4 abs(const ivec4& v) {
+static inline ivec4 abs(ivec4 v) {
     return vabdq_s32(v, ivec4(0));
 }
 
-static inline bool any(const ivec4& v) {
+static inline bool any(ivec4 v) {
+#ifdef __ARM64__
+    return (vmaxvq_u32(vreinterpretq_u32_s32(v)) != 0);
+#else
     return (vgetq_lane_s32(v, 0) != 0 || vgetq_lane_s32(v, 1) != 0 || vgetq_lane_s32(v, 2) != 0 || vgetq_lane_s32(v, 3) != 0);
+#endif
 }
 
 // Mathematical operators involving a scalar and a vector.
 
-static inline fvec4 operator+(float v1, const fvec4& v2) {
+static inline fvec4 operator+(float v1, fvec4 v2) {
     return fvec4(v1)+v2;
 }
 
-static inline fvec4 operator-(float v1, const fvec4& v2) {
+static inline fvec4 operator-(float v1, fvec4 v2) {
     return fvec4(v1)-v2;
 }
 
-static inline fvec4 operator*(float v1, const fvec4& v2) {
+static inline fvec4 operator*(float v1, fvec4 v2) {
     return fvec4(v1)*v2;
 }
 
-static inline fvec4 operator/(float v1, const fvec4& v2) {
+static inline fvec4 operator/(float v1, fvec4 v2) {
     return fvec4(v1)/v2;
 }
 
 // Operations for blending fvec4s based on an ivec4.
 
-static inline fvec4 blend(const fvec4& v1, const fvec4& v2, const ivec4& mask) {
+static inline fvec4 blend(fvec4 v1, fvec4 v2, ivec4 mask) {
     return vbslq_f32(vreinterpretq_u32_s32(mask), v2, v1);
 }
 
-static inline fvec4 blendZero(const fvec4 v, const ivec4 mask) {
-    return blend(0.0f, v, mask);
+static inline fvec4 blendZero(fvec4 v, ivec4 mask) {
+    return vreinterpretq_f32_s32(vandq_s32(vreinterpretq_s32_f32(v), mask));
+}
+
+static inline ivec4 blendZero(ivec4 v, ivec4 mask) {
+    return v & mask;
 }
 
 // These are at the end since they involve other functions defined above.
 
-static inline fvec4 round(const fvec4& v) {
+static inline fvec4 round(fvec4 v) {
     fvec4 shift(0x1.0p23f);
     fvec4 absResult = (abs(v)+shift)-shift;
     return blend(v, absResult, ivec4(0x7FFFFFFF));
 }
 
-static inline fvec4 floor(const fvec4& v) {
+static inline fvec4 floor(fvec4 v) {
     fvec4 rounded = round(v);
     return rounded + blend(0.0f, -1.0f, rounded>v);
 }
 
-static inline fvec4 ceil(const fvec4& v) {
+static inline fvec4 ceil(fvec4 v) {
     fvec4 rounded = round(v);
     return rounded + blend(0.0f, 1.0f, rounded<v);
 }
@@ -435,7 +456,7 @@ static inline fvec4 ceil(const fvec4& v) {
  * of vectors. The first result vector contains the values at the given indexes, and the second
  * result vector contains the values from each respective index+1.
  */
-static inline void gatherVecPair(const float* table, const ivec4 index, fvec4& out0, fvec4& out1) {
+static inline void gatherVecPair(const float* table, ivec4 index, fvec4& out0, fvec4& out1) {
     fvec4 t0(table + index[0]);
     fvec4 t1(table + index[1]);
     fvec4 t2(table + index[2]);
@@ -458,7 +479,7 @@ static inline void gatherVecPair(const float* table, const ivec4 index, fvec4& o
  *   output[2] = (Z0 + Z1 + Z2 + Z3)
  *   output[3] = undefined
  */
-static inline fvec4 reduceToVec3(const fvec4 x, const fvec4 y, const fvec4 z) {
+static inline fvec4 reduceToVec3(fvec4 x, fvec4 y, fvec4 z) {
     const auto nx = reduceAdd(x);
     const auto ny = reduceAdd(y);
     const auto nz = reduceAdd(z);

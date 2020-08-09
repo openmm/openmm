@@ -110,7 +110,7 @@ void CpuCustomManyParticleForce::calculateIxn(AlignedArray<float>& posq, vector<
         neighborList->computeNeighborList(numParticles, posq, exclusions, periodicBoxVectors, usePeriodic, cutoffDistance, threads);
         for (int blockIndex = 0; blockIndex < neighborList->getNumBlocks(); blockIndex++) {
             const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
-            const vector<char>& exclusions = neighborList->getBlockExclusions(blockIndex);
+            const auto& exclusions = neighborList->getBlockExclusions(blockIndex);
             int numNeighbors = neighbors.size();
             for (int i = 0; i < 4; i++) {
                 int p1 = neighborList->getSortedAtoms()[4*blockIndex+i];
