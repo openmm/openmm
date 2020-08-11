@@ -23,6 +23,7 @@
  */
 
 #include "AmoebaReferenceMultipoleForce.h"
+#include "SimTKOpenMMRealType.h"
 #include "jama_svd.h"
 #include <algorithm>
 
@@ -36,7 +37,7 @@ using namespace OpenMM;
 AmoebaReferenceMultipoleForce::AmoebaReferenceMultipoleForce() :
                                                    _nonbondedMethod(NoCutoff),
                                                    _numParticles(0),
-                                                   _electric(138.9354558456),
+                                                   _electric(ONE_4PI_EPS0),
                                                    _dielectric(1.0),
                                                    _mutualInducedDipoleConverged(0),
                                                    _mutualInducedDipoleIterations(0),
@@ -52,7 +53,7 @@ AmoebaReferenceMultipoleForce::AmoebaReferenceMultipoleForce() :
 AmoebaReferenceMultipoleForce::AmoebaReferenceMultipoleForce(NonbondedMethod nonbondedMethod) :
                                                    _nonbondedMethod(nonbondedMethod),
                                                    _numParticles(0),
-                                                   _electric(138.9354558456),
+                                                   _electric(ONE_4PI_EPS0),
                                                    _dielectric(1.0),
                                                    _mutualInducedDipoleConverged(0),
                                                    _mutualInducedDipoleIterations(0),

@@ -70,10 +70,8 @@ void testSerialization() {
     gridDimension.push_back(63);
     gridDimension.push_back(61);
     force1.setPmeGridDimensions(gridDimension); 
-    //force1.setMutualInducedIterationMethod(AmoebaMultipoleForce::SOR); 
     force1.setMutualInducedMaxIterations(200); 
     force1.setMutualInducedTargetEpsilon(1.0e-05); 
-    //force1.setElectricConstant(138.93); 
     force1.setEwaldErrorTolerance(1.0e-05); 
     
     vector<double> coeff;

@@ -157,7 +157,7 @@ mole_base_unit = BaseUnit(amount_dimension, "mole", "mol")
 moles = mole = Unit({mole_base_unit: 1.0})
 
 single_item_amount_base_unit = BaseUnit(amount_dimension, "item", "")
-mole_base_unit.define_conversion_factor_to(single_item_amount_base_unit, 6.0221417930e23)
+mole_base_unit.define_conversion_factor_to(single_item_amount_base_unit, 6.02214076e23)
 items = item = Unit({single_item_amount_base_unit: 1.0})
 
 ##########################

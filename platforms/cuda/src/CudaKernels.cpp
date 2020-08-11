@@ -729,6 +729,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     alpha = 0;
     ewaldSelfEnergy = 0.0;
     map<string, string> paramsDefines;
+    paramsDefines["ONE_4PI_EPS0"] = cu.doubleToString(ONE_4PI_EPS0);
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
@@ -1064,6 +1065,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     baseParticleParams.initialize<float4>(cu, cu.getPaddedNumAtoms(), "baseParticleParams");
     baseParticleParams.upload(baseParticleParamVec);
     map<string, string> replacements;
+    replacements["ONE_4PI_EPS0"] = cu.doubleToString(ONE_4PI_EPS0);
     if (usePosqCharges) {
         replacements["CHARGE1"] = "posq1.w";
         replacements["CHARGE2"] = "posq2.w";

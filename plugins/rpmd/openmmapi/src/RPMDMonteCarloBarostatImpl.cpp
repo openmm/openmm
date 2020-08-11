@@ -36,6 +36,7 @@
 #include "openmm/kernels.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/RPMDIntegrator.h"
+#include "SimTKOpenMMRealType.h"
 #include <cmath>
 #include <vector>
 #include <algorithm>
@@ -43,11 +44,6 @@
 using namespace OpenMM;
 using namespace OpenMM_SFMT;
 using std::vector;
-
-const float BOLTZMANN = 1.380658e-23f; // (J/K)
-const float AVOGADRO = 6.0221367e23f;
-const float RGAS = BOLTZMANN*AVOGADRO; // (J/(mol K))
-const float BOLTZ = RGAS/1000;         // (kJ/(mol K))
 
 RPMDMonteCarloBarostatImpl::RPMDMonteCarloBarostatImpl(const RPMDMonteCarloBarostat& owner) : owner(owner), step(0) {
 }

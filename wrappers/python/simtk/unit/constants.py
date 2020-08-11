@@ -41,8 +41,8 @@ from .unit_definitions import *
 #################
 
 # codata 2006
-AVOGADRO_CONSTANT_NA = 6.02214179e23 / mole
-BOLTZMANN_CONSTANT_kB = 1.3806504e-23 * joule / kelvin
+AVOGADRO_CONSTANT_NA = 6.02214076e23 / mole
+BOLTZMANN_CONSTANT_kB = 1.380649e-23 * joule / kelvin
 MOLAR_GAS_CONSTANT_R = AVOGADRO_CONSTANT_NA * BOLTZMANN_CONSTANT_kB
 
 # From simtkcommon
