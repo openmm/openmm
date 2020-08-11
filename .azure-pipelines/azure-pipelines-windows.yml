@@ -94,7 +94,7 @@ jobs:
       # Build
       - script: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
-          set SWIG_LIB=C:\Miniconda3\Library\bin\Lib
+          set SWIG_LIB=C:\tools\miniconda3\Library\bin\Lib
           cmake --build . ^
                 --config $(cmake.build.type) ^
                 -- -j %NUMBER_OF_PROCESSORS%
