@@ -23,7 +23,6 @@ jobs:
       - script: |
           choco install -y miniconda3
           choco install -y doxygen.install
-          choco install -y swig
           choco install -y graphviz
           choco install -y 7zip.install
           choco install -y wget
@@ -46,6 +45,7 @@ jobs:
                         fftw ^
                         ninja ^
                         numpy ^
+                        swig ^
                         pytest ^
                         pytest-xdist ^
                         python=$(python.version)
@@ -94,6 +94,7 @@ jobs:
       # Build
       - script: |
           call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          set SWIG_LIB=C:\tools\miniconda3\Library\bin\Lib
           cmake --build . ^
                 --config $(cmake.build.type) ^
                 -- -j %NUMBER_OF_PROCESSORS%
