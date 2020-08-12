@@ -60,7 +60,7 @@
 #define DOT3(u,v) ((u[0])*(v[0]) + (u[1])*(v[1]) + (u[2])*(v[2]))
 
 
-// Physical constants are from https://pml.nist.gov/cuu/Constants
+// Physical constants are CODATA 2018 values from https://pml.nist.gov/cuu/Constants
 
 #define ANGSTROM     (1e-10) 
 #define KILO         (1e3)
