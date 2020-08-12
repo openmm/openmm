@@ -328,8 +328,9 @@ private:
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
     bool useCutoff, usePeriodic, deviceIsCpu, anyExclusions, usePadding, forceRebuildNeighborList;
-    int numForceBuffers, startTileIndex, numTiles, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
+    int numForceBuffers, startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
     int forceThreadBlockSize, interactingBlocksThreadBlockSize, groupFlags;
+    long long numTiles;
 };
 
 /**

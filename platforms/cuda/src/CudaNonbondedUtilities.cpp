@@ -463,9 +463,9 @@ void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endF
     int numAtomBlocks = context.getNumAtomBlocks();
     startBlockIndex = (int) (startFraction*numAtomBlocks);
     numBlocks = (int) (endFraction*numAtomBlocks)-startBlockIndex;
-    int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
+    long long totalTiles = context.getNumAtomBlocks()*((long long)context.getNumAtomBlocks()+1)/2;
     startTileIndex = (int) (startFraction*totalTiles);
-    numTiles = (int) (endFraction*totalTiles)-startTileIndex;
+    numTiles = (long long) (endFraction*totalTiles)-startTileIndex;
     forceRebuildNeighborList = true;
 }
 

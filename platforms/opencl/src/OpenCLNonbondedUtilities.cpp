@@ -440,9 +440,9 @@ void OpenCLNonbondedUtilities::setAtomBlockRange(double startFraction, double en
     int numAtomBlocks = context.getNumAtomBlocks();
     startBlockIndex = (int) (startFraction*numAtomBlocks);
     numBlocks = (int) (endFraction*numAtomBlocks)-startBlockIndex;
-    int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
+    long long totalTiles = context.getNumAtomBlocks()*((long long)context.getNumAtomBlocks()+1)/2;
     startTileIndex = (int) (startFraction*totalTiles);;
-    numTiles = (int) (endFraction*totalTiles)-startTileIndex;
+    numTiles = (long long) (endFraction*totalTiles)-startTileIndex;
     if (useCutoff) {
         // We are using a cutoff, and the kernels have already been created.
 
@@ -450,15 +450,15 @@ void OpenCLNonbondedUtilities::setAtomBlockRange(double startFraction, double en
             KernelSet& kernels = iter->second;
             if (*reinterpret_cast<cl_kernel*>(&kernels.forceKernel) != NULL) {
                 kernels.forceKernel.setArg<cl_uint>(5, startTileIndex);
-                kernels.forceKernel.setArg<cl_uint>(6, numTiles);
+                kernels.forceKernel.setArg<cl_ulong>(6, numTiles);
             }
             if (*reinterpret_cast<cl_kernel*>(&kernels.energyKernel) != NULL) {
                 kernels.energyKernel.setArg<cl_uint>(5, startTileIndex);
-                kernels.energyKernel.setArg<cl_uint>(6, numTiles);
+                kernels.energyKernel.setArg<cl_ulong>(6, numTiles);
             }
             if (*reinterpret_cast<cl_kernel*>(&kernels.forceEnergyKernel) != NULL) {
                 kernels.forceEnergyKernel.setArg<cl_uint>(5, startTileIndex);
-                kernels.forceEnergyKernel.setArg<cl_uint>(6, numTiles);
+                kernels.forceEnergyKernel.setArg<cl_ulong>(6, numTiles);
             }
             kernels.findInteractingBlocksKernel.setArg<cl_uint>(10, startBlockIndex);
             kernels.findInteractingBlocksKernel.setArg<cl_uint>(11, numBlocks);
@@ -711,7 +711,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     kernel.setArg<cl::Buffer>(index++, exclusions.getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusionTiles.getDeviceBuffer());
     kernel.setArg<cl_uint>(index++, startTileIndex);
-    kernel.setArg<cl_uint>(index++, numTiles);
+    kernel.setArg<cl_ulong>(index++, numTiles);
     if (useCutoff) {
         kernel.setArg<cl::Buffer>(index++, interactingTiles.getDeviceBuffer());
         kernel.setArg<cl::Buffer>(index++, interactionCount.getDeviceBuffer());

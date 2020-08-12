@@ -23,7 +23,7 @@ __kernel void computeNonbonded(
         __global real4* restrict forceBuffers,
 #endif
         __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
-        __global const ushort2* restrict exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
+        __global const ushort2* restrict exclusionTiles, unsigned int startTileIndex, unsigned long numTileIndices
 #ifdef USE_CUTOFF
         , __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
@@ -205,12 +205,11 @@ __kernel void computeNonbonded(
     unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(long)numTileIndices/totalWarps : warp*(long)numTiles/totalWarps);
-    int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(long)numTileIndices/totalWarps : (warp+1)*(long)numTiles/totalWarps);
+    int pos = (int) (warp*(long)numTiles/totalWarps);
+    int end = (int) ((warp+1)*(long)numTiles/totalWarps);
 #else
-    const unsigned int numTiles = numTileIndices;
-    int pos = (int) (startTileIndex+warp*(long)numTiles/totalWarps);
-    int end = (int) (startTileIndex+(warp+1)*(long)numTiles/totalWarps);
+    int pos = (int) (startTileIndex+warp*numTileIndices/totalWarps);
+    int end = (int) (startTileIndex+(warp+1)*numTileIndices/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;

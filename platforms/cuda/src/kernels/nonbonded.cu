@@ -105,7 +105,7 @@ static __inline__ __device__ long long real_shfl(long long var, int srcLane) {
  */
 extern "C" __global__ void computeNonbonded(
         unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
-        const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
+        const ushort2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned long long numTileIndices
 #ifdef USE_CUTOFF
         , const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
@@ -324,12 +324,11 @@ extern "C" __global__ void computeNonbonded(
     const unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(long long)numTileIndices/totalWarps : warp*(long long)numTiles/totalWarps);
-    int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(long long)numTileIndices/totalWarps : (warp+1)*(long long)numTiles/totalWarps);
+    int pos = (int) (warp*(long long)numTiles/totalWarps);
+    int end = (int) ((warp+1)*(long long)numTiles/totalWarps);
 #else
-    const unsigned int numTiles = numTileIndices;
-    int pos = (int) (startTileIndex+warp*(long long)numTiles/totalWarps);
-    int end = (int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
+    int pos = (int) (startTileIndex+warp*numTileIndices/totalWarps);
+    int end = (int) (startTileIndex+(warp+1)*numTileIndices/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
