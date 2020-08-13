@@ -17,7 +17,7 @@ KERNEL void computeN2Energy(
 #endif
         GLOBAL mixed* RESTRICT energyBuffer,
         GLOBAL const real4* RESTRICT posq, GLOBAL const unsigned int* RESTRICT exclusions,
-        GLOBAL const ushort2* exclusionTiles, int needEnergy,
+        GLOBAL const int2* exclusionTiles, int needEnergy,
 #ifdef USE_CUTOFF
         GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
@@ -37,7 +37,7 @@ KERNEL void computeN2Energy(
     const int firstExclusionTile = FIRST_EXCLUSION_TILE+GROUP_ID*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
     const int lastExclusionTile = FIRST_EXCLUSION_TILE+(GROUP_ID+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
     for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
-        const ushort2 tileIndices = exclusionTiles[pos];
+        const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
 
@@ -248,7 +248,7 @@ KERNEL void computeN2Energy(
 
         while (nextToSkip < pos) {
             if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
-                ushort2 tile = exclusionTiles[currentSkipIndex++];
+                int2 tile = exclusionTiles[currentSkipIndex++];
                 nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else

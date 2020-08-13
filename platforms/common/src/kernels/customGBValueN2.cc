@@ -2,7 +2,7 @@
  * Compute a value based on pair interactions.
  */
 KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigned int* RESTRICT exclusions,
-        GLOBAL const ushort2* exclusionTiles,
+        GLOBAL const int2* exclusionTiles,
 #ifdef SUPPORTS_64_BIT_ATOMICS
         GLOBAL mm_ulong* RESTRICT global_value,
 #else
@@ -29,7 +29,7 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
     const int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     const int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
-        const ushort2 tileIndices = exclusionTiles[pos];
+        const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
         real value = 0;
@@ -205,7 +205,7 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
             SYNC_WARPS;
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
-                ushort2 tile = exclusionTiles[skipBase+tgx];
+                int2 tile = exclusionTiles[skipBase+tgx];
                 skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else

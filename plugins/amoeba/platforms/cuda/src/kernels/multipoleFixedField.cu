@@ -437,7 +437,7 @@ __device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGr
  */
 extern "C" __global__ void computeFixedField(
         unsigned long long* __restrict__ fieldBuffers, unsigned long long* __restrict__ fieldPolarBuffers, const real4* __restrict__ posq,
-        const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags, const ushort2* __restrict__ exclusionTiles,
+        const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags, const int2* __restrict__ exclusionTiles,
         unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
         const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
@@ -458,7 +458,7 @@ extern "C" __global__ void computeFixedField(
     const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
-        const ushort2 tileIndices = exclusionTiles[pos];
+        const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
         AtomData data;
@@ -627,7 +627,7 @@ extern "C" __global__ void computeFixedField(
 
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
-                ushort2 tile = exclusionTiles[skipBase+tgx];
+                int2 tile = exclusionTiles[skipBase+tgx];
                 skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else

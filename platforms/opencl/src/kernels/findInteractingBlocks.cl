@@ -166,7 +166,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                     includeBlock2 = true;
 #endif
                 if (includeBlock2) {
-                    unsigned short y = (unsigned short) sortedBlocks[block2].y;
+                    int y = (int) sortedBlocks[block2].y;
                     for (int k = 0; k < numExclusions; k++)
                         includeBlock2 &= (exclusionsForX[k] != y);
                 }
@@ -180,7 +180,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                 while (i < TILE_SIZE && !includeBlockFlags[warpStart+i])
                     i++;
                 if (i < TILE_SIZE) {
-                    unsigned short y = (unsigned short) sortedBlocks[block2Base+i].y;
+                    int y = (int) sortedBlocks[block2Base+i].y;
 
                     // Check each atom in block Y for interactions.
 

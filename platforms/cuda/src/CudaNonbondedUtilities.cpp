@@ -167,7 +167,7 @@ void CudaNonbondedUtilities::requestExclusions(const vector<vector<int> >& exclu
     }
 }
 
-static bool compareUshort2(ushort2 a, ushort2 b) {
+static bool compareInt2(int2 a, int2 b) {
     return ((a.y < b.y) || (a.y == b.y && a.x < b.x));
 }
 
@@ -199,15 +199,15 @@ void CudaNonbondedUtilities::initialize(const System& system) {
             tilesWithExclusions.insert(make_pair(max(x, y), min(x, y)));
         }
     }
-    vector<ushort2> exclusionTilesVec;
+    vector<int2> exclusionTilesVec;
     for (set<pair<int, int> >::const_iterator iter = tilesWithExclusions.begin(); iter != tilesWithExclusions.end(); ++iter)
-        exclusionTilesVec.push_back(make_ushort2((unsigned short) iter->first, (unsigned short) iter->second));
-    sort(exclusionTilesVec.begin(), exclusionTilesVec.end(), compareUshort2);
-    exclusionTiles.initialize<ushort2>(context, exclusionTilesVec.size(), "exclusionTiles");
+        exclusionTilesVec.push_back(make_int2(iter->first, iter->second));
+    sort(exclusionTilesVec.begin(), exclusionTilesVec.end(), compareInt2);
+    exclusionTiles.initialize<int2>(context, exclusionTilesVec.size(), "exclusionTiles");
     exclusionTiles.upload(exclusionTilesVec);
     map<pair<int, int>, int> exclusionTileMap;
     for (int i = 0; i < (int) exclusionTilesVec.size(); i++) {
-        ushort2 tile = exclusionTilesVec[i];
+        int2 tile = exclusionTilesVec[i];
         exclusionTileMap[make_pair(tile.x, tile.y)] = i;
     }
     vector<vector<int> > exclusionBlocksForBlock(numAtomBlocks);

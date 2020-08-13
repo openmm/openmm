@@ -22,7 +22,7 @@ KERNEL void computeBornSum(
 #else
         unsigned int numTiles,
 #endif
-        GLOBAL const ushort2* exclusionTiles) {
+        GLOBAL const int2* exclusionTiles) {
     LOCAL AtomData1 localData[TILE_SIZE];
 
     // First loop: process tiles that contain exclusions.
@@ -30,7 +30,7 @@ KERNEL void computeBornSum(
     const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+GROUP_ID*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
     const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(GROUP_ID+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
     for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
-        const ushort2 tileIndices = exclusionTiles[pos];
+        const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
 
@@ -213,7 +213,7 @@ KERNEL void computeBornSum(
 
         while (nextToSkip < pos) {
             if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
-                ushort2 tile = exclusionTiles[currentSkipIndex++];
+                int2 tile = exclusionTiles[currentSkipIndex++];
                 nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else
@@ -416,7 +416,7 @@ KERNEL void computeGBSAForce1(
 #else
         unsigned int numTiles,
 #endif
-        GLOBAL const ushort2* exclusionTiles) {
+        GLOBAL const int2* exclusionTiles) {
     mixed energy = 0;
     LOCAL AtomData2 localData[TILE_SIZE];
 
@@ -425,7 +425,7 @@ KERNEL void computeGBSAForce1(
     const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+GROUP_ID*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
     const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(GROUP_ID+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
     for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
-        const ushort2 tileIndices = exclusionTiles[pos];
+        const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
 
@@ -637,7 +637,7 @@ KERNEL void computeGBSAForce1(
 
         while (nextToSkip < pos) {
             if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
-                ushort2 tile = exclusionTiles[currentSkipIndex++];
+                int2 tile = exclusionTiles[currentSkipIndex++];
                 nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else

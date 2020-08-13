@@ -24,7 +24,7 @@ KERNEL void computeBornSum(
 #else
         unsigned int numTiles,
 #endif
-        GLOBAL const ushort2* RESTRICT exclusionTiles) {
+        GLOBAL const int2* RESTRICT exclusionTiles) {
     const unsigned int totalWarps = GLOBAL_SIZE/TILE_SIZE;
     const unsigned int warp = GLOBAL_ID/TILE_SIZE;
     const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
@@ -36,7 +36,7 @@ KERNEL void computeBornSum(
     const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
-        const ushort2 tileIndices = exclusionTiles[pos];
+        const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
         real bornSum = 0;
@@ -209,7 +209,7 @@ KERNEL void computeBornSum(
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
             SYNC_WARPS;
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
-                ushort2 tile = exclusionTiles[skipBase+tgx];
+                int2 tile = exclusionTiles[skipBase+tgx];
                 skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else
@@ -393,7 +393,7 @@ KERNEL void computeGBSAForce1(
 #else
         unsigned int numTiles,
 #endif
-        GLOBAL const ushort2* RESTRICT exclusionTiles) {
+        GLOBAL const int2* RESTRICT exclusionTiles) {
     const unsigned int totalWarps = GLOBAL_SIZE/TILE_SIZE;
     const unsigned int warp = GLOBAL_ID/TILE_SIZE;
     const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
@@ -406,7 +406,7 @@ KERNEL void computeGBSAForce1(
     const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
-        const ushort2 tileIndices = exclusionTiles[pos];
+        const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
         real4 force = make_real4(0);
@@ -604,7 +604,7 @@ KERNEL void computeGBSAForce1(
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
             SYNC_WARPS;
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
-                ushort2 tile = exclusionTiles[skipBase+tgx];
+                int2 tile = exclusionTiles[skipBase+tgx];
                 skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else
