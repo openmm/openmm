@@ -33,4 +33,5 @@
 #include "TestNonbondedForce.h"
 
 void runPlatformTests() {
+    testHugeSystem();
 }

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -907,8 +907,6 @@ int main(int argc, char* argv[]) {
         testPeriodicExceptions();
         testTriclinic();
         testLargeSystem();
-        if (platform.getName() != "Reference") // It takes far too long on Reference
-            testHugeSystem();
         testDispersionCorrection();
         testChangingParameters();
         testSwitchingFunction(NonbondedForce::CutoffNonPeriodic);
