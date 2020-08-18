@@ -110,7 +110,7 @@ void testWater() {
     double maxNorm = 1.0;
     try {
         if (platform.getPropertyValue(context, "Precision") != "double") {
-            maxNorm = 5.0;
+            maxNorm = 10.0;
         }
     } catch(OpenMMException) {
         // The defaults above are for double precision, which is assumed in this case
@@ -127,8 +127,6 @@ void testWater() {
         for (int j = 1; j < (int) force.size(); j += 5)
             norm += sqrt(force[j].dot(force[j]));
         norm = (norm/numMolecules);
-        // Just to see what's going on with Travis.  Remove later!
-        if(norm < maxNorm) { printf("norm: %8.2f, allowed %6.2f\n", norm, maxNorm); }
         ASSERT(norm < maxNorm);
     }
 }

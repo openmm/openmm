@@ -27,6 +27,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "ReferencePME.h"
+#include "SimTKOpenMMRealType.h"
 #include "jama_svd.h"
 #include <algorithm>
 
@@ -37,7 +38,7 @@
 using std::vector;
 using namespace OpenMM;
 
-AmoebaReferenceHippoNonbondedForce::AmoebaReferenceHippoNonbondedForce(const HippoNonbondedForce& force) : _electric(138.9354558456) {
+AmoebaReferenceHippoNonbondedForce::AmoebaReferenceHippoNonbondedForce(const HippoNonbondedForce& force) : _electric(ONE_4PI_EPS0) {
     _numParticles = force.getNumParticles();
     particleData.resize(_numParticles);
     std::vector<double> dipoles, quadrupoles;

@@ -85,7 +85,7 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
             type.setDoubleProperty("sigma", sigma).setDoubleProperty("epsilon", epsilon);
         }
         SerializationNode& pairs = node.createChildNode("TypePairs");
-        for (int i = 0; i < force.getNumParticleTypes(); i++) {
+        for (int i = 0; i < force.getNumTypePairs(); i++) {
             int type1, type2;
             double sigma, epsilon;
             force.getTypePairParameters(i, type1, type2, sigma, epsilon);

@@ -72,6 +72,23 @@ OpenMM::NmPerAngstrom before passing them to OpenMM, and positions calculated by
 OpenMM should be multiplied by OpenMM::AngstromsPerNm before passing them back
 to your application.
 
+.. _physical-constants:
+
+Physical Constants
+******************
+
+OpenMM uses the CODATA 2018 values for all physical constants.  Here are the
+specific values it uses for the constants that frequently come up in molecular
+simulations.
+
+========================================  =================================
+Quantity                                  Value
+========================================  =================================
+Elementary Charge (:math:`e`)             1.602176634·10\ :sup:`-19` C
+Boltzmann's Constant (:math:`k_B`)        1.380649·10\ :sup:`-23` J/K
+Avogadro's Number (:math:`N_A`)           6.02214076·10\ :sup:`23`
+Vacuum Permittivity (:math:`\epsilon_0`)  8.8541878128·10\ :sup:`-12` F/m
+========================================  =================================
 
 
 Standard Forces

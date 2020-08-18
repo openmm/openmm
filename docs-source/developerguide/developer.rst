@@ -793,7 +793,7 @@ the CUDA platform only works on devices that support 64 bit atomic operations
 (compute capability 1.2 or higher).
 
 
-.. _common-compute
+.. _common-compute:
 
 Common Compute
 ##############

@@ -42,6 +42,7 @@
 #include "OpenMMAmoeba.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
+#include "SimTKOpenMMRealType.h"
 #include <iostream>
 #include <vector>
 
@@ -50,11 +51,6 @@ using namespace OpenMM;
 extern "C" void registerAmoebaCudaKernelFactories();
 
 const double TOL = 1e-5;
-#define PI_M               3.141592653589
-#define RADIAN            57.29577951308
-#define RADIAN_TO_DEGREE  57.29577951308
-#define DEGREE_TO_RADIAN   0.01745329252
-#define RADIAN_INVERSE     0.01745329252
 
 /* ---------------------------------------------------------------------------------------
 

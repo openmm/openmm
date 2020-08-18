@@ -89,7 +89,7 @@ void testEwaldExact() {
 // 
 //   E is then the energy per pair of ions, so for our case
 //   E has to be divided by 2 (per ion), multiplied by N(avogadro), multiplied by number of particles, and divided by 1000 for kJ
-    double exactEnergy        = - (1.7476 * 1.6022e-19 * 1.6022e-19  * 6.02214e+23 * numParticles) / (1.112e-10 * 0.282e-9 * 2 * 1000);
+    double exactEnergy        = - (1.7476 * 1.6022e-19 * 1.6022e-19  * AVOGADRO * numParticles) / (1.112e-10 * 0.282e-9 * 2 * 1000);
     //cout << "exact\t\t: " << exactEnergy << endl;
     //cout << "calc\t\t: " << state.getPotentialEnergy() << endl;
     ASSERT_EQUAL_TOL(exactEnergy, state.getPotentialEnergy(), 100*ewaldTol);

@@ -40,6 +40,7 @@
 #include "CudaFFT3D.h"
 #include "CudaForceInfo.h"
 #include "CudaKernelSources.h"
+#include "SimTKOpenMMRealType.h"
 #include "jama_lu.h"
 
 #include <algorithm>
@@ -955,7 +956,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     defines["NUM_ATOMS"] = cu.intToString(numMultipoles);
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
-    defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456/innerDielectric);
+    defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(ONE_4PI_EPS0/innerDielectric);
     if (polarizationType == AmoebaMultipoleForce::Direct)
         defines["DIRECT_POLARIZATION"] = "";
     else if (polarizationType == AmoebaMultipoleForce::Mutual)
@@ -1081,7 +1082,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         pmeDefines["PME_ORDER"] = cu.intToString(PmeOrder);
         pmeDefines["NUM_ATOMS"] = cu.intToString(numMultipoles);
         pmeDefines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-        pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(138.9354558456);
+        pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(ONE_4PI_EPS0);
         pmeDefines["GRID_SIZE_X"] = cu.intToString(gridSizeX);
         pmeDefines["GRID_SIZE_Y"] = cu.intToString(gridSizeY);
         pmeDefines["GRID_SIZE_Z"] = cu.intToString(gridSizeZ);
@@ -2193,9 +2194,9 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
     defines["GK_FC"] = cu.doubleToString(1*(1-solventDielectric)/(0+1*solventDielectric));
     defines["GK_FD"] = cu.doubleToString(2*(1-solventDielectric)/(1+2*solventDielectric));
     defines["GK_FQ"] = cu.doubleToString(3*(1-solventDielectric)/(2+3*solventDielectric));
-    defines["EPSILON_FACTOR"] = cu.doubleToString(138.9354558456);
+    defines["EPSILON_FACTOR"] = cu.doubleToString(ONE_4PI_EPS0);
     defines["M_PI"] = cu.doubleToString(M_PI);
-    defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456/force.getSoluteDielectric());
+    defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(ONE_4PI_EPS0/force.getSoluteDielectric());
     if (polarizationType == AmoebaMultipoleForce::Direct)
         defines["DIRECT_POLARIZATION"] = "";
     else if (polarizationType == AmoebaMultipoleForce::Mutual)
@@ -2859,7 +2860,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     defines["NUM_ATOMS"] = cu.intToString(numParticles);
     defines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
-    defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456);
+    defines["ENERGY_SCALE_FACTOR"] = cu.doubleToString(ONE_4PI_EPS0);
     if (useShuffle)
         defines["USE_SHUFFLE"] = "";
     maxExtrapolationOrder = extrapolationCoefficients.size();
@@ -2934,7 +2935,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
         pmeDefines["PME_ORDER"] = cu.intToString(PmeOrder);
         pmeDefines["NUM_ATOMS"] = cu.intToString(numParticles);
         pmeDefines["PADDED_NUM_ATOMS"] = cu.intToString(cu.getPaddedNumAtoms());
-        pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(138.9354558456);
+        pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(ONE_4PI_EPS0);
         pmeDefines["GRID_SIZE_X"] = cu.intToString(gridSizeX);
         pmeDefines["GRID_SIZE_Y"] = cu.intToString(gridSizeY);
         pmeDefines["GRID_SIZE_Z"] = cu.intToString(gridSizeZ);
@@ -3184,7 +3185,7 @@ void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const H
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qYY", "real", 1, labQuadrupoles[3].getElementSize(), labQuadrupoles[3].getDevicePointer()));
     nb.addParameter(CudaNonbondedUtilities::ParameterInfo("qYZ", "real", 1, labQuadrupoles[4].getElementSize(), labQuadrupoles[4].getDevicePointer()));
     map<string, string> replacements;
-    replacements["ENERGY_SCALE_FACTOR"] = cu.doubleToString(138.9354558456);
+    replacements["ENERGY_SCALE_FACTOR"] = cu.doubleToString(ONE_4PI_EPS0);
     replacements["SWITCH_CUTOFF"] = cu.doubleToString(force.getSwitchingDistance());
     replacements["SWITCH_C3"] = cu.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
     replacements["SWITCH_C4"] = cu.doubleToString(15/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 4.0));

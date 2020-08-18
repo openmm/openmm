@@ -7,7 +7,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2020 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
@@ -40,14 +40,12 @@ from .unit_definitions import *
 ### CONSTANTS ###
 #################
 
-# codata 2006
-AVOGADRO_CONSTANT_NA = 6.02214179e23 / mole
-BOLTZMANN_CONSTANT_kB = 1.3806504e-23 * joule / kelvin
+# codata 2018
+AVOGADRO_CONSTANT_NA = 6.02214076e23 / mole
+BOLTZMANN_CONSTANT_kB = 1.380649e-23 * joule / kelvin
 MOLAR_GAS_CONSTANT_R = AVOGADRO_CONSTANT_NA * BOLTZMANN_CONSTANT_kB
-
-# From simtkcommon
 SPEED_OF_LIGHT_C = 2.99792458e8 * meter / second
-GRAVITATIONAL_CONSTANT_G = 6.6742e-11 * newton * meter**2 / kilogram**2
+GRAVITATIONAL_CONSTANT_G = 6.6743e-11 * newton * meter**2 / kilogram**2
 
 # run module directly for testing
 if __name__=='__main__':

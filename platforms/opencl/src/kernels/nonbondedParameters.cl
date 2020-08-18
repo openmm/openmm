@@ -57,7 +57,7 @@ __kernel void computeParameters(__global mixed* restrict energyBuffer, int inclu
             params.z += value*offset.z;
         }
 #endif
-        exceptionParams[i] = (float4) ((float) (138.935456f*params.x), (float) params.y, (float) (4*params.z), 0);
+        exceptionParams[i] = (float4) ((float) (ONE_4PI_EPS0*params.x), (float) params.y, (float) (4*params.z), 0);
     }
 #endif
     if (includeSelfEnergy)
@@ -85,6 +85,6 @@ __kernel void computeExclusionParameters(__global real4* restrict posq, __global
         float sigma = 0;
         float epsilon = 0;
 #endif
-        exclusionParams[i] = (float4) ((float) (138.935456f*chargeProd), sigma, epsilon, 0);
+        exclusionParams[i] = (float4) ((float) (ONE_4PI_EPS0*chargeProd), sigma, epsilon, 0);
     }
 }

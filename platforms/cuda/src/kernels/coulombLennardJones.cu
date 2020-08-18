@@ -4,7 +4,7 @@
     const real alphaR = EWALD_ALPHA*r;
     const real expAlphaRSqr = EXP(-alphaR*alphaR);
 #if HAS_COULOMB
-    const real prefactor = 138.935456f*CHARGE1*CHARGE2*invR;
+    const real prefactor = ONE_4PI_EPS0*CHARGE1*CHARGE2*invR;
 #else
     const real prefactor = 0.0f;
 #endif
@@ -102,11 +102,11 @@
 #endif
 #if HAS_COULOMB
   #ifdef USE_CUTOFF
-    const real prefactor = 138.935456f*CHARGE1*CHARGE2;
+    const real prefactor = ONE_4PI_EPS0*CHARGE1*CHARGE2;
     tempForce += prefactor*(invR - 2.0f*REACTION_FIELD_K*r2);
     tempEnergy += includeInteraction ? prefactor*(invR + REACTION_FIELD_K*r2 - REACTION_FIELD_C) : 0;
   #else
-    const real prefactor = 138.935456f*CHARGE1*CHARGE2*invR;
+    const real prefactor = ONE_4PI_EPS0*CHARGE1*CHARGE2*invR;
     tempForce += prefactor;
     tempEnergy += includeInteraction ? prefactor : 0;
   #endif

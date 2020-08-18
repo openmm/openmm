@@ -34,11 +34,11 @@
  */
 
 #include "openmm/internal/AssertionUtilities.h"
-//#include "AmoebaTinkerParameterFile.h"
 #include "openmm/Context.h"
 #include "OpenMMAmoeba.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
+#include "SimTKOpenMMRealType.h"
 #include <iostream>
 #include <vector>
 
@@ -47,8 +47,6 @@ using namespace OpenMM;
 extern "C" OPENMM_EXPORT void registerAmoebaReferenceKernelFactories();
 
 const double TOL = 1e-5;
-#define PI_M               3.141592653589
-#define RADIAN            57.29577951308
 
 /* ---------------------------------------------------------------------------------------
 

@@ -57,7 +57,7 @@ extern "C" __global__ void computeParameters(mixed* __restrict__ energyBuffer, b
             params.z += value*offset.z;
         }
 #endif
-        exceptionParams[i] = make_float4((float) (138.935456f*params.x), (float) params.y, (float) (4*params.z), 0);
+        exceptionParams[i] = make_float4((float) (ONE_4PI_EPS0*params.x), (float) params.y, (float) (4*params.z), 0);
     }
 #endif
     if (includeSelfEnergy)
@@ -85,6 +85,6 @@ extern "C" __global__ void computeExclusionParameters(real4* __restrict__ posq, 
         float sigma = 0;
         float epsilon = 0;
 #endif
-        exclusionParams[i] = make_float4((float) (138.935456f*chargeProd), sigma, epsilon, 0);
+        exclusionParams[i] = make_float4((float) (ONE_4PI_EPS0*chargeProd), sigma, epsilon, 0);
     }
 }
