@@ -43,6 +43,8 @@ from .prefix import *
 import math
 import sys
 
+# Physical constants in this file are CODATA 2018 values from https://pml.nist.gov/cuu/Constants
+
 #####################
 ### DIMENSIONLESS ###
 #####################
