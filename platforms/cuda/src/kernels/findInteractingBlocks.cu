@@ -264,7 +264,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                     includeBlock2 = forceInclude = true;
 #endif
                 if (includeBlock2) {
-                    unsigned short y = (unsigned short) sortedBlocks[block2].y;
+                    int y = (int) sortedBlocks[block2].y;
                     for (int k = 0; k < numExclusions; k++)
                         includeBlock2 &= (exclusionsForX[k] != y);
                 }
@@ -278,7 +278,7 @@ extern "C" __global__ void findBlocksWithInteractions(real4 periodicBoxSize, rea
                 int i = __ffs(includeBlockFlags)-1;
                 includeBlockFlags &= includeBlockFlags-1;
                 forceInclude = (forceIncludeFlags>>i) & 1;
-                unsigned short y = (unsigned short) sortedBlocks[block2Base+i].y;
+                int y = (int) sortedBlocks[block2Base+i].y;
 
                 // Check each atom in block Y for interactions.
 

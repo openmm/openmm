@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -534,6 +534,63 @@ void testLargeSystem() {
         ASSERT_EQUAL_VEC(state.getForces()[i], referenceState.getForces()[i], tol);
     }
     ASSERT_EQUAL_TOL(state.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
+}
+
+void testHugeSystem() {
+    // Create a system with over 3 million particles.
+    
+    const int gridSize = 150;
+    const int numParticles = gridSize*gridSize*gridSize;
+    const double spacing = 0.3;
+    const double boxSize = gridSize*spacing;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    NonbondedForce* force = new NonbondedForce();
+    system.addForce(force);
+    force->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    force->setCutoffDistance(1.0);
+    force->setUseSwitchingFunction(true);
+    force->setSwitchingDistance(0.9);
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < gridSize; i++)
+        for (int j = 0; j < gridSize; j++)
+            for (int k = 0; k < gridSize; k++) {
+                system.addParticle(1.0);
+                force->addParticle(0.0, 0.1, 1.0);
+                positions.push_back(Vec3(i*spacing+genrand_real2(sfmt)*0.1, j*spacing+genrand_real2(sfmt)*0.1, k*spacing+genrand_real2(sfmt)*0.1));
+            }
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    // Compute the norm of the force.
+
+    State state = context.getState(State::Forces);
+    double norm = 0.0;
+    for (int i = 0; i < numParticles; ++i) {
+        Vec3 f = state.getForces()[i];
+        norm += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
+    }
+    norm = std::sqrt(norm);
+    
+    // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
+
+    const double delta = 0.3;
+    double step = 0.5*delta/norm;
+    vector<Vec3> positions2(numParticles), positions3(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        Vec3 p = positions[i];
+        Vec3 f = state.getForces()[i];
+        positions2[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        positions3[i] = Vec3(p[0]+f[0]*step, p[1]+f[1]*step, p[2]+f[2]*step);
+    }
+    context.setPositions(positions2);
+    State state2 = context.getState(State::Energy);
+    context.setPositions(positions3);
+    State state3 = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state3.getPotentialEnergy()+norm*delta, 1e-5)
 }
 
 void testDispersionCorrection() {

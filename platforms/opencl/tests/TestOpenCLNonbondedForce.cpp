@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,6 +31,8 @@
 
 #include "OpenCLTests.h"
 #include "TestNonbondedForce.h"
+#include <cl.hpp>
+#include <string>
 
 void testParallelComputation(NonbondedForce::NonbondedMethod method) {
     System system;
@@ -122,9 +124,34 @@ void testReordering() {
     }
 }
 
+bool canRunHugeTest() {
+    // Create a minimal context just to see which platform and device are being used.
+    
+    System system;
+    system.addParticle(1.0);
+    VerletIntegrator integrator(1.0);
+    Context context(system, integrator, platform);
+    int platformIndex = stoi(platform.getPropertyValue(context, OpenCLPlatform::OpenCLPlatformIndex()));
+    int deviceIndex = stoi(platform.getPropertyValue(context, OpenCLPlatform::OpenCLDeviceIndex()));
+
+    // Find out how much memory the device has.
+
+    vector<cl::Platform> platforms;
+    cl::Platform::get(&platforms);
+    vector<cl::Device> devices;
+    platforms[platformIndex].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+    long long memory = devices[deviceIndex].getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
+
+    // Only run the huge test if the device has at least 4 GB of memory.
+
+    return (memory >= 4*(1<<30));
+}
+
 void runPlatformTests() {
     testParallelComputation(NonbondedForce::NoCutoff);
     testParallelComputation(NonbondedForce::Ewald);
     testParallelComputation(NonbondedForce::PME);
     testReordering();
+    if (canRunHugeTest())
+        testHugeSystem();
 }

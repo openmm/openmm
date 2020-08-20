@@ -55,7 +55,7 @@ typedef struct {
  * Compute the electrostatic field.
  */
 extern "C" __global__ void computeField(const real4* __restrict__ posq, const unsigned int* __restrict__ exclusions,
-        const ushort2* __restrict__ exclusionTiles, unsigned long long* __restrict__ fieldBuffers,
+        const int2* __restrict__ exclusionTiles, unsigned long long* __restrict__ fieldBuffers,
 #ifdef USE_CUTOFF
         const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
@@ -75,7 +75,7 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
     const unsigned int firstExclusionTile = warp*NUM_TILES_WITH_EXCLUSIONS/totalWarps;
     const unsigned int lastExclusionTile = (warp+1)*NUM_TILES_WITH_EXCLUSIONS/totalWarps;
     for (int tile = firstExclusionTile; tile < lastExclusionTile; tile++) {
-        const ushort2 tileIndices = exclusionTiles[tile];
+        const int2 tileIndices = exclusionTiles[tile];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
         real3 field = make_real3(0);
@@ -218,7 +218,7 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
 
         while (skipTiles[tbx+TILE_SIZE-1] < tile) {
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
-                ushort2 tile = exclusionTiles[skipBase+tgx];
+                int2 tile = exclusionTiles[skipBase+tgx];
                 skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else

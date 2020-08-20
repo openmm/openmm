@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,6 +31,8 @@
 
 #include "CudaTests.h"
 #include "TestNonbondedForce.h"
+#include <cuda.h>
+#include <string>
 
 void testParallelComputation(NonbondedForce::NonbondedMethod method) {
     System system;
@@ -152,10 +154,33 @@ void testDeterministicForces() {
     }
 }
 
+bool canRunHugeTest() {
+    // Create a minimal context just to see which device is being used.
+
+    System system;
+    system.addParticle(1.0);
+    VerletIntegrator integrator(1.0);
+    Context context(system, integrator, platform);
+    int deviceIndex = stoi(platform.getPropertyValue(context, CudaPlatform::CudaDeviceIndex()));
+
+    // Find out how much memory the device has.
+
+    CUdevice device;
+    cuDeviceGet(&device, deviceIndex);
+    size_t memory;
+    cuDeviceTotalMem(&memory, device);
+
+    // Only run the huge test if the device has at least 4 GB of memory.
+
+    return (memory >= 4*(1<<30));
+}
+
 void runPlatformTests() {
     testParallelComputation(NonbondedForce::NoCutoff);
     testParallelComputation(NonbondedForce::Ewald);
     testParallelComputation(NonbondedForce::PME);
     testReordering();
     testDeterministicForces();
+    if (canRunHugeTest())
+        testHugeSystem();
 }
