@@ -214,7 +214,7 @@ script:
       fi;
       export PYTHONUNBUFFERED=1;
       python -m simtk.testInstallation;
-      (cd python/tests && py.test -v);
+      (cd python/tests && py.test -s -v);
     fi
 
   # Run the tests, and rerun any failing tests.
