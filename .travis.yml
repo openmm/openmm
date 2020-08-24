@@ -212,6 +212,7 @@ script:
       else
           make PythonInstall;
       fi;
+      export PYTHONUNBUFFERED=1;
       python -m simtk.testInstallation;
       (cd python/tests && py.test -v);
     fi
