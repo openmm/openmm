@@ -136,7 +136,7 @@ protected:
     ComputeKernel settlePosKernel, settleVelKernel;
     ComputeKernel shakePosKernel, shakeVelKernel;
     ComputeKernel ccmaDirectionsKernel, ccmaPosForceKernel, ccmaVelForceKernel;
-    ComputeKernel ccmaMultiplyKernel, ccmaUpdateKernel;
+    ComputeKernel ccmaMultiplyKernel, ccmaUpdateKernel, ccmaFullKernel;
     ComputeKernel vsitePositionKernel, vsiteForceKernel, vsiteSaveForcesKernel;
     ComputeKernel randomKernel, timeShiftKernel;
     ComputeArray posDelta;

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -532,11 +532,12 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     settleVelKernel = program->createKernel("applySettleToVelocities");
     shakePosKernel = program->createKernel("applyShakeToPositions");
     shakeVelKernel = program->createKernel("applyShakeToVelocities");
-    ccmaDirectionsKernel = program->createKernel("computeCCMAConstraintDirections");
-    ccmaPosForceKernel = program->createKernel("computeCCMAPositionConstraintForce");
-    ccmaVelForceKernel = program->createKernel("computeCCMAVelocityConstraintForce");
-    ccmaMultiplyKernel = program->createKernel("multiplyByCCMAConstraintMatrix");
-    ccmaUpdateKernel = program->createKernel("updateCCMAAtomPositions");
+    ccmaDirectionsKernel = program->createKernel("computeCCMAConstraintDirectionsKernel");
+    ccmaPosForceKernel = program->createKernel("computeCCMAPositionConstraintForceKernel");
+    ccmaVelForceKernel = program->createKernel("computeCCMAVelocityConstraintForceKernel");
+    ccmaMultiplyKernel = program->createKernel("multiplyByCCMAConstraintMatrixKernel");
+    ccmaUpdateKernel = program->createKernel("updateCCMAAtomPositionsKernel");
+    ccmaFullKernel = program->createKernel("runCCMA");
     vsitePositionKernel = program->createKernel("computeVirtualSites");
     vsiteForceKernel = program->createKernel("distributeVirtualSiteForces");
     vsiteSaveForcesKernel = program->createKernel("saveDistributedForces");
@@ -661,6 +662,22 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         ccmaUpdateKernel->addArg(ccmaDelta2);
         ccmaUpdateKernel->addArg(ccmaConverged);
         ccmaUpdateKernel->addArg();
+        ccmaFullKernel->addArg();
+        ccmaFullKernel->addArg(ccmaNumAtomConstraints);
+        ccmaFullKernel->addArg(ccmaAtomConstraints);
+        ccmaFullKernel->addArg(ccmaAtoms);
+        ccmaFullKernel->addArg(ccmaDistance);
+        ccmaFullKernel->addArg(context.getPosq());
+        ccmaFullKernel->addArg(context.getVelm());
+        ccmaFullKernel->addArg(posDelta);
+        ccmaFullKernel->addArg(ccmaReducedMass);
+        ccmaFullKernel->addArg(ccmaDelta1);
+        ccmaFullKernel->addArg(ccmaDelta2);
+        ccmaFullKernel->addArg(ccmaConstraintMatrixColumn);
+        ccmaFullKernel->addArg(ccmaConstraintMatrixValue);
+        ccmaFullKernel->addArg();
+        if (context.getUseMixedPrecision())
+            ccmaFullKernel->addArg(context.getPosqCorrection());
     }
 
     // Arguments for time shift kernel will be set later.

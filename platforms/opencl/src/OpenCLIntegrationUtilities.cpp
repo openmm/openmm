@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2020 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -77,43 +77,55 @@ void OpenCLIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, 
         shakeKernel->execute(shakeAtoms.getSize());
     }
     if (ccmaAtoms.isInitialized()) {
-        ccmaForceKernel->setArg(6, ccmaConvergedHostBuffer);
-        if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
-            ccmaForceKernel->setArg(7, tol);
-        else
-            ccmaForceKernel->setArg(7, (float) tol);
-        ccmaDirectionsKernel->execute(ccmaAtoms.getSize());
-        const int checkInterval = 4;
-        OpenCLContext& cl = dynamic_cast<OpenCLContext&>(context);
-        cl::CommandQueue queue = cl.getQueue();
-        int* converged = (int*) context.getPinnedBuffer();
-        int* ccmaConvergedHostMemory = (int*) queue.enqueueMapBuffer(ccmaConvergedHostBuffer.getDeviceBuffer(), CL_TRUE, CL_MAP_WRITE, 0, sizeof(cl_int));
-        ccmaConvergedHostMemory[0] = 0;
-        queue.enqueueUnmapMemObject(ccmaConvergedHostBuffer.getDeviceBuffer(), ccmaConvergedHostMemory);
-        ccmaUpdateKernel->setArg(3, constrainVelocities ? context.getVelm() : posDelta);
-        for (int i = 0; i < 150; i++) {
-            ccmaForceKernel->setArg(8, i);
-            ccmaForceKernel->execute(ccmaAtoms.getSize());
-            cl::Event event;
-            if ((i+1)%checkInterval == 0 && !ccmaUseDirectBuffer)
-                queue.enqueueReadBuffer(cl.unwrap(ccmaConverged).getDeviceBuffer(), CL_FALSE, 0, 2*sizeof(int), converged, NULL, &event);
-            ccmaMultiplyKernel->setArg(5, i);
-            ccmaMultiplyKernel->execute(ccmaAtoms.getSize());
-            ccmaUpdateKernel->setArg(8, i);
-            ccmaUpdateKernel->execute(context.getNumAtoms());
-            if ((i+1)%checkInterval == 0) {
-                if (ccmaUseDirectBuffer) {
-                    ccmaConvergedHostMemory = (int*) queue.enqueueMapBuffer(ccmaConvergedHostBuffer.getDeviceBuffer(), CL_FALSE, CL_MAP_READ, 0, sizeof(cl_int), NULL, &event);
-                    queue.flush();
-                    while (event.getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>() != CL_COMPLETE)
-                        ;
-                    converged[i%2] = ccmaConvergedHostMemory[0];
-                    queue.enqueueUnmapMemObject(ccmaConvergedHostBuffer.getDeviceBuffer(), ccmaConvergedHostMemory);
+        if (ccmaAtoms.getSize() <= 1024) {
+            // Use the version of CCMA that runs in a single kernel with one workgroup.
+            ccmaFullKernel->setArg(0, (int) constrainVelocities);
+            if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+                ccmaFullKernel->setArg(13, tol);
+            else
+                ccmaFullKernel->setArg(13, (float) tol);
+            ccmaFullKernel->execute(128, 128);
+        }
+        else {
+            // Use the version of CCMA that uses multiple kernels.
+            ccmaForceKernel->setArg(6, ccmaConvergedHostBuffer);
+            if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
+                ccmaForceKernel->setArg(7, tol);
+            else
+                ccmaForceKernel->setArg(7, (float) tol);
+            ccmaDirectionsKernel->execute(ccmaAtoms.getSize());
+            const int checkInterval = 4;
+            OpenCLContext& cl = dynamic_cast<OpenCLContext&>(context);
+            cl::CommandQueue queue = cl.getQueue();
+            int* converged = (int*) context.getPinnedBuffer();
+            int* ccmaConvergedHostMemory = (int*) queue.enqueueMapBuffer(ccmaConvergedHostBuffer.getDeviceBuffer(), CL_TRUE, CL_MAP_WRITE, 0, sizeof(cl_int));
+            ccmaConvergedHostMemory[0] = 0;
+            queue.enqueueUnmapMemObject(ccmaConvergedHostBuffer.getDeviceBuffer(), ccmaConvergedHostMemory);
+            ccmaUpdateKernel->setArg(3, constrainVelocities ? context.getVelm() : posDelta);
+            for (int i = 0; i < 150; i++) {
+                ccmaForceKernel->setArg(8, i);
+                ccmaForceKernel->execute(ccmaAtoms.getSize());
+                cl::Event event;
+                if ((i+1)%checkInterval == 0 && !ccmaUseDirectBuffer)
+                    queue.enqueueReadBuffer(cl.unwrap(ccmaConverged).getDeviceBuffer(), CL_FALSE, 0, 2*sizeof(int), converged, NULL, &event);
+                ccmaMultiplyKernel->setArg(5, i);
+                ccmaMultiplyKernel->execute(ccmaAtoms.getSize());
+                ccmaUpdateKernel->setArg(8, i);
+                ccmaUpdateKernel->execute(context.getNumAtoms());
+                if ((i+1)%checkInterval == 0) {
+                    if (ccmaUseDirectBuffer) {
+                        ccmaConvergedHostMemory = (int*) queue.enqueueMapBuffer(ccmaConvergedHostBuffer.getDeviceBuffer(), CL_FALSE, CL_MAP_READ, 0, sizeof(cl_int), NULL, &event);
+                        queue.flush();
+                        while (event.getInfo<CL_EVENT_COMMAND_EXECUTION_STATUS>() != CL_COMPLETE)
+                            ;
+                        converged[i%2] = ccmaConvergedHostMemory[0];
+                        queue.enqueueUnmapMemObject(ccmaConvergedHostBuffer.getDeviceBuffer(), ccmaConvergedHostMemory);
+                    }
+                    else
+                        event.wait();
+                    if (converged[i%2])
+                        break;
                 }
-                else
-                    event.wait();
-                if (converged[i%2])
-                    break;
             }
         }
     }
