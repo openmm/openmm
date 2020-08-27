@@ -761,9 +761,9 @@ KERNEL void updateCCMAAtomPositionsKernel(GLOBAL const int* RESTRICT numAtomCons
  * That makes it faster for small numbers of constraints, but slower for large numbers.
  */
 KERNEL void runCCMA(int constrainVelocities, GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
-        GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL const mixed4* RESTRICT constraintDistance, GLOBAL mixed4* RESTRICT atomPositions,
-        GLOBAL const mixed4* RESTRICT velm, GLOBAL mixed4* RESTRICT posDelta, GLOBAL const mixed* RESTRICT reducedMass,
-        GLOBAL const mixed* RESTRICT delta1, GLOBAL const mixed* RESTRICT delta2, GLOBAL const int* RESTRICT constraintMatrixColumn,
+        GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL mixed4* RESTRICT constraintDistance, GLOBAL const mixed4* RESTRICT atomPositions,
+        GLOBAL mixed4* RESTRICT velm, GLOBAL mixed4* RESTRICT posDelta, GLOBAL const mixed* RESTRICT reducedMass,
+        GLOBAL mixed* RESTRICT delta1, GLOBAL mixed* RESTRICT delta2, GLOBAL const int* RESTRICT constraintMatrixColumn,
         GLOBAL const mixed* RESTRICT constraintMatrixValue, mixed tol
 #ifdef USE_MIXED_PRECISION
         , GLOBAL const real4* RESTRICT posqCorrection
