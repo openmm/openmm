@@ -1124,6 +1124,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         exceptionOffsetIndices.upload(exceptionOffsetIndicesVec);
     }
     globalParams.initialize(cl, max((int) paramValues.size(), 1), cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "globalParams");
+    if (paramValues.size() > 0)
+        globalParams.upload(paramValues, true);
     recomputeParams = true;
     
     // Initialize the kernel for updating parameters.

@@ -1174,6 +1174,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         exceptionOffsetIndices.upload(exceptionOffsetIndicesVec);
     }
     globalParams.initialize(cu, max((int) paramValues.size(), 1), cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "globalParams");
+    if (paramValues.size() > 0)
+        globalParams.upload(paramValues, true);
     recomputeParams = true;
     
     // Initialize the kernel for updating parameters.
