@@ -781,6 +781,94 @@ File                 Water Model
 :code:`swm4ndp.xml`  SWM4-NDP water model\ :cite:`Lamoureux2006`
 ===================  ============================================
 
+Small molecule parameters
+=========================
+
+The OpenMM force fields above include pregenerated templates for biopolymers
+and solvents. If your system instead contain small molecules, it is often
+necessary to generate these parameters on the fly.
+
+
+There are two options for doing this within the OpenMM ``app`` ecosystem:
+
+Small molecule residue template generators
+------------------------------------------
+
+One approach is to use residue template generators for small molecules from the
+openmmforcefields_  conda package.
+You can install this via conda with:
+
+.. code-block:: bash
+
+    $ conda install -c omnia -c conda-forge openmmforcefields
+
+You can then add a small molecule residue template generator using the Open Force
+Field Initiative small molecule force fields using the following example:
+
+::
+
+    # Create an openforcefield Molecule object for benzene from SMILES
+    from openforcefield.topology import Molecule
+    molecule = Molecule.from_smiles('c1ccccc1')
+    # Create the SMIRNOFF template generator with the most up to date Open Force Field Initiative force field
+    from openmmforcefields.generators import SMIRNOFFTemplateGenerator
+    smirnoff = SMIRNOFFTemplateGenerator(molecules=molecule)
+    # Create an OpenMM ForceField object with AMBER ff14SB and TIP3P with compatible ions
+    from simtk.openmm.app import ForceField
+    forcefield = ForceField('amber/protein.ff14SB.xml', 'amber/tip3p_standard.xml', 'amber/tip3p_HFE_multivalent.xml')
+    # Register the SMIRNOFF template generator
+    forcefield.registerTemplateGenerator(smirnoff.generator)
+
+Alternatively, you can use the older `AMBER GAFF small molecule force field <http://ambermd.org/antechamber/gaff.html>`_:
+
+::
+
+    # Create an openforcefield Molecule object for benzene from SMILES
+    from openforcefield.topology import Molecule
+    molecule = Molecule.from_smiles('c1ccccc1')
+    # Create the GAFF template generator
+    from openmmforcefields.generators import GAFFTemplateGenerator
+    gaff = GAFFTemplateGenerator(molecules=molecule)
+    # Create an OpenMM ForceField object with AMBER ff14SB and TIP3P with compatible ions
+    from simtk.openmm.app import ForceField
+    forcefield = ForceField('amber/protein.ff14SB.xml', 'amber/tip3p_standard.xml', 'amber/tip3p_HFE_multivalent.xml')
+    # Register the GAFF template generator
+    forcefield.registerTemplateGenerator(gaff.generator)
+    # You can now parameterize an OpenMM Topology object that contains the specified molecule.
+    # forcefield will load the appropriate GAFF parameters when needed, and antechamber
+    # will be used to generate small molecule parameters on the fly.
+    from simtk.openmm.app import PDBFile
+    pdbfile = PDBFile('t4-lysozyme-L99A-with-benzene.pdb')
+    system = forcefield.createSystem(pdbfile.topology)
+
+More documentation can be found on the openmmforcefields_ page.
+
+Managing force fields with ``SystemGenerator``
+----------------------------------------------
+
+As an alternative to explicitly registering template generators, the openmmforcefields_
+package provides a ``SystemGenerator`` facility to simplify biopolymer and
+small molecule force field management. To use this, you can simply specify the
+small molecule force field you want to use:
+
+::
+
+    # Define the keyword arguments to feed to ForceField
+    from simtk import unit
+    from simtk.openmm import app
+    forcefield_kwargs = { 'constraints' : app.HBonds, 'rigidWater' : True, 'removeCMMotion' : False, 'hydrogenMass' : 4*unit.amu }
+    # Initialize a SystemGenerator using the Open Force Field Initiative 1.2.0 force field (openff-1.2.0)
+    from openmmforcefields.generators import SystemGenerator
+    system_generator = SystemGenerator(forcefields=['amber/ff14SB.xml', 'amber/tip3p_standard.xml'], small_molecule_forcefield='openff-1.2.0', forcefield_kwargs=forcefield_kwargs, cache='db.json')
+    # Create an OpenMM System from an OpenMM Topology object and a list of openforcefield Molecule objects
+    molecules = Molecule.from_file('molecules.sdf', file_format='sdf')
+    system = system_generator.create_system(topology, molecules=molecules)
+
+The ``SystemGenerator`` will match any instances of the molecules found in ``molecules.sdf`` to those that appear in ``topology``.
+Note that the protonation and tautomeric states must match exactly between the ``molecules`` read and those appearing in the Topology.
+See the openmmforcefields_ documentation for more details.
+
+.. _openmmforcefields: http://github.com/openmm/openmmforcefields
 
 AMBER Implicit Solvent
 ======================
@@ -2387,7 +2475,7 @@ The :code:`<PeriodicTorsionForce>` tag also supports an optional
 impropers are assigned in different simulation packages:
 
  * :code:`ordering="default"` specifies the default behavior if the attribute
-   is omitted. 
+   is omitted.
  * :code:`ordering="amber"` produces behavior that replicates the behavior of
    AmberTools LEaP
  * :code:`ordering="charmm"` produces behavior more consistent with CHARMM
