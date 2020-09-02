@@ -719,13 +719,14 @@ KERNEL void multiplyByCCMAConstraintMatrixKernel(GLOBAL const mixed* RESTRICT de
 /**
  * Update the atom positions based on CCMA constraint forces.
  */
-DEVICE void updateCCMAAtomPositions(GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
+DEVICE void updateCCMAAtomPositions(GLOBAL const int* RESTRICT atoms, GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
         GLOBAL const mixed4* RESTRICT constraintDistance, GLOBAL mixed4* RESTRICT atomPositions, GLOBAL const mixed4* RESTRICT velm,
         GLOBAL const mixed* RESTRICT delta1, GLOBAL const mixed* RESTRICT delta2, int iteration) {
     mixed damping = (iteration < 2 ? 0.5f : 1.0f);
-    for (int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < NUM_CCMA_ATOMS; i += GLOBAL_SIZE) {
         // Compute the new position of this atom.
 
+        int index = atoms[i];
         mixed4 atomPos = atomPositions[index];
         mixed invMass = velm[index].w;
         int num = numAtomConstraints[index];
@@ -744,14 +745,14 @@ DEVICE void updateCCMAAtomPositions(GLOBAL const int* RESTRICT numAtomConstraint
     }
 }
 
-KERNEL void updateCCMAAtomPositionsKernel(GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
+KERNEL void updateCCMAAtomPositionsKernel(GLOBAL const int* RESTRICT atoms, GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
         GLOBAL const mixed4* RESTRICT constraintDistance, GLOBAL mixed4* RESTRICT atomPositions, GLOBAL const mixed4* RESTRICT velm,
         GLOBAL const mixed* RESTRICT delta1, GLOBAL const mixed* RESTRICT delta2, GLOBAL int* RESTRICT converged, int iteration) {
     if (GROUP_ID == 0 && LOCAL_ID == 0)
         converged[1-iteration%2] = 1;
     if (converged[iteration%2])
         return; // The constraint iteration has already converged.
-    updateCCMAAtomPositions(numAtomConstraints, atomConstraints, constraintDistance, atomPositions, velm,
+    updateCCMAAtomPositions(atoms, numAtomConstraints, atomConstraints, constraintDistance, atomPositions, velm,
             delta1, delta2, iteration);
 }
 
@@ -760,7 +761,7 @@ KERNEL void updateCCMAAtomPositionsKernel(GLOBAL const int* RESTRICT numAtomCons
  * using multiple kernels, but requires the calculation to use only a single workgroup.
  * That makes it faster for small numbers of constraints, but slower for large numbers.
  */
-KERNEL void runCCMA(int constrainVelocities, GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
+KERNEL void runCCMA(int constrainVelocities, GLOBAL const int* RESTRICT atoms, GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
         GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL mixed4* RESTRICT constraintDistance, GLOBAL const real4* RESTRICT atomPositions,
         GLOBAL mixed4* RESTRICT velm, GLOBAL mixed4* RESTRICT posDelta, GLOBAL const mixed* RESTRICT reducedMass,
         GLOBAL mixed* RESTRICT delta1, GLOBAL mixed* RESTRICT delta2, GLOBAL const int* RESTRICT constraintMatrixColumn,
@@ -787,10 +788,10 @@ KERNEL void runCCMA(int constrainVelocities, GLOBAL const int* RESTRICT numAtomC
         multiplyByCCMAConstraintMatrix(delta1, delta2, constraintMatrixColumn, constraintMatrixValue, iteration);
         SYNC_THREADS
         if (constrainVelocities)
-            updateCCMAAtomPositions(numAtomConstraints, atomConstraints, constraintDistance, velm, velm,
+            updateCCMAAtomPositions(atoms, numAtomConstraints, atomConstraints, constraintDistance, velm, velm,
                     delta1, delta2, iteration);
         else
-            updateCCMAAtomPositions(numAtomConstraints, atomConstraints, constraintDistance, posDelta, velm,
+            updateCCMAAtomPositions(atoms, numAtomConstraints, atomConstraints, constraintDistance, posDelta, velm,
                     delta1, delta2, iteration);
         SYNC_THREADS
         if (groupConverged)

@@ -148,6 +148,7 @@ protected:
     ComputeArray randomSeed;
     ComputeArray stepSize;
     ComputeArray ccmaAtoms;
+    ComputeArray ccmaConstraintAtoms;
     ComputeArray ccmaDistance;
     ComputeArray ccmaReducedMass;
     ComputeArray ccmaAtomConstraints;

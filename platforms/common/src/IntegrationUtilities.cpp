@@ -36,6 +36,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <map>
+#include <set>
 
 using namespace OpenMM;
 using namespace std;
@@ -292,6 +293,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     // Record the connections between constraints.
 
     int numCCMA = (int) ccmaConstraints.size();
+    int numCCMAAtoms = 0;
     if (numCCMA > 0) {
         // Record information needed by ReferenceCCMAAlgorithm.
         
@@ -354,14 +356,26 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
             for (int j = 0; j < (int)matrix[i].size(); ++j)
                 matrix[i][j].first = inverseOrder[matrix[i][j].first];
 
+        // Make a list of all atoms that involve a CCMA constraint.
+
+        set<int> ccmaAtomsSet;
+        for (int i = 0; i < numCCMA; i++) {
+            ccmaAtomsSet.insert(atom1[ccmaConstraints[i]]);
+            ccmaAtomsSet.insert(atom2[ccmaConstraints[i]]);
+        }
+        vector<int> ccmaAtomsVec(ccmaAtomsSet.begin(), ccmaAtomsSet.end());
+        sort(ccmaAtomsVec.begin(), ccmaAtomsVec.end());
+        numCCMAAtoms = ccmaAtomsVec.size();
+
         // Record the CCMA data structures.
 
-        ccmaAtoms.initialize<mm_int2>(context, numCCMA, "CcmaAtoms");
+        ccmaAtoms.initialize<int>(context, numCCMAAtoms, "ccmaAtoms");
+        ccmaConstraintAtoms.initialize<mm_int2>(context, numCCMA, "ccmaConstraintAtoms");
         ccmaAtomConstraints.initialize<int>(context, numAtoms*maxAtomConstraints, "CcmaAtomConstraints");
         ccmaNumAtomConstraints.initialize<int>(context, numAtoms, "CcmaAtomConstraintsIndex");
         ccmaConstraintMatrixColumn.initialize<int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
         ccmaConverged.initialize<int>(context, 2, "ccmaConverged");
-        vector<mm_int2> atomsVec(ccmaAtoms.getSize());
+        vector<mm_int2> atomsVec(ccmaConstraintAtoms.getSize());
         vector<int> atomConstraintsVec(ccmaAtomConstraints.getSize());
         vector<int> numAtomConstraintsVec(ccmaNumAtomConstraints.getSize());
         vector<int> constraintMatrixColumnVec(ccmaConstraintMatrixColumn.getSize());
@@ -397,7 +411,8 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
                 atomConstraintsVec[i+j*numAtoms] = (forward ? inverseOrder[atomConstraints[i][j]]+1 : -inverseOrder[atomConstraints[i][j]]-1);
             }
         }
-        ccmaAtoms.upload(atomsVec);
+        ccmaAtoms.upload(ccmaAtomsVec);
+        ccmaConstraintAtoms.upload(atomsVec);
         ccmaAtomConstraints.upload(atomConstraintsVec);
         ccmaNumAtomConstraints.upload(numAtomConstraintsVec);
         ccmaConstraintMatrixColumn.upload(constraintMatrixColumnVec);
@@ -518,6 +533,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     // Create the kernels used by this class.
 
     map<string, string> defines;
+    defines["NUM_CCMA_ATOMS"] = context.intToString(numCCMAAtoms);
     defines["NUM_CCMA_CONSTRAINTS"] = context.intToString(numCCMA);
     defines["NUM_ATOMS"] = context.intToString(numAtoms);
     defines["NUM_2_AVERAGE"] = context.intToString(num2Avg);
@@ -622,14 +638,14 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         if (context.getUseMixedPrecision())
             shakeVelKernel->addArg(context.getPosqCorrection());
     }
-    if (ccmaAtoms.isInitialized()) {
-        ccmaDirectionsKernel->addArg(ccmaAtoms);
+    if (ccmaConstraintAtoms.isInitialized()) {
+        ccmaDirectionsKernel->addArg(ccmaConstraintAtoms);
         ccmaDirectionsKernel->addArg(ccmaDistance);
         ccmaDirectionsKernel->addArg(context.getPosq());
         ccmaDirectionsKernel->addArg(ccmaConverged);
         if (context.getUseMixedPrecision())
             ccmaDirectionsKernel->addArg(context.getPosqCorrection());
-        ccmaPosForceKernel->addArg(ccmaAtoms);
+        ccmaPosForceKernel->addArg(ccmaConstraintAtoms);
         ccmaPosForceKernel->addArg(ccmaDistance);
         ccmaPosForceKernel->addArg(posDelta);
         ccmaPosForceKernel->addArg(ccmaReducedMass);
@@ -638,7 +654,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         ccmaPosForceKernel->addArg();
         ccmaPosForceKernel->addArg();
         ccmaPosForceKernel->addArg();
-        ccmaVelForceKernel->addArg(ccmaAtoms);
+        ccmaVelForceKernel->addArg(ccmaConstraintAtoms);
         ccmaVelForceKernel->addArg(ccmaDistance);
         ccmaVelForceKernel->addArg(context.getVelm());
         ccmaVelForceKernel->addArg(ccmaReducedMass);
@@ -653,6 +669,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         ccmaMultiplyKernel->addArg(ccmaConstraintMatrixValue);
         ccmaMultiplyKernel->addArg(ccmaConverged);
         ccmaMultiplyKernel->addArg();
+        ccmaUpdateKernel->addArg(ccmaAtoms);
         ccmaUpdateKernel->addArg(ccmaNumAtomConstraints);
         ccmaUpdateKernel->addArg(ccmaAtomConstraints);
         ccmaUpdateKernel->addArg(ccmaDistance);
@@ -663,9 +680,10 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         ccmaUpdateKernel->addArg(ccmaConverged);
         ccmaUpdateKernel->addArg();
         ccmaFullKernel->addArg();
+        ccmaFullKernel->addArg(ccmaAtoms);
         ccmaFullKernel->addArg(ccmaNumAtomConstraints);
         ccmaFullKernel->addArg(ccmaAtomConstraints);
-        ccmaFullKernel->addArg(ccmaAtoms);
+        ccmaFullKernel->addArg(ccmaConstraintAtoms);
         ccmaFullKernel->addArg(ccmaDistance);
         ccmaFullKernel->addArg(context.getPosq());
         ccmaFullKernel->addArg(context.getVelm());

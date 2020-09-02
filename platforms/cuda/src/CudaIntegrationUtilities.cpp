@@ -91,14 +91,14 @@ void CudaIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, do
             shakeKernel->setArg(1, (float) tol);
         shakeKernel->execute(shakeAtoms.getSize());
     }
-    if (ccmaAtoms.isInitialized()) {
-        if (ccmaAtoms.getSize() <= 1024) {
+    if (ccmaConstraintAtoms.isInitialized()) {
+        if (ccmaConstraintAtoms.getSize() <= 1024) {
             // Use the version of CCMA that runs in a single kernel with one workgroup.
             ccmaFullKernel->setArg(0, (int) constrainVelocities);
             if (context.getUseDoublePrecision() || context.getUseMixedPrecision())
-                ccmaFullKernel->setArg(13, tol);
+                ccmaFullKernel->setArg(14, tol);
             else
-                ccmaFullKernel->setArg(13, (float) tol);
+                ccmaFullKernel->setArg(14, (float) tol);
             ccmaFullKernel->execute(128, 128);
         }
         else {
@@ -107,18 +107,18 @@ void CudaIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, do
                 ccmaForceKernel->setArg(7, tol);
             else
                 ccmaForceKernel->setArg(7, (float) tol);
-            ccmaDirectionsKernel->execute(ccmaAtoms.getSize());
+            ccmaDirectionsKernel->execute(ccmaConstraintAtoms.getSize());
             const int checkInterval = 4;
             ccmaConvergedMemory[0] = 0;
-            ccmaUpdateKernel->setArg(3, constrainVelocities ? context.getVelm() : posDelta);
+            ccmaUpdateKernel->setArg(4, constrainVelocities ? context.getVelm() : posDelta);
             for (int i = 0; i < 150; i++) {
                 ccmaForceKernel->setArg(8, i);
-                ccmaForceKernel->execute(ccmaAtoms.getSize());
+                ccmaForceKernel->execute(ccmaConstraintAtoms.getSize());
                 if ((i+1)%checkInterval == 0)
                     CHECK_RESULT2(cuEventRecord(ccmaEvent, 0), "Error recording event for CCMA");
                 ccmaMultiplyKernel->setArg(5, i);
-                ccmaMultiplyKernel->execute(ccmaAtoms.getSize());
-                ccmaUpdateKernel->setArg(8, i);
+                ccmaMultiplyKernel->execute(ccmaConstraintAtoms.getSize());
+                ccmaUpdateKernel->setArg(9, i);
                 ccmaUpdateKernel->execute(context.getNumAtoms());
                 if ((i+1)%checkInterval == 0) {
                     CHECK_RESULT2(cuEventSynchronize(ccmaEvent), "Error synchronizing on event for CCMA");
