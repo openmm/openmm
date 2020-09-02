@@ -600,7 +600,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
 #else
         string command = compiler+" --ptx -lineinfo --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
 #endif
-        int res = executeInWindows(command);
+        res = executeInWindows(command);
 #else
         string command = compiler+" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
         res = std::system(command.c_str());
