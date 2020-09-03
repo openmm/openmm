@@ -280,12 +280,12 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
 
 #define BUFFER_SIZE BUFFER_GROUPS*GROUP_SIZE
 #define WARP_SIZE 32
-#define INVALID 0xFFFF
+#define INVALID -1
 
 /**
  * Perform a parallel prefix sum over an array.  The input values are all assumed to be 0 or 1.
  */
-void prefixSum(__local short* sum, __local ushort2* temp) {
+void prefixSum(__local int* sum, __local int2* temp) {
     for (int i = get_local_id(0); i < BUFFER_SIZE; i += get_local_size(0))
         temp[i].x = sum[i];
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -313,7 +313,7 @@ void prefixSum(__local short* sum, __local ushort2* temp) {
  * This is called by findBlocksWithInteractions().  It compacts the list of blocks, identifies interactions
  * in them, and writes the result to global memory.
  */
-void storeInteractionData(int x, __local unsigned short* buffer, __local short* sum, __local ushort2* temp, __local int* atoms, __local int* numAtoms,
+void storeInteractionData(int x, __local int* buffer, __local int* sum, __local int2* temp, __local int* atoms, __local int* numAtoms,
             __local int* baseIndex, __global unsigned int* interactionCount, __global int* interactingTiles, __global unsigned int* interactingAtoms, real4 periodicBoxSize,
             real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, __global const real4* posq, __local real4* posBuffer,
             real4 blockCenterX, real4 blockSizeX, unsigned int maxTiles, bool finish) {
@@ -455,9 +455,9 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
         __global const real4* restrict sortedBlockCenter, __global const real4* restrict sortedBlockBoundingBox,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global real4* restrict oldPositions,
         __global const int* restrict rebuildNeighborList) {
-    __local unsigned short buffer[BUFFER_SIZE];
-    __local short sum[BUFFER_SIZE];
-    __local ushort2 temp[BUFFER_SIZE];
+    __local int buffer[BUFFER_SIZE];
+    __local int sum[BUFFER_SIZE];
+    __local int2 temp[BUFFER_SIZE];
     __local int atoms[BUFFER_SIZE+TILE_SIZE];
     __local real4 posBuffer[TILE_SIZE];
     __local int exclusionsForX[MAX_EXCLUSIONS];
@@ -503,13 +503,13 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
         barrier(CLK_LOCAL_MEM_FENCE);
         
         // Compare it to other blocks after this one in sorted order.
-        
+
         for (int base = i+1; base < NUM_BLOCKS; base += get_local_size(0)) {
             int j = base+get_local_id(0);
             real2 sortedKey2 = (j < NUM_BLOCKS ? sortedBlocks[j] : (real2) 0);
             real4 blockCenterY = (j < NUM_BLOCKS ? sortedBlockCenter[j] : (real4) 0);
             real4 blockSizeY = (j < NUM_BLOCKS ? sortedBlockBoundingBox[j] : (real4) 0);
-            unsigned short y = (unsigned short) sortedKey2.y;
+            int y = (int) sortedKey2.y;
             real4 delta = blockCenterX-blockCenterY;
 #ifdef USE_PERIODIC
             APPLY_PERIODIC_TO_DELTA(delta)
