@@ -556,8 +556,8 @@ KERNEL void applySettleToVelocities(int numClusters, mixed tol, GLOBAL const rea
 /**
  * Compute the direction each CCMA constraint is pointing in.  This is called once at the beginning of constraint evaluation.
  */
-KERNEL void computeCCMAConstraintDirections(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL mixed4* RESTRICT constraintDistance,
-        GLOBAL const real4* RESTRICT atomPositions, GLOBAL int* RESTRICT converged
+DEVICE void computeCCMAConstraintDirections(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL mixed4* RESTRICT constraintDistance,
+        GLOBAL const real4* RESTRICT atomPositions
 #ifdef USE_MIXED_PRECISION
         , GLOBAL const real4* RESTRICT posqCorrection
 #endif
@@ -577,6 +577,19 @@ KERNEL void computeCCMAConstraintDirections(GLOBAL const int2* RESTRICT constrai
         dir.z = oldPos1.z-oldPos2.z;
         constraintDistance[index] = dir;
     }
+}
+
+KERNEL void computeCCMAConstraintDirectionsKernel(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL mixed4* RESTRICT constraintDistance,
+        GLOBAL const real4* RESTRICT atomPositions, GLOBAL int* RESTRICT converged
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL const real4* RESTRICT posqCorrection
+#endif
+        ) {
+#ifdef USE_MIXED_PRECISION
+    computeCCMAConstraintDirections(constraintAtoms, constraintDistance, atomPositions, posqCorrection);
+#else
+    computeCCMAConstraintDirections(constraintAtoms, constraintDistance, atomPositions);
+#endif
     if (GLOBAL_ID == 0) {
         converged[0] = 1;
         converged[1] = 0;
@@ -586,19 +599,11 @@ KERNEL void computeCCMAConstraintDirections(GLOBAL const int2* RESTRICT constrai
 /**
  * Compute the force applied by each CCMA position constraint.
  */
-KERNEL void computeCCMAPositionConstraintForce(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL const mixed4* RESTRICT constraintDistance,
+DEVICE void computeCCMAPositionConstraintForce(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL const mixed4* RESTRICT constraintDistance,
         GLOBAL const mixed4* RESTRICT atomPositions, GLOBAL const mixed* RESTRICT reducedMass, GLOBAL mixed* RESTRICT delta1,
-        GLOBAL int* RESTRICT converged, GLOBAL int* RESTRICT hostConvergedFlag, mixed tol, int iteration) {
-    LOCAL int groupConverged;
-    if (converged[1-iteration%2]) {
-        if (GLOBAL_ID == 0) {
-            converged[iteration%2] = 1;
-            hostConvergedFlag[0] = 1;
-        }
-        return; // The constraint iteration has already converged.
-    }
+        mixed tol, int iteration, LOCAL_ARG int* groupConverged) {
     if (LOCAL_ID == 0)
-        groupConverged = 1;
+        *groupConverged = 1;
     SYNC_THREADS;
     mixed lowerTol = 1-2*tol+tol*tol;
     mixed upperTol = 1+2*tol+tol*tol;
@@ -620,8 +625,23 @@ KERNEL void computeCCMAPositionConstraintForce(GLOBAL const int2* RESTRICT const
         delta1[index] = (rrpr > d_ij2*1e-6f ? reducedMass[index]*diff/rrpr : 0.0f);
         threadConverged &= (rp2 > lowerTol*dist2 && rp2 < upperTol*dist2);
     }
-    if (groupConverged && !threadConverged)
-        groupConverged = 0;
+    if (*groupConverged && !threadConverged)
+        *groupConverged = 0;
+}
+
+KERNEL void computeCCMAPositionConstraintForceKernel(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL const mixed4* RESTRICT constraintDistance,
+        GLOBAL const mixed4* RESTRICT atomPositions, GLOBAL const mixed* RESTRICT reducedMass, GLOBAL mixed* RESTRICT delta1,
+        GLOBAL int* RESTRICT converged, GLOBAL int* RESTRICT hostConvergedFlag, mixed tol, int iteration) {
+    LOCAL int groupConverged;
+    if (converged[1-iteration%2]) {
+        if (GLOBAL_ID == 0) {
+            converged[iteration%2] = 1;
+            hostConvergedFlag[0] = 1;
+        }
+        return; // The constraint iteration has already converged.
+    }
+    computeCCMAPositionConstraintForce(constraintAtoms, constraintDistance, atomPositions, reducedMass,
+            delta1, tol, iteration, &groupConverged);
     SYNC_THREADS;
     if (LOCAL_ID == 0 && !groupConverged)
         converged[iteration%2] = 0;
@@ -630,7 +650,29 @@ KERNEL void computeCCMAPositionConstraintForce(GLOBAL const int2* RESTRICT const
 /**
  * Compute the force applied by each CCMA velocity constraint.
  */
-KERNEL void computeCCMAVelocityConstraintForce(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL const mixed4* RESTRICT constraintDistance,
+DEVICE void computeCCMAVelocityConstraintForce(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL const mixed4* RESTRICT constraintDistance,
+        GLOBAL const mixed4* RESTRICT atomPositions, GLOBAL const mixed* RESTRICT reducedMass, GLOBAL mixed* RESTRICT delta1,
+        mixed tol, int iteration, LOCAL_ARG int* groupConverged) {
+    if (LOCAL_ID == 0)
+        *groupConverged = 1;
+    SYNC_THREADS;
+    bool threadConverged = true;
+    for (int index = GLOBAL_ID; index < NUM_CCMA_CONSTRAINTS; index += GLOBAL_SIZE) {
+        // Compute the force due to this constraint.
+
+        int2 atoms = constraintAtoms[index];
+        mixed4 dir = constraintDistance[index];
+        mixed4 rp_ij = atomPositions[atoms.x]-atomPositions[atoms.y];
+        mixed rrpr = rp_ij.x*dir.x + rp_ij.y*dir.y + rp_ij.z*dir.z;
+        mixed d_ij2 = dir.x*dir.x + dir.y*dir.y + dir.z*dir.z;
+        delta1[index] = -2*reducedMass[index]*rrpr/d_ij2;
+        threadConverged &= (fabs(delta1[index]) <= tol);
+    }
+    if (*groupConverged && !threadConverged)
+        *groupConverged = 0;
+}
+
+KERNEL void computeCCMAVelocityConstraintForceKernel(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL const mixed4* RESTRICT constraintDistance,
         GLOBAL const mixed4* RESTRICT atomPositions, GLOBAL const mixed* RESTRICT reducedMass, GLOBAL mixed* RESTRICT delta1,
         GLOBAL int* RESTRICT converged, GLOBAL int* RESTRICT hostConvergedFlag, mixed tol, int iteration) {
     LOCAL int groupConverged;
@@ -641,36 +683,17 @@ KERNEL void computeCCMAVelocityConstraintForce(GLOBAL const int2* RESTRICT const
         }
         return; // The constraint iteration has already converged.
     }
-    if (LOCAL_ID == 0)
-        groupConverged = 1;
-    SYNC_THREADS;
-    for (int index = GLOBAL_ID; index < NUM_CCMA_CONSTRAINTS; index += GLOBAL_SIZE) {
-        // Compute the force due to this constraint.
-
-        int2 atoms = constraintAtoms[index];
-        mixed4 dir = constraintDistance[index];
-        mixed4 rp_ij = atomPositions[atoms.x]-atomPositions[atoms.y];
-        mixed rrpr = rp_ij.x*dir.x + rp_ij.y*dir.y + rp_ij.z*dir.z;
-        mixed d_ij2 = dir.x*dir.x + dir.y*dir.y + dir.z*dir.z;
-        delta1[index] = -2*reducedMass[index]*rrpr/d_ij2;
-
-        // See whether it has converged.
-
-        if (groupConverged && fabs(delta1[index]) > tol) {
-            groupConverged = 0;
-            converged[iteration%2] = 0;
-        }
-    }
+    computeCCMAVelocityConstraintForce(constraintAtoms, constraintDistance, atomPositions, reducedMass,
+            delta1, tol, iteration, &groupConverged);
+    if (LOCAL_ID == 0 && !groupConverged)
+        converged[iteration%2] = 0;
 }
 
 /**
  * Multiply the vector of CCMA constraint forces by the constraint matrix.
  */
-KERNEL void multiplyByCCMAConstraintMatrix(GLOBAL const mixed* RESTRICT delta1, GLOBAL mixed* RESTRICT delta2, GLOBAL const int* RESTRICT constraintMatrixColumn,
-        GLOBAL const mixed* RESTRICT constraintMatrixValue, GLOBAL const int* RESTRICT converged, int iteration) {
-    if (converged[iteration%2])
-        return; // The constraint iteration has already converged.
-
+DEVICE void multiplyByCCMAConstraintMatrix(GLOBAL const mixed* RESTRICT delta1, GLOBAL mixed* RESTRICT delta2, GLOBAL const int* RESTRICT constraintMatrixColumn,
+        GLOBAL const mixed* RESTRICT constraintMatrixValue, int iteration) {
     // Multiply by the inverse constraint matrix.
 
     for (int index = GLOBAL_ID; index < NUM_CCMA_CONSTRAINTS; index += GLOBAL_SIZE) {
@@ -686,20 +709,24 @@ KERNEL void multiplyByCCMAConstraintMatrix(GLOBAL const mixed* RESTRICT delta1, 
     }
 }
 
+KERNEL void multiplyByCCMAConstraintMatrixKernel(GLOBAL const mixed* RESTRICT delta1, GLOBAL mixed* RESTRICT delta2, GLOBAL const int* RESTRICT constraintMatrixColumn,
+        GLOBAL const mixed* RESTRICT constraintMatrixValue, GLOBAL const int* RESTRICT converged, int iteration) {
+    if (converged[iteration%2])
+        return; // The constraint iteration has already converged.
+    multiplyByCCMAConstraintMatrix(delta1, delta2, constraintMatrixColumn, constraintMatrixValue, iteration);
+}
+
 /**
  * Update the atom positions based on CCMA constraint forces.
  */
-KERNEL void updateCCMAAtomPositions(GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
+DEVICE void updateCCMAAtomPositions(GLOBAL const int* RESTRICT atoms, GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
         GLOBAL const mixed4* RESTRICT constraintDistance, GLOBAL mixed4* RESTRICT atomPositions, GLOBAL const mixed4* RESTRICT velm,
-        GLOBAL const mixed* RESTRICT delta1, GLOBAL const mixed* RESTRICT delta2, GLOBAL int* RESTRICT converged, int iteration) {
-    if (GROUP_ID == 0 && LOCAL_ID == 0)
-        converged[1-iteration%2] = 1;
-    if (converged[iteration%2])
-        return; // The constraint iteration has already converged.
+        GLOBAL const mixed* RESTRICT delta1, GLOBAL const mixed* RESTRICT delta2, int iteration) {
     mixed damping = (iteration < 2 ? 0.5f : 1.0f);
-    for (int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
+    for (int i = GLOBAL_ID; i < NUM_CCMA_ATOMS; i += GLOBAL_SIZE) {
         // Compute the new position of this atom.
 
+        int index = atoms[i];
         mixed4 atomPos = atomPositions[index];
         mixed invMass = velm[index].w;
         int num = numAtomConstraints[index];
@@ -715,6 +742,60 @@ KERNEL void updateCCMAAtomPositions(GLOBAL const int* RESTRICT numAtomConstraint
             atomPos.z += constraintForce*dir.z;
         }
         atomPositions[index] = atomPos;
+    }
+}
+
+KERNEL void updateCCMAAtomPositionsKernel(GLOBAL const int* RESTRICT atoms, GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
+        GLOBAL const mixed4* RESTRICT constraintDistance, GLOBAL mixed4* RESTRICT atomPositions, GLOBAL const mixed4* RESTRICT velm,
+        GLOBAL const mixed* RESTRICT delta1, GLOBAL const mixed* RESTRICT delta2, GLOBAL int* RESTRICT converged, int iteration) {
+    if (GROUP_ID == 0 && LOCAL_ID == 0)
+        converged[1-iteration%2] = 1;
+    if (converged[iteration%2])
+        return; // The constraint iteration has already converged.
+    updateCCMAAtomPositions(atoms, numAtomConstraints, atomConstraints, constraintDistance, atomPositions, velm,
+            delta1, delta2, iteration);
+}
+
+/**
+ * Run the entire CCMA iteration within a single kernel.  This has far less overhead than
+ * using multiple kernels, but requires the calculation to use only a single workgroup.
+ * That makes it faster for small numbers of constraints, but slower for large numbers.
+ */
+KERNEL void runCCMA(int constrainVelocities, GLOBAL const int* RESTRICT atoms, GLOBAL const int* RESTRICT numAtomConstraints, GLOBAL const int* RESTRICT atomConstraints,
+        GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL mixed4* RESTRICT constraintDistance, GLOBAL const real4* RESTRICT atomPositions,
+        GLOBAL mixed4* RESTRICT velm, GLOBAL mixed4* RESTRICT posDelta, GLOBAL const mixed* RESTRICT reducedMass,
+        GLOBAL mixed* RESTRICT delta1, GLOBAL mixed* RESTRICT delta2, GLOBAL const int* RESTRICT constraintMatrixColumn,
+        GLOBAL const mixed* RESTRICT constraintMatrixValue, mixed tol
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL const real4* RESTRICT posqCorrection
+#endif
+        ) {
+    LOCAL int groupConverged;
+#ifdef USE_MIXED_PRECISION
+    computeCCMAConstraintDirections(constraintAtoms, constraintDistance, atomPositions, posqCorrection);
+#else
+    computeCCMAConstraintDirections(constraintAtoms, constraintDistance, atomPositions);
+#endif
+    for (int iteration = 0; iteration < 150; iteration++) {
+        SYNC_THREADS
+        if (constrainVelocities)
+            computeCCMAVelocityConstraintForce(constraintAtoms, constraintDistance, velm, reducedMass,
+                    delta1, tol, iteration, &groupConverged);
+        else
+            computeCCMAPositionConstraintForce(constraintAtoms, constraintDistance, posDelta, reducedMass,
+                    delta1, tol, iteration, &groupConverged);
+        SYNC_THREADS
+        multiplyByCCMAConstraintMatrix(delta1, delta2, constraintMatrixColumn, constraintMatrixValue, iteration);
+        SYNC_THREADS
+        if (constrainVelocities)
+            updateCCMAAtomPositions(atoms, numAtomConstraints, atomConstraints, constraintDistance, velm, velm,
+                    delta1, delta2, iteration);
+        else
+            updateCCMAAtomPositions(atoms, numAtomConstraints, atomConstraints, constraintDistance, posDelta, velm,
+                    delta1, delta2, iteration);
+        SYNC_THREADS
+        if (groupConverged)
+            return;
     }
 }
 

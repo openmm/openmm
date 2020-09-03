@@ -227,6 +227,52 @@ void testConstrainedMasslessParticles() {
     ASSERT_EQUAL(0.0, state.getVelocities()[0][0]);
 }
 
+void testConstrainedChain(int numParticles) {
+    // Create a linear chain of particles with all distances constrained.
+    
+    System system;
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        positions[i] = Vec3(i, 0, 0);
+        if (i > 0) {
+            system.addConstraint(i-1, i, 1.0);
+            Vec3 delta(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+            delta /= sqrt(delta.dot(delta));
+            positions[i] = positions[i-1]+delta;
+        }
+    }
+    VerletIntegrator integrator(0.001);
+    integrator.setConstraintTolerance(1e-5);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(300.0);
+
+    // Simulate it and see whether the constraints remain satisfied.
+
+    double initialEnergy = 0.0;
+    for (int i = 0; i < 1000; ++i) {
+        State state = context.getState(State::Positions | State::Energy | State::Velocities | State::Forces);
+        for (int j = 0; j < system.getNumConstraints(); ++j) {
+            int particle1, particle2;
+            double distance;
+            system.getConstraintParameters(j, particle1, particle2, distance);
+            Vec3 p1 = state.getPositions()[particle1];
+            Vec3 p2 = state.getPositions()[particle2];
+            double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
+            ASSERT_EQUAL_TOL(distance, dist, 2e-5);
+        }
+        double energy = state.getPotentialEnergy()+state.getKineticEnergy();
+        if (i == 1)
+            initialEnergy = energy;
+        else if (i > 1)
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
+        integrator.step(1);
+    }
+}
+
 void testInitialTemperature() {
     // Check temperature initialization for a collection of randomly placed particles
     const int numParticles = 50000;
@@ -289,6 +335,8 @@ int main(int argc, char* argv[]) {
         testConstraints();
         testConstrainedClusters();
         testConstrainedMasslessParticles();
+        testConstrainedChain(10);
+        testConstrainedChain(1500);
         testInitialTemperature();
         testForceGroups();
         runPlatformTests();
