@@ -288,6 +288,7 @@ __kernel void computeNonbonded(
                 localData[localAtomIndex].x = 0;
                 localData[localAtomIndex].y = 0;
                 localData[localAtomIndex].z = 0;
+                CLEAR_LOCAL_PARAMETERS
             }
             SYNC_WARPS;
 #ifdef USE_PERIODIC

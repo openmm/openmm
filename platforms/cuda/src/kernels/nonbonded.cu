@@ -419,6 +419,7 @@ extern "C" __global__ void computeNonbonded(
                 localData[threadIdx.x].y = 0;
                 localData[threadIdx.x].z = 0;
 #endif
+                CLEAR_LOCAL_PARAMETERS
             }
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
@@ -607,11 +608,11 @@ extern "C" __global__ void computeNonbonded(
         real4 posq2 = posq[atom2];
         LOAD_ATOM1_PARAMETERS
         int j = atom2;
-atom2 = threadIdx.x;
+        atom2 = threadIdx.x;
         DECLARE_LOCAL_PARAMETERS
         LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
         LOAD_ATOM2_PARAMETERS
-atom2 = pair.y;
+        atom2 = pair.y;
         real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
         APPLY_PERIODIC_TO_DELTA(delta)
