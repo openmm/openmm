@@ -651,6 +651,21 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         }
     }
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
+    
+    stringstream clearLocal;
+    for (int i = 0; i < (int) params.size(); i++) {
+        if (useShuffle)
+            clearLocal<<"shfl";
+        else
+            clearLocal<<"localData[atom2].";
+        clearLocal<<params[i].getName()<<" = ";
+        if (params[i].getNumComponents() == 1)
+            clearLocal<<"0;\n";
+        else
+            clearLocal<<"make_"<<params[i].getType()<<"(0);\n";
+    }
+    replacements["CLEAR_LOCAL_PARAMETERS"] = clearLocal.str();
+
     stringstream initDerivs;
     for (int i = 0; i < energyParameterDerivatives.size(); i++)
         initDerivs<<"mixed energyParamDeriv"<<i<<" = 0;\n";

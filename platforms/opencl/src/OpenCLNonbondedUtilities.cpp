@@ -640,6 +640,15 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         }
     }
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
+    stringstream clearLocal;
+    for (int i = 0; i < (int) params.size(); i++) {
+        if (params[i].getNumComponents() == 1)
+            clearLocal<<"localData[localAtomIndex]."<<params[i].getName()<<" = 0;\n";
+        else
+            for (int j = 0; j < params[i].getNumComponents(); ++j)
+                clearLocal<<"localData[localAtomIndex]."<<params[i].getName()<<"_"<<suffixes[j]<<" = 0;\n";
+    }
+    replacements["CLEAR_LOCAL_PARAMETERS"] = clearLocal.str();
     stringstream initDerivs;
     for (int i = 0; i < energyParameterDerivatives.size(); i++)
         initDerivs<<"mixed energyParamDeriv"<<i<<" = 0;\n";
