@@ -244,7 +244,8 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                             for (int j = 0; j < tilesToStore; j++)
                                 interactingAtoms[(newTileStartIndex+j)*TILE_SIZE+indexInWarp] = buffer[indexInWarp+j*TILE_SIZE];
                         }
-                        buffer[indexInWarp] = buffer[indexInWarp+TILE_SIZE*tilesToStore];
+                        if (indexInWarp+TILE_SIZE*tilesToStore < BUFFER_SIZE)
+                            buffer[indexInWarp] = buffer[indexInWarp+TILE_SIZE*tilesToStore];
                         neighborsInBuffer -= TILE_SIZE*tilesToStore;
                    }
                 }
