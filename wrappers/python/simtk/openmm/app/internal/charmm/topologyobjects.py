@@ -532,7 +532,7 @@ class ResidueList(list):
         if lr is None:
             res = self._last_residue = Residue(resname, resnum, inscode)
             list.append(self, res)
-        elif (lr.resname != resname or lr.idx != resname or
+        elif (lr.resname != resname or lr.idx != resnum or
                 lr.inscode != inscode  or system != lr.system):
             res = self._last_residue = Residue(resname, resnum, inscode)
             res.system = system
