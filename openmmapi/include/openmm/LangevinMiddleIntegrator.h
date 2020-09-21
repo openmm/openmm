@@ -40,7 +40,7 @@ namespace OpenMM {
 
 /**
  * This is an Integrator which simulates a System using Langevin dynamics, with
- * the LFMiddle discretization (J. Phys. Chem. A 2019, 123, 28, 6056–6079).
+ * the LFMiddle discretization (J. Phys. Chem. A 2019, 123, 28, 6056-6079).
  * This method tend to produce more accurate configurational sampling than other
  * discretizations, such as the one used in LangevinIntegrator.
  * 
