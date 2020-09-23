@@ -40,9 +40,15 @@ namespace OpenMM {
 
 /**
  * This is an Integrator which simulates a System using Langevin dynamics, with
- * the LFMiddle discretization (http://dx.doi.org/10.1021/acs.jpca.9b02771).
+ * the LFMiddle discretization (J. Phys. Chem. A 2019, 123, 28, 6056-6079).
  * This method tend to produce more accurate configurational sampling than other
  * discretizations, such as the one used in LangevinIntegrator.
+ * 
+ * The algorithm is closely related to the BAOAB discretization
+ * (Proc. R. Soc. A. 472: 20160138).  Both methods produce identical trajectories,
+ * but LFMiddle returns half step (leapfrog) velocities, while BAOAB returns
+ * on-step velocities.  The former provide a much more accurate sampling of the
+ * thermal ensemble. 
  */
 
 class OPENMM_EXPORT LangevinMiddleIntegrator : public Integrator {
