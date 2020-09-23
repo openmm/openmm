@@ -164,7 +164,7 @@ class Metadynamics(object):
             if simulation.currentStep % self.frequency == 0:
                 nextSteps = min(nextSteps, self.frequency)
             else:
-                nextSteps = min(nextSteps, simulation.currentStep % self.frequency)
+                nextSteps = min(nextSteps, self.frequency - simulation.currentStep % self.frequency)
             simulation.step(nextSteps)
             if simulation.currentStep % self.frequency == 0:
                 position = self._force.getCollectiveVariableValues(simulation.context)
