@@ -408,7 +408,7 @@ class DesmondDMSFile(object):
                 else:
                     raise IOError("No HCT parameters found in DMS file")
                     
-            if implicitSolvent is 'AGBNP3':
+            if implicitSolvent == 'AGBNP3':
                 #load AGBNP3 plugin if available
                 try:
                     from AGBNP3plugin import AGBNP3Force
@@ -430,14 +430,14 @@ class DesmondDMSFile(object):
                 else:
                     raise IOError("No AGBNP parameters found in DMS file")
 
-            if implicitSolvent is 'GVolSA':
+            if implicitSolvent == 'GVolSA':
                 #implemented as AGBNP version 0
                 implicitSolvent = 'AGBNP'
                 AGBNPVersion = 0
                 if self._verbose:
                     print('Using GVolSA')
 
-            if implicitSolvent is 'AGBNP':
+            if implicitSolvent == 'AGBNP':
                 #load AGBNP plugin if available
                 try:
                     from AGBNPplugin import AGBNPForce
