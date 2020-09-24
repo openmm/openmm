@@ -56,8 +56,6 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
 #else
         const real charge = (CHARGE)*EPSILON_FACTOR;
 #endif
-        if (charge == 0)
-            continue;
         APPLY_PERIODIC_TO_POS(pos)
         real3 t = make_real3(pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x,
                              pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y,
@@ -68,6 +66,8 @@ extern "C" __global__ void gridSpreadCharge(const real4* __restrict__ posq, real
         int3 gridIndex = make_int3(((int) t.x) % GRID_SIZE_X,
                                    ((int) t.y) % GRID_SIZE_Y,
                                    ((int) t.z) % GRID_SIZE_Z);
+        if (charge == 0)
+            continue;
 
         // Since we need the full set of thetas, it's faster to compute them here than load them
         // from global memory.

@@ -843,7 +843,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 pmeInterpolateForceKernel = cu.getKernel(module, "gridInterpolateForce");
                 pmeEvalEnergyKernel = cu.getKernel(module, "gridEvaluateEnergy");
                 pmeFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
-                cuFuncSetCacheConfig(pmeSpreadChargeKernel, CU_FUNC_CACHE_PREFER_L1);
+                cuFuncSetCacheConfig(pmeSpreadChargeKernel, CU_FUNC_CACHE_PREFER_SHARED);
                 cuFuncSetCacheConfig(pmeInterpolateForceKernel, CU_FUNC_CACHE_PREFER_L1);
                 if (doLJPME) {
                     pmeDefines["EWALD_ALPHA"] = cu.doubleToString(dispersionAlpha);
