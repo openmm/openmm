@@ -85,15 +85,16 @@ __device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, unsign
         int count = __popc(flags[i]);
         sum += (count <= MAX_BITS_FOR_PAIRS ? count : 0);
     }
-    sumBuffer[indexInWarp] = sum;
-    for (int step = 1; step < 32; step *= 2) {
-        int add = (indexInWarp >= step ? sumBuffer[indexInWarp-step] : 0);
-        sumBuffer[indexInWarp] += add;
+    for (int i = 1; i < 32; i *= 2) {
+        int n = __shfl_up_sync(0xffffffff, sum, i);
+        if (indexInWarp >= i)
+            sum += n;
     }
-    int pairsToStore = sumBuffer[31];
-    if (indexInWarp == 0)
-        pairStartIndex = atomicAdd(singlePairCount, pairsToStore);
-    int pairIndex = pairStartIndex + (indexInWarp > 0 ? sumBuffer[indexInWarp-1] : 0);
+    if (indexInWarp == 31)
+        pairStartIndex = atomicAdd(singlePairCount,(unsigned int) sum);
+    __syncwarp();
+    int prevSum = __shfl_up_sync(0xffffffff, sum, 1);
+    int pairIndex = pairStartIndex + (indexInWarp > 0 ? prevSum : 0);
     for (int i = indexInWarp; i < length; i += 32) {
         int count = __popc(flags[i]);
         if (count <= MAX_BITS_FOR_PAIRS && pairIndex+count < maxSinglePairs) {
