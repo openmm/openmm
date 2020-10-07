@@ -63,19 +63,17 @@ OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int le
     unsigned int maxRangeSize = std::min(maxGroupSize, (unsigned int) computeRangeKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()));
     unsigned int maxPositionsSize = std::min(maxGroupSize, (unsigned int) computeBucketPositionsKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()));
     int maxLocalBuffer = (maxSharedMem/trait->getDataSize())/2;
-    unsigned int maxShortList = min(8192, max(maxLocalBuffer, (int) OpenCLContext::ThreadBlockSize*context.getNumThreadBlocks()));
-    // The following line checks CL_KERNEL_WORK_GROUP_SIZE to make sure we don't create too large a workgroup.
-    // Unfortunately, AMD's OpenCL returns an inappropriately small value for it that is much shorter than the actual
-    // maximum, so including the check hurts performance.  For the moment I'm just leaving it commented out.
-    // If the workgroup size turns out to be too large, we catch the exception and switch back to the standard
-    // sorting kernels.
-    //maxShortList = min(maxShortList, shortListKernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice()));
-    isShortList = (length <= maxShortList);
+    int maxShortList = max(maxLocalBuffer, (int) OpenCLContext::ThreadBlockSize*context.getNumThreadBlocks());
     string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
-    if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA")
+    if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
+        maxShortList = min(3000, maxShortList);
         useShortList2 = (dataLength <= OpenCLContext::ThreadBlockSize*context.getNumThreadBlocks());
-    else
+    }
+    else {
+        maxShortList = min(1024, maxShortList);
         useShortList2 = false;
+    }
+    isShortList = (length <= maxShortList);
     for (rangeKernelSize = 1; rangeKernelSize*2 <= maxRangeSize; rangeKernelSize *= 2)
         ;
     positionsKernelSize = std::min(rangeKernelSize, maxPositionsSize);

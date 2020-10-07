@@ -58,7 +58,7 @@ CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) 
     int maxSharedMem;
     cuDeviceGetAttribute(&maxSharedMem, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, context.getDevice());
     int maxLocalBuffer = (maxSharedMem/trait->getDataSize())/2;
-    int maxShortList = min(8192, max(maxLocalBuffer, CudaContext::ThreadBlockSize*context.getNumThreadBlocks()));
+    int maxShortList = min(3000, max(maxLocalBuffer, CudaContext::ThreadBlockSize*context.getNumThreadBlocks()));
     isShortList = (length <= maxShortList);
     for (rangeKernelSize = 1; rangeKernelSize*2 <= maxBlockSize; rangeKernelSize *= 2)
         ;
