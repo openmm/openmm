@@ -95,8 +95,8 @@ jobs:
 
     - sudo: false
       dist: xenial
-      python: "3.8"
-      name: "Python 3.8"
+      python: "3.9"
+      name: "Python 3.9"
       env: OPENCL=false
            CUDA=false
            CC=$CCACHE/gcc
