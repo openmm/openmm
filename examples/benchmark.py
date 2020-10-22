@@ -125,7 +125,6 @@ def runOneTest(testName, options):
             steps = int(steps*options.seconds/time)
     print('Integrated %d steps in %g seconds' % (steps, time))
     print('%g ns/day' % (dt*steps*86400/time).value_in_unit(unit.nanoseconds))
-#    app.PDBFile.writeFile(pdb.topology, context.getState(getPositions=True).getPositions(), open('output.pdb', 'w'))
 
 # Parse the command line options.
 
