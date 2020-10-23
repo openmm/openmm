@@ -68,6 +68,7 @@ def runOneTest(testName, options):
                 method = app.CutoffPeriodic
                 cutoff = 1*unit.nanometers
             friction = 1*(1/unit.picoseconds)
+            hydrogenMass = 1.5*unit.amu
         elif explicit:
             ff = app.ForceField('amber99sb.xml', 'tip3p.xml')
             pdb = app.PDBFile('5dfr_solv-cube_equil.pdb')
@@ -92,7 +93,6 @@ def runOneTest(testName, options):
         else:
             dt = 0.004*unit.picoseconds
             constraints = app.HBonds
-            hydrogenMass = None
             integ = mm.LangevinMiddleIntegrator(300*unit.kelvin, friction, dt)
         system = ff.createSystem(pdb.topology, nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints, hydrogenMass=hydrogenMass)
     print('Step Size: %g fs' % dt.value_in_unit(unit.femtoseconds))
