@@ -64,7 +64,7 @@ public:
      */
     enum Id {CONSTANT, VARIABLE, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE, POWER, NEGATE, SQRT, EXP, LOG,
              SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, ATAN2, SINH, COSH, TANH, ERF, ERFC, STEP, DELTA, SQUARE, CUBE, RECIPROCAL,
-             ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT, MIN, MAX, ABS, FLOOR, CEIL, SELECT};
+             ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT, MIN, MAX, ABS, FLOOR, CEIL, SELECT, SELECT2, ELU, RELU};
     /**
      * Get the name of this Operation.
      */
@@ -157,6 +157,9 @@ public:
     class Floor;
     class Ceil;
     class Select;
+    class Select2;
+    class Elu;
+    class Relu;
 };
 
 class LEPTON_EXPORT Operation::Constant : public Operation {
@@ -1184,6 +1187,83 @@ public:
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return (args[0] != 0.0 ? args[1] : args[2]);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class LEPTON_EXPORT Operation::Select2 : public Operation {
+public:
+    Select2() {
+    }
+    std::string getName() const {
+        return "select2";
+    }
+    Id getId() const {
+        return SELECT;
+    }
+    int getNumArguments() const {
+        return 3;
+    }
+    Operation* clone() const {
+        return new Select2();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return (args[0] > 0.0 ? args[1] : args[2]);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class LEPTON_EXPORT Operation::Elu : public Operation {
+public:
+    Elu() {
+    }
+    std::string getName() const {
+        return "elu";
+    }
+    Id getId() const {
+        return ELU;
+    }
+    int getNumArguments() const {
+        return 2;
+    }
+    Operation* clone() const {
+        return new Elu();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        const double x = args[0];
+        const double alpha = args[1];
+        if (x > 0.0) {
+            return x;
+        } else {
+            return alpha * (std::exp(x) - 1);
+        }
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class LEPTON_EXPORT Operation::Relu : public Operation {
+public:
+    Relu() {
+    }
+    std::string getName() const {
+        return "Relu";
+    }
+    Id getId() const {
+        return RELU;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Relu();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        const double x = args[0];
+        if (x > 0.0) {
+            return x;
+        } else {
+            return 0;
+        }
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };

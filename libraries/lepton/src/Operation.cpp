@@ -343,3 +343,40 @@ ExpressionTreeNode Operation::Select::differentiate(const std::vector<Expression
     derivChildren.push_back(childDerivs[2]);
     return ExpressionTreeNode(new Operation::Select(), derivChildren);
 }
+
+ExpressionTreeNode Operation::Select2::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    vector<ExpressionTreeNode> derivChildren;
+    derivChildren.push_back(children[0]);
+    derivChildren.push_back(childDerivs[1]);
+    derivChildren.push_back(childDerivs[2]);
+    return ExpressionTreeNode(new Operation::Select2(), derivChildren);
+}
+
+ExpressionTreeNode Operation::Elu::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    vector<ExpressionTreeNode> derivChildren;
+    derivChildren.reserve(3);
+    derivChildren.push_back(children[0]);
+    derivChildren.push_back(ExpressionTreeNode(new Operation::Add(), childDerivs[0],
+                                               ExpressionTreeNode(new Operation::MultiplyConstant(0.0), childDerivs[1])));
+    derivChildren.push_back(ExpressionTreeNode(new Operation::Add(),
+                                               ExpressionTreeNode(new Operation::Multiply,
+                                                                  ExpressionTreeNode(new Operation::Multiply,
+                                                                                     children[1],
+                                                                                     ExpressionTreeNode(new Operation::Exp,
+                                                                                                        children[0])),
+                                                                  childDerivs[0]),
+                                               ExpressionTreeNode(new Operation::Multiply,
+                                                                  ExpressionTreeNode(new Operation::AddConstant(-1.0),
+                                                                                     ExpressionTreeNode(new Operation::Exp,
+                                                                                                        children[0])),
+                                                                  childDerivs[1])));
+    return ExpressionTreeNode(new Operation::Select2(), derivChildren);
+}
+
+ExpressionTreeNode Operation::Relu::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    vector<ExpressionTreeNode> derivChildren;
+    derivChildren.push_back(children[0]);
+    derivChildren.push_back(childDerivs[0]);
+    derivChildren.push_back(ExpressionTreeNode(new Operation::Constant(0.0)));
+    return ExpressionTreeNode(new Operation::Select2(), derivChildren);
+}
