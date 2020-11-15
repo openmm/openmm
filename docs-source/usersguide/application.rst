@@ -500,7 +500,7 @@ script, and can even run it for you.
 To install OpenMM-Setup, open a command line terminal and type the following command
 ::
 
-    conda install -c omnia openmm-setup
+    conda install -c conda-forge openmm-setup
 
 You can then launch it by typing the command
 ::
@@ -809,7 +809,7 @@ You can install this via conda with:
 
 .. code-block:: bash
 
-    $ conda install -c omnia -c conda-forge openmmforcefields
+    $ conda install -c conda-forge openmmforcefields
 
 You can then add a small molecule residue template generator using the Open Force
 Field Initiative small molecule force fields using the following example:
