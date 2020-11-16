@@ -82,7 +82,7 @@ int NoseHooverIntegrator::addSubsystemThermostat(const std::vector<int>& thermos
                                                  int chainLength, int numMTS, int numYoshidaSuzuki) {
     int chainID = noseHooverChains.size();
     // check if one thermostat already applies to all atoms or pairs
-    if ( (chainID > 0) && (noseHooverChains[0].getThermostatedAtoms().size()*noseHooverChains[0].getThermostatedPairs().size() == 0) ) {
+    if ( (chainID > 0) && (noseHooverChains[0].getThermostatedAtoms().size()+noseHooverChains[0].getThermostatedPairs().size() == 0) ) {
         throw OpenMMException(
             "Cannot add thermostat, since one of the thermostats already in the integrator applies to all particles. "
             "To manually add thermostats, use the constructor that takes only the "
