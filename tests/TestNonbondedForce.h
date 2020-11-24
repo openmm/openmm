@@ -893,6 +893,46 @@ void testParameterOffsets() {
     ASSERT_EQUAL_TOL(energy, context.getState(State::Energy).getPotentialEnergy(), 1e-5);
 }
 
+void testEwaldExceptions() {
+    // Create a minimal system using LJPME.
+
+    System system;
+    for (int i = 0; i < 4; i++)
+        system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 2, 0), Vec3(0, 0, 2));
+    NonbondedForce* force = new NonbondedForce();
+    system.addForce(force);
+    force->setNonbondedMethod(NonbondedForce::LJPME);
+    force->setCutoffDistance(1.0);
+    force->addParticle(1.0, 0.5, 1.0);
+    force->addParticle(1.0, 0.5, 1.0);
+    force->addParticle(-1.0, 0.5, 1.0);
+    force->addParticle(-1.0, 0.5, 1.0);
+    vector<Vec3> positions = {
+        Vec3(0, 0, 0),
+        Vec3(1.5, 0, 0),
+        Vec3(0, 0.5, 0.5),
+        Vec3(0.2, 1.3, 0)
+    };
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    
+    // Compute the energy.
+    
+    double e1 = context.getState(State::Energy).getPotentialEnergy();
+
+    // Add a periodic exception and see if the energy changes by the correct amount.
+
+    force->addException(0, 1, 0.2, 0.8, 2.0);
+    force->setExceptionsUsePeriodicBoundaryConditions(true);
+    context.reinitialize(true);
+    double e2 = context.getState(State::Energy).getPotentialEnergy();
+    double r = 0.5;
+    double expectedChange = ONE_4PI_EPS0*(0.2-1.0)/r + 4*2.0*(pow(0.8/r, 12)-pow(0.8/r, 6)) - 4*1.0*(pow(0.5/r, 12)-pow(0.5/r, 6));
+    ASSERT_EQUAL_TOL(expectedChange, e2-e1, 1e-5);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -913,6 +953,7 @@ int main(int argc, char* argv[]) {
         testSwitchingFunction(NonbondedForce::PME);
         testTwoForces();
         testParameterOffsets();
+        testEwaldExceptions();
         runPlatformTests();
     }
     catch(const exception& e) {
