@@ -70,9 +70,10 @@ modern drivers from your vendor.
 
     conda install -c conda-forge openmm
 
-This installs a version of OpenMM compiled with the latest version of CUDA
-supported by your drivers. Alternatively you can request a version that is
-compiled for a specific CUDA version with the command
+With recent :code:`conda` versions (v4.8.4+), this will install a version of
+OpenMM compiled with the latest version of CUDA supported by your drivers.
+Alternatively you can request a version that is compiled for a specific CUDA
+version with the command
 ::
 
     conda install -c conda-forge openmm cudatoolkit==10.0
