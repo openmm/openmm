@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2018 Stanford University and the Authors.
+Portions copyright (c) 2012-2020 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -1223,9 +1223,9 @@ class Modeller(object):
         forcefield : ForceField
             the ForceField to use for determining atomic charges and for relaxing the membrane
         lipidType : string or object
-            the type of lipid to use.  Supported string values are 'POPC' and 'POPE'.  For other types
-            of lipids, provide a PDBFile or PDBxFile object (or any other object with "topology" and
-            "positions" fields) containing a membrane patch.
+            the type of lipid to use.  Supported string values are 'POPC', 'POPE', 'DLPC', 'DLPE', 'DMPC',
+            'DOPC', and 'DPPC'.  For other types of lipids, provide a PDBFile or PDBxFile object (or any
+            other object with "topology" and "positions" fields) containing a membrane patch.
         membraneCenterZ: distance=0*nanometer
             the position along the Z axis of the center of the membrane
         minimumPadding : distance=1*nanometer
@@ -1375,7 +1375,7 @@ class Modeller(object):
                 # Remove the same number of residues from each leaf.
                 skipFromLeaf[lipidLeaf[residue]] -= 1
             else:
-                newResidue = membraneTopology.addResidue(residue.name, lipidChain, lipidResNum, residue.insertionCode)
+                newResidue = membraneTopology.addResidue(residue.name, lipidChain, str(lipidResNum), residue.insertionCode)
                 lipidResNum += 1
 
                 for atom in residue.atoms():
