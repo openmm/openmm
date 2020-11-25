@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -47,7 +47,7 @@ const int CpuNonbondedForce::NUM_TABLE_POINTS = 2048;
 
    --------------------------------------------------------------------------------------- */
 
-CpuNonbondedForce::CpuNonbondedForce() : cutoff(false), useSwitch(false), periodic(false), ewald(false), pme(false), ljpme(false), tableIsValid(false), expTableIsValid(false),
+CpuNonbondedForce::CpuNonbondedForce() : cutoff(false), useSwitch(false), periodic(false), periodicExceptions(false), ewald(false), pme(false), ljpme(false), tableIsValid(false), expTableIsValid(false),
     cutoffDistance(0.0f), alphaDispersionEwald(0.0f), alphaEwald(0.0f) {
 }
 
@@ -202,6 +202,9 @@ void CpuNonbondedForce::setUseLJPME(float alpha, int meshSize[3]) {
     }
 }
 
+void CpuNonbondedForce::setPeriodicExceptions(bool periodic) {
+    periodicExceptions = periodic;
+}
 
 void CpuNonbondedForce::tabulateEwaldScaleFactor() {
     if (tableIsValid)
@@ -450,7 +453,7 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
                         fvec4 deltaR;
                         fvec4 posJ((float) atomCoordinates[j][0], (float) atomCoordinates[j][1], (float) atomCoordinates[j][2], 0.0f);
                         float r2;
-                        getDeltaR(posJ, posI, deltaR, r2, false, boxSize, invBoxSize);
+                        getDeltaR(posJ, posI, deltaR, r2, periodicExceptions, boxSize, invBoxSize);
                         float r = sqrtf(r2);
                         float alphaR = alphaEwald*r;
                         float erfAlphaR = erf(alphaR);
