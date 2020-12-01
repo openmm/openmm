@@ -1002,6 +1002,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             replacements["EWALD_ALPHA"] = cl.doubleToString(alpha);
             replacements["TWO_OVER_SQRT_PI"] = cl.doubleToString(2.0/sqrt(M_PI));
             replacements["DO_LJPME"] = doLJPME ? "1" : "0";
+            replacements["USE_PERIODIC"] = force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0";
             if (doLJPME)
                 replacements["EWALD_DISPERSION_ALPHA"] = cl.doubleToString(dispersionAlpha);
             cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::pmeExclusions, replacements), force.getForceGroup());
