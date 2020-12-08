@@ -1490,6 +1490,20 @@ class CharmmPsfFile(object):
                 ii, jj, q, eps, sig = force.getExceptionParameters(i)
                 nbtforce.addExclusion(ii, jj)
 
+        # Add 1-4 pair interactions into exception list which were excluded.
+        if has_drude_particle and has_nbthole_terms:
+            for dih in self.dihedral_list:
+                a1, a4 = dih.atom1, dih.atom4
+                idx_a1, idx_a4 = a1.idx, a4.idx
+                at1, at4 = self.atom_list[idx_a1].type, self.atom_list[idx_a4].type
+                if at1.nbthole and at4.nbthole:
+                    name_a4 = at4.name
+                    name_a1 = at1.name
+                    nbt_value1 = at1.nbthole.get(name_a4,0)
+                    nbt_value2 = at4.nbthole.get(name_a1,0)
+                    if abs(nbt_value1)>TINY or abs(nbt_value2)>TINY:
+                        nbtforce.addException(idx_a1,idx_a4)
+
         # Add GB model if we're doing one
         if implicitSolvent is not None:
             if verbose: print('Adding GB parameters...')

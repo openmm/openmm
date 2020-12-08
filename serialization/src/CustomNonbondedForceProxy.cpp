@@ -81,6 +81,12 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
         force.getExclusionParticles(i, particle1, particle2);
         exclusions.createChildNode("Exclusion").setIntProperty("p1", particle1).setIntProperty("p2", particle2);
     }
+    SerializationNode& exceptions = node.createChildNode("Exceptions");
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        force.getExceptionParticles(i, particle1, particle2);
+        exceptions.createChildNode("Exception").setIntProperty("p1", particle1).setIntProperty("p2", particle2);
+    }
     SerializationNode& functions = node.createChildNode("Functions");
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         functions.createChildNode("Function", &force.getTabulatedFunction(i)).setStringProperty("name", force.getTabulatedFunctionName(i));
@@ -138,6 +144,9 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
         const SerializationNode& exclusions = node.getChildNode("Exclusions");
         for (auto& exclusion : exclusions.getChildren())
             force->addExclusion(exclusion.getIntProperty("p1"), exclusion.getIntProperty("p2"));
+        const SerializationNode& exceptions = node.getChildNode("Exceptions");
+        for (auto& exception : exceptions.getChildren())
+            force->addException(exception.getIntProperty("p1"), exception.getIntProperty("p2"));
         const SerializationNode& functions = node.getChildNode("Functions");
         for (auto& function : functions.getChildren()) {
             if (function.hasProperty("type")) {
