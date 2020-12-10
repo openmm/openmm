@@ -64,7 +64,7 @@ string CudaRuntimeCompilerKernel::createModule(const string& source, const strin
     // Compile the program to PTX.
     
     nvrtcProgram program;
-    CHECK_RESULT(nvrtcCreateProgram(&program, source.c_str(), "", 0, NULL, NULL), "Error creating program");
+    CHECK_RESULT(nvrtcCreateProgram(&program, source.c_str(), NULL, 0, NULL, NULL), "Error creating program");
     try {
         nvrtcResult result = nvrtcCompileProgram(program, options.size(), &options[0]);
         if (result != NVRTC_SUCCESS) {
