@@ -810,7 +810,7 @@ You can install this via conda with:
 
 .. code-block:: bash
 
-    $ conda install -c conda-forge openmmforcefields
+    $ conda install -c omnia openmmforcefields
 
 You can then add a small molecule residue template generator using the Open Force
 Field Initiative small molecule force fields using the following example:
