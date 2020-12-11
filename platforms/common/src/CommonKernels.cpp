@@ -3899,7 +3899,7 @@ public:
         if (group1 < force.getNumDonors() && group2 < force.getNumDonors()) {
             force.getDonorParameters(group1, p1, p2, p3, params1);
             force.getDonorParameters(group2, p1, p2, p3, params2);
-            return (params1 == params2 && params1 == params2);
+            return (params1 == params2);
         }
         if (group1 < force.getNumDonors() || group2 < force.getNumDonors())
             return false;
@@ -3908,7 +3908,7 @@ public:
         if (group1 < force.getNumAcceptors() && group2 < force.getNumAcceptors()) {
             force.getAcceptorParameters(group1, p1, p2, p3, params1);
             force.getAcceptorParameters(group2, p1, p2, p3, params2);
-            return (params1 == params2 && params1 == params2);
+            return (params1 == params2);
         }
         if (group1 < force.getNumAcceptors() || group2 < force.getNumAcceptors())
             return false;
