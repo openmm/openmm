@@ -64,7 +64,6 @@ CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
     energyParameterDerivatives = rhs.energyParameterDerivatives;
     particles = rhs.particles;
     exclusions = rhs.exclusions;
-    exceptions = rhs.exceptions;
     interactionGroups = rhs.interactionGroups;
     for (vector<FunctionInfo>::const_iterator it = rhs.functions.begin(); it != rhs.functions.end(); ++it)
         functions.push_back(FunctionInfo(it->name, it->function->Copy()));
@@ -236,36 +235,6 @@ void CustomNonbondedForce::createExclusionsFromBonds(const vector<pair<int, int>
         for (int j : exclusions[i])
             if (j < i)
                 addExclusion(j, i);
-}
-
-int CustomNonbondedForce::addException(int particle1, int particle2) {
-    map<pair<int, int>, int>::iterator iter = exceptionMap.find(pair<int, int>(particle1, particle2));
-    int newIndex;
-    if (iter == exceptionMap.end())
-        iter = exceptionMap.find(pair<int, int>(particle2, particle1));
-    if (iter != exceptionMap.end()) {
-        exceptions[iter->second] = ExceptionInfo(particle1, particle2);
-        newIndex = iter->second;
-        exceptionMap.erase(iter->first);
-    }
-    else {
-        exceptions.push_back(ExceptionInfo(particle1, particle2));
-        newIndex = exceptions.size()-1;
-    }
-    exceptionMap[pair<int, int>(particle1, particle2)] = newIndex;
-    return newIndex;
-}
-
-void CustomNonbondedForce::getExceptionParticles(int index, int& particle1, int& particle2) const {
-    ASSERT_VALID_INDEX(index, exceptions);
-    particle1 = exceptions[index].particle1;
-    particle2 = exceptions[index].particle2;
-}
-
-void CustomNonbondedForce::setExceptionParticles(int index, int particle1, int particle2) {
-    ASSERT_VALID_INDEX(index, exceptions);
-    exceptions[index].particle1 = particle1;
-    exceptions[index].particle2 = particle2;
 }
 
 int CustomNonbondedForce::addTabulatedFunction(const std::string& name, TabulatedFunction* function) {

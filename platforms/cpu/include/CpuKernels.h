@@ -328,7 +328,6 @@ private:
     CustomNonbondedForce* forceCopy;
     std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;
-    std::vector<std::vector<int> > exceptions;
     std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     std::vector<double> longRangeCoefficientDerivs;

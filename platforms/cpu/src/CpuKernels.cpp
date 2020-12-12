@@ -867,20 +867,6 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         exclusions[particle2].insert(particle1);
     }
 
-    int NumExceptions = force.getNumExceptions();
-    if ( NumExceptions > 0 ) {
-        exceptions.resize(NumExceptions);
-        for (int i = 0; i < NumExceptions; i++)
-           exceptions[i].resize(2);
-
-        for (int i = 0; i < NumExceptions; i++) {
-            int particle1, particle2;
-            force.getExceptionParticles(i, particle1, particle2);
-            exceptions[i][0]=particle1;
-            exceptions[i][1]=particle2;
-        }
-    }
-
     // Build the arrays.
 
     int numParameters = force.getNumPerParticleParameters();
@@ -956,12 +942,6 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
     nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions, data.threads);
     if (interactionGroups.size() > 0)
         nonbonded->setInteractionGroups(interactionGroups);
-
-   // Add the extra interaction pairs.
-
-   if (NumExceptions > 0 )
-        nonbonded->addInteractionPairs(exceptions);
-
 }
 
 double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {

@@ -92,15 +92,6 @@ void CpuCustomNonbondedForce::setInteractionGroups(const vector<pair<set<int>, s
     }
 }
 
-void CpuCustomNonbondedForce::addInteractionPairs(const vector<vector<int> >& exceptions) {
-      int atom1,atom2;
-      for (int ii = 0; ii < exceptions.size(); ii++) {
-         atom1=exceptions[ii][0];
-         atom2=exceptions[ii][1];
-         groupInteractions.push_back(make_pair(atom1, atom2));
-      }
-}
-
 void CpuCustomNonbondedForce::setUseSwitchingFunction(double distance) {
     useSwitch = true;
     switchingDistance = distance;

@@ -177,12 +177,6 @@ public:
         return exclusions.size();
     }
     /**
-     * Get the number of extra particle pairs whose interactions were needed to calculate.
-     */
-    int getNumExceptions() const {
-        return exceptions.size();
-    }
-    /**
      * Get the number of per-particle parameters that the interaction depends on.
      */
     int getNumPerParticleParameters() const {
@@ -413,30 +407,6 @@ public:
      */
     void createExclusionsFromBonds(const std::vector<std::pair<int, int> >& bonds, int bondCutoff);
     /**
-     * Add a particle pair to the list of interactions that should be excluded.
-     * 
-     * @param particle1  the index of the first particle in the pair
-     * @param particle2  the index of the second particle in the pair 
-     * @return  the index of the exclusion that was added 
-     */
-    int addException(int particle1, int particle2);
-    /**
-     * Get the particles in a pair whose interaction may be excluded and should be calculated.
-     *
-     * @param index            the index of the exception for which to get particle indices
-     * @param[out] particle1   the index of the first particle in the pair
-     * @param[out] particle2   the index of the second particle in the pair
-     */
-    void getExceptionParticles(int index, int& particle1, int& particle2) const;
-    /**
-     * Set the particles in a pair whose interaction shoud be added into exception list for calculation.
-     * 
-     * @param index           the index of the exception for which to set particle indices
-     * @param particle1       the index of the first particle in the pair
-     * @param particle2       the index of the second particle in the pair
-     */
-    void setExceptionParticles(int index, int particle1, int particle2);
-    /**
      * Add a tabulated function that may appear in the energy expression.
      *
      * @param name           the name of the function as it appears in expressions
@@ -540,7 +510,6 @@ private:
     class PerParticleParameterInfo;
     class GlobalParameterInfo;
     class ExclusionInfo;
-    class ExceptionInfo;
     class FunctionInfo;
     class InteractionGroupInfo;
     NonbondedMethod nonbondedMethod;
@@ -551,8 +520,6 @@ private:
     std::vector<GlobalParameterInfo> globalParameters;
     std::vector<ParticleInfo> particles;
     std::vector<ExclusionInfo> exclusions;
-    std::vector<ExceptionInfo> exceptions;  
-    std::map<std::pair<int, int>, int> exceptionMap;
     std::vector<FunctionInfo> functions;
     std::vector<InteractionGroupInfo> interactionGroups;
     std::vector<int> energyParameterDerivatives;
@@ -640,18 +607,6 @@ public:
         set1(set1), set2(set2) {
     }
 };
-
-
-class CustomNonbondedForce::ExceptionInfo {
-public:
-    int particle1, particle2;
-    ExceptionInfo() {
-    }
-    ExceptionInfo(int particle1, int particle2) :
-        particle1(particle1), particle2(particle2) {
-    }
-};
-
 
 } // namespace OpenMM
 

@@ -413,10 +413,16 @@ class CharmmParameterSet(object):
                     theteq = tmp
                 except IndexError:
                     pass # Do nothing
-                # Improper types seem not to have the central atom defined in
-                # the first place, so just have the key a fully sorted list. We
-                # still depend on the PSF having properly ordered improper atoms
-                key = tuple(sorted([type1, type2, type3, type4]))
+                if type1 < type4:
+                    key = (type1, type2, type3, type4)
+                elif type1 > type4:
+                    key = (type4, type3, type2, type1)
+                else:
+                    # OK, we need to sort by the middle atoms now
+                    if type2 < type3:
+                        key = (type1, type2, type3, type4)
+                    else:
+                        key = (type4, type3, type2, type1)
                 self.improper_types[key] = ImproperType(k, theteq)
                 continue
             if section == 'CMAP':

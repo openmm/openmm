@@ -81,17 +81,6 @@ class CpuCustomNonbondedForce {
 
       void setInteractionGroups(const std::vector<std::pair<std::set<int>, std::set<int> > >& groups);
 
-      /**--------------------------------------------------------------------------------------- 
-
-         Add extra set of particle pairs to calculate their interaction
- 
-         @param exceptions              the 2d int vector which store the particles' index in the extra pairs
-      
-        ----------------------------------------------------------------------------------------  */
-
-      void addInteractionPairs(const std::vector<std::vector<int> >& exceptions);
-
-
       /**---------------------------------------------------------------------------------------
       
          Set the force to use a switching function.

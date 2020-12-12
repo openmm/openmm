@@ -1293,10 +1293,15 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
 
             if (useCudaFFT) {
-                if (cu.getUseDoublePrecision())
-                    cufftExecD2Z(fftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
-                else
-                    cufftExecR2C(fftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
+                if (cu.getUseDoublePrecision()) {
+                    cufftResult result = cufftExecD2Z(fftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
+                    if (result != CUFFT_SUCCESS)
+                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
+                } else {
+                    cufftResult result = cufftExecR2C(fftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
+                    if (result != CUFFT_SUCCESS)
+                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
+                }
             }
             else {
                 fft->execFFT(pmeGrid1, pmeGrid2, true);
@@ -1315,10 +1320,15 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             cu.executeKernel(pmeConvolutionKernel, convolutionArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
 
             if (useCudaFFT) {
-                if (cu.getUseDoublePrecision())
-                    cufftExecZ2D(fftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
-                else
-                    cufftExecC2R(fftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*)  pmeGrid1.getDevicePointer());
+                if (cu.getUseDoublePrecision()) {
+                    cufftResult result = cufftExecZ2D(fftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
+                    if (result != CUFFT_SUCCESS)
+                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
+                } else {
+                    cufftResult result = cufftExecC2R(fftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*)  pmeGrid1.getDevicePointer());
+                    if (result != CUFFT_SUCCESS)
+                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
+                }
             }
             else {
                 fft->execFFT(pmeGrid2, pmeGrid1, false);
@@ -1353,10 +1363,15 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             cu.executeKernel(pmeDispersionFinishSpreadChargeKernel, finishSpreadArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
 
             if (useCudaFFT) {
-                if (cu.getUseDoublePrecision())
-                    cufftExecD2Z(dispersionFftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
-                else
-                    cufftExecR2C(dispersionFftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
+                if (cu.getUseDoublePrecision()) {
+                    cufftResult result = cufftExecD2Z(dispersionFftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
+                    if (result != CUFFT_SUCCESS)
+                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
+                } else {
+                    cufftResult result = cufftExecR2C(dispersionFftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
+                    if (result != CUFFT_SUCCESS)
+                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
+                }
             }
             else {
                 dispersionFft->execFFT(pmeGrid1, pmeGrid2, true);
@@ -1375,10 +1390,15 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             cu.executeKernel(pmeDispersionConvolutionKernel, convolutionArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
 
             if (useCudaFFT) {
-                if (cu.getUseDoublePrecision())
-                    cufftExecZ2D(dispersionFftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
-                else
-                    cufftExecC2R(dispersionFftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*)  pmeGrid1.getDevicePointer());
+                if (cu.getUseDoublePrecision()) {
+                    cufftResult result = cufftExecZ2D(dispersionFftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
+                    if (result != CUFFT_SUCCESS)
+                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
+                } else {
+                    cufftResult result = cufftExecC2R(dispersionFftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*)  pmeGrid1.getDevicePointer());
+                    if (result != CUFFT_SUCCESS)
+                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
+                }
             }
             else {
                 dispersionFft->execFFT(pmeGrid2, pmeGrid1, false);
@@ -1764,7 +1784,7 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
     float scalefZ = (float) scaleZ;
     void* args[] = {&scalefX, &scalefY, &scalefZ, &numMolecules, cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(),
                     cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
-		    &cu.getPosq().getDevicePointer(), &moleculeAtoms.getDevicePointer(), &moleculeStartIndex.getDevicePointer()};
+                    &cu.getPosq().getDevicePointer(), &moleculeAtoms.getDevicePointer(), &moleculeStartIndex.getDevicePointer()};
     cu.executeKernel(kernel, args, cu.getNumAtoms());
     for (auto& offset : cu.getPosCellOffsets())
         offset = mm_int4(0, 0, 0, 0);
