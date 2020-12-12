@@ -677,13 +677,12 @@ class CharmmPsfFile(object):
             # Store the atoms
             a1, a2, a3, a4 = imp.atom1, imp.atom2, imp.atom3, imp.atom4
             at1, at2, at3, at4 = a1.attype, a2.attype, a3.attype, a4.attype
-            key = tuple(sorted([at1, at2, at3, at4]))
+            key = min((at1,at2,at3,at4), (at4,at3,at2,at1))
             if not key in parmset.improper_types:
-                # Check for wild-cards
-                for anchor in (at2, at3, at4):
-                    key = tuple(sorted([at1, anchor, 'X', 'X']))
-                    if key in parmset.improper_types:
-                        break # This is the right key
+                key = min((at1,'X', 'X',at4),(at4,'X','X',at1))
+                if not key in parmset.improper_types:
+                    raise MissingParameter('No improper dihedral parameters found for '
+                                           '%r' % imp)
             try:
                 imp.improper_type = parmset.improper_types[key]
             except KeyError:
@@ -1489,6 +1488,36 @@ class CharmmPsfFile(object):
             for i in range(force.getNumExceptions()):
                 ii, jj, q, eps, sig = force.getExceptionParameters(i)
                 nbtforce.addExclusion(ii, jj)
+
+        # Calculate 1-4 atom pairs' NBThole interaction which have been excluded in the way of CustomBond 
+        if has_drude_particle and has_nbthole_terms:
+            nbt14force=mm.CustomBondForce('-138.935456*charge_prod*(1.0+0.5*screen*r)*exp(-1.0*screen*r)/r')
+            nbt14force.addPerBondParameter("charge_prod")
+            nbt14force.addPerBondParameter("screen")
+            nbt14force.setForceGroup(self.NONBONDED_FORCE_GROUP)
+            num_nbt14=0
+            for dih in self.dihedral_list:
+                a1, a4 = dih.atom1, dih.atom4
+                idx_a1, idx_a4 = a1.idx, a4.idx
+                at1, at4 = self.atom_list[idx_a1].type, self.atom_list[idx_a4].type
+                if at1.nbthole and at4.nbthole:
+                    name_a4 = at4.name
+                    name_a1 = at1.name
+                    nbt_value1 = at1.nbthole.get(name_a4,0)
+                    nbt_value2 = at4.nbthole.get(name_a1,0)
+                    if abs(nbt_value1)>TINY or abs(nbt_value2)>TINY:
+                        q1, q4 = a1.charge, a4.charge
+                        alpha1= pow(-1*self.drudeconsts_list[idx_a1][0],-1./6.)
+                        alpha4= pow(-1*self.drudeconsts_list[idx_a4][0],-1./6.)
+                        qij=q1*q4
+                        if abs(nbt_value1)>=abs(nbt_value2):
+                            screen=nbt_value1*alpha1*alpha4*10.0
+                        else:
+                            screen=nbt_value2*alpha1*alpha4*10.0
+                        nbt14force.addBond(idx_a1,idx_a4,[qij,screen])
+                        num_nbt14+=1
+            if num_nbt14>0:
+                system.addForce(nbt14force)
 
         # Add GB model if we're doing one
         if implicitSolvent is not None:
