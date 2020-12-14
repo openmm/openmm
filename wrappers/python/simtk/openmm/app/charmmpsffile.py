@@ -1502,18 +1502,13 @@ class CharmmPsfFile(object):
                 at1, at4 = self.atom_list[idx_a1].type, self.atom_list[idx_a4].type
                 if at1.nbthole and at4.nbthole:
                     name_a4 = at4.name
-                    name_a1 = at1.name
-                    nbt_value1 = at1.nbthole.get(name_a4,0)
-                    nbt_value2 = at4.nbthole.get(name_a1,0)
-                    if abs(nbt_value1)>TINY or abs(nbt_value2)>TINY:
+                    nbt_value = at1.nbthole.get(name_a4,0)
+                    if abs(nbt_value)>TINY:
                         q1, q4 = a1.charge, a4.charge
                         alpha1= pow(-1*self.drudeconsts_list[idx_a1][0],-1./6.)
                         alpha4= pow(-1*self.drudeconsts_list[idx_a4][0],-1./6.)
                         qij=q1*q4
-                        if abs(nbt_value1)>=abs(nbt_value2):
-                            screen=nbt_value1*alpha1*alpha4*10.0
-                        else:
-                            screen=nbt_value2*alpha1*alpha4*10.0
+                        screen=nbt_value*alpha1*alpha4*10.0
                         nbt14force.addBond(idx_a1,idx_a4,[qij,screen])
                         num_nbt14+=1
             if num_nbt14>0:
