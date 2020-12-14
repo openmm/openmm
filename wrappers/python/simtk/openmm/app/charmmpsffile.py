@@ -1489,7 +1489,7 @@ class CharmmPsfFile(object):
                 ii, jj, q, eps, sig = force.getExceptionParameters(i)
                 nbtforce.addExclusion(ii, jj)
 
-        # Calculate 1-4 atom pairs' NBThole interaction which have been excluded in the way of CustomBond 
+        # Using CustomBondForce to Calculate 1-4 atom pairs' NBThole interaction which have been excluded 
         if has_drude_particle and has_nbthole_terms:
             nbt14force=mm.CustomBondForce('-138.935456*charge_prod*(1.0+0.5*screen*r)*exp(-1.0*screen*r)/r')
             nbt14force.addPerBondParameter("charge_prod")
