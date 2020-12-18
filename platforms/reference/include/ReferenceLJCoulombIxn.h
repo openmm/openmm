@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -36,7 +36,7 @@ class ReferenceLJCoulombIxn {
        
       bool cutoff;
       bool useSwitch;
-      bool periodic;
+      bool periodic, periodicExceptions;
       bool ewald;
       bool pme, ljpme;
       const OpenMM::NeighborList* neighborList;
@@ -158,6 +158,14 @@ class ReferenceLJCoulombIxn {
          --------------------------------------------------------------------------------------- */
 
       void setUseLJPME(double dalpha, int dmeshSize[3]);
+      
+      /**---------------------------------------------------------------------------------------
+
+         Set whether exceptions use periodic boundary conditions.
+
+         --------------------------------------------------------------------------------------- */
+
+      void setPeriodicExceptions(bool periodic);
 
       /**---------------------------------------------------------------------------------------
       

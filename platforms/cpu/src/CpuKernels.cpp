@@ -666,6 +666,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
         nonbonded->setPeriodic(boxVectors);
+        nonbonded->setPeriodicExceptions(exceptionsArePeriodic);
     }
     if (ewald)
         nonbonded->setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
