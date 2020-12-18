@@ -811,18 +811,6 @@ void IntegrationUtilities::loadCheckpoint(istream& stream) {
     randomSeed.upload(randomSeedVec);
 }
 
-template <typename T>
-double computeEnergySum(T* velm, int numParticles)
-{
-    double energySum = 0.0;
-    for (int i = 0; i < numParticles; i++) {
-        auto v = velm[i];
-        if (v.w != 0)
-            energySum += (v.x * v.x + v.y * v.y + v.z * v.z) / v.w;
-    }
-    return energySum;
-}
-
 double IntegrationUtilities::computeKineticEnergy(double timeShift) {
     int numParticles = context.getNumAtoms();
     if (timeShift != 0) {
@@ -846,16 +834,22 @@ double IntegrationUtilities::computeKineticEnergy(double timeShift) {
     
     double energy = 0.0;
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
-		auto velm = (mm_double4*)context.getPinnedBuffer();
+	auto velm = (mm_double4*)context.getPinnedBuffer();
         context.getVelm().download(velm);
-
-        energy = computeEnergySum<mm_double4>(velm, numParticles);
+        for (int i = 0; i < numParticles; i++) {
+            mm_double4 v = velm[i];
+            if (v.w != 0)
+                energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
+        }
     }
     else {
-		auto velm = (mm_float4*)context.getPinnedBuffer();
+	auto velm = (mm_float4*)context.getPinnedBuffer();
         context.getVelm().download(velm);
-
-        energy = computeEnergySum<mm_float4>(velm, numParticles);
+        for (int i = 0; i < numParticles; i++) {
+            mm_float4 v = velm[i];
+            if (v.w != 0)
+                energy += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
+        }
     }
     
     // Restore the velocities.
