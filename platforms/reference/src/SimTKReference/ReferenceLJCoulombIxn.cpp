@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -48,7 +48,7 @@ using namespace OpenMM;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceLJCoulombIxn::ReferenceLJCoulombIxn() : cutoff(false), useSwitch(false), periodic(false), ewald(false), pme(false), ljpme(false) {
+ReferenceLJCoulombIxn::ReferenceLJCoulombIxn() : cutoff(false), useSwitch(false), periodic(false), periodicExceptions(false), ewald(false), pme(false), ljpme(false) {
 }
 
 /**---------------------------------------------------------------------------------------
@@ -165,6 +165,10 @@ void ReferenceLJCoulombIxn::setUseLJPME(double alpha, int meshSize[3]) {
     dispersionMeshDim[1] = meshSize[1];
     dispersionMeshDim[2] = meshSize[2];
     ljpme = true;
+}
+
+void ReferenceLJCoulombIxn::setPeriodicExceptions(bool periodic) {
+    periodicExceptions = periodic;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -466,7 +470,10 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
                 int jj = exclusion;
 
                 double deltaR[2][ReferenceForce::LastDeltaRIndex];
-                ReferenceForce::getDeltaR(atomCoordinates[jj], atomCoordinates[ii], deltaR[0]);
+                if (periodicExceptions)
+                    ReferenceForce::getDeltaRPeriodic(atomCoordinates[jj], atomCoordinates[ii], periodicBoxVectors, deltaR[0]);
+                else
+                    ReferenceForce::getDeltaR(atomCoordinates[jj], atomCoordinates[ii], deltaR[0]);
                 double r         = deltaR[0][ReferenceForce::RIndex];
                 double inverseR  = 1.0/(deltaR[0][ReferenceForce::RIndex]);
                 double alphaR    = alphaEwald * r;

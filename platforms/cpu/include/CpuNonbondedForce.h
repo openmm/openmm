@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -126,6 +126,14 @@ class CpuNonbondedForce {
       void setUseLJPME(float alpha, int meshSize[3]);
 
       /**---------------------------------------------------------------------------------------
+
+         Set whether exceptions use periodic boundary conditions.
+
+         --------------------------------------------------------------------------------------- */
+
+      void setPeriodicExceptions(bool periodic);
+
+      /**---------------------------------------------------------------------------------------
       
          Calculate Ewald ixn
       
@@ -172,7 +180,7 @@ class CpuNonbondedForce {
 protected:
         bool cutoff;
         bool useSwitch;
-        bool periodic;
+        bool periodic, periodicExceptions;
         bool triclinic;
         bool ewald;
         bool ljpme, pme;

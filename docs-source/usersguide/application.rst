@@ -37,12 +37,12 @@ the results.
 Installing OpenMM
 *****************
 
-OpenMM is installed using the Conda package manager (http://conda.pydata.org).
+OpenMM is installed using the Conda package manager (https://docs.conda.io).
 Conda is included as part of the Anaconda Python distribution, which you can
-download from http://docs.continuum.io/anaconda/install.  This is a Python
+download from https://docs.continuum.io/anaconda/install.  This is a Python
 distribution specifically designed for scientific applications, with many of the
 most popular mathematical and scientific packages preinstalled.  Alternatively
-you can use Miniconda (available from http://conda.pydata.org/miniconda.html),
+you can use Miniconda (available from https://docs.conda.io/en/latest/miniconda.html),
 which includes only Python itself, plus the Conda package manager.  That offers
 a much smaller initial download, with the ability to then install only the
 packages you want.
@@ -54,33 +54,43 @@ to compile from source.  Detailed instruction are in Chapter :ref:`compiling-ope
 \1. Begin by installing the most recent 64 bit, Python 3.x version of either
 Anaconda or Miniconda.
 
-\2. (Optional) If you want to run OpenMM on a GPU, install CUDA and/or OpenCL.
+\2. (Optional) If you want to run OpenMM on a GPU, make sure you have installed
+modern drivers from your vendor.
 
-  * If you have an Nvidia GPU, download CUDA from
-    https://developer.nvidia.com/cuda-downloads.  Be sure to install both the
-    drivers and toolkit.  OpenCL is included with the CUDA drivers.
+  * If you have an Nvidia GPU, download the latest drivers from
+    https://www.nvidia.com/Download/index.aspx. CUDA itself will be provided by
+    the :code:`cudatoolkit` package when you install :code:`openmm` in the next steps.
   * If you have an AMD GPU and are using Linux or Windows, download the latest
-    version of the Catalyst driver from http://support.amd.com.  On OS X, OpenCL
+    version of the drivers from https://support.amd.com.  On OS X, OpenCL
     is included with the operating system and is supported on OS X 10.10.3 or
     later.
 
 3. Open a command line terminal and type the following command
 ::
 
-    conda install -c omnia -c conda-forge openmm
+    conda install -c conda-forge openmm
 
-This installs a version of OpenMM that is compiled to work with CUDA 10.1.
+With recent :code:`conda` versions (v4.8.4+), this will install a version of
+OpenMM compiled with the latest version of CUDA supported by your drivers.
 Alternatively you can request a version that is compiled for a specific CUDA
 version with the command
 ::
 
-    conda install -c omnia/label/cuda92 -c conda-forge openmm
+    conda install -c conda-forge openmm cudatoolkit==10.0
 
-where :code:`cuda92` should be replaced with the particular CUDA version
-installed on your computer.  Supported values are :code:`cuda75`, :code:`cuda80`,
-:code:`cuda90`, :code:`cuda91`, :code:`cuda92`, :code:`cuda100`, and :code:`cuda101`.  Because
-different CUDA releases are not binary compatible with each other, OpenMM can
-only work with the particular CUDA version it was compiled with.
+where :code:`10.0` should be replaced with the particular CUDA version
+you want to target.  We build packages for CUDA 9.2 and above on Linux,
+and CUDA 10.0 and above on Windows.  Because different CUDA releases are
+not binary compatible with each other, OpenMM can only work with the particular
+CUDA version it was compiled with.
+
+.. note::
+
+    Prior to v7.5, conda packages for OpenMM where distributed through the
+    :code:`omnia` channel (https://anaconda.org/omnia). Starting with v7.5,
+    OpenMM will use the :code:`conda-forge` channel. Check the documentation
+    for previous versions in case you want to install older packages.
+
 
 4. Verify your installation by typing the following command:
 ::
@@ -491,7 +501,7 @@ script, and can even run it for you.
 To install OpenMM-Setup, open a command line terminal and type the following command
 ::
 
-    conda install -c omnia openmm-setup
+    conda install -c conda-forge openmm-setup
 
 You can then launch it by typing the command
 ::
@@ -800,7 +810,7 @@ You can install this via conda with:
 
 .. code-block:: bash
 
-    $ conda install -c omnia -c conda-forge openmmforcefields
+    $ conda install -c conda-forge openmmforcefields
 
 You can then add a small molecule residue template generator using the Open Force
 Field Initiative small molecule force fields using the following example:
