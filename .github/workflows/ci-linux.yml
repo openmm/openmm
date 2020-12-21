@@ -184,7 +184,7 @@ jobs:
         shell: bash -l {0}
         run: |
           set -euxo pipefail
-          source env_vars.sh
+          test -f env_vars.sh && source env_vars.sh
 
           cmake . -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/OpenMM ${{ matrix.CMAKE_FLAGS }}
 
@@ -194,13 +194,13 @@ jobs:
       - name: "Tests"
         shell: bash -l {0}
         run: |
-          source env_vars.sh
+          test -f env_vars.sh && source env_vars.sh
           python devtools/run-ctest.py # --start-time $START_TIME
 
       - name: "Python tests"
         shell: bash -l {0}
         run: |
-          source env_vars.sh
+          test -f env_vars.sh && source env_vars.sh
           python -m simtk.testInstallation;
           (cd python/tests && pytest -v)
 
