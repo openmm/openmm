@@ -7,6 +7,8 @@ dependencies:
 - cmake 3.17.*
 - cython
 - python
-- gromacs
 - fftw
 - numpy
+- gromacs
+- ocl-icd-system
+- doxygen 1.8.14
