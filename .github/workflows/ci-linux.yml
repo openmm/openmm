@@ -136,7 +136,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
-          environment-file: devtools/conda-envs/build-linux.yaml
+          environment-file: devtools/conda-envs/build-linux.yml
           auto-activate-base: false
 
       - name: "Install CUDA (if needed)"
