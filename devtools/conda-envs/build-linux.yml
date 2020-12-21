@@ -12,3 +12,4 @@ dependencies:
 - gromacs
 - ocl-icd-system
 - doxygen 1.8.14
+- pytest
