@@ -43,7 +43,7 @@ jobs:
               -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
               -DOPENMM_BUILD_EXAMPLES=OFF \
               -DOPENCL_INCLUDE_DIR=${{ github.workspace }}/AMDAPPSDK/include \
-              -DOPENCL_LIBRARY=${{ github.workspace }}/AMDAPPSDK/lib/x86_64/libOpenCL.so
+              -DOPENCL_LIBRARY=${{ github.workspace }}/AMDAPPSDK/lib/x86_64/libOpenCL.so \
 
           - name: x64 CUDA 10.0
             os: ubuntu-latest
@@ -66,7 +66,8 @@ jobs:
               -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-10.0/bin/nvcc \
               -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-10.0/ \
               -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-10.0/include \
-              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0/
+              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0/ \
+
 
           - name: x64 Static Lib
             os: ubuntu-latest
@@ -146,6 +147,7 @@ jobs:
         run: |
           wget -q "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-repo-ubuntu1804_${CUDA_VERSION}_amd64.deb"
           sudo dpkg -i cuda-repo-ubuntu1804_${CUDA_VERSION}_amd64.deb
+          sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
           sudo apt-get update -qq
           CUDA_APT=${CUDA_VERSION%-*}
           CUDA_APT=${CUDA_APT/./-}
@@ -174,7 +176,9 @@ jobs:
         shell: bash -l {0}
         run: |
           set -euxo pipefail
-          cmake . ${{ matrix.CMAKE_FLAGS }} -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/OpenMM
+
+          cmake . -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/OpenMM ${{ matrix.CMAKE_FLAGS }}
+
           make -j2 install
           make PythonInstall
 
