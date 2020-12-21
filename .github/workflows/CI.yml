@@ -255,7 +255,7 @@ jobs:
           sudo apt-get install -y libgl1-mesa-dev cuda-drivers cuda-core-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} cuda-cufft-dev-${CUDA_APT}
           sudo apt-get clean
           export CUDA_HOME=/usr/local/cuda-${CUDA_APT/-/.}
-          export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+          export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH:-}
           export PATH=${CUDA_HOME}/bin:${PATH}
 
           echo "CUDA_HOME=${CUDA_HOME}" >> ${GITHUB_ENV}
@@ -273,7 +273,7 @@ jobs:
           mkdir -p ${OPENCL_VENDOR_PATH}
           sh AMD-APP-SDK*.sh --tar -xf -C ${AMDAPPSDK}
           echo libamdocl64.so > ${OPENCL_VENDOR_PATH}/amdocl64.icd
-          export LD_LIBRARY_PATH=${AMDAPPSDK}/lib/x86_64:${LD_LIBRARY_PATH}
+          export LD_LIBRARY_PATH=${AMDAPPSDK}/lib/x86_64:${LD_LIBRARY_PATH:-}
           chmod +x ${AMDAPPSDK}/bin/x86_64/clinfo
           ${AMDAPPSDK}/bin/x86_64/clinfo
           sudo apt-get install -y libgl1-mesa-dev
