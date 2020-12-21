@@ -165,6 +165,8 @@ jobs:
       - name: "Install OpenCL (if needed)"
         if: matrix.OPENCL == true
         run: |
+          test -f env_vars.sh && source env_vars.sh
+
           wget -q http://s3.amazonaws.com/omnia-ci/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2
           tar -xjf AMD-APP-SDK*.tar.bz2
           AMDAPPSDK=${{ github.workspace }}/AMDAPPSDK
