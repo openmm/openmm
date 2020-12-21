@@ -13,7 +13,6 @@ on:
     #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
     - cron: "0 0 * * *"
 
-name: CI
 
 jobs:
   linux:
