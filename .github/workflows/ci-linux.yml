@@ -144,7 +144,7 @@ jobs:
         env:
           CUDA_VERSION: ${{ matrix.CUDA_VERSION }}
         run: |
-          wget "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb"
+          wget -q "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb"
           sudo dpkg -i cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb
           sudo apt-get update -qq
           CUDA_APT=${CUDA_VERSION%-*}
@@ -158,7 +158,7 @@ jobs:
       - name: "Install OpenCL (if needed)"
         if: matrix.OPENCL == true
         run: |
-          wget http://s3.amazonaws.com/omnia-ci/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2
+          wget -q http://s3.amazonaws.com/omnia-ci/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2
           tar -xjf AMD-APP-SDK*.tar.bz2
           AMDAPPSDK=${{ github.workspace }}/AMDAPPSDK
           export OPENCL_VENDOR_PATH=${AMDAPPSDK}/etc/OpenCL/vendors
@@ -168,7 +168,7 @@ jobs:
           export LD_LIBRARY_PATH=${AMDAPPSDK}/lib/x86_64:${LD_LIBRARY_PATH}
           chmod +x ${AMDAPPSDK}/bin/x86_64/clinfo
           ${AMDAPPSDK}/bin/x86_64/clinfo
-          apt-get install -y libgl1-mesa-dev
+          sudo apt-get install -y libgl1-mesa-dev
 
       - name: "Build OpenMM"
         shell: bash -l {0}
