@@ -191,20 +191,23 @@ jobs:
           cmake . -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/OpenMM ${{ matrix.CMAKE_FLAGS }}
 
           make -j2 install
+
+      - name: "Build & test Python wrappers"
+        shell: bash -l {0}
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
+        run: |
+          set -euxo pipefail
+          test -f env_vars.sh && source env_vars.sh
+
           make PythonInstall
+          python -m simtk.testInstallation
+          (cd python/tests && pytest -v)
 
       - name: "Tests"
         shell: bash -l {0}
         run: |
           test -f env_vars.sh && source env_vars.sh
           python devtools/run-ctest.py # --start-time $START_TIME
-
-      - name: "Python tests"
-        shell: bash -l {0}
-        run: |
-          test -f env_vars.sh && source env_vars.sh
-          python -m simtk.testInstallation;
-          (cd python/tests && pytest -v)
 
   # macos:
   #   runs-on: ${{ matrix.os }}
