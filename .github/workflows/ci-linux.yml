@@ -45,12 +45,12 @@ jobs:
               -DOPENCL_INCLUDE_DIR=${{ github.workspace }}/AMDAPPSDK/include
               -DOPENCL_LIBRARY=${{ github.workspace }}/AMDAPPSDK/lib/x86_64/libOpenCL.so
 
-          - name: x64 CUDA 7.5
+          - name: x64 CUDA 10.0
             os: ubuntu-latest
             python-version: "3.6"
             CUDA: true
             OPENCL: false
-            CUDA_VERSION: "7.5-18"
+            CUDA_VERSION: "10.0.130-1"
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -61,12 +61,12 @@ jobs:
               -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
               -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
               -DOPENMM_BUILD_EXAMPLES=OFF
-              -DOPENCL_LIBRARY=/usr/local/cuda-7.5/lib64/libOpenCL.so
-              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-7.5/lib64/libcudart.so
-              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-7.5/bin/nvcc
-              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-7.5/
-              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-7.5/include
-              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-7.5/
+              -DOPENCL_LIBRARY=/usr/local/cuda-10.0/lib64/libOpenCL.so
+              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-10.0/lib64/libcudart.so
+              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-10.0/bin/nvcc
+              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-10.0/
+              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-10.0/include
+              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0/
 
           - name: x64 Static Lib
             os: ubuntu-latest
@@ -144,7 +144,7 @@ jobs:
         env:
           CUDA_VERSION: ${{ matrix.CUDA_VERSION }}
         run: |
-          wget -q "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb"
+          wget -q "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-repo-ubuntu1804_${CUDA_VERSION}_amd64.deb"
           sudo dpkg -i cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb
           sudo apt-get update -qq
           CUDA_APT=${CUDA_VERSION%-*}
