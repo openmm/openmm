@@ -1,0 +1,17 @@
+name: build
+channels:
+- conda-forge
+- bioconda
+dependencies:
+- swig
+- ninja
+- cmake 3.17.*
+- cython
+- python
+- fftw
+- numpy
+- doxygen 1.8.14
+- pytest
+- pytest-xdist
+- khronos-opencl-icd-loader
+- vs2017_win-64

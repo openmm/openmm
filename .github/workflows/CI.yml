@@ -1,0 +1,365 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "master"
+  pull_request:
+    branches:
+      - "master"
+  schedule:
+    # Nightly tests run on master by default:
+    #   Scheduled workflows run on the latest commit on the default or base branch.
+    #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
+    - cron: "0 0 * * *"
+
+
+jobs:
+  unix:
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux CUDA 10.0
+            os: ubuntu-latest
+            python-version: "3.6"
+            CUDA: true
+            OPENCL: false
+            CUDA_VERSION: "10.0.130-1"
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_CUDA_TESTS=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DOPENMM_BUILD_CPU_LIB=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+              -DOPENCL_LIBRARY=/usr/local/cuda-10.0/lib64/libOpenCL.so \
+              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-10.0/lib64/libcudart.so \
+              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-10.0/bin/nvcc \
+              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-10.0/ \
+              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-10.0/include \
+              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0/ \
+
+          - name: Linux CUDA 10.1
+            os: ubuntu-latest
+            python-version: "3.6"
+            CUDA: true
+            OPENCL: false
+            CUDA_VERSION: "10.1.243-1"
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_CUDA_TESTS=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DOPENMM_BUILD_CPU_LIB=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+              -DOPENCL_LIBRARY=/usr/local/cuda-10.1/lib64/libOpenCL.so \
+              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-10.1/lib64/libcudart.so \
+              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-10.1/bin/nvcc \
+              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-10.1/ \
+              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-10.1/include \
+              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.1/ \
+
+          - name: Linux CUDA 10.2
+            os: ubuntu-latest
+            python-version: "3.6"
+            CUDA: true
+            OPENCL: false
+            CUDA_VERSION: "10.2.89-1"
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_CUDA_TESTS=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DOPENMM_BUILD_CPU_LIB=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+              -DOPENCL_LIBRARY=/usr/local/cuda-10.2/lib64/libOpenCL.so \
+              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-10.2/lib64/libcudart.so \
+              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-10.2/bin/nvcc \
+              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-10.2/ \
+              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-10.2/include \
+              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.2/ \
+
+          - name: Linux AMD OpenCL
+            os: ubuntu-latest
+            python-version: "3.6"
+            OPENCL: true
+            CUDA: false
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=ON \
+              -DOPENMM_BUILD_OPENCL_TESTS=ON \
+              -DOPENMM_BUILD_STATIC_LIB=OFF \
+              -DOPENMM_BUILD_CPU_LIB=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_PME_PLUGIN=OFF \
+              -DOPENMM_BUILD_AMOEBA_PLUGIN=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+              -DOPENCL_INCLUDE_DIR=${GITHUB_WORKSPACE}/AMDAPPSDK/include \
+              -DOPENCL_LIBRARY=${GITHUB_WORKSPACE}/AMDAPPSDK/lib/x86_64/libOpenCL.so \
+
+          - name: Linux CPU Python 3.6 with static lib
+            os: ubuntu-latest
+            python-version: "3.6"
+            OPENCL: false
+            CUDA: false
+            CC: $CCACHE/clang
+            CXX: $CCACHE/clang++
+            CMAKE_FLAGS: "-DOPENMM_BUILD_STATIC_LIB=ON"
+
+          - name: Linux CPU Python 3.6
+            python-version: "3.6"
+            os: ubuntu-latest
+            OPENCL: false
+            CUDA: false
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+
+          # - name: Linux CPU Python 3.7
+          #   python-version: "3.7"
+          #   os: ubuntu-latest
+          #   OPENCL: false
+          #   CUDA: false
+          #   # CC: $CCACHE/gcc
+          #   # CXX: $CCACHE/g++
+          #   CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+
+          # - name: Linux CPU Python 3.8
+          #   python-version: "3.8"
+          #   os: ubuntu-latest
+          #   OPENCL: false
+          #   CUDA: false
+          #   # CC: $CCACHE/gcc
+          #   # CXX: $CCACHE/g++
+          #   CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+
+          # - name: Linux CPU Python 3.9
+          #   python-version: "3.9"
+          #   os: ubuntu-latest
+          #   OPENCL: false
+          #   CUDA: false
+          #   # CC: $CCACHE/gcc
+          #   # CXX: $CCACHE/g++
+          #   CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+
+          - name: MacOS CPU Python 3.6
+            python-version: "3.6"
+            os: macos-latest
+            OPENCL: false
+            CUDA: false
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+
+          - name: MacOS CPU Python 3.7
+            python-version: "3.7"
+            os: macos-latest
+            OPENCL: false
+            CUDA: false
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+
+          - name: MacOS CPU Python 3.8
+            python-version: "3.8"
+            os: macos-latest
+            OPENCL: false
+            CUDA: false
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+
+          - name: MacOS CPU Python 3.9
+            python-version: "3.9"
+            os: macos-latest
+            OPENCL: false
+            CUDA: false
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+
+          # - name: ppc64le
+          #   python-version: "3.8"
+          #   os: ubuntu-latest
+          #   OPENCL: false
+          #   CUDA: false
+          #   CMAKE_FLAGS: ""
+
+          # - name: aarch64
+          #   python-version: "3.8"
+          #   os: ubuntu-latest
+          #   OPENCL: false
+          #   CUDA: false
+          #   CMAKE_FLAGS: ""
+
+          # - name: Docs
+          #   python-version: "3.6"
+          #   os: ubuntu-latest
+          #   OPENCL: false
+          #   CUDA: false
+          #   CC: $CCACHE/clang
+          #   CXX: $CCACHE/clang++
+          #   DOCS_DEPLOY: true
+          #   CMAKE_FLAGS: |
+          #     -DOPENMM_GENERATE_API_DOCS=ON \
+          #     -DOPENMM_BUILD_CUDA_TESTS=OFF \
+          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+          #     -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+          #     -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+          #     -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+          #     -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+          #     -DOPENMM_BUILD_EXAMPLES=OFF \
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: conda-incubator/setup-miniconda@v2
+        name: "Prepare base dependencies"
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: build
+          environment-file: devtools/conda-envs/build-unix.yml
+          auto-activate-base: false
+
+      - name: "Install CUDA on Ubuntu (if needed)"
+        if: matrix.CUDA == true && startsWith(matrix.os, 'ubuntu')
+        env:
+          CUDA_VERSION: ${{ matrix.CUDA_VERSION }}
+        run: |
+          set -euxo pipefail
+          wget -q "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-repo-ubuntu1804_${CUDA_VERSION}_amd64.deb"
+          sudo dpkg -i cuda-repo-ubuntu1804_${CUDA_VERSION}_amd64.deb
+          sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
+          sudo apt-get update -qq
+          CUDA_APT=${CUDA_VERSION/./-}
+          CUDA_APT=${CUDA_APT%.*}
+          sudo apt-get install -y libgl1-mesa-dev cuda-drivers cuda-core-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} cuda-cufft-dev-${CUDA_APT}
+          sudo apt-get clean
+          export CUDA_HOME=/usr/local/cuda-${CUDA_APT/-/.}
+          export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+          export PATH=${CUDA_HOME}/bin:${PATH}
+
+          echo "CUDA_HOME=${CUDA_HOME}" >> ${GITHUB_ENV}
+          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> ${GITHUB_ENV}
+          echo "PATH=${PATH}" >> ${GITHUB_ENV}
+
+      - name: "Install OpenCL on Ubuntu (if needed)"
+        if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
+        run: |
+          set -euxo pipefail
+          wget -q http://s3.amazonaws.com/omnia-ci/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2
+          tar -xjf AMD-APP-SDK*.tar.bz2
+          AMDAPPSDK=${GITHUB_WORKSPACE}/AMDAPPSDK
+          export OPENCL_VENDOR_PATH=${AMDAPPSDK}/etc/OpenCL/vendors
+          mkdir -p ${OPENCL_VENDOR_PATH}
+          sh AMD-APP-SDK*.sh --tar -xf -C ${AMDAPPSDK}
+          echo libamdocl64.so > ${OPENCL_VENDOR_PATH}/amdocl64.icd
+          export LD_LIBRARY_PATH=${AMDAPPSDK}/lib/x86_64:${LD_LIBRARY_PATH}
+          chmod +x ${AMDAPPSDK}/bin/x86_64/clinfo
+          ${AMDAPPSDK}/bin/x86_64/clinfo
+          sudo apt-get install -y libgl1-mesa-dev
+
+          echo "OPENCL_VENDOR_PATH=${OPENCL_VENDOR_PATH}" >> ${GITHUB_ENV}
+          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> ${GITHUB_ENV}
+
+      - name: "Configure build with CMake"
+        shell: bash -l {0}
+        run: |
+          cmake . -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/OpenMM ${{ matrix.CMAKE_FLAGS }}
+
+      - name: "Build OpenMM"
+        shell: bash -l {0}
+        run: |
+          make -j2 install
+
+      - name: "Test OpenMM"
+        shell: bash -l {0}
+        run: |
+          python devtools/run-ctest.py --parallel 2
+
+      - name: "Build Python wrappers"
+        shell: bash -l {0}
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
+        run: |
+          make PythonInstall
+
+      - name: "Test Python wrappers"
+        shell: bash -l {0}
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
+        run: |
+          python -m simtk.testInstallation
+          cd python/tests
+          pytest -v -n2
+
+  windows:
+    runs-on: windows-latest
+    name: Windows Python ${{ matrix.python-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+        - "3.6"
+        - "3.7"
+        - "3.8"
+        - "3.9"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: conda-incubator/setup-miniconda@v2
+        name: "Prepare base dependencies"
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: build
+          environment-file: devtools/conda-envs/build-windows.yml
+          auto-activate-base: false
+
+      - name: "Configure build with CMake"
+        run: |
+          mkdir build & cd build
+          cmake -G Ninja ^
+                -DCMAKE_BUILD_TYPE=Release ^
+                -DOPENCL_INCLUDE_DIR=%CONDA_PREFIX%/Library/include ^
+                -DOPENCL_LIBRARY=%CONDA_PREFIX%/lib/OpenCL.lib ^
+                -DCMAKE_BUILD_TYPE=Release ^
+                -DCMAKE_CXX_COMPILER=cl.exe ^
+                -DCMAKE_C_COMPILER=cl.exe ^
+                -DCMAKE_INSTALL_PREFIX=../install ^
+                -DOPENMM_BUILD_EXAMPLES=OFF ^
+                -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+                ..
+
+      - name: "Build OpenMM"
+        run: |
+          cd build
+          cmake --build . ^
+                --config Release ^
+                -- -j 2
+          cmake --build . --target install
+          cmake --build . --target PythonInstall
+
+      - name: "Test OpenMM"
+        run: |
+          cd build
+          python ..\devtools\run-ctest.py --parallel 2
+          cd python\tests
+          py.test -v -n 2
