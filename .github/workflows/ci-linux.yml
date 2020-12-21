@@ -149,8 +149,8 @@ jobs:
           sudo dpkg -i cuda-repo-ubuntu1804_${CUDA_VERSION}_amd64.deb
           sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
           sudo apt-get update -qq
-          CUDA_APT=${CUDA_VERSION%-*}
-          CUDA_APT=${CUDA_APT/./-}
+          CUDA_APT=${CUDA_VERSION/./-}
+          CUDA_APT=${CUDA_APT%.*}
           sudo apt-get install -y libgl1-mesa-dev cuda-drivers cuda-core-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} cuda-cufft-dev-${CUDA_APT}
           sudo apt-get clean
           # export CUDA_HOME=/usr/local/cuda-${CUDA_VERSION%%-*}
