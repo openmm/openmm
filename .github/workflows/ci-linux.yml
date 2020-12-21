@@ -1,17 +1,17 @@
-# TODO
-# - ccache
-# - ppc64le
-# - aarch64
+name: CI
 
 on:
   push:
     branches:
-      - master
+      - "master"
   pull_request:
     branches:
-      - master
+      - "master"
   schedule:
-    - "0 0 * * *"
+    # Nightly tests run on master by default:
+    #   Scheduled workflows run on the latest commit on the default or base branch.
+    #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
+    - cron: "0 0 * * *"
 
 name: CI
 
