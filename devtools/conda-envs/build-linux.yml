@@ -1,0 +1,12 @@
+name: build
+channels:
+- conda-forge
+- bioconda
+dependencies:
+- swig
+- cmake 3.17.*
+- cython
+- python
+- gromacs
+- fftw
+- numpy

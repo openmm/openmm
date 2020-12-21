@@ -1,0 +1,225 @@
+# TODO
+# - ccache
+# - ppc64le
+# - aarch64
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  schedule:
+    - "0 0 * * *"
+
+name: CI
+
+jobs:
+  linux:
+    runs-on: ${{ matrix.os }}
+    name: Linux ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        ### LINUX BUILDS ###
+          - name: x64 CPU OpenCL
+            os: ubuntu-latest
+            python-version: "3.6"
+            OPENCL: true
+            CUDA: false
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: |
+              -OPENMM_BUILD_OPENCL_LIB=ON
+              -DOPENMM_BUILD_OPENCL_TESTS=ON
+              -DOPENMM_BUILD_STATIC_LIB=OFF
+              -DOPENMM_BUILD_CPU_LIB=OFF
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
+              -DOPENMM_BUILD_PME_PLUGIN=OFF
+              -DOPENMM_BUILD_AMOEBA_PLUGIN=OFF
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
+              -DOPENMM_BUILD_EXAMPLES=OFF
+              -DOPENCL_INCLUDE_DIR=${{ github.workspace }}/AMDAPPSDK/include
+              -DOPENCL_LIBRARY=${{ github.workspace }}/AMDAPPSDK/lib/x86_64/libOpenCL.so
+
+          - name: x64 CUDA 7.5
+            os: ubuntu-latest
+            python-version: "3.6"
+            CUDA: true
+            OPENCL: false
+            CUDA_VERSION: "7.5-18"
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_CUDA_TESTS=OFF
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
+              -DOPENMM_BUILD_EXAMPLES=OFF
+              -DOPENCL_LIBRARY=/usr/local/cuda-7.5/lib64/libOpenCL.so
+              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-7.5/lib64/libcudart.so
+              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-7.5/bin/nvcc
+              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-7.5/
+              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-7.5/include
+              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-7.5/
+
+          - name: Static Lib
+            os: ubuntu-latest
+            python-version: "3.6"
+            OPENCL: false
+            CUDA: false
+            CC: $CCACHE/clang
+            CXX: $CCACHE/clang++
+            CMAKE_FLAGS: "-DOPENMM_BUILD_STATIC_LIB=ON"
+
+          - name: x64 Python 3.6
+            python-version: "3.6"
+            os: ubuntu-latest
+            OPENCL: false
+            CUDA: false
+            CC: $CCACHE/clang
+            CXX: $CCACHE/clang++
+            DOCS_DEPLOY: true
+            CMAKE_FLAGS: "-DOPENMM_GENERATE_API_DOCS=ON"
+
+          - name: x64 Python 3.7
+            python-version: "3.7"
+            os: ubuntu-latest
+            OPENCL: false
+            CUDA: false
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: ""
+
+          - name: x64 Python 3.8
+            python-version: "3.8"
+            os: ubuntu-latest
+            OPENCL: false
+            CUDA: false
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: ""
+
+          - name: x64 Python 3.9
+            python-version: "3.9"
+            os: ubuntu-latest
+            OPENCL: false
+            CUDA: false
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: ""
+
+          # - name: ppc64le
+          #   python-version: "3.8"
+          #   os: ubuntu-latest
+          #   OPENCL: false
+          #   CUDA: false
+          #   CMAKE_FLAGS: ""
+
+          # - name: aarch64
+          #   python-version: "3.8"
+          #   os: ubuntu-latest
+          #   OPENCL: false
+          #   CUDA: false
+          #   CMAKE_FLAGS: ""
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: conda-incubator/setup-miniconda@v2
+        name: "Prepare base dependencies"
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: build
+          environment-file: devtools/conda-envs/build-linux.yaml
+          auto-activate-base: false
+
+      - name: "Install CUDA (if needed)"
+        if: matrix.CUDA == true
+        run: |
+          wget "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb"
+          sudo dpkg -i cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb
+          sudo apt-get update -qq
+          CUDA_APT=${CUDA_VERSION%-*}
+          CUDA_APT=${CUDA_APT/./-}
+          sudo apt-get install -y libgl1-mesa-dev cuda-drivers cuda-core-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} cuda-cufft-dev-${CUDA_APT}
+          sudo apt-get clean
+          # export CUDA_HOME=/usr/local/cuda-${CUDA_VERSION%%-*}
+          # export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+          # export PATH=${CUDA_HOME}/bin:${PATH}
+
+      - name: "Install OpenCL (if needed)"
+        if: matrix.OPENCL == true
+        run: |
+          wget http://s3.amazonaws.com/omnia-ci/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2
+          tar -xjf AMD-APP-SDK*.tar.bz2
+          AMDAPPSDK=${{ github.workspace }}/AMDAPPSDK
+          export OPENCL_VENDOR_PATH=${AMDAPPSDK}/etc/OpenCL/vendors
+          mkdir -p ${OPENCL_VENDOR_PATH}
+          sh AMD-APP-SDK*.sh --tar -xf -C ${AMDAPPSDK}
+          echo libamdocl64.so > ${OPENCL_VENDOR_PATH}/amdocl64.icd
+          export LD_LIBRARY_PATH=${AMDAPPSDK}/lib/x86_64:${LD_LIBRARY_PATH}
+          chmod +x ${AMDAPPSDK}/bin/x86_64/clinfo
+          ${AMDAPPSDK}/bin/x86_64/clinfo
+          apt-get install -y libgl1-mesa-dev
+
+      - name: "Build OpenMM"
+        shell: bash -l {0}
+        run: |
+          set -euxo pipefail
+          cmake . ${CMAKE_FLAGS} -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/OpenMM
+          make -j2 install
+          make PythonInstall
+
+      - name: "Tests"
+        shell: bash -l {0}
+        run: |
+          python devtools/run-ctest.py # --start-time $START_TIME
+
+      - name: "Python tests"
+        shell: bash -l {0}
+        run: |
+          python -m simtk.testInstallation;
+          (cd python/tests && pytest -v)
+
+  macos:
+    runs-on: ${{ matrix.os }}
+    name: MacOS ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: MacOS
+            os: macos-latest
+            OPENCL: false
+            CUDA: false
+            CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+
+    steps:
+      - uses: actions/checkout@v2
+
+  windows:
+    runs-on: ${{ matrix.os }}
+    name: Windows ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            OPENCL: false
+            CUDA: false
+            CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Prepare build requirements
+        run: |
+          echo "Install stuff here"
