@@ -123,7 +123,10 @@ jobs:
             CUDA: false
             CC: $CCACHE/clang
             CXX: $CCACHE/clang++
-            CMAKE_FLAGS: "-DOPENMM_BUILD_STATIC_LIB=ON"
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_STATIC_LIB=ON \
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
           - name: Linux CPU Python 3.6
             python-version: "3.6"
@@ -132,7 +135,9 @@ jobs:
             CUDA: false
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
-            CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
           # - name: Linux CPU Python 3.7
           #   python-version: "3.7"
@@ -141,7 +146,9 @@ jobs:
           #   CUDA: false
           #   # CC: $CCACHE/gcc
           #   # CXX: $CCACHE/g++
-          #   CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+          #   CMAKE_FLAGS: |
+          #     -DOPENMM_BUILD_OPENCL_LIB=OFF \
+          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
           # - name: Linux CPU Python 3.8
           #   python-version: "3.8"
@@ -150,7 +157,9 @@ jobs:
           #   CUDA: false
           #   # CC: $CCACHE/gcc
           #   # CXX: $CCACHE/g++
-          #   CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+          #   CMAKE_FLAGS: |
+          #     -DOPENMM_BUILD_OPENCL_LIB=OFF \
+          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
           # - name: Linux CPU Python 3.9
           #   python-version: "3.9"
@@ -159,7 +168,9 @@ jobs:
           #   CUDA: false
           #   # CC: $CCACHE/gcc
           #   # CXX: $CCACHE/g++
-          #   CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+          #   CMAKE_FLAGS: |
+          #     -DOPENMM_BUILD_OPENCL_LIB=OFF \
+          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
           - name: MacOS CPU Python 3.6
             python-version: "3.6"
@@ -168,34 +179,42 @@ jobs:
             CUDA: false
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
-            CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS CPU Python 3.7
-            python-version: "3.7"
-            os: macos-latest
-            OPENCL: false
-            CUDA: false
-            # CC: $CCACHE/gcc
-            # CXX: $CCACHE/g++
-            CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+          # - name: MacOS CPU Python 3.7
+          #   python-version: "3.7"
+          #   os: macos-latest
+          #   OPENCL: false
+          #   CUDA: false
+          #   # CC: $CCACHE/gcc
+          #   # CXX: $CCACHE/g++
+          #   CMAKE_FLAGS: |
+          #     -DOPENMM_BUILD_OPENCL_LIB=OFF \
+          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS CPU Python 3.8
-            python-version: "3.8"
-            os: macos-latest
-            OPENCL: false
-            CUDA: false
-            # CC: $CCACHE/gcc
-            # CXX: $CCACHE/g++
-            CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+          # - name: MacOS CPU Python 3.8
+          #   python-version: "3.8"
+          #   os: macos-latest
+          #   OPENCL: false
+          #   CUDA: false
+          #   # CC: $CCACHE/gcc
+          #   # CXX: $CCACHE/g++
+          #   CMAKE_FLAGS: |
+          #     -DOPENMM_BUILD_OPENCL_LIB=OFF \
+          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS CPU Python 3.9
-            python-version: "3.9"
-            os: macos-latest
-            OPENCL: false
-            CUDA: false
-            # CC: $CCACHE/gcc
-            # CXX: $CCACHE/g++
-            CMAKE_FLAGS: "-DOPENMM_BUILD_OPENCL_TESTS=OFF"
+          # - name: MacOS CPU Python 3.9
+          #   python-version: "3.9"
+          #   os: macos-latest
+          #   OPENCL: false
+          #   CUDA: false
+          #   # CC: $CCACHE/gcc
+          #   # CXX: $CCACHE/g++
+          #   CMAKE_FLAGS: |
+          #     -DOPENMM_BUILD_OPENCL_LIB=OFF \
+          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
           # - name: ppc64le
           #   python-version: "3.8"
@@ -308,7 +327,7 @@ jobs:
         run: |
           python -m simtk.testInstallation
           cd python/tests
-          pytest -v -n2
+          pytest -v -n 2
 
   windows:
     runs-on: windows-latest
@@ -318,9 +337,9 @@ jobs:
       matrix:
         python-version:
         - "3.6"
-        - "3.7"
-        - "3.8"
-        - "3.9"
+        # - "3.7"
+        # - "3.8"
+        # - "3.9"
 
     steps:
       - uses: actions/checkout@v2
@@ -335,7 +354,8 @@ jobs:
 
       - name: "Configure build with CMake"
         run: |
-          mkdir build & cd build
+          mkdir build
+          cd build
           cmake -G Ninja ^
                 -DCMAKE_BUILD_TYPE=Release ^
                 -DOPENCL_INCLUDE_DIR=%CONDA_PREFIX%/Library/include ^
