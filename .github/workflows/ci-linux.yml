@@ -153,9 +153,14 @@ jobs:
           CUDA_APT=${CUDA_APT%.*}
           sudo apt-get install -y libgl1-mesa-dev cuda-drivers cuda-core-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} cuda-cufft-dev-${CUDA_APT}
           sudo apt-get clean
-          # export CUDA_HOME=/usr/local/cuda-${CUDA_VERSION%%-*}
-          # export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
-          # export PATH=${CUDA_HOME}/bin:${PATH}
+          export CUDA_HOME=/usr/local/cuda-${CUDA_APT/-/.}
+          export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+          export PATH=${CUDA_HOME}/bin:${PATH}
+
+          echo "export CUDA_HOME=${CUDA_HOME}" >> env_vars.sh
+          echo "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> env_vars.sh
+          echo "export PATH=${PATH}" >> env_vars.sh
+
 
       - name: "Install OpenCL (if needed)"
         if: matrix.OPENCL == true
@@ -172,10 +177,14 @@ jobs:
           ${AMDAPPSDK}/bin/x86_64/clinfo
           sudo apt-get install -y libgl1-mesa-dev
 
+          echo "export OPENCL_VENDOR_PATH=${OPENCL_VENDOR_PATH}" >> env_vars.sh
+          echo "export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> env_vars.sh
+
       - name: "Build OpenMM"
         shell: bash -l {0}
         run: |
           set -euxo pipefail
+          source env_vars.sh
 
           cmake . -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/OpenMM ${{ matrix.CMAKE_FLAGS }}
 
@@ -185,11 +194,13 @@ jobs:
       - name: "Tests"
         shell: bash -l {0}
         run: |
+          source env_vars.sh
           python devtools/run-ctest.py # --start-time $START_TIME
 
       - name: "Python tests"
         shell: bash -l {0}
         run: |
+          source env_vars.sh
           python -m simtk.testInstallation;
           (cd python/tests && pytest -v)
 
