@@ -31,18 +31,18 @@ jobs:
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_LIB=ON
-              -DOPENMM_BUILD_OPENCL_TESTS=ON
-              -DOPENMM_BUILD_STATIC_LIB=OFF
-              -DOPENMM_BUILD_CPU_LIB=OFF
-              -DOPENMM_BUILD_REFERENCE_TESTS=OFF
-              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
-              -DOPENMM_BUILD_PME_PLUGIN=OFF
-              -DOPENMM_BUILD_AMOEBA_PLUGIN=OFF
-              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF
-              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
-              -DOPENMM_BUILD_EXAMPLES=OFF
-              -DOPENCL_INCLUDE_DIR=${{ github.workspace }}/AMDAPPSDK/include
+              -DOPENMM_BUILD_OPENCL_LIB=ON \
+              -DOPENMM_BUILD_OPENCL_TESTS=ON \
+              -DOPENMM_BUILD_STATIC_LIB=OFF \
+              -DOPENMM_BUILD_CPU_LIB=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_PME_PLUGIN=OFF \
+              -DOPENMM_BUILD_AMOEBA_PLUGIN=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+              -DOPENCL_INCLUDE_DIR=${{ github.workspace }}/AMDAPPSDK/include \
               -DOPENCL_LIBRARY=${{ github.workspace }}/AMDAPPSDK/lib/x86_64/libOpenCL.so
 
           - name: x64 CUDA 10.0
@@ -54,18 +54,18 @@ jobs:
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
-              -DOPENMM_BUILD_CUDA_TESTS=OFF
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF
-              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF
-              -DOPENMM_BUILD_REFERENCE_TESTS=OFF
-              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF
-              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF
-              -DOPENMM_BUILD_EXAMPLES=OFF
-              -DOPENCL_LIBRARY=/usr/local/cuda-10.0/lib64/libOpenCL.so
-              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-10.0/lib64/libcudart.so
-              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-10.0/bin/nvcc
-              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-10.0/
-              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-10.0/include
+              -DOPENMM_BUILD_CUDA_TESTS=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+              -DOPENCL_LIBRARY=/usr/local/cuda-10.0/lib64/libOpenCL.so \
+              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-10.0/lib64/libcudart.so \
+              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-10.0/bin/nvcc \
+              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-10.0/ \
+              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-10.0/include \
               -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0/
 
           - name: x64 Static Lib
@@ -145,7 +145,7 @@ jobs:
           CUDA_VERSION: ${{ matrix.CUDA_VERSION }}
         run: |
           wget -q "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-repo-ubuntu1804_${CUDA_VERSION}_amd64.deb"
-          sudo dpkg -i cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb
+          sudo dpkg -i cuda-repo-ubuntu1804_${CUDA_VERSION}_amd64.deb
           sudo apt-get update -qq
           CUDA_APT=${CUDA_VERSION%-*}
           CUDA_APT=${CUDA_APT/./-}
