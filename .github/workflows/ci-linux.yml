@@ -141,9 +141,11 @@ jobs:
 
       - name: "Install CUDA (if needed)"
         if: matrix.CUDA == true
+        env:
+          CUDA_VERSION: ${{ matrix.CUDA_VERSION }}
         run: |
           wget "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb"
-          sudo dpkg -i cuda-repo-ubuntu1404_${{ matrix.CUDA_VERSION}_amd64.deb
+          sudo dpkg -i cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb
           sudo apt-get update -qq
           CUDA_APT=${CUDA_VERSION%-*}
           CUDA_APT=${CUDA_APT/./-}
