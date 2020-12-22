@@ -341,22 +341,22 @@ jobs:
           cd build
           make -j2 install
 
+      - name: "Build Python wrappers"
+        shell: bash -l {0}
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
+        run: |
+          cd build
+          make PythonInstall
+
       - name: "Test OpenMM"
         shell: bash -l {0}
         run: |
           cd build
           python ../devtools/run-ctest.py --parallel 2 --timeout 600
 
-      - name: "Build Python wrappers"
-        shell: bash -l {0}
-        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }} && always()
-        run: |
-          cd build
-          make PythonInstall
-
       - name: "Test Python wrappers"
         shell: bash -l {0}
-        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }} && always()
         run: |
           python -m simtk.testInstallation
           cd build/python/tests
@@ -410,22 +410,24 @@ jobs:
           if errorlevel 1 exit 1
           jom -j 2 install
           if errorlevel 1 exit 1
+
+      - name: "Build Python wrappers"
+        shell: cmd /C call {0}
+        run: |
+          cd build
+          jom -j 2 PythonInstall
+
       - name: "Test OpenMM"
         shell: cmd /C call {0}
         run: |
           cd build
           python ..\devtools\run-ctest.py --parallel 2 --timeout 600
 
-      - name: "Build Python wrappers"
+      - name: "Test Python wrappers"
         shell: cmd /C call {0}
         if: always()
         run: |
-          cd build
-          jom -j 2 PythonInstall
-
-      - name: "Test Python wrappers"
-        shell: cmd /C call {0}
-        run: |
+          set "PYTHONPATH=%CONDA_PREFIX%\Lib\site-packages"
           python -m simtk.testInstallation
           cd build\python\tests
           python -m pytest -v -n 2
