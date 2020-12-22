@@ -302,7 +302,7 @@ jobs:
 
       - name: "Set Xcode on MacOS (if needed)"
         if: startsWith(matrix.os, 'macos')
-        uses: maxim-lobanov/setup-xcode
+        uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: "10.*"
 
