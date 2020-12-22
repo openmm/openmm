@@ -424,6 +424,7 @@ jobs:
         run: |
           mkdir build
           cd build
+          set "CUDA_TOOLKIT_ROOT_DIR=%CUDA_PATH:\=/%"
           cmake -G "NMake Makefiles JOM" ^
                 -DCMAKE_BUILD_TYPE=Release ^
                 -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library ^
@@ -434,6 +435,7 @@ jobs:
                 -DCMAKE_C_COMPILER=cl.exe ^
                 -DOPENMM_BUILD_EXAMPLES=OFF ^
                 -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+                -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
                 ..
 
       - name: "Build OpenMM"
