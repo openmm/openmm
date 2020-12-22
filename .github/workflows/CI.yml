@@ -328,81 +328,22 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
-          environment-file: devtools/conda-envs/build-${{ matrix.os }}.yml
+          environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
           auto-activate-base: false
 
       - name: "Install CUDA on Ubuntu (if needed)"
         if: matrix.CUDA == true && startsWith(matrix.os, 'ubuntu')
         env:
           CUDA_VERSION: ${{ matrix.CUDA_VERSION }}
-        run: |
-          set -euxo pipefail
-          sudo wget -O /etc/apt/preferences.d/cuda-repository-pin-600 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
-          sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
-          sudo add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
-          sudo apt-get update -qq
-
-          CUDA_APT=${CUDA_VERSION/./-}
-          if [[ ${CUDA_VERSION} == 10.* ]]; then CUFFT="cuda-cufft"; else CUFFT="libcufft"; fi
-          sudo apt-get install -y \
-            libgl1-mesa-dev cuda-compiler-${CUDA_APT} \
-            cuda-drivers cuda-driver-dev-${CUDA_APT} \
-            cuda-cudart-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} \
-            ${CUFFT}-${CUDA_APT} ${CUFFT}-dev-${CUDA_APT} \
-            cuda-nvprof-${CUDA_APT}
-          sudo apt-get clean
-
-          export CUDA_HOME=/usr/local/cuda-${CUDA_APT/-/.}
-          export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH:-}
-          export PATH=${CUDA_HOME}/bin:${PATH}
-
-          echo "CUDA_HOME=${CUDA_HOME}" >> ${GITHUB_ENV}
-          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> ${GITHUB_ENV}
-          echo "PATH=${PATH}" >> ${GITHUB_ENV}
+        run: source devtools/ci/gh-actions/scripts/install_cuda.sh
 
       - name: "Install OpenCL on Ubuntu (if needed)"
         if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
-        run: |
-          set -euxo pipefail
-          wget -q http://s3.amazonaws.com/omnia-ci/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2
-          tar -xjf AMD-APP-SDK*.tar.bz2
-          AMDAPPSDK=${GITHUB_WORKSPACE}/AMDAPPSDK
-          export OPENCL_VENDOR_PATH=${AMDAPPSDK}/etc/OpenCL/vendors
-          mkdir -p ${OPENCL_VENDOR_PATH}
-          sh AMD-APP-SDK*.sh --tar -xf -C ${AMDAPPSDK}
-          echo libamdocl64.so > ${OPENCL_VENDOR_PATH}/amdocl64.icd
-          export LD_LIBRARY_PATH=${AMDAPPSDK}/lib/x86_64:${LD_LIBRARY_PATH:-}
-          chmod +x ${AMDAPPSDK}/bin/x86_64/clinfo
-          ${AMDAPPSDK}/bin/x86_64/clinfo
-          sudo apt-get install -y libgl1-mesa-dev
-
-          echo "OPENCL_VENDOR_PATH=${OPENCL_VENDOR_PATH}" >> ${GITHUB_ENV}
-          echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> ${GITHUB_ENV}
+        run: source devtools/ci/gh-actions/scripts/install_amd_opencl.sh
 
       - name: "Set SDK on MacOS (if needed)"
         if: startsWith(matrix.os, 'macos')
-        run: |
-          OSX_SDK_DIR="$(xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs"
-          export MACOSX_DEPLOYMENT_TARGET=10.9
-          export MACOSX_SDK_VERSION=10.9
-
-          export CMAKE_OSX_SYSROOT="${OSX_SDK_DIR}/MacOSX${MACOSX_SDK_VERSION}.sdk"
-
-          if [[ ! -d ${CMAKE_OSX_SYSROOT}} ]]; then
-              echo "Downloading ${MACOSX_SDK_VERSION} sdk"
-              curl -L -O https://github.com/phracker/MacOSX-SDKs/releases/download/10.15/MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz
-              tar -xf MacOSX${MACOSX_SDK_VERSION}.sdk.tar.xz -C "$(dirname ${CMAKE_OSX_SYSROOT})"
-          fi
-
-          if [[ "$MACOSX_DEPLOYMENT_TARGET" == 10.* ]]; then
-            # set minimum sdk version to our target
-            plutil -replace MinimumSDKVersion -string ${MACOSX_SDK_VERSION} $(xcode-select -p)/Platforms/MacOSX.platform/Info.plist
-            plutil -replace DTSDKName -string macosx${MACOSX_SDK_VERSION}internal $(xcode-select -p)/Platforms/MacOSX.platform/Info.plist
-          fi
-
-          echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET}" >> ${GITHUB_ENV}
-          echo "CMAKE_OSX_SYSROOT=${MACOSX_DEPLOYMENT_TARGET}" >> ${GITHUB_ENV}
-          echo "CMAKE_OSX_SYSROOT=${CMAKE_OSX_SYSROOT}" >> ${GITHUB_ENV}
+        run: source devtools/ci/gh-actions/scripts/install_macos_sdk.sh
 
       - name: "Configure build with CMake"
         shell: bash -l {0}
@@ -443,7 +384,7 @@ jobs:
 
   windows:
     runs-on: windows-latest
-    name: Windows Python ${{ matrix.python-version }}
+    name: Windows Python ${{ matrix.python-version }}, CUDA ${{ matrix.cuda-version }}
     env:
       CONDA_ENVS_PATH: "D:/conda-envs"
     strategy:
@@ -454,6 +395,13 @@ jobs:
         # - "3.7"
         # - "3.8"
         # - "3.9"
+        cuda-version:
+        - "10.0"
+        # - "10.1"
+        # - "10.2"
+        # - "11.0"
+        # - "11.1"
+        # - "11.2"
 
     steps:
       - uses: actions/checkout@v2
@@ -463,8 +411,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
-          environment-file: devtools/conda-envs/build-windows-latest.yml
+          environment-file: devtools/ci/gh-actions/conda-envs/build-windows-latest.yml
           auto-activate-base: false
+      - name: "Install CUDA (if needed)"
+        shell: cmd /C call {0}
+        env:
+          CUDA_VERSION: ${{ matrix.cuda-version }}
+        run: call devtools/ci/gh-actions/scripts/install_cuda.bat
 
       - name: "Configure build with CMake"
         shell: cmd /C call {0}
