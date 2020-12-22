@@ -431,7 +431,7 @@ jobs:
         shell: bash -l {0}
         run: |
           cd build
-          python ../devtools/run-ctest.py --parallel 2 --timeout 600
+          python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 300
 
       - name: "Test Python wrappers"
         shell: bash -l {0}
@@ -502,7 +502,7 @@ jobs:
         shell: cmd /C call {0}
         run: |
           cd build
-          python ..\devtools\run-ctest.py --parallel 2 --timeout 600
+          python ..\devtools\run-ctest.py --parallel 2 --timeout 600 --job-duration 300
 
       - name: "Test Python wrappers"
         shell: cmd /C call {0}
