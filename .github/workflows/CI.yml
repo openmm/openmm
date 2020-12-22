@@ -303,22 +303,30 @@ jobs:
       - name: "Configure build with CMake"
         shell: bash -l {0}
         run: |
-          cmake . -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} ${{ matrix.CMAKE_FLAGS }}
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
+            -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
+            ${{ matrix.CMAKE_FLAGS }}
 
       - name: "Build OpenMM"
         shell: bash -l {0}
         run: |
+          cd build
           make -j2 install
 
       - name: "Test OpenMM"
         shell: bash -l {0}
         run: |
-          python devtools/run-ctest.py --parallel 2
+          cd build
+          python ../devtools/run-ctest.py --parallel 2
 
       - name: "Build Python wrappers"
         shell: bash -l {0}
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
         run: |
+          cd build
           make PythonInstall
 
       - name: "Test Python wrappers"
@@ -326,7 +334,7 @@ jobs:
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
         run: |
           python -m simtk.testInstallation
-          cd python/tests
+          cd build/python/tests
           pytest -v -n 2
 
   windows:
@@ -357,32 +365,36 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake -G Ninja ^
-                -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library ^
+          cmake -G "NMake Makefiles JOM" ^
                 -DCMAKE_BUILD_TYPE=Release ^
+                -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library ^
+                -DCMAKE_PREFIX_PATH=%CONDA_PREFIX%/Library ^
                 -DOPENCL_INCLUDE_DIR=%CONDA_PREFIX%/Library/include ^
                 -DOPENCL_LIBRARY=%CONDA_PREFIX%/Library/lib/OpenCL.lib ^
-                -DCMAKE_BUILD_TYPE=Release ^
                 -DCMAKE_CXX_COMPILER=cl.exe ^
                 -DCMAKE_C_COMPILER=cl.exe ^
                 -DOPENMM_BUILD_EXAMPLES=OFF ^
                 -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
                 ..
+          if errorlevel 1 exit 1
 
       - name: "Build OpenMM"
         shell: cmd /C call {0}
         run: |
           cd build
-          cmake --build . ^
-                --config Release ^
-                -- -j 2
-          cmake --build . --target install
-          cmake --build . --target PythonInstall
+          jom -j 2
+          if errorlevel 1 exit 1
+          jom -j 2 install
+          if errorlevel 1 exit 1
+          jom -j 2 PythonInstall
+          if errorlevel 1 exit 1
 
       - name: "Test OpenMM"
         shell: cmd /C call {0}
         run: |
           cd build
           python ..\devtools\run-ctest.py --parallel 2
+          if errorlevel 1 exit 1
           cd python\tests
           py.test -v -n 2
+          if errorlevel 1 exit 1
