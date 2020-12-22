@@ -303,7 +303,7 @@ jobs:
       - name: "Configure build with CMake"
         shell: bash -l {0}
         run: |
-          cmake . -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/OpenMM ${{ matrix.CMAKE_FLAGS }}
+          cmake . -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} ${{ matrix.CMAKE_FLAGS }}
 
       - name: "Build OpenMM"
         shell: bash -l {0}
@@ -358,13 +358,13 @@ jobs:
           mkdir build
           cd build
           cmake -G Ninja ^
+                -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library ^
                 -DCMAKE_BUILD_TYPE=Release ^
                 -DOPENCL_INCLUDE_DIR=%CONDA_PREFIX%/Library/include ^
                 -DOPENCL_LIBRARY=%CONDA_PREFIX%/Library/lib/OpenCL.lib ^
                 -DCMAKE_BUILD_TYPE=Release ^
                 -DCMAKE_CXX_COMPILER=cl.exe ^
                 -DCMAKE_C_COMPILER=cl.exe ^
-                -DCMAKE_INSTALL_PREFIX=../install ^
                 -DOPENMM_BUILD_EXAMPLES=OFF ^
                 -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
                 ..
