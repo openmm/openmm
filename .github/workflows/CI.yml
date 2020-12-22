@@ -349,7 +349,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
-          environment-file: devtools/conda-envs/build-${{ matrix.os }}.yml
+          environment-file: devtools/conda-envs/build-windows-latest.yml
           auto-activate-base: false
 
       - name: "Configure build with CMake"

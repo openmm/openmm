@@ -1,0 +1,114 @@
+jobs:
+
+  # Configure, build, install, and test job
+  - job: 'windows_build'
+    displayName: 'Windows VS2017'
+    pool:
+      vmImage: 'vs2017-win2016'
+    timeoutInMinutes: 360
+    variables:
+      llvm.version: '7.0.1'
+      mkl.version: '2019.1'
+      python.version: '3.6'
+      cmake.build.type: 'Release'
+    steps:
+      # Install Chocolatey (https://chocolatey.org/install#install-with-powershellexe)
+      - powershell: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+          Write-Host "##vso[task.setvariable variable=PATH]$env:PATH"
+          choco --version
+        displayName: "Install Chocolatey"
+      # Install Miniconda
+      - script: |
+          choco install -y miniconda3
+          choco install -y doxygen.install
+          choco install -y graphviz
+          choco install -y 7zip.install
+          choco install -y wget
+          set PATH=C:\tools\miniconda3\Scripts;C:\tools\miniconda3;C:\tools\miniconda3\Library\bin;%PATH%
+          echo '##vso[task.setvariable variable=PATH]%PATH%'
+          set LIB=C:\tools\miniconda3\Library\lib;%LIB%
+          echo '##vso[task.setvariable variable=LIB]%LIB%'
+          conda --version
+        displayName: "Install Miniconda"
+      # Configure Miniconda
+      - script: |
+          conda config --set always_yes yes
+          conda info
+        displayName: "Configure Miniconda"
+      # Create conda enviroment
+      # Note: conda activate doesn't work here, because it creates a new shell!
+      - script: |
+          conda install cmake ^
+                        cython ^
+                        fftw ^
+                        ninja ^
+                        numpy ^
+                        swig ^
+                        pytest ^
+                        pytest-xdist ^
+                        python=$(python.version)
+          conda list
+        displayName: "Install conda packages"
+      # Download OpenCL Headers and build the ICD loader
+      - script: |
+          setlocal EnableDelayedExpansion
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          mkdir opencl
+          cd opencl
+          wget https://www.khronos.org/registry/cl/specs/opencl-icd-1.2.11.0.tgz -O opencl-icd-1.2.11.0.tgz
+          7z x opencl-icd-1.2.11.0.tgz > $null
+          7z x opencl-icd-1.2.11.0.tar > $null
+          robocopy .\icd . /E /MOVE
+          mkdir inc\CL > $null
+          wget https://github.com/KhronosGroup/OpenCL-Headers/archive/master.zip
+          7z x master.zip
+          move .\OpenCL-Headers-master\CL\*.h .\inc\CL\
+          mkdir lib > $null
+          cd lib
+          cmake -G Ninja .. ^
+                -DCMAKE_CXX_COMPILER=cl.exe ^
+                -DCMAKE_C_COMPILER=cl.exe
+          cmake --build . ^
+                -- -j %NUMBER_OF_PROCESSORS%
+        displayName: "Download and install OpenCL"
+        workingDirectory: $(Pipeline.Workspace)
+      # Configure
+      - script: |
+          setlocal EnableDelayedExpansion
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          mkdir build & cd build
+          cmake -G Ninja ^
+                -DOPENCL_INCLUDE_DIR=$(Pipeline.Workspace)/opencl/inc ^
+                -DOPENCL_LIBRARY=$(Pipeline.Workspace)/opencl/lib/OpenCL.lib ^
+                -DCMAKE_BUILD_TYPE=$(cmake.build.type) ^
+                -DCMAKE_CXX_COMPILER=cl.exe ^
+                -DCMAKE_C_COMPILER=cl.exe ^
+                -DCMAKE_INSTALL_PREFIX=../install ^
+                -DOPENMM_BUILD_EXAMPLES=OFF ^
+                -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+                $(Build.SourcesDirectory)
+        displayName: "Configure OpenMM with CMake"
+        workingDirectory: $(Build.BinariesDirectory)
+      # Build
+      - script: |
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          set SWIG_LIB=C:\tools\miniconda3\Library\bin\Lib
+          cmake --build . ^
+                --config $(cmake.build.type) ^
+                -- -j %NUMBER_OF_PROCESSORS%
+          cmake --build . --target install
+          cmake --build . --target PythonInstall
+        displayName: "Build OpenMM"
+        workingDirectory: $(Build.BinariesDirectory)/build
+      # Test
+      - script: |
+          python $(Build.SourcesDirectory)\devtools\run-ctest.py --job-duration 50 --parallel %NUMBER_OF_PROCESSORS%
+          cd python\tests
+          python --version
+          set PYTHONPATH=D:\tools\miniconda3\Lib\site-packages
+          dir %PYTHONPATH%
+          py.test -v -n %NUMBER_OF_PROCESSORS%
+        workingDirectory: $(Build.BinariesDirectory)/build
+        displayName: "Run OpenMM tests"
