@@ -353,31 +353,34 @@ jobs:
           auto-activate-base: false
 
       - name: "Configure build with CMake"
+        shell: cmd /C call {0}
         run: |
           mkdir build
           cd build
-          cmake -G Ninja `
-                -DCMAKE_BUILD_TYPE=Release `
-                -DOPENCL_INCLUDE_DIR=$env:CONDA_PREFIX/Library/include `
-                -DOPENCL_LIBRARY=$env:CONDA_PREFIX/lib/OpenCL.lib `
-                -DCMAKE_BUILD_TYPE=Release `
-                -DCMAKE_CXX_COMPILER=cl.exe `
-                -DCMAKE_C_COMPILER=cl.exe `
-                -DCMAKE_INSTALL_PREFIX=../install `
-                -DOPENMM_BUILD_EXAMPLES=OFF `
-                -DOPENMM_BUILD_OPENCL_TESTS=OFF `
+          cmake -G Ninja ^
+                -DCMAKE_BUILD_TYPE=Release ^
+                -DOPENCL_INCLUDE_DIR=%CONDA_PREFIX%/Library/include ^
+                -DOPENCL_LIBRARY=%CONDA_PREFIX%/Library/lib/OpenCL.lib ^
+                -DCMAKE_BUILD_TYPE=Release ^
+                -DCMAKE_CXX_COMPILER=cl.exe ^
+                -DCMAKE_C_COMPILER=cl.exe ^
+                -DCMAKE_INSTALL_PREFIX=../install ^
+                -DOPENMM_BUILD_EXAMPLES=OFF ^
+                -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
                 ..
 
       - name: "Build OpenMM"
+        shell: cmd /C call {0}
         run: |
           cd build
-          cmake --build . `
-                --config Release `
+          cmake --build . ^
+                --config Release ^
                 -- -j 2
           cmake --build . --target install
           cmake --build . --target PythonInstall
 
       - name: "Test OpenMM"
+        shell: cmd /C call {0}
         run: |
           cd build
           python ..\devtools\run-ctest.py --parallel 2
