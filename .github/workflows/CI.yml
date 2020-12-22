@@ -27,7 +27,7 @@ jobs:
             python-version: "3.6"
             CUDA: true
             OPENCL: false
-            CUDA_VERSION: "10.0.130-1"
+            CUDA_VERSION: "10.0"
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -51,7 +51,7 @@ jobs:
             python-version: "3.6"
             CUDA: true
             OPENCL: false
-            CUDA_VERSION: "10.1.243-1"
+            CUDA_VERSION: "10.1"
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -75,7 +75,7 @@ jobs:
             python-version: "3.6"
             CUDA: true
             OPENCL: false
-            CUDA_VERSION: "10.2.89-1"
+            CUDA_VERSION: "10.2"
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -93,6 +93,78 @@ jobs:
               -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-10.2/ \
               -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-10.2/include \
               -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.2/ \
+
+          - name: Linux CUDA 11.0
+            os: ubuntu-latest
+            python-version: "3.6"
+            CUDA: true
+            OPENCL: false
+            CUDA_VERSION: "11.0"
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_CUDA_TESTS=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DOPENMM_BUILD_CPU_LIB=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+              -DOPENCL_LIBRARY=/usr/local/cuda-11.0/lib64/libOpenCL.so \
+              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-11.0/lib64/libcudart.so \
+              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-11.0/bin/nvcc \
+              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-11.0/ \
+              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-11.0/include \
+              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.0/ \
+
+          - name: Linux CUDA 11.1
+            os: ubuntu-latest
+            python-version: "3.6"
+            CUDA: true
+            OPENCL: false
+            CUDA_VERSION: "11.1"
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_CUDA_TESTS=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DOPENMM_BUILD_CPU_LIB=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+              -DOPENCL_LIBRARY=/usr/local/cuda-11.1/lib64/libOpenCL.so \
+              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-11.1/lib64/libcudart.so \
+              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-11.1/bin/nvcc \
+              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-11.1/ \
+              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-11.1/include \
+              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.1/ \
+
+          - name: Linux CUDA 11.2
+            os: ubuntu-latest
+            python-version: "3.6"
+            CUDA: true
+            OPENCL: false
+            CUDA_VERSION: "11.2"
+            # CC: $CCACHE/gcc
+            # CXX: $CCACHE/g++
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_CUDA_TESTS=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DOPENMM_BUILD_CPU_LIB=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+              -DOPENCL_LIBRARY=/usr/local/cuda-11.2/lib64/libOpenCL.so \
+              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-11.2/lib64/libcudart.so \
+              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-11.2/bin/nvcc \
+              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-11.2/ \
+              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-11.2/include \
+              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.2/ \
 
           - name: Linux AMD OpenCL
             os: ubuntu-latest
@@ -265,14 +337,21 @@ jobs:
           CUDA_VERSION: ${{ matrix.CUDA_VERSION }}
         run: |
           set -euxo pipefail
-          wget -q "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-repo-ubuntu1804_${CUDA_VERSION}_amd64.deb"
-          sudo dpkg -i cuda-repo-ubuntu1804_${CUDA_VERSION}_amd64.deb
-          sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
+          wget -O /etc/apt/preferences.d/cuda-repository-pin-600 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
+          sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
+          sudo add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
           sudo apt-get update -qq
+
           CUDA_APT=${CUDA_VERSION/./-}
           CUDA_APT=${CUDA_APT%.*}
-          sudo apt-get install -y libgl1-mesa-dev cuda-drivers cuda-core-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} cuda-cufft-dev-${CUDA_APT}
+          if [[ CUDA_APT == 10.* ]]; then
+            CUFFT="cuda-cufft"
+          else
+            CUFFT="libcufft"
+          fi
+          sudo apt-get install -y libgl1-mesa-dev cuda-drivers cuda-compiler-${CUDA_APT} cuda-cudart-${CUDA_APT} ${CUFFT}-${CUDA_APT}
           sudo apt-get clean
+
           export CUDA_HOME=/usr/local/cuda-${CUDA_APT/-/.}
           export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH:-}
           export PATH=${CUDA_HOME}/bin:${PATH}
