@@ -3,13 +3,16 @@ channels:
 - conda-forge
 - bioconda
 dependencies:
-- swig
+# build
 - cmake
-- cython
+# host
 - python
+- cython
+- swig
 - fftw
 - numpy
-- gromacs 2018.*
 - doxygen 1.8.14
+# test
 - pytest
 - pytest-xdist
+- gromacs 2018.*
