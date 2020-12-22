@@ -300,6 +300,12 @@ jobs:
           echo "OPENCL_VENDOR_PATH=${OPENCL_VENDOR_PATH}" >> ${GITHUB_ENV}
           echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}" >> ${GITHUB_ENV}
 
+      - name: "Set Xcode on MacOS (if needed)"
+        if: startsWith(matrix.os, 'macos')
+        uses: maxim-lobanov/setup-xcode
+        with:
+          xcode-version: "10.*"
+
       - name: "Configure build with CMake"
         shell: bash -l {0}
         run: |
