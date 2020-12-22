@@ -365,6 +365,8 @@ jobs:
   windows:
     runs-on: windows-latest
     name: Windows Python ${{ matrix.python-version }}
+    env:
+      CONDA_ENVS_PATH: "D:/conda-envs"
     strategy:
       fail-fast: false
       matrix:
@@ -429,5 +431,6 @@ jobs:
         run: |
           set "PYTHONPATH=%CONDA_PREFIX%\Lib\site-packages"
           python -m simtk.testInstallation
+          if errorlevel 1 exit 1
           cd build\python\tests
           python -m pytest -v -n 2
