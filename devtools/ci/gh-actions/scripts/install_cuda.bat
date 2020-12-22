@@ -133,7 +133,7 @@ if not exist "%CUDA_PATH%\bin\nvcc.exe" (
     exit /b 1
 )
 
-echo "CUDA_PATH=%CUDA_PATH%" >> %GITHUB_ENV%
+echo CUDA_PATH=%CUDA_PATH% >> %GITHUB_ENV%
 
 :: Notes about nvcuda.dll
 :: ----------------------
