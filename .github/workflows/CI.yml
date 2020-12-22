@@ -356,7 +356,7 @@ jobs:
 
       - name: "Test Python wrappers"
         shell: bash -l {0}
-        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }} && always()
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && always() }}
         run: |
           python -m simtk.testInstallation
           cd build/python/tests
