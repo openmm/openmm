@@ -356,23 +356,23 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake -G Ninja ^
-                -DCMAKE_BUILD_TYPE=Release ^
-                -DOPENCL_INCLUDE_DIR=%CONDA_PREFIX%/Library/include ^
-                -DOPENCL_LIBRARY=%CONDA_PREFIX%/lib/OpenCL.lib ^
-                -DCMAKE_BUILD_TYPE=Release ^
-                -DCMAKE_CXX_COMPILER=cl.exe ^
-                -DCMAKE_C_COMPILER=cl.exe ^
-                -DCMAKE_INSTALL_PREFIX=../install ^
-                -DOPENMM_BUILD_EXAMPLES=OFF ^
-                -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+          cmake -G Ninja `
+                -DCMAKE_BUILD_TYPE=Release `
+                -DOPENCL_INCLUDE_DIR=$env:CONDA_PREFIX/Library/include `
+                -DOPENCL_LIBRARY=$env:CONDA_PREFIX/lib/OpenCL.lib `
+                -DCMAKE_BUILD_TYPE=Release `
+                -DCMAKE_CXX_COMPILER=cl.exe `
+                -DCMAKE_C_COMPILER=cl.exe `
+                -DCMAKE_INSTALL_PREFIX=../install `
+                -DOPENMM_BUILD_EXAMPLES=OFF `
+                -DOPENMM_BUILD_OPENCL_TESTS=OFF `
                 ..
 
       - name: "Build OpenMM"
         run: |
           cd build
-          cmake --build . ^
-                --config Release ^
+          cmake --build . `
+                --config Release `
                 -- -j 2
           cmake --build . --target install
           cmake --build . --target PythonInstall
