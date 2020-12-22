@@ -343,8 +343,7 @@ jobs:
           sudo apt-get update -qq
 
           CUDA_APT=${CUDA_VERSION/./-}
-          CUDA_APT=${CUDA_APT%.*}
-          if [[ CUDA_APT == 10.* ]]; then
+          if [[ CUDA_VERSION == 10.* ]]; then
             CUFFT="cuda-cufft"
           else
             CUFFT="libcufft"
