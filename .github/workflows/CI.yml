@@ -360,7 +360,7 @@ jobs:
         run: |
           python -m simtk.testInstallation
           cd build/python/tests
-          pytest -v -n 2
+          python -m pytest -v -n 2
 
   windows:
     runs-on: windows-latest
@@ -401,7 +401,6 @@ jobs:
                 -DOPENMM_BUILD_EXAMPLES=OFF ^
                 -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
                 ..
-          if errorlevel 1 exit 1
 
       - name: "Build OpenMM"
         shell: cmd /C call {0}
@@ -411,15 +410,21 @@ jobs:
           if errorlevel 1 exit 1
           jom -j 2 install
           if errorlevel 1 exit 1
-          jom -j 2 PythonInstall
-          if errorlevel 1 exit 1
-
       - name: "Test OpenMM"
         shell: cmd /C call {0}
         run: |
           cd build
           python ..\devtools\run-ctest.py --parallel 2 --timeout 600
-          if errorlevel 1 exit 1
-          cd python\tests
-          py.test -v -n 2
-          if errorlevel 1 exit 1
+
+      - name: "Build Python wrappers"
+        shell: cmd /C call {0}
+        run: |
+          cd build
+          jom -j 2 PythonInstall
+
+      - name: "Test Python wrappers"
+        shell: cmd /C call {0}
+        run: |
+          python -m simtk.testInstallation
+          cd build\python\tests
+          python -m pytest -v -n 2
