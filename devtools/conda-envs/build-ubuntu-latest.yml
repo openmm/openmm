@@ -4,7 +4,7 @@ channels:
 - bioconda
 dependencies:
 - swig
-- cmake 3.17.*
+- cmake
 - cython
 - python
 - fftw

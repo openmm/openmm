@@ -1,0 +1,15 @@
+name: build
+channels:
+- conda-forge
+- bioconda
+dependencies:
+- swig
+- cmake
+- cython
+- python
+- fftw
+- numpy
+- gromacs 2018.*
+- doxygen 1.8.14
+- pytest
+- pytest-xdist

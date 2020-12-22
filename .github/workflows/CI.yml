@@ -256,7 +256,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
-          environment-file: devtools/conda-envs/build-unix.yml
+          environment-file: devtools/conda-envs/build-${{ matrix.os }}.yml
           auto-activate-base: false
 
       - name: "Install CUDA on Ubuntu (if needed)"
@@ -349,7 +349,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
-          environment-file: devtools/conda-envs/build-windows.yml
+          environment-file: devtools/conda-envs/build-${{ matrix.os }}.yml
           auto-activate-base: false
 
       - name: "Configure build with CMake"

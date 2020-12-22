@@ -1,11 +1,11 @@
 name: build
 channels:
 - conda-forge
-- bioconda
+- defaults
 dependencies:
 - swig
 - ninja
-- cmake 3.17.*
+- cmake
 - cython
 - python
 - fftw
