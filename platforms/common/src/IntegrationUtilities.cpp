@@ -834,7 +834,7 @@ double IntegrationUtilities::computeKineticEnergy(double timeShift) {
     
     double energy = 0.0;
     if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
-        vector<mm_double4> velm;
+        auto velm = (mm_double4*)context.getPinnedBuffer();
         context.getVelm().download(velm);
         for (int i = 0; i < numParticles; i++) {
             mm_double4 v = velm[i];
@@ -843,7 +843,7 @@ double IntegrationUtilities::computeKineticEnergy(double timeShift) {
         }
     }
     else {
-        vector<mm_float4> velm;
+        auto velm = (mm_float4*)context.getPinnedBuffer();
         context.getVelm().download(velm);
         for (int i = 0; i < numParticles; i++) {
             mm_float4 v = velm[i];
