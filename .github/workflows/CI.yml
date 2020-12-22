@@ -343,7 +343,7 @@ jobs:
           sudo apt-get update -qq
 
           CUDA_APT=${CUDA_VERSION/./-}
-          if [[ ${CUDA_VERSION} == 10.* ]] then CUFFT="cuda-cufft" else CUFFT="libcufft" fi
+          if [[ ${CUDA_VERSION} == 10.* ]]; then CUFFT="cuda-cufft"; else CUFFT="libcufft"; fi
           sudo apt-get install -y libgl1-mesa-dev cuda-drivers cuda-compiler-${CUDA_APT} cuda-cudart-${CUDA_APT} ${CUFFT}-${CUDA_APT}
           sudo apt-get clean
 
