@@ -183,6 +183,7 @@ latex_elements = {
     \\usepackage{xstring}
     \\usepackage{color}
     \\usepackage{caption}
+    \\usepackage{textcomp}
     \\setcounter{tocdepth}{3}
     \\captionsetup[figure]{labelformat=empty}
     % Backwards compatibility for sphinx < 1.5

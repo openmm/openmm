@@ -182,6 +182,7 @@ latex_elements = {
     \\usepackage[none]{hyphenat}
     \\usepackage{xstring}
     \\usepackage{color}
+    \\usepackage{textcomp}
     \\usepackage{caption}
     \\setcounter{tocdepth}{3}
     \\captionsetup[figure]{labelformat=empty}
