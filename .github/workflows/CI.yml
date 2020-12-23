@@ -608,7 +608,8 @@ jobs:
         run: |
           set -ex
           echo 'APT::Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
-          sudo apt-get install -y latexmk
+          sudo apt-get install -y latexmk xzdec
+          tlmgr init-usertree
           tlmgr install cmap
 
       - name: "Configure build with CMake"
