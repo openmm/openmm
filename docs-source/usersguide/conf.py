@@ -183,6 +183,7 @@ latex_elements = {
     \\usepackage{xstring}
     \\usepackage{color}
     \\usepackage{textcomp}
+    \\usepackage[utf8]{inputenc}
     \\usepackage{caption}
     \\setcounter{tocdepth}{3}
     \\captionsetup[figure]{labelformat=empty}

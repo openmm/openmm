@@ -184,6 +184,7 @@ latex_elements = {
     \\usepackage{color}
     \\usepackage{caption}
     \\usepackage{textcomp}
+    \\usepackage[utf8]{inputenc}
     \\setcounter{tocdepth}{3}
     \\captionsetup[figure]{labelformat=empty}
     % Backwards compatibility for sphinx < 1.5
