@@ -342,12 +342,19 @@ def _mbondi3_radii(topology, all_bonds = None):
         all_bonds = _get_bonded_atom_list(topology)
     radii = _mbondi2_radii(topology, all_bonds=all_bonds)
     for i, atom in enumerate(topology.atoms()):
-        # carboxylate and HH/HE (ARG)
-        if _is_carboxylateO(atom, all_bonds):
-            radii[i] = 1.4
+        if atom.residue.name in ('GLU', 'ASP', 'GL4', 'AS4'):
+            if atom.name.startswith('OE') or atom.name.startswith('OD'):
+                radii[i] = 1.4
         elif atom.residue.name == 'ARG':
             if atom.name.startswith('HH') or atom.name.startswith('HE'):
                 radii[i] = 1.17
+        
+        # Adjust carboxylate O radii on C-Termini. Don't just do the end
+        # residue, since we can have C-termini in the middle as well
+        # (i.e., 2-chain dimers)
+        if atom.name == 'OXT':
+            radii[i] = 1.4
+            radii[i-1] = 1.4
     return radii  # Converted to nanometers above
 
 

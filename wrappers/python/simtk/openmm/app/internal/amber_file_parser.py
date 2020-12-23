@@ -1016,7 +1016,8 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
             if abs(r - gb_parms[i][0]) > 1e-4 or abs(s - gb_parms[i][1]) > 1e-4:
                 if not warned:
                     warnings.warn(
-                        'Non-optimal GB parameters detected for GB model %s' % gbmodel)
+                        'Non-optimal GB parameters detected for GB model %s in index %d. Atom name %s, type %s, radius %f, recommended_rad %f, screen %f, recommended_scr %f' \
+                        % (gbmodel, i, prmtop.getAtomName(i), prmtop.getAtomType(i), r, gb_parms[i][0], s, gb_parms[i][1]))
                     warned = True
             gb_parms[i][0], gb_parms[i][1] = r, s
 
