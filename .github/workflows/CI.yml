@@ -360,7 +360,7 @@ jobs:
         shell: bash -l {0}
         id: testcore
         run: |
-          set +x
+          set -ex
           cd build
           python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 300
 
@@ -380,7 +380,7 @@ jobs:
         shell: bash -l {0}
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success') }}
         run: |
-          set +x
+          set -ex
           python -m simtk.testInstallation
           python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build/python/tests
