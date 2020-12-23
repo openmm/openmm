@@ -606,8 +606,10 @@ jobs:
 
       - name: "Install TeX"
         run: |
+          set -ex
+          echo 'APT::Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
           sudo apt-get install -y latexmk
-          tlmgr cmap
+          tlmgr install cmap
 
       - name: "Configure build with CMake"
         shell: bash -l {0}
