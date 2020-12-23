@@ -1,4 +1,4 @@
 sphinx==2.3.1
-sphinxcontrib-bibtex
+sphinxcontrib-bibtex<2.0.0
 sphinxcontrib-lunrsearch
 sphinxcontrib-autodoc_doxygen
