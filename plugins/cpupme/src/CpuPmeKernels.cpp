@@ -520,7 +520,7 @@ void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize
         }
         for (int i = 0; i < ndata; i++)
             if (moduli[i] < 1.0e-7f)
-                moduli[i] = (moduli[i-1]+moduli[i+1])*0.5f;
+                moduli[i] = (moduli[(i-1+ndata)%ndata]+moduli[(i+1)%ndata])*0.5f;
     }
 }
 

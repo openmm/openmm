@@ -1014,7 +1014,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                         }
                         for (int i = 0; i < ndata; i++)
                             if (moduli[i] < 1.0e-7)
-                                moduli[i] = (moduli[i-1]+moduli[i+1])*0.5;
+                                moduli[i] = (moduli[(i-1+ndata)%ndata]+moduli[(i+1)%ndata])*0.5;
                         if (dim == 0)
                             xmoduli->upload(moduli, true);
                         else if (dim == 1)
