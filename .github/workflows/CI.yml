@@ -299,11 +299,11 @@ jobs:
         if: matrix.cuda-version != '' && startsWith(matrix.os, 'ubuntu')
         env:
           CUDA_VERSION: ${{ matrix.cuda-version }}
-        run: source devtools/ci/gh-actions/scripts/install_cuda.sh; do
+        run: source devtools/ci/gh-actions/scripts/install_cuda.sh
 
       - name: "Install OpenCL on Ubuntu (if needed)"
         if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
-        run: source devtools/ci/gh-actions/scripts/install_amd_opencl.sh; do
+        run: source devtools/ci/gh-actions/scripts/install_amd_opencl.sh
 
       - name: "Set SDK on MacOS (if needed)"
         if: startsWith(matrix.os, 'macos')
