@@ -134,6 +134,7 @@ if not exist "%CUDA_PATH%\bin\nvcc.exe" (
 )
 
 echo CUDA_PATH=%CUDA_PATH% >> %GITHUB_ENV%
+echo CUDA_TOOLKIT_ROOT_DIR=%CUDA_PATH:\=/% >> %GITHUB_ENV%
 
 :: Notes about nvcuda.dll
 :: ----------------------

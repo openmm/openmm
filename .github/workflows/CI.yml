@@ -25,9 +25,8 @@ jobs:
           - name: Linux CUDA 10.0
             os: ubuntu-latest
             python-version: "3.6"
-            CUDA: true
+            cuda-version: "10.0"
             OPENCL: false
-            CUDA_VERSION: "10.0"
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -49,9 +48,8 @@ jobs:
           - name: Linux CUDA 10.1
             os: ubuntu-latest
             python-version: "3.6"
-            CUDA: true
             OPENCL: false
-            CUDA_VERSION: "10.1"
+            cuda-version: "10.1"
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -73,9 +71,8 @@ jobs:
           - name: Linux CUDA 10.2
             os: ubuntu-latest
             python-version: "3.6"
-            CUDA: true
             OPENCL: false
-            CUDA_VERSION: "10.2"
+            cuda-version: "10.2"
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -97,9 +94,8 @@ jobs:
           - name: Linux CUDA 11.0
             os: ubuntu-latest
             python-version: "3.6"
-            CUDA: true
             OPENCL: false
-            CUDA_VERSION: "11.0"
+            cuda-version: "11.0"
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -121,9 +117,8 @@ jobs:
           - name: Linux CUDA 11.1
             os: ubuntu-latest
             python-version: "3.6"
-            CUDA: true
             OPENCL: false
-            CUDA_VERSION: "11.1"
+            cuda-version: "11.1"
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -145,9 +140,8 @@ jobs:
           - name: Linux CUDA 11.2
             os: ubuntu-latest
             python-version: "3.6"
-            CUDA: true
             OPENCL: false
-            CUDA_VERSION: "11.2"
+            cuda-version: "11.2"
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -170,7 +164,7 @@ jobs:
             os: ubuntu-latest
             python-version: "3.6"
             OPENCL: true
-            CUDA: false
+            cuda-version: ""
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -192,7 +186,7 @@ jobs:
             os: ubuntu-latest
             python-version: "3.6"
             OPENCL: false
-            CUDA: false
+            cuda-version: ""
             CC: $CCACHE/clang
             CXX: $CCACHE/clang++
             CMAKE_FLAGS: |
@@ -204,7 +198,7 @@ jobs:
             python-version: "3.6"
             os: ubuntu-latest
             OPENCL: false
-            CUDA: false
+            cuda-version: ""
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -215,7 +209,7 @@ jobs:
           #   python-version: "3.7"
           #   os: ubuntu-latest
           #   OPENCL: false
-          #   CUDA: false
+          #   cuda-version: ""
           #   # CC: $CCACHE/gcc
           #   # CXX: $CCACHE/g++
           #   CMAKE_FLAGS: |
@@ -226,7 +220,7 @@ jobs:
           #   python-version: "3.8"
           #   os: ubuntu-latest
           #   OPENCL: false
-          #   CUDA: false
+          #   cuda-version: ""
           #   # CC: $CCACHE/gcc
           #   # CXX: $CCACHE/g++
           #   CMAKE_FLAGS: |
@@ -237,7 +231,7 @@ jobs:
           #   python-version: "3.9"
           #   os: ubuntu-latest
           #   OPENCL: false
-          #   CUDA: false
+          #   cuda-version: ""
           #   # CC: $CCACHE/gcc
           #   # CXX: $CCACHE/g++
           #   CMAKE_FLAGS: |
@@ -248,7 +242,7 @@ jobs:
             python-version: "3.6"
             os: macos-latest
             OPENCL: false
-            CUDA: false
+            cuda-version: ""
             # CC: $CCACHE/gcc
             # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
@@ -259,7 +253,7 @@ jobs:
           #   python-version: "3.7"
           #   os: macos-latest
           #   OPENCL: false
-          #   CUDA: false
+          #   cuda-version: ""
           #   # CC: $CCACHE/gcc
           #   # CXX: $CCACHE/g++
           #   CMAKE_FLAGS: |
@@ -270,7 +264,7 @@ jobs:
           #   python-version: "3.8"
           #   os: macos-latest
           #   OPENCL: false
-          #   CUDA: false
+          #   cuda-version: ""
           #   # CC: $CCACHE/gcc
           #   # CXX: $CCACHE/g++
           #   CMAKE_FLAGS: |
@@ -281,7 +275,7 @@ jobs:
           #   python-version: "3.9"
           #   os: macos-latest
           #   OPENCL: false
-          #   CUDA: false
+          #   cuda-version: ""
           #   # CC: $CCACHE/gcc
           #   # CXX: $CCACHE/g++
           #   CMAKE_FLAGS: |
@@ -292,21 +286,21 @@ jobs:
           #   python-version: "3.8"
           #   os: ubuntu-latest
           #   OPENCL: false
-          #   CUDA: false
+          #   cuda-version: ""
           #   CMAKE_FLAGS: ""
 
           # - name: aarch64
           #   python-version: "3.8"
           #   os: ubuntu-latest
           #   OPENCL: false
-          #   CUDA: false
+          #   cuda-version: ""
           #   CMAKE_FLAGS: ""
 
           # - name: Docs
           #   python-version: "3.6"
           #   os: ubuntu-latest
           #   OPENCL: false
-          #   CUDA: false
+          #   cuda-version: ""
           #   CC: $CCACHE/clang
           #   CXX: $CCACHE/clang++
           #   DOCS_DEPLOY: true
@@ -332,9 +326,9 @@ jobs:
           auto-activate-base: false
 
       - name: "Install CUDA on Ubuntu (if needed)"
-        if: matrix.CUDA == true && startsWith(matrix.os, 'ubuntu')
+        if: matrix.cuda-version != '' && startsWith(matrix.os, 'ubuntu')
         env:
-          CUDA_VERSION: ${{ matrix.CUDA_VERSION }}
+          CUDA_VERSION: ${{ matrix.cuda-version }}
         run: source devtools/ci/gh-actions/scripts/install_cuda.sh
 
       - name: "Install OpenCL on Ubuntu (if needed)"
@@ -390,18 +384,126 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version:
-        - "3.6"
-        # - "3.7"
-        # - "3.8"
-        # - "3.9"
-        cuda-version:
-        - "10.0"
-        # - "10.1"
-        # - "10.2"
-        # - "11.0"
-        # - "11.1"
-        # - "11.2"
+        includes:
+          - name: Windows CUDA 10.0
+            python-version: "3.6"
+            cuda-version: "10.0"
+            CMAKE_FLAGS: |
+              -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
+              -DOPENMM_BUILD_CUDA_TESTS=OFF ^
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+              -DOPENMM_BUILD_CPU_LIB=OFF ^
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF ^
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF ^
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_EXAMPLES=OFF ^
+
+          - name: Windows CUDA 10.1
+            python-version: "3.6"
+            cuda-version: "10.1"
+            CMAKE_FLAGS: |
+              -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
+              -DOPENMM_BUILD_CUDA_TESTS=OFF ^
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+              -DOPENMM_BUILD_CPU_LIB=OFF ^
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF ^
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF ^
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_EXAMPLES=OFF ^
+
+          - name: Windows CUDA 10.2
+            python-version: "3.6"
+            cuda-version: "10.2"
+            CMAKE_FLAGS: |
+              -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
+              -DOPENMM_BUILD_CUDA_TESTS=OFF ^
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+              -DOPENMM_BUILD_CPU_LIB=OFF ^
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF ^
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF ^
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_EXAMPLES=OFF ^
+
+          - name: Windows CUDA 11.0
+            python-version: "3.6"
+            cuda-version: "11.0"
+            CMAKE_FLAGS: |
+              -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
+              -DOPENMM_BUILD_CUDA_TESTS=OFF ^
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+              -DOPENMM_BUILD_CPU_LIB=OFF ^
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF ^
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF ^
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_EXAMPLES=OFF ^
+
+          - name: Windows CUDA 11.1
+            python-version: "3.6"
+            cuda-version: "11.1"
+            CMAKE_FLAGS: |
+              -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
+              -DOPENMM_BUILD_CUDA_TESTS=OFF ^
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+              -DOPENMM_BUILD_CPU_LIB=OFF ^
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF ^
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF ^
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_EXAMPLES=OFF ^
+
+          - name: Windows CUDA 11.2
+            python-version: "3.6"
+            cuda-version: "11.2"
+            CMAKE_FLAGS: |
+              -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
+              -DOPENMM_BUILD_CUDA_TESTS=OFF ^
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+              -DOPENMM_BUILD_CPU_LIB=OFF ^
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF ^
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF ^
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_EXAMPLES=OFF ^
+
+          - name: Windows CPU Python 3.6 with static lib
+            python-version: "3.6"
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_STATIC_LIB=ON ^
+              -DOPENMM_BUILD_OPENCL_LIB=OFF ^
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+
+          - name: Windows CPU Python 3.6
+            python-version: "3.6"
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF ^
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+
+          # - name: Windows CPU Python 3.7
+          #   python-version: "3.7"
+          #   cuda-version: ""
+          #   CMAKE_FLAGS: |
+          #     -DOPENMM_BUILD_OPENCL_LIB=OFF ^
+          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+
+          # - name: Windows CPU Python 3.8
+          #   python-version: "3.8"
+          #   cuda-version: ""
+          #   CMAKE_FLAGS: |
+          #     -DOPENMM_BUILD_OPENCL_LIB=OFF ^
+          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+
+          # - name: Windows CPU Python 3.9
+          #   python-version: "3.9"
+          #   cuda-version: ""
+          #   CMAKE_FLAGS: |
+          #     -DOPENMM_BUILD_OPENCL_LIB=OFF ^
+          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
 
     steps:
       - uses: actions/checkout@v2
@@ -415,16 +517,18 @@ jobs:
           auto-activate-base: false
       - name: "Install CUDA (if needed)"
         shell: cmd /C call {0}
+        if: matrix.cuda-version != ''
         env:
           CUDA_VERSION: ${{ matrix.cuda-version }}
         run: call devtools/ci/gh-actions/scripts/install_cuda.bat
 
       - name: "Configure build with CMake"
         shell: cmd /C call {0}
+        env:
+          CMAKE_FLAGS: matrix.CMAKE_FLAGS
         run: |
           mkdir build
           cd build
-          set "CUDA_TOOLKIT_ROOT_DIR=%CUDA_PATH:\=/%"
           cmake -G "NMake Makefiles JOM" ^
                 -DCMAKE_BUILD_TYPE=Release ^
                 -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library ^
@@ -435,7 +539,7 @@ jobs:
                 -DCMAKE_C_COMPILER=cl.exe ^
                 -DOPENMM_BUILD_EXAMPLES=OFF ^
                 -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
-                -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
+                %CMAKE_FLAGS%
                 ..
 
       - name: "Build OpenMM"
