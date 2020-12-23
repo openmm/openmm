@@ -216,6 +216,24 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
+          - name: MacOS OpenCL
+            python-version: "3.6"
+            os: macos-latest
+            OPENCL: true
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=ON \
+              -DOPENMM_BUILD_OPENCL_TESTS=ON \
+              -DOPENMM_BUILD_STATIC_LIB=OFF \
+              -DOPENMM_BUILD_CPU_LIB=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_PME_PLUGIN=OFF \
+              -DOPENMM_BUILD_AMOEBA_PLUGIN=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+
           - name: MacOS CPU Python 3.6
             python-version: "3.6"
             os: macos-latest
