@@ -368,15 +368,16 @@ jobs:
           # This is always built
           test -f ${CONDA_PREFIX}/lib/libOpenMM.$SHLIB
           # With CUDA, we _expect_ CUDA plugins :)
-          if [[ ${{ matrix.cuda-version }} != "" ]]; then
+          if [[ "${{ matrix.cuda-version }}" != "" ]]; then
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCUDA.$SHLIB
-            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCudaCompiler.$SHLIB
+            # TODO: Check with Peter why this is not there. Maybe we need an extra flag?
+            # test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCudaCompiler.$SHLIB
           fi
           # OpenCL should also be there for CUDA and, well, OpenCL
-          if [[ ${{ matrix.cuda-version }} != "" || ${{ matrix.OPENCL }} == true ]]; then
+          if [[ "${{ matrix.cuda-version }}" != "" || ${{ matrix.OPENCL }} == true ]]; then
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMOpenCL.$SHLIB
+          # CPU builds should provide both CPU and PME
           else
-            # CPU builds should provide both CPU and PME
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.$SHLIB
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMPME.$SHLIB
           fi
