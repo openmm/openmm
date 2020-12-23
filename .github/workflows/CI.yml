@@ -284,22 +284,6 @@ jobs:
           #   cuda-version: ""
           #   CMAKE_FLAGS: ""
 
-          - name: Docs
-            python-version: "3.6"
-            os: ubuntu-latest
-            OPENCL: false
-            cuda-version: ""
-            CMAKE_FLAGS: |
-              -DOPENMM_GENERATE_API_DOCS=ON \
-              -DOPENMM_BUILD_CUDA_TESTS=OFF \
-              -DOPENMM_BUILD_OPENCL_LIB=OFF \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
-              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
-              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
-              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
-              -DOPENMM_BUILD_EXAMPLES=OFF \
-
     steps:
       - uses: actions/checkout@v2
 
@@ -407,36 +391,6 @@ jobs:
           python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build/python/tests
           python -m pytest -v -n 2
-
-      - name: "Build docs (if needed)"
-        shell: bash -l {0}
-        if: ${{ contains(matrix.CMAKE_FLAGS, 'OPENMM_GENERATE_API_DOCS=ON') }}
-        run: |
-          set -ex
-          sudo apt-get install -y latexmk
-          pip install -U -r devtools/ci/gh-actions/conda-envs/docs_requirements.txt
-          cd build
-          make sphinxhtml
-          make sphinxpdf
-          make C++ApiDocs PythonApiDocs
-          mkdir -p api-docs
-          mv sphinx-docs/userguide/html api-docs/userguide
-          mv sphinx-docs/developerguide/html api-docs/developerguide
-          mv api-python api-docs
-          mv api-c++ api-docs
-
-      - name: "Deploy docs (if needed, only on master)"
-        if: ${{ contains(matrix.CMAKE_FLAGS, 'OPENMM_GENERATE_API_DOCS=ON') && github.ref == 'refs/heads/master' && github.event_name != 'schedule' }}
-        uses: jakejarvis/s3-sync-action@master
-        with:
-          args: --acl public-read --follow-symlinks --delete
-        env:
-          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: 'us-west-1'
-          SOURCE_DIR: 'api-docs'
-          DEST_DIR: 'development'
 
   windows:
     runs-on: windows-latest
@@ -585,15 +539,7 @@ jobs:
         if: matrix.cuda-version != ''
         env:
           CUDA_VERSION: ${{ matrix.cuda-version }}
-        run: |
-          set count=5
-          :DoWhile
-              if %count%==0 goto EndDoWhile
-              set /a count = %count% -1
-              call devtools/ci/gh-actions/scripts/install_cuda.bat
-              if %errorlevel%==0 goto EndDoWhile
-              if %count% gtr 0 goto DoWhile
-          :EndDoWhile
+        run: call devtools/ci/gh-actions/scripts/install_cuda.bat
 
       - name: "Configure build with CMake"
         shell: cmd /C call {0}
@@ -659,3 +605,76 @@ jobs:
           python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build\python\tests
           python -m pytest -v -n 2
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: conda-incubator/setup-miniconda@v2
+        name: "Prepare base dependencies"
+        with:
+          python-version: "3.6"
+          activate-environment: build
+          environment-file: devtools/ci/gh-actions/conda-envs/docs.yml
+          auto-activate-base: false
+
+      - name: "Install TeX"
+        run: |
+          sudo apt-get install -y latexmk
+          tlmgr cmap
+
+      - name: "Configure build with CMake"
+        shell: bash -l {0}
+        run: |
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
+            -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
+            -DOPENMM_GENERATE_API_DOCS=ON \
+            -DOPENMM_BUILD_CUDA_TESTS=OFF \
+            -DOPENMM_BUILD_OPENCL_LIB=OFF \
+            -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+            -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+            -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+            -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+            -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+            -DOPENMM_BUILD_EXAMPLES=OFF
+
+      - name: Build docs
+        shell: bash -l {0}
+        run: |
+          set -ex
+          cd build
+          make sphinxhtml
+          make sphinxpdf
+          make C++ApiDocs PythonApiDocs
+          mkdir -p api-docs
+          mv sphinx-docs/userguide/html api-docs/userguide
+          mv sphinx-docs/developerguide/html api-docs/developerguide
+          mv api-python api-docs
+          mv api-c++ api-docs
+
+      - name: "Deploy docs (only on master)"
+        if: ${{ github.ref == 'refs/heads/master' && github.event_name != 'schedule' }}
+        uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read --follow-symlinks --delete
+        env:
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: 'us-west-1'
+          SOURCE_DIR: 'build/api-docs'
+          DEST_DIR: 'development'
+
+
+      - name: Check 404s (Sphinx)
+        shell: bash -l {0}
+        run: |
+          cd build/api-docs/
+          python -m http.server > /dev/null &2>1&
+          npx broken-link-checker http://localhost:8000/ --ordered --recursive \
+            --exclude "*.txt"
