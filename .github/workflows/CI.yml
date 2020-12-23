@@ -595,7 +595,7 @@ jobs:
           if errorlevel 1 exit 1
 
           if not exist %CONDA_PREFIX%/Library/lib/OpenMM.lib exit 1
-          if "${{ matrix.cuda-version }}" != "" (
+          if not "${{ matrix.cuda-version }}" == "" (
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCUDA.lib exit 1
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMOpenCL.lib exit 1
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCudaCompiler.lib exit 1
