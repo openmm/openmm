@@ -413,6 +413,7 @@ jobs:
         if: ${{ contains(matrix.CMAKE_FLAGS, 'OPENMM_GENERATE_API_DOCS=ON') }}
         run: |
           set -ex
+          cd build
           pip install -U -r devtools/ci/gh-actions/conda-envs/docs_requirements.txt
           make sphinxhtml
           make sphinxpdf
