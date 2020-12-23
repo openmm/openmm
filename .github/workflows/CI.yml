@@ -27,8 +27,6 @@ jobs:
             python-version: "3.6"
             cuda-version: "10.0"
             OPENCL: false
-            # CC: $CCACHE/gcc
-            # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_CUDA_TESTS=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
@@ -50,8 +48,6 @@ jobs:
             python-version: "3.6"
             OPENCL: false
             cuda-version: "10.1"
-            # CC: $CCACHE/gcc
-            # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_CUDA_TESTS=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
@@ -73,8 +69,6 @@ jobs:
             python-version: "3.6"
             OPENCL: false
             cuda-version: "10.2"
-            # CC: $CCACHE/gcc
-            # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_CUDA_TESTS=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
@@ -96,8 +90,6 @@ jobs:
             python-version: "3.6"
             OPENCL: false
             cuda-version: "11.0"
-            # CC: $CCACHE/gcc
-            # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_CUDA_TESTS=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
@@ -119,8 +111,6 @@ jobs:
             python-version: "3.6"
             OPENCL: false
             cuda-version: "11.1"
-            # CC: $CCACHE/gcc
-            # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_CUDA_TESTS=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
@@ -142,8 +132,6 @@ jobs:
             python-version: "3.6"
             OPENCL: false
             cuda-version: "11.2"
-            # CC: $CCACHE/gcc
-            # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_CUDA_TESTS=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
@@ -165,8 +153,6 @@ jobs:
             python-version: "3.6"
             OPENCL: true
             cuda-version: ""
-            # CC: $CCACHE/gcc
-            # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=ON \
@@ -199,88 +185,72 @@ jobs:
             os: ubuntu-latest
             OPENCL: false
             cuda-version: ""
-            # CC: $CCACHE/gcc
-            # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          # - name: Linux CPU Python 3.7
-          #   python-version: "3.7"
-          #   os: ubuntu-latest
-          #   OPENCL: false
-          #   cuda-version: ""
-          #   # CC: $CCACHE/gcc
-          #   # CXX: $CCACHE/g++
-          #   CMAKE_FLAGS: |
-          #     -DOPENMM_BUILD_OPENCL_LIB=OFF \
-          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+          - name: Linux CPU Python 3.7
+            python-version: "3.7"
+            os: ubuntu-latest
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          # - name: Linux CPU Python 3.8
-          #   python-version: "3.8"
-          #   os: ubuntu-latest
-          #   OPENCL: false
-          #   cuda-version: ""
-          #   # CC: $CCACHE/gcc
-          #   # CXX: $CCACHE/g++
-          #   CMAKE_FLAGS: |
-          #     -DOPENMM_BUILD_OPENCL_LIB=OFF \
-          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+          - name: Linux CPU Python 3.8
+            python-version: "3.8"
+            os: ubuntu-latest
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          # - name: Linux CPU Python 3.9
-          #   python-version: "3.9"
-          #   os: ubuntu-latest
-          #   OPENCL: false
-          #   cuda-version: ""
-          #   # CC: $CCACHE/gcc
-          #   # CXX: $CCACHE/g++
-          #   CMAKE_FLAGS: |
-          #     -DOPENMM_BUILD_OPENCL_LIB=OFF \
-          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+          - name: Linux CPU Python 3.9
+            python-version: "3.9"
+            os: ubuntu-latest
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
           - name: MacOS CPU Python 3.6
             python-version: "3.6"
             os: macos-latest
             OPENCL: false
             cuda-version: ""
-            # CC: $CCACHE/gcc
-            # CXX: $CCACHE/g++
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          # - name: MacOS CPU Python 3.7
-          #   python-version: "3.7"
-          #   os: macos-latest
-          #   OPENCL: false
-          #   cuda-version: ""
-          #   # CC: $CCACHE/gcc
-          #   # CXX: $CCACHE/g++
-          #   CMAKE_FLAGS: |
-          #     -DOPENMM_BUILD_OPENCL_LIB=OFF \
-          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+          - name: MacOS CPU Python 3.7
+            python-version: "3.7"
+            os: macos-latest
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          # - name: MacOS CPU Python 3.8
-          #   python-version: "3.8"
-          #   os: macos-latest
-          #   OPENCL: false
-          #   cuda-version: ""
-          #   # CC: $CCACHE/gcc
-          #   # CXX: $CCACHE/g++
-          #   CMAKE_FLAGS: |
-          #     -DOPENMM_BUILD_OPENCL_LIB=OFF \
-          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+          - name: MacOS CPU Python 3.8
+            python-version: "3.8"
+            os: macos-latest
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          # - name: MacOS CPU Python 3.9
-          #   python-version: "3.9"
-          #   os: macos-latest
-          #   OPENCL: false
-          #   cuda-version: ""
-          #   # CC: $CCACHE/gcc
-          #   # CXX: $CCACHE/g++
-          #   CMAKE_FLAGS: |
-          #     -DOPENMM_BUILD_OPENCL_LIB=OFF \
-          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+          - name: MacOS CPU Python 3.9
+            python-version: "3.9"
+            os: macos-latest
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
           # - name: ppc64le
           #   python-version: "3.8"
@@ -388,15 +358,29 @@ jobs:
 
       - name: "Test OpenMM"
         shell: bash -l {0}
+        id: testcore
         run: |
           cd build
           python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 300
 
+          if [[ ${{ matrix.os }} == ubuntu-* ]]; then SHLIB=so; else SHLIB=dylib; fi
+          test -f ${CONDA_PREFIX}/lib/libOpenMM.$SHLIB
+          test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.$SHLIB
+          test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMPME.$SHLIB
+          if [[ ${{ matrix.cuda-version }} != "" || ${{ matrix.OPENCL }} == true ]]; then
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMOpenCL.$SHLIB
+          fi
+          if [[ ${{ matrix.cuda-version }} != "" ]]; then
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCUDA.$SHLIB
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCudaCompiler.$SHLIB
+          fi
+
       - name: "Test Python wrappers"
         shell: bash -l {0}
-        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && always() }}
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success') }}
         run: |
           python -m simtk.testInstallation
+          python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build/python/tests
           python -m pytest -v -n 2
 
@@ -404,6 +388,8 @@ jobs:
     runs-on: windows-latest
     name: ${{ matrix.name }}
     env:
+      # `make pythoninstall` will always put the files in the workspace unit
+      # workaround: make sure conda envs are created in the same unit as workspace
       CONDA_ENVS_PATH: "D:/conda-envs"
     strategy:
       fail-fast: false
@@ -508,26 +494,26 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF ^
               -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
 
-          # - name: Windows CPU Python 3.7
-          #   python-version: "3.7"
-          #   cuda-version: ""
-          #   CMAKE_FLAGS: |
-          #     -DOPENMM_BUILD_OPENCL_LIB=OFF ^
-          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+          - name: Windows CPU Python 3.7
+            python-version: "3.7"
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF ^
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
 
-          # - name: Windows CPU Python 3.8
-          #   python-version: "3.8"
-          #   cuda-version: ""
-          #   CMAKE_FLAGS: |
-          #     -DOPENMM_BUILD_OPENCL_LIB=OFF ^
-          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+          - name: Windows CPU Python 3.8
+            python-version: "3.8"
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF ^
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
 
-          # - name: Windows CPU Python 3.9
-          #   python-version: "3.9"
-          #   cuda-version: ""
-          #   CMAKE_FLAGS: |
-          #     -DOPENMM_BUILD_OPENCL_LIB=OFF ^
-          #     -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+          - name: Windows CPU Python 3.9
+            python-version: "3.9"
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF ^
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
 
     steps:
       - uses: actions/checkout@v2
@@ -539,6 +525,7 @@ jobs:
           activate-environment: build
           environment-file: devtools/ci/gh-actions/conda-envs/build-windows-latest.yml
           auto-activate-base: false
+
       - name: "Install CUDA (if needed)"
         shell: cmd /C call {0}
         if: matrix.cuda-version != ''
@@ -596,12 +583,22 @@ jobs:
         run: |
           cd build
           python ..\devtools\run-ctest.py --parallel 2 --timeout 600 --job-duration 300
+          if errorlevel 1 exit 1
+
+          if not exist %CONDA_PREFIX%/Library/lib/OpenMM.lib exit 1
+          if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCPU.lib exit 1
+          if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMPME.lib exit 1
+          if "${{ matrix.cuda-version }}" != "" (
+            if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCUDA.lib exit 1
+            if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMOpenCL.lib exit 1
+            if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCudaCompiler.lib exit 1
+          )
 
       - name: "Test Python wrappers"
         shell: cmd /C call {0}
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success') }}
         run: |
           python -m simtk.testInstallation
-          if errorlevel 1 exit 1
+          python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build\python\tests
           python -m pytest -v -n 2
