@@ -384,7 +384,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        includes:
+        include:
           - name: Windows CUDA 10.0
             python-version: "3.6"
             cuda-version: "10.0"
