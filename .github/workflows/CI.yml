@@ -365,15 +365,20 @@ jobs:
           python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 300
 
           if [[ ${{ matrix.os }} == ubuntu-* ]]; then SHLIB=so; else SHLIB=dylib; fi
+          # This is always built
           test -f ${CONDA_PREFIX}/lib/libOpenMM.$SHLIB
-          test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.$SHLIB
-          test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMPME.$SHLIB
-          if [[ ${{ matrix.cuda-version }} != "" || ${{ matrix.OPENCL }} == true ]]; then
-            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMOpenCL.$SHLIB
-          fi
+          # With CUDA, we _expect_ CUDA plugins :)
           if [[ ${{ matrix.cuda-version }} != "" ]]; then
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCUDA.$SHLIB
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCudaCompiler.$SHLIB
+          fi
+          # OpenCL should also be there for CUDA and, well, OpenCL
+          if [[ ${{ matrix.cuda-version }} != "" || ${{ matrix.OPENCL }} == true ]]; then
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMOpenCL.$SHLIB
+          else
+            # CPU builds should provide both CPU and PME
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.$SHLIB
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMPME.$SHLIB
           fi
 
       - name: "Test Python wrappers"
@@ -589,12 +594,13 @@ jobs:
           if errorlevel 1 exit 1
 
           if not exist %CONDA_PREFIX%/Library/lib/OpenMM.lib exit 1
-          if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCPU.lib exit 1
-          if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMPME.lib exit 1
           if "${{ matrix.cuda-version }}" != "" (
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCUDA.lib exit 1
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMOpenCL.lib exit 1
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCudaCompiler.lib exit 1
+          ) else (
+            if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCPU.lib exit 1
+            if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMPME.lib exit 1
           )
 
       - name: "Test Python wrappers"
