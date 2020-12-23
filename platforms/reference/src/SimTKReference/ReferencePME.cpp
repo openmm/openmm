@@ -181,7 +181,7 @@ pme_calculate_bsplines_moduli(pme_t pme)
         {
             if (pme->bsplines_moduli[d][i]<1.0e-7)
             {
-                pme->bsplines_moduli[d][i]=(pme->bsplines_moduli[d][i-1]+pme->bsplines_moduli[d][i+1])/2;
+                pme->bsplines_moduli[d][i]=(pme->bsplines_moduli[d][(i-1+ndata)%ndata]+pme->bsplines_moduli[d][(i+1)%ndata])/2;
             }
         }
     }
