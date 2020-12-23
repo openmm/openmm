@@ -525,7 +525,7 @@ jobs:
       - name: "Configure build with CMake"
         shell: cmd /C call {0}
         env:
-          CMAKE_FLAGS: matrix.CMAKE_FLAGS
+          CMAKE_FLAGS: ${{ matrix.CMAKE_FLAGS }}
         run: |
           mkdir build
           cd build
@@ -553,21 +553,22 @@ jobs:
 
       - name: "Build Python wrappers"
         shell: cmd /C call {0}
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
         run: |
           cd build
           jom -j 2 PythonInstall
 
       - name: "Test OpenMM"
         shell: cmd /C call {0}
+        id: testcore
         run: |
           cd build
           python ..\devtools\run-ctest.py --parallel 2 --timeout 600 --job-duration 300
 
       - name: "Test Python wrappers"
         shell: cmd /C call {0}
-        if: always()
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success' }}
         run: |
-          set "PYTHONPATH=%CONDA_PREFIX%\Lib\site-packages"
           python -m simtk.testInstallation
           if errorlevel 1 exit 1
           cd build\python\tests
