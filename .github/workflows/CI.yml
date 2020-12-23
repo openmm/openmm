@@ -299,27 +299,11 @@ jobs:
         if: matrix.cuda-version != '' && startsWith(matrix.os, 'ubuntu')
         env:
           CUDA_VERSION: ${{ matrix.cuda-version }}
-        run: |
-          max_retry=5
-          tried=0
-          until source devtools/ci/gh-actions/scripts/install_cuda.sh; do
-            sleep 5
-            [[ tried -eq $max_retry ]] && echo "Failed!" && exit 1
-            echo "Trying again... Attempt #$tried"
-            ((tried++))
-          done
+        run: source devtools/ci/gh-actions/scripts/install_cuda.sh; do
 
       - name: "Install OpenCL on Ubuntu (if needed)"
         if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
-        run: |
-          max_retry=5
-          tried=0
-          until source devtools/ci/gh-actions/scripts/install_amd_opencl.sh; do
-            sleep 5
-            [[ tried -eq $max_retry ]] && echo "Failed!" && exit 1
-            echo "Trying again... Attempt #$tried"
-            ((tried++))
-          done
+        run: source devtools/ci/gh-actions/scripts/install_amd_opencl.sh; do
 
       - name: "Set SDK on MacOS (if needed)"
         if: startsWith(matrix.os, 'macos')
