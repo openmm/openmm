@@ -170,6 +170,7 @@ htmlhelp_basename = 'OpenMMUsersGuidedoc'
 
 # -- Options for LaTeX output --------------------------------------------------
 
+latex_engine = 'xelatex'
 latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
 'papersize': 'letterpaper,openany',
@@ -182,8 +183,6 @@ latex_elements = {
     \\usepackage[none]{hyphenat}
     \\usepackage{xstring}
     \\usepackage{color}
-    \\usepackage{textcomp}
-    \\usepackage[utf8]{inputenc}
     \\usepackage{caption}
     \\setcounter{tocdepth}{3}
     \\captionsetup[figure]{labelformat=empty}

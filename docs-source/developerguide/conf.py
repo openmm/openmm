@@ -170,6 +170,7 @@ htmlhelp_basename = 'OpenMMDeveloperGuidedoc'
 
 # -- Options for LaTeX output --------------------------------------------------
 
+latex_engine = 'xelatex'
 latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
 'papersize': 'letterpaper,openany',
@@ -183,8 +184,6 @@ latex_elements = {
     \\usepackage{xstring}
     \\usepackage{color}
     \\usepackage{caption}
-    \\usepackage{textcomp}
-    \\usepackage[utf8]{inputenc}
     \\setcounter{tocdepth}{3}
     \\captionsetup[figure]{labelformat=empty}
     % Backwards compatibility for sphinx < 1.5
