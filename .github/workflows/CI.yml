@@ -329,15 +329,39 @@ jobs:
         if: matrix.cuda-version != '' && startsWith(matrix.os, 'ubuntu')
         env:
           CUDA_VERSION: ${{ matrix.cuda-version }}
-        run: source devtools/ci/gh-actions/scripts/install_cuda.sh
+        run: |
+          max_retry=5
+          tried=0
+          until source devtools/ci/gh-actions/scripts/install_cuda.sh; do
+            sleep 5
+            [[ tried -eq $max_retry ]] && echo "Failed!" && exit 1
+            echo "Trying again... Attempt #$tried"
+            ((tried++))
+          done
 
       - name: "Install OpenCL on Ubuntu (if needed)"
         if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
-        run: source devtools/ci/gh-actions/scripts/install_amd_opencl.sh
+        run: |
+          max_retry=5
+          tried=0
+          until source devtools/ci/gh-actions/scripts/install_amd_opencl.sh; do
+            sleep 5
+            [[ tried -eq $max_retry ]] && echo "Failed!" && exit 1
+            echo "Trying again... Attempt #$tried"
+            ((tried++))
+          done
 
       - name: "Set SDK on MacOS (if needed)"
         if: startsWith(matrix.os, 'macos')
-        run: source devtools/ci/gh-actions/scripts/install_macos_sdk.sh
+        run: |
+          max_retry=5
+          tried=0
+          until source devtools/ci/gh-actions/scripts/install_macos_sdk.sh; do
+            sleep 5
+            [[ tried -eq $max_retry ]] && echo "Failed!" && exit 1
+            echo "Trying again... Attempt #$tried"
+            ((tried++))
+          done
 
       - name: "Configure build with CMake"
         shell: bash -l {0}
@@ -520,7 +544,15 @@ jobs:
         if: matrix.cuda-version != ''
         env:
           CUDA_VERSION: ${{ matrix.cuda-version }}
-        run: call devtools/ci/gh-actions/scripts/install_cuda.bat
+        run: |
+          set count=5
+          :DoWhile
+              if %count%==0 goto EndDoWhile
+              set /a count = %count% -1
+              call devtools/ci/gh-actions/scripts/install_cuda.bat
+              if %errorlevel%==0 goto EndDoWhile
+              if %count% gtr 0 goto DoWhile
+          :EndDoWhile
 
       - name: "Configure build with CMake"
         shell: cmd /C call {0}
