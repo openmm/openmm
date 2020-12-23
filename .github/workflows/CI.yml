@@ -378,7 +378,7 @@ jobs:
 
   windows:
     runs-on: windows-latest
-    name: Windows Python ${{ matrix.python-version }}, CUDA ${{ matrix.cuda-version }}
+    name: ${{ matrix.name }}
     env:
       CONDA_ENVS_PATH: "D:/conda-envs"
     strategy:
