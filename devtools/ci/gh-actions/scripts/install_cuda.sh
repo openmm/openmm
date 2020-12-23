@@ -8,14 +8,14 @@ sudo apt-get update -qq
 CUDA_APT=${CUDA_VERSION/./-}
 if [[ ${CUDA_VERSION} == 10.* ]]; then CUFFT="cuda-cufft"; else CUFFT="libcufft"; fi
 sudo apt-get install -y \
-libgl1-mesa-dev cuda-compiler-${CUDA_APT} \
-cuda-drivers cuda-driver-dev-${CUDA_APT} \
-cuda-cudart-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} \
-${CUFFT}-${CUDA_APT} ${CUFFT}-dev-${CUDA_APT} \
+    libgl1-mesa-dev cuda-compiler-${CUDA_APT} \
+    cuda-drivers cuda-driver-dev-${CUDA_APT} \
+    cuda-cudart-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} \
+    ${CUFFT}-${CUDA_APT} ${CUFFT}-dev-${CUDA_APT} \
 cuda-nvprof-${CUDA_APT}
 sudo apt-get clean
 
-export CUDA_HOME=/usr/local/cuda-${CUDA_APT/-/.}
+export CUDA_HOME=/usr/local/cuda-${CUDA_VERSION}
 export LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH:-}
 export PATH=${CUDA_HOME}/bin:${PATH}
 

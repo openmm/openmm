@@ -413,6 +413,7 @@ jobs:
         if: ${{ contains(matrix.CMAKE_FLAGS, 'OPENMM_GENERATE_API_DOCS=ON') }}
         run: |
           set -ex
+          sudo apt-get install -y latexmk
           pip install -U -r devtools/ci/gh-actions/conda-envs/docs_requirements.txt
           cd build
           make sphinxhtml
