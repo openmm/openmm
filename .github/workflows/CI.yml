@@ -567,7 +567,7 @@ jobs:
 
       - name: "Test Python wrappers"
         shell: cmd /C call {0}
-        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success' }}
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success') }}
         run: |
           python -m simtk.testInstallation
           if errorlevel 1 exit 1
