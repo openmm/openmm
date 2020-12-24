@@ -1,6 +1,8 @@
 set -euxo pipefail
 WORKSPACE="$HOME/workspace"
 
+source /opt/conda/etc/profile.d/conda.sh
+
 # Remove gromacs from dependencies
 sed -E "s/.*gromacs.*//" ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
 
