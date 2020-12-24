@@ -1,10 +1,10 @@
 set -euxo pipefail
-cd workspace
+WORKSPACE="$HOME/workspace"
 
 # Remove gromacs from dependencies
-sed -i -E "s/.*gromacs.*//" devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml
+sed -E "s/.*gromacs.*//" ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
 
-conda env create -n build -f devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml
+conda env create -n build -f conda-env.yml
 conda activate build
 
 CMAKE_FLAGS=""
@@ -20,7 +20,7 @@ fi
 
 mkdir build
 cd build
-cmake .. \
+cmake ${WORKSPACE} \
     -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
     -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
     -DOPENMM_BUILD_CUDA_TESTS=OFF \
@@ -31,7 +31,7 @@ cmake .. \
 make -j2 install PythonInstall
 
 # Core tests
-python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 300
+python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 300
 test -f ${CONDA_PREFIX}/lib/libOpenMM.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMPME.so
@@ -46,4 +46,4 @@ python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibN
 cd python/tests
 python -m pytest -v -n 2 -k "not gromacs"
 
-touch "/home/conda/workspace/docker_steps_run_successfully"
+touch "${WORKSPACE}/docker_steps_run_successfully"
