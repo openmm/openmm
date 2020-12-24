@@ -1,6 +1,9 @@
 set -euxo pipefail
 cd workspace
 
+# Remove gromacs from dependencies
+sed -i -E "s/.*gromacs.*//" devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml
+
 conda env create -n build -f devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml
 conda activate build
 
@@ -41,6 +44,6 @@ fi
 python -m simtk.testInstallation
 python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
 cd python/tests
-python -m pytest -v -n 2
+python -m pytest -v -n 2 -k "not gromacs"
 
 touch "/home/conda/workspace/docker_steps_run_successfully"
