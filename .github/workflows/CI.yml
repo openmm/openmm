@@ -338,7 +338,7 @@ jobs:
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
         run: |
           cd build
-          make PythonInstall
+          make -j2 PythonInstall
 
       - name: "Test OpenMM"
         shell: bash -l {0}
@@ -625,11 +625,12 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
             -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
             -DOPENMM_GENERATE_API_DOCS=ON \
-            -DOPENMM_BUILD_CUDA_TESTS=OFF \
+            -DOPENMM_BUILD_PYTHON_WRAPPERS=ON \
             -DOPENMM_BUILD_OPENCL_LIB=OFF \
-            -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-            -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
             -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+            -DOPENMM_BUILD_CPU_TESTS=OFF \
+            -DOPENMM_BUILD_CUDA_TESTS=OFF \
+            -DOPENMM_BUILD_OPENCL_TESTS=OFF \
             -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
             -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
             -DOPENMM_BUILD_EXAMPLES=OFF
@@ -639,6 +640,10 @@ jobs:
         run: |
           set -ex
           cd build
+          make -j2 install PythonInstall
+          make -j2 sphinxhtml
+          make -j2 sphinxpdf
+          make -j2 C++ApiDocs PythonApiDocs
           make sphinxhtml
           make sphinxpdf
           make C++ApiDocs PythonApiDocs
