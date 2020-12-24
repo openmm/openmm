@@ -6,7 +6,8 @@ source /opt/conda/etc/profile.d/conda.sh
 # Remove gromacs from dependencies
 sed -E "s/.*gromacs.*//" ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
 
-conda env create -n build -f conda-env.yml
+conda create -n build python=${PYTHON_VER}
+conda env update -n build -f conda-env.yml
 conda activate build
 
 CMAKE_FLAGS=""

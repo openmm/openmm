@@ -600,10 +600,12 @@ jobs:
           - name: ppc64le
             docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda
             cuda-version: "10.2"
+            python-version: "3.6"
 
           - name: aarch64
             docker-image: quay.io/condaforge/linux-anvil-aarch64
             cuda-version: ""
+            python-version: "3.6"
 
     steps:
     - uses: actions/checkout@v2
@@ -616,6 +618,7 @@ jobs:
     - name: Run docker
       env:
         CUDA_VER: ${{ matrix.cuda-version }}
+        PYTHON_VER: ${{ matrix.python-version }}
         DOCKER_IMAGE: ${{ matrix.docker-image }}
       run: |
         set -x
@@ -626,6 +629,7 @@ jobs:
           -e HOST_USER_ID \
           -e CPU_COUNT \
           -e CUDA_VER \
+          -e PYTHON_VER \
           ${DOCKER_IMAGE} \
           bash \
           /home/conda/workspace/devtools/ci/gh-actions/scripts/run_steps_inside_docker_image.sh
