@@ -617,7 +617,7 @@ jobs:
       env:
         CUDA_VER: ${{ matrix.cuda-version }}
         DOCKER_IMAGE: ${{ matrix.docker-image }}
-      run:
+      run: |
         HOST_USER_ID=$(id -u)
         test ! -z ${CUDA_VER} && DOCKER_IMAGE+=":${CUDA_VER}"
         docker run \
