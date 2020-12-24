@@ -7,6 +7,8 @@ dependencies:
 # host
 - python
 - pip
+- numpy
+- cython
 - swig
 - doxygen 1.8.14
 - pip:

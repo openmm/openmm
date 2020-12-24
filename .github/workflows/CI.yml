@@ -643,13 +643,13 @@ jobs:
           make -j2 install PythonInstall
           make -j2 sphinxhtml
           make -j2 sphinxpdf
-          make -j2 C++ApiDocs PythonApiDocs
-          make sphinxhtml
-          make sphinxpdf
-          make C++ApiDocs PythonApiDocs
+          make -j2 C++ApiDocs
+          make -j2 PythonApiDocs
           mkdir -p api-docs
           mv sphinx-docs/userguide/html api-docs/userguide
+          mv sphinx-docs/userguide/latex/*.pdf api-docs/userguide/
           mv sphinx-docs/developerguide/html api-docs/developerguide
+          mv sphinx-docs/developerguide/latex/*.pdf api-docs/developerguide/
           mv api-python api-docs
           mv api-c++ api-docs
 
