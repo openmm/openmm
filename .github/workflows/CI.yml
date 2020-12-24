@@ -670,6 +670,7 @@ jobs:
         shell: bash -l {0}
         run: |
           set -x
+          set +e
           npx linkinator ./build/api-docs/api-c++/ --recurse --timeout=5000
           exitcode=$?
           npx linkinator ./build/api-docs/api-python/ --recurse --timeout=5000
