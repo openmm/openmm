@@ -1,6 +1,6 @@
 source /opt/conda/etc/profile.d/conda.sh
 
-set -euxo pipefail
+set -exo pipefail
 WORKSPACE="$HOME/workspace"
 
 
