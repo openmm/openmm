@@ -14,6 +14,9 @@ conda activate build
 CMAKE_FLAGS=""
 if [[ ! -z ${CUDA_VER} ]]; then
     export CUDA_PATH="/usr/local/cuda-${CUDA_VER}"
+    export CUDA_HOME="${CUDA_PATH}"
+    export LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH:-}"
+    export PATH="${CUDA_HOME}/bin:${PATH}"
     CMAKE_FLAGS+=" -DOPENCL_LIBRARY=${CUDA_PATH}/lib64/libOpenCL.so"
     CMAKE_FLAGS+=" -DCUDA_CUDART_LIBRARY=${CUDA_PATH}/lib64/libcudart.so"
     CMAKE_FLAGS+=" -DCUDA_NVCC_EXECUTABLE=${CUDA_PATH}/bin/nvcc"

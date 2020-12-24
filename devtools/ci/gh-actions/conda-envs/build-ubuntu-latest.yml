@@ -5,6 +5,7 @@ channels:
 dependencies:
 # build
 - cmake
+- make
 # host
 - python
 - cython
