@@ -669,9 +669,15 @@ jobs:
       - name: Check 404s
         shell: bash -l {0}
         run: |
-          set -ex
+          set -x
           npx linkinator ./build/api-docs/api-c++/ --recurse --timeout=5000
+          exitcode=$?
           npx linkinator ./build/api-docs/api-python/ --recurse --timeout=5000
+          exitcode+="+$?"
           npx linkinator ./build/api-docs/developerguide/ --recurse --timeout=5000
+          exitcode+="+$?"
           npx linkinator ./build/api-docs/userguide/ --recurse --timeout=5000
+          exitcode+="+$?"
           npx linkinator ./README.md --markdown
+          exitcode+="+$?"
+          exit $(echo $exitcode | bc)
