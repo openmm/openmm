@@ -344,7 +344,7 @@ jobs:
         shell: bash -l {0}
         id: testcore
         run: |
-          set -ex
+          set -x
           cd build
           python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 300
 
@@ -370,7 +370,7 @@ jobs:
         shell: bash -l {0}
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success') }}
         run: |
-          set -ex
+          set -x
           python -m simtk.testInstallation
           python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build/python/tests
@@ -590,6 +590,49 @@ jobs:
           cd build\python\tests
           python -m pytest -v -n 2
 
+  docker:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ppc64le
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda
+            cuda-version: "10.2"
+
+          - name: aarch64
+            docker-image: quay.io/condaforge/linux-anvil-aarch64
+            cuda-version: ""
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Prepare docker
+      run: |
+        docker run --rm --privileged multiarch/qemu-user-static:register --reset --credential yes
+        ls /proc/sys/fs/binfmt_misc/
+
+    - name: Run docker
+      env:
+        CUDA_VER: ${{ matrix.cuda-version }}
+        DOCKER_IMAGE: ${{ matrix.docker-image }}
+      run:
+        HOST_USER_ID=$(id -u)
+        test ! -z ${CUDA_VER} && DOCKER_IMAGE+=":${CUDA_VER}"
+        docker run \
+          -it \
+          -v "${GITHUB_WORKSPACE}":/home/conda/workspace:rw,z \
+          -e HOST_USER_ID \
+          -e CPU_COUNT \
+          -e CUDA_VER \
+          ${DOCKER_IMAGE} \
+          bash \
+          /home/conda/workspace/devtools/ci/gh-actions/scripts/run_steps_inside_docker_image.sh
+
+        test -f docker_steps_run_successfully
+
+
   docs:
     name: Docs
     runs-on: ubuntu-latest
@@ -606,7 +649,7 @@ jobs:
 
       - name: "Install TeX"
         run: |
-          set -ex
+          set -x
           echo 'APT::Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
           sudo apt-get install -y \
             latexmk \
@@ -638,7 +681,7 @@ jobs:
       - name: Build docs
         shell: bash -l {0}
         run: |
-          set -ex
+          set -x
           cd build
           make -j2 install PythonInstall
           make -j2 sphinxhtml
