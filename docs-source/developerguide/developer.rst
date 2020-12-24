@@ -856,8 +856,6 @@ Writing Device Code
 When compiling kernels with the Common Compute API, the following macros are
 defined.
 
-.. tabularcolumns:: |l|l|L|
-
 +-------------------------------+------------------------------------------------------------+--------------------------------------------+
 |Macro                          |OpenCL Definition                                           |CUDA Definition                             |
 +===============================+============================================================+============================================+
