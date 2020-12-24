@@ -7,7 +7,7 @@ WORKSPACE="$HOME/workspace"
 # Remove gromacs from dependencies
 sed -E "s/.*gromacs.*//" ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
 
-conda create -n build python=${PYTHON_VER}
+conda create -n build python=${PYTHON_VER} compilers
 conda env update -n build -f conda-env.yml
 conda activate build
 
