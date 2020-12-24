@@ -618,10 +618,10 @@ jobs:
         CUDA_VER: ${{ matrix.cuda-version }}
         DOCKER_IMAGE: ${{ matrix.docker-image }}
       run: |
+        set -x
         HOST_USER_ID=$(id -u)
         test ! -z ${CUDA_VER} && DOCKER_IMAGE+=":${CUDA_VER}"
         docker run \
-          -it \
           -v "${GITHUB_WORKSPACE}":/home/conda/workspace:rw,z \
           -e HOST_USER_ID \
           -e CPU_COUNT \
