@@ -670,5 +670,8 @@ jobs:
         shell: bash -l {0}
         run: |
           set -ex
-          npx linkinator ./build/api-docs/ --recurse
+          npx linkinator ./build/api-docs/api-c++/ --recurse --timeout=5000
+          npx linkinator ./build/api-docs/api-python/ --recurse --timeout=5000
+          npx linkinator ./build/api-docs/developerguide/ --recurse --timeout=5000
+          npx linkinator ./build/api-docs/userguide/ --recurse --timeout=5000
           npx linkinator ./README.md --markdown
