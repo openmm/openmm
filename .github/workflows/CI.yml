@@ -666,12 +666,9 @@ jobs:
           SOURCE_DIR: 'build/api-docs'
           DEST_DIR: 'development'
 
-      - name: Check 404s (Sphinx)
+      - name: Check 404s
         shell: bash -l {0}
         run: |
-          cd build/api-docs/
-          nohup python -m http.server > /dev/null &2>1 &
-          server=$!
-          npx broken-link-checker http://localhost:8000/ --ordered --recursive \
-            --exclude "*.txt"
-          kill $server
+          set -ex
+          npx linkinator ./build/api-docs/ --recurse
+          npx linkinator ./README.md --markdown
