@@ -1,31 +1,29 @@
 source /opt/conda/etc/profile.d/conda.sh
+set -eo pipefail
 
-set -exo pipefail
+
 WORKSPACE="$HOME/workspace"
 
-
+echo "Prepare build environment..."
 # Remove gromacs from dependencies
 sed -E "s/.*gromacs.*//" ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
 
-conda create -n build python=${PYTHON_VER} compilers
+conda create -y -n build python=${PYTHON_VER} compilers
 conda env update -n build -f conda-env.yml
-conda activate build
+conda activate build || true
 
+echo "Configure with CMake..."
 CMAKE_FLAGS=""
-if [[ ! -z ${CUDA_VER} ]]; then
-    export CUDA_PATH="/usr/local/cuda-${CUDA_VER}"
-    export CUDA_HOME="${CUDA_PATH}"
-    export LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH:-}"
-    export PATH="${CUDA_HOME}/bin:${PATH}"
+if [[ -d /usr/local/cuda ]]; then
+    export CUDA_PATH="/usr/local/cuda"
+    export CUDA_LIB_PATH="${CUDA_PATH}/lib64/stubs"
+    export LD_LIBRARY_PATH="${CUDA_PATH}/lib64/stubs:${LD_LIBRARY_PATH:-}"
+    export PATH="${CUDA_PATH}/bin:${PATH}"
     CMAKE_FLAGS+=" -DOPENCL_LIBRARY=${CUDA_PATH}/lib64/libOpenCL.so"
-    CMAKE_FLAGS+=" -DCUDA_CUDART_LIBRARY=${CUDA_PATH}/lib64/libcudart.so"
-    CMAKE_FLAGS+=" -DCUDA_NVCC_EXECUTABLE=${CUDA_PATH}/bin/nvcc"
-    CMAKE_FLAGS+=" -DCUDA_SDK_ROOT_DIR=${CUDA_PATH}/"
-    CMAKE_FLAGS+=" -DCUDA_TOOLKIT_INCLUDE=${CUDA_PATH}/include"
-    CMAKE_FLAGS+=" -DCUDA_TOOLKIT_ROOT_DIR=${CUDA_PATH}/"
 fi
 
-mkdir build
+rm -rf build || true
+mkdir -p build
 cd build
 cmake ${WORKSPACE} \
     -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
@@ -35,9 +33,11 @@ cmake ${WORKSPACE} \
     ${CMAKE_FLAGS}
 
 # Build
+echo "Build with make..."
 make -j2 install PythonInstall
 
 # Core tests
+echo "Run core tests..."
 python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 300
 test -f ${CONDA_PREFIX}/lib/libOpenMM.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.so
@@ -48,9 +48,11 @@ if [[ ! -z ${CUDA_VER} ]]; then
 fi
 
 # Python tests
+echo "Run Python tests..."
 python -m simtk.testInstallation
 python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
 cd python/tests
 python -m pytest -v -n 2 -k "not gromacs"
 
+echo "We are done!"
 touch "${WORKSPACE}/docker_steps_run_successfully"

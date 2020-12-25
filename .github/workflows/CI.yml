@@ -597,19 +597,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: ppc64le CPU
+          - name: PowerPC CPU Python 3.6
             docker-image: quay.io/condaforge/linux-anvil-ppc64le
-            cuda-version: ""
             python-version: "3.6"
 
-          - name: ppc64le CUDA 10.2
-            docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda
-            cuda-version: "10.2"
+          - name: PowerPC CUDA 10.2
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:10.2
             python-version: "3.6"
 
-          - name: aarch64 CPU
+          - name: ARM CPU Python 3.6
             docker-image: quay.io/condaforge/linux-anvil-aarch64
-            cuda-version: ""
             python-version: "3.6"
 
     steps:
@@ -622,7 +619,6 @@ jobs:
 
     - name: Run docker
       env:
-        CUDA_VER: ${{ matrix.cuda-version }}
         PYTHON_VER: ${{ matrix.python-version }}
         DOCKER_IMAGE: ${{ matrix.docker-image }}
       run: |
@@ -633,7 +629,6 @@ jobs:
           -v "${GITHUB_WORKSPACE}":/home/conda/workspace:rw,z \
           -e HOST_USER_ID \
           -e CPU_COUNT \
-          -e CUDA_VER \
           -e PYTHON_VER \
           ${DOCKER_IMAGE} \
           bash \
