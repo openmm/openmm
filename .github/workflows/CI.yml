@@ -597,12 +597,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: ppc64le
+          - name: ppc64le CPU
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le
+            cuda-version: ""
+            python-version: "3.6"
+
+          - name: ppc64le CUDA 10.2
             docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda
             cuda-version: "10.2"
             python-version: "3.6"
 
-          - name: aarch64
+          - name: aarch64 CPU
             docker-image: quay.io/condaforge/linux-anvil-aarch64
             cuda-version: ""
             python-version: "3.6"
