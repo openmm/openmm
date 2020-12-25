@@ -612,19 +612,38 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    # Following bits adapted from conda-forge Azure configs.
+    # If it stops working, check any feedstock with ppc64le or aarch64
+    # enabled, and adapt from:
+    #  .azure-pipelines/azure-pipelines-linux.yml
+    #  .scripts/run_docker_build.sh
+    #  .scripts/build_steps.sh
+
     - name: Prepare docker
       run: |
         docker run --rm --privileged multiarch/qemu-user-static:register --reset --credential yes
         ls /proc/sys/fs/binfmt_misc/
+
+        docker info
+
+        # In order for the conda-build process in the container to write to the mounted
+        # volumes, we need to run with the same id as the host machine, which is
+        # normally the owner of the mounted volumes, or at least has write permission
+        export HOST_USER_ID=$(id -u)
+
+        # Check if docker-machine is being used (normally on OSX) and get the uid from
+        # the VM
+        if hash docker-machine 2> /dev/null && docker-machine active > /dev/null; then
+            export HOST_USER_ID=$(docker-machine ssh $(docker-machine active) id -u)
+        fi
+
+        echo "HOST_USER_ID=${HOST_USER_ID}" >> ${GITHUB_ENV}
 
     - name: Run docker
       env:
         PYTHON_VER: ${{ matrix.python-version }}
         DOCKER_IMAGE: ${{ matrix.docker-image }}
       run: |
-        set -x
-        HOST_USER_ID=$(id -u)
-        test ! -z ${CUDA_VER} && DOCKER_IMAGE+=":${CUDA_VER}"
         docker run \
           -v "${GITHUB_WORKSPACE}":/home/conda/workspace:rw,z \
           -e HOST_USER_ID \
