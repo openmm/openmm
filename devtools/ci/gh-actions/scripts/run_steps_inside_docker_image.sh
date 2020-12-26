@@ -16,7 +16,7 @@ fi
 
 
 # Remove gromacs from dependencies
-sed -E "s/.*gromacs.*//" ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
+sed -E -e "s/.*gromacs.*//" -e "s/.*pytest-xdist.*//" ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
 
 conda create -y -n build python=${PYTHON_VER} $extra_conda_packages
 conda env update -n build -f conda-env.yml
@@ -59,7 +59,7 @@ echo "Run Python tests..."
 python -m simtk.testInstallation
 python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
 cd python/tests
-python -m pytest -v -n 2 -k "not gromacs" --timeout 600
+python -m pytest -v -k "not gromacs" --timeout 600
 
 echo "We are done!"
 touch "${WORKSPACE}/docker_steps_run_successfully"
