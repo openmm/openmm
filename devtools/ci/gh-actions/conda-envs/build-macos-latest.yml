@@ -15,4 +15,5 @@ dependencies:
 # test
 - pytest
 - pytest-xdist
+- pytest-timeout
 - gromacs 2018.*

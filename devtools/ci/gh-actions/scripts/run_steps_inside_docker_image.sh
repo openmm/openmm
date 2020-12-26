@@ -6,14 +6,19 @@ WORKSPACE="$HOME/workspace"
 
 echo "Prepare build environment..."
 
-sudo yum install -y centos-release-scl
-sudo yum install -y devtoolset-7
-source /opt/rh/devtoolset-7/enable
+if [[ ${COMPILERS} == devtoolset* ]]; then
+    sudo yum install -y centos-release-scl
+    sudo yum install -y ${COMPILERS}
+    source /opt/rh/${COMPILERS}/enable
+else
+    extra_conda_packages="${COMPILERS}"
+fi
+
 
 # Remove gromacs from dependencies
 sed -E "s/.*gromacs.*//" ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
 
-conda create -y -n build python=${PYTHON_VER} # compilers
+conda create -y -n build python=${PYTHON_VER} $extra_conda_packages
 conda env update -n build -f conda-env.yml
 conda activate build || true
 
@@ -40,7 +45,7 @@ make -j2 install PythonInstall
 
 # Core tests
 echo "Run core tests..."
-python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 300
+python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 360 --attempts 3
 test -f ${CONDA_PREFIX}/lib/libOpenMM.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMPME.so
@@ -54,7 +59,7 @@ echo "Run Python tests..."
 python -m simtk.testInstallation
 python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
 cd python/tests
-python -m pytest -v -n 2 -k "not gromacs"
+python -m pytest -v -n 2 -k "not gromacs" --timeout 600
 
 echo "We are done!"
 touch "${WORKSPACE}/docker_steps_run_successfully"
