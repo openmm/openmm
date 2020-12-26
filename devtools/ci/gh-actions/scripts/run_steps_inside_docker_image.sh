@@ -13,13 +13,11 @@ conda env update -n build -f conda-env.yml
 conda activate build || true
 
 echo "Configure with CMake..."
-CMAKE_FLAGS=""
 if [[ -d /usr/local/cuda ]]; then
     export CUDA_PATH="/usr/local/cuda"
     export CUDA_LIB_PATH="${CUDA_PATH}/lib64/stubs"
     export LD_LIBRARY_PATH="${CUDA_PATH}/lib64/stubs:${LD_LIBRARY_PATH:-}"
     export PATH="${CUDA_PATH}/bin:${PATH}"
-    CMAKE_FLAGS+=" -DOPENCL_LIBRARY=${CUDA_PATH}/lib64/libOpenCL.so"
 fi
 
 rm -rf build || true
@@ -29,8 +27,7 @@ cmake ${WORKSPACE} \
     -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
     -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
     -DOPENMM_BUILD_CUDA_TESTS=OFF \
-    -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-    ${CMAKE_FLAGS}
+    -DOPENMM_BUILD_OPENCL_TESTS=OFF
 
 # Build
 echo "Build with make..."
