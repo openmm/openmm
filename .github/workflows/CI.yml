@@ -180,6 +180,16 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
+          - name: Linux CPU Python 3.6 with conda-forge compilers
+            python-version: "3.6"
+            os: ubuntu-latest
+            OPENCL: false
+            cuda-version: ""
+            compilers: conda-forge
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
           - name: Linux CPU Python 3.6
             python-version: "3.6"
             os: ubuntu-latest
@@ -304,6 +314,11 @@ jobs:
       - name: "Install OpenCL on Ubuntu (if needed)"
         if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
         run: source devtools/ci/gh-actions/scripts/install_amd_opencl.sh
+
+      - name: "Install conda-forge compilers on Ubuntu (if needed)"
+        if: matrix.compilers == 'conda-forge'
+        shell: bash -l {0}
+        run: conda install -c conda-forge compilers
 
       - name: "Set SDK on MacOS (if needed)"
         if: startsWith(matrix.os, 'macos')
@@ -597,17 +612,30 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: PowerPC CPU Python 3.6
+          - name: PowerPC CPU Python 3.6 devtoolset-7
             docker-image: quay.io/condaforge/linux-anvil-ppc64le
             python-version: "3.6"
+            compilers: devtoolset-7
+
+          - name: PowerPC CPU Python 3.6 conda-forge compilers
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le
+            python-version: "3.6"
+            compilers: compilers
 
           - name: PowerPC CUDA 10.2
             docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:10.2
             python-version: "3.6"
+            compilers: devtoolset-7
 
-          - name: ARM CPU Python 3.6
+          - name: ARM CPU Python 3.6 devtoolset-7
             docker-image: quay.io/condaforge/linux-anvil-aarch64
             python-version: "3.6"
+            compilers: devtoolset-7
+
+          - name: ARM CPU Python 3.6 conda-forge compilers
+            docker-image: quay.io/condaforge/linux-anvil-aarch64
+            python-version: "3.6"
+            compilers: compilers
 
     steps:
     - uses: actions/checkout@v2
@@ -643,12 +671,14 @@ jobs:
       env:
         PYTHON_VER: ${{ matrix.python-version }}
         DOCKER_IMAGE: ${{ matrix.docker-image }}
+        COMPILERS: ${{ matrix.compilers }}
       run: |
         docker run \
           -v "${GITHUB_WORKSPACE}":/home/conda/workspace:rw,z \
           -e HOST_USER_ID \
           -e CPU_COUNT \
           -e PYTHON_VER \
+          -e COMPILERS \
           ${DOCKER_IMAGE} \
           bash \
           /home/conda/workspace/devtools/ci/gh-actions/scripts/run_steps_inside_docker_image.sh
