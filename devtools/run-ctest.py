@@ -53,12 +53,20 @@ def main():
         help='Number of processors to use',
         type=int,
         default=1)
+    parser.add_argument(
+        '--attempts',
+        help='Number of times failed tests will be re-run',
+        type=int,
+        default=1
+    )
 
     args, raw_args = parser.parse_known_args()
 
     status = execute_tests(args, raw_args)
-    if status != 0:
+    attempts = 0
+    if status != 0 and attempts < args.attempts:
         status = execute_failed_tests(args, raw_args)
+        attempts += 1
     return status
 
 

@@ -346,7 +346,7 @@ jobs:
         run: |
           set -x
           cd build
-          python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 300
+          python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 300 --attempts 3
 
           if [[ ${{ matrix.os }} == ubuntu-* ]]; then SHLIB=so; else SHLIB=dylib; fi
           # This is always built
@@ -567,7 +567,7 @@ jobs:
         run: |
           @echo on
           cd build
-          python ..\devtools\run-ctest.py --parallel 2 --timeout 600 --job-duration 300
+          python ..\devtools\run-ctest.py --parallel 2 --timeout 600 --job-duration 300 --attempts 3
           if errorlevel 1 exit 1
 
           if not exist %CONDA_PREFIX%/Library/lib/OpenMM.lib exit 1
