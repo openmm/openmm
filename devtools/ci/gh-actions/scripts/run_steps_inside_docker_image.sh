@@ -5,10 +5,15 @@ set -eo pipefail
 WORKSPACE="$HOME/workspace"
 
 echo "Prepare build environment..."
+
+sudo yum install -y centos-release-scl
+sudo yum install -y devtoolset-7
+source /opt/rh/devtoolset-7/enable
+
 # Remove gromacs from dependencies
 sed -E "s/.*gromacs.*//" ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
 
-conda create -y -n build python=${PYTHON_VER} compilers
+conda create -y -n build python=${PYTHON_VER} # compilers
 conda env update -n build -f conda-env.yml
 conda activate build || true
 
