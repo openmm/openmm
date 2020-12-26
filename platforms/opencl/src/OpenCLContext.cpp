@@ -614,10 +614,7 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     if (!defines.empty())
         src << endl;
     src << source << endl;
-    // Get length before using c_str() to avoid length() call invalidating the c_str() value.
-    string src_string = src.str();
-    ::size_t src_length = src_string.length();
-    cl::Program::Sources sources(1, make_pair(src_string.c_str(), src_length));
+    cl::Program::Sources sources({src.str()});
     cl::Program program(context, sources);
     try {
         program.build(vector<cl::Device>(1, device), options.c_str());

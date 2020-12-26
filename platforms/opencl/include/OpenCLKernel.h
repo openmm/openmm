@@ -29,7 +29,6 @@
 
 #include "OpenCLArray.h"
 #include "OpenCLContext.h"
-#include <cl.hpp>
 #include <string>
 #include <vector>
 
