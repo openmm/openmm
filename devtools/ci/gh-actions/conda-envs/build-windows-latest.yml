@@ -8,6 +8,7 @@ dependencies:
 - jom
 - cmake
 - ccache
+- m2-coreutils
 # host
 - python
 - cython

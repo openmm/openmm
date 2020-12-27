@@ -329,7 +329,7 @@ jobs:
         shell: bash -l {0}
         run: |
           echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
-          echo "::set-output name=timestamp::$(date +%s)"
+          echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
 
           echo "CCACHE_BASEDIR=${GITHUB_WORKSPACE}" >> ${GITHUB_ENV}
           echo "CCACHE_DIR=${GITHUB_WORKSPACE}/.ccache" >> ${GITHUB_ENV}
@@ -357,8 +357,8 @@ jobs:
           cmake .. \
             -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
             -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
-            -D CMAKE_C_COMPILER_LAUNCHER=ccache \
-            -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             ${{ matrix.CMAKE_FLAGS }}
 
       - name: "Build OpenMM"
@@ -570,8 +570,7 @@ jobs:
           set name=${{ matrix.name }}
           set name=%name: =%
           set name=%name:.=%
-          set today=%date: =0%
-          set timestamp=%today:~6,4%%today:~3,2%%today:~0,2%%time:~0,2%%time:~3,2%
+          for /f "usebackq tokens=*" %%a in (`date +%Y%m%d-%H%M%S`) do set "timestamp=%%a"
 
           echo ::set-output name=key::%name%
           echo ::set-output name=timestamp::%timestamp%"
@@ -606,8 +605,8 @@ jobs:
                 -DCMAKE_PREFIX_PATH=%CONDA_PREFIX%/Library ^
                 -DOPENCL_INCLUDE_DIR=%CONDA_PREFIX%/Library/include ^
                 -DOPENCL_LIBRARY=%CONDA_PREFIX%/Library/lib/OpenCL.lib ^
-                -D CMAKE_C_COMPILER_LAUNCHER=ccache ^
-                -D CMAKE_CXX_COMPILER_LAUNCHER=ccache ^
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache ^
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ^
                 -DCMAKE_CXX_COMPILER=cl.exe ^
                 -DCMAKE_C_COMPILER=cl.exe ^
                 -DOPENMM_BUILD_EXAMPLES=OFF ^
