@@ -334,6 +334,7 @@ jobs:
 
       - name: "Prepare ccache"
         id: prepare-ccache
+        shell: bash -l {0}
         run: |
           echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
           echo "::set-output name=timestamp::$(date +%s)"
