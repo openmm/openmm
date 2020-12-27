@@ -582,10 +582,10 @@ jobs:
           echo ::set-output name=timestamp::%timestamp%"
 
           set "CCACHE_BASEDIR=%GITHUB_WORKSPACE%"
-          set "CCACHE_DIR=%GITHUB_WORKSPACE%/.ccache"
-          set "CCACHE_COMPRESS=true"
-          set "CCACHE_COMPRESSLEVEL=6"
-          set "CCACHE_MAXSIZE=400M"
+          set "CCACHE_DIR=%GITHUB_WORKSPACE%\.ccache"
+          set CCACHE_COMPRESS=true
+          set CCACHE_COMPRESSLEVEL=6
+          set CCACHE_MAXSIZE=400M
 
           echo CCACHE_BASEDIR=%CCACHE_BASEDIR% >> %GITHUB_ENV%
           echo CCACHE_DIR=%CCACHE_DIR% >> %GITHUB_ENV%
