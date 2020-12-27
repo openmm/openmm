@@ -31,7 +31,6 @@
 #include "OpenCLArray.h"
 #include "OpenCLExpressionUtilities.h"
 #include "openmm/common/NonbondedUtilities.h"
-#include <cl.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
