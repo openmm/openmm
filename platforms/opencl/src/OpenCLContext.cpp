@@ -519,8 +519,7 @@ void OpenCLContext::initialize() {
     reduceForcesKernel.setArg<cl::Buffer>(1, forceBuffers.getDeviceBuffer());
     reduceForcesKernel.setArg<cl_int>(2, paddedNumAtoms);
     reduceForcesKernel.setArg<cl_int>(3, numForceBuffers);
-    if (supports64BitGlobalAtomics)
-        addAutoclearBuffer(longForceBuffer);
+    addAutoclearBuffer(longForceBuffer);
     addAutoclearBuffer(forceBuffers);
     addAutoclearBuffer(energyBuffer);
     int numEnergyParamDerivs = energyParamDerivNames.size();
