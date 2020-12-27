@@ -19,7 +19,7 @@ sed -E -e "s/.*gromacs.*//" \
        -e "s/^- python$/- python ${PYTHON_VER}/" \
        ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
 for package in $extra_conda_packages; do
-    if [[ -n ${package// } ]; then
+    if [[ -n ${package// } ]]; then
         echo "- ${package}" >> conda-env.yml
     fi
 done
