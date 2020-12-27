@@ -322,15 +322,7 @@ jobs:
 
       - name: "Set SDK on MacOS (if needed)"
         if: startsWith(matrix.os, 'macos')
-        run: |
-          max_retry=5
-          tried=0
-          until source devtools/ci/gh-actions/scripts/install_macos_sdk.sh; do
-            sleep 5
-            [[ tried -eq $max_retry ]] && echo "Failed!" && exit 1
-            echo "Trying again... Attempt #$tried"
-            ((tried++))
-          done
+        run: source devtools/ci/gh-actions/scripts/install_macos_sdk.sh
 
       - name: "Prepare ccache"
         id: prepare-ccache
