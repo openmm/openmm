@@ -606,8 +606,8 @@ jobs:
                 -DCMAKE_PREFIX_PATH=%CONDA_PREFIX%/Library ^
                 -DOPENCL_INCLUDE_DIR=%CONDA_PREFIX%/Library/include ^
                 -DOPENCL_LIBRARY=%CONDA_PREFIX%/Library/lib/OpenCL.lib ^
-                -D CMAKE_C_COMPILER_LAUNCHER=ccache \
-                -D CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                -D CMAKE_C_COMPILER_LAUNCHER=ccache ^
+                -D CMAKE_CXX_COMPILER_LAUNCHER=ccache ^
                 -DCMAKE_CXX_COMPILER=cl.exe ^
                 -DCMAKE_C_COMPILER=cl.exe ^
                 -DOPENMM_BUILD_EXAMPLES=OFF ^
