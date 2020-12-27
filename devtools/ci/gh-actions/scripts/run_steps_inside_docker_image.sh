@@ -59,7 +59,7 @@ echo "Run Python tests..."
 python -m simtk.testInstallation
 python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
 cd python/tests
-python -m pytest -v -k "not gromacs" --timeout 600
+python -m pytest -v -k "not gromacs and not membrane and not MTSLangevinIntegrator" --timeout 600
 
 echo "We are done!"
 touch "${WORKSPACE}/docker_steps_run_successfully"
