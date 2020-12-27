@@ -350,9 +350,9 @@ jobs:
         uses: actions/cache@v1.1.0
         with:
           path: .ccache
-          key: ccache-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
+          key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
           restore-keys: |
-            ccache-${{ steps.prepare-ccache.outputs.key }}-
+            ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
 
       - name: "Configure build with CMake"
         shell: bash -l {0}
@@ -584,13 +584,13 @@ jobs:
           set "CCACHE_BASEDIR=%GITHUB_WORKSPACE%"
           set "CCACHE_DIR=%GITHUB_WORKSPACE%\.ccache"
           set CCACHE_COMPRESS=true
-          set CCACHE_COMPRESSLEVEL=6
+          :: set CCACHE_COMPRESSLEVEL=6
           set CCACHE_MAXSIZE=400M
 
           echo CCACHE_BASEDIR=%CCACHE_BASEDIR% >> %GITHUB_ENV%
           echo CCACHE_DIR=%CCACHE_DIR% >> %GITHUB_ENV%
           echo CCACHE_COMPRESS=%CCACHE_COMPRESS% >> %GITHUB_ENV%
-          echo CCACHE_COMPRESSLEVEL=%CCACHE_COMPRESSLEVEL% >> %GITHUB_ENV%
+          :: echo CCACHE_COMPRESSLEVEL=%CCACHE_COMPRESSLEVEL% >> %GITHUB_ENV%
           echo CCACHE_MAXSIZE=%CCACHE_MAXSIZE% >> %GITHUB_ENV%
 
           ccache -p
@@ -600,9 +600,9 @@ jobs:
         uses: actions/cache@v1.1.0
         with:
           path: .ccache
-          key: ccache-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
+          key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
           restore-keys: |
-            ccache-${{ steps.prepare-ccache.outputs.key }}-
+            ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
 
       - name: "Configure build with CMake"
         shell: cmd /C call {0}
