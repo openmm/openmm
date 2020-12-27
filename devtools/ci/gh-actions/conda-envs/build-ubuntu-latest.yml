@@ -6,6 +6,7 @@ dependencies:
 # build
 - cmake
 - make
+- ccache
 # host
 - python
 - cython
