@@ -737,6 +737,21 @@ jobs:
 
         echo "HOST_USER_ID=${HOST_USER_ID}" >> ${GITHUB_ENV}
 
+    - name: "Prepare ccache"
+      id: prepare-ccache
+      shell: bash -l {0}
+      run: |
+        echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
+        echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
+
+    - name: "Restore ccache"
+      uses: actions/cache@v1.1.0
+      with:
+        path: .ccache
+        key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
+        restore-keys: |
+          ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
+
     - name: Run docker
       env:
         PYTHON_VER: ${{ matrix.python-version }}

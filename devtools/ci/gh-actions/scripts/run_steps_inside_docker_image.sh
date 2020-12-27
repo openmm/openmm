@@ -4,8 +4,17 @@ set -eo pipefail
 
 WORKSPACE="$HOME/workspace"
 
-echo "Prepare build environment..."
+echo "Prepare ccache..."
+export CCACHE_BASEDIR=${WORKSPACE}
+export CCACHE_DIR=${WORKSPACE}/.ccache
+export CCACHE_COMPRESS=true
+export CCACHE_COMPRESSLEVEL=6
+export CCACHE_MAXSIZE=400M
+ccache -p
+ccache -z
 
+echo "Prepare build environment..."
+extra_conda_packages=""
 if [[ ${COMPILERS} == devtoolset* ]]; then
     sudo yum install -y centos-release-scl
     sudo yum install -y ${COMPILERS}
@@ -14,12 +23,17 @@ else
     extra_conda_packages="${COMPILERS}"
 fi
 
-
-# Remove gromacs from dependencies
-sed -E -e "s/.*gromacs.*//" -e "s/.*pytest-xdist.*//" ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
-
-conda create -y -n build python=${PYTHON_VER} $extra_conda_packages
-conda env update -n build -f conda-env.yml
+# Patch environment file
+sed -E -e "s/.*gromacs.*//" \
+       -e "s/.*pytest-xdist.*//" \
+       -e "s/^- python$/- python ${PYTHON_VER}/" \
+       ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
+for package in $extra_conda_packages; do
+    if [[ -n ${package// } ]; then
+        echo "- ${package}" >> conda-env.yml
+    fi
+done
+conda env create -n build -f conda-env.yml
 conda activate build || true
 
 echo "Configure with CMake..."
@@ -36,12 +50,17 @@ cd build
 cmake ${WORKSPACE} \
     -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
     -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
+    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
     -DOPENMM_BUILD_CUDA_TESTS=OFF \
     -DOPENMM_BUILD_OPENCL_TESTS=OFF
 
 # Build
 echo "Build with make..."
 make -j2 install PythonInstall
+
+echo "Check ccache performance..."
+ccache -s
 
 # Core tests
 echo "Run core tests..."
