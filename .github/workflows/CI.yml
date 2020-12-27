@@ -331,11 +331,17 @@ jobs:
           echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
           echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
 
-          echo "CCACHE_BASEDIR=${GITHUB_WORKSPACE}" >> ${GITHUB_ENV}
-          echo "CCACHE_DIR=${GITHUB_WORKSPACE}/.ccache" >> ${GITHUB_ENV}
-          echo "CCACHE_COMPRESS=true" >> ${GITHUB_ENV}
-          echo "CCACHE_COMPRESSLEVEL=6" >> ${GITHUB_ENV}
-          echo "CCACHE_MAXSIZE=400M" >> ${GITHUB_ENV}
+          export CCACHE_BASEDIR=${GITHUB_WORKSPACE}
+          export CCACHE_DIR=${GITHUB_WORKSPACE}/.ccache
+          export CCACHE_COMPRESS=true
+          export CCACHE_COMPRESSLEVEL=6
+          export CCACHE_MAXSIZE=400M
+
+          echo "CCACHE_BASEDIR=${CCACHE_BASEDIR}" >> ${GITHUB_ENV}
+          echo "CCACHE_DIR=${CCACHE_DIR}" >> ${GITHUB_ENV}
+          echo "CCACHE_COMPRESS=${CCACHE_COMPRESS}" >> ${GITHUB_ENV}
+          echo "CCACHE_COMPRESSLEVEL=${CCACHE_COMPRESSLEVEL}" >> ${GITHUB_ENV}
+          echo "CCACHE_MAXSIZE=${CCACHE_MAXSIZE}" >> ${GITHUB_ENV}
 
           ccache -p
           ccache -z
@@ -575,11 +581,17 @@ jobs:
           echo ::set-output name=key::%name%
           echo ::set-output name=timestamp::%timestamp%"
 
-          echo CCACHE_BASEDIR=%GITHUB_WORKSPACE% >> %GITHUB_ENV%
-          echo CCACHE_DIR=%GITHUB_WORKSPACE%/.ccache >> %GITHUB_ENV%
-          echo CCACHE_COMPRESS=true >> %GITHUB_ENV%
-          echo CCACHE_COMPRESSLEVEL=6 >> %GITHUB_ENV%
-          echo CCACHE_MAXSIZE=400M >> %GITHUB_ENV%
+          set "CCACHE_BASEDIR=%GITHUB_WORKSPACE%"
+          set "CCACHE_DIR=%GITHUB_WORKSPACE%/.ccache"
+          set "CCACHE_COMPRESS=true"
+          set "CCACHE_COMPRESSLEVEL=6"
+          set "CCACHE_MAXSIZE=400M"
+
+          echo CCACHE_BASEDIR=%CCACHE_BASEDIR% >> %GITHUB_ENV%
+          echo CCACHE_DIR=%CCACHE_DIR% >> %GITHUB_ENV%
+          echo CCACHE_COMPRESS=%CCACHE_COMPRESS% >> %GITHUB_ENV%
+          echo CCACHE_COMPRESSLEVEL=%CCACHE_COMPRESSLEVEL% >> %GITHUB_ENV%
+          echo CCACHE_MAXSIZE=%CCACHE_MAXSIZE% >> %GITHUB_ENV%
 
           ccache -p
           ccache -z
