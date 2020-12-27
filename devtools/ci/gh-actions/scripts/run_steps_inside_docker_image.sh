@@ -1,19 +1,9 @@
 source /opt/conda/etc/profile.d/conda.sh
 set -eo pipefail
 
-
 WORKSPACE="$HOME/workspace"
 
-echo "Prepare ccache..."
-export CCACHE_BASEDIR=${WORKSPACE}
-export CCACHE_DIR=${WORKSPACE}/.ccache
-export CCACHE_COMPRESS=true
-export CCACHE_COMPRESSLEVEL=6
-export CCACHE_MAXSIZE=400M
-ccache -p
-ccache -z
-
-echo "Prepare build environment..."
+echo "::group::Prepare build environment..."
 extra_conda_packages=""
 if [[ ${COMPILERS} == devtoolset* ]]; then
     sudo yum install -y centos-release-scl
@@ -35,8 +25,19 @@ for package in $extra_conda_packages; do
 done
 conda env create -n build -f conda-env.yml
 conda activate build || true
+echo "::endgroup::"
 
-echo "Configure with CMake..."
+echo "::group::Prepare ccache..."
+export CCACHE_BASEDIR=${WORKSPACE}
+export CCACHE_DIR=${WORKSPACE}/.ccache
+export CCACHE_COMPRESS=true
+export CCACHE_COMPRESSLEVEL=6
+export CCACHE_MAXSIZE=400M
+ccache -p
+ccache -z
+echo "::endgroup::"
+
+echo "::group::Configure with CMake..."
 if [[ -d /usr/local/cuda ]]; then
     export CUDA_PATH="/usr/local/cuda"
     export CUDA_LIB_PATH="${CUDA_PATH}/lib64/stubs"
@@ -54,16 +55,20 @@ cmake ${WORKSPACE} \
     -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
     -DOPENMM_BUILD_CUDA_TESTS=OFF \
     -DOPENMM_BUILD_OPENCL_TESTS=OFF
+echo "::endgroup::"
 
 # Build
-echo "Build with make..."
+echo "::group::Build with make..."
 make -j2 install PythonInstall
+echo "::endgroup::"
 
-echo "Check ccache performance..."
+echo "::group::Check ccache performance..."
 ccache -s
+echo "::endgroup::"
 
 # Core tests
-echo "Run core tests..."
+
+echo "::group::Run core tests..."
 python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 360 --attempts 3
 test -f ${CONDA_PREFIX}/lib/libOpenMM.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.so
@@ -72,13 +77,15 @@ if [[ ! -z ${CUDA_VER} ]]; then
     test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCUDA.so
     test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMOpenCL.so
 fi
+echo "::endgroup::"
 
 # Python tests
-echo "Run Python tests..."
+echo "::group::Run Python tests..."
 python -m simtk.testInstallation
 python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
 cd python/tests
 python -m pytest -v -k "not gromacs and not membrane and not MTSLangevinIntegrator" --timeout 600
+echo "::endgroup::"
 
 echo "We are done!"
 touch "${WORKSPACE}/docker_steps_run_successfully"
