@@ -180,7 +180,7 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux CPU Python 3.6 with conda-forge compilers
+          - name: Linux CPU Python 3.6 with condaforge compilers
             python-version: "3.6"
             os: ubuntu-latest
             OPENCL: false
@@ -685,30 +685,66 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: PowerPC CPU Python 3.6 devtoolset-7
+          - name: PowerPC CPU Python 3.6 with condaforge compilers
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le
+            python-version: "3.6"
+            compilers: compilers
+
+          - name: PowerPC CPU Python 3.6
             docker-image: quay.io/condaforge/linux-anvil-ppc64le
             python-version: "3.6"
             compilers: devtoolset-7
 
-          - name: PowerPC CPU Python 3.6 conda-forge compilers
+          - name: PowerPC CPU Python 3.7
             docker-image: quay.io/condaforge/linux-anvil-ppc64le
-            python-version: "3.6"
-            compilers: compilers
+            python-version: "3.7"
+            compilers: devtoolset-7
+
+          - name: PowerPC CPU Python 3.8
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le
+            python-version: "3.8"
+            compilers: devtoolset-7
+
+          - name: PowerPC CPU Python 3.9
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le
+            python-version: "3.9"
+            compilers: devtoolset-7
 
           - name: PowerPC CUDA 10.2
             docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:10.2
             python-version: "3.6"
             compilers: devtoolset-7
 
-          - name: ARM CPU Python 3.6 devtoolset-7
+          - name: PowerPC CUDA 11.0
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:11.0
+            python-version: "3.6"
+            compilers: devtoolset-7
+
+          - name: ARM CPU Python 3.6 with condaforge compilers
+            docker-image: quay.io/condaforge/linux-anvil-aarch64
+            python-version: "3.6"
+            compilers: compilers
+
+          - name: ARM CPU Python 3.6
             docker-image: quay.io/condaforge/linux-anvil-aarch64
             python-version: "3.6"
             compilers: devtoolset-7
 
-          - name: ARM CPU Python 3.6 conda-forge compilers
+          - name: ARM CPU Python 3.7
             docker-image: quay.io/condaforge/linux-anvil-aarch64
-            python-version: "3.6"
-            compilers: compilers
+            python-version: "3.7"
+            compilers: devtoolset-7
+
+          - name: ARM CPU Python 3.8
+            docker-image: quay.io/condaforge/linux-anvil-aarch64
+            python-version: "3.8"
+            compilers: devtoolset-7
+
+          - name: ARM CPU Python 3.9
+            docker-image: quay.io/condaforge/linux-anvil-aarch64
+            python-version: "3.9"
+            compilers: devtoolset-7
+
 
     steps:
     - uses: actions/checkout@v2
