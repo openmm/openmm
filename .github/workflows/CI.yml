@@ -576,7 +576,7 @@ jobs:
           set name=${{ matrix.name }}
           set name=%name: =%
           set name=%name:.=%
-          for /f "usebackq tokens=*" %%a in (`date +%Y%m%d-%H%M%S`) do set "timestamp=%%a"
+          for /f "usebackq tokens=*" %%a in (`%CONDA_PREFIX%\Library\usr\bin\date.exe +%Y%m%d-%H%M%S`) do set "timestamp=%%a"
 
           echo ::set-output name=key::%name%
           echo ::set-output name=timestamp::%timestamp%"
