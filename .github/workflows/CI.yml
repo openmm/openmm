@@ -798,6 +798,36 @@ jobs:
             texlive-xetex \
             fonts-freefont-otf
 
+      - name: "Prepare ccache"
+        id: prepare-ccache
+        shell: bash -l {0}
+        run: |
+          echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
+          echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
+
+          export CCACHE_BASEDIR=${GITHUB_WORKSPACE}
+          export CCACHE_DIR=${GITHUB_WORKSPACE}/.ccache
+          export CCACHE_COMPRESS=true
+          export CCACHE_COMPRESSLEVEL=6
+          export CCACHE_MAXSIZE=400M
+
+          echo "CCACHE_BASEDIR=${CCACHE_BASEDIR}" >> ${GITHUB_ENV}
+          echo "CCACHE_DIR=${CCACHE_DIR}" >> ${GITHUB_ENV}
+          echo "CCACHE_COMPRESS=${CCACHE_COMPRESS}" >> ${GITHUB_ENV}
+          echo "CCACHE_COMPRESSLEVEL=${CCACHE_COMPRESSLEVEL}" >> ${GITHUB_ENV}
+          echo "CCACHE_MAXSIZE=${CCACHE_MAXSIZE}" >> ${GITHUB_ENV}
+
+          ccache -p
+          ccache -z
+
+      - name: "Restore ccache"
+        uses: actions/cache@v1.1.0
+        with:
+          path: .ccache
+          key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
+          restore-keys: |
+            ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
+
       - name: "Configure build with CMake"
         shell: bash -l {0}
         run: |
@@ -806,6 +836,8 @@ jobs:
           cmake .. \
             -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
             -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DOPENMM_GENERATE_API_DOCS=ON \
             -DOPENMM_BUILD_PYTHON_WRAPPERS=ON \
             -DOPENMM_BUILD_OPENCL_LIB=OFF \
@@ -835,6 +867,10 @@ jobs:
           mv api-python api-docs
           mv api-c++ api-docs
 
+      - name: "Check ccache performance"
+        shell: bash -l {0}
+        run: ccache -s
+
       - name: "Deploy docs (only on master)"
         if: ${{ github.ref == 'refs/heads/master' && github.event_name != 'schedule' }}
         uses: jakejarvis/s3-sync-action@master
@@ -853,14 +889,14 @@ jobs:
         run: |
           set -x
           set +e
-          npx linkinator ./build/api-docs/api-c++/ --recurse --timeout=5000
-          exitcode=$?
-          npx linkinator ./build/api-docs/api-python/ --recurse --timeout=5000
-          exitcode+="+$?"
-          npx linkinator ./build/api-docs/developerguide/ --recurse --timeout=5000
-          exitcode+="+$?"
-          npx linkinator ./build/api-docs/userguide/ --recurse --timeout=5000
-          exitcode+="+$?"
+          for d in api-c++ api-python developerguide userguide; do
+            echo "::group:: Check ${d}"
+            npx linkinator ./build/api-docs/${d}/ --recurse --timeout=5000
+            ((exitcode+=$?))
+            echo "::endgroup::"
+          done
+          echo "::group:: Check README"
           npx linkinator ./README.md --markdown
-          exitcode+="+$?"
-          exit $(echo $exitcode | bc)
+          ((exitcode+=$?))
+          echo "::endgroup::"
+          exit $exitcode

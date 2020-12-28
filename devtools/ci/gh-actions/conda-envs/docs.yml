@@ -4,6 +4,7 @@ channels:
 dependencies:
 # build
 - cmake
+- ccache
 # host
 - python
 - pip
