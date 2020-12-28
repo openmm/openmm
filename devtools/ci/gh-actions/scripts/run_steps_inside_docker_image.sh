@@ -18,7 +18,6 @@ fi
 
 # Patch environment file
 sed -E -e "s/.*gromacs.*//" \
-       -e "s/.*pytest-xdist.*//" \
        -e "s/^- python$/- python ${PYTHON_VER}.*/" \
        ${WORKSPACE}/devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml > conda-env.yml
 for package in $extra_conda_packages; do
@@ -72,7 +71,7 @@ echo "::endgroup::"
 # Core tests
 
 echo "::group::Run core tests..."
-python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 900 --job-duration 360 --attempts 3
+python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 1500 --job-duration 360 --attempts 3
 test -f ${CONDA_PREFIX}/lib/libOpenMM.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMPME.so
@@ -87,7 +86,7 @@ echo "::group::Run Python tests..."
 python -m simtk.testInstallation
 python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
 cd python/tests
-python -m pytest -v -k "not gromacs and not membrane and not MTSLangevinIntegrator" --timeout 600
+python -m pytest -v -k "not gromacs and not membrane and not MTSLangevinIntegrator" -n 2
 echo "::endgroup::"
 
 echo "We are done!"
