@@ -4,7 +4,7 @@ set -eo pipefail
 WORKSPACE="$HOME/workspace"
 
 # This endgroup closes the open tag in CI.yml
-echo ":endgroup:"
+echo "::endgroup::"
 
 echo "::group::Prepare build environment..."
 extra_conda_packages=""
