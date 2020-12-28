@@ -3,6 +3,9 @@ set -eo pipefail
 
 WORKSPACE="$HOME/workspace"
 
+# This endgroup closes the open tag in CI.yml
+echo ":endgroup:"
+
 echo "::group::Prepare build environment..."
 extra_conda_packages=""
 if [[ ${COMPILERS} == devtoolset* ]]; then
@@ -69,7 +72,7 @@ echo "::endgroup::"
 # Core tests
 
 echo "::group::Run core tests..."
-python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 360 --attempts 3
+python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 900 --job-duration 360 --attempts 3
 test -f ${CONDA_PREFIX}/lib/libOpenMM.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMPME.so

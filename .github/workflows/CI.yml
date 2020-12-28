@@ -758,6 +758,7 @@ jobs:
         DOCKER_IMAGE: ${{ matrix.docker-image }}
         COMPILERS: ${{ matrix.compilers }}
       run: |
+        echo "::group::Start docker..."
         docker run \
           -v "${GITHUB_WORKSPACE}":/home/conda/workspace:rw,z \
           -e HOST_USER_ID \
