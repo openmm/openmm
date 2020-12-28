@@ -18,6 +18,12 @@ jobs:
   unix:
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
+    env:
+      CCACHE_BASEDIR: "${{ github.workspace }}"
+      CCACHE_DIR: "${{ github.workspace }}/.ccache"
+      CCACHE_COMPRESS: true
+      CCACHE_COMPRESSLEVEL: 6
+      CCACHE_MAXSIZE: 400M
     strategy:
       fail-fast: false
       matrix:
@@ -331,18 +337,6 @@ jobs:
           echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
           echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
 
-          export CCACHE_BASEDIR=${GITHUB_WORKSPACE}
-          export CCACHE_DIR=${GITHUB_WORKSPACE}/.ccache
-          export CCACHE_COMPRESS=true
-          export CCACHE_COMPRESSLEVEL=6
-          export CCACHE_MAXSIZE=400M
-
-          echo "CCACHE_BASEDIR=${CCACHE_BASEDIR}" >> ${GITHUB_ENV}
-          echo "CCACHE_DIR=${CCACHE_DIR}" >> ${GITHUB_ENV}
-          echo "CCACHE_COMPRESS=${CCACHE_COMPRESS}" >> ${GITHUB_ENV}
-          echo "CCACHE_COMPRESSLEVEL=${CCACHE_COMPRESSLEVEL}" >> ${GITHUB_ENV}
-          echo "CCACHE_MAXSIZE=${CCACHE_MAXSIZE}" >> ${GITHUB_ENV}
-
           ccache -p
           ccache -z
 
@@ -427,6 +421,12 @@ jobs:
       # `make pythoninstall` will always put the files in the workspace unit
       # workaround: make sure conda envs are created in the same unit as workspace
       CONDA_ENVS_PATH: "D:/conda-envs"
+      CCACHE_BASEDIR: "${{ github.workspace }}"
+      CCACHE_DIR: "${{ github.workspace }}/.ccache"
+      CCACHE_COMPRESS: true
+      CCACHE_COMPRESSLEVEL: 6
+      CCACHE_MAXSIZE: 400M
+
     strategy:
       fail-fast: false
       matrix:
@@ -579,19 +579,7 @@ jobs:
           for /f "usebackq tokens=*" %%a in (`%CONDA_PREFIX%\Library\usr\bin\date.exe +%%Y%%m%%d-%%H%%M%%S`) do set "timestamp=%%a"
 
           echo ::set-output name=key::%name%
-          echo ::set-output name=timestamp::%timestamp%"
-
-          set "CCACHE_BASEDIR=%GITHUB_WORKSPACE%"
-          set "CCACHE_DIR=%GITHUB_WORKSPACE%\.ccache"
-          set CCACHE_COMPRESS=true
-          :: set CCACHE_COMPRESSLEVEL=6
-          set CCACHE_MAXSIZE=400M
-
-          echo CCACHE_BASEDIR=%CCACHE_BASEDIR% >> %GITHUB_ENV%
-          echo CCACHE_DIR=%CCACHE_DIR% >> %GITHUB_ENV%
-          echo CCACHE_COMPRESS=%CCACHE_COMPRESS% >> %GITHUB_ENV%
-          :: echo CCACHE_COMPRESSLEVEL=%CCACHE_COMPRESSLEVEL% >> %GITHUB_ENV%
-          echo CCACHE_MAXSIZE=%CCACHE_MAXSIZE% >> %GITHUB_ENV%
+          echo ::set-output name=timestamp::%timestamp%
 
           ccache -p
           ccache -z
@@ -813,6 +801,13 @@ jobs:
 
   docs:
     name: Docs
+    env:
+      CCACHE_BASEDIR: "${{ github.workspace }}"
+      CCACHE_DIR: "${{ github.workspace }}/.ccache"
+      CCACHE_COMPRESS: true
+      CCACHE_COMPRESSLEVEL: 6
+      CCACHE_MAXSIZE: 400M
+
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -843,18 +838,6 @@ jobs:
         run: |
           echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
           echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
-
-          export CCACHE_BASEDIR=${GITHUB_WORKSPACE}
-          export CCACHE_DIR=${GITHUB_WORKSPACE}/.ccache
-          export CCACHE_COMPRESS=true
-          export CCACHE_COMPRESSLEVEL=6
-          export CCACHE_MAXSIZE=400M
-
-          echo "CCACHE_BASEDIR=${CCACHE_BASEDIR}" >> ${GITHUB_ENV}
-          echo "CCACHE_DIR=${CCACHE_DIR}" >> ${GITHUB_ENV}
-          echo "CCACHE_COMPRESS=${CCACHE_COMPRESS}" >> ${GITHUB_ENV}
-          echo "CCACHE_COMPRESSLEVEL=${CCACHE_COMPRESSLEVEL}" >> ${GITHUB_ENV}
-          echo "CCACHE_MAXSIZE=${CCACHE_MAXSIZE}" >> ${GITHUB_ENV}
 
           ccache -p
           ccache -z
