@@ -408,7 +408,7 @@ jobs:
       # workaround: make sure conda envs are created in the same unit as workspace
       CONDA_ENVS_PATH: "D:/conda-envs"
       CCACHE_BASEDIR: "${{ github.workspace }}"
-      CCACHE_DIR: "${{ github.workspace }}/.ccache"
+      CCACHE_DIR: "${{ github.workspace }}\\.ccache"
       CCACHE_COMPRESS: true
       CCACHE_COMPRESSLEVEL: 6
       CCACHE_MAXSIZE: 400M
