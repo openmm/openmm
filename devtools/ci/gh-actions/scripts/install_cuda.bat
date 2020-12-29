@@ -1,3 +1,10 @@
+:: This script installs CUDA on Windows.
+:: It downloads the offline installer from the Nvidia servers
+:: and the relevant patches, if applicable.
+:: It uses the default installation path, which is exported as CUDA_PATH
+:: For CMake compatibility, CUDA_TOOLKIT_ROOT_DIR is also exported
+:: It expects a %CUDA_VERSION% environment variable, set to major.minor (e.g. 10.0)
+
 :: We define a default subset of components to be installed for faster installation times
 :: and reduced storage usage (CI is limited to 10GB). Full list of components is available at
 :: https://docs.nvidia.com/cuda/archive/%CUDA_VERSION%/cuda-installation-guide-microsoft-windows/index.html

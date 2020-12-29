@@ -232,7 +232,7 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS OpenCL
+          - name: MacOS Intel OpenCL
             python-version: "3.6"
             os: macos-latest
             OPENCL: true
@@ -250,7 +250,7 @@ jobs:
               -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
               -DOPENMM_BUILD_EXAMPLES=OFF \
 
-          - name: MacOS CPU Python 3.6
+          - name: MacOS Intel CPU Python 3.6
             python-version: "3.6"
             os: macos-latest
             OPENCL: false
@@ -259,7 +259,7 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS CPU Python 3.7
+          - name: MacOS Intel CPU Python 3.7
             python-version: "3.7"
             os: macos-latest
             OPENCL: false
@@ -268,7 +268,7 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS CPU Python 3.8
+          - name: MacOS Intel CPU Python 3.8
             python-version: "3.8"
             os: macos-latest
             OPENCL: false
@@ -277,7 +277,7 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS CPU Python 3.9
+          - name: MacOS Intel CPU Python 3.9
             python-version: "3.9"
             os: macos-latest
             OPENCL: false
@@ -285,20 +285,6 @@ jobs:
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-
-          # - name: ppc64le
-          #   python-version: "3.8"
-          #   os: ubuntu-latest
-          #   OPENCL: false
-          #   cuda-version: ""
-          #   CMAKE_FLAGS: ""
-
-          # - name: aarch64
-          #   python-version: "3.8"
-          #   os: ubuntu-latest
-          #   OPENCL: false
-          #   cuda-version: ""
-          #   CMAKE_FLAGS: ""
 
     steps:
       - uses: actions/checkout@v2
@@ -744,7 +730,7 @@ jobs:
     #  .scripts/run_docker_build.sh
     #  .scripts/build_steps.sh
 
-    - name: Prepare docker
+    - name: "Prepare docker"
       run: |
         docker run --rm --privileged multiarch/qemu-user-static:register --reset --credential yes
         ls /proc/sys/fs/binfmt_misc/

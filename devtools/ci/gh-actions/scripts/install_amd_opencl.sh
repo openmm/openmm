@@ -1,4 +1,8 @@
+# This script installs AMD's SDK 3.0 to provide their OpenCL implementation
+# * Installation path will be ${GITHUB_WORKSPACE}/AMDAPPSDK
+
 set -euxo pipefail
+
 
 wget -q --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 --tries 5 \
     http://s3.amazonaws.com/omnia-ci/AMD-APP-SDKInstaller-v3.0.130.135-GA-linux64.tar.bz2

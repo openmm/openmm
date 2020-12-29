@@ -1,3 +1,9 @@
+# This script install CUDA on Ubuntu-based systemws
+# It uses the Nvidia repos for Ubuntu 18.04, which as of Dec 2020
+# includes packages for CUDA 10.0, 10.1, 10.2, 11.0, 11.1, 11.2
+# Future versions might require an updated repo (maybe Ubuntu 20)
+# It expects a $CUDA_VERSION environment variable set to major.minor (e.g. 10.0)
+
 set -euxo pipefail
 
 # Enable retrying
@@ -11,6 +17,7 @@ sudo add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/r
 sudo apt-get update -qq
 
 CUDA_APT=${CUDA_VERSION/./-}
+## cufft changed package names in CUDA 11
 if [[ ${CUDA_VERSION} == 10.* ]]; then CUFFT="cuda-cufft"; else CUFFT="libcufft"; fi
 sudo apt-get install -y \
     libgl1-mesa-dev cuda-compiler-${CUDA_APT} \

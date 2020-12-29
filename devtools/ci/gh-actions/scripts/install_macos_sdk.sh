@@ -1,3 +1,12 @@
+# Install an older MacOS SDK
+# This should guarantee OpenMM builds with extended compatibility across MacOS versions
+# Adapted from conda-forge-ci-setup scripts:
+# * https://github.com/conda-forge/conda-forge-ci-setup-feedstock/blob/dde296e/recipe/run_conda_forge_build_setup_osx
+# * https://github.com/conda-forge/conda-forge-ci-setup-feedstock/blob/dde296e/recipe/download_osx_sdk.sh
+#
+# Some possible updates might involve upgrading the download link to future MacOS releases (10.15 to something else),
+# depending on the version provided by the CI
+
 OSX_SDK_DIR="$(xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs"
 export MACOSX_DEPLOYMENT_TARGET=10.9
 export MACOSX_SDK_VERSION=10.9

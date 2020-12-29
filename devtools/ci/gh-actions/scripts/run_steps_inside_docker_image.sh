@@ -86,6 +86,8 @@ echo "::group::Run Python tests..."
 python -m simtk.testInstallation
 python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
 cd python/tests
+# Gromacs is not available on condaforge for PPC/ARM
+# Membrane an MTS Langevin Integrator tests timeout (>6h!), possibly due to the emulation slowdown
 python -m pytest -v -k "not gromacs and not membrane and not MTSLangevinIntegrator" -n 2
 echo "::endgroup::"
 
