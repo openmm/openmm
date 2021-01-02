@@ -37,7 +37,7 @@ def runOneTest(testName, options):
     explicit = (testName in ('rf', 'pme', 'amoebapme'))
     amoeba = (testName in ('amoebagk', 'amoebapme'))
     apoa1 = testName.startswith('apoa1')
-    amber = (testName in ('JAC', 'Cellulose', 'FactorIX', 'STMV'))
+    amber = (testName.startswith('amber'))
     hydrogenMass = None
     print()
     if amoeba:
@@ -72,8 +72,10 @@ def runOneTest(testName, options):
         integ = mm.MTSIntegrator(dt, [(0,2), (1,1)])
     elif amber:
         dirname = downloadAmberSuite()
-        prmtop = app.AmberPrmtopFile(os.path.join(dirname, f'PME/Topologies/{testName}.prmtop'))
-        inpcrd = app.AmberInpcrdFile(os.path.join(dirname, f'PME/Coordinates/{testName}.inpcrd'))
+        names = {'amber20-dhfr':'JAC',  'amber20-factorix':'FactorIX', 'amber20-cellulose':'Cellulose', 'amber20-stmv':'STMV'}
+        fileName = names[testName]
+        prmtop = app.AmberPrmtopFile(os.path.join(dirname, f'PME/Topologies/{fileName}.prmtop'))
+        inpcrd = app.AmberInpcrdFile(os.path.join(dirname, f'PME/Coordinates/{fileName}.inpcrd'))
         topology = prmtop.topology
         positions = inpcrd.positions
         dt = 0.004*unit.picoseconds
@@ -172,7 +174,8 @@ def runOneTest(testName, options):
 parser = ArgumentParser()
 platformNames = [mm.Platform.getPlatform(i).getName() for i in range(mm.Platform.getNumPlatforms())]
 parser.add_argument('--platform', dest='platform', choices=platformNames, help='name of the platform to benchmark')
-parser.add_argument('--test', dest='test', choices=('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme', 'JAC',  'FactorIX', 'Cellulose', 'STMV'), help='the test to perform: gbsa, rf, pme, apoa1rf, apoa1pme, apoa1ljpme, amoebagk, or amoebapme [default: all]')
+parser.add_argument('--test', dest='test', choices=('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme', 'amber20-dhfr',  'amber20-factorix', 'amber20-cellulose', 'amber20-stmv'), 
+    help='the test to perform: gbsa, rf, pme, apoa1rf, apoa1pme, apoa1ljpme, amoebagk, amoebapme,  amber20-dhfr,  amber20-factorix, amber20-cellulose, amber20-stmv [default: all except amber-*]')
 parser.add_argument('--ensemble', default='NPT', dest='ensemble', choices=('NPT', 'NVE', 'NVT'), help='the ensemble (for Amber tests only) [default: NPT]')
 parser.add_argument('--pme-cutoff', default=0.9, dest='cutoff', type=float, help='direct space cutoff for PME in nm [default: 0.9]')
 parser.add_argument('--seconds', default=60, dest='seconds', type=float, help='target simulation length in seconds [default: 60]')
