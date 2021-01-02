@@ -77,10 +77,15 @@ def runOneTest(testName, options):
         method = app.PME
         cutoff = options.cutoff
         constraints = app.HBonds
-        hydrogenMass = 3*unit.amu # NOTE do the inputs already have this included?  3.0 is standard for tleap
         friction = 1*(1/unit.picoseconds)
-        integ = mm.LangevinMiddleIntegrator(300*unit.kelvin, friction, dt)
-        system = prmtop.createSystem(nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints, hydrogenMass=hydrogenMass)
+        system = prmtop.createSystem(nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints)
+        print('Ensemble: %s' % options.ensemble)
+        if options.ensemble == 'NPT':
+            system.addForce(mm.MonteCarloBarostat(1*unit.bar, 300*unit.kelvin))
+        if options.ensemble == 'NVE':
+            integ = mm.VerletIntegrator(dt)
+        else:
+            integ = mm.LangevinMiddleIntegrator(300*unit.kelvin, friction, dt)
     else:
         if apoa1:
             ff = app.ForceField('amber14/protein.ff14SB.xml', 'amber14/lipid17.xml', 'amber14/tip3p.xml')
@@ -165,6 +170,7 @@ parser = ArgumentParser()
 platformNames = [mm.Platform.getPlatform(i).getName() for i in range(mm.Platform.getNumPlatforms())]
 parser.add_argument('--platform', dest='platform', choices=platformNames, help='name of the platform to benchmark')
 parser.add_argument('--test', dest='test', choices=('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme', 'JAC',  'FactorIX', 'Cellulose', 'STMV'), help='the test to perform: gbsa, rf, pme, apoa1rf, apoa1pme, apoa1ljpme, amoebagk, or amoebapme [default: all]')
+parser.add_argument('--ensemble', default='NPT', dest='ensemble', choices=('NPT', 'NVE', 'NVT'), help='the ensemble (for Amber tests only) [default: NPT]')
 parser.add_argument('--pme-cutoff', default=0.9, dest='cutoff', type=float, help='direct space cutoff for PME in nm [default: 0.9]')
 parser.add_argument('--seconds', default=60, dest='seconds', type=float, help='target simulation length in seconds [default: 60]')
 parser.add_argument('--polarization', default='mutual', dest='polarization', choices=('direct', 'extrapolated', 'mutual'), help='the polarization method for AMOEBA: direct, extrapolated, or mutual [default: mutual]')
