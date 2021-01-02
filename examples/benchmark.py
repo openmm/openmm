@@ -4,6 +4,7 @@ import simtk.openmm as mm
 import simtk.unit as unit
 import sys
 from datetime import datetime
+import os
 from argparse import ArgumentParser
 
 def timeIntegration(context, steps, initialSteps):
@@ -17,11 +18,23 @@ def timeIntegration(context, steps, initialSteps):
     elapsed = end-start
     return elapsed.seconds + elapsed.microseconds*1e-6
 
+def downloadAmberSuite():
+    dir = 'Amber20_Benchmark_Suite'
+    if not os.path.exists(dir):
+        os.mkdir(dir)
+        os.chdir(dir)
+        import subprocess
+        subprocess.run('wget https://ambermd.org/Amber20_Benchmark_Suite.tar.gz', shell=True, check=True)
+        subprocess.run('tar xzvf Amber20_Benchmark_Suite.tar.gz', shell=True, check=True)
+        os.chdir('..')
+    return dir
+
 def runOneTest(testName, options):
     """Perform a single benchmarking simulation."""
     explicit = (testName in ('rf', 'pme', 'amoebapme'))
     amoeba = (testName in ('amoebagk', 'amoebapme'))
     apoa1 = testName.startswith('apoa1')
+    amber = (testName in ('JAC', 'Cellulose', 'FactorIX', 'STMV'))
     hydrogenMass = None
     print()
     if amoeba:
@@ -54,6 +67,20 @@ def runOneTest(testName, options):
                 f.setForceGroup(1)
         dt = 0.002*unit.picoseconds
         integ = mm.MTSIntegrator(dt, [(0,2), (1,1)])
+    elif amber:
+        dir = downloadAmberSuite()
+        prmtop = app.AmberPrmtopFile(os.path.join(dir, f'PME/Topologies/{testName}.prmtop'))
+        inpcrd = app.AmberInpcrdFile(os.path.join(dir, f'PME/Coordinates/{testName}.inpcrd'))
+        topology = prmtop.topology
+        positions = inpcrd.positions
+        dt = 0.004*unit.picoseconds
+        method = app.PME
+        cutoff = options.cutoff
+        constraints = app.HBonds
+        hydrogenMass = 3*unit.amu # NOTE do the inputs already have this included?  3.0 is standard for tleap
+        friction = 1*(1/unit.picoseconds)
+        integ = mm.LangevinMiddleIntegrator(300*unit.kelvin, friction, dt)
+        system = prmtop.createSystem(nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints, hydrogenMass=hydrogenMass)
     else:
         if apoa1:
             ff = app.ForceField('amber14/protein.ff14SB.xml', 'amber14/lipid17.xml', 'amber14/tip3p.xml')
@@ -94,6 +121,7 @@ def runOneTest(testName, options):
             dt = 0.004*unit.picoseconds
             constraints = app.HBonds
             integ = mm.LangevinMiddleIntegrator(300*unit.kelvin, friction, dt)
+        positions = pdb.positions
         system = ff.createSystem(pdb.topology, nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints, hydrogenMass=hydrogenMass)
     print('Step Size: %g fs' % dt.value_in_unit(unit.femtoseconds))
     properties = {}
@@ -104,7 +132,7 @@ def runOneTest(testName, options):
             initialSteps = 250
     if options.precision is not None and platform.getName() in ('CUDA', 'OpenCL'):
         properties['Precision'] = options.precision
-    
+
     # Run the simulation.
     
     integ.setConstraintTolerance(1e-5)
@@ -112,8 +140,13 @@ def runOneTest(testName, options):
         context = mm.Context(system, integ, platform, properties)
     else:
         context = mm.Context(system, integ, platform)
-    context.setPositions(pdb.positions)
-    context.setVelocitiesToTemperature(300*unit.kelvin)
+    context.setPositions(positions)
+    if not amber:
+        context.setVelocitiesToTemperature(300*unit.kelvin)
+    if amber:
+        if inpcrd.boxVectors is not None:
+            context.setPeriodicBoxVectors(*inpcrd.boxVectors)
+
     steps = 20
     while True:
         time = timeIntegration(context, steps, initialSteps)
@@ -131,7 +164,7 @@ def runOneTest(testName, options):
 parser = ArgumentParser()
 platformNames = [mm.Platform.getPlatform(i).getName() for i in range(mm.Platform.getNumPlatforms())]
 parser.add_argument('--platform', dest='platform', choices=platformNames, help='name of the platform to benchmark')
-parser.add_argument('--test', dest='test', choices=('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme'), help='the test to perform: gbsa, rf, pme, apoa1rf, apoa1pme, apoa1ljpme, amoebagk, or amoebapme [default: all]')
+parser.add_argument('--test', dest='test', choices=('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme', 'JAC',  'FactorIX', 'Cellulose', 'STMV'), help='the test to perform: gbsa, rf, pme, apoa1rf, apoa1pme, apoa1ljpme, amoebagk, or amoebapme [default: all]')
 parser.add_argument('--pme-cutoff', default=0.9, dest='cutoff', type=float, help='direct space cutoff for PME in nm [default: 0.9]')
 parser.add_argument('--seconds', default=60, dest='seconds', type=float, help='target simulation length in seconds [default: 60]')
 parser.add_argument('--polarization', default='mutual', dest='polarization', choices=('direct', 'extrapolated', 'mutual'), help='the polarization method for AMOEBA: direct, extrapolated, or mutual [default: mutual]')
