@@ -19,15 +19,18 @@ def timeIntegration(context, steps, initialSteps):
     return elapsed.seconds + elapsed.microseconds*1e-6
 
 def downloadAmberSuite():
-    dir = 'Amber20_Benchmark_Suite'
-    if not os.path.exists(dir):
-        os.mkdir(dir)
-        os.chdir(dir)
-        import subprocess
-        subprocess.run('wget https://ambermd.org/Amber20_Benchmark_Suite.tar.gz', shell=True, check=True)
-        subprocess.run('tar xzvf Amber20_Benchmark_Suite.tar.gz', shell=True, check=True)
-        os.chdir('..')
-    return dir
+    """Download and extract Amber benchmark to Amber20_Benchmark_Suite/ in current directory."""
+    dirname = 'Amber20_Benchmark_Suite'
+    url = 'https://ambermd.org/Amber20_Benchmark_Suite.tar.gz'
+    if not os.path.exists(dirname):
+        import urllib.request
+        print('Downloading', url)
+        filename, headers = urllib.request.urlretrieve(url, filename='Amber20_Benchmark_Suite.tar.gz')
+        import tarfile
+        print('Extracting', filename)
+        tarfh = tarfile.open(filename, 'r:gz')
+        tarfh.extractall(path=dirname)
+    return dirname
 
 def runOneTest(testName, options):
     """Perform a single benchmarking simulation."""
@@ -68,9 +71,9 @@ def runOneTest(testName, options):
         dt = 0.002*unit.picoseconds
         integ = mm.MTSIntegrator(dt, [(0,2), (1,1)])
     elif amber:
-        dir = downloadAmberSuite()
-        prmtop = app.AmberPrmtopFile(os.path.join(dir, f'PME/Topologies/{testName}.prmtop'))
-        inpcrd = app.AmberInpcrdFile(os.path.join(dir, f'PME/Coordinates/{testName}.inpcrd'))
+        dirname = downloadAmberSuite()
+        prmtop = app.AmberPrmtopFile(os.path.join(dirname, f'PME/Topologies/{testName}.prmtop'))
+        inpcrd = app.AmberInpcrdFile(os.path.join(dirname, f'PME/Coordinates/{testName}.inpcrd'))
         topology = prmtop.topology
         positions = inpcrd.positions
         dt = 0.004*unit.picoseconds
