@@ -215,7 +215,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     if platform.system() != "Windows":
         extensionArgs["runtime_library_dirs"] = library_dirs
     setupKeywords["ext_modules"] = [Extension(**extensionArgs)]
-    setupKeywords["ext_modules"] += cythonize('simtk/openmm/app/internal/*.pyx', language='c++')
+    setupKeywords["ext_modules"] += cythonize('simtk/openmm/app/internal/*.pyx')
 
     outputString = ''
     firstTab     = 40
