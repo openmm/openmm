@@ -1135,7 +1135,8 @@ class ForceField(object):
         hydrogenMass : mass=None
             The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
             added to a hydrogen is subtracted from the heavy atom to keep
-            their total mass the same.
+            their total mass the same.  If rigidWater is used to make water molecules
+            rigid, then water hydrogens are not altered.
         residueTemplates : dict=dict()
             Key: Topology Residue object
             Value: string, name of _TemplateData residue template object to use for (Key) residue.
@@ -1211,7 +1212,7 @@ class ForceField(object):
             for atom1, atom2 in topology.bonds():
                 if atom1.element is elem.hydrogen:
                     (atom1, atom2) = (atom2, atom1)
-                if atom2.element is elem.hydrogen and atom1.element not in (elem.hydrogen, None):
+                if atom2.element is elem.hydrogen and atom1.element not in (elem.hydrogen, None) and not rigidResidue[atom2.residue.index]:
                     transferMass = hydrogenMass-sys.getParticleMass(atom2.index)
                     sys.setParticleMass(atom2.index, hydrogenMass)
                     sys.setParticleMass(atom1.index, sys.getParticleMass(atom1.index)-transferMass)
