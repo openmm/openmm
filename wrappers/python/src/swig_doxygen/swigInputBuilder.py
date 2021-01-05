@@ -178,7 +178,6 @@ class SwigInputBuilder:
                  skipAdditionalMethods=[],
                  SWIG_VERSION='3.0.2'):
         self.nodeByID={}
-        self.SWIG_COMPACT_ARGUMENTS = LooseVersion(SWIG_VERSION) < LooseVersion('3.0.5')
 
         self.configModule = __import__(os.path.splitext(configFilename)[0])
 
@@ -521,10 +520,7 @@ class SwigInputBuilder:
                 textInside = ''
                 key = (shortClassName, methName)
                 for argNum in self.configModule.STEAL_OWNERSHIP.get(key, []):
-                    if self.SWIG_COMPACT_ARGUMENTS:
-                        argName = 'args[%s]' % argNum
-                    else:
-                        argName = getText('declname', paramList[argNum])
+                    argName = getText('declname', paramList[argNum])
 
                     textInside += '''
     if not {argName}.thisown:
@@ -541,12 +537,12 @@ class SwigInputBuilder:
                         argUnits=self.configModule.UNITS[("*", methName)][1]
                     else:
                         argUnits = ()
-                    if len(argUnits) > 0 and (self.SWIG_COMPACT_ARGUMENTS or isConstructors):
+                    if len(argUnits) > 0 and isConstructors:
                         textInside += '''
     args = list(args)'''
                     for i, units in enumerate(argUnits):
                         if units is not None:
-                            if self.SWIG_COMPACT_ARGUMENTS or isConstructors:
+                            if isConstructors:
                                 argName = 'args[%s]' % i
                             else:
                                 argName = getText('declname', paramList[i])
@@ -555,10 +551,7 @@ class SwigInputBuilder:
         {argName} = {argName}.value_in_unit({units})'''.format(argName=argName, units=units)
 
                 for argNum in self.configModule.REQUIRE_ORDERED_SET.get(key, []):
-                    if self.SWIG_COMPACT_ARGUMENTS:
-                        argName = 'args[%s]' % argNum
-                    else:
-                        argName = getText('declname', paramList[argNum])
+                    argName = getText('declname', paramList[argNum])
 
                     textInside += '''
     {argName} = list({argName})'''.format(argName=argName)
@@ -607,10 +600,7 @@ class SwigInputBuilder:
 
                 if key in self.configModule.STEAL_OWNERSHIP:
                     for argNum in self.configModule.STEAL_OWNERSHIP[key]:
-                        if self.SWIG_COMPACT_ARGUMENTS:
-                            argName = 'args[%s]' % argNum
-                        else:
-                            argName = getText('declname', paramList[argNum])
+                        argName = getText('declname', paramList[argNum])
                         addText = "%s%s%s.thisown=0\n" \
                                 % (addText, INDENT, argName)
 
