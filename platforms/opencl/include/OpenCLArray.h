@@ -33,7 +33,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/common/windowsExportCommon.h"
 #include "openmm/common/ArrayInterface.h"
-#include <opencl.hpp>
+#include "opencl.hpp"
 #include <iostream>
 #include <sstream>
 #include <vector>
