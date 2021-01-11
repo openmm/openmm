@@ -190,8 +190,8 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
         extra_compile_args.append('/EHsc')
     else:
         if platform.system() == 'Darwin':
-            extra_compile_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
-            extra_link_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7', '-Wl', '-rpath', openmm_lib_path]
+            extra_compile_args += ['-stdlib=libc++']
+            extra_link_args += ['-stdlib=libc++', '-Wl', '-rpath', openmm_lib_path]
             if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ and platform.processor() != 'arm':
                 extra_compile_args += ['-mmacosx-version-min=10.7']
                 extra_link_args += ['-mmacosx-version-min=10.7']
