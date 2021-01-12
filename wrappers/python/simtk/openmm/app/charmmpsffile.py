@@ -677,13 +677,12 @@ class CharmmPsfFile(object):
             # Store the atoms
             a1, a2, a3, a4 = imp.atom1, imp.atom2, imp.atom3, imp.atom4
             at1, at2, at3, at4 = a1.attype, a2.attype, a3.attype, a4.attype
-            key = tuple(sorted([at1, at2, at3, at4]))
+            key = min((at1,at2,at3,at4), (at4,at3,at2,at1))
             if not key in parmset.improper_types:
-                # Check for wild-cards
-                for anchor in (at2, at3, at4):
-                    key = tuple(sorted([at1, anchor, 'X', 'X']))
-                    if key in parmset.improper_types:
-                        break # This is the right key
+                key = min((at1,'X', 'X',at4),(at4,'X','X',at1))
+                if not key in parmset.improper_types:
+                    raise MissingParameter('No improper dihedral parameters found for '
+                                           '%r' % imp)
             try:
                 imp.improper_type = parmset.improper_types[key]
             except KeyError:
@@ -856,7 +855,8 @@ class CharmmPsfFile(object):
         hydrogenMass : mass=None
             The mass to use for hydrogen atoms bound to heavy atoms. Any mass
             added to a hydrogen is subtracted from the heavy atom to keep their
-            total mass the same.
+            total mass the same.  If rigidWater is used to make water molecules
+            rigid, then water hydrogens are not altered.
         ewaldErrorTolerance : float=0.0005
             The error tolerance to use if the nonbonded method is Ewald, PME, or LJPME.
         flexibleConstraints : bool=True
@@ -1490,6 +1490,31 @@ class CharmmPsfFile(object):
                 ii, jj, q, eps, sig = force.getExceptionParameters(i)
                 nbtforce.addExclusion(ii, jj)
 
+        # Using CustomBondForce to Calculate 1-4 atom pairs' NBThole interaction which have been excluded 
+        if has_drude_particle and has_nbthole_terms:
+            nbt14force=mm.CustomBondForce('-138.935456*charge_prod*(1.0+0.5*screen*r)*exp(-1.0*screen*r)/r')
+            nbt14force.addPerBondParameter("charge_prod")
+            nbt14force.addPerBondParameter("screen")
+            nbt14force.setForceGroup(self.NONBONDED_FORCE_GROUP)
+            num_nbt14=0
+            for dih in self.dihedral_list:
+                a1, a4 = dih.atom1, dih.atom4
+                idx_a1, idx_a4 = a1.idx, a4.idx
+                at1, at4 = self.atom_list[idx_a1].type, self.atom_list[idx_a4].type
+                if at1.nbthole and at4.nbthole:
+                    name_a4 = at4.name
+                    nbt_value = at1.nbthole.get(name_a4,0)
+                    if abs(nbt_value)>TINY:
+                        q1, q4 = a1.charge, a4.charge
+                        alpha1= pow(-1*self.drudeconsts_list[idx_a1][0],-1./6.)
+                        alpha4= pow(-1*self.drudeconsts_list[idx_a4][0],-1./6.)
+                        qij=q1*q4
+                        screen=nbt_value*alpha1*alpha4*10.0
+                        nbt14force.addBond(idx_a1,idx_a4,[qij,screen])
+                        num_nbt14+=1
+            if num_nbt14>0:
+                system.addForce(nbt14force)
+
         # Add GB model if we're doing one
         if implicitSolvent is not None:
             if verbose: print('Adding GB parameters...')
@@ -1556,6 +1581,8 @@ class CharmmPsfFile(object):
                 # Only take the ones with at least one hydrogen
                 if (bond.atom1.type.atomic_number != 1 and
                     bond.atom2.type.atomic_number != 1):
+                    continue
+                if rigidWater and _is_bond_in_water(bond):
                     continue
                 atom1, atom2 = bond.atom1, bond.atom2
                 if atom1.type.atomic_number == 1:

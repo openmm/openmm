@@ -32,7 +32,7 @@ OpenCLEvent::OpenCLEvent(OpenCLContext& context) : context(context) {
 }
 
 void OpenCLEvent::enqueue() {
-    context.getQueue().enqueueMarker(&event);
+    context.getQueue().enqueueMarkerWithWaitList(NULL, &event);
 }
 
 void OpenCLEvent::wait() {

@@ -29,8 +29,9 @@
 
 #include <map>
 #include <string>
-#define __CL_ENABLE_EXCEPTIONS
-#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
+#define CL_HPP_ENABLE_EXCEPTIONS
+#define CL_HPP_TARGET_OPENCL_VERSION 120
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #ifndef CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD
   #define CL_DEVICE_SIMD_PER_COMPUTE_UNIT_AMD 0x4040
 #endif
@@ -48,7 +49,7 @@
     #define NOMINMAX
 #endif
 #include <pthread.h>
-#include <cl.hpp>
+#include "opencl.hpp"
 #include "openmm/common/windowsExportCommon.h"
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"

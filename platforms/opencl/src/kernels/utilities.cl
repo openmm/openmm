@@ -88,11 +88,7 @@ __kernel void reduceForces(__global long* restrict longBuffer, __global real4* r
     int totalSize = bufferSize*numBuffers;
     real scale = 1/(real) 0x100000000;
     for (int index = get_global_id(0); index < bufferSize; index += get_global_size(0)) {
-#ifdef SUPPORTS_64_BIT_ATOMICS
         real4 sum = (real4) (scale*longBuffer[index], scale*longBuffer[index+bufferSize], scale*longBuffer[index+2*bufferSize], 0);
-#else
-        real4 sum = (real4) 0;
-#endif
         for (int i = index; i < totalSize; i += bufferSize)
             sum += buffer[i];
         buffer[index] = sum;

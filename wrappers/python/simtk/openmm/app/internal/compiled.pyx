@@ -1,3 +1,6 @@
+# distutils: language = c++
+# cython: language_level = 3
+
 """
 compiled.pyx: Utility functions that are compiled with Cython for speed
 

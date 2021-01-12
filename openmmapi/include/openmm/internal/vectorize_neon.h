@@ -34,7 +34,7 @@
 
 #ifdef __ANDROID__
 #include <cpu-features.h>
-#else
+#elif !defined(__APPLE__)
 #include <sys/auxv.h>
 #include <asm/hwcap.h>
 #endif
@@ -53,7 +53,9 @@ float32x4_t log_ps(float32x4_t);
  * Determine whether ivec4 and fvec4 are supported on this processor.
  */
 static bool isVec4Supported() {
-#ifdef __ANDROID__
+#ifdef __APPLE__
+    return true;
+#elif defined(__ANDROID__)
     uint64_t features = android_getCpuFeatures();
     return (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
 #elif defined(__ARM__)

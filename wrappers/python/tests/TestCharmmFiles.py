@@ -91,7 +91,10 @@ class TestCharmmFiles(unittest.TestCase):
         for atom in topology.atoms():
             if atom.element == elem.hydrogen:
                 self.assertNotEqual(hydrogenMass, system1.getParticleMass(atom.index))
-                self.assertEqual(hydrogenMass, system2.getParticleMass(atom.index))
+                if atom.residue.name == 'HOH':
+                    self.assertEqual(system1.getParticleMass(atom.index), system2.getParticleMass(atom.index))
+                else:
+                    self.assertEqual(hydrogenMass, system2.getParticleMass(atom.index))
         totalMass1 = sum([system1.getParticleMass(i) for i in range(system1.getNumParticles())]).value_in_unit(amu)
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
@@ -147,6 +150,26 @@ class TestCharmmFiles(unittest.TestCase):
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, 15559.71602, delta=0.05)
 
+    def test_NBThole(self):
+        """Tests CHARMM system with NBTHole"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/cyt-gua-cyt.psf')
+        crd = CharmmCrdFile('systems/cyt-gua-cyt.crd')
+        params = CharmmParameterSet('systems/toppar_drude_master_protein_2013e.str','systems/toppar_drude_nucleic_acid_2017b.str')
+        # Box dimensions (cubic box)
+        psf.setBox(30.0*angstroms, 30.0*angstroms, 30.0*angstroms)
+
+        # Now compute the full energy
+        plat = Platform.getPlatformByName('Reference')
+        system = psf.createSystem(params, nonbondedMethod=PME, ewaldErrorTolerance=0.00005)
+        integrator = DrudeLangevinIntegrator(300*kelvin, 1.0/picosecond, 1*kelvin, 10/picosecond, 0.001*picoseconds)
+        con = Context(system, integrator, plat)
+        con.setPositions(crd.positions)
+
+        state = con.getState(getEnergy=True, enforcePeriodicBox=True)
+        ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        self.assertAlmostEqual(ene, -292.73015, delta=1.0)
+        
     def test_Drude(self):
         """Test CHARMM systems with Drude force field"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)

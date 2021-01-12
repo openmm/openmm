@@ -87,7 +87,7 @@ INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_BINARY_DIR}/../common/src)
 
 # Install headers
 
-FILE(GLOB CORE_HEADERS include/*.h)
+FILE(GLOB CORE_HEADERS include/*.h src/opencl.hpp)
 INSTALL_FILES(/include/openmm/opencl FILES ${CORE_HEADERS})
 
 SUBDIRS (sharedTarget)

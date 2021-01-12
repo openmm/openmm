@@ -26,7 +26,6 @@
 
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLContext.h"
-#include <cl.hpp>
 
 using namespace OpenMM;
 using namespace std;

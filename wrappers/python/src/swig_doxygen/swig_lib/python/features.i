@@ -1,3 +1,7 @@
+%begin %{
+#define SWIG_PYTHON_CAST_MODE
+%}
+
 %include pythoncode.i
 %include exceptions.i
 %include extend.i
