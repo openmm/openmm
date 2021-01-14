@@ -12,6 +12,25 @@
 #define THREAD_M (WARP_TILE_M / THREAD_TILE_M)
 #define THREAD_N (WARP_TILE_N / THREAD_TILE_N)
 
+/**
+ * Computes the interacting atoms between two given sets using the following matrix multiplication framing
+ * for the pairwise distance calculation. 
+ * 
+ * d_{ij}^2 = (a_x - b_x)^2 + (a_y - b_y)^2 + (a_z - b_z)^2
+ *          = (a_x^2 - 2a_xb_x + b_x^2) + (a_y^2 - 2a_yb_y + b_y^2) + (a_z^2 - 2a_zb_z + b_z^2)
+ *          = (a_x^2 + a_y^2 + a_z^2) + (1) * (b_x^2 + b_y^2 + b_z^2) - 2*(a_xb_x) - 2*(a_yb_y) - 2*(a_zb_z)
+ *
+ * The squared norms of the position vectors are precomputed and stored in shared memory. Letting
+ * a=a_x^2 + a_y^2 + a_z^2 and b=b_x^2 + b_y^2 + b_z^2 gives:
+ *
+ * 0.5 d_{ij}^2 = 0.5a + (0.5)(b) + (a_x)(-b_x) + (a_y)(-b_y) + (a_z)(-b_z)
+ * 
+ * The pairwise distance can be computed using NxMx4 matrix multiplication where C is packed with 0.5*a, the A matrix contains 
+ * (-a_x, -a_y, -a_z, 0.5) and the B matrix contains (b_x, b_y, b_z, b). The resulting D matrix will contain the pairwise
+ * distance divided by 2
+ * 
+ */
+
 __device__ __inline__ void compute_interacts(const int indexInWarp, real* pos_a_buffer, real* pos_b_buffer, int* interactsBuffer) {
     const int tile_m = indexInWarp / THREAD_N;
     const int tile_n = indexInWarp % THREAD_N;
