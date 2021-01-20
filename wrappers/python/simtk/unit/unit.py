@@ -363,23 +363,38 @@ class Unit(object):
         assert self.is_compatible(other)
         factor *= self.get_conversion_factor_to_base_units()
         factor /= other.get_conversion_factor_to_base_units()
-        # Organize both units' base units by dimension
+
+        # Organize both units' base units by dimension.  Since so many conversion factors
+        # are powers of ten, we accumulate them separately as an integer power to reduce
+        # numerical error.
 
         canonical_units = {} # dimension: BaseUnit
+        powers_of_ten = 0
         for unit, power in self.iter_all_base_units():
             d = unit.dimension
             if d in canonical_units:
                 if unit != canonical_units[d]:
-                    factor *= unit.conversion_factor_to(canonical_units[d])**power
+                    conversion = unit.conversion_factor_to(canonical_units[d])
+                    log_conversion = math.log10(conversion)
+                    if log_conversion == int(log_conversion):
+                        powers_of_ten += power*int(log_conversion)
+                    else:
+                        factor *= conversion**power
             else:
                 canonical_units[d] = unit
         for unit, power in other.iter_all_base_units():
             d = unit.dimension
             if d in canonical_units:
                 if unit != canonical_units[d]:
-                    factor /= unit.conversion_factor_to(canonical_units[d])**power
+                    conversion = unit.conversion_factor_to(canonical_units[d])
+                    log_conversion = math.log10(conversion)
+                    if log_conversion == int(log_conversion):
+                        powers_of_ten -= power*int(log_conversion)
+                    else:
+                        factor /= conversion**power
             else:
                 canonical_units[d] = unit
+        factor *= 10**powers_of_ten
         if not self in Unit._conversion_factor_cache:
             Unit._conversion_factor_cache[self] = {}
         Unit._conversion_factor_cache[self][other] = factor
