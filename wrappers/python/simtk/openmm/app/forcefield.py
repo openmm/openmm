@@ -990,7 +990,7 @@ class ForceField(object):
 
         Returns
         -------
-        bondedToAtom : list of set list int
+        bondedToAtom : list of list of int
             bondedToAtom[index] is the list of atom indices bonded to atom `index`
 
         """
