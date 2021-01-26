@@ -12,7 +12,7 @@ export DOCKER_IMAGE="quay.io/condaforge/linux-anvil-ppc64le-cuda:10.2"
 # export DOCKER_IMAGE="quay.io/condaforge/linux-anvil-aarch64"
 
 # With Conda Forge compilers (GCC9)
-export COMPILERS="conda-forge"
+export COMPILERS="compilers"
 # # With RH devtoolset (GCC7)
 # export COMPILERS="devtoolset-7"
 
