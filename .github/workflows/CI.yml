@@ -411,10 +411,10 @@ jobs:
             python-version: "3.9"
             compilers: compilers
 
-          # - name: PowerPC CPU Python 3.9 devtoolset-7 compilers
-          #   docker-image: quay.io/condaforge/linux-anvil-ppc64le
-          #   python-version: "3.9"
-          #   compilers: devtoolset-7
+          - name: PowerPC CPU Python 3.9 devtoolset-7 compilers
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le
+            python-version: "3.9"
+            compilers: devtoolset-7
 
           - name: ARM CPU Python 3.6 with condaforge compilers
             docker-image: quay.io/condaforge/linux-anvil-aarch64
