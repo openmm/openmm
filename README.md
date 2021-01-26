@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/openmm/openmm.svg?branch=master)](https://travis-ci.org/openmm/openmm?branch=master)
-[![Anaconda Cloud Badge](https://anaconda.org/omnia/openmm/badges/downloads.svg)](https://anaconda.org/omnia/openmm)
+[![Anaconda Cloud Badge](https://anaconda.org/conda-forge/openmm/badges/downloads.svg)](https://anaconda.org/conda-forge/openmm)
 
 ## OpenMM: A High Performance Molecular Dynamics Library
 
