@@ -114,3 +114,26 @@ There are some limitations when compared to other CI services, but I guess this 
 
 - Cache cannot be invalidated directly. Instead, I included a secret `CACHE_VERSION` that is part of the cache key. If you change the value of this secret, it will functionally prevent access to the previous cache. It also expires every 7 days. Note that since this trick uses a secret, the value of `CACHE_VERSION` will be masked in the log output. As a result, make sure to use something short but meaningless and difficult to find in the wild (e.g. `pqgbhl` instead of `0`).
 - There's no `ci skip` functionality (yet).
+
+## Extra content
+
+### How to debug PowerPC / ARM locally
+
+From the root of the repository, run the following script. There are
+some variables you might want to edit (PPC vs ARM, Python version, etc).
+Take a look to the script first in that case.
+
+```bash
+bash devtools/ci/gh-actions/start_docker_locally.sh
+```
+
+You will be inside the Docker image after a few moments. The repo root has
+been mounted to `/home/conda/workspace`.
+
+Run this other script to reproduce the CI steps exactly. Do NOT `source` scripts,
+since a failure will exit Docker altogether. Always use new `bash` processes
+to avoid starting from scratch.
+
+```bash
+bash /home/conda/workspace/devtools/ci/gh-actions/scripts/run_steps_inside_docker_image.sh
+```
