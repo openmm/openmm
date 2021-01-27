@@ -1,102 +1,6 @@
 #define GROUP_SIZE 256
 #define BUFFER_SIZE 256
 
-#define BLOCK 32
-
-#define WARP_TILE_M 32
-#define WARP_TILE_N 16
-
-#define THREAD_TILE_M 4
-#define THREAD_TILE_N 4
-
-#define THREAD_M (WARP_TILE_M / THREAD_TILE_M)
-#define THREAD_N (WARP_TILE_N / THREAD_TILE_N)
-
-/**
- * Computes the interacting atoms between two given sets using the following matrix multiplication framing
- * for the pairwise distance calculation. 
- * 
- * d_{ij}^2 = (a_x - b_x)^2 + (a_y - b_y)^2 + (a_z - b_z)^2
- *          = (a_x^2 - 2a_xb_x + b_x^2) + (a_y^2 - 2a_yb_y + b_y^2) + (a_z^2 - 2a_zb_z + b_z^2)
- *          = (a_x^2 + a_y^2 + a_z^2) + (1) * (b_x^2 + b_y^2 + b_z^2) - 2*(a_xb_x) - 2*(a_yb_y) - 2*(a_zb_z)
- *
- * The squared norms of the position vectors are precomputed and stored in shared memory. Letting
- * a=a_x^2 + a_y^2 + a_z^2 and b=b_x^2 + b_y^2 + b_z^2 gives:
- *
- * 0.5 d_{ij}^2 = 0.5a + (0.5)(b) + (a_x)(-b_x) + (a_y)(-b_y) + (a_z)(-b_z)
- * 
- * The pairwise distance can be computed using NxMx4 matrix multiplication where C is packed with 0.5*a, the A matrix contains 
- * (-a_x, -a_y, -a_z, 0.5) and the B matrix contains (b_x, b_y, b_z, b). The resulting D matrix will contain the pairwise
- * distance divided by 2
- * 
- */
-
-__device__ __inline__ void compute_interacts(const int indexInWarp, real* pos_a_buffer, real* pos_b_buffer, int* interactsBuffer) {
-    const int tile_m = indexInWarp / THREAD_N;
-    const int tile_n = indexInWarp % THREAD_N;
-
-    interactsBuffer[indexInWarp] = 0;
-#pragma unroll 1
-    for (int m = 0; m < BLOCK; m+=WARP_TILE_M) {
-#pragma unroll 1
-    for (int n = 0; n < BLOCK; n+=WARP_TILE_N) {
-
-        //load c into registers
-        real reg_c[THREAD_TILE_M][THREAD_TILE_N];
-#pragma unroll 
-        for (int idx_m = 0; idx_m < THREAD_TILE_M; idx_m++) {
-#pragma unroll 
-            for (int idx_n = 0; idx_n < THREAD_TILE_N; idx_n++) {
-                reg_c[idx_m][idx_n] = pos_a_buffer[(m + tile_m * THREAD_TILE_M + idx_m) + 3 * BLOCK];
-            }
-        }
-#pragma unroll 
-        for (int k = 0; k < 4; k++) {
-            // load a into registers
-            real reg_a[THREAD_TILE_M];
-#pragma unroll 
-            for(int idx_m = 0; idx_m < THREAD_TILE_M; idx_m++) {
-                if (k==3) {
-                    reg_a[idx_m] = 0.5f;
-                } else {
-                    reg_a[idx_m] = -1.0f * pos_a_buffer[(m + tile_m * THREAD_TILE_M + idx_m) + k * BLOCK];
-                }
-            }
-
-            //load b into registers
-            real reg_b[THREAD_TILE_N];
-#pragma unroll 
-            for (int idx_n = 0; idx_n < THREAD_TILE_N; idx_n++) {
-                reg_b[idx_n] = pos_b_buffer[(n + tile_n * THREAD_TILE_N + idx_n) + k * BLOCK];
-            }
-
-            // Compute the outer product
-#pragma unroll 
-            for (int idx_m = 0; idx_m < THREAD_TILE_M; idx_m++) {
-#pragma unroll 
-                for (int idx_n = 0; idx_n < THREAD_TILE_N; idx_n++) {
-                    reg_c[idx_m][idx_n] += reg_a[idx_m] * reg_b[idx_n];
-                }
-            }
-        }
-
-#pragma unroll 
-        for (int idx_m = 0; idx_m < THREAD_TILE_M; idx_m++) {
-            const int C_row = m + tile_m * THREAD_TILE_M + idx_m; 
-            int local_interacts = 0;
-#pragma unroll 
-            for (int idx_n = 0; idx_n < THREAD_TILE_N; idx_n++) {
-                const int C_col = n + tile_n * THREAD_TILE_N + idx_n; 
-                const real dist_val = reg_c[idx_m][idx_n];
-                local_interacts |= (dist_val < 0.5f * PADDED_CUTOFF_SQUARED ? 1<<C_col : 0);
-            }
-            atomicOr(&(interactsBuffer[C_row]), local_interacts);
-        }
-    }
-    }
-}
-
-
 /**
  * Find a bounding box for the atoms in each block.
  */
@@ -177,6 +81,7 @@ __device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, unsign
     
     const int indexInWarp = threadIdx.x%32;
     int sum = 0;
+    #pragma unroll 8 // (GROUP_SIZE / TILE_SIZE)
     for (int i = indexInWarp; i < length; i += 32) {
         int count = __popc(flags[i]);
         sum += (count <= MAX_BITS_FOR_PAIRS ? count : 0);
@@ -291,8 +196,6 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
     __shared__ int workgroupFlagsBuffer[BUFFER_SIZE*(GROUP_SIZE/32)];
     __shared__ int warpExclusions[MAX_EXCLUSIONS*(GROUP_SIZE/32)];
     __shared__ real4 posBuffer[GROUP_SIZE];
-    __shared__ real4 posBuffer2[GROUP_SIZE];
-    __shared__  int interactsBuffer[GROUP_SIZE];
     __shared__ volatile int workgroupTileIndex[GROUP_SIZE/32];
     __shared__ int worksgroupPairStartIndex[GROUP_SIZE/32];
     int* sumBuffer = (int*) posBuffer; // Reuse the same buffer to save memory
@@ -302,13 +205,9 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
     volatile int& tileStartIndex = workgroupTileIndex[warpStart/32];
     volatile int& pairStartIndex = worksgroupPairStartIndex[warpStart/32];
 
-
-    real* pos_b_buffer = reinterpret_cast<real *>(&(posBuffer[warpStart]));
-    real* pos_a_buffer = reinterpret_cast<real *>(&(posBuffer2[warpStart]));
-
     // Loop over blocks.
-
-    for (int block1 = startBlockIndex+warpIndex; block1 < startBlockIndex+numBlocks; block1 += totalWarps) { 
+    
+    for (int block1 = startBlockIndex+warpIndex; block1 < startBlockIndex+numBlocks; block1 += totalWarps) {
         // Load data for this block.  Note that all threads in a warp are processing the same block.
         
         real2 sortedKey = sortedBlocks[block1];
@@ -328,17 +227,15 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
             APPLY_PERIODIC_TO_POS_WITH_CENTER(pos1, blockCenterX)
         }
 #endif
-        pos1.w = (pos1.x * pos1.x + pos1.y * pos1.y + pos1.z * pos1.z);
-        pos_b_buffer[indexInWarp + 0 * BLOCK] = pos1.x;
-        pos_b_buffer[indexInWarp + 1 * BLOCK] = pos1.y;
-        pos_b_buffer[indexInWarp + 2 * BLOCK] = pos1.z;
-        pos_b_buffer[indexInWarp + 3 * BLOCK] = pos1.w;
+        pos1.w = 0.5f * (pos1.x * pos1.x + pos1.y * pos1.y + pos1.z * pos1.z);
+        posBuffer[threadIdx.x] = pos1;
 
         // Load exclusion data for block x.
         
         const int exclusionStart = exclusionRowIndices[x];
         const int exclusionEnd = exclusionRowIndices[x+1];
         const int numExclusions = exclusionEnd-exclusionStart;
+        #pragma unroll 4 // (MAX_EXCLUSIONS)
         for (int j = indexInWarp; j < numExclusions; j += 32)
             exclusionsForX[j] = exclusionIndices[exclusionStart+j];
         if (MAX_EXCLUSIONS > 32)
@@ -372,13 +269,14 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
 #endif
                 if (includeBlock2) {
                     int y = (int) sortedBlocks[block2].y;
+                    #pragma unroll 4 // (MAX_EXCLUSIONS)
                     for (int k = 0; k < numExclusions; k++)
                         includeBlock2 &= (exclusionsForX[k] != y);
                 }
             }
             
             // Loop over any blocks we identified as potentially containing neighbors.
-
+            
             int includeBlockFlags = BALLOT(includeBlock2);
             int forceIncludeFlags = BALLOT(forceInclude);
             while (includeBlockFlags != 0) {
@@ -397,46 +295,37 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
                 }
 #endif
                 pos2.w = 0.5f * (pos2.x * pos2.x + pos2.y * pos2.y + pos2.z * pos2.z);
-                pos_a_buffer[indexInWarp + 0 * BLOCK] = pos2.x;
-                pos_a_buffer[indexInWarp + 1 * BLOCK] = pos2.y;
-                pos_a_buffer[indexInWarp + 2 * BLOCK] = pos2.z;
-                pos_a_buffer[indexInWarp + 3 * BLOCK] = pos2.w;
 
                 real4 blockCenterY = sortedBlockCenter[block2Base+i];
-                real3 atomDelta;
-                atomDelta.x = pos_b_buffer[indexInWarp + 0 * BLOCK] - blockCenterY.x;
-                atomDelta.y = pos_b_buffer[indexInWarp + 1 * BLOCK] - blockCenterY.y;
-                atomDelta.z = pos_b_buffer[indexInWarp + 2 * BLOCK] - blockCenterY.z;
+                real3 atomDelta = trimTo3(posBuffer[warpStart+indexInWarp])-trimTo3(blockCenterY);
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(atomDelta)
 #endif
                 int atomFlags = BALLOT(forceInclude || atomDelta.x*atomDelta.x+atomDelta.y*atomDelta.y+atomDelta.z*atomDelta.z < (PADDED_CUTOFF+blockCenterY.w)*(PADDED_CUTOFF+blockCenterY.w));
                 int interacts = 0;
-                if (atomFlags != 0) {
+                if (atom2 < NUM_ATOMS && atomFlags != 0) {
                     int first = __ffs(atomFlags)-1;
                     int last = 32-__clz(atomFlags);
 #ifdef USE_PERIODIC
                     if (!singlePeriodicCopy) {
                         for (int j = first; j < last; j++) {
-                            real3 delta;
-                            delta.x = pos2.x - pos_b_buffer[j + 0 * BLOCK];
-                            delta.y = pos2.y - pos_b_buffer[j + 1 * BLOCK];
-                            delta.z = pos2.z - pos_b_buffer[j + 2 * BLOCK];
+                            real3 delta = trimTo3(pos2)-trimTo3(posBuffer[warpStart+j]);
                             APPLY_PERIODIC_TO_DELTA(delta)
                             interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED ? 1<<j : 0);
                         }
                     }
                     else {
 #endif
-                        compute_interacts(indexInWarp, pos_a_buffer, pos_b_buffer, (int*) interactsBuffer + warpStart);
-                        interacts = interactsBuffer[threadIdx.x];
+                        #pragma unroll
+                        for (int j = 0; j < 32; j++) {
+                            real4 posj = posBuffer[warpStart+j];
+                            real halfDist2 = posj.w + pos2.w - posj.x*pos2.x - posj.y*pos2.y - posj.z*pos2.z;
+                            interacts |= (halfDist2 < 0.5f * PADDED_CUTOFF_SQUARED ? 1<<j : 0);
+                        }
 #ifdef USE_PERIODIC
                     }
 #endif
                 }
-
-                // Zero out any threads which are not valid atoms
-                if (atom2 >= NUM_ATOMS) interacts = 0;
                 
                 // Add any interacting atoms to the buffer.
                 
@@ -461,6 +350,7 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
                         if (newTileStartIndex+tilesToStore <= maxTiles) {
                             if (indexInWarp < tilesToStore)
                                 interactingTiles[newTileStartIndex+indexInWarp] = x;
+                            #pragma unroll 8 // (GROUP_SIZE / TILE_SIZE)
                             for (int j = 0; j < tilesToStore; j++)
                                 interactingAtoms[(newTileStartIndex+j)*TILE_SIZE+indexInWarp] = buffer[indexInWarp+j*TILE_SIZE];
                         }
@@ -486,6 +376,7 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
             if (newTileStartIndex+tilesToStore <= maxTiles) {
                 if (indexInWarp < tilesToStore)
                     interactingTiles[newTileStartIndex+indexInWarp] = x;
+                #pragma unroll 8 // (GROUP_SIZE / TILE_SIZE)
                 for (int j = 0; j < tilesToStore; j++)
                     interactingAtoms[(newTileStartIndex+j)*TILE_SIZE+indexInWarp] = (indexInWarp+j*TILE_SIZE < neighborsInBuffer ? buffer[indexInWarp+j*TILE_SIZE] : NUM_ATOMS);
             }
