@@ -34,7 +34,7 @@
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #include "OpenCLTests.h"
 #include "TestNonbondedForce.h"
-#include <opencl.hpp>
+#include "opencl.hpp"
 #include <string>
 
 void testParallelComputation(NonbondedForce::NonbondedMethod method) {

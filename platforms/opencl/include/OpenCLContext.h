@@ -49,7 +49,7 @@
     #define NOMINMAX
 #endif
 #include <pthread.h>
-#include <opencl.hpp>
+#include "opencl.hpp"
 #include "openmm/common/windowsExportCommon.h"
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"

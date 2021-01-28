@@ -608,6 +608,7 @@ class ForceField(object):
                 self.bondedToAtom[bond.atom2].add(bond.atom1)
                 self.atomBonds[bond.atom1].append(i)
                 self.atomBonds[bond.atom2].append(i)
+            self.bondedToAtom = [sorted(b) for b in self.bondedToAtom]
 
         def addConstraint(self, system, atom1, atom2, distance):
             """Add a constraint to the system, avoiding duplicate constraints."""
@@ -989,8 +990,8 @@ class ForceField(object):
 
         Returns
         -------
-        bondedToAtom : list of set of int
-            bondedToAtom[index] is the set of atom indices bonded to atom `index`
+        bondedToAtom : list of list of int
+            bondedToAtom[index] is the list of atom indices bonded to atom `index`
 
         """
         bondedToAtom = []
@@ -999,6 +1000,7 @@ class ForceField(object):
         for (atom1, atom2) in topology.bonds():
             bondedToAtom[atom1.index].add(atom2.index)
             bondedToAtom[atom2.index].add(atom1.index)
+        bondedToAtom = [sorted(b) for b in bondedToAtom]
         return bondedToAtom
 
     def getUnmatchedResidues(self, topology):
@@ -1135,7 +1137,8 @@ class ForceField(object):
         hydrogenMass : mass=None
             The mass to use for hydrogen atoms bound to heavy atoms.  Any mass
             added to a hydrogen is subtracted from the heavy atom to keep
-            their total mass the same.
+            their total mass the same.  If rigidWater is used to make water molecules
+            rigid, then water hydrogens are not altered.
         residueTemplates : dict=dict()
             Key: Topology Residue object
             Value: string, name of _TemplateData residue template object to use for (Key) residue.
@@ -1211,7 +1214,7 @@ class ForceField(object):
             for atom1, atom2 in topology.bonds():
                 if atom1.element is elem.hydrogen:
                     (atom1, atom2) = (atom2, atom1)
-                if atom2.element is elem.hydrogen and atom1.element not in (elem.hydrogen, None):
+                if atom2.element is elem.hydrogen and atom1.element not in (elem.hydrogen, None) and not rigidResidue[atom2.residue.index]:
                     transferMass = hydrogenMass-sys.getParticleMass(atom2.index)
                     sys.setParticleMass(atom2.index, hydrogenMass)
                     sys.setParticleMass(atom1.index, sys.getParticleMass(atom1.index)-transferMass)

@@ -855,7 +855,8 @@ class CharmmPsfFile(object):
         hydrogenMass : mass=None
             The mass to use for hydrogen atoms bound to heavy atoms. Any mass
             added to a hydrogen is subtracted from the heavy atom to keep their
-            total mass the same.
+            total mass the same.  If rigidWater is used to make water molecules
+            rigid, then water hydrogens are not altered.
         ewaldErrorTolerance : float=0.0005
             The error tolerance to use if the nonbonded method is Ewald, PME, or LJPME.
         flexibleConstraints : bool=True
@@ -1580,6 +1581,8 @@ class CharmmPsfFile(object):
                 # Only take the ones with at least one hydrogen
                 if (bond.atom1.type.atomic_number != 1 and
                     bond.atom2.type.atomic_number != 1):
+                    continue
+                if rigidWater and _is_bond_in_water(bond):
                     continue
                 atom1, atom2 = bond.atom1, bond.atom2
                 if atom1.type.atomic_number == 1:

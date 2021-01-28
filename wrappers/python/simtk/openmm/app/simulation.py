@@ -113,14 +113,16 @@ class Simulation(object):
         except Exception: # OpenMM just raises Exception if it's not implemented everywhere
             self._usesPBC = topology.getUnitCellDimensions() is not None
 
-    def minimizeEnergy(self, tolerance=10*unit.kilojoule/unit.mole, maxIterations=0):
+    def minimizeEnergy(self, tolerance=10*unit.kilojoules_per_mole/unit.nanometer, maxIterations=0):
         """Perform a local energy minimization on the system.
 
         Parameters
         ----------
-        tolerance : energy=10*kilojoules/mole
-            The energy tolerance to which the system should be minimized
-        maxIterations : int=0
+        tolerance : force
+            This specifies how precisely the energy minimum must be located.  Minimization
+            is halted once the root-mean-square value of all force components reaches
+            this tolerance.
+        maxIterations : int
             The maximum number of iterations to perform.  If this is 0,
             minimization is continued until the results converge without regard
             to how many iterations it takes.

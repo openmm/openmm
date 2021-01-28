@@ -246,7 +246,10 @@ class TestForceField(unittest.TestCase):
         for atom in topology.atoms():
             if atom.element == elem.hydrogen:
                 self.assertNotEqual(hydrogenMass, system1.getParticleMass(atom.index))
-                self.assertEqual(hydrogenMass, system2.getParticleMass(atom.index))
+                if atom.residue.name == 'HOH':
+                    self.assertEqual(system1.getParticleMass(atom.index), system2.getParticleMass(atom.index))
+                else:
+                    self.assertEqual(hydrogenMass, system2.getParticleMass(atom.index))
         totalMass1 = sum([system1.getParticleMass(i) for i in range(system1.getNumParticles())]).value_in_unit(amu)
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
@@ -932,7 +935,7 @@ class TestForceField(unittest.TestCase):
         system1_indexes = [imp1[0], imp1[1], imp1[2], imp1[3]]
         system2_indexes = [imp2[0], imp2[1], imp2[2], imp2[3]]
 
-        self.assertEqual(system1_indexes, [51, 56, 54, 55])
+        self.assertEqual(system1_indexes, [51, 55, 54, 56])
         self.assertEqual(system2_indexes, [51, 55, 54, 56])
 
     def test_ImpropersOrdering_smirnoff(self):
