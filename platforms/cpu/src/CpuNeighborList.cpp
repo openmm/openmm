@@ -62,8 +62,12 @@ public:
     Voxels(int blockSize, float vsy, float vsz, float miny, float maxy, float minz, float maxz, const Vec3* boxVectors, bool usePeriodic) :
             blockSize(blockSize), voxelSizeY(vsy), voxelSizeZ(vsz), miny(miny), maxy(maxy), minz(minz), maxz(maxz), usePeriodic(usePeriodic) {
         for (int i = 0; i < 3; i++)
-            for (int j = 0; j < 3; j++)
-                periodicBoxVectors[i][j] = (float) boxVectors[i][j];
+            for (int j = 0; j < 3; j++) {
+                // Copying to a volatile temporary variable is a workaround for
+                // a bug in GCC9 on PPC.
+                volatile float temp = (float) boxVectors[i][j];
+                periodicBoxVectors[i][j] = temp;
+            }
         periodicBoxSize[0] = (float) boxVectors[0][0];
         periodicBoxSize[1] = (float) boxVectors[1][1];
         periodicBoxSize[2] = (float) boxVectors[2][2];
