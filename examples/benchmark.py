@@ -1,7 +1,7 @@
 from __future__ import print_function
-import simtk.openmm.app as app
-import simtk.openmm as mm
-import simtk.unit as unit
+import openmm.app as app
+import openmm as mm
+import openmm.unit as unit
 import sys
 from datetime import datetime
 import os
