@@ -126,7 +126,7 @@ freely, subject to the following restrictions:
 OpenMM uses the PDBx/mmCIF parser written by John Westbrook.  It is distributed
 under the Creative Commons Attribution 3.0 Unported license.  For details, see
 https://creativecommons.org/licenses/by/3.0.  This library was modified to move
-it inside the simtk.openmm.app.internal module.
+it inside the openmm.app.internal module.
 
 
 7. irrXML

@@ -2598,14 +2598,14 @@ is set with the :code:`LD_LIBRARY_PATH` environment variable on Linux,
 :code:`DYLD_LIBRARY_PATH` on Mac, or :code:`PATH` on Windows.  See
 Chapter :ref:`installing-openmm` for details.
 
-The Python API is contained in the simtk.openmm package, while the units code is
-contained in the simtk.units package.  (The application layer, described in the
-Application Guide, is contained in the simtk.openmm.app package.)  A program
+The Python API is contained in the openmm package, while the units code is
+contained in the openmm.units package.  (The application layer, described in the
+Application Guide, is contained in the openmm.app package.)  A program
 using it will therefore typically begin
 ::
 
-    import simtk.openmm as mm
-    import simtk.unit as unit
+    import openmm as mm
+    import openmm.unit as unit
 
 Creating and using OpenMM objects is then done exactly as in C++:
 ::
@@ -2675,7 +2675,7 @@ quantity is “0.63 kilograms”.  A Quantity is expressed as a combination of a
 value (e.g., 0.63), and a Unit (e.g., kilogram).  The same Quantity can be
 expressed in different Units.
 
-The set of BaseDimensions defined in the simtk.unit module includes:
+The set of BaseDimensions defined in the openmm.unit module includes:
 
 * mass
 * length
@@ -2687,8 +2687,8 @@ The set of BaseDimensions defined in the simtk.unit module includes:
 
 
 These are not precisely the same list of base dimensions used in the SI unit
-system.  SI defines “current” (charge per time) as a base unit, while simtk.unit
-uses “charge”.  And simtk.unit treats angle as a dimension, even though angle
+system.  SI defines “current” (charge per time) as a base unit, while openmm.unit
+uses “charge”.  And openmm.unit treats angle as a dimension, even though angle
 quantities are often considered dimensionless.  In this case, we choose to err
 on the side of explicitness, particularly because interconversion of degrees and
 radians is a frequent source of unit headaches.
@@ -2696,16 +2696,16 @@ radians is a frequent source of unit headaches.
 Units examples
 --------------
 
-Many common units are defined in the simtk.unit module.
+Many common units are defined in the openmm.unit module.
 ::
 
-    from simtk.unit import nanometer, angstrom, dalton
+    from openmm.unit import nanometer, angstrom, dalton
 
 Sometimes you don’t want to type the full unit name every time, so you can
 assign it a shorter name using the :code:`as` functionality:
 ::
 
-    from simtk.unit import nanometer as nm
+    from openmm.unit import nanometer as nm
 
 New quantities can be created from a value and a unit.  You can use either the
 multiply operator (‘*’) or the explicit Quantity constructor:
@@ -2743,7 +2743,7 @@ Multiplying or dividing two quantities creates a new quantity with a composite
 dimension.  For example, dividing a distance by a time results in a velocity.
 ::
 
-    from simtk.unit import kilogram, meter, second
+    from openmm.unit import kilogram, meter, second
     a = 9.8 * meter / second**2; # acceleration
     m = 0.36 * kilogram; # mass
     F = m * a; # force in kg*m/s**2::
@@ -2754,13 +2754,13 @@ Multiplication or division of two Units results in a composite Unit.
 
     mps = meter / second
 
-Unlike amount (moles), angle (radians) is arguably dimensionless.  But simtk.unit
+Unlike amount (moles), angle (radians) is arguably dimensionless.  But openmm.unit
 treats angle as another dimension.   Use the trigonometric functions from the
-simtk.unit module (not those from the Python math module!) when dealing with
+openmm.unit module (not those from the Python math module!) when dealing with
 Units and Quantities.
 ::
 
-    from simtk.unit import sin, cos, acos
+    from openmm.unit import sin, cos, acos
     x = sin(90.0*degrees)
     angle = acos(0.68); # returns an angle quantity (in radians)
 
@@ -2776,10 +2776,10 @@ Quantities and Units.
 
 The method :code:`sqrt()` is not as built-in as :code:`pow()`\ .  Do not
 use the Python :code:`math.sqrt()` method with Units and Quantities.  Use
-the :code:`simtk.unit.sqrt()` method instead:
+the :code:`openmm.unit.sqrt()` method instead:
 ::
 
-    from simtk.unit import sqrt
+    from openmm.unit import sqrt
     side_length = sqrt(4.0*meter**2)
 
 
@@ -2787,7 +2787,7 @@ Atomic scale mass and energy units are “per amount”
 ---------------------------------------------------
 
 Mass and energy units at the atomic scale are specified “per amount” in the
-simtk.unit module.  Amount (mole) is one of the seven fundamental dimensions in
+openmm.unit module.  Amount (mole) is one of the seven fundamental dimensions in
 the SI unit system.   The atomic scale mass unit, dalton, is defined as grams
 per mole.  The dimension of dalton is therefore mass/amount, instead of simply
 mass.  Similarly, the atomic scale energy unit, kilojoule_per_mole (and
@@ -2812,11 +2812,11 @@ SI prefixes
 -----------
 
 Many units with SI prefixes such as “milligram” (milli) and “kilometer” (kilo)
-are provided in the simtk.unit module.  Others can be created by multiplying a
+are provided in the openmm.unit module.  Others can be created by multiplying a
 prefix symbol by a non-prefixed unit:
 ::
 
-    from simtk.unit import mega, kelvin
+    from openmm.unit import mega, kelvin
     megakelvin = mega * kelvin
     t = 8.3 * megakelvin
 
@@ -2831,13 +2831,13 @@ Use the :code:`Quantity.in_units_of()` method to create a new Quantity with
 different units.
 ::
 
-    from simtk.unit import nanosecond, fortnight
+    from openmm.unit import nanosecond, fortnight
     x = (175000*nanosecond).in_units_of(fortnight)
 
 When you want a plain number out of a Quantity, use the :code:`value_in_unit()` method:
 ::
 
-    from simtk.unit import femtosecond, picosecond
+    from openmm.unit import femtosecond, picosecond
     t = 5.0*femtosecond
     t_just_a_number = t.value_in_unit(picoseconds)
 
@@ -2850,7 +2850,7 @@ Lists, tuples, vectors, numpy arrays, and Units
 -----------------------------------------------
 
 Units can be attached to containers of numbers to create a vector quantity.  The
-simtk.unit module overloads the :code:`__setitem__` and
+openmm.unit module overloads the :code:`__setitem__` and
 :code:`__getitem__` methods for these containers to ensure that Quantities go
 in and out.
 ::
