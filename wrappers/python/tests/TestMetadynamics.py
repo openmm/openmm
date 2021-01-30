@@ -1,7 +1,7 @@
 import unittest
-from simtk.openmm import *
-from simtk.openmm.app import *
-from simtk.unit import *
+from openmm import *
+from openmm.app import *
+from openmm.unit import *
 
 class TestMetadynamics(unittest.TestCase):
     """Test the Metadynamics class"""

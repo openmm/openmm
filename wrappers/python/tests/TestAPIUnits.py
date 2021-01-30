@@ -1,9 +1,9 @@
 from __future__ import division
 
 import unittest
-from simtk.openmm import *
-from simtk.openmm.app import *
-from simtk.unit import *
+from openmm import *
+from openmm.app import *
+from openmm.unit import *
 import random
 import math
 

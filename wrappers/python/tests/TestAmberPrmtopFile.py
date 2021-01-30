@@ -2,10 +2,10 @@ import unittest
 import os
 import tempfile
 from validateConstraints import *
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
-import simtk.openmm.app.element as elem
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
+import openmm.app.element as elem
 
 prmtop1 = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
 prmtop2 = AmberPrmtopFile('systems/alanine-dipeptide-implicit.prmtop')
@@ -377,7 +377,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
 
     def testGBneckRadii(self):
         """ Tests that GBneck radii limits are correctly enforced """
-        from simtk.openmm.app.internal.customgbforces import GBSAGBnForce
+        from openmm.app.internal.customgbforces import GBSAGBnForce
         f = GBSAGBnForce()
         # Make sure legal parameters do not raise
         f.addParticle([0, 0.1, 0.5])

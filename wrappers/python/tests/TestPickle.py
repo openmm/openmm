@@ -1,11 +1,11 @@
 import unittest
 from validateConstraints import *
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
-import simtk.openmm
-import simtk.openmm.app.element as elem
-import simtk.openmm.app.forcefield as forcefield
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
+import openmm
+import openmm.app.element as elem
+import openmm.app.forcefield as forcefield
 import copy
 import pickle
 

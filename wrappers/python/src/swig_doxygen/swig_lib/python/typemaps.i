@@ -1,6 +1,6 @@
 %fragment("Vec3_to_PyVec3", "header") {
 /**
- * Convert an OpenMM::Vec3 into a Python simtk.openmm.Vec3 object
+ * Convert an OpenMM::Vec3 into a Python openmm.Vec3 object
  *
  * Returns a new reference.
  */
@@ -8,7 +8,7 @@ PyObject* Vec3_to_PyVec3(const OpenMM::Vec3& v) {
     static PyObject *__s_mm = NULL;
     static PyObject *__s_Vec3 = NULL;
     if (__s_mm == NULL) {
-        __s_mm = PyImport_AddModule("simtk.openmm");
+        __s_mm = PyImport_AddModule("openmm");
         __s_Vec3 = PyObject_GetAttrString(__s_mm, "Vec3");
     }
     PyObject* tuple = Py_BuildValue("(d,d,d)", v[0], v[1], v[2]);
@@ -25,7 +25,7 @@ PyObject* Vec3_to_PyVec3(const OpenMM::Vec3& v) {
  *
  * This is equivalent to the following Python code
  *
- * >>> from simtk import unit
+ * >>> from openmm import unit
  * >>> if isinstance(input, unit.Quantity)
  * ...     if input.is_compatible(unit.bar)
  * ...         return input.value_in_unit(unit.bar)
@@ -41,9 +41,9 @@ PyObject* Py_StripOpenMMUnits(PyObject *input) {
 
     if (__s_Quantity == NULL) {
         PyObject* module = NULL;
-        module = PyImport_ImportModule("simtk.unit");
+        module = PyImport_ImportModule("openmm.unit");
         if (!module) {
-            PyErr_SetString(PyExc_ImportError, "simtk.unit"); Py_CLEAR(module); return NULL;
+            PyErr_SetString(PyExc_ImportError, "openmm.unit"); Py_CLEAR(module); return NULL;
         }
 
         __s_Quantity = PyObject_GetAttrString(module, "Quantity");
