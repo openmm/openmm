@@ -623,7 +623,7 @@ water model and ions\ :cite:`Wang2014`:
          you run the risk of having :class:`ForceField` throw an exception since
          :file:`tip3p.xml` will be missing parameters for ions in your system.
 
-The converted parameter sets come from the `AmberTools 17 release <http://ambermd.org/AmberTools17-get.html>`_
+The converted parameter sets come from the `AmberTools 17 release <http://ambermd.org/AmberTools.php>`_
 and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
 CHARMM36
