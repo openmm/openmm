@@ -596,16 +596,20 @@ jobs:
 
       - name: Check 404s
         shell: bash -l {0}
+        env:
+          # From --help: "List of (comma-separated) urls in regexy form to not include in the check"
+          # Multi-skip syntax example: https://github.com/volkamerlab/volkamerlab_org/blob/fd4be6a/.github/workflows/ci.yaml#L33-L41
+          SKIP_URL: support.amd.com
         run: |
           set +e
           for d in api-c++ api-python developerguide userguide; do
             echo "::group:: Check ${d}"
-            npx linkinator ./build/api-docs/${d}/ --recurse --timeout=5000
+            npx linkinator ./build/api-docs/${d}/ --recurse --timeout=5000 --skip "$SKIP_URL"
             ((exitcode+=$?))
             echo "::endgroup::"
           done
           echo "::group:: Check README"
-          npx linkinator ./README.md --markdown
+          npx linkinator ./README.md --markdown --skip "$SKIP_URL"
           ((exitcode+=$?))
           echo "::endgroup::"
           exit $exitcode
