@@ -1,9 +1,9 @@
 import unittest
 import tempfile
 from datetime import datetime, timedelta
-from simtk.openmm import *
-from simtk.openmm.app import *
-from simtk.unit import *
+from openmm import *
+from openmm.app import *
+from openmm.unit import *
 
 class TestSimulation(unittest.TestCase):
     """Test the Simulation class"""

@@ -1,7 +1,7 @@
 import unittest
-from simtk.openmm import app
-import simtk.openmm as mm
-from simtk import unit
+from openmm import app
+import openmm as mm
+from openmm import unit
 try:
     import numpy as np
     NUMPY_IMPORT_FAILED = False

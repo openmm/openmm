@@ -1,8 +1,8 @@
 import unittest
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
-import simtk.openmm.app.forcefield as forcefield
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
+import openmm.app.forcefield as forcefield
 import math
 try:
     from cStringIO import StringIO

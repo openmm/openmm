@@ -1,10 +1,10 @@
 import unittest
 from validateConstraints import *
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
-from simtk.openmm.app.gromacstopfile import _defaultGromacsIncludeDir
-import simtk.openmm.app.element as elem
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
+from openmm.app.gromacstopfile import _defaultGromacsIncludeDir
+import openmm.app.element as elem
 
 GROMACS_INCLUDE = _defaultGromacsIncludeDir()
 

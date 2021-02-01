@@ -1,4 +1,4 @@
-.. currentmodule:: simtk.openmm.openmm
+.. currentmodule:: openmm.openmm
 
 OpenMM Python API
 =================

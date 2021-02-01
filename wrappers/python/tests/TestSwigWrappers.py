@@ -1,5 +1,5 @@
 import unittest
-import simtk.openmm as mm
+import openmm as mm
 
 
 class TestSwigWrappers(unittest.TestCase):

@@ -6,5 +6,5 @@ python devtools/run-ctest.py --job-duration=120 --timeout 300 --in-order -R 'Tes
 
 # Build & test Python
 make PythonInstall
-python -m simtk.testInstallation
+python -m openmm.testInstallation
 cd python/tests && py.test -v

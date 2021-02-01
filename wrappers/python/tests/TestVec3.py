@@ -1,6 +1,6 @@
 """ Tests the Vec3 object """
 from unittest import TestCase
-from simtk.openmm import Vec3
+from openmm import Vec3
 
 class TestVectors(TestCase):
     """ Tests the Vec3 type """
