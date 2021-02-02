@@ -530,7 +530,9 @@ void OpenCLContext::initialize() {
             energyParamDerivBuffer.initialize<cl_float>(*this, numEnergyParamDerivs*energyBufferSize, "energyParamDerivBuffer");
         addAutoclearBuffer(energyParamDerivBuffer);
     }
-    int bufferBytes = max(velm.getSize()*velm.getElementSize(), energyBufferSize*energyBuffer.getElementSize());
+    int bufferBytes = max(max(velm.getSize()*velm.getElementSize(),
+            energyBufferSize*energyBuffer.getElementSize()),
+            longForceBuffer.getSize()*longForceBuffer.getElementSize());
     pinnedBuffer = new cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, bufferBytes);
     pinnedMemory = currentQueue.enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
     for (int i = 0; i < numAtoms; i++) {
