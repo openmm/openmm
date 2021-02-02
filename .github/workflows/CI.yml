@@ -248,8 +248,8 @@ jobs:
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success') }}
         run: |
           set -x
-          python -m simtk.testInstallation
-          python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
+          python -m openmm.testInstallation
+          python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build/python/tests
           python -m pytest -v -n 2
 
@@ -394,8 +394,8 @@ jobs:
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success') }}
         run: |
           @echo on
-          python -m simtk.testInstallation
-          python -c "import simtk.openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
+          python -m openmm.testInstallation
+          python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build\python\tests
           python -m pytest -v -n 2
 
