@@ -12,7 +12,6 @@ import os.path
 import shutil
 import time
 from glob import glob
-from os.path import join, exists
 from subprocess import call
 from argparse import ArgumentParser
 from datetime import datetime, timedelta

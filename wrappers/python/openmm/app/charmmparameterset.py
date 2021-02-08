@@ -42,7 +42,6 @@ from openmm.app.internal.charmm.topologyobjects import (
             UreyBradleyType, NoUreyBradley)
 from openmm.app.internal.charmm.exceptions import CharmmFileError
 from openmm.app.element import Element, get_by_symbol
-import openmm.unit as u
 import warnings
 
 class CharmmParameterSet(object):

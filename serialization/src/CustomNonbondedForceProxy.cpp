@@ -67,12 +67,12 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
     for (int i = 0; i < force.getNumParticles(); i++) {
         vector<double> params;
         force.getParticleParameters(i, params);
-        SerializationNode& node = particles.createChildNode("Particle");
+        SerializationNode& particle = particles.createChildNode("Particle");
         for (int j = 0; j < (int) params.size(); j++) {
             stringstream key;
             key << "param";
             key << j+1;
-            node.setDoubleProperty(key.str(), params[j]);
+            particle.setDoubleProperty(key.str(), params[j]);
         }
     }
     SerializationNode& exclusions = node.createChildNode("Exclusions");

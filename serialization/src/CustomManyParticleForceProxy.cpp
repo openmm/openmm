@@ -63,13 +63,13 @@ void CustomManyParticleForceProxy::serialize(const void* object, SerializationNo
         vector<double> params;
         int type;
         force.getParticleParameters(i, params, type);
-        SerializationNode& node = particles.createChildNode("Particle");
-        node.setIntProperty("type", type);
+        SerializationNode& particle = particles.createChildNode("Particle");
+        particle.setIntProperty("type", type);
         for (int j = 0; j < (int) params.size(); j++) {
             stringstream key;
             key << "param";
             key << j+1;
-            node.setDoubleProperty(key.str(), params[j]);
+            particle.setDoubleProperty(key.str(), params[j]);
         }
     }
     SerializationNode& exclusions = node.createChildNode("Exclusions");

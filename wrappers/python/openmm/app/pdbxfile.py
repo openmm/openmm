@@ -40,7 +40,7 @@ from datetime import date
 from openmm.app.internal.pdbx.reader.PdbxReader import PdbxReader
 from openmm.app.internal.unitcell import computePeriodicBoxVectors, computeLengthsAndAngles
 from openmm.app import Topology, PDBFile
-from openmm.unit import nanometers, angstroms, is_quantity, norm, Quantity, dot
+from openmm.unit import nanometers, angstroms, is_quantity, norm, Quantity
 from . import element as elem
 try:
     import numpy

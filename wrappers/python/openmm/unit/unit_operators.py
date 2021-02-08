@@ -129,8 +129,6 @@ def _unit_class_mul(self, other):
         return Quantity(value, unit).reduce_unit(self)
     else:
         # print "scalar * unit"
-        value = other
-        unit = self
         # Is reduce_unit needed here?  I hope not, there is a performance issue...
         # return Quantity(other, self).reduce_unit(self)
         return Quantity(other, self)

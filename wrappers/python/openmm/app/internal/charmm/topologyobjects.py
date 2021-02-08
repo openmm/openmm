@@ -34,10 +34,9 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 from __future__ import absolute_import
 from openmm.app.internal.charmm.exceptions import (
-                SplitResidueWarning, BondError, ResidueError, CmapError,
+                BondError, ResidueError, CmapError,
                 MissingParameter)
 import openmm.unit as u
-import warnings
 
 TINY = 1e-8
 
@@ -160,6 +159,8 @@ class AtomType(object):
     def __ne__(self, other):
         return not self == other
 
+    __hash__ = None
+
     def set_lj_params(self, eps, rmin, eps14=None, rmin14=None):
         """ Sets Lennard-Jones parameters on this atom type """
         if eps14 is None:
@@ -228,6 +229,8 @@ class WildCard(AtomType):
     def __gt__(self, other): return False
     def __le__(self, other): return True
     def __ge__(self, other): return True
+
+    __hash__ = None
 
 WildCard = WildCard() # Turn it into a singleton
 
@@ -472,6 +475,8 @@ class Residue(object):
 
     def __ne__(self, thing):
         return not self.__eq__(thing)
+
+    __hash__ = None
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -992,6 +997,8 @@ class BondType(object):
     def __ne__(self, other):
         return not self == other
 
+    __hash__ = None
+
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class AngleType(object):
@@ -1014,6 +1021,8 @@ class AngleType(object):
 
     def __ne__(self, other):
         return not self == other
+
+    __hash__ = None
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1059,6 +1068,8 @@ class DihedralType(object):
     def __ne__(self, other):
         return not self == other
 
+    __hash__ = None
+
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 class ImproperType(object):
@@ -1081,6 +1092,8 @@ class ImproperType(object):
 
     def __ne__(self, other):
         return not self == other
+
+    __hash__ = None
 
     def __repr__(self):
         return '<ImproperType; k=%s; phieq=%s>' % (self.k, self.phieq)
@@ -1119,6 +1132,8 @@ class CmapType(object):
 
     def __ne__(self, other):
         return not self == other
+
+    __hash__ = None
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1219,6 +1234,8 @@ class _CmapGrid(object):
 
     def __ne__(self, other):
         return not self == other
+
+    __hash__ = None
 
     def switch_range(self):
         """

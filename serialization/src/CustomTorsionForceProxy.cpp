@@ -64,12 +64,12 @@ void CustomTorsionForceProxy::serialize(const void* object, SerializationNode& n
         int p1, p2, p3, p4;
         vector<double> params;
         force.getTorsionParameters(i, p1, p2, p3, p4, params);
-        SerializationNode& node = torsions.createChildNode("Torsion").setIntProperty("p1", p1).setIntProperty("p2", p2).setIntProperty("p3", p3).setIntProperty("p4", p4);
+        SerializationNode& torsion = torsions.createChildNode("Torsion").setIntProperty("p1", p1).setIntProperty("p2", p2).setIntProperty("p3", p3).setIntProperty("p4", p4);
         for (int j = 0; j < (int) params.size(); j++) {
             stringstream key;
             key << "param";
             key << j+1;
-            node.setDoubleProperty(key.str(), params[j]);
+            torsion.setDoubleProperty(key.str(), params[j]);
         }
     }
 }

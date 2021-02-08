@@ -44,7 +44,6 @@ from collections import defaultdict
 import openmm as mm
 import openmm.unit as unit
 from . import element as elem
-from openmm.app import Topology
 from openmm.app.internal.singleton import Singleton
 from openmm.app.internal import compiled
 
@@ -589,16 +588,16 @@ class ForceField(object):
             self.atomParameters = {}
             self.atomTemplateIndexes = {}
             self.atoms = list(topology.atoms())
-            self.excludeAtomWith = [[] for a in self.atoms]
+            self.excludeAtomWith = [[] for _ in self.atoms]
             self.virtualSites = {}
             self.bonds = [ForceField._BondData(bond[0].index, bond[1].index) for bond in topology.bonds()]
             self.angles = []
             self.propers = []
             self.impropers = []
-            self.atomBonds = [[] for a in self.atoms]
+            self.atomBonds = [[] for _ in self.atoms]
             self.isAngleConstrained = []
             self.constraints = {}
-            self.bondedToAtom = [set() for a in self.atoms]
+            self.bondedToAtom = [set() for _ in self.atoms]
     
             # Record which atoms are bonded to each other atom
     
@@ -994,9 +993,7 @@ class ForceField(object):
             bondedToAtom[index] is the list of atom indices bonded to atom `index`
 
         """
-        bondedToAtom = []
-        for atom in topology.atoms():
-            bondedToAtom.append(set())
+        bondedToAtom = [set() for _ in topology.atoms()]
         for (atom1, atom2) in topology.bonds():
             bondedToAtom[atom1.index].add(atom2.index)
             bondedToAtom[atom2.index].add(atom1.index)
@@ -2169,7 +2166,7 @@ class PeriodicTorsionGenerator(object):
                         force.addTorsion(torsion[0], torsion[1], torsion[2], torsion[3], match.periodicity[i], match.phase[i], match.k[i])
         impr_cache = {}
         for torsion in data.impropers:
-            t1, t2, t3, t4 = tatoms = [data.atomType[data.atoms[torsion[i]]] for i in range(4)]
+            t1, t2, t3, t4 = [data.atomType[data.atoms[torsion[i]]] for i in range(4)]
             sig = (t1, t2, t3, t4)
             match = impr_cache.get(sig, None)
             if match == -1:
@@ -3086,7 +3083,7 @@ class CustomHbondGenerator(object):
                 type1 = data.atomType[atom]
                 for i in range(len(self.donorTypes1)):
                     types1 = self.donorTypes1[i]
-                    if type1 in self.donorTypes1[i]:
+                    if type1 in types1:
                         force.addDonor(atom.index, -1, -1, self.donorParamValues[i])
         elif self.particlesPerDonor == 2:
             for bond in data.bonds:
@@ -3118,7 +3115,7 @@ class CustomHbondGenerator(object):
                 type1 = data.atomType[atom]
                 for i in range(len(self.acceptorTypes1)):
                     types1 = self.acceptorTypes1[i]
-                    if type1 in self.acceptorTypes1[i]:
+                    if type1 in types1:
                         force.addAcceptor(atom.index, -1, -1, self.acceptorParamValues[i])
         elif self.particlesPerAcceptor == 2:
             for bond in data.bonds:
@@ -3685,7 +3682,6 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
         # find atom shared by both bonds making up the angle
 
-        middleAtom = -1
         for atomIndex in angle:
             isMiddle = 0
             for bond in data.atomBonds[atomIndex]:
@@ -3733,8 +3729,6 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
         inPlaneAngles = []
         nonInPlaneAngles = []
-        nonInPlaneAnglesConstrained = []
-        idealAngles = []*len(data.angles)
 
         for (angle, isConstrained) in zip(data.angles, data.isAngleConstrained):
 
@@ -4026,12 +4020,12 @@ class AmoebaPiTorsionGenerator(object):
         else:
             force = existing[0]
 
-        for bond in data.bonds:
+        for bond1 in data.bonds:
 
             # search for bonds with both atoms in bond having covalency == 3
 
-            atom1 = bond.atom1
-            atom2 = bond.atom2
+            atom1 = bond1.atom1
+            atom2 = bond1.atom2
 
             if (len(data.atomBonds[atom1]) == 3 and len(data.atomBonds[atom2]) == 3):
 
@@ -4283,9 +4277,9 @@ class AmoebaTorsionTorsionGenerator(object):
                     ia = bondedAtom2
 
                 if (ia != ic and ia != id):
-                    for bondIndex in data.atomBonds[id]:
-                        bondedAtom1 = data.bonds[bondIndex].atom1
-                        bondedAtom2 = data.bonds[bondIndex].atom2
+                    for bondIndex2 in data.atomBonds[id]:
+                        bondedAtom1 = data.bonds[bondIndex2].atom1
+                        bondedAtom2 = data.bonds[bondIndex2].atom2
                         if (bondedAtom1 != id):
                             ie = bondedAtom1
                         else:
@@ -4409,10 +4403,6 @@ class AmoebaStretchBendGenerator(object):
         for angleDict in angleList:
 
             angle = angleDict['angle']
-            if ('isConstrained' in angleDict):
-                isConstrained = angleDict['isConstrained']
-            else:
-                isConstrained = 0
 
             type1 = data.atomType[data.atoms[angle[0]]]
             type2 = data.atomType[data.atoms[angle[1]]]
@@ -4522,7 +4512,6 @@ class AmoebaVdwGenerator(object):
                     generator.radiustype != element.attrib['radiustype'] or generator.radiussize != element.attrib['radiussize']:
                 raise ValueError('Found multiple AmoebaVdwForce tags with different combining rules')
         generator.params.parseDefinitions(element)
-        two_six = 1.122462048309372
 
     #=============================================================================================
 
@@ -5096,10 +5085,10 @@ class AmoebaMultipoleGenerator(object):
                                           zaxis = xaxis
                                           xaxis = swapI
                                       else:
-                                          for bondedAtomXIndex in bondedAtomIndices:
-                                              bondedAtomX1Type = int(data.atomType[data.atoms[bondedAtomXIndex]])
-                                              if( bondedAtomX1Type == kx and bondedAtomXIndex != bondedAtomZIndex and bondedAtomXIndex < xaxis ):
-                                                  xaxis = bondedAtomXIndex
+                                          for bondedAtomXIndex2 in bondedAtomIndices:
+                                              bondedAtomX1Type = int(data.atomType[data.atoms[bondedAtomXIndex2]])
+                                              if( bondedAtomX1Type == kx and bondedAtomXIndex2 != bondedAtomZIndex and bondedAtomXIndex2 < xaxis ):
+                                                  xaxis = bondedAtomXIndex2
 
                                       savedMultipoleDict = multipoleDict
                                       hit = 1
@@ -5160,10 +5149,10 @@ class AmoebaMultipoleGenerator(object):
 
                                       # select xaxis w/ smallest index
 
-                                      for bondedAtomXIndex in bondedAtom13Indices:
-                                          bondedAtomX1Type = int(data.atomType[data.atoms[bondedAtomXIndex]])
-                                          if( bondedAtomX1Type == kx and bondedAtomXIndex != bondedAtomZIndex and bondedAtomZIndex in bonded12ParticleSets[bondedAtomXIndex] and bondedAtomXIndex < xaxis ):
-                                              xaxis = bondedAtomXIndex
+                                      for bondedAtomXIndex2 in bondedAtom13Indices:
+                                          bondedAtomX1Type = int(data.atomType[data.atoms[bondedAtomXIndex2]])
+                                          if( bondedAtomX1Type == kx and bondedAtomXIndex2 != bondedAtomZIndex and bondedAtomZIndex in bonded12ParticleSets[bondedAtomXIndex2] and bondedAtomXIndex2 < xaxis ):
+                                              xaxis = bondedAtomXIndex2
 
                                       savedMultipoleDict = multipoleDict
                                       hit = 3

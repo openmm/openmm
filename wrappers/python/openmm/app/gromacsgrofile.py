@@ -32,12 +32,10 @@ from __future__ import absolute_import
 __author__ = "Lee-Ping Wang"
 __version__ = "1.0"
 
-import os
-import sys
 from openmm import Vec3
 from openmm.app.internal.unitcell import reducePeriodicBoxVectors
 from re import sub, match
-from openmm.unit import nanometers, angstroms, Quantity
+from openmm.unit import nanometers, Quantity
 from . import element as elem
 try:
     import numpy
@@ -158,7 +156,6 @@ class GromacsGroFile(object):
                     pos = [float(line[20+i*digits:20+(i+1)*digits]) for i in range(3)]
                     xyz.append(Vec3(pos[0], pos[1], pos[2]))
                 elif _is_gro_box(line) and ln == na + 2:
-                    sline = line.split()
                     boxes.append(_construct_box_vectors(line))
                     xyzs.append(xyz*nanometers)
                     xyz = []

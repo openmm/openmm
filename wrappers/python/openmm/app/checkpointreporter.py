@@ -32,7 +32,6 @@ from __future__ import absolute_import
 __author__ = "Robert McGibbon"
 __version__ = "1.0"
 
-import openmm as mm
 import os
 import os.path
 

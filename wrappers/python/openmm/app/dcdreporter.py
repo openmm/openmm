@@ -32,7 +32,6 @@ from __future__ import absolute_import
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
-import openmm as mm
 from openmm.app import DCDFile
 from openmm.unit import nanometer
 
