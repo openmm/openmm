@@ -56,8 +56,8 @@ void CustomCVForceProxy::serialize(const void* object, SerializationNode& node) 
     }
     SerializationNode& cvs = node.createChildNode("CollectiveVariables");
     for (int i = 0; i < force.getNumCollectiveVariables(); i++) {
-        SerializationNode& node = cvs.createChildNode("CollectiveVariable").setStringProperty("name", force.getCollectiveVariableName(i));
-        node.createChildNode("Force", &force.getCollectiveVariable(i));
+        SerializationNode& cv = cvs.createChildNode("CollectiveVariable").setStringProperty("name", force.getCollectiveVariableName(i));
+        cv.createChildNode("Force", &force.getCollectiveVariable(i));
     }
     SerializationNode& functions = node.createChildNode("Functions");
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++)

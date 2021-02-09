@@ -42,7 +42,7 @@ from __future__ import absolute_import, print_function
 
 import os
 import re
-from math import ceil, cos, sin, asin, sqrt, pi
+from math import ceil, cos, sin, asin, sqrt
 import warnings
 
 try:
@@ -1190,14 +1190,10 @@ class AmberAsciiRestart(object):
             coordinates = np.zeros((self.natom, 3), np.float32)
             if hasvels:
                 velocities = np.zeros((self.natom, 3), np.float32)
-            if hasbox:
-                boxVectors = np.zeros((3, 3), np.float32)
         else:
             coordinates = [Vec3(0.0, 0.0, 0.0) for i in range(self.natom)]
             if hasvels:
                 velocities = [Vec3(0.0, 0.0, 0.0) for i in range(self.natom)]
-            if hasbox:
-                boxVectors = [[0.0, 0.0, 0.0] for i in range(3)]
 
         # Now it's time to parse.  Coordinates first
         startline = 2

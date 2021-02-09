@@ -64,12 +64,12 @@ void CustomAngleForceProxy::serialize(const void* object, SerializationNode& nod
         int p1, p2, p3;
         vector<double> params;
         force.getAngleParameters(i, p1, p2, p3, params);
-        SerializationNode& node = angles.createChildNode("Angle").setIntProperty("p1", p1).setIntProperty("p2", p2).setIntProperty("p3", p3);
+        SerializationNode& angle = angles.createChildNode("Angle").setIntProperty("p1", p1).setIntProperty("p2", p2).setIntProperty("p3", p3);
         for (int j = 0; j < (int) params.size(); j++) {
             stringstream key;
             key << "param";
             key << j+1;
-            node.setDoubleProperty(key.str(), params[j]);
+            angle.setDoubleProperty(key.str(), params[j]);
         }
     }
 }

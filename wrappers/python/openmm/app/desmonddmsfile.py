@@ -285,7 +285,6 @@ class DesmondDMSFile(object):
                     gammaN = gamma_conv*(igamma+0.*sgamma)#AGBNP must have only one gamma
                     alphaN = alpha_conv*(ialpha+salpha)
                     # delta parameter is ignored
-                    hbtypeN = hbtype
                     hbwN = en_conv * hbw
                     gb_p.append([radiusN,chargeN,gammaN,alphaN,hbtype,hbwN,ishydrogenN])
             return gb_p
@@ -831,7 +830,6 @@ class DesmondDMSFile(object):
                 go.append(True)
             if go[fcounter] and (not self._hasTable('posre_harm_param',tables)):
                 raise IOError('DMS file lacks posre_harm_param table even though posre_harm_term table is present.')
-                return
 
         if not any(go):
             return

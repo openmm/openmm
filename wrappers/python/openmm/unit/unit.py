@@ -40,7 +40,6 @@ __version__ = "0.5"
 import math
 import sys
 from .mymatrix import MyMatrix, zeros
-from .basedimension import BaseDimension
 from .baseunit import BaseUnit
 from .standard_dimensions import *
 
@@ -191,6 +190,15 @@ class Unit(object):
         if not self.is_compatible(other):
             raise TypeError('Unit "%s" is not compatible with Unit "%s".', (self, other))
         return self.conversion_factor_to(other) < 1.0
+
+    def __le__(self, other):
+        return self.__lt__(other) or self.__eq__(other)
+
+    def __gt__(self, other):
+        return other.__lt__(self) 
+
+    def __ge__(self, other):
+        return other.__lt__(self) or other.__eq__(self)
 
     def __hash__(self):
         """

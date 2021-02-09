@@ -1020,8 +1020,6 @@ if __name__=='__main__':
     # print str(a)
     assert str(a).rstrip() == pdb_line.rstrip()
 
-    a = Atom("ATOM   2209  CB  TYR A 299       6.167  22.607  20.046  1.00  8.12           C")
-
     # misaligned residue name - bad
     try:
         a = Atom("ATOM   2209  CB   TYRA 299       6.167  22.607  20.046  1.00  8.12           C")

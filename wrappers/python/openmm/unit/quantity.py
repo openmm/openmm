@@ -118,7 +118,7 @@ class Quantity(object):
                 # Is value a container?
                 is_container = True
                 try:
-                    i = iter(value)
+                    _ = iter(value)
                 except TypeError:
                     is_container = False
                 if is_container:
@@ -286,6 +286,8 @@ class Quantity(object):
         return self._value <= (other.value_in_unit(self.unit))
     def __lt__(self, other):
         return self._value < (other.value_in_unit(self.unit))
+
+    __hash__ = None
 
     _reduce_cache = {}
 

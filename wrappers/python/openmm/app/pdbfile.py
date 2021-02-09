@@ -42,7 +42,7 @@ from openmm import Vec3, Platform
 from openmm.app.internal.pdbstructure import PdbStructure
 from openmm.app.internal.unitcell import computeLengthsAndAngles
 from openmm.app import Topology
-from openmm.unit import nanometers, angstroms, is_quantity, norm, Quantity, dot
+from openmm.unit import nanometers, angstroms, is_quantity, norm, Quantity
 from . import element as elem
 try:
     import numpy

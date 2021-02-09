@@ -78,18 +78,18 @@ void CustomCentroidBondForceProxy::serialize(const void* object, SerializationNo
         vector<int> groups;
         vector<double> params;
         force.getBondParameters(i, groups, params);
-        SerializationNode& node = bonds.createChildNode("Bond");
+        SerializationNode& bond = bonds.createChildNode("Bond");
         for (int j = 0; j < (int) groups.size(); j++) {
             stringstream key;
             key << "g";
             key << j+1;
-            node.setIntProperty(key.str(), groups[j]);
+            bond.setIntProperty(key.str(), groups[j]);
         }
         for (int j = 0; j < (int) params.size(); j++) {
             stringstream key;
             key << "param";
             key << j+1;
-            node.setDoubleProperty(key.str(), params[j]);
+            bond.setDoubleProperty(key.str(), params[j]);
         }
     }
     SerializationNode& functions = node.createChildNode("Functions");

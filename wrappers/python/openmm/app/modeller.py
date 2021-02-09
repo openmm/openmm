@@ -35,12 +35,11 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from openmm.app import Topology, PDBFile, ForceField
-from openmm.app.forcefield import HAngles, AllBonds, CutoffNonPeriodic, CutoffPeriodic, _createResidueSignature, DrudeGenerator
-from openmm.app.topology import Residue
+from openmm.app.forcefield import AllBonds, CutoffNonPeriodic, CutoffPeriodic, DrudeGenerator
 from openmm.app.internal import compiled
 from openmm.vec3 import Vec3
 from openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LangevinIntegrator, LocalEnergyMinimizer
-from openmm.unit import nanometer, molar, elementary_charge, amu, gram, liter, degree, sqrt, acos, is_quantity, dot, norm, kilojoules_per_mole
+from openmm.unit import nanometer, molar, elementary_charge, degree, acos, is_quantity, dot, norm, kilojoules_per_mole
 import openmm.unit as unit
 from . import element as elem
 import gc
@@ -478,7 +477,6 @@ class Modeller(object):
             vectors = self.topology.getPeriodicBoxVectors().value_in_unit(nanometer)
             if box is None:
                 raise ValueError('Neither the box size, box vectors, nor padding was specified, and the Topology does not define unit cell dimensions')
-        invBox = Vec3(1.0/box[0], 1.0/box[1], 1.0/box[2])
 
         # Have the ForceField build a System for the solute from which we can determine van der Waals radii.
 
@@ -1030,9 +1028,7 @@ class Modeller(object):
         """
         # Record which atoms are bonded to each other atom.
 
-        bondedToAtom = []
-        for atom in self.topology.atoms():
-            bondedToAtom.append(set())
+        bondedToAtom = [set() for _ in self.topology.atoms()]
         for atom1, atom2 in self.topology.bonds():
             bondedToAtom[atom1.index].add(atom2.index)
             bondedToAtom[atom2.index].add(atom1.index)

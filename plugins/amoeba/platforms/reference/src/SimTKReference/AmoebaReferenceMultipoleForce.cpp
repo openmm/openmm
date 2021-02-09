@@ -4894,7 +4894,7 @@ AmoebaReferencePmeMultipoleForce::~AmoebaReferencePmeMultipoleForce()
         fftpack_destroy(_fftplan);
     }
     if (_pmeGrid) {
-        delete _pmeGrid;
+        delete[] _pmeGrid;
     }
 };
 
@@ -4980,7 +4980,7 @@ void AmoebaReferencePmeMultipoleForce::resizePmeArrays()
     _totalGridSize = _pmeGridDimensions[0]*_pmeGridDimensions[1]*_pmeGridDimensions[2];
     if (_pmeGridSize < _totalGridSize) {
         if (_pmeGrid) {
-            delete _pmeGrid;
+            delete[] _pmeGrid;
         }
         _pmeGrid      = new t_complex[_totalGridSize];
         _pmeGridSize  = _totalGridSize;

@@ -9,8 +9,6 @@ import time
 import getopt
 import re
 import xml.etree.ElementTree as etree
-from distutils.version import LooseVersion
-import copy
 
 try:
     from html.parser import HTMLParser

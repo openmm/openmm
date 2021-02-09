@@ -37,7 +37,7 @@ import os
 import time
 import struct
 import math
-from openmm.unit import picoseconds, nanometers, angstroms, is_quantity, norm
+from openmm.unit import picoseconds, nanometers, is_quantity, norm
 from openmm import Vec3
 from openmm.app.internal.unitcell import computeLengthsAndAngles
 

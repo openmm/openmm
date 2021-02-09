@@ -1535,8 +1535,6 @@ class CharmmPsfFile(object):
                 # Multiply by 0.73 to account for ion exclusions, and multiply
                 # by 10 to convert to 1/nm from 1/angstroms
                 implicitSolventKappa *= 7.3
-            elif implicitSolvent is None:
-                implicitSolventKappa = 0.0
 
             if u.is_quantity(implicitSolventKappa):
                 implicitSolventKappa = implicitSolventKappa.value_in_unit(
