@@ -170,6 +170,8 @@ htmlhelp_basename = 'OpenMMUsersGuidedoc'
 
 # -- Options for LaTeX output --------------------------------------------------
 
+latex_engine = 'xelatex'
+latex_use_xindy = False
 latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
 'papersize': 'letterpaper,openany',

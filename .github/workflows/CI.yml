@@ -1,0 +1,615 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "master"
+  pull_request:
+    branches:
+      - "master"
+  schedule:
+    # Nightly tests run on master by default:
+    #   Scheduled workflows run on the latest commit on the default or base branch.
+    #   (from https://help.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events-schedule)
+    - cron: "0 0 * * *"
+
+
+jobs:
+  unix:
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}
+    env:
+      CCACHE_BASEDIR: "${{ github.workspace }}"
+      CCACHE_DIR: "${{ github.workspace }}/.ccache"
+      CCACHE_COMPRESS: true
+      CCACHE_COMPRESSLEVEL: 6
+      CCACHE_MAXSIZE: 400M
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux CUDA 10.0
+            os: ubuntu-latest
+            python-version: "3.6"
+            cuda-version: "10.0"
+            OPENCL: false
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_CUDA_TESTS=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DOPENMM_BUILD_CPU_LIB=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+              -DOPENCL_LIBRARY=/usr/local/cuda-10.0/lib64/libOpenCL.so \
+              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-10.0/lib64/libcudart.so \
+              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-10.0/bin/nvcc \
+              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-10.0/ \
+              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-10.0/include \
+              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0/ \
+
+          - name: Linux CUDA 11.2
+            os: ubuntu-latest
+            python-version: "3.6"
+            OPENCL: false
+            cuda-version: "11.2"
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_CUDA_TESTS=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DOPENMM_BUILD_CPU_LIB=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+              -DOPENCL_LIBRARY=/usr/local/cuda-11.2/lib64/libOpenCL.so \
+              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-11.2/lib64/libcudart.so \
+              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-11.2/bin/nvcc \
+              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-11.2/ \
+              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-11.2/include \
+              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.2/ \
+
+          - name: Linux AMD OpenCL
+            os: ubuntu-latest
+            python-version: "3.6"
+            OPENCL: true
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=ON \
+              -DOPENMM_BUILD_OPENCL_TESTS=ON \
+              -DOPENMM_BUILD_STATIC_LIB=OFF \
+              -DOPENMM_BUILD_CPU_LIB=OFF \
+              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+              -DOPENMM_BUILD_PME_PLUGIN=OFF \
+              -DOPENMM_BUILD_AMOEBA_PLUGIN=OFF \
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+              -DOPENMM_BUILD_EXAMPLES=OFF \
+              -DOPENCL_INCLUDE_DIR=${GITHUB_WORKSPACE}/AMDAPPSDK/include \
+              -DOPENCL_LIBRARY=${GITHUB_WORKSPACE}/AMDAPPSDK/lib/x86_64/libOpenCL.so \
+
+          - name: Linux CPU Python 3.6 with static lib
+            os: ubuntu-latest
+            python-version: "3.6"
+            OPENCL: false
+            cuda-version: ""
+            CC: $CCACHE/clang
+            CXX: $CCACHE/clang++
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_STATIC_LIB=ON \
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
+          - name: Linux CPU Python 3.6 with condaforge compilers
+            python-version: "3.6"
+            os: ubuntu-latest
+            OPENCL: false
+            cuda-version: ""
+            compilers: conda-forge
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
+          - name: Linux CPU Python 3.6
+            python-version: "3.6"
+            os: ubuntu-latest
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
+          - name: Linux CPU Python 3.9
+            python-version: "3.9"
+            os: ubuntu-latest
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
+          - name: MacOS Intel CPU/OpenCL Python 3.9
+            python-version: "3.9"
+            os: macos-latest
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=ON \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: conda-incubator/setup-miniconda@v2
+        name: "Prepare base dependencies"
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: build
+          environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
+          auto-activate-base: false
+
+      - name: "Install CUDA on Ubuntu (if needed)"
+        if: matrix.cuda-version != '' && startsWith(matrix.os, 'ubuntu')
+        env:
+          CUDA_VERSION: ${{ matrix.cuda-version }}
+        run: source devtools/ci/gh-actions/scripts/install_cuda.sh
+
+      - name: "Install OpenCL on Ubuntu (if needed)"
+        if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
+        run: source devtools/ci/gh-actions/scripts/install_amd_opencl.sh
+
+      - name: "Install conda-forge compilers on Ubuntu (if needed)"
+        if: matrix.compilers == 'conda-forge'
+        shell: bash -l {0}
+        run: conda install -c conda-forge compilers
+
+      - name: "Set SDK on MacOS (if needed)"
+        if: startsWith(matrix.os, 'macos')
+        run: source devtools/ci/gh-actions/scripts/install_macos_sdk.sh
+
+      - name: "Prepare ccache"
+        id: prepare-ccache
+        shell: bash -l {0}
+        run: |
+          echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
+          echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
+
+          ccache -p
+          ccache -z
+
+      - name: "Restore ccache"
+        uses: actions/cache@v1.1.0
+        with:
+          path: .ccache
+          key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
+          restore-keys: |
+            ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
+
+      - name: "Configure build with CMake"
+        shell: bash -l {0}
+        run: |
+          mkdir build
+          cd build
+
+          cmake .. \
+            -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
+            -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            ${{ matrix.CMAKE_FLAGS }}
+
+      - name: "Build OpenMM"
+        shell: bash -l {0}
+        run: |
+          cd build
+          make -j2 install
+
+      - name: "Build Python wrappers"
+        shell: bash -l {0}
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
+        run: |
+          cd build
+          make -j2 PythonInstall
+
+      - name: "Check ccache performance"
+        shell: bash -l {0}
+        run: ccache -s
+
+      - name: "Test OpenMM"
+        shell: bash -l {0}
+        id: testcore
+        run: |
+          set -x
+          cd build
+          python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 900 --attempts 3
+
+          if [[ ${{ matrix.os }} == ubuntu-* ]]; then SHLIB=so; else SHLIB=dylib; fi
+          # This is always built
+          test -f ${CONDA_PREFIX}/lib/libOpenMM.$SHLIB
+          # With CUDA, we _expect_ CUDA plugins :)
+          if [[ "${{ matrix.cuda-version }}" != "" ]]; then
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCUDA.$SHLIB
+            # TODO: Check with Peter why this is not there. Maybe we need an extra flag?
+            # test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCudaCompiler.$SHLIB
+          fi
+          # OpenCL should also be there for CUDA and, well, OpenCL
+          if [[ "${{ matrix.cuda-version }}" != "" || ${{ matrix.OPENCL }} == true ]]; then
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMOpenCL.$SHLIB
+          # CPU builds should provide both CPU and PME
+          else
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.$SHLIB
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMPME.$SHLIB
+          fi
+
+      - name: "Test Python wrappers"
+        shell: bash -l {0}
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success') }}
+        run: |
+          set -x
+          python -m openmm.testInstallation
+          python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
+          cd build/python/tests
+          python -m pytest -v -n 2
+
+  windows:
+    runs-on: windows-latest
+    name: ${{ matrix.name }}
+    env:
+      # `make pythoninstall` will always put the files in the workspace unit
+      # workaround: make sure conda envs are created in the same unit as workspace
+      CONDA_ENVS_PATH: "D:/conda-envs"
+      CCACHE_BASEDIR: "${{ github.workspace }}"
+      CCACHE_DIR: "${{ github.workspace }}\\.ccache"
+      CCACHE_COMPRESS: true
+      CCACHE_COMPRESSLEVEL: 6
+      CCACHE_MAXSIZE: 400M
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows CUDA 11.2 Python 3.9
+            python-version: "3.9"
+            cuda-version: "11.2"
+            CMAKE_FLAGS: |
+              -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
+              -DOPENMM_BUILD_CUDA_TESTS=OFF ^
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+              -DOPENMM_BUILD_CPU_LIB=ON ^
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=ON ^
+              -DOPENMM_BUILD_REFERENCE_TESTS=ON ^
+              -DOPENMM_BUILD_SERIALIZATION_TESTS=ON ^
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=ON ^
+              -DOPENMM_BUILD_EXAMPLES=ON ^
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: conda-incubator/setup-miniconda@v2
+        name: "Prepare base dependencies"
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: build
+          environment-file: devtools/ci/gh-actions/conda-envs/build-windows-latest.yml
+          auto-activate-base: false
+
+      - name: "Install CUDA (if needed)"
+        shell: cmd /C call {0}
+        if: matrix.cuda-version != ''
+        env:
+          CUDA_VERSION: ${{ matrix.cuda-version }}
+        run: call devtools/ci/gh-actions/scripts/install_cuda.bat
+
+      - name: "Prepare ccache"
+        id: prepare-ccache
+        shell: cmd /C call {0}
+        run: |
+          set name=${{ matrix.name }}
+          set name=%name: =%
+          set name=%name:.=%
+          for /f "usebackq tokens=*" %%a in (`%CONDA_PREFIX%\Library\usr\bin\date.exe +%%Y%%m%%d-%%H%%M%%S`) do set "timestamp=%%a"
+
+          echo ::set-output name=key::%name%
+          echo ::set-output name=timestamp::%timestamp%
+
+          ccache -p
+          ccache -z
+
+      - name: "Restore ccache"
+        uses: actions/cache@v1.1.0
+        with:
+          path: .ccache
+          key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
+          restore-keys: |
+            ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
+
+      - name: "Configure build with CMake"
+        shell: cmd /C call {0}
+        env:
+          CMAKE_FLAGS: ${{ matrix.CMAKE_FLAGS }}
+        run: |
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          mkdir build
+          cd build
+          cmake -G "NMake Makefiles JOM" ^
+                -DCMAKE_BUILD_TYPE=Release ^
+                -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX%/Library ^
+                -DCMAKE_PREFIX_PATH=%CONDA_PREFIX%/Library ^
+                -DOPENCL_INCLUDE_DIR=%CONDA_PREFIX%/Library/include ^
+                -DOPENCL_LIBRARY=%CONDA_PREFIX%/Library/lib/OpenCL.lib ^
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache ^
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ^
+                -DCMAKE_CXX_COMPILER=cl.exe ^
+                -DCMAKE_C_COMPILER=cl.exe ^
+                -DOPENMM_BUILD_EXAMPLES=OFF ^
+                -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
+                %CMAKE_FLAGS%
+                ..
+
+      - name: "Build OpenMM"
+        shell: cmd /C call {0}
+        run: |
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          cd build
+          jom -j 2
+          if errorlevel 1 exit 1
+          jom -j 2 install
+          if errorlevel 1 exit 1
+
+      - name: "Build Python wrappers"
+        shell: cmd /C call {0}
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
+        run: |
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          cd build
+          jom -j 2 PythonInstall
+
+      - name: "Check ccache performance"
+        shell: cmd /C call {0}
+        run: ccache -s
+
+      - name: "Test OpenMM"
+        shell: cmd /C call {0}
+        id: testcore
+        run: |
+          @echo on
+          cd build
+          python ..\devtools\run-ctest.py --parallel 2 --timeout 600 --job-duration 900 --attempts 3
+          if errorlevel 1 exit 1
+
+          if not exist %CONDA_PREFIX%/Library/lib/OpenMM.lib exit 1
+          if not "${{ matrix.cuda-version }}" == "" (
+            if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCUDA.lib exit 1
+            if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMOpenCL.lib exit 1
+            if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCudaCompiler.lib exit 1
+          ) else (
+            if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCPU.lib exit 1
+            if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMPME.lib exit 1
+          )
+
+      - name: "Test Python wrappers"
+        shell: cmd /C call {0}
+        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success') }}
+        run: |
+          @echo on
+          python -m openmm.testInstallation
+          python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
+          cd build\python\tests
+          python -m pytest -v -n 2
+
+  docker:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: PowerPC CPU/CUDA 10.2 Python 3.9 with condaforge compilers
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:10.2
+            python-version: "3.9"
+            compilers: compilers
+
+          - name: PowerPC CPU Python 3.9 devtoolset-7 compilers
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le
+            python-version: "3.9"
+            compilers: devtoolset-7
+
+          - name: ARM CPU Python 3.6 with condaforge compilers
+            docker-image: quay.io/condaforge/linux-anvil-aarch64
+            python-version: "3.9"
+            compilers: compilers
+
+
+    steps:
+    - uses: actions/checkout@v2
+
+    # Following bits adapted from conda-forge Azure configs.
+    # If it stops working, check any feedstock with ppc64le or aarch64
+    # enabled, and adapt from:
+    #  .azure-pipelines/azure-pipelines-linux.yml
+    #  .scripts/run_docker_build.sh
+    #  .scripts/build_steps.sh
+
+    - name: "Prepare docker"
+      run: |
+        docker run --rm --privileged multiarch/qemu-user-static:register --reset --credential yes
+        ls /proc/sys/fs/binfmt_misc/
+
+        docker info
+
+        # In order for the conda-build process in the container to write to the mounted
+        # volumes, we need to run with the same id as the host machine, which is
+        # normally the owner of the mounted volumes, or at least has write permission
+        export HOST_USER_ID=$(id -u)
+
+        # Check if docker-machine is being used (normally on OSX) and get the uid from
+        # the VM
+        if hash docker-machine 2> /dev/null && docker-machine active > /dev/null; then
+            export HOST_USER_ID=$(docker-machine ssh $(docker-machine active) id -u)
+        fi
+
+        echo "HOST_USER_ID=${HOST_USER_ID}" >> ${GITHUB_ENV}
+
+    - name: "Prepare ccache"
+      id: prepare-ccache
+      shell: bash -l {0}
+      run: |
+        echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
+        echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
+
+    - name: "Restore ccache"
+      uses: actions/cache@v1.1.0
+      with:
+        path: .ccache
+        key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
+        restore-keys: |
+          ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
+
+    - name: Run docker
+      env:
+        PYTHON_VER: ${{ matrix.python-version }}
+        DOCKER_IMAGE: ${{ matrix.docker-image }}
+        COMPILERS: ${{ matrix.compilers }}
+      run: |
+        echo "::group::Start docker..."
+        docker run \
+          -v "${GITHUB_WORKSPACE}":/home/conda/workspace:rw,z \
+          -e HOST_USER_ID \
+          -e CPU_COUNT \
+          -e PYTHON_VER \
+          -e COMPILERS \
+          ${DOCKER_IMAGE} \
+          bash \
+          /home/conda/workspace/devtools/ci/gh-actions/scripts/run_steps_inside_docker_image.sh
+
+        test -f docker_steps_run_successfully
+
+
+  docs:
+    name: Docs
+    env:
+      CCACHE_BASEDIR: "${{ github.workspace }}"
+      CCACHE_DIR: "${{ github.workspace }}/.ccache"
+      CCACHE_COMPRESS: true
+      CCACHE_COMPRESSLEVEL: 6
+      CCACHE_MAXSIZE: 400M
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: conda-incubator/setup-miniconda@v2
+        name: "Prepare base dependencies"
+        with:
+          python-version: "3.6"
+          activate-environment: build
+          environment-file: devtools/ci/gh-actions/conda-envs/docs.yml
+          auto-activate-base: false
+
+      - name: "Install TeX"
+        run: |
+          set -x
+          echo 'APT::Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+          sudo apt-get install -y \
+            latexmk \
+            texlive-latex-recommended \
+            texlive-fonts-recommended \
+            texlive-latex-extra \
+            texlive-xetex \
+            fonts-freefont-otf
+
+      - name: "Prepare ccache"
+        id: prepare-ccache
+        shell: bash -l {0}
+        run: |
+          echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
+          echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
+
+          ccache -p
+          ccache -z
+
+      - name: "Restore ccache"
+        uses: actions/cache@v1.1.0
+        with:
+          path: .ccache
+          key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
+          restore-keys: |
+            ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
+
+      - name: "Configure build with CMake"
+        shell: bash -l {0}
+        run: |
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
+            -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DOPENMM_GENERATE_API_DOCS=ON \
+            -DOPENMM_BUILD_PYTHON_WRAPPERS=ON \
+            -DOPENMM_BUILD_OPENCL_LIB=OFF \
+            -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+            -DOPENMM_BUILD_CPU_TESTS=OFF \
+            -DOPENMM_BUILD_CUDA_TESTS=OFF \
+            -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+            -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+            -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+            -DOPENMM_BUILD_EXAMPLES=OFF
+
+      - name: Build docs
+        shell: bash -l {0}
+        run: |
+          set -x
+          cd build
+          make -j2 install PythonInstall
+          make -j2 sphinxhtml
+          make -j2 sphinxpdf
+          make -j2 C++ApiDocs
+          make -j2 PythonApiDocs
+          mkdir -p api-docs
+          mv sphinx-docs/userguide/html api-docs/userguide
+          mv sphinx-docs/userguide/latex/*.pdf api-docs/userguide/
+          mv sphinx-docs/developerguide/html api-docs/developerguide
+          mv sphinx-docs/developerguide/latex/*.pdf api-docs/developerguide/
+          mv api-python api-docs
+          mv api-c++ api-docs
+
+      - name: "Check ccache performance"
+        shell: bash -l {0}
+        run: ccache -s
+
+      - name: "Deploy docs (only on master)"
+        if: ${{ github.ref == 'refs/heads/master' && github.event_name != 'schedule' }}
+        uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read --follow-symlinks --delete
+        env:
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: 'us-west-1'
+          SOURCE_DIR: 'build/api-docs'
+          DEST_DIR: 'development'
+
+      - name: Check 404s
+        shell: bash -l {0}
+        env:
+          # From --help: "List of (comma-separated) urls in regexy form to not include in the check"
+          # Multi-skip syntax example: https://github.com/volkamerlab/volkamerlab_org/blob/fd4be6a/.github/workflows/ci.yaml#L33-L41
+          SKIP_URL: support.amd.com
+        run: |
+          set +e
+          for d in api-c++ api-python developerguide userguide; do
+            echo "::group:: Check ${d}"
+            npx linkinator ./build/api-docs/${d}/ --recurse --timeout=5000 --skip "$SKIP_URL"
+            ((exitcode+=$?))
+            echo "::endgroup::"
+          done
+          echo "::group:: Check README"
+          npx linkinator ./README.md --markdown --skip "$SKIP_URL"
+          ((exitcode+=$?))
+          echo "::endgroup::"
+          exit $exitcode

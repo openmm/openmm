@@ -1,0 +1,19 @@
+name: build
+channels:
+- conda-forge
+dependencies:
+# build
+- cmake
+- ccache
+# host
+- python
+- pip
+- numpy
+- cython
+- swig
+- doxygen 1.8.14
+- pip:
+  - sphinx==2.3.1
+  - sphinxcontrib-bibtex<2.0.0
+  - sphinxcontrib-lunrsearch
+  - sphinxcontrib-autodoc_doxygen
