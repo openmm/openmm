@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -106,13 +106,13 @@ static int executeInWindows(const string &command) {
 #endif
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
-        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData, CudaContext* originalContext) : ComputeContext(system), currentStream(0),
-        platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
+        const string& tempDir, const std::string& hostCompiler, bool allowRuntimeCompiler, CudaPlatform::PlatformData& platformData,
+        CudaContext* originalContext) : ComputeContext(system), currentStream(0), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
         hasCompilerKernel(false), isNvccAvailable(false), pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL) {
     // Determine what compiler to use.
     
     this->compiler = "\""+compiler+"\"";
-    if (platformData.context != NULL) {
+    if (allowRuntimeCompiler && platformData.context != NULL) {
         try {
             compilerKernel = platformData.context->getPlatform().createKernel(CudaCompilerKernel::Name(), *platformData.context);
             hasCompilerKernel = true;
