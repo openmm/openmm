@@ -304,10 +304,10 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
                 int atomFlags = BALLOT(forceInclude || atomDelta.x*atomDelta.x+atomDelta.y*atomDelta.y+atomDelta.z*atomDelta.z < (PADDED_CUTOFF+blockCenterY.w)*(PADDED_CUTOFF+blockCenterY.w));
                 int interacts = 0;
                 if (atom2 < NUM_ATOMS && atomFlags != 0) {
-                    int first = __ffs(atomFlags)-1;
-                    int last = 32-__clz(atomFlags);
 #ifdef USE_PERIODIC
                     if (!singlePeriodicCopy) {
+                        int first = __ffs(atomFlags)-1;
+                        int last = 32-__clz(atomFlags);
                         for (int j = first; j < last; j++) {
                             real3 delta = trimTo3(pos2)-trimTo3(posBuffer[warpStart+j]);
                             APPLY_PERIODIC_TO_DELTA(delta)

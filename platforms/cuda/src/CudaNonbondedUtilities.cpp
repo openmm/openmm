@@ -369,7 +369,7 @@ double CudaNonbondedUtilities::getMaxCutoffDistance() {
 }
 
 double CudaNonbondedUtilities::padCutoff(double cutoff) {
-    double padding = (usePadding ? 0.1*cutoff : 0.0);
+    double padding = (usePadding ? 0.08*cutoff : 0.0);
     return cutoff+padding;
 }
 
