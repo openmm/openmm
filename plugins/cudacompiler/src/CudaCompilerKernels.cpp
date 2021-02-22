@@ -51,11 +51,17 @@ static string getErrorString(nvrtcResult result) {
 CudaRuntimeCompilerKernel::CudaRuntimeCompilerKernel(const std::string& name, const Platform& platform) : CudaCompilerKernel(name, platform) {
     // Find the maximum architecture the compiler supports.
     
+#if CUDA_VERSION < 11000
+    // CUDA versions before 11 can't query the compiler to see what it supports.
+    
+    maxSupportedArchitecture = 75;
+#else
     int numArchs;
     CHECK_RESULT(nvrtcGetNumSupportedArchs(&numArchs), "Error querying supported architectures");
     vector<int> archs(numArchs);
     CHECK_RESULT(nvrtcGetSupportedArchs(archs.data()), "Error querying supported architectures");
     maxSupportedArchitecture = archs.back();
+#endif
 }
 
 string CudaRuntimeCompilerKernel::createModule(const string& source, const string& flags, CudaContext& cu) {
