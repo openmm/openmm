@@ -530,9 +530,10 @@ private:
     int contextIndex;
     int numAtomBlocks;
     int numThreadBlocks;
+    int gpuArchitecture;
     bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, boxIsTriclinic, hasCompilerKernel, isNvccAvailable, hasAssignedPosqCharges;
     bool isLinkedContext;
-    std::string compiler, tempDir, cacheDir, gpuArchitecture;
+    std::string compiler, tempDir, cacheDir;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;
     std::string defaultOptimizationOptions;
