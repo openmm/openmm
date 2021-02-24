@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,15 +37,17 @@ ExpressionUtilities::ExpressionUtilities(ComputeContext& context) : context(cont
 }
 
 string ExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const map<string, string>& variables,
-        const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix, const string& tempType) {
+        const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix,
+        const string& tempType, bool distancesArePeriodic) {
     vector<pair<ExpressionTreeNode, string> > variableNodes;
     for (map<string, string>::const_iterator iter = variables.begin(); iter != variables.end(); ++iter)
         variableNodes.push_back(make_pair(ExpressionTreeNode(new Operation::Variable(iter->first)), iter->second));
-    return createExpressions(expressions, variableNodes, functions, functionNames, prefix, tempType);
+    return createExpressions(expressions, variableNodes, functions, functionNames, prefix, tempType, distancesArePeriodic);
 }
 
 string ExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const vector<pair<ExpressionTreeNode, string> >& variables,
-        const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix, const string& tempType) {
+        const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix, const string& tempType,
+        bool distancesArePeriodic) {
     stringstream out;
     vector<ParsedExpression> allExpressions;
     for (map<string, ParsedExpression>::const_iterator iter = expressions.begin(); iter != expressions.end(); ++iter)
@@ -53,7 +55,7 @@ string ExpressionUtilities::createExpressions(const map<string, ParsedExpression
     vector<pair<ExpressionTreeNode, string> > temps = variables;
     vector<vector<double> > functionParams = computeFunctionParameters(functions);
     for (map<string, ParsedExpression>::const_iterator iter = expressions.begin(); iter != expressions.end(); ++iter) {
-        processExpression(out, iter->second.getRootNode(), temps, functions, functionNames, prefix, functionParams, allExpressions, tempType);
+        processExpression(out, iter->second.getRootNode(), temps, functions, functionNames, prefix, functionParams, allExpressions, tempType, distancesArePeriodic);
         out << iter->first << getTempName(iter->second.getRootNode(), temps) << ";\n";
     }
     return out.str();
@@ -61,12 +63,12 @@ string ExpressionUtilities::createExpressions(const map<string, ParsedExpression
 
 void ExpressionUtilities::processExpression(stringstream& out, const ExpressionTreeNode& node, vector<pair<ExpressionTreeNode, string> >& temps,
         const vector<const TabulatedFunction*>& functions, const vector<pair<string, string> >& functionNames, const string& prefix, const vector<vector<double> >& functionParams,
-        const vector<ParsedExpression>& allExpressions, const string& tempType) {
+        const vector<ParsedExpression>& allExpressions, const string& tempType, bool distancesArePeriodic) {
     for (int i = 0; i < (int) temps.size(); i++)
         if (temps[i].first == node)
             return;
     for (int i = 0; i < (int) node.getChildren().size(); i++)
-        processExpression(out, node.getChildren()[i], temps, functions, functionNames, prefix, functionParams, allExpressions, tempType);
+        processExpression(out, node.getChildren()[i], temps, functions, functionNames, prefix, functionParams, allExpressions, tempType, distancesArePeriodic);
     string name = prefix+context.intToString(temps.size());
     bool hasRecordedNode = false;
     bool isVecType = (tempType[tempType.size()-1] == '3');
@@ -109,43 +111,80 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                 temps.push_back(make_pair(*nodes[j], name2));
             }
             out << "{\n";
-            if (node.getOperation().getName() == "periodicdistance") {
-                // This is the periodicdistance() function.
+            if (node.getOperation().getName() == "pointdistance" || node.getOperation().getName() == "periodicdistance") {
+                // This is a pointdistance() or periodicdistance() function.
 
-                out << tempType << "3 periodicDistance_delta = make_real3(";
-                for (int i = 0; i < 3; i++) {
-                    if (i > 0)
-                        out << ", ";
-                    out << getTempName(node.getChildren()[i], temps) << "-" << getTempName(node.getChildren()[i+3], temps);
-                }
-                out << ");\n";
-                out << "APPLY_PERIODIC_TO_DELTA(periodicDistance_delta)\n";
-                out << tempType << " periodicDistance_r2 = periodicDistance_delta.x*periodicDistance_delta.x + periodicDistance_delta.y*periodicDistance_delta.y + periodicDistance_delta.z*periodicDistance_delta.z;\n";
-                out << tempType << " periodicDistance_rinv = RSQRT(periodicDistance_r2);\n";
+                bool periodic = (node.getOperation().getName() == "periodicdistance" || distancesArePeriodic);
+                computeDelta(out, "pointDistance_delta", node, 0, 3, tempType, periodic, temps);
+                out << tempType << " pointDistance_rinv = RSQRT(pointDistance_delta.w);\n";
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     int argIndex = -1;
                     for (int k = 0; k < 6; k++) {
                         if (derivOrder[k] > 0) {
                             if (derivOrder[k] > 1 || argIndex != -1)
-                                throw OpenMMException("Unsupported derivative of periodicdistance"); // Should be impossible for this to happen.
+                                throw OpenMMException("Unsupported derivative of "+node.getOperation().getName()); // Should be impossible for this to happen.
                             argIndex = k;
                         }
                     }
                     if (argIndex == -1)
-                        out << nodeNames[j] << " = RECIP(periodicDistance_rinv);\n";
+                        out << nodeNames[j] << " = RECIP(pointDistance_rinv);\n";
                     else if (argIndex == 0)
-                        out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? periodicDistance_delta.x*periodicDistance_rinv : 0);\n";
+                        out << nodeNames[j] << " = (pointDistance_delta.w > 0 ? pointDistance_delta.x*pointDistance_rinv : 0);\n";
                     else if (argIndex == 1)
-                        out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? periodicDistance_delta.y*periodicDistance_rinv : 0);\n";
+                        out << nodeNames[j] << " = (pointDistance_delta.w > 0 ? pointDistance_delta.y*pointDistance_rinv : 0);\n";
                     else if (argIndex == 2)
-                        out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? periodicDistance_delta.z*periodicDistance_rinv : 0);\n";
+                        out << nodeNames[j] << " = (pointDistance_delta.w > 0 ? pointDistance_delta.z*pointDistance_rinv : 0);\n";
                     else if (argIndex == 3)
-                        out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? -periodicDistance_delta.x*periodicDistance_rinv : 0);\n";
+                        out << nodeNames[j] << " = (pointDistance_delta.w > 0 ? -pointDistance_delta.x*pointDistance_rinv : 0);\n";
                     else if (argIndex == 4)
-                        out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? -periodicDistance_delta.y*periodicDistance_rinv : 0);\n";
+                        out << nodeNames[j] << " = (pointDistance_delta.w > 0 ? -pointDistance_delta.y*pointDistance_rinv : 0);\n";
                     else if (argIndex == 5)
-                        out << nodeNames[j] << " = (periodicDistance_r2 > 0 ? -periodicDistance_delta.z*periodicDistance_rinv : 0);\n";
+                        out << nodeNames[j] << " = (pointDistance_delta.w > 0 ? -pointDistance_delta.z*pointDistance_rinv : 0);\n";
+                }
+            }
+            else if (node.getOperation().getName() == "pointangle") {
+                // This is a pointangle() function.
+
+                bool periodic = (node.getOperation().getName() == "periodicdistance" || distancesArePeriodic);
+                computeDelta(out, "pointAngle_delta21", node, 3, 0, tempType, periodic, temps);
+                computeDelta(out, "pointAngle_delta23", node, 3, 6, tempType, periodic, temps);
+                out << tempType << " pointAngle_theta = ccb_computeAngle(pointAngle_delta21, pointAngle_delta23);\n";
+                out << tempType << "3 pointAngle_crossProd = trimTo3(cross(pointAngle_delta23, pointAngle_delta21));\n";
+                out << "real pointAngle_lengthCross = max(SQRT(dot(pointAngle_crossProd, pointAngle_crossProd)), (real) 1e-6f);\n";
+                out << "real3 pointAngle_deltaCross0 = cross(trimTo3(pointAngle_delta21), pointAngle_crossProd)/(pointAngle_delta21.w*pointAngle_lengthCross);\n";
+                out << "real3 pointAngle_deltaCross2 = -cross(trimTo3(pointAngle_delta23), pointAngle_crossProd)/(pointAngle_delta23.w*pointAngle_lengthCross);\n";
+                out << "real3 pointAngle_deltaCross1 = -(pointAngle_deltaCross0+pointAngle_deltaCross2);\n";
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    int argIndex = -1;
+                    for (int k = 0; k < 9; k++) {
+                        if (derivOrder[k] > 0) {
+                            if (derivOrder[k] > 1 || argIndex != -1)
+                                throw OpenMMException("Unsupported derivative of "+node.getOperation().getName()); // Should be impossible for this to happen.
+                            argIndex = k;
+                        }
+                    }
+                    if (argIndex == -1)
+                        out << nodeNames[j] << " = pointAngle_theta;\n";
+                    else if (argIndex == 0)
+                        out << nodeNames[j] << " = pointAngle_deltaCross0.x;\n";
+                    else if (argIndex == 1)
+                        out << nodeNames[j] << " = pointAngle_deltaCross0.y;\n";
+                    else if (argIndex == 2)
+                        out << nodeNames[j] << " = pointAngle_deltaCross0.z;\n";
+                    else if (argIndex == 3)
+                        out << nodeNames[j] << " = pointAngle_deltaCross1.x;\n";
+                    else if (argIndex == 4)
+                        out << nodeNames[j] << " = pointAngle_deltaCross1.y;\n";
+                    else if (argIndex == 5)
+                        out << nodeNames[j] << " = pointAngle_deltaCross1.z;\n";
+                    else if (argIndex == 6)
+                        out << nodeNames[j] << " = pointAngle_deltaCross2.x;\n";
+                    else if (argIndex == 7)
+                        out << nodeNames[j] << " = pointAngle_deltaCross2.y;\n";
+                    else if (argIndex == 8)
+                        out << nodeNames[j] << " = pointAngle_deltaCross2.z;\n";
                 }
             }
             else if (node.getOperation().getName() == "dot") {
@@ -997,4 +1036,20 @@ void ExpressionUtilities::callFunction2(stringstream& out, string singleFn, stri
     }
     else
         out<<fn<<"(("<<tempType<<") "<<arg1<<", ("<<tempType<<") "<<arg2<<")";
+}
+
+void ExpressionUtilities::computeDelta(stringstream& out, const string& varName, const ExpressionTreeNode& node, int index1, int index2, const string& tempType, bool periodic, const vector<pair<ExpressionTreeNode, string> >& temps) {
+    // Compute the (optionally periodic) displacement between two points, storing the distance
+    // into the w component.
+    
+    out << tempType << "4 " << varName << " = make_" << tempType << "4(";
+    for (int i = 0; i < 3; i++) {
+        if (i > 0)
+            out << ", ";
+        out << getTempName(node.getChildren()[index1+i], temps) << "-" << getTempName(node.getChildren()[index2+i], temps);
+    }
+    out << ", 0);\n";
+    if (periodic)
+        out << "APPLY_PERIODIC_TO_DELTA(" << varName << ")\n";
+    out << varName << ".w = " << varName << ".x*" << varName << ".x + " << varName << ".y*" << varName << ".y + " << varName << ".z*" << varName << ".z;\n";
 }

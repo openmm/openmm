@@ -38,6 +38,9 @@
 
 namespace OpenMM {
 
+/**
+ * This implements the pointdistance() function used in custom forces.
+ */
 class OPENMM_EXPORT ReferencePointDistanceFunction : public Lepton::CustomFunction {
 public:
     ReferencePointDistanceFunction(bool periodic, Vec3** boxVectorHandle);
@@ -50,6 +53,9 @@ private:
     Vec3** boxVectorHandle;
 };
 
+/**
+ * This implements the pointangle() function used in custom forces.
+ */
 class OPENMM_EXPORT ReferencePointAngleFunction : public Lepton::CustomFunction {
 public:
     ReferencePointAngleFunction(bool periodic, Vec3** boxVectorHandle);
@@ -62,6 +68,9 @@ private:
     Vec3** boxVectorHandle;
 };
 
+/**
+ * This implements the pointdihedral() function used in custom forces.
+ */
 class OPENMM_EXPORT ReferencePointDihedralFunction : public Lepton::CustomFunction {
 public:
     ReferencePointDihedralFunction(bool periodic, Vec3** boxVectorHandle);

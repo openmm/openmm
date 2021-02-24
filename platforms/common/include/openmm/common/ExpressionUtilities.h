@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -57,10 +57,12 @@ public:
      * @param functionNames  defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
      * @param tempType       the type of value to use for temporary variables (defaults to "real")
+     * @param distancesArePeriodic   whether the distances in pointdistance(), pointangle(), and pointdihedral() functions
+     *                               should have periodic boundary conditions applied
      */
     std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::map<std::string, std::string>& variables,
             const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
-            const std::string& prefix, const std::string& tempType="real");
+            const std::string& prefix, const std::string& tempType="real", bool distancesArePeriodic=false);
     /**
      * Generate the source code for calculating a set of expressions.
      *
@@ -71,10 +73,12 @@ public:
      * @param functionNames  defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
      * @param tempType       the type of value to use for temporary variables (defaults to "real")
+     * @param distancesArePeriodic   whether the distances in pointdistance(), pointangle(), and pointdihedral() functions
+     *                               should have periodic boundary conditions applied
      */
     std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variables,
             const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
-            const std::string& prefix, const std::string& tempType="real");
+            const std::string& prefix, const std::string& tempType="real", bool distancesArePeriodic=false);
     /**
      * Calculate the spline coefficients for a tabulated function that appears in expressions.
      *
@@ -116,7 +120,8 @@ private:
     void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
             std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps,
             const std::vector<const TabulatedFunction*>& functions, const std::vector<std::pair<std::string, std::string> >& functionNames,
-            const std::string& prefix, const std::vector<std::vector<double> >& functionParams, const std::vector<Lepton::ParsedExpression>& allExpressions, const std::string& tempType);
+            const std::string& prefix, const std::vector<std::vector<double> >& functionParams, const std::vector<Lepton::ParsedExpression>& allExpressions,
+            const std::string& tempType, bool distancesArePeriodic);
     std::string getTempName(const Lepton::ExpressionTreeNode& node, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
     void findRelatedCustomFunctions(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             std::vector<const Lepton::ExpressionTreeNode*>& nodes);
@@ -124,6 +129,8 @@ private:
             std::map<int, const Lepton::ExpressionTreeNode*>& powers);
     void callFunction(std::stringstream& out, std::string singleFn, std::string doubleFn, const std::string& arg, const std::string& tempType);
     void callFunction2(std::stringstream& out, std::string singleFn, std::string doubleFn, const std::string& arg1, const std::string& arg2, const std::string& tempType);
+    void computeDelta(std::stringstream& out, const std::string& varName, const Lepton::ExpressionTreeNode& node, int index1, int index2, const std::string& tempType,
+            bool periodic, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
     std::vector<std::vector<double> > computeFunctionParameters(const std::vector<const TabulatedFunction*>& functions);
     ComputeContext& context;
     FunctionPlaceholder fp1, fp2, fp3, periodicDistance;
