@@ -806,7 +806,6 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
 private:
-    class PeriodicDistanceFunction;
     int numParticles;
     ReferenceCustomExternalIxn* ixn;
     std::vector<int> particles;
@@ -814,16 +813,6 @@ private:
     Lepton::CompiledExpression energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ;
     std::vector<std::string> parameterNames, globalParameterNames;
     Vec3* boxVectors;
-};
-
-class ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction : public Lepton::CustomFunction {
-public:
-    Vec3** boxVectorHandle;
-    PeriodicDistanceFunction(Vec3** boxVectorHandle);
-    int getNumArguments() const;
-    double evaluate(const double* arguments) const;
-    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
-    Lepton::CustomFunction* clone() const;
 };
 
 /**
@@ -943,6 +932,7 @@ private:
     ReferenceCustomCompoundBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
     bool usePeriodic;
+    Vec3* boxVectors;
 };
 
 /**
