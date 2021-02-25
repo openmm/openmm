@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2021 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -29,6 +29,7 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "ReferenceCustomManyParticleIxn.h"
+#include "ReferencePointFunctions.h"
 #include "ReferenceTabulatedFunction.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "lepton/CustomFunction.h"
@@ -47,6 +48,12 @@ ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyP
     for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
+    // Create implementations of point functions.
+
+    functions["pointdistance"] = new ReferencePointDistanceFunction(force.usesPeriodicBoundaryConditions(), &periodicBoxVectors);
+    functions["pointangle"] = new ReferencePointAngleFunction(force.usesPeriodicBoundaryConditions(), &periodicBoxVectors);
+    functions["pointdihedral"] = new ReferencePointDihedralFunction(force.usesPeriodicBoundaryConditions(), &periodicBoxVectors);
+
     // Parse the expression and create the object used to calculate the interaction.
 
     map<string, vector<int> > distances;
@@ -54,7 +61,6 @@ ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyP
     map<string, vector<int> > dihedrals;
     Lepton::ParsedExpression energyExpr = CustomManyParticleForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
     energyExpression = energyExpr.createProgram();
-    vector<string> particleParameterNames;
     if (force.getNonbondedMethod() != CustomManyParticleForce::NoCutoff)
         setUseCutoff(force.getCutoffDistance());
 
@@ -124,9 +130,7 @@ void ReferenceCustomManyParticleIxn::setPeriodic(Vec3* vectors) {
     assert(vectors[1][1] >= 2.0*cutoffDistance);
     assert(vectors[2][2] >= 2.0*cutoffDistance);
     usePeriodic = true;
-    periodicBoxVectors[0] = vectors[0];
-    periodicBoxVectors[1] = vectors[1];
-    periodicBoxVectors[2] = vectors[2];
+    periodicBoxVectors = vectors;
 }
 
 void ReferenceCustomManyParticleIxn::loopOverInteractions(vector<int>& particles, int loopIndex, vector<OpenMM::Vec3>& atomCoordinates,

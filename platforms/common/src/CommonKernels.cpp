@@ -4639,7 +4639,6 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
         compute<<parameter.getType()<<" params"<<(i+1)<<" = global_params"<<(i+1)<<"[index];\n";
     }
     forceExpressions["energy += "] = energyExpression;
-    compute << cc.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
 
     // Apply forces to atoms.
 
@@ -4649,21 +4648,17 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
         string forceName = "force"+istr;
         forceNames.push_back(forceName);
         compute<<"real3 "<<forceName<<" = make_real3(0);\n";
-        compute<<"{\n";
         Lepton::ParsedExpression forceExpressionX = energyExpression.differentiate("x"+istr).optimize();
         Lepton::ParsedExpression forceExpressionY = energyExpression.differentiate("y"+istr).optimize();
         Lepton::ParsedExpression forceExpressionZ = energyExpression.differentiate("z"+istr).optimize();
-        map<string, Lepton::ParsedExpression> expressions;
         if (!isZeroExpression(forceExpressionX))
-            expressions[forceName+".x -= "] = forceExpressionX;
+            forceExpressions[forceName+".x -= "] = forceExpressionX;
         if (!isZeroExpression(forceExpressionY))
-            expressions[forceName+".y -= "] = forceExpressionY;
+            forceExpressions[forceName+".y -= "] = forceExpressionY;
         if (!isZeroExpression(forceExpressionZ))
-            expressions[forceName+".z -= "] = forceExpressionZ;
-        if (expressions.size() > 0)
-            compute<<cc.getExpressionUtilities().createExpressions(expressions, variables, functionList, functionDefinitions, "coordtemp");
-        compute<<"}\n";
+            forceExpressions[forceName+".z -= "] = forceExpressionZ;
     }
+    compute << cc.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp", "real", force.usesPeriodicBoundaryConditions());
     index = 0;
     for (auto& distance : distances) {
         const vector<int>& atoms = distance.second;

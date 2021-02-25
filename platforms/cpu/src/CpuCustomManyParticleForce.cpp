@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2021 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -29,6 +29,7 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "CpuCustomManyParticleForce.h"
+#include "ReferencePointFunctions.h"
 #include "ReferenceTabulatedFunction.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "lepton/CustomFunction.h"
@@ -48,6 +49,12 @@ CpuCustomManyParticleForce::CpuCustomManyParticleForce(const CustomManyParticleF
     map<string, Lepton::CustomFunction*> functions;
     for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+
+    // Create implementations of point functions.
+
+    functions["pointdistance"] = new ReferencePointDistanceFunction(force.usesPeriodicBoundaryConditions(), &boxVectorsRef);
+    functions["pointangle"] = new ReferencePointAngleFunction(force.usesPeriodicBoundaryConditions(), &boxVectorsRef);
+    functions["pointdihedral"] = new ReferencePointDihedralFunction(force.usesPeriodicBoundaryConditions(), &boxVectorsRef);
 
     // Parse the expression and create the objects used to calculate the interaction.
 
@@ -190,6 +197,7 @@ void CpuCustomManyParticleForce::setPeriodic(Vec3* periodicBoxVectors) {
     assert(periodicBoxVectors[1][1] >= 2.0*cutoffDistance);
     assert(periodicBoxVectors[2][2] >= 2.0*cutoffDistance);
     usePeriodic = true;
+    this->boxVectorsRef = periodicBoxVectors;
     this->periodicBoxVectors[0] = periodicBoxVectors[0];
     this->periodicBoxVectors[1] = periodicBoxVectors[1];
     this->periodicBoxVectors[2] = periodicBoxVectors[2];

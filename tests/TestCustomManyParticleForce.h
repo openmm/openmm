@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2014-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,6 +47,17 @@ using namespace OpenMM;
 using namespace std;
 
 const double TOL = 1e-5;
+
+string axilrodTellerParticleExpression =
+        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
+        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
+        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)";
+
+string axilrodTellerPointExpression =
+        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
+        "theta1=pointangle(x1,y1,z1,x2,y2,z2,x3,y3,z3); theta2=pointangle(x2,y2,z2,x3,y3,z3,x1,y1,z1); theta3=pointangle(x3,y3,z3,x1,y1,z1,x2,y2,z2);"
+        "r12=pointdistance(x1,y1,z1,x2,y2,z2); r13=pointdistance(x1,y1,z1,x3,y3,z3); r23=pointdistance(x2,y2,z2,x3,y3,z3)";
+
 
 Vec3 computeDelta(const Vec3& pos1, const Vec3& pos2, bool periodic, const Vec3* periodicBoxVectors) {
     Vec3 diff = pos1-pos2;
@@ -208,11 +219,8 @@ void validateStillingerWeber(CustomManyParticleForce* force, const vector<Vec3>&
     ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/stepSize, 1e-4);
 }
 
-void testNoCutoff() {
-    CustomManyParticleForce* force = new CustomManyParticleForce(3,
-        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
-        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
-        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
+void testNoCutoff(bool byParticle) {
+    CustomManyParticleForce* force = new CustomManyParticleForce(3, byParticle ? axilrodTellerParticleExpression : axilrodTellerPointExpression);
     force->addGlobalParameter("C", 1.5);
     vector<double> params;
     force->addParticle(params);
@@ -229,11 +237,8 @@ void testNoCutoff() {
     validateAxilrodTeller(force, positions, expectedSets, 2.0, false);
 }
 
-void testCutoff() {
-    CustomManyParticleForce* force = new CustomManyParticleForce(3,
-        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
-        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
-        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
+void testCutoff(bool byParticle) {
+    CustomManyParticleForce* force = new CustomManyParticleForce(3, byParticle ? axilrodTellerParticleExpression : axilrodTellerPointExpression);
     force->addGlobalParameter("C", 1.5);
     force->setNonbondedMethod(CustomManyParticleForce::CutoffNonPeriodic);
     force->setCutoffDistance(1.55);
@@ -254,11 +259,8 @@ void testCutoff() {
     validateAxilrodTeller(force, positions, expectedSets, 2.0, false);
 }
 
-void testPeriodic() {
-    CustomManyParticleForce* force = new CustomManyParticleForce(3,
-        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
-        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
-        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
+void testPeriodic(bool byParticle) {
+    CustomManyParticleForce* force = new CustomManyParticleForce(3, byParticle ? axilrodTellerParticleExpression : axilrodTellerPointExpression);
     force->addGlobalParameter("C", 1.5);
     force->setNonbondedMethod(CustomManyParticleForce::CutoffPeriodic);
     force->setCutoffDistance(1.05);
@@ -280,11 +282,8 @@ void testPeriodic() {
     validateAxilrodTeller(force, positions, expectedSets, boxSize, false);
 }
 
-void testTriclinic() {
-    CustomManyParticleForce* force = new CustomManyParticleForce(3,
-        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
-        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
-        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
+void testTriclinic(bool byParticle) {
+    CustomManyParticleForce* force = new CustomManyParticleForce(3, byParticle ? axilrodTellerParticleExpression : axilrodTellerPointExpression);
     force->addGlobalParameter("C", 1.5);
     force->setNonbondedMethod(CustomManyParticleForce::CutoffPeriodic);
     force->setCutoffDistance(1.05);
@@ -307,10 +306,7 @@ void testTriclinic() {
 }
 
 void testExclusions() {
-    CustomManyParticleForce* force = new CustomManyParticleForce(3,
-        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
-        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
-        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
+    CustomManyParticleForce* force = new CustomManyParticleForce(3, axilrodTellerParticleExpression);
     force->addGlobalParameter("C", 1.5);
     vector<double> params;
     force->addParticle(params);
@@ -578,10 +574,7 @@ void testLargeSystem() {
     int numParticles = gridSize*gridSize*gridSize;
     double boxSize = 3.0;
     double spacing = boxSize/gridSize;
-    CustomManyParticleForce* force = new CustomManyParticleForce(3,
-        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
-        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
-        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
+    CustomManyParticleForce* force = new CustomManyParticleForce(3, axilrodTellerParticleExpression);
     force->addGlobalParameter("C", 1.5);
     force->setNonbondedMethod(CustomManyParticleForce::CutoffPeriodic);
     force->setCutoffDistance(0.6);
@@ -729,10 +722,14 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
-        testNoCutoff();
-        testCutoff();
-        testPeriodic();
-        testTriclinic();
+        testNoCutoff(true);
+        testNoCutoff(false);
+        testCutoff(true);
+        testCutoff(false);
+        testPeriodic(true);
+        testPeriodic(false);
+        testTriclinic(true);
+        testTriclinic(false);
         testExclusions();
         testAllTerms();
         testParameters();

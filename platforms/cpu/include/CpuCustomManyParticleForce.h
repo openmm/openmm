@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2021 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -55,6 +55,7 @@ private:
     double cutoffDistance;
     float recipBoxSize[3];
     Vec3 periodicBoxVectors[3];
+    Vec3* boxVectorsRef;
     AlignedArray<fvec4> periodicBoxVec4;
     CpuNeighborList* neighborList;
     ThreadPool& threads;

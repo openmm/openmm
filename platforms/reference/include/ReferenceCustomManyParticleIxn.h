@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2021 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -46,7 +46,7 @@ class ReferenceCustomManyParticleIxn {
       int numParticlesPerSet, numPerParticleParameters, numTypes;
       bool useCutoff, usePeriodic, centralParticleMode;
       double cutoffDistance;
-      OpenMM::Vec3 periodicBoxVectors[3];
+      OpenMM::Vec3* periodicBoxVectors;
       Lepton::ExpressionProgram energyExpression;
       std::vector<std::vector<std::string> > particleParamNames;
       std::vector<std::set<int> > exclusions;
