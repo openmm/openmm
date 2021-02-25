@@ -1376,7 +1376,6 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         Lepton::ParsedExpression derivExpression = energyExpression.differentiate(paramName).optimize();
         forceExpressions[derivVariable+" += "] = derivExpression;
     }
-    compute << cc.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp", "real", force.usesPeriodicBoundaryConditions());
 
     // Finally, apply forces to atoms.
 
@@ -1386,21 +1385,17 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         string forceName = "force"+istr;
         forceNames.push_back(forceName);
         compute<<"real3 "<<forceName<<" = make_real3(0);\n";
-        compute<<"{\n";
         Lepton::ParsedExpression forceExpressionX = energyExpression.differentiate("x"+istr).optimize();
         Lepton::ParsedExpression forceExpressionY = energyExpression.differentiate("y"+istr).optimize();
         Lepton::ParsedExpression forceExpressionZ = energyExpression.differentiate("z"+istr).optimize();
-        map<string, Lepton::ParsedExpression> expressions;
         if (!isZeroExpression(forceExpressionX))
-            expressions[forceName+".x -= "] = forceExpressionX;
+            forceExpressions[forceName+".x -= "] = forceExpressionX;
         if (!isZeroExpression(forceExpressionY))
-            expressions[forceName+".y -= "] = forceExpressionY;
+            forceExpressions[forceName+".y -= "] = forceExpressionY;
         if (!isZeroExpression(forceExpressionZ))
-            expressions[forceName+".z -= "] = forceExpressionZ;
-        if (expressions.size() > 0)
-            compute<<cc.getExpressionUtilities().createExpressions(expressions, variables, functionList, functionDefinitions, "coordtemp", "real", force.usesPeriodicBoundaryConditions());
-        compute<<"}\n";
+            forceExpressions[forceName+".z -= "] = forceExpressionZ;
     }
+    compute << cc.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp", "real", force.usesPeriodicBoundaryConditions());
     index = 0;
     for (auto& distance : distances) {
         const vector<int>& atoms = distance.second;

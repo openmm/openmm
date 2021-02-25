@@ -115,8 +115,8 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                 // This is a pointdistance() or periodicdistance() function.
 
                 bool periodic = (node.getOperation().getName() == "periodicdistance" || distancesArePeriodic);
-                computeDelta(out, "pointDistance_delta", node, 0, 3, tempType, periodic, temps);
-                out << tempType << " pointDistance_rinv = RSQRT(pointDistance_delta.w);\n";
+                computeDelta(out, "distance_delta", node, 0, 3, tempType, periodic, temps);
+                out << tempType << " distance_rinv = RSQRT(distance_delta.w);\n";
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     int argIndex = -1;
@@ -128,33 +128,32 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                         }
                     }
                     if (argIndex == -1)
-                        out << nodeNames[j] << " = RECIP(pointDistance_rinv);\n";
+                        out << nodeNames[j] << " = RECIP(distance_rinv);\n";
                     else if (argIndex == 0)
-                        out << nodeNames[j] << " = (pointDistance_delta.w > 0 ? pointDistance_delta.x*pointDistance_rinv : 0);\n";
+                        out << nodeNames[j] << " = (distance_delta.w > 0 ? distance_delta.x*distance_rinv : 0);\n";
                     else if (argIndex == 1)
-                        out << nodeNames[j] << " = (pointDistance_delta.w > 0 ? pointDistance_delta.y*pointDistance_rinv : 0);\n";
+                        out << nodeNames[j] << " = (distance_delta.w > 0 ? distance_delta.y*distance_rinv : 0);\n";
                     else if (argIndex == 2)
-                        out << nodeNames[j] << " = (pointDistance_delta.w > 0 ? pointDistance_delta.z*pointDistance_rinv : 0);\n";
+                        out << nodeNames[j] << " = (distance_delta.w > 0 ? distance_delta.z*distance_rinv : 0);\n";
                     else if (argIndex == 3)
-                        out << nodeNames[j] << " = (pointDistance_delta.w > 0 ? -pointDistance_delta.x*pointDistance_rinv : 0);\n";
+                        out << nodeNames[j] << " = (distance_delta.w > 0 ? -distance_delta.x*distance_rinv : 0);\n";
                     else if (argIndex == 4)
-                        out << nodeNames[j] << " = (pointDistance_delta.w > 0 ? -pointDistance_delta.y*pointDistance_rinv : 0);\n";
+                        out << nodeNames[j] << " = (distance_delta.w > 0 ? -distance_delta.y*distance_rinv : 0);\n";
                     else if (argIndex == 5)
-                        out << nodeNames[j] << " = (pointDistance_delta.w > 0 ? -pointDistance_delta.z*pointDistance_rinv : 0);\n";
+                        out << nodeNames[j] << " = (distance_delta.w > 0 ? -distance_delta.z*distance_rinv : 0);\n";
                 }
             }
             else if (node.getOperation().getName() == "pointangle") {
                 // This is a pointangle() function.
 
-                bool periodic = (node.getOperation().getName() == "periodicdistance" || distancesArePeriodic);
-                computeDelta(out, "pointAngle_delta21", node, 3, 0, tempType, periodic, temps);
-                computeDelta(out, "pointAngle_delta23", node, 3, 6, tempType, periodic, temps);
-                out << tempType << " pointAngle_theta = ccb_computeAngle(pointAngle_delta21, pointAngle_delta23);\n";
-                out << tempType << "3 pointAngle_crossProd = trimTo3(cross(pointAngle_delta23, pointAngle_delta21));\n";
-                out << "real pointAngle_lengthCross = max(SQRT(dot(pointAngle_crossProd, pointAngle_crossProd)), (real) 1e-6f);\n";
-                out << "real3 pointAngle_deltaCross0 = cross(trimTo3(pointAngle_delta21), pointAngle_crossProd)/(pointAngle_delta21.w*pointAngle_lengthCross);\n";
-                out << "real3 pointAngle_deltaCross2 = -cross(trimTo3(pointAngle_delta23), pointAngle_crossProd)/(pointAngle_delta23.w*pointAngle_lengthCross);\n";
-                out << "real3 pointAngle_deltaCross1 = -(pointAngle_deltaCross0+pointAngle_deltaCross2);\n";
+                computeDelta(out, "angle_delta21", node, 3, 0, tempType, distancesArePeriodic, temps);
+                computeDelta(out, "angle_delta23", node, 3, 6, tempType, distancesArePeriodic, temps);
+                out << tempType << " angle_theta = ccb_computeAngle(angle_delta21, angle_delta23);\n";
+                out << tempType << "3 angle_crossProd = trimTo3(cross(angle_delta23, angle_delta21));\n";
+                out << "real angle_lengthCross = max(SQRT(dot(angle_crossProd, angle_crossProd)), (real) 1e-6f);\n";
+                out << "real3 angle_deltaCross0 = cross(trimTo3(angle_delta21), angle_crossProd)/(angle_delta21.w*angle_lengthCross);\n";
+                out << "real3 angle_deltaCross2 = -cross(trimTo3(angle_delta23), angle_crossProd)/(angle_delta23.w*angle_lengthCross);\n";
+                out << "real3 angle_deltaCross1 = -(angle_deltaCross0+angle_deltaCross2);\n";
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     int argIndex = -1;
@@ -166,25 +165,82 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                         }
                     }
                     if (argIndex == -1)
-                        out << nodeNames[j] << " = pointAngle_theta;\n";
+                        out << nodeNames[j] << " = angle_theta;\n";
                     else if (argIndex == 0)
-                        out << nodeNames[j] << " = pointAngle_deltaCross0.x;\n";
+                        out << nodeNames[j] << " = angle_deltaCross0.x;\n";
                     else if (argIndex == 1)
-                        out << nodeNames[j] << " = pointAngle_deltaCross0.y;\n";
+                        out << nodeNames[j] << " = angle_deltaCross0.y;\n";
                     else if (argIndex == 2)
-                        out << nodeNames[j] << " = pointAngle_deltaCross0.z;\n";
+                        out << nodeNames[j] << " = angle_deltaCross0.z;\n";
                     else if (argIndex == 3)
-                        out << nodeNames[j] << " = pointAngle_deltaCross1.x;\n";
+                        out << nodeNames[j] << " = angle_deltaCross1.x;\n";
                     else if (argIndex == 4)
-                        out << nodeNames[j] << " = pointAngle_deltaCross1.y;\n";
+                        out << nodeNames[j] << " = angle_deltaCross1.y;\n";
                     else if (argIndex == 5)
-                        out << nodeNames[j] << " = pointAngle_deltaCross1.z;\n";
+                        out << nodeNames[j] << " = angle_deltaCross1.z;\n";
                     else if (argIndex == 6)
-                        out << nodeNames[j] << " = pointAngle_deltaCross2.x;\n";
+                        out << nodeNames[j] << " = angle_deltaCross2.x;\n";
                     else if (argIndex == 7)
-                        out << nodeNames[j] << " = pointAngle_deltaCross2.y;\n";
+                        out << nodeNames[j] << " = angle_deltaCross2.y;\n";
                     else if (argIndex == 8)
-                        out << nodeNames[j] << " = pointAngle_deltaCross2.z;\n";
+                        out << nodeNames[j] << " = angle_deltaCross2.z;\n";
+                }
+            }
+            else if (node.getOperation().getName() == "pointdihedral") {
+                // This is a pointdihedral() function.
+
+                computeDelta(out, "dihedral_delta12", node, 0, 3, tempType, distancesArePeriodic, temps);
+                computeDelta(out, "dihedral_delta32", node, 6, 3, tempType, distancesArePeriodic, temps);
+                computeDelta(out, "dihedral_delta34", node, 6, 9, tempType, distancesArePeriodic, temps);
+                out << tempType << "4 dihedral_cross1 = ccb_computeCross(dihedral_delta12, dihedral_delta32);\n";
+                out << tempType << "4 dihedral_cross2 = ccb_computeCross(dihedral_delta32, dihedral_delta34);\n";
+                out << tempType << " dihedral_theta = ccb_computeAngle(dihedral_cross1, dihedral_cross2);\n";
+                out << "dihedral_theta *= (dihedral_delta12.x*dihedral_cross2.x + dihedral_delta12.y*dihedral_cross2.y + dihedral_delta12.z*dihedral_cross2.z < 0 ? -1 : 1);\n";
+                out << tempType << " dihedral_r = SQRT(dihedral_delta32.w);\n";
+                out << tempType << "4 dihedral_ff;\n";
+                out << "dihedral_ff.x = -dihedral_r/dihedral_cross1.w;\n";
+                out << "dihedral_ff.y = (dihedral_delta12.x*dihedral_delta32.x + dihedral_delta12.y*dihedral_delta32.y + dihedral_delta12.z*dihedral_delta32.z)/dihedral_delta32.w;\n";
+                out << "dihedral_ff.z = (dihedral_delta34.x*dihedral_delta32.x + dihedral_delta34.y*dihedral_delta32.y + dihedral_delta34.z*dihedral_delta32.z)/dihedral_delta32.w;\n";
+                out << "dihedral_ff.w = dihedral_r/dihedral_cross2.w;\n";
+                out << tempType << "3 dihedral_internalF0 = dihedral_ff.x*trimTo3(dihedral_cross1);\n";
+                out << tempType << "3 dihedral_internalF3 = dihedral_ff.w*trimTo3(dihedral_cross2);\n";
+                out << tempType << "3 dihedral_s = dihedral_ff.y*dihedral_internalF0 - dihedral_ff.z*dihedral_internalF3;\n";
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    int argIndex = -1;
+                    for (int k = 0; k < 12; k++) {
+                        if (derivOrder[k] > 0) {
+                            if (derivOrder[k] > 1 || argIndex != -1)
+                                throw OpenMMException("Unsupported derivative of "+node.getOperation().getName()); // Should be impossible for this to happen.
+                            argIndex = k;
+                        }
+                    }
+                    if (argIndex == -1)
+                        out << nodeNames[j] << " = dihedral_theta;\n";
+                    else if (argIndex == 0)
+                        out << nodeNames[j] << " = -dihedral_internalF0.x;\n";
+                    else if (argIndex == 1)
+                        out << nodeNames[j] << " = -dihedral_internalF0.y;\n";
+                    else if (argIndex == 2)
+                        out << nodeNames[j] << " = -dihedral_internalF0.z;\n";
+                    else if (argIndex == 3)
+                        out << nodeNames[j] << " = -dihedral_s.x+dihedral_internalF0.x;\n";
+                    else if (argIndex == 4)
+                        out << nodeNames[j] << " = -dihedral_s.y+dihedral_internalF0.y;\n";
+                    else if (argIndex == 5)
+                        out << nodeNames[j] << " = -dihedral_s.z+dihedral_internalF0.z;\n";
+                    else if (argIndex == 6)
+                        out << nodeNames[j] << " = dihedral_s.x+dihedral_internalF3.x;\n";
+                    else if (argIndex == 7)
+                        out << nodeNames[j] << " = dihedral_s.y+dihedral_internalF3.y;\n";
+                    else if (argIndex == 8)
+                        out << nodeNames[j] << " = dihedral_s.z+dihedral_internalF3.z;\n";
+                    else if (argIndex == 9)
+                        out << nodeNames[j] << " = -dihedral_internalF3.x;\n";
+                    else if (argIndex == 10)
+                        out << nodeNames[j] << " = -dihedral_internalF3.y;\n";
+                    else if (argIndex == 11)
+                        out << nodeNames[j] << " = -dihedral_internalF3.z;\n";
                 }
             }
             else if (node.getOperation().getName() == "dot") {
