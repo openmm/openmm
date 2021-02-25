@@ -1305,7 +1305,7 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         if (computedDeltas.count(deltaName) == 0) {
-            compute<<"real4 delta"<<deltaName<<" = ccb_delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
+            compute<<"real4 delta"<<deltaName<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName);
         }
         compute<<"real r_"<<deltaName<<" = SQRT(delta"<<deltaName<<".w);\n";
@@ -1320,14 +1320,14 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
         if (computedDeltas.count(deltaName1) == 0) {
-            compute<<"real4 delta"<<deltaName1<<" = ccb_delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[0]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
+            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[0]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName1);
         }
         if (computedDeltas.count(deltaName2) == 0) {
-            compute<<"real4 delta"<<deltaName2<<" = ccb_delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[2]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
+            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[1]]<<", "<<posNames[atoms[2]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName2);
         }
-        compute<<"real "<<angleName<<" = ccb_computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
+        compute<<"real "<<angleName<<" = computeAngle(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
         variables[angle.first] = angleName;
         forceExpressions["real dEdAngle"+cc.intToString(index)+" = "] = energyExpression.differentiate(angle.first).optimize();
         index++;
@@ -1342,20 +1342,20 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
         string dihedralName = "dihedral_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]]+atomNames[atoms[3]];
         if (computedDeltas.count(deltaName1) == 0) {
-            compute<<"real4 delta"<<deltaName1<<" = ccb_delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
+            compute<<"real4 delta"<<deltaName1<<" = delta("<<posNames[atoms[0]]<<", "<<posNames[atoms[1]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName1);
         }
         if (computedDeltas.count(deltaName2) == 0) {
-            compute<<"real4 delta"<<deltaName2<<" = ccb_delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[1]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
+            compute<<"real4 delta"<<deltaName2<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[1]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName2);
         }
         if (computedDeltas.count(deltaName3) == 0) {
-            compute<<"real4 delta"<<deltaName3<<" = ccb_delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[3]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
+            compute<<"real4 delta"<<deltaName3<<" = delta("<<posNames[atoms[2]]<<", "<<posNames[atoms[3]]<<", "<<force.usesPeriodicBoundaryConditions()<<", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName3);
         }
-        compute<<"real4 "<<crossName1<<" = ccb_computeCross(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
-        compute<<"real4 "<<crossName2<<" = ccb_computeCross(delta"<<deltaName2<<", delta"<<deltaName3<<");\n";
-        compute<<"real "<<dihedralName<<" = ccb_computeAngle("<<crossName1<<", "<<crossName2<<");\n";
+        compute<<"real4 "<<crossName1<<" = computeCross(delta"<<deltaName1<<", delta"<<deltaName2<<");\n";
+        compute<<"real4 "<<crossName2<<" = computeCross(delta"<<deltaName2<<", delta"<<deltaName3<<");\n";
+        compute<<"real "<<dihedralName<<" = computeAngle("<<crossName1<<", "<<crossName2<<");\n";
         compute<<dihedralName<<" *= (delta"<<deltaName1<<".x*"<<crossName2<<".x + delta"<<deltaName1<<".y*"<<crossName2<<".y + delta"<<deltaName1<<".z*"<<crossName2<<".z < 0 ? -1 : 1);\n";
         variables[dihedral.first] = dihedralName;
         forceExpressions["real dEdDihedral"+cc.intToString(index)+" = "] = energyExpression.differentiate(dihedral.first).optimize();
@@ -1770,7 +1770,6 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
                 if (allParamDerivNames[index] == force.getEnergyParameterDerivativeName(i))
                     saveParamDerivs << "energyParamDerivs[GLOBAL_ID*" << numDerivs << "+" << index << "] += energyParamDeriv" << i << ";\n";
     }
-    compute << cc.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
 
     // Finally, apply forces to groups.
 
@@ -1780,21 +1779,17 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         string forceName = "force"+istr;
         forceNames.push_back(forceName);
         compute<<"real3 "<<forceName<<" = make_real3(0);\n";
-        compute<<"{\n";
         Lepton::ParsedExpression forceExpressionX = energyExpression.differentiate("x"+istr).optimize();
         Lepton::ParsedExpression forceExpressionY = energyExpression.differentiate("y"+istr).optimize();
         Lepton::ParsedExpression forceExpressionZ = energyExpression.differentiate("z"+istr).optimize();
-        map<string, Lepton::ParsedExpression> expressions;
         if (!isZeroExpression(forceExpressionX))
-            expressions[forceName+".x -= "] = forceExpressionX;
+            forceExpressions[forceName+".x -= "] = forceExpressionX;
         if (!isZeroExpression(forceExpressionY))
-            expressions[forceName+".y -= "] = forceExpressionY;
+            forceExpressions[forceName+".y -= "] = forceExpressionY;
         if (!isZeroExpression(forceExpressionZ))
-            expressions[forceName+".z -= "] = forceExpressionZ;
-        if (expressions.size() > 0)
-            compute<<cc.getExpressionUtilities().createExpressions(expressions, variables, functionList, functionDefinitions, "coordtemp");
-        compute<<"}\n";
+            forceExpressions[forceName+".z -= "] = forceExpressionZ;
     }
+    compute << cc.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp", "real", force.usesPeriodicBoundaryConditions());
     index = 0;
     for (auto& distance : distances) {
         const vector<int>& groups = distance.second;

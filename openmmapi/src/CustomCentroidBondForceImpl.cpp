@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -140,14 +140,22 @@ map<string, double> CustomCentroidBondForceImpl::getDefaultParameters() {
 
 ParsedExpression CustomCentroidBondForceImpl::prepareExpression(const CustomCentroidBondForce& force, const map<string, CustomFunction*>& customFunctions, map<string, vector<int> >& distances,
         map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals) {
-    CustomCentroidBondForceImpl::FunctionPlaceholder custom(1);
     CustomCentroidBondForceImpl::FunctionPlaceholder distance(2);
     CustomCentroidBondForceImpl::FunctionPlaceholder angle(3);
     CustomCentroidBondForceImpl::FunctionPlaceholder dihedral(4);
+    CustomCentroidBondForceImpl::FunctionPlaceholder pointdistance(6);
+    CustomCentroidBondForceImpl::FunctionPlaceholder pointangle(9);
+    CustomCentroidBondForceImpl::FunctionPlaceholder pointdihedral(12);
     map<string, CustomFunction*> functions = customFunctions;
     functions["distance"] = &distance;
     functions["angle"] = &angle;
     functions["dihedral"] = &dihedral;
+    if (functions.find("pointdistance") == functions.end())
+        functions["pointdistance"] = &pointdistance;
+    if (functions.find("pointangle") == functions.end())
+        functions["pointangle"] = &pointangle;
+    if (functions.find("pointdihedral") == functions.end())
+        functions["pointdihedral"] = &pointdihedral;
     ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions);
     map<string, int> groups;
     set<string> variables;
@@ -176,7 +184,7 @@ ExpressionTreeNode CustomCentroidBondForceImpl::replaceFunctions(const Expressio
         throw OpenMMException("CustomCentroidBondForce: Unknown variable '"+op.getName()+"'");
     if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "dihedral"))
     {
-        // This is not an angle or dihedral, so process its children.
+        // The arguments are not group identifiers, so process its children.
 
         vector<ExpressionTreeNode> children;
         for (auto& child : node.getChildren())

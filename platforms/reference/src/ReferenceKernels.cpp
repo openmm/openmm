@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1748,6 +1748,12 @@ void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system
     for (int i = 0; i < force.getNumFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
+    // Create implementations of point functions.
+
+    functions["pointdistance"] = new ReferencePointDistanceFunction(usePeriodic, &boxVectors);
+    functions["pointangle"] = new ReferencePointAngleFunction(usePeriodic, &boxVectors);
+    functions["pointdihedral"] = new ReferencePointDihedralFunction(usePeriodic, &boxVectors);
+
     // Parse the expression and create the object used to calculate the interaction.
 
     map<string, vector<int> > distances;
@@ -1780,8 +1786,10 @@ double ReferenceCalcCustomCentroidBondForceKernel::execute(ContextImpl& context,
     map<string, double> globalParameters;
     for (auto& name : globalParameterNames)
         globalParameters[name] = context.getParameter(name);
-    if (usePeriodic)
-        ixn->setPeriodic(extractBoxVectors(context));
+    if (usePeriodic) {
+        boxVectors = extractBoxVectors(context);
+        ixn->setPeriodic(boxVectors);
+    }
     vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
     ixn->calculatePairIxn(posData, bondParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
     map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);

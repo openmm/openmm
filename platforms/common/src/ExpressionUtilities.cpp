@@ -148,7 +148,7 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
 
                 computeDelta(out, "angle_delta21", node, 3, 0, tempType, distancesArePeriodic, temps);
                 computeDelta(out, "angle_delta23", node, 3, 6, tempType, distancesArePeriodic, temps);
-                out << tempType << " angle_theta = ccb_computeAngle(angle_delta21, angle_delta23);\n";
+                out << tempType << " angle_theta = computeAngle(angle_delta21, angle_delta23);\n";
                 out << tempType << "3 angle_crossProd = trimTo3(cross(angle_delta23, angle_delta21));\n";
                 out << "real angle_lengthCross = max(SQRT(dot(angle_crossProd, angle_crossProd)), (real) 1e-6f);\n";
                 out << "real3 angle_deltaCross0 = cross(trimTo3(angle_delta21), angle_crossProd)/(angle_delta21.w*angle_lengthCross);\n";
@@ -192,9 +192,9 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                 computeDelta(out, "dihedral_delta12", node, 0, 3, tempType, distancesArePeriodic, temps);
                 computeDelta(out, "dihedral_delta32", node, 6, 3, tempType, distancesArePeriodic, temps);
                 computeDelta(out, "dihedral_delta34", node, 6, 9, tempType, distancesArePeriodic, temps);
-                out << tempType << "4 dihedral_cross1 = ccb_computeCross(dihedral_delta12, dihedral_delta32);\n";
-                out << tempType << "4 dihedral_cross2 = ccb_computeCross(dihedral_delta32, dihedral_delta34);\n";
-                out << tempType << " dihedral_theta = ccb_computeAngle(dihedral_cross1, dihedral_cross2);\n";
+                out << tempType << "4 dihedral_cross1 = computeCross(dihedral_delta12, dihedral_delta32);\n";
+                out << tempType << "4 dihedral_cross2 = computeCross(dihedral_delta32, dihedral_delta34);\n";
+                out << tempType << " dihedral_theta = computeAngle(dihedral_cross1, dihedral_cross2);\n";
                 out << "dihedral_theta *= (dihedral_delta12.x*dihedral_cross2.x + dihedral_delta12.y*dihedral_cross2.y + dihedral_delta12.z*dihedral_cross2.z < 0 ? -1 : 1);\n";
                 out << tempType << " dihedral_r = SQRT(dihedral_delta32.w);\n";
                 out << tempType << "4 dihedral_ff;\n";
