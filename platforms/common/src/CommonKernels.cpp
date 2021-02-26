@@ -1321,7 +1321,7 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
     cc.getBondedUtilities().addInteraction(atoms, compute.str(), force.getForceGroup());
     map<string, string> replacements;
     replacements["M_PI"] = cc.doubleToString(M_PI);
-    cc.getBondedUtilities().addPrefixCode(cc.replaceStrings(CommonKernelSources::customCompoundBond, replacements));
+    cc.getBondedUtilities().addPrefixCode(cc.replaceStrings(CommonKernelSources::pointFunctions, replacements));
 }
 
 double CommonCalcCustomCompoundBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1600,7 +1600,7 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     replacements["COMPUTE_FORCE"] = compute.str();
     replacements["INIT_PARAM_DERIVS"] = initParamDerivs.str();
     replacements["SAVE_PARAM_DERIVS"] = saveParamDerivs.str();
-    ComputeProgram program = cc.compileProgram(cc.replaceStrings(CommonKernelSources::customCentroidBond, replacements));
+    ComputeProgram program = cc.compileProgram(cc.replaceStrings(CommonKernelSources::pointFunctions+CommonKernelSources::customCentroidBond, replacements));
     computeCentersKernel = program->createKernel("computeGroupCenters");
     computeCentersKernel->addArg(numGroups);
     computeCentersKernel->addArg(cc.getPosq());
@@ -4457,7 +4457,7 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
     defines["TILE_SIZE"] = cc.intToString(32);
     defines["NUM_BLOCKS"] = cc.intToString(numAtomBlocks);
     defines["FIND_NEIGHBORS_WORKGROUP_SIZE"] = cc.intToString(findNeighborsWorkgroupSize);
-    ComputeProgram program = cc.compileProgram(cc.replaceStrings(CommonKernelSources::customManyParticle, replacements), defines);
+    ComputeProgram program = cc.compileProgram(cc.replaceStrings(CommonKernelSources::pointFunctions+CommonKernelSources::customManyParticle, replacements), defines);
     forceKernel = program->createKernel("computeInteraction");
     blockBoundsKernel = program->createKernel("findBlockBounds");
     neighborsKernel = program->createKernel("findNeighbors");

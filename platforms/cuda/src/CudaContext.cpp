@@ -419,7 +419,7 @@ CudaContext::~CudaContext() {
     string errorMessage = "Error deleting Context";
     if (contextIsValid && !isLinkedContext) {
         cuProfilerStop();
-        CHECK_RESULT(cuCtxDestroy(context));
+        cuCtxDestroy(context);
     }
     contextIsValid = false;
 }
