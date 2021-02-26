@@ -51,8 +51,8 @@ static string getErrorString(nvrtcResult result) {
 CudaRuntimeCompilerKernel::CudaRuntimeCompilerKernel(const std::string& name, const Platform& platform) : CudaCompilerKernel(name, platform) {
     // Find the maximum architecture the compiler supports.
     
-#if CUDA_VERSION < 11000
-    // CUDA versions before 11 can't query the compiler to see what it supports.
+#if CUDA_VERSION < 11020
+    // CUDA versions before 11.2 can't query the compiler to see what it supports.
     
     maxSupportedArchitecture = 75;
 #else
