@@ -138,8 +138,7 @@ map<string, double> CustomCentroidBondForceImpl::getDefaultParameters() {
     return parameters;
 }
 
-ParsedExpression CustomCentroidBondForceImpl::prepareExpression(const CustomCentroidBondForce& force, const map<string, CustomFunction*>& customFunctions, map<string, vector<int> >& distances,
-        map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals) {
+ParsedExpression CustomCentroidBondForceImpl::prepareExpression(const CustomCentroidBondForce& force, const map<string, CustomFunction*>& customFunctions) {
     CustomCentroidBondForceImpl::FunctionPlaceholder distance(2);
     CustomCentroidBondForceImpl::FunctionPlaceholder angle(3);
     CustomCentroidBondForceImpl::FunctionPlaceholder dihedral(4);
@@ -174,21 +173,20 @@ ParsedExpression CustomCentroidBondForceImpl::prepareExpression(const CustomCent
         variables.insert(force.getGlobalParameterName(i));
     for (int i = 0; i < force.getNumPerBondParameters(); i++)
         variables.insert(force.getPerBondParameterName(i));
-    return ParsedExpression(replaceFunctions(expression.getRootNode(), groups, distances, angles, dihedrals, variables)).optimize();
+    return ParsedExpression(replaceFunctions(expression.getRootNode(), groups, functions, variables)).optimize();
 }
 
 ExpressionTreeNode CustomCentroidBondForceImpl::replaceFunctions(const ExpressionTreeNode& node, map<string, int> groups,
-        map<string, vector<int> >& distances, map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals, set<string>& variables) {
+        const map<string, CustomFunction*>& functions, set<string>& variables) {
     const Operation& op = node.getOperation();
     if (op.getId() == Operation::VARIABLE && variables.find(op.getName()) == variables.end())
         throw OpenMMException("CustomCentroidBondForce: Unknown variable '"+op.getName()+"'");
-    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "dihedral"))
-    {
+    vector<ExpressionTreeNode> children;
+    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "dihedral")) {
         // The arguments are not group identifiers, so process its children.
 
-        vector<ExpressionTreeNode> children;
         for (auto& child : node.getChildren())
-            children.push_back(replaceFunctions(child, groups, distances, angles, dihedrals, variables));
+            children.push_back(replaceFunctions(child, groups, functions, variables));
         return ExpressionTreeNode(op.clone(), children);
     }
     const Operation::Custom& custom = static_cast<const Operation::Custom&>(op);
@@ -203,29 +201,25 @@ ExpressionTreeNode CustomCentroidBondForceImpl::replaceFunctions(const Expressio
             throw OpenMMException("CustomCentroidBondForce: Unknown group '"+node.getChildren()[i].getOperation().getName()+"'");
         indices[i] = iter->second;
     }
-
-    // Select a name for the variable and add it to the appropriate map.
-
-    stringstream variable;
-    if (numArgs == 2)
-        variable << "distance";
-    else if (numArgs == 3)
-        variable << "angle";
-    else
-        variable << "dihedral";
-    for (int i = 0; i < numArgs; i++)
-        variable << indices[i];
-    string name = variable.str();
-    if (numArgs == 2)
-        distances[name] = indices;
-    else if (numArgs == 3)
-        angles[name] = indices;
-    else
-        dihedrals[name] = indices;
-
-    // Return a new node that represents it as a simple variable.
-
-    return ExpressionTreeNode(new Operation::Variable(name));
+    
+    // Replace it by the corresponding point based function.
+    
+    for (int i = 0; i < numArgs; i++) {
+        stringstream x, y, z;
+        x << 'x' << (indices[i]+1);
+        y << 'y' << (indices[i]+1);
+        z << 'z' << (indices[i]+1);
+        children.push_back(ExpressionTreeNode(new Operation::Variable(x.str())));
+        children.push_back(ExpressionTreeNode(new Operation::Variable(y.str())));
+        children.push_back(ExpressionTreeNode(new Operation::Variable(z.str())));
+    }
+    if (op.getName() == "distance")
+        return ExpressionTreeNode(new Operation::Custom("pointdistance", functions.at("pointdistance")->clone()), children);
+    if (op.getName() == "angle")
+        return ExpressionTreeNode(new Operation::Custom("pointangle", functions.at("pointangle")->clone()), children);
+    if (op.getName() == "dihedral")
+        return ExpressionTreeNode(new Operation::Custom("pointdihedral", functions.at("pointdihedral")->clone()), children);
+    throw OpenMMException("Internal error.  Unexpected function '"+op.getName()+"'");
 }
 
 vector<pair<int, int> > CustomCentroidBondForceImpl::getBondedParticles() const {

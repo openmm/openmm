@@ -1756,10 +1756,7 @@ void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system
 
     // Parse the expression and create the object used to calculate the interaction.
 
-    map<string, vector<int> > distances;
-    map<string, vector<int> > angles;
-    map<string, vector<int> > dihedrals;
-    Lepton::ParsedExpression energyExpression = CustomCentroidBondForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    Lepton::ParsedExpression energyExpression = CustomCentroidBondForceImpl::prepareExpression(force, functions);
     vector<string> bondParameterNames;
     for (int i = 0; i < numBondParameters; i++)
         bondParameterNames.push_back(force.getPerBondParameterName(i));
@@ -1771,7 +1768,7 @@ void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system
         energyParamDerivNames.push_back(param);
         energyParamDerivExpressions.push_back(energyExpression.differentiate(param).createCompiledExpression());
     }
-    ixn = new ReferenceCustomCentroidBondIxn(force.getNumGroupsPerBond(), groupAtoms, normalizedWeights, bondGroups, energyExpression, bondParameterNames, distances, angles, dihedrals, energyParamDerivExpressions);
+    ixn = new ReferenceCustomCentroidBondIxn(force.getNumGroupsPerBond(), groupAtoms, normalizedWeights, bondGroups, energyExpression, bondParameterNames, energyParamDerivExpressions);
 
     // Delete the custom functions.
 
@@ -1849,10 +1846,7 @@ void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system
 
     // Parse the expression and create the object used to calculate the interaction.
 
-    map<string, vector<int> > distances;
-    map<string, vector<int> > angles;
-    map<string, vector<int> > dihedrals;
-    Lepton::ParsedExpression energyExpression = CustomCompoundBondForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    Lepton::ParsedExpression energyExpression = CustomCompoundBondForceImpl::prepareExpression(force, functions);
     vector<string> bondParameterNames;
     for (int i = 0; i < numBondParameters; i++)
         bondParameterNames.push_back(force.getPerBondParameterName(i));
@@ -1864,7 +1858,7 @@ void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system
         energyParamDerivNames.push_back(param);
         energyParamDerivExpressions.push_back(energyExpression.differentiate(param).createCompiledExpression());
     }
-    ixn = new ReferenceCustomCompoundBondIxn(force.getNumParticlesPerBond(), bondParticles, energyExpression, bondParameterNames, distances, angles, dihedrals, energyParamDerivExpressions);
+    ixn = new ReferenceCustomCompoundBondIxn(force.getNumParticlesPerBond(), bondParticles, energyExpression, bondParameterNames, energyParamDerivExpressions);
 
     // Delete the custom functions.
 
