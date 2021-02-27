@@ -115,7 +115,7 @@ namespace OpenMM {
  * This enables more flexible geometric calculations.  For example, the following computes the distance
  * from group g1 to the midpoint between groups g2 and g3.
  * 
- * <tt>CustomCentroidBondForce* force = new CustomCentroidBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2");</tt>
+ * <tt>CustomCentroidBondForce* force = new CustomCentroidBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");</tt>
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
  * creating a TabulatedFunction object.  That function can then appear in the expression.
