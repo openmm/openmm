@@ -116,6 +116,7 @@ class CharmmParameterSet(object):
         self.nbthole_types = dict()
         self.parametersets = []
         self.nbxmod = 5
+        self.e14fac = 1.0
 
         # Load all of the files
         tops, pars, strs = [], [], []
@@ -273,6 +274,8 @@ class CharmmParameterSet(object):
                     if nbxmod not in list(range(-5, 6)):
                         raise CharmmFileError('Unsupported value for NBXMOD: %d' % nbxmod)
                     self.nbxmod = nbxmod
+                if 'E14FAC' in fields:
+                    self.e14fac = float(fields[fields.index('E14FAC')+1])
                 continue
             if line.startswith('NBFIX'):
                 section = 'NBFIX'
