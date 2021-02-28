@@ -132,6 +132,8 @@ class PrmtopLoader(object):
                             raise TypeError('CHAMBER-style topology files are not supported here. '
                                             'Consider using the CHARMM files directly with CharmmPsfFile '
                                             'or ParmEd (where CHAMBER topologies are supported)')
+                        if 'CMAP' in flag:
+                            raise TypeError("CMAP terms in AMBER topology files are not supported. You can use ParmEd instead")
                         self._flags.append(flag)
                         self._raw_data[flag] = []
                     elif line.startswith('%FORMAT'):
