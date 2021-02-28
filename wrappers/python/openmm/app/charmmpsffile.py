@@ -1384,7 +1384,7 @@ class CharmmPsfFile(object):
             for ia1, ia4 in self.pair_14_list:
                 atom1 = self.atom_list[ia1]
                 atom4 = self.atom_list[ia4]
-                charge_prod = (atom1.charge * atom4.charge)
+                charge_prod = (atom1.charge * atom4.charge) * params.e14fac
                 epsilon = sqrt(abs(atom1.type.epsilon_14 * atom4.type.epsilon_14)) * ene_conv
                 sigma = (atom1.type.rmin_14 + atom4.type.rmin_14) * (length_conv * sigma_scale)
                 force.addException(ia1, ia4, charge_prod, sigma, epsilon)
