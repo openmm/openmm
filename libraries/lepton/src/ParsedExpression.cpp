@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -70,7 +70,10 @@ double ParsedExpression::evaluate(const ExpressionTreeNode& node, const map<stri
 ParsedExpression ParsedExpression::optimize() const {
     ExpressionTreeNode result = precalculateConstantSubexpressions(getRootNode());
     while (true) {
-        ExpressionTreeNode simplified = substituteSimplerExpression(result);
+        vector<const ExpressionTreeNode*> examples;
+        result.assignTags(examples);
+        map<int, ExpressionTreeNode> nodeCache;
+        ExpressionTreeNode simplified = substituteSimplerExpression(result, nodeCache);
         if (simplified == result)
             break;
         result = simplified;
@@ -82,7 +85,10 @@ ParsedExpression ParsedExpression::optimize(const map<string, double>& variables
     ExpressionTreeNode result = preevaluateVariables(getRootNode(), variables);
     result = precalculateConstantSubexpressions(result);
     while (true) {
-        ExpressionTreeNode simplified = substituteSimplerExpression(result);
+        vector<const ExpressionTreeNode*> examples;
+        result.assignTags(examples);
+        map<int, ExpressionTreeNode> nodeCache;
+        ExpressionTreeNode simplified = substituteSimplerExpression(result, nodeCache);
         if (simplified == result)
             break;
         result = simplified;
@@ -117,10 +123,18 @@ ExpressionTreeNode ParsedExpression::precalculateConstantSubexpressions(const Ex
     return ExpressionTreeNode(new Operation::Constant(evaluate(result, map<string, double>())));
 }
 
-ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const ExpressionTreeNode& node) {
+ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const ExpressionTreeNode& node, map<int, ExpressionTreeNode>& nodeCache) {
     vector<ExpressionTreeNode> children(node.getChildren().size());
-    for (int i = 0; i < (int) children.size(); i++)
-        children[i] = substituteSimplerExpression(node.getChildren()[i]);
+    for (int i = 0; i < (int) children.size(); i++) {
+        const ExpressionTreeNode& child = node.getChildren()[i];
+        auto cached = nodeCache.find(child.tag);
+        if (cached == nodeCache.end()) {
+            children[i] = substituteSimplerExpression(child, nodeCache);
+            nodeCache[child.tag] = children[i];
+        }
+        else
+            children[i] = cached->second;
+    }
     
     // Collect some info on constant expressions in children
     bool first_const = children.size() > 0 && isConstant(children[0]); // is first child constant?
@@ -306,14 +320,22 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
 }
 
 ParsedExpression ParsedExpression::differentiate(const string& variable) const {
-    return differentiate(getRootNode(), variable);
+    vector<const ExpressionTreeNode*> examples;
+    getRootNode().assignTags(examples);
+    map<int, ExpressionTreeNode> nodeCache;
+    return differentiate(getRootNode(), variable, nodeCache);
 }
 
-ExpressionTreeNode ParsedExpression::differentiate(const ExpressionTreeNode& node, const string& variable) {
+ExpressionTreeNode ParsedExpression::differentiate(const ExpressionTreeNode& node, const string& variable, map<int, ExpressionTreeNode>& nodeCache) {
+    auto cached = nodeCache.find(node.tag);
+    if (cached != nodeCache.end())
+        return cached->second;
     vector<ExpressionTreeNode> childDerivs(node.getChildren().size());
     for (int i = 0; i < (int) childDerivs.size(); i++)
-        childDerivs[i] = differentiate(node.getChildren()[i], variable);
-    return node.getOperation().differentiate(node.getChildren(),childDerivs, variable);
+        childDerivs[i] = differentiate(node.getChildren()[i], variable, nodeCache);
+    ExpressionTreeNode result = node.getOperation().differentiate(node.getChildren(), childDerivs, variable);
+    nodeCache[node.tag] = result;
+    return result;
 }
 
 bool ParsedExpression::isConstant(const ExpressionTreeNode& node) {
