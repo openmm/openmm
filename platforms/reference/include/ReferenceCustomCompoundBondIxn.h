@@ -38,18 +38,12 @@ class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
    private:
 
       class ParticleTermInfo;
-      class DistanceTermInfo;
-      class AngleTermInfo;
-      class DihedralTermInfo;
       std::vector<std::vector<int> > bondAtoms;
       CompiledExpressionSet expressionSet;
       Lepton::CompiledExpression energyExpression;
       std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
       std::vector<int> bondParamIndex;
       std::vector<ParticleTermInfo> particleTerms;
-      std::vector<DistanceTermInfo> distanceTerms;
-      std::vector<AngleTermInfo> angleTerms;
-      std::vector<DihedralTermInfo> dihedralTerms;
       int numParameters;
       bool usePeriodic;
       Vec3 boxVectors[3];
@@ -83,9 +77,7 @@ class ReferenceCustomCompoundBondIxn : public ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
 
        ReferenceCustomCompoundBondIxn(int numParticlesPerBond, const std::vector<std::vector<int> >& bondAtoms, const Lepton::ParsedExpression& energyExpression,
-                               const std::vector<std::string>& bondParameterNames, const std::map<std::string, std::vector<int> >& distances,
-                               const std::map<std::string, std::vector<int> >& angles, const std::map<std::string, std::vector<int> >& dihedrals,
-                               const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
+                               const std::vector<std::string>& bondParameterNames, const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
 
       /**---------------------------------------------------------------------------------------
 
@@ -142,44 +134,6 @@ public:
     Lepton::CompiledExpression forceExpression;
     ParticleTermInfo(const std::string& name, int atom, int component, const Lepton::CompiledExpression& forceExpression) :
             name(name), atom(atom), component(component), forceExpression(forceExpression) {
-    }
-};
-
-class ReferenceCustomCompoundBondIxn::DistanceTermInfo {
-public:
-    std::string name;
-    int p1, p2, index;
-    Lepton::CompiledExpression forceExpression;
-    mutable double delta[ReferenceForce::LastDeltaRIndex];
-    DistanceTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression) :
-            name(name), p1(atoms[0]), p2(atoms[1]), forceExpression(forceExpression) {
-    }
-};
-
-class ReferenceCustomCompoundBondIxn::AngleTermInfo {
-public:
-    std::string name;
-    int p1, p2, p3, index;
-    Lepton::CompiledExpression forceExpression;
-    mutable double delta1[ReferenceForce::LastDeltaRIndex];
-    mutable double delta2[ReferenceForce::LastDeltaRIndex];
-    AngleTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression) :
-            name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), forceExpression(forceExpression) {
-    }
-};
-
-class ReferenceCustomCompoundBondIxn::DihedralTermInfo {
-public:
-    std::string name;
-    int p1, p2, p3, p4, index;
-    Lepton::CompiledExpression forceExpression;
-    mutable double delta1[ReferenceForce::LastDeltaRIndex];
-    mutable double delta2[ReferenceForce::LastDeltaRIndex];
-    mutable double delta3[ReferenceForce::LastDeltaRIndex];
-    mutable double cross1[3];
-    mutable double cross2[3];
-    DihedralTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression) :
-            name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), p4(atoms[3]), forceExpression(forceExpression) {
     }
 };
 

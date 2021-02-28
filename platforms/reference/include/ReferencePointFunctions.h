@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUSTOMCOMPOUNDBONDFORCEIMPL_H_
-#define OPENMM_CUSTOMCOMPOUNDBONDFORCEIMPL_H_
+#ifndef OPENMM_REFERENCEPOINTFUNCTIONS_H_
+#define OPENMM_REFERENCEPOINTFUNCTIONS_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2021 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,55 +32,57 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ForceImpl.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/Kernel.h"
+#include "openmm/Vec3.h"
+#include "openmm/internal/windowsExport.h"
 #include "lepton/CustomFunction.h"
-#include "lepton/ExpressionTreeNode.h"
-#include "lepton/ParsedExpression.h"
-#include <utility>
-#include <map>
-#include <set>
-#include <string>
 
 namespace OpenMM {
 
 /**
- * This is the internal implementation of CustomCompoundBondForce.
+ * This implements the pointdistance() function used in custom forces.
  */
-
-class OPENMM_EXPORT CustomCompoundBondForceImpl : public ForceImpl {
+class OPENMM_EXPORT ReferencePointDistanceFunction : public Lepton::CustomFunction {
 public:
-    CustomCompoundBondForceImpl(const CustomCompoundBondForce& owner);
-    ~CustomCompoundBondForceImpl();
-    void initialize(ContextImpl& context);
-    const CustomCompoundBondForce& getOwner() const {
-        return owner;
-    }
-    void updateContextState(ContextImpl& context, bool& forcesInvalid) {
-        // This force field doesn't update the state directly.
-    }
-    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
-    std::map<std::string, double> getDefaultParameters();
-    std::vector<std::string> getKernelNames();
-    void updateParametersInContext(ContextImpl& context);
-    /**
-     * This is a utility routine that parses the energy expression, identifies particle based functions,
-     * and replaces them with equivalent point based ones.
-     *
-     * @param force     the CustomCompoundBondForce to process
-     * @param functions definitions of custom function that may appear in the expression
-     * @return a Parsed expression for the energy
-     */
-    static Lepton::ParsedExpression prepareExpression(const CustomCompoundBondForce& force, const std::map<std::string, Lepton::CustomFunction*>& functions);
+    ReferencePointDistanceFunction(bool periodic, Vec3** boxVectorHandle);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    Lepton::CustomFunction* clone() const;
 private:
-    class FunctionPlaceholder;
-    static Lepton::ExpressionTreeNode replaceFunctions(const Lepton::ExpressionTreeNode& node, std::map<std::string, int> atoms,
-            const std::map<std::string, Lepton::CustomFunction*>& functions, std::set<std::string>& variables);
-    const CustomCompoundBondForce& owner;
-    Kernel kernel;
+    bool periodic;
+    Vec3** boxVectorHandle;
+};
+
+/**
+ * This implements the pointangle() function used in custom forces.
+ */
+class OPENMM_EXPORT ReferencePointAngleFunction : public Lepton::CustomFunction {
+public:
+    ReferencePointAngleFunction(bool periodic, Vec3** boxVectorHandle);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    Lepton::CustomFunction* clone() const;
+private:
+    bool periodic;
+    Vec3** boxVectorHandle;
+};
+
+/**
+ * This implements the pointdihedral() function used in custom forces.
+ */
+class OPENMM_EXPORT ReferencePointDihedralFunction : public Lepton::CustomFunction {
+public:
+    ReferencePointDihedralFunction(bool periodic, Vec3** boxVectorHandle);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    Lepton::CustomFunction* clone() const;
+private:
+    bool periodic;
+    Vec3** boxVectorHandle;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUSTOMCOMPOUNDBONDFORCEIMPL_H_*/
+#endif /*OPENMM_REFERENCEPOINTFUNCTIONS_H_*/

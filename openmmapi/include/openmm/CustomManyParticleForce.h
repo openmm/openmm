@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -154,6 +154,15 @@ namespace OpenMM {
  * select(x,y,z) = z if x = 0, y otherwise.  The names of per-particle parameters have the suffix "1", "2", etc. appended to them to indicate the values for
  * the multiple interacting particles. For example, if you define a per-particle parameter called "charge", then the variable "charge2" is the charge of particle p2.
  * As seen above, the expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
+ * 
+ * This class also supports the functions pointdistance(x1, y1, z1, x2, y2, z2),
+ * pointangle(x1, y1, z1, x2, y2, z2, x3, y3, z3), and pointdihedral(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4).
+ * These functions are similar to distance(), angle(), and dihedral(), but the arguments are the
+ * coordinates of points to perform the calculation based on rather than the names of particles.
+ * This enables more flexible geometric calculations.  For example, the following computes the distance
+ * from particle p1 to the midpoint between particles p2 and p3.
+ * 
+ * <tt>CustomManyParticleForce* force = new CustomManyParticleForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");</tt>
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
  * creating a TabulatedFunction object.  That function can then appear in the expression.

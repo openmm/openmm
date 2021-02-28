@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2015-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -117,7 +117,7 @@ void testHarmonicBond() {
     ASSERT_EQUAL(5, molecules[0].size());
 }
 
-void testComplexFunction() {
+void testComplexFunction(bool byGroups) {
     int numParticles = 5;
     System system;
     for (int i = 0; i < numParticles; i++)
@@ -130,7 +130,12 @@ void testComplexFunction() {
     // CustomCompoundBondForce.  Use that to test a complicated energy function with lots of terms.
 
     CustomCompoundBondForce* compound = new CustomCompoundBondForce(4, "x1+y2+z4+fn(distance(p1,p2))*angle(p3,p2,p4)+scale*dihedral(p2,p1,p4,p3)");
-    CustomCentroidBondForce* centroid = new CustomCentroidBondForce(4, "x1+y2+z4+fn(distance(g1,g2))*angle(g3,g2,g4)+scale*dihedral(g2,g1,g4,g3)");
+    string expression;
+    if (byGroups)
+        expression = "x1+y2+z4+fn(distance(g1,g2))*angle(g3,g2,g4)+scale*dihedral(g2,g1,g4,g3)";
+    else
+        expression = "x1+y2+z4+fn(pointdistance(x1,y1,z1,x2,y2,z2))*pointangle(x3,y3,z3,x2,y2,z2,x4,y4,z4)+scale*pointdihedral(x2,y2,z2,x1,y1,z1,x4,y4,z4,x3,y3,z3)";
+    CustomCentroidBondForce* centroid = new CustomCentroidBondForce(4, expression);
     compound->addGlobalParameter("scale", 0.5);
     centroid->addGlobalParameter("scale", 0.5);
     compound->addTabulatedFunction("fn", new Continuous1DFunction(table, -1, 10));
@@ -277,7 +282,7 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
-void testPeriodic() {
+void testPeriodic(bool byGroups) {
     // Create a force that uses periodic boundary conditions.
     
     System system;
@@ -287,7 +292,12 @@ void testPeriodic() {
     system.addParticle(4.0);
     system.addParticle(5.0);
     system.setDefaultPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
-    CustomCentroidBondForce* force = new CustomCentroidBondForce(2, "k*distance(g1,g2)^2");
+    string expression;
+    if (byGroups)
+        expression = "k*distance(g1,g2)^2";
+    else
+        expression = "k*pointdistance(x1,y1,z1,x2,y2,z2)^2";
+    CustomCentroidBondForce* force = new CustomCentroidBondForce(2, expression);
     force->addPerBondParameter("k");
     vector<int> particles1;
     particles1.push_back(0);
@@ -398,10 +408,12 @@ int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         testHarmonicBond();
-        testComplexFunction();
+        testComplexFunction(true);
+        testComplexFunction(false);
         testCustomWeights();
         testIllegalVariable();
-        testPeriodic();
+        testPeriodic(true);
+        testPeriodic(false);
         testEnergyParameterDerivatives();
         runPlatformTests();
     }

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -107,6 +107,15 @@ namespace OpenMM {
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
  * select(x,y,z) = z if x = 0, y otherwise.
+ * 
+ * This class also supports the functions pointdistance(x1, y1, z1, x2, y2, z2),
+ * pointangle(x1, y1, z1, x2, y2, z2, x3, y3, z3), and pointdihedral(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4).
+ * These functions are similar to distance(), angle(), and dihedral(), but the arguments are the
+ * coordinates of points to perform the calculation based on rather than the names of groups.
+ * This enables more flexible geometric calculations.  For example, the following computes the distance
+ * from group g1 to the midpoint between groups g2 and g3.
+ * 
+ * <tt>CustomCentroidBondForce* force = new CustomCentroidBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");</tt>
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
  * creating a TabulatedFunction object.  That function can then appear in the expression.

@@ -38,9 +38,6 @@ class ReferenceCustomCentroidBondIxn : public ReferenceBondIxn {
    private:
 
       class PositionTermInfo;
-      class DistanceTermInfo;
-      class AngleTermInfo;
-      class DihedralTermInfo;
       std::vector<std::vector<int> > groupAtoms;
       std::vector<std::vector<double> > normalizedWeights;
       std::vector<std::vector<int> > bondGroups;
@@ -49,9 +46,6 @@ class ReferenceCustomCentroidBondIxn : public ReferenceBondIxn {
       std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
       std::vector<int> bondParamIndex;
       std::vector<PositionTermInfo> positionTerms;
-      std::vector<DistanceTermInfo> distanceTerms;
-      std::vector<AngleTermInfo> angleTerms;
-      std::vector<DihedralTermInfo> dihedralTerms;
       int numParameters;
       bool usePeriodic;
       Vec3 boxVectors[3];
@@ -86,9 +80,7 @@ class ReferenceCustomCentroidBondIxn : public ReferenceBondIxn {
 
        ReferenceCustomCentroidBondIxn(int numGroupsPerBond, const std::vector<std::vector<int> >& groupAtoms,
                                const std::vector<std::vector<double> >& normalizedWeights, const std::vector<std::vector<int> >& bondGroups, const Lepton::ParsedExpression& energyExpression,
-                               const std::vector<std::string>& bondParameterNames, const std::map<std::string, std::vector<int> >& distances,
-                               const std::map<std::string, std::vector<int> >& angles, const std::map<std::string, std::vector<int> >& dihedrals,
-                               const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
+                               const std::vector<std::string>& bondParameterNames, const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
 
       /**---------------------------------------------------------------------------------------
 
@@ -145,44 +137,6 @@ public:
     Lepton::CompiledExpression forceExpression;
     PositionTermInfo(const std::string& name, int group, int component, const Lepton::CompiledExpression& forceExpression) :
             name(name), group(group), component(component), forceExpression(forceExpression) {
-    }
-};
-
-class ReferenceCustomCentroidBondIxn::DistanceTermInfo {
-public:
-    std::string name;
-    int g1, g2, index;
-    Lepton::CompiledExpression forceExpression;
-    mutable double delta[ReferenceForce::LastDeltaRIndex];
-    DistanceTermInfo(const std::string& name, const std::vector<int>& groups, const Lepton::CompiledExpression& forceExpression) :
-            name(name), g1(groups[0]), g2(groups[1]), forceExpression(forceExpression) {
-    }
-};
-
-class ReferenceCustomCentroidBondIxn::AngleTermInfo {
-public:
-    std::string name;
-    int g1, g2, g3, index;
-    Lepton::CompiledExpression forceExpression;
-    mutable double delta1[ReferenceForce::LastDeltaRIndex];
-    mutable double delta2[ReferenceForce::LastDeltaRIndex];
-    AngleTermInfo(const std::string& name, const std::vector<int>& groups, const Lepton::CompiledExpression& forceExpression) :
-            name(name), g1(groups[0]), g2(groups[1]), g3(groups[2]), forceExpression(forceExpression) {
-    }
-};
-
-class ReferenceCustomCentroidBondIxn::DihedralTermInfo {
-public:
-    std::string name;
-    int g1, g2, g3, g4, index;
-    Lepton::CompiledExpression forceExpression;
-    mutable double delta1[ReferenceForce::LastDeltaRIndex];
-    mutable double delta2[ReferenceForce::LastDeltaRIndex];
-    mutable double delta3[ReferenceForce::LastDeltaRIndex];
-    mutable double cross1[3];
-    mutable double cross2[3];
-    DihedralTermInfo(const std::string& name, const std::vector<int>& groups, const Lepton::CompiledExpression& forceExpression) :
-            name(name), g1(groups[0]), g2(groups[1]), g3(groups[2]), g4(groups[3]), forceExpression(forceExpression) {
     }
 };
 

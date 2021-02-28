@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -50,7 +50,7 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-void testBond() {
+void testBond(bool byParticles) {
     // Create a system using a CustomCompoundBondForce.
 
     System customSystem;
@@ -58,7 +58,12 @@ void testBond() {
     customSystem.addParticle(1.0);
     customSystem.addParticle(1.0);
     customSystem.addParticle(1.0);
-    CustomCompoundBondForce* custom = new CustomCompoundBondForce(4, "0.5*kb*((distance(p1,p2)-b0)^2+(distance(p2,p3)-b0)^2)+0.5*ka*(angle(p2,p3,p4)-a0)^2+kt*(1+cos(dihedral(p1,p2,p3,p4)-t0))");
+    string expression;
+    if (byParticles)
+        expression = "0.5*kb*((distance(p1,p2)-b0)^2+(distance(p2,p3)-b0)^2)+0.5*ka*(angle(p2,p3,p4)-a0)^2+kt*(1+cos(dihedral(p1,p2,p3,p4)-t0))";
+    else
+        expression = "0.5*kb*((pointdistance(x1,y1,z1,x2,y2,z2)-b0)^2+(pointdistance(x2,y2,z2,x3,y3,z3)-b0)^2)+0.5*ka*(pointangle(x2,y2,z2,x3,y3,z3,x4,y4,z4)-a0)^2+kt*(1+cos(pointdihedral(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)-t0))";
+    CustomCompoundBondForce* custom = new CustomCompoundBondForce(4, expression);
     custom->addPerBondParameter("kb");
     custom->addPerBondParameter("ka");
     custom->addPerBondParameter("kt");
@@ -330,7 +335,7 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
-void testPeriodic() {
+void testPeriodic(bool byParticles) {
     // Create a force that uses periodic boundary conditions.
 
     System customSystem;
@@ -339,7 +344,12 @@ void testPeriodic() {
     customSystem.addParticle(1.0);
     customSystem.addParticle(1.0);
     customSystem.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
-    CustomCompoundBondForce* custom = new CustomCompoundBondForce(4, "0.5*kb*((distance(p1,p2)-b0)^2+(distance(p2,p3)-b0)^2)+0.5*ka*(angle(p2,p3,p4)-a0)^2+kt*(1+cos(dihedral(p1,p2,p3,p4)-t0))");
+    string expression;
+    if (byParticles)
+        expression = "0.5*kb*((distance(p1,p2)-b0)^2+(distance(p2,p3)-b0)^2)+0.5*ka*(angle(p2,p3,p4)-a0)^2+kt*(1+cos(dihedral(p1,p2,p3,p4)-t0))";
+    else
+        expression = "0.5*kb*((pointdistance(x1,y1,z1,x2,y2,z2)-b0)^2+(pointdistance(x2,y2,z2,x3,y3,z3)-b0)^2)+0.5*ka*(pointangle(x2,y2,z2,x3,y3,z3,x4,y4,z4)-a0)^2+kt*(1+cos(pointdihedral(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)-t0))";
+    CustomCompoundBondForce* custom = new CustomCompoundBondForce(4, expression);
     custom->addPerBondParameter("kb");
     custom->addPerBondParameter("ka");
     custom->addPerBondParameter("kt");
@@ -453,13 +463,15 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
-        testBond();
+        testBond(true);
+        testBond(false);
         testPositionDependence();
         testContinuous2DFunction();
         testContinuous3DFunction();
         testMultipleBonds();
         testIllegalVariable();
-        testPeriodic();
+        testPeriodic(true);
+        testPeriodic(false);
         testEnergyParameterDerivatives();
         runPlatformTests();
     }

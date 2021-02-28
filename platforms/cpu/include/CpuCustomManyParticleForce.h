@@ -1,5 +1,4 @@
-
-/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2021 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -46,15 +45,13 @@ class CpuCustomManyParticleForce {
 private:
 
     class ParticleTermInfo;
-    class DistanceTermInfo;
-    class AngleTermInfo;
-    class DihedralTermInfo;
     class ThreadData;
     int numParticles, numParticlesPerSet, numPerParticleParameters, numTypes;
     bool useCutoff, usePeriodic, triclinic, centralParticleMode;
     double cutoffDistance;
     float recipBoxSize[3];
     Vec3 periodicBoxVectors[3];
+    Vec3* boxVectorsRef;
     AlignedArray<fvec4> periodicBoxVec4;
     CpuNeighborList* neighborList;
     ThreadPool& threads;
@@ -112,10 +109,6 @@ private:
      * periodic boundary conditions.
      */
     void computeDelta(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const;
-    
-    static float computeAngle(const fvec4& vi, const fvec4& vj, float v2i, float v2j, float sign);
-    
-    static float getDihedralAngleBetweenThreeVectors(const fvec4& v1, const fvec4& v2, const fvec4& v3, fvec4& cross1, fvec4& cross2, const fvec4& signVector);
 
 public:
     /**
@@ -167,57 +160,16 @@ public:
     ParticleTermInfo(const std::string& name, int atom, int component, const Lepton::CompiledExpression& forceExpression, ThreadData& data);
 };
 
-class CpuCustomManyParticleForce::DistanceTermInfo {
-public:
-    std::string name;
-    int p1, p2, variableIndex;
-    Lepton::CompiledExpression forceExpression;
-    int delta;
-    float deltaSign;
-    DistanceTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, ThreadData& data);
-};
-
-class CpuCustomManyParticleForce::AngleTermInfo {
-public:
-    std::string name;
-    int p1, p2, p3, variableIndex;
-    Lepton::CompiledExpression forceExpression;
-    int delta1, delta2;
-    float delta1Sign, delta2Sign;
-    AngleTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, ThreadData& data);
-};
-
-class CpuCustomManyParticleForce::DihedralTermInfo {
-public:
-    std::string name;
-    int p1, p2, p3, p4, variableIndex;
-    Lepton::CompiledExpression forceExpression;
-    int delta1, delta2, delta3;
-    DihedralTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::CompiledExpression& forceExpression, ThreadData& data);
-};
-
 class CpuCustomManyParticleForce::ThreadData {
 public:
     CompiledExpressionSet expressionSet;
     Lepton::CompiledExpression energyExpression;
     std::vector<std::vector<int> > particleParamIndices;
     std::vector<int> permutedParticles;
-    std::vector<std::pair<int, int> > deltaPairs;
     std::vector<ParticleTermInfo> particleTerms;
-    std::vector<DistanceTermInfo> distanceTerms;
-    std::vector<AngleTermInfo> angleTerms;
-    std::vector<DihedralTermInfo> dihedralTerms;
-    AlignedArray<fvec4> delta, cross1, cross2;
-    std::vector<float> normDelta;
-    std::vector<float> norm2Delta;
     AlignedArray<fvec4> f;
     double energy;
-    ThreadData(const CustomManyParticleForce& force, Lepton::ParsedExpression& energyExpr,
-            std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles, std::map<std::string, std::vector<int> >& dihedrals);
-    /**
-     * Request a pair of particles whose distance or displacement vector is needed in the computation.
-     */
-    void requestDeltaPair(int p1, int p2, int& pairIndex, float& pairSign, bool allowReversed);
+    ThreadData(const CustomManyParticleForce& force, Lepton::ParsedExpression& energyExpr);
 };
 
 } // namespace OpenMM
