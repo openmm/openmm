@@ -68,11 +68,15 @@ double ParsedExpression::evaluate(const ExpressionTreeNode& node, const map<stri
 }
 
 ParsedExpression ParsedExpression::optimize() const {
-    ExpressionTreeNode result = precalculateConstantSubexpressions(getRootNode());
+    ExpressionTreeNode result = getRootNode();
+    vector<const ExpressionTreeNode*> examples;
+    result.assignTags(examples);
+    map<int, ExpressionTreeNode> nodeCache;
+    result = precalculateConstantSubexpressions(result, nodeCache);
     while (true) {
-        vector<const ExpressionTreeNode*> examples;
+        examples.clear();
         result.assignTags(examples);
-        map<int, ExpressionTreeNode> nodeCache;
+        nodeCache.clear();
         ExpressionTreeNode simplified = substituteSimplerExpression(result, nodeCache);
         if (simplified == result)
             break;
@@ -83,11 +87,14 @@ ParsedExpression ParsedExpression::optimize() const {
 
 ParsedExpression ParsedExpression::optimize(const map<string, double>& variables) const {
     ExpressionTreeNode result = preevaluateVariables(getRootNode(), variables);
-    result = precalculateConstantSubexpressions(result);
+    vector<const ExpressionTreeNode*> examples;
+    result.assignTags(examples);
+    map<int, ExpressionTreeNode> nodeCache;
+    result = precalculateConstantSubexpressions(result, nodeCache);
     while (true) {
-        vector<const ExpressionTreeNode*> examples;
+        examples.clear();
         result.assignTags(examples);
-        map<int, ExpressionTreeNode> nodeCache;
+        nodeCache.clear();
         ExpressionTreeNode simplified = substituteSimplerExpression(result, nodeCache);
         if (simplified == result)
             break;
@@ -110,17 +117,26 @@ ExpressionTreeNode ParsedExpression::preevaluateVariables(const ExpressionTreeNo
     return ExpressionTreeNode(node.getOperation().clone(), children);
 }
 
-ExpressionTreeNode ParsedExpression::precalculateConstantSubexpressions(const ExpressionTreeNode& node) {
+ExpressionTreeNode ParsedExpression::precalculateConstantSubexpressions(const ExpressionTreeNode& node, map<int, ExpressionTreeNode>& nodeCache) {
+    auto cached = nodeCache.find(node.tag);
+    if (cached != nodeCache.end())
+        return cached->second;
     vector<ExpressionTreeNode> children(node.getChildren().size());
     for (int i = 0; i < (int) children.size(); i++)
-        children[i] = precalculateConstantSubexpressions(node.getChildren()[i]);
+        children[i] = precalculateConstantSubexpressions(node.getChildren()[i], nodeCache);
     ExpressionTreeNode result = ExpressionTreeNode(node.getOperation().clone(), children);
-    if (node.getOperation().getId() == Operation::VARIABLE || node.getOperation().getId() == Operation::CUSTOM)
+    if (node.getOperation().getId() == Operation::VARIABLE || node.getOperation().getId() == Operation::CUSTOM) {
+        nodeCache[node.tag] = result;
         return result;
+    }
     for (int i = 0; i < (int) children.size(); i++)
-        if (children[i].getOperation().getId() != Operation::CONSTANT)
+        if (children[i].getOperation().getId() != Operation::CONSTANT) {
+            nodeCache[node.tag] = result;
             return result;
-    return ExpressionTreeNode(new Operation::Constant(evaluate(result, map<string, double>())));
+        }
+    result = ExpressionTreeNode(new Operation::Constant(evaluate(result, map<string, double>())));
+    nodeCache[node.tag] = result;
+    return result;
 }
 
 ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const ExpressionTreeNode& node, map<int, ExpressionTreeNode>& nodeCache) {

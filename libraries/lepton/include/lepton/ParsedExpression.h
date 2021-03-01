@@ -113,7 +113,7 @@ public:
 private:
     static double evaluate(const ExpressionTreeNode& node, const std::map<std::string, double>& variables);
     static ExpressionTreeNode preevaluateVariables(const ExpressionTreeNode& node, const std::map<std::string, double>& variables);
-    static ExpressionTreeNode precalculateConstantSubexpressions(const ExpressionTreeNode& node);
+    static ExpressionTreeNode precalculateConstantSubexpressions(const ExpressionTreeNode& node, std::map<int, ExpressionTreeNode>& nodeCache);
     static ExpressionTreeNode substituteSimplerExpression(const ExpressionTreeNode& node, std::map<int, ExpressionTreeNode>& nodeCache);
     static ExpressionTreeNode differentiate(const ExpressionTreeNode& node, const std::string& variable, std::map<int, ExpressionTreeNode>& nodeCache);
     static bool isConstant(const ExpressionTreeNode& node);
