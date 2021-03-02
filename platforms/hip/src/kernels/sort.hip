@@ -11,7 +11,7 @@ extern "C" {
  */
 __global__ void sortShortList(DATA_TYPE* __restrict__ data, unsigned int length) {
     // Load the data into local memory.
-    
+
     HIP_DYNAMIC_SHARED( DATA_TYPE, dataBuffer)
     for (int index = threadIdx.x; index < length; index += blockDim.x)
         dataBuffer[index] = data[index];
@@ -59,7 +59,7 @@ __global__ void sortShortList2(const DATA_TYPE* __restrict__ dataIn, DATA_TYPE* 
     KEY_TYPE key = getValue(value);
     int count = 0;
     for (int blockStart = 0; blockStart < length; blockStart += blockDim.x) {
-        int numInBlock = min(blockDim.x, length-blockStart);
+        int numInBlock = min(static_cast<int>(blockDim.x), static_cast<int>(length-blockStart));
         __syncthreads();
         if (threadIdx.x < numInBlock)
             dataBuffer[threadIdx.x] = dataIn[blockStart+threadIdx.x];
@@ -111,7 +111,7 @@ __global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int le
         range[0] = minimum;
         range[1] = maximum;
     }
-    
+
     // Clear the bucket counters in preparation for the next kernel.
 
     for (unsigned int index = threadIdx.x; index < numBuckets; index += blockDim.x)
