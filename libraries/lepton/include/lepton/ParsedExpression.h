@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009=2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009=2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -113,9 +113,9 @@ public:
 private:
     static double evaluate(const ExpressionTreeNode& node, const std::map<std::string, double>& variables);
     static ExpressionTreeNode preevaluateVariables(const ExpressionTreeNode& node, const std::map<std::string, double>& variables);
-    static ExpressionTreeNode precalculateConstantSubexpressions(const ExpressionTreeNode& node);
-    static ExpressionTreeNode substituteSimplerExpression(const ExpressionTreeNode& node);
-    static ExpressionTreeNode differentiate(const ExpressionTreeNode& node, const std::string& variable);
+    static ExpressionTreeNode precalculateConstantSubexpressions(const ExpressionTreeNode& node, std::map<int, ExpressionTreeNode>& nodeCache);
+    static ExpressionTreeNode substituteSimplerExpression(const ExpressionTreeNode& node, std::map<int, ExpressionTreeNode>& nodeCache);
+    static ExpressionTreeNode differentiate(const ExpressionTreeNode& node, const std::string& variable, std::map<int, ExpressionTreeNode>& nodeCache);
     static bool isConstant(const ExpressionTreeNode& node);
     static double getConstantValue(const ExpressionTreeNode& node);
     static ExpressionTreeNode renameNodeVariables(const ExpressionTreeNode& node, const std::map<std::string, std::string>& replacements);
