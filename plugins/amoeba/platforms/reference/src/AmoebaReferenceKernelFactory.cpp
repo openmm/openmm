@@ -48,12 +48,7 @@ extern "C" OPENMM_EXPORT void registerKernelFactories() {
         Platform& platform = Platform::getPlatform(i);
         if (dynamic_cast<ReferencePlatform*>(&platform) != NULL) {
              AmoebaReferenceKernelFactory* factory = new AmoebaReferenceKernelFactory();
-             platform.registerKernelFactory(CalcAmoebaBondForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaAngleForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaInPlaneAngleForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaPiTorsionForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaStretchBendForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaOutOfPlaneBendForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaTorsionTorsionForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(), factory);
@@ -73,23 +68,8 @@ KernelImpl* AmoebaReferenceKernelFactory::createKernelImpl(std::string name, con
 
     // create AmoebaReferenceData object if contextToAmoebaDataMap does not contain
     // key equal to current context
-    if (name == CalcAmoebaBondForceKernel::Name())
-        return new ReferenceCalcAmoebaBondForceKernel(name, platform, context.getSystem());
-
-    if (name == CalcAmoebaAngleForceKernel::Name())
-        return new ReferenceCalcAmoebaAngleForceKernel(name, platform, context.getSystem());
-
-    if (name == CalcAmoebaInPlaneAngleForceKernel::Name())
-        return new ReferenceCalcAmoebaInPlaneAngleForceKernel(name, platform, context.getSystem());
-
     if (name == CalcAmoebaPiTorsionForceKernel::Name())
         return new ReferenceCalcAmoebaPiTorsionForceKernel(name, platform, context.getSystem());
-
-    if (name == CalcAmoebaStretchBendForceKernel::Name())
-        return new ReferenceCalcAmoebaStretchBendForceKernel(name, platform, context.getSystem());
-
-    if (name == CalcAmoebaOutOfPlaneBendForceKernel::Name())
-        return new ReferenceCalcAmoebaOutOfPlaneBendForceKernel(name, platform, context.getSystem());
 
     if (name == CalcAmoebaTorsionTorsionForceKernel::Name())
         return new ReferenceCalcAmoebaTorsionTorsionForceKernel(name, platform, context.getSystem());

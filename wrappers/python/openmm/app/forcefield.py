@@ -3334,7 +3334,7 @@ class AmoebaBondGenerator(object):
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
-        energy = "k*(d^2 + c3*d^3 + c4*d^4); d=r-r0; c3=%s; c4=%s" % (self.cubic, self.quartic)
+        energy = "k*(d^2 + %s*d^3 + %s*d^4); d=r-r0" % (self.cubic, self.quartic)
         existing = [f for f in sys.getForces() if type(f) == mm.CustomBondForce and f.getEnergyFunction() == energy]
         if len(existing) == 0:
             force = mm.CustomBondForce(energy)
@@ -3467,7 +3467,7 @@ class AmoebaAngleGenerator(object):
 
         # get force
 
-        energy = "k*(d^2 + c3*d^3 + c4*d^4 + c5*d^5 + c6*d^6); d=%.15g*theta-theta0; c3=%s; c4=%s; c5=%s; c6=%s" % (180/math.pi, self.cubic, self.quartic, self.pentic, self.sextic)
+        energy = "k*(d^2 + %s*d^3 + %s*d^4 + %s*d^5 + %s*d^6); d=%.15g*theta-theta0" % (self.cubic, self.quartic, self.pentic, self.sextic, 180/math.pi)
         existing = [f for f in sys.getForces() if type(f) == mm.CustomAngleForce and f.getEnergyFunction() == energy]
 
         if len(existing) == 0:
@@ -3529,7 +3529,7 @@ class AmoebaAngleGenerator(object):
 
         # get force
 
-        energy = """k*(d^2 + c3*d^3 + c4*d^4 + c5*d^5 + c6*d^6); d=theta-theta0;
+        energy = """k*(d^2 + %s*d^3 + %s*d^4 + %s*d^5 + %s*d^6); d=theta-theta0;
                     theta = %.15g*pointangle(x1, y1, z1, projx, projy, projz, x3, y3, z3);
                     projx = x2-nx*dot; projy = y2-ny*dot; projz = z2-nz*dot;
                     dot = nx*(x2-x3) + ny*(y2-y3) + nz*(z2-z3);
@@ -3537,8 +3537,7 @@ class AmoebaAngleGenerator(object):
                     norm = sqrt(px*px + py*py + pz*pz);
                     px = (d1y*d2z-d1z*d2y); py = (d1z*d2x-d1x*d2z); pz = (d1x*d2y-d1y*d2x);
                     d1x = x1-x4; d1y = y1-y4; d1z = z1-z4;
-                    d2x = x3-x4; d2y = y3-y4; d2z = z3-z4;
-                    c3=%s; c4=%s; c5=%s; c6=%s""" % (180/math.pi, self.cubic, self.quartic, self.pentic, self.sextic)
+                    d2x = x3-x4; d2y = y3-y4; d2z = z3-z4""" % (self.cubic, self.quartic, self.pentic, self.sextic, 180/math.pi)
         existing = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getEnergyFunction() == energy]
         if len(existing) == 0:
             force = mm.CustomCompoundBondForce(4, energy)
@@ -3694,7 +3693,7 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
         # get force
 
-        energy = """k*(theta^2 + c3*theta^3 + c4*theta^4 + c5*theta^5 + c6*theta^6);
+        energy = """k*(theta^2 + %s*theta^3 + %s*theta^4 + %s*theta^5 + %s*theta^6);
                     theta = %.15g*pointangle(x2, y2, z2, x4, y4, z4, projx, projy, projz);
                     projx = x2-nx*dot; projy = y2-ny*dot; projz = z2-nz*dot;
                     dot = nx*(x2-x3) + ny*(y2-y3) + nz*(z2-z3);
@@ -3702,8 +3701,7 @@ class AmoebaOutOfPlaneBendGenerator(object):
                     norm = sqrt(px*px + py*py + pz*pz);
                     px = (d1y*d2z-d1z*d2y); py = (d1z*d2x-d1x*d2z); pz = (d1x*d2y-d1y*d2x);
                     d1x = x1-x4; d1y = y1-y4; d1z = z1-z4;
-                    d2x = x3-x4; d2y = y3-y4; d2z = z3-z4;
-                    c3=%s; c4=%s; c5=%s; c6=%s""" % (180/math.pi, self.cubic, self.quartic, self.pentic, self.sextic)
+                    d2x = x3-x4; d2y = y3-y4; d2z = z3-z4""" % (self.cubic, self.quartic, self.pentic, self.sextic, 180/math.pi)
         existing = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getEnergyFunction() == energy]
         if len(existing) == 0:
             force = mm.CustomCompoundBondForce(4, energy)
