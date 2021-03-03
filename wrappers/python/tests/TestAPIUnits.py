@@ -633,35 +633,6 @@ class TestAPIUnits(unittest.TestCase):
         self.assertIs(r.unit, nanometer)
         self.assertEqual(s, 0.4)
 
-    def testAmoebaPiTorsionForce(self):
-        """ Tests the AmoebaPiTorsionForce API features """
-        force = AmoebaPiTorsionForce()
-
-        force.addPiTorsion(0, 1, 2, 3, 4, 5, 1.0)
-        force.addPiTorsion(1, 2, 3, 4, 5, 6, 1.0*kilocalories_per_mole)
-
-        self.assertEqual(force.getNumPiTorsions(), 2)
-
-        i, j, k, l, m, n, tk = force.getPiTorsionParameters(0)
-        self.assertEqual(i, 0)
-        self.assertEqual(j, 1)
-        self.assertEqual(k, 2)
-        self.assertEqual(l, 3)
-        self.assertEqual(m, 4)
-        self.assertEqual(n, 5)
-        self.assertEqual(tk, 1.0*kilojoules_per_mole)
-        self.assertIs(tk.unit, kilojoule_per_mole)
-
-        i, j, k, l, m, n, tk = force.getPiTorsionParameters(1)
-        self.assertEqual(i, 1)
-        self.assertEqual(j, 2)
-        self.assertEqual(k, 3)
-        self.assertEqual(l, 4)
-        self.assertEqual(m, 5)
-        self.assertEqual(n, 6)
-        self.assertEqual(tk, 1.0*kilocalories_per_mole)
-        self.assertIs(tk.unit, kilojoule_per_mole)
-
     def testAmoebaTorsionTorsionForce(self):
         """ Tests the AmoebaTorsionTorsionForce API features """
         force = AmoebaTorsionTorsionForce()

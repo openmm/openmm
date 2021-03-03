@@ -32,7 +32,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AmoebaPiTorsionForce.h"
 #include "openmm/AmoebaTorsionTorsionForce.h"
 #include "openmm/AmoebaMultipoleForce.h"
 #include "openmm/AmoebaGeneralizedKirkwoodForce.h"

@@ -40,44 +40,6 @@ namespace OpenMM {
 
 class CudaCalcAmoebaGeneralizedKirkwoodForceKernel;
 
-
-/**
- * This kernel is invoked by AmoebaPiTorsionForce to calculate the forces acting on the system and the energy of the system.
- */
-class CudaCalcAmoebaPiTorsionForceKernel : public CalcAmoebaPiTorsionForceKernel {
-public:
-    CudaCalcAmoebaPiTorsionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaPiTorsionForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaPiTorsionForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the AmoebaPiTorsionForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const AmoebaPiTorsionForce& force);
-private:
-    class ForceInfo;
-    int numPiTorsions;
-    CudaContext& cu;
-    const System& system;
-    CudaArray params;
-};
-
 /**
  * This kernel is invoked by AmoebaTorsionTorsionForce to calculate the forces acting on the system and the energy of the system.
  */

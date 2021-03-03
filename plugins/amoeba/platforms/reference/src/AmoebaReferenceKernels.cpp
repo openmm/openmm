@@ -25,7 +25,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "AmoebaReferenceKernels.h"
-#include "AmoebaReferencePiTorsionForce.h"
 #include "AmoebaReferenceTorsionTorsionForce.h"
 #include "AmoebaReferenceWcaDispersionForce.h"
 #include "AmoebaReferenceGeneralizedKirkwoodForce.h"
@@ -76,61 +75,6 @@ static Vec3* extractBoxVectors(ContextImpl& context) {
 }
 
 // ***************************************************************************
-
-ReferenceCalcAmoebaPiTorsionForceKernel::ReferenceCalcAmoebaPiTorsionForceKernel(const std::string& name, const Platform& platform, const System& system) :
-         CalcAmoebaPiTorsionForceKernel(name, platform), system(system) {
-}
-
-ReferenceCalcAmoebaPiTorsionForceKernel::~ReferenceCalcAmoebaPiTorsionForceKernel() {
-}
-
-void ReferenceCalcAmoebaPiTorsionForceKernel::initialize(const System& system, const AmoebaPiTorsionForce& force) {
-
-    numPiTorsions                     = force.getNumPiTorsions();
-    for (int ii = 0; ii < numPiTorsions; ii++) {
-
-        int particle1Index, particle2Index, particle3Index, particle4Index, particle5Index, particle6Index;
-        double kTorsionParameter;
-        force.getPiTorsionParameters(ii, particle1Index, particle2Index, particle3Index, particle4Index, particle5Index, particle6Index, kTorsionParameter);
-        particle1.push_back(particle1Index); 
-        particle2.push_back(particle2Index); 
-        particle3.push_back(particle3Index); 
-        particle4.push_back(particle4Index); 
-        particle5.push_back(particle5Index); 
-        particle6.push_back(particle6Index); 
-        kTorsion.push_back(kTorsionParameter);
-    }
-    usePeriodic = force.usesPeriodicBoundaryConditions();
-}
-
-double ReferenceCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    vector<Vec3>& posData = extractPositions(context);
-    vector<Vec3>& forceData = extractForces(context);
-    AmoebaReferencePiTorsionForce amoebaReferencePiTorsionForce;
-    if (usePeriodic)
-        amoebaReferencePiTorsionForce.setPeriodic(extractBoxVectors(context));
-    double energy = amoebaReferencePiTorsionForce.calculateForceAndEnergy(numPiTorsions, posData, particle1, particle2,
-                                                                                    particle3, particle4, particle5, particle6,
-                                                                                    kTorsion, forceData);
-    return static_cast<double>(energy);
-}
-
-void ReferenceCalcAmoebaPiTorsionForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaPiTorsionForce& force) {
-    if (numPiTorsions != force.getNumPiTorsions())
-        throw OpenMMException("updateParametersInContext: The number of torsions has changed");
-
-    // Record the values.
-
-    for (int i = 0; i < numPiTorsions; ++i) {
-        int particle1Index, particle2Index, particle3Index, particle4Index, particle5Index, particle6Index;
-        double kTorsionParameter;
-        force.getPiTorsionParameters(i, particle1Index, particle2Index, particle3Index, particle4Index, particle5Index, particle6Index, kTorsionParameter);
-        if (particle1Index != particle1[i] || particle2Index != particle2[i] || particle3Index != particle3[i] ||
-            particle4Index != particle4[i] || particle5Index != particle5[i] || particle6Index != particle6[i])
-            throw OpenMMException("updateParametersInContext: The set of particles in a torsion has changed");
-        kTorsion[i] = kTorsionParameter;
-    }
-}
 
 ReferenceCalcAmoebaTorsionTorsionForceKernel::ReferenceCalcAmoebaTorsionTorsionForceKernel(const std::string& name, const Platform& platform, const System& system) :
                 CalcAmoebaTorsionTorsionForceKernel(name, platform), system(system) {

@@ -4001,10 +4001,19 @@ class AmoebaPiTorsionGenerator(object):
 
     def createForce(self, sys, data, nonpiTorsionedMethod, nonpiTorsionedCutoff, args):
 
-        existing = [f for f in sys.getForces() if type(f) == mm.AmoebaPiTorsionForce]
+        energy = """2*k*sin(phi)^2;
+                    phi = pointdihedral(x3+c1x, y3+c1y, z3+c1z, x3, y3, z3, x4, y4, z4, x4+c2x, y4+c2y, z4+c2z);
+                    c1x = (d14y*d24z-d14z*d24y); c1y = (d14z*d24x-d14x*d24z); c1z = (d14x*d24y-d14y*d24x);
+                    c2x = (d53y*d63z-d53z*d63y); c2y = (d53z*d63x-d53x*d63z); c2z = (d53x*d63y-d53y*d63x);
+                    d14x = x1-x4; d14y = y1-y4; d14z = z1-z4;
+                    d24x = x2-x4; d24y = y2-y4; d24z = z2-z4;
+                    d53x = x5-x3; d53y = y5-y3; d53z = z5-z3;
+                    d63x = x6-x3; d63y = y6-y3; d63z = z6-z3"""
+        existing = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getEnergyFunction() == energy]
 
         if len(existing) == 0:
-            force = mm.AmoebaPiTorsionForce()
+            force = mm.CustomCompoundBondForce(6, energy)
+            force.addPerBondParameter('k')
             sys.addForce(force)
         else:
             force = existing[0]
@@ -4066,7 +4075,7 @@ class AmoebaPiTorsionGenerator(object):
                                else:
                                    piTorsionAtom6 = b1
 
-                       force.addPiTorsion(piTorsionAtom1, piTorsionAtom2, piTorsionAtom3, piTorsionAtom4, piTorsionAtom5, piTorsionAtom6, self.k[i])
+                       force.addBond([piTorsionAtom1, piTorsionAtom2, piTorsionAtom3, piTorsionAtom4, piTorsionAtom5, piTorsionAtom6], [self.k[i]])
 
 parsers["AmoebaPiTorsionForce"] = AmoebaPiTorsionGenerator.parseElement
 
