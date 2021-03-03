@@ -674,7 +674,7 @@ static void* threadBody(void* args) {
     return 0;
 }
 
-ComputeContext::WorkThread::WorkThread() : waiting(true), finished(false), threwException(false), stashedException("Default threadPool exception. This should never be thrown.") {
+ComputeContext::WorkThread::WorkThread() : waiting(true), finished(false), threwException(false), stashedException("Default WorkThread exception. This should never be thrown.") {
     pthread_mutex_init(&queueLock, NULL);
     pthread_cond_init(&waitForTaskCondition, NULL);
     pthread_cond_init(&queueEmptyCondition, NULL);
