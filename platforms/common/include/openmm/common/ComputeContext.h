@@ -515,7 +515,8 @@ public:
     void flush();
 private:
     std::queue<ComputeContext::WorkTask*> tasks;
-    bool waiting, finished;
+    bool waiting, finished, threwException;
+    OpenMMException stashedException;
     pthread_mutex_t queueLock;
     pthread_cond_t waitForTaskCondition, queueEmptyCondition;
     pthread_t thread;
