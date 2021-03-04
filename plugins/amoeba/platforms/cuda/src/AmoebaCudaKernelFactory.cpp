@@ -48,12 +48,6 @@ extern "C" OPENMM_EXPORT void registerKernelFactories() {
     try {
         Platform& platform = Platform::getPlatformByName("CUDA");
         AmoebaCudaKernelFactory* factory = new AmoebaCudaKernelFactory();
-        platform.registerKernelFactory(CalcAmoebaBondForceKernel::Name(), factory);
-        platform.registerKernelFactory(CalcAmoebaAngleForceKernel::Name(), factory);
-        platform.registerKernelFactory(CalcAmoebaInPlaneAngleForceKernel::Name(), factory);
-        platform.registerKernelFactory(CalcAmoebaPiTorsionForceKernel::Name(), factory);
-        platform.registerKernelFactory(CalcAmoebaStretchBendForceKernel::Name(), factory);
-        platform.registerKernelFactory(CalcAmoebaOutOfPlaneBendForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaTorsionTorsionForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
@@ -79,24 +73,6 @@ extern "C" OPENMM_EXPORT void registerAmoebaCudaKernelFactories() {
 KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
     CudaContext& cu = *data.contexts[0];
-
-    if (name == CalcAmoebaBondForceKernel::Name())
-        return new CudaCalcAmoebaBondForceKernel(name, platform, cu, context.getSystem());
-
-    if (name == CalcAmoebaAngleForceKernel::Name())
-        return new CudaCalcAmoebaAngleForceKernel(name, platform, cu, context.getSystem());
-
-    if (name == CalcAmoebaInPlaneAngleForceKernel::Name())
-        return new CudaCalcAmoebaInPlaneAngleForceKernel(name, platform, cu, context.getSystem());
-
-    if (name == CalcAmoebaPiTorsionForceKernel::Name())
-        return new CudaCalcAmoebaPiTorsionForceKernel(name, platform, cu, context.getSystem());
-
-    if (name == CalcAmoebaStretchBendForceKernel::Name())
-        return new CudaCalcAmoebaStretchBendForceKernel(name, platform, cu, context.getSystem());
-
-    if (name == CalcAmoebaOutOfPlaneBendForceKernel::Name())
-        return new CudaCalcAmoebaOutOfPlaneBendForceKernel(name, platform, cu, context.getSystem());
 
     if (name == CalcAmoebaTorsionTorsionForceKernel::Name())
         return new CudaCalcAmoebaTorsionTorsionForceKernel(name, platform, cu, context.getSystem());
