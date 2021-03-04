@@ -527,7 +527,7 @@ void testWithBarostat() {
 
     // Check the temperature.
     
-    const int numSteps = 500;
+    const int numSteps = 1000;
     integ.step(100);
     vector<double> ke(numCopies, 0.0);
     for (int i = 0; i < numSteps; i++) {
