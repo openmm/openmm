@@ -46,6 +46,7 @@ void testSerialization() {
 
     AmoebaVdwForce force1;
     force1.setForceGroup(3);
+    force1.setName("custom name");
     force1.setSigmaCombiningRule("GEOMETRIC");
     force1.setEpsilonCombiningRule("GEOMETRIC");
     force1.setCutoff(0.9);
@@ -74,6 +75,7 @@ void testSerialization() {
     AmoebaVdwForce& force2 = *copy;
 
     ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force1.getName(), force2.getName());
     ASSERT_EQUAL(force1.getSigmaCombiningRule(),    force2.getSigmaCombiningRule());
     ASSERT_EQUAL(force1.getEpsilonCombiningRule(),  force2.getEpsilonCombiningRule());
     ASSERT_EQUAL(force1.getCutoff(),                force2.getCutoff());

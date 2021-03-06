@@ -46,6 +46,7 @@ void HippoNonbondedForceProxy::serialize(const void* object, SerializationNode& 
     const HippoNonbondedForce& force = *reinterpret_cast<const HippoNonbondedForce*>(object);
 
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setIntProperty("nonbondedMethod", force.getNonbondedMethod());
     node.setDoubleProperty("cutoffDistance", force.getCutoffDistance());
     node.setDoubleProperty("switchingDistance", force.getSwitchingDistance());
@@ -122,6 +123,7 @@ void* HippoNonbondedForceProxy::deserialize(const SerializationNode& node) const
     HippoNonbondedForce* force = new HippoNonbondedForce();
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setNonbondedMethod(static_cast<HippoNonbondedForce::NonbondedMethod>(node.getIntProperty("nonbondedMethod")));
         force->setCutoffDistance(node.getDoubleProperty("cutoffDistance"));
         force->setSwitchingDistance(node.getDoubleProperty("switchingDistance"));

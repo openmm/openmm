@@ -43,6 +43,7 @@ void testSerialization() {
 
     GBSAOBCForce force;
     force.setForceGroup(3);
+    force.setName("custom name");
     force.setNonbondedMethod(GBSAOBCForce::CutoffPeriodic);
     force.setCutoffDistance(2.0);
     force.setSoluteDielectric(5.1);
@@ -62,6 +63,7 @@ void testSerialization() {
 
     GBSAOBCForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getNonbondedMethod(), force2.getNonbondedMethod());
     ASSERT_EQUAL(force.getCutoffDistance(), force2.getCutoffDistance());
     ASSERT_EQUAL(force.getSoluteDielectric(), force2.getSoluteDielectric());

@@ -2569,6 +2569,7 @@ class LennardJonesGenerator(object):
         self.force.addTabulatedFunction('acoef', mm.Discrete2DFunction(numLjTypes, numLjTypes, acoef))
         self.force.addTabulatedFunction('bcoef', mm.Discrete2DFunction(numLjTypes, numLjTypes, bcoef))
         self.force.addPerParticleParameter('type')
+        self.force.setName('LennardJones')
         if nonbondedMethod in [CutoffPeriodic, Ewald, PME, LJPME]:
             self.force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
         elif nonbondedMethod is NoCutoff:
@@ -2614,6 +2615,7 @@ class LennardJonesGenerator(object):
             bonded = mm.CustomBondForce('%g*epsilon*((sigma/r)^12-(sigma/r)^6)' % (4*self.lj14scale))
             bonded.addPerBondParameter('sigma')
             bonded.addPerBondParameter('epsilon')
+            bonded.setName('LennardJones14')
             sys.addForce(bonded)
             skip = set(tuple(forceCopy.getExclusionParticles(i)) for i in range(forceCopy.getNumExclusions()))
             for i in range(self.force.getNumExclusions()):
@@ -3340,6 +3342,7 @@ class AmoebaBondGenerator(object):
             force = mm.CustomBondForce(energy)
             force.addPerBondParameter('r0')
             force.addPerBondParameter('k')
+            force.setName('AmoebaBond')
             sys.addForce(force)
         else:
             force = existing[0]
@@ -3474,6 +3477,7 @@ class AmoebaAngleGenerator(object):
             force = mm.CustomAngleForce(energy)
             force.addPerAngleParameter('theta0')
             force.addPerAngleParameter('k')
+            force.setName('AmoebaAngle')
             sys.addForce(force)
         else:
             force = existing[0]
@@ -3543,6 +3547,7 @@ class AmoebaAngleGenerator(object):
             force = mm.CustomCompoundBondForce(4, energy)
             force.addPerBondParameter("theta0")
             force.addPerBondParameter("k")
+            force.setName('AmoebaInPlaneAngle')
             sys.addForce(force)
         else:
             force = existing[0]
@@ -3706,6 +3711,7 @@ class AmoebaOutOfPlaneBendGenerator(object):
         if len(existing) == 0:
             force = mm.CustomCompoundBondForce(4, energy)
             force.addPerBondParameter("k")
+            force.setName('AmoebaOutOfPlaneBend')
             sys.addForce(force)
         else:
             force = existing[0]
@@ -4014,6 +4020,7 @@ class AmoebaPiTorsionGenerator(object):
         if len(existing) == 0:
             force = mm.CustomCompoundBondForce(6, energy)
             force.addPerBondParameter('k')
+            force.setName('AmoebaPiTorsion')
             sys.addForce(force)
         else:
             force = existing[0]
@@ -4398,6 +4405,7 @@ class AmoebaStretchBendGenerator(object):
             force.addPerBondParameter("theta0")
             force.addPerBondParameter("k1")
             force.addPerBondParameter("k2")
+            force.setName('AmoebaStretchBend')
             sys.addForce(force)
         else:
             force = existing[0]

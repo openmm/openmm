@@ -45,6 +45,7 @@ void CustomTorsionForceProxy::serialize(const void* object, SerializationNode& n
     node.setIntProperty("version", 3);
     const CustomTorsionForce& force = *reinterpret_cast<const CustomTorsionForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perTorsionParams = node.createChildNode("PerTorsionParameters");
@@ -82,6 +83,7 @@ void* CustomTorsionForceProxy::deserialize(const SerializationNode& node) const 
     try {
         CustomTorsionForce* force = new CustomTorsionForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perTorsionParams = node.getChildNode("PerTorsionParameters");

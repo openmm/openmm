@@ -45,6 +45,7 @@ void MonteCarloAnisotropicBarostatProxy::serialize(const void* object, Serializa
     node.setIntProperty("version", 1);
     const MonteCarloAnisotropicBarostat& force = *reinterpret_cast<const MonteCarloAnisotropicBarostat*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     Vec3 pressure = force.getDefaultPressure();
     node.setDoubleProperty("pressurex", pressure[0]);
     node.setDoubleProperty("pressurey", pressure[1]);
@@ -66,6 +67,7 @@ void* MonteCarloAnisotropicBarostatProxy::deserialize(const SerializationNode& n
         force = new MonteCarloAnisotropicBarostat(pressure, node.getDoubleProperty("temperature"), node.getBoolProperty("scalex"),
                 node.getBoolProperty("scaley"), node.getBoolProperty("scalez"), node.getIntProperty("frequency"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
         return force;
     }

@@ -66,6 +66,7 @@ void AmoebaTorsionTorsionForceProxy::serialize(const void* object, Serialization
     node.setIntProperty("version", 3);
     const AmoebaTorsionTorsionForce& force = *reinterpret_cast<const AmoebaTorsionTorsionForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
 
     // grid[xIdx][yIdx][6 values]
@@ -123,8 +124,8 @@ void* AmoebaTorsionTorsionForceProxy::deserialize(const SerializationNode& node)
 
     AmoebaTorsionTorsionForce* force = new AmoebaTorsionTorsionForce();
     try {
-        if (version > 1)
-            force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         if (version > 2)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& grids                    = node.getChildNode("TorsionTorsionGrids");

@@ -43,6 +43,7 @@ void testSerialization() {
 
     CMMotionRemover force(5);
     force.setForceGroup(3);
+    force.setName("custom name");
 
     // Serialize and then deserialize it.
 
@@ -54,6 +55,7 @@ void testSerialization() {
 
     CMMotionRemover& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getFrequency(), force2.getFrequency());
 }
 

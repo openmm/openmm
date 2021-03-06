@@ -45,6 +45,7 @@ void CustomExternalForceProxy::serialize(const void* object, SerializationNode& 
     node.setIntProperty("version", 1);
     const CustomExternalForce& force = *reinterpret_cast<const CustomExternalForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perParticleParams = node.createChildNode("PerParticleParameters");
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
@@ -76,6 +77,7 @@ void* CustomExternalForceProxy::deserialize(const SerializationNode& node) const
     try {
         CustomExternalForce* force = new CustomExternalForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");
         for (auto& parameter : perParticleParams.getChildren())
             force->addPerParticleParameter(parameter.getStringProperty("name"));

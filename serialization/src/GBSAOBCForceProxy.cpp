@@ -45,6 +45,7 @@ void GBSAOBCForceProxy::serialize(const void* object, SerializationNode& node) c
     node.setIntProperty("version", 2);
     const GBSAOBCForce& force = *reinterpret_cast<const GBSAOBCForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
     node.setDoubleProperty("soluteDielectric", force.getSoluteDielectric());
@@ -65,6 +66,7 @@ void* GBSAOBCForceProxy::deserialize(const SerializationNode& node) const {
     GBSAOBCForce* force = new GBSAOBCForce();
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setNonbondedMethod((GBSAOBCForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         force->setSoluteDielectric(node.getDoubleProperty("soluteDielectric"));

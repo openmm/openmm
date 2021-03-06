@@ -46,6 +46,7 @@ void AmoebaGeneralizedKirkwoodForceProxy::serialize(const void* object, Serializ
     const AmoebaGeneralizedKirkwoodForce& force = *reinterpret_cast<const AmoebaGeneralizedKirkwoodForce*>(object);
 
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setDoubleProperty("GeneralizedKirkwoodSolventDielectric", force.getSolventDielectric());
     node.setDoubleProperty("GeneralizedKirkwoodSoluteDielectric",  force.getSoluteDielectric());
     //node.setDoubleProperty("GeneralizedKirkwoodDielectricOffset",  force.getDielectricOffset());
@@ -68,8 +69,8 @@ void* AmoebaGeneralizedKirkwoodForceProxy::deserialize(const SerializationNode& 
         throw OpenMMException("Unsupported version number");
     AmoebaGeneralizedKirkwoodForce* force = new AmoebaGeneralizedKirkwoodForce();
     try {
-        if (version > 1)
-            force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setSolventDielectric(  node.getDoubleProperty("GeneralizedKirkwoodSolventDielectric"));
         force->setSoluteDielectric(   node.getDoubleProperty("GeneralizedKirkwoodSoluteDielectric"));
         //force->setDielectricOffset(   node.getDoubleProperty("GeneralizedKirkwoodDielectricOffset"));

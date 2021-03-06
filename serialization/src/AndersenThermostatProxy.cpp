@@ -48,6 +48,7 @@ void AndersenThermostatProxy::serialize(const void* object, SerializationNode& n
     node.setDoubleProperty("frequency", force.getDefaultCollisionFrequency());
     node.setIntProperty("randomSeed", force.getRandomNumberSeed());
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
 }
 
 void* AndersenThermostatProxy::deserialize(const SerializationNode& node) const {
@@ -57,6 +58,7 @@ void* AndersenThermostatProxy::deserialize(const SerializationNode& node) const 
     try {
         AndersenThermostat* force = new AndersenThermostat(node.getDoubleProperty("temperature"), node.getDoubleProperty("frequency"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
         return force;
     }

@@ -43,6 +43,7 @@ void testSerialization() {
 
     CustomGBForce force;
     force.setForceGroup(3);
+    force.setName("custom name");
     force.setNonbondedMethod(CustomGBForce::CutoffPeriodic);
     force.setCutoffDistance(2.1);
     force.addGlobalParameter("x", 1.3);
@@ -77,6 +78,7 @@ void testSerialization() {
 
     CustomGBForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getNonbondedMethod(), force2.getNonbondedMethod());
     ASSERT_EQUAL(force.getCutoffDistance(), force2.getCutoffDistance());
     ASSERT_EQUAL(force.getNumPerParticleParameters(), force2.getNumPerParticleParameters());

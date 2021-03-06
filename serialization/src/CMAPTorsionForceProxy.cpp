@@ -45,6 +45,7 @@ void CMAPTorsionForceProxy::serialize(const void* object, SerializationNode& nod
     node.setIntProperty("version", 2);
     const CMAPTorsionForce& force = *reinterpret_cast<const CMAPTorsionForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     SerializationNode& maps = node.createChildNode("Maps");
     for (int i = 0; i < force.getNumMaps(); i++) {
@@ -70,6 +71,7 @@ void* CMAPTorsionForceProxy::deserialize(const SerializationNode& node) const {
     CMAPTorsionForce* force = new CMAPTorsionForce();
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& maps = node.getChildNode("Maps");

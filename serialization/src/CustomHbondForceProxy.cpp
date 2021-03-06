@@ -45,6 +45,7 @@ void CustomHbondForceProxy::serialize(const void* object, SerializationNode& nod
     node.setIntProperty("version", 1);
     const CustomHbondForce& force = *reinterpret_cast<const CustomHbondForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setStringProperty("energy", force.getEnergyFunction());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
@@ -104,6 +105,7 @@ void* CustomHbondForceProxy::deserialize(const SerializationNode& node) const {
     try {
         CustomHbondForce* force = new CustomHbondForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setNonbondedMethod((CustomHbondForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         const SerializationNode& perDonorParams = node.getChildNode("PerDonorParameters");
