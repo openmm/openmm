@@ -123,6 +123,7 @@ class Metadynamics(object):
         self._selfBias = np.zeros(tuple(v.gridWidth for v in reversed(variables)))
         self._totalBias = np.zeros(tuple(v.gridWidth for v in reversed(variables)))
         self._loadedBiases = {}
+        self._syncWithDisk()
         self._deltaT = temperature*(biasFactor-1)
         varNames = ['cv%d' % i for i in range(len(variables))]
         self._force = mm.CustomCVForce('table(%s)' % ', '.join(varNames))
@@ -146,7 +147,6 @@ class Metadynamics(object):
         freeGroups = set(range(32)) - set(force.getForceGroup() for force in system.getForces())
         self._force.setForceGroup(max(freeGroups))
         system.addForce(self._force)
-        self._syncWithDisk()
 
     def step(self, simulation, steps):
         """Advance the simulation by integrating a specified number of time steps.
