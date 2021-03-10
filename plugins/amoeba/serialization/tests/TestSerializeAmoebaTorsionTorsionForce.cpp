@@ -82,6 +82,7 @@ void testSerialization() {
     AmoebaTorsionTorsionForce force1;
 
     force1.setForceGroup(3);
+    force1.setName("custom name");
     for (unsigned int ii = 0; ii < 5; ii++) {
         std::vector< std::vector< std::vector<double> > > gridVector;
         loadTorsionTorsionGrid(gridVector);
@@ -102,6 +103,7 @@ void testSerialization() {
 
     AmoebaTorsionTorsionForce & force2 = *copy;
     ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force1.getName(), force2.getName());
     ASSERT_EQUAL(force1.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force1.getNumTorsionTorsions(), force2.getNumTorsionTorsions());
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumTorsionTorsions()); ii++) {

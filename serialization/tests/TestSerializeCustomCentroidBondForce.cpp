@@ -43,6 +43,7 @@ void testSerialization() {
 
     CustomCentroidBondForce force(3, "5*sin(distance(g1,g2))^2+y*z");
     force.setForceGroup(3);
+    force.setName("custom name");
     force.addGlobalParameter("x", 1.3);
     force.addGlobalParameter("y", 2.221);
     force.addPerBondParameter("z");
@@ -90,6 +91,7 @@ void testSerialization() {
 
     CustomCentroidBondForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getNumGroupsPerBond(), force2.getNumGroupsPerBond());
     ASSERT_EQUAL(force.getEnergyFunction(), force2.getEnergyFunction());
     ASSERT_EQUAL(force.getNumPerBondParameters(), force2.getNumPerBondParameters());

@@ -43,6 +43,7 @@ void testSerialization() {
 
     CustomManyParticleForce force(3, "C*(a1+a2+a3)*(distance(p1,p2)+distance(p1,p3))");
     force.setForceGroup(3);
+    force.setName("custom name");
     force.setNonbondedMethod(CustomManyParticleForce::CutoffPeriodic);
     force.setPermutationMode(CustomManyParticleForce::UniqueCentralParticle);
     force.setCutoffDistance(2.1);
@@ -78,6 +79,7 @@ void testSerialization() {
 
     CustomManyParticleForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getNumParticlesPerSet(), force2.getNumParticlesPerSet());
     ASSERT_EQUAL(force.getEnergyFunction(), force2.getEnergyFunction());
     ASSERT_EQUAL(force.getNonbondedMethod(), force2.getNonbondedMethod());

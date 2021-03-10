@@ -45,6 +45,7 @@ void MonteCarloMembraneBarostatProxy::serialize(const void* object, Serializatio
     node.setIntProperty("version", 1);
     const MonteCarloMembraneBarostat& force = *reinterpret_cast<const MonteCarloMembraneBarostat*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setDoubleProperty("pressure", force.getDefaultPressure());
     node.setDoubleProperty("surfaceTension", force.getDefaultSurfaceTension());
     node.setDoubleProperty("temperature", force.getDefaultTemperature());
@@ -64,6 +65,7 @@ void* MonteCarloMembraneBarostatProxy::deserialize(const SerializationNode& node
         force = new MonteCarloMembraneBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("surfaceTension"),
                 node.getDoubleProperty("temperature"), xymode, zmode, node.getIntProperty("frequency"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
         return force;
     }

@@ -43,6 +43,7 @@ void testSerialization() {
 
     HarmonicAngleForce force;
     force.setForceGroup(3);
+    force.setName("custom name");
     force.addAngle(0, 1, 2, 1.0, 2.0);
     force.addAngle(0, 2, 3, 2.0, 2.1);
     force.addAngle(2, 3, 4, 3.0, 2.2);
@@ -59,6 +60,7 @@ void testSerialization() {
 
     HarmonicAngleForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force.getNumAngles(), force2.getNumAngles());
     for (int i = 0; i < force.getNumAngles(); i++) {

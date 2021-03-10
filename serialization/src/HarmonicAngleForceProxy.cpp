@@ -45,6 +45,7 @@ void HarmonicAngleForceProxy::serialize(const void* object, SerializationNode& n
     node.setIntProperty("version", 2);
     const HarmonicAngleForce& force = *reinterpret_cast<const HarmonicAngleForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     SerializationNode& bonds = node.createChildNode("Angles");
     for (int i = 0; i < force.getNumAngles(); i++) {
@@ -62,6 +63,7 @@ void* HarmonicAngleForceProxy::deserialize(const SerializationNode& node) const 
     HarmonicAngleForce* force = new HarmonicAngleForce();
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& angles = node.getChildNode("Angles");

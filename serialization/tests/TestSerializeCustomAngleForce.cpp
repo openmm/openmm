@@ -43,6 +43,7 @@ void testSerialization() {
 
     CustomAngleForce force("5*sin(x)^2+y*z");
     force.setForceGroup(3);
+    force.setName("custom name");
     force.addGlobalParameter("x", 1.3);
     force.addGlobalParameter("y", 2.221);
     force.addPerAngleParameter("z");
@@ -66,6 +67,7 @@ void testSerialization() {
 
     CustomAngleForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getEnergyFunction(), force2.getEnergyFunction());
     ASSERT_EQUAL(force.getNumPerAngleParameters(), force2.getNumPerAngleParameters());
     for (int i = 0; i < force.getNumPerAngleParameters(); i++)

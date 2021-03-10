@@ -49,6 +49,7 @@ void testSerialization() {
         particles.push_back(i*i);
     RMSDForce force(refPos, particles);
     force.setForceGroup(3);
+    force.setName("custom name");
 
     // Serialize and then deserialize it.
 
@@ -60,6 +61,7 @@ void testSerialization() {
 
     RMSDForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getReferencePositions().size(), force2.getReferencePositions().size());
     for (int i = 0; i < force.getReferencePositions().size(); i++)
         ASSERT_EQUAL_VEC(force.getReferencePositions()[i], force2.getReferencePositions()[i], 0.0);

@@ -47,6 +47,7 @@ void AmoebaVdwForceProxy::serialize(const void* object, SerializationNode& node)
     bool useTypes = force.getUseParticleTypes();
 
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setStringProperty("SigmaCombiningRule", force.getSigmaCombiningRule());
     node.setStringProperty("EpsilonCombiningRule", force.getEpsilonCombiningRule());
     node.setDoubleProperty("VdwCutoff", force.getCutoffDistance());
@@ -101,8 +102,8 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
         throw OpenMMException("Unsupported version number");
     AmoebaVdwForce* force = new AmoebaVdwForce();
     try {
-        if (version > 1)
-            force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setSigmaCombiningRule(node.getStringProperty("SigmaCombiningRule"));
         force->setEpsilonCombiningRule(node.getStringProperty("EpsilonCombiningRule"));
         force->setCutoffDistance(node.getDoubleProperty("VdwCutoff"));

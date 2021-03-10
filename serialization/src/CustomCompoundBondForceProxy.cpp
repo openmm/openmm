@@ -45,6 +45,7 @@ void CustomCompoundBondForceProxy::serialize(const void* object, SerializationNo
     node.setIntProperty("version", 3);
     const CustomCompoundBondForce& force = *reinterpret_cast<const CustomCompoundBondForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setIntProperty("particles", force.getNumParticlesPerBond());
     node.setStringProperty("energy", force.getEnergyFunction());
@@ -92,6 +93,7 @@ void* CustomCompoundBondForceProxy::deserialize(const SerializationNode& node) c
     try {
         CustomCompoundBondForce* force = new CustomCompoundBondForce(node.getIntProperty("particles"), node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perBondParams = node.getChildNode("PerBondParameters");

@@ -45,6 +45,7 @@ void CustomCentroidBondForceProxy::serialize(const void* object, SerializationNo
     node.setIntProperty("version", 3);
     const CustomCentroidBondForce& force = *reinterpret_cast<const CustomCentroidBondForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setIntProperty("groups", force.getNumGroupsPerBond());
     node.setStringProperty("energy", force.getEnergyFunction());
@@ -105,6 +106,7 @@ void* CustomCentroidBondForceProxy::deserialize(const SerializationNode& node) c
     try {
         CustomCentroidBondForce* force = new CustomCentroidBondForce(node.getIntProperty("groups"), node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perBondParams = node.getChildNode("PerBondParameters");

@@ -45,6 +45,7 @@ void CustomGBForceProxy::serialize(const void* object, SerializationNode& node) 
     node.setIntProperty("version", 2);
     const CustomGBForce& force = *reinterpret_cast<const CustomGBForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
     SerializationNode& perParticleParams = node.createChildNode("PerParticleParameters");
@@ -104,6 +105,7 @@ void* CustomGBForceProxy::deserialize(const SerializationNode& node) const {
     try {
         CustomGBForce* force = new CustomGBForce();
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setNonbondedMethod((CustomGBForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");

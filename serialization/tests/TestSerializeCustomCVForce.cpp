@@ -45,6 +45,7 @@ void testSerialization() {
 
     CustomCVForce force("2*v1+v2");
     force.setForceGroup(3);
+    force.setName("custom name");
     force.addGlobalParameter("x", 1.3);
     force.addGlobalParameter("y", 2.221);
     force.addEnergyParameterDerivative("y");
@@ -69,6 +70,7 @@ void testSerialization() {
 
     CustomCVForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getEnergyFunction(), force2.getEnergyFunction());
     ASSERT_EQUAL(force.getNumGlobalParameters(), force2.getNumGlobalParameters());
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {

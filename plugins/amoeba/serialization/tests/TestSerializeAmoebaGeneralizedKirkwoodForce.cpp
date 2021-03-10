@@ -46,6 +46,7 @@ void testSerialization() {
 
     AmoebaGeneralizedKirkwoodForce force1;
     force1.setForceGroup(3);
+    force1.setName("custom name");
     force1.setSolventDielectric(  80.0);
     force1.setSoluteDielectric(   1.0);
     //force1.setDielectricOffset(   0.09);
@@ -66,6 +67,7 @@ void testSerialization() {
     // Compare the two forces to see if they are identical.  
     AmoebaGeneralizedKirkwoodForce& force2 = *copy;
     ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force1.getName(), force2.getName());
     ASSERT_EQUAL(force1.getSolventDielectric(),    force2.getSolventDielectric());
     ASSERT_EQUAL(force1.getSoluteDielectric(),     force2.getSoluteDielectric());
     //ASSERT_EQUAL(force1.getDielectricOffset(),     force2.getDielectricOffset());
