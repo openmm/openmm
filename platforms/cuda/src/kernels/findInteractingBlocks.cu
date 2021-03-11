@@ -98,7 +98,7 @@ __device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, unsign
     int pairIndex = pairStartIndex + (indexInWarp > 0 ? prevSum : 0);
     for (int i = indexInWarp; i < length; i += 32) {
         int count = __popc(flags[i]);
-        if (count <= MAX_BITS_FOR_PAIRS && pairIndex+count < maxSinglePairs) {
+        if (count <= MAX_BITS_FOR_PAIRS && pairIndex+count <= maxSinglePairs) {
             int f = flags[i];
             while (f != 0) {
                 singlePairs[pairIndex] = make_int2(atoms[i], x*TILE_SIZE+__ffs(f)-1);
