@@ -146,7 +146,7 @@ class Metadynamics(object):
         self._force.addTabulatedFunction('table', self._table)
         freeGroups = set(range(32)) - set(force.getForceGroup() for force in system.getForces())
         if len(freeGroups) == 0:
-            raise RuntimeError('Cannot assign a force groups to the metadynamics force. '
+            raise RuntimeError('Cannot assign a force group to the metadynamics force. '
                                'The maximum number (32) of the force groups is already used.')
         self._force.setForceGroup(max(freeGroups))
         system.addForce(self._force)
