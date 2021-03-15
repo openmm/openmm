@@ -155,6 +155,8 @@ void runPlatformTests() {
     testParallelComputation(NonbondedForce::Ewald);
     testParallelComputation(NonbondedForce::PME);
     testReordering();
-    if (canRunHugeTest())
-        testHugeSystem();
+    if (canRunHugeTest()) {
+        double tol = (platform.getPropertyDefaultValue("Precision") == "single" ? 1e-4 : 1e-5);
+        testHugeSystem(tol);
+    }
 }

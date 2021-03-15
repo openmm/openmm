@@ -45,6 +45,7 @@ void CustomCentroidBondForceProxy::serialize(const void* object, SerializationNo
     node.setIntProperty("version", 3);
     const CustomCentroidBondForce& force = *reinterpret_cast<const CustomCentroidBondForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setIntProperty("groups", force.getNumGroupsPerBond());
     node.setStringProperty("energy", force.getEnergyFunction());
@@ -78,18 +79,18 @@ void CustomCentroidBondForceProxy::serialize(const void* object, SerializationNo
         vector<int> groups;
         vector<double> params;
         force.getBondParameters(i, groups, params);
-        SerializationNode& node = bonds.createChildNode("Bond");
+        SerializationNode& bond = bonds.createChildNode("Bond");
         for (int j = 0; j < (int) groups.size(); j++) {
             stringstream key;
             key << "g";
             key << j+1;
-            node.setIntProperty(key.str(), groups[j]);
+            bond.setIntProperty(key.str(), groups[j]);
         }
         for (int j = 0; j < (int) params.size(); j++) {
             stringstream key;
             key << "param";
             key << j+1;
-            node.setDoubleProperty(key.str(), params[j]);
+            bond.setDoubleProperty(key.str(), params[j]);
         }
     }
     SerializationNode& functions = node.createChildNode("Functions");
@@ -105,6 +106,7 @@ void* CustomCentroidBondForceProxy::deserialize(const SerializationNode& node) c
     try {
         CustomCentroidBondForce* force = new CustomCentroidBondForce(node.getIntProperty("groups"), node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perBondParams = node.getChildNode("PerBondParameters");

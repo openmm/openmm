@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
+ * Portions copyright (c) 2015-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,8 +44,7 @@ namespace OpenMM {
  */
 class OPENMM_EXPORT_CUDACOMPILER CudaRuntimeCompilerKernel : public CudaCompilerKernel {
 public:
-    CudaRuntimeCompilerKernel(const std::string& name, const Platform& platform) : CudaCompilerKernel(name, platform) {
-    }
+    CudaRuntimeCompilerKernel(const std::string& name, const Platform& platform);
     /**
      * Compile a kernel to PTX.
      *
@@ -54,6 +53,14 @@ public:
      * @param cu         the CudaContext for which the kernel is being compiled
      */
     std::string createModule(const std::string& source, const std::string& flags, CudaContext& cu);
+    /**
+     * Get the maximum architecture version the compiler supports.
+     */
+    int getMaxSupportedArchitecture() const {
+        return maxSupportedArchitecture;
+    }
+private:
+    int maxSupportedArchitecture;
 };
 
 } // namespace OpenMM

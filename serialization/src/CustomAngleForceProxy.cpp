@@ -45,6 +45,7 @@ void CustomAngleForceProxy::serialize(const void* object, SerializationNode& nod
     node.setIntProperty("version", 3);
     const CustomAngleForce& force = *reinterpret_cast<const CustomAngleForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perAngleParams = node.createChildNode("PerAngleParameters");
@@ -64,12 +65,12 @@ void CustomAngleForceProxy::serialize(const void* object, SerializationNode& nod
         int p1, p2, p3;
         vector<double> params;
         force.getAngleParameters(i, p1, p2, p3, params);
-        SerializationNode& node = angles.createChildNode("Angle").setIntProperty("p1", p1).setIntProperty("p2", p2).setIntProperty("p3", p3);
+        SerializationNode& angle = angles.createChildNode("Angle").setIntProperty("p1", p1).setIntProperty("p2", p2).setIntProperty("p3", p3);
         for (int j = 0; j < (int) params.size(); j++) {
             stringstream key;
             key << "param";
             key << j+1;
-            node.setDoubleProperty(key.str(), params[j]);
+            angle.setDoubleProperty(key.str(), params[j]);
         }
     }
 }
@@ -82,6 +83,7 @@ void* CustomAngleForceProxy::deserialize(const SerializationNode& node) const {
     try {
         CustomAngleForce* force = new CustomAngleForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& perAngleParams = node.getChildNode("PerAngleParameters");

@@ -1,6 +1,6 @@
 import unittest
 import itertools
-import simtk.openmm as mm
+import openmm as mm
 
 
 class TestForceGroups(unittest.TestCase):

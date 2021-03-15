@@ -95,7 +95,7 @@ CUDA version it was compiled with.
 4. Verify your installation by typing the following command:
 ::
 
-    python -m simtk.testInstallation
+    python -m openmm.testInstallation
 
 This command confirms that OpenMM is installed, checks whether GPU acceleration
 is available (via the OpenCL and/or CUDA platforms), and verifies that all
@@ -121,9 +121,9 @@ steps.
 .. samepage::
     ::
 
-        from simtk.openmm.app import *
-        from simtk.openmm import *
-        from simtk.unit import *
+        from openmm.app import *
+        from openmm import *
+        from openmm.unit import *
         from sys import stdout
 
         pdb = PDBFile('input.pdb')
@@ -164,9 +164,9 @@ You can name your own scripts whatever you want.  Let’s go through the script 
 by line and see how it works.
 ::
 
-    from simtk.openmm.app import *
-    from simtk.openmm import *
-    from simtk.unit import *
+    from openmm.app import *
+    from openmm import *
+    from openmm.unit import *
     from sys import stdout
 
 These lines are just telling the Python interpreter about some libraries we will
@@ -299,9 +299,9 @@ found in OpenMM’s :file:`examples` folder with the name :file:`simulateAmber.p
 .. samepage::
     ::
 
-        from simtk.openmm.app import *
-        from simtk.openmm import *
-        from simtk.unit import *
+        from openmm.app import *
+        from openmm import *
+        from openmm.unit import *
         from sys import stdout
 
         prmtop = AmberPrmtopFile('input.prmtop')
@@ -392,9 +392,9 @@ with the name :file:`simulateGromacs.py`.
 .. samepage::
     ::
 
-        from simtk.openmm.app import *
-        from simtk.openmm import *
-        from simtk.unit import *
+        from openmm.app import *
+        from openmm import *
+        from openmm.unit import *
         from sys import stdout
 
         gro = GromacsGroFile('input.gro')
@@ -456,9 +456,9 @@ on the :class:`CharmmPsfFile`.
 .. samepage::
     ::
 
-        from simtk.openmm.app import *
-        from simtk.openmm import *
-        from simtk.unit import *
+        from openmm.app import *
+        from openmm import *
+        from openmm.unit import *
         from sys import stdout, exit, stderr
 
         psf = CharmmPsfFile('input.psf')
@@ -824,7 +824,7 @@ Field Initiative small molecule force fields using the following example:
     from openmmforcefields.generators import SMIRNOFFTemplateGenerator
     smirnoff = SMIRNOFFTemplateGenerator(molecules=molecule)
     # Create an OpenMM ForceField object with AMBER ff14SB and TIP3P with compatible ions
-    from simtk.openmm.app import ForceField
+    from openmm.app import ForceField
     forcefield = ForceField('amber/protein.ff14SB.xml', 'amber/tip3p_standard.xml', 'amber/tip3p_HFE_multivalent.xml')
     # Register the SMIRNOFF template generator
     forcefield.registerTemplateGenerator(smirnoff.generator)
@@ -840,14 +840,14 @@ Alternatively, you can use the older `AMBER GAFF small molecule force field <htt
     from openmmforcefields.generators import GAFFTemplateGenerator
     gaff = GAFFTemplateGenerator(molecules=molecule)
     # Create an OpenMM ForceField object with AMBER ff14SB and TIP3P with compatible ions
-    from simtk.openmm.app import ForceField
+    from openmm.app import ForceField
     forcefield = ForceField('amber/protein.ff14SB.xml', 'amber/tip3p_standard.xml', 'amber/tip3p_HFE_multivalent.xml')
     # Register the GAFF template generator
     forcefield.registerTemplateGenerator(gaff.generator)
     # You can now parameterize an OpenMM Topology object that contains the specified molecule.
     # forcefield will load the appropriate GAFF parameters when needed, and antechamber
     # will be used to generate small molecule parameters on the fly.
-    from simtk.openmm.app import PDBFile
+    from openmm.app import PDBFile
     pdbfile = PDBFile('t4-lysozyme-L99A-with-benzene.pdb')
     system = forcefield.createSystem(pdbfile.topology)
 
@@ -864,8 +864,8 @@ small molecule force field you want to use:
 ::
 
     # Define the keyword arguments to feed to ForceField
-    from simtk import unit
-    from simtk.openmm import app
+    from openmm import unit
+    from openmm import app
     forcefield_kwargs = { 'constraints' : app.HBonds, 'rigidWater' : True, 'removeCMMotion' : False, 'hydrogenMass' : 4*unit.amu }
     # Initialize a SystemGenerator using the Open Force Field Initiative 1.2.0 force field (openff-1.2.0)
     from openmmforcefields.generators import SystemGenerator
@@ -1787,9 +1787,9 @@ PDB file.
 .. samepage::
     ::
 
-        from simtk.openmm.app import *
-        from simtk.openmm import *
-        from simtk.unit import *
+        from openmm.app import *
+        from openmm import *
+        from openmm.unit import *
 
         print('Loading...')
         pdb = PDBFile('input.pdb')
@@ -3261,9 +3261,9 @@ This :code:`generator` function must conform to the following API:
         """
         Parameters
         ----------
-        forcefield : simtk.openmm.app.ForceField
+        forcefield : openmm.app.ForceField
             The ForceField object to which residue templates and/or parameters are to be added.
-        residue : simtk.openmm.app.Topology.Residue
+        residue : openmm.app.Topology.Residue
             The residue topology for which a template is to be generated.
 
         Returns

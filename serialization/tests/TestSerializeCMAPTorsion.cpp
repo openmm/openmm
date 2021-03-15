@@ -43,6 +43,7 @@ void testSerialization() {
 
     CMAPTorsionForce force;
     force.setForceGroup(3);
+    force.setName("custom name");
     vector<double> map1(9);
     for (int i = 0; i < 9; i++)
         map1[i] = 0.1*i;
@@ -67,6 +68,7 @@ void testSerialization() {
 
     CMAPTorsionForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force.getNumMaps(), force2.getNumMaps());
     for (int i = 0; i < force.getNumMaps(); i++) {

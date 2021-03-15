@@ -1,5 +1,4 @@
-
-/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2021 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -29,6 +28,7 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
 #include "ReferenceCustomManyParticleIxn.h"
+#include "ReferencePointFunctions.h"
 #include "ReferenceTabulatedFunction.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "lepton/CustomFunction.h"
@@ -47,14 +47,16 @@ ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyP
     for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
+    // Create implementations of point functions.
+
+    functions["pointdistance"] = new ReferencePointDistanceFunction(force.usesPeriodicBoundaryConditions(), &periodicBoxVectors);
+    functions["pointangle"] = new ReferencePointAngleFunction(force.usesPeriodicBoundaryConditions(), &periodicBoxVectors);
+    functions["pointdihedral"] = new ReferencePointDihedralFunction(force.usesPeriodicBoundaryConditions(), &periodicBoxVectors);
+
     // Parse the expression and create the object used to calculate the interaction.
 
-    map<string, vector<int> > distances;
-    map<string, vector<int> > angles;
-    map<string, vector<int> > dihedrals;
-    Lepton::ParsedExpression energyExpr = CustomManyParticleForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    Lepton::ParsedExpression energyExpr = CustomManyParticleForceImpl::prepareExpression(force, functions);
     energyExpression = energyExpr.createProgram();
-    vector<string> particleParameterNames;
     if (force.getNonbondedMethod() != CustomManyParticleForce::NoCutoff)
         setUseCutoff(force.getCutoffDistance());
 
@@ -80,12 +82,6 @@ ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyP
             particleParamNames[i].push_back(paramname.str());
         }
     }
-    for (auto& term : distances)
-        distanceTerms.push_back(ReferenceCustomManyParticleIxn::DistanceTermInfo(term.first, term.second, energyExpr.differentiate(term.first).optimize().createProgram()));
-    for (auto& term : angles)
-        angleTerms.push_back(ReferenceCustomManyParticleIxn::AngleTermInfo(term.first, term.second, energyExpr.differentiate(term.first).optimize().createProgram()));
-    for (auto& term : dihedrals)
-        dihedralTerms.push_back(ReferenceCustomManyParticleIxn::DihedralTermInfo(term.first, term.second, energyExpr.differentiate(term.first).optimize().createProgram()));
     
     // Record exclusions.
     
@@ -124,9 +120,7 @@ void ReferenceCustomManyParticleIxn::setPeriodic(Vec3* vectors) {
     assert(vectors[1][1] >= 2.0*cutoffDistance);
     assert(vectors[2][2] >= 2.0*cutoffDistance);
     usePeriodic = true;
-    periodicBoxVectors[0] = vectors[0];
-    periodicBoxVectors[1] = vectors[1];
-    periodicBoxVectors[2] = vectors[2];
+    periodicBoxVectors = vectors;
 }
 
 void ReferenceCustomManyParticleIxn::loopOverInteractions(vector<int>& particles, int loopIndex, vector<OpenMM::Vec3>& atomCoordinates,
@@ -190,99 +184,15 @@ void ReferenceCustomManyParticleIxn::calculateOneIxn(const vector<int>& particle
         for (int j = 0; j < numPerParticleParameters; j++)
             variables[particleParamNames[i][j]] = particleParameters[permutedParticles[i]][j];
     
-    // Compute all of the variables the energy can depend on.
+    // Record particle coordinates.
 
     for (auto& term : particleTerms)
         variables[term.name] = atomCoordinates[permutedParticles[term.atom]][term.component];
-    for (auto& term : distanceTerms) {
-        computeDelta(permutedParticles[term.p1], permutedParticles[term.p2], term.delta, atomCoordinates);
-        variables[term.name] = term.delta[ReferenceForce::RIndex];
-    }
-    for (auto& term : angleTerms) {
-        computeDelta(permutedParticles[term.p1], permutedParticles[term.p2], term.delta1, atomCoordinates);
-        computeDelta(permutedParticles[term.p3], permutedParticles[term.p2], term.delta2, atomCoordinates);
-        variables[term.name] = computeAngle(term.delta1, term.delta2);
-    }
-    for (auto& term : dihedralTerms) {
-        computeDelta(permutedParticles[term.p2], permutedParticles[term.p1], term.delta1, atomCoordinates);
-        computeDelta(permutedParticles[term.p2], permutedParticles[term.p3], term.delta2, atomCoordinates);
-        computeDelta(permutedParticles[term.p4], permutedParticles[term.p3], term.delta3, atomCoordinates);
-        double dotDihedral, signOfDihedral;
-        double* crossProduct[] = {term.cross1, term.cross2};
-        variables[term.name] = ReferenceBondIxn::getDihedralAngleBetweenThreeVectors(term.delta1, term.delta2, term.delta3, crossProduct, &dotDihedral, term.delta1, &signOfDihedral, 1);
-    }
-    
-    // Apply forces based on individual particle coordinates.
-    
+
+    // Apply forces based on particle coordinates.
+
     for (auto& term : particleTerms)
         forces[permutedParticles[term.atom]][term.component] -= term.forceExpression.evaluate(variables);
-
-    // Apply forces based on distances.
-
-    for (auto& term : distanceTerms) {
-        double dEdR = term.forceExpression.evaluate(variables)/(term.delta[ReferenceForce::RIndex]);
-        for (int i = 0; i < 3; i++) {
-           double force  = -dEdR*term.delta[i];
-           forces[permutedParticles[term.p1]][i] -= force;
-           forces[permutedParticles[term.p2]][i] += force;
-        }
-    }
-
-    // Apply forces based on angles.
-
-    for (auto& term : angleTerms) {
-        double dEdTheta = term.forceExpression.evaluate(variables);
-        double thetaCross[ReferenceForce::LastDeltaRIndex];
-        SimTKOpenMMUtilities::crossProductVector3(term.delta1, term.delta2, thetaCross);
-        double lengthThetaCross = sqrt(DOT3(thetaCross, thetaCross));
-        if (lengthThetaCross < 1.0e-06)
-            lengthThetaCross = 1.0e-06;
-        double termA = dEdTheta/(term.delta1[ReferenceForce::R2Index]*lengthThetaCross);
-        double termC = -dEdTheta/(term.delta2[ReferenceForce::R2Index]*lengthThetaCross);
-        double deltaCrossP[3][3];
-        SimTKOpenMMUtilities::crossProductVector3(term.delta1, thetaCross, deltaCrossP[0]);
-        SimTKOpenMMUtilities::crossProductVector3(term.delta2, thetaCross, deltaCrossP[2]);
-        for (int i = 0; i < 3; i++) {
-            deltaCrossP[0][i] *= termA;
-            deltaCrossP[2][i] *= termC;
-            deltaCrossP[1][i] = -(deltaCrossP[0][i]+deltaCrossP[2][i]);
-        }
-        for (int i = 0; i < 3; i++) {
-            forces[permutedParticles[term.p1]][i] += deltaCrossP[0][i];
-            forces[permutedParticles[term.p2]][i] += deltaCrossP[1][i];
-            forces[permutedParticles[term.p3]][i] += deltaCrossP[2][i];
-        }
-    }
-
-    // Apply forces based on dihedrals.
-
-    for (auto& term : dihedralTerms) {
-        double dEdTheta = term.forceExpression.evaluate(variables);
-        double internalF[4][3];
-        double forceFactors[4];
-        double normCross1 = DOT3(term.cross1, term.cross1);
-        double normBC = term.delta2[ReferenceForce::RIndex];
-        forceFactors[0] = (-dEdTheta*normBC)/normCross1;
-        double normCross2 = DOT3(term.cross2, term.cross2);
-        forceFactors[3] = (dEdTheta*normBC)/normCross2;
-        forceFactors[1] = DOT3(term.delta1, term.delta2);
-        forceFactors[1] /= term.delta2[ReferenceForce::R2Index];
-        forceFactors[2] = DOT3(term.delta3, term.delta2);
-        forceFactors[2] /= term.delta2[ReferenceForce::R2Index];
-        for (int i = 0; i < 3; i++) {
-            internalF[0][i] = forceFactors[0]*term.cross1[i];
-            internalF[3][i] = forceFactors[3]*term.cross2[i];
-            double s = forceFactors[1]*internalF[0][i] - forceFactors[2]*internalF[3][i];
-            internalF[1][i] = internalF[0][i] - s;
-            internalF[2][i] = internalF[3][i] + s;
-        }
-        for (int i = 0; i < 3; i++) {
-            forces[permutedParticles[term.p1]][i] += internalF[0][i];
-            forces[permutedParticles[term.p2]][i] -= internalF[1][i];
-            forces[permutedParticles[term.p3]][i] -= internalF[2][i];
-            forces[permutedParticles[term.p4]][i] += internalF[3][i];
-        }
-    }
 
     // Add the energy
 

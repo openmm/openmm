@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -58,6 +58,7 @@
 #include "ReferenceMonteCarloBarostat.h"
 #include "ReferenceNoseHooverChain.h"
 #include "ReferenceNoseHooverDynamics.h"
+#include "ReferencePointFunctions.h"
 #include "ReferenceProperDihedralBond.h"
 #include "ReferenceRbDihedralBond.h"
 #include "ReferenceRMSDForce.h"
@@ -903,7 +904,6 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
     baseExceptionParams.resize(num14);
     for (int i = 0; i < numParticles; ++i)
        force.getParticleParameters(i, baseParticleParams[i][0], baseParticleParams[i][1], baseParticleParams[i][2]);
-    this->exclusions = exclusions;
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
         force.getExceptionParameters(nb14s[i], particle1, particle2, baseExceptionParams[i][0], baseExceptionParams[i][1], baseExceptionParams[i][2]);
@@ -1525,48 +1525,6 @@ void ReferenceCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& cont
     }
 }
 
-ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction::PeriodicDistanceFunction(Vec3** boxVectorHandle) : boxVectorHandle(boxVectorHandle) {
-}
-
-int ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction::getNumArguments() const {
-    return 6;
-}
-
-double ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction::evaluate(const double* arguments) const {
-    Vec3* boxVectors = *boxVectorHandle;
-    Vec3 delta = Vec3(arguments[0], arguments[1], arguments[2])-Vec3(arguments[3], arguments[4], arguments[5]);
-    delta -= boxVectors[2]*floor(delta[2]/boxVectors[2][2]+0.5);
-    delta -= boxVectors[1]*floor(delta[1]/boxVectors[1][1]+0.5);
-    delta -= boxVectors[0]*floor(delta[0]/boxVectors[0][0]+0.5);
-    return sqrt(delta.dot(delta));
-}
-
-double ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction::evaluateDerivative(const double* arguments, const int* derivOrder) const {
-    int argIndex = -1;
-    for (int i = 0; i < 6; i++) {
-        if (derivOrder[i] > 0) {
-            if (derivOrder[i] > 1 || argIndex != -1)
-                throw OpenMMException("Unsupported derivative of periodicdistance"); // Should be impossible for this to happen.
-            argIndex = i;
-        }
-    }
-    Vec3* boxVectors = *boxVectorHandle;
-    Vec3 delta = Vec3(arguments[0], arguments[1], arguments[2])-Vec3(arguments[3], arguments[4], arguments[5]);
-    delta -= boxVectors[2]*floor(delta[2]/boxVectors[2][2]+0.5);
-    delta -= boxVectors[1]*floor(delta[1]/boxVectors[1][1]+0.5);
-    delta -= boxVectors[0]*floor(delta[0]/boxVectors[0][0]+0.5);
-    double r = sqrt(delta.dot(delta));
-    if (r == 0)
-        return 0.0;    
-    if (argIndex < 3)
-        return delta[argIndex]/r;
-    return -delta[argIndex-3]/r;
-}
-
-Lepton::CustomFunction* ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction::clone() const {
-    return new PeriodicDistanceFunction(boxVectorHandle);
-}
-
 ReferenceCalcCustomExternalForceKernel::~ReferenceCalcCustomExternalForceKernel() {
     if (ixn != NULL)
         delete ixn;
@@ -1586,7 +1544,7 @@ void ReferenceCalcCustomExternalForceKernel::initialize(const System& system, co
     // Parse the expression used to calculate the force.
 
     map<string, Lepton::CustomFunction*> functions;
-    PeriodicDistanceFunction periodicDistance(&boxVectors);
+    ReferencePointDistanceFunction periodicDistance(true, &boxVectors);
     functions["periodicdistance"] = &periodicDistance;
     Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
     energyExpression = expression.createCompiledExpression();
@@ -1790,12 +1748,15 @@ void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system
     for (int i = 0; i < force.getNumFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
+    // Create implementations of point functions.
+
+    functions["pointdistance"] = new ReferencePointDistanceFunction(usePeriodic, &boxVectors);
+    functions["pointangle"] = new ReferencePointAngleFunction(usePeriodic, &boxVectors);
+    functions["pointdihedral"] = new ReferencePointDihedralFunction(usePeriodic, &boxVectors);
+
     // Parse the expression and create the object used to calculate the interaction.
 
-    map<string, vector<int> > distances;
-    map<string, vector<int> > angles;
-    map<string, vector<int> > dihedrals;
-    Lepton::ParsedExpression energyExpression = CustomCentroidBondForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    Lepton::ParsedExpression energyExpression = CustomCentroidBondForceImpl::prepareExpression(force, functions);
     vector<string> bondParameterNames;
     for (int i = 0; i < numBondParameters; i++)
         bondParameterNames.push_back(force.getPerBondParameterName(i));
@@ -1807,7 +1768,7 @@ void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system
         energyParamDerivNames.push_back(param);
         energyParamDerivExpressions.push_back(energyExpression.differentiate(param).createCompiledExpression());
     }
-    ixn = new ReferenceCustomCentroidBondIxn(force.getNumGroupsPerBond(), groupAtoms, normalizedWeights, bondGroups, energyExpression, bondParameterNames, distances, angles, dihedrals, energyParamDerivExpressions);
+    ixn = new ReferenceCustomCentroidBondIxn(force.getNumGroupsPerBond(), groupAtoms, normalizedWeights, bondGroups, energyExpression, bondParameterNames, energyParamDerivExpressions);
 
     // Delete the custom functions.
 
@@ -1822,8 +1783,10 @@ double ReferenceCalcCustomCentroidBondForceKernel::execute(ContextImpl& context,
     map<string, double> globalParameters;
     for (auto& name : globalParameterNames)
         globalParameters[name] = context.getParameter(name);
-    if (usePeriodic)
-        ixn->setPeriodic(extractBoxVectors(context));
+    if (usePeriodic) {
+        boxVectors = extractBoxVectors(context);
+        ixn->setPeriodic(boxVectors);
+    }
     vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
     ixn->calculatePairIxn(posData, bondParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
     map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);
@@ -1875,12 +1838,15 @@ void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system
     for (int i = 0; i < force.getNumFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
+    // Create implementations of point functions.
+
+    functions["pointdistance"] = new ReferencePointDistanceFunction(usePeriodic, &boxVectors);
+    functions["pointangle"] = new ReferencePointAngleFunction(usePeriodic, &boxVectors);
+    functions["pointdihedral"] = new ReferencePointDihedralFunction(usePeriodic, &boxVectors);
+
     // Parse the expression and create the object used to calculate the interaction.
 
-    map<string, vector<int> > distances;
-    map<string, vector<int> > angles;
-    map<string, vector<int> > dihedrals;
-    Lepton::ParsedExpression energyExpression = CustomCompoundBondForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    Lepton::ParsedExpression energyExpression = CustomCompoundBondForceImpl::prepareExpression(force, functions);
     vector<string> bondParameterNames;
     for (int i = 0; i < numBondParameters; i++)
         bondParameterNames.push_back(force.getPerBondParameterName(i));
@@ -1892,7 +1858,7 @@ void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system
         energyParamDerivNames.push_back(param);
         energyParamDerivExpressions.push_back(energyExpression.differentiate(param).createCompiledExpression());
     }
-    ixn = new ReferenceCustomCompoundBondIxn(force.getNumParticlesPerBond(), bondParticles, energyExpression, bondParameterNames, distances, angles, dihedrals, energyParamDerivExpressions);
+    ixn = new ReferenceCustomCompoundBondIxn(force.getNumParticlesPerBond(), bondParticles, energyExpression, bondParameterNames, energyParamDerivExpressions);
 
     // Delete the custom functions.
 
@@ -1907,8 +1873,10 @@ double ReferenceCalcCustomCompoundBondForceKernel::execute(ContextImpl& context,
     map<string, double> globalParameters;
     for (auto& name : globalParameterNames)
         globalParameters[name] = context.getParameter(name);
-    if (usePeriodic)
-        ixn->setPeriodic(extractBoxVectors(context));
+    if (usePeriodic) {
+        boxVectors = extractBoxVectors(context);
+        ixn->setPeriodic(boxVectors);
+    }
     vector<double> energyParamDerivValues(energyParamDerivNames.size()+1, 0.0);
     ixn->calculatePairIxn(posData, bondParamArray, globalParameters, forceData, includeEnergy ? &energy : NULL, &energyParamDerivValues[0]);
     map<string, double>& energyParamDerivs = extractEnergyParameterDerivatives(context);

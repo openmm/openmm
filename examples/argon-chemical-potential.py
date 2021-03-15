@@ -16,8 +16,8 @@
 # J. Chem. Phys. 129:124105 (2008)  http://dx.doi.org/10.1063/1.2978177
 
 from __future__ import print_function
-from simtk.openmm import *
-from simtk.unit import *
+from openmm import *
+from openmm.unit import *
 import numpy
 
 # =============================================================================

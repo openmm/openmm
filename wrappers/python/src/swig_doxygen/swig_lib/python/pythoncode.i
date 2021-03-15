@@ -17,8 +17,8 @@ if sys.version_info[0] == 2:
 else:
     _string_types = (bytes, str)
 
-import simtk.unit as unit
-from simtk.openmm.vec3 import Vec3
+import openmm.unit as unit
+from openmm.vec3 import Vec3
 
 
 %}

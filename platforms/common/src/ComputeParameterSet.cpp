@@ -40,25 +40,25 @@ ComputeParameterSet::ComputeParameterSet(ComputeContext& context, int numParamet
     string elementType = (useDoublePrecision ? "double" : "float");
     if (!arrayPerParameter) {
         while (params > 2) {
-            std::stringstream name;
-            name << "param" << (++bufferCount);
+            std::stringstream arrayName;
+            arrayName << "param" << (++bufferCount);
             arrays.push_back(context.createArray());
-            arrays.back()->initialize(context, numObjects, elementSize*4, name.str());
+            arrays.back()->initialize(context, numObjects, elementSize*4, arrayName.str());
             params -= 4;
         }
         if (params > 1) {
-            std::stringstream name;
-            name << "param" << (++bufferCount);
+            std::stringstream arrayName;
+            arrayName << "param" << (++bufferCount);
             arrays.push_back(context.createArray());
-            arrays.back()->initialize(context, numObjects, elementSize*2, name.str());
+            arrays.back()->initialize(context, numObjects, elementSize*2, arrayName.str());
             params -= 2;
         }
     }
     while (params > 0) {
-        std::stringstream name;
-        name << "param" << (++bufferCount);
+        std::stringstream arrayName;
+        arrayName << "param" << (++bufferCount);
             arrays.push_back(context.createArray());
-        arrays.back()->initialize(context, numObjects, elementSize, name.str());
+        arrays.back()->initialize(context, numObjects, elementSize, arrayName.str());
         params--;
     }
     for (ArrayInterface* array : arrays)

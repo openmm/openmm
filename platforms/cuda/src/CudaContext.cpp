@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -106,13 +106,13 @@ static int executeInWindows(const string &command) {
 #endif
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
-        const string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData, CudaContext* originalContext) : ComputeContext(system), currentStream(0),
-        platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
+        const string& tempDir, const std::string& hostCompiler, bool allowRuntimeCompiler, CudaPlatform::PlatformData& platformData,
+        CudaContext* originalContext) : ComputeContext(system), currentStream(0), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
         hasCompilerKernel(false), isNvccAvailable(false), pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL) {
     // Determine what compiler to use.
     
     this->compiler = "\""+compiler+"\"";
-    if (platformData.context != NULL) {
+    if (allowRuntimeCompiler && platformData.context != NULL) {
         try {
             compilerKernel = platformData.context->getPlatform().createKernel(CudaCompilerKernel::Name(), *platformData.context);
             hasCompilerKernel = true;
@@ -227,7 +227,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
             minor = 3;
         }
     }
-    gpuArchitecture = intToString(major)+intToString(minor);
+    gpuArchitecture = 10*major+minor;
     computeCapability = major+0.1*minor;
 
     contextIsValid = true;
@@ -419,7 +419,7 @@ CudaContext::~CudaContext() {
     string errorMessage = "Error deleting Context";
     if (contextIsValid && !isLinkedContext) {
         cuProfilerStop();
-        CHECK_RESULT(cuCtxDestroy(context));
+        cuCtxDestroy(context);
     }
     contextIsValid = false;
 }
@@ -531,6 +531,16 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     if (!defines.empty())
         src << endl;
     src << source << endl;
+    
+    // Determine what architecture to compile for.
+    
+    string compileArchitecture;
+    if (hasCompilerKernel) {
+        int maxCompilerArchitecture = compilerKernel.getAs<CudaCompilerKernel>().getMaxSupportedArchitecture();
+        compileArchitecture = intToString(min(gpuArchitecture, maxCompilerArchitecture));
+    }
+    else
+        compileArchitecture = intToString(gpuArchitecture);
 
     // See whether we already have PTX for this kernel cached.
 
@@ -544,7 +554,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     cacheFile.flags(ios::hex);
     for (int i = 0; i < 20; i++)
         cacheFile << setw(2) << setfill('0') << (int) hash[i];
-    cacheFile << '_' << gpuArchitecture << '_' << bits;
+    cacheFile << '_' << compileArchitecture << '_' << bits;
     CUmodule module;
     if (cuModuleLoad(&module, cacheFile.str().c_str()) == CUDA_SUCCESS)
         return module;
@@ -566,7 +576,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     // If the runtime compiler plugin is available, use it.
 
     if (hasCompilerKernel) {
-        string ptx = compilerKernel.getAs<CudaCompilerKernel>().createModule(src.str(), "-arch=compute_"+gpuArchitecture+" "+options, *this);
+        string ptx = compilerKernel.getAs<CudaCompilerKernel>().createModule(src.str(), "-arch=compute_"+compileArchitecture+" "+options, *this);
 
         // If possible, write the PTX out to a temporary file so we can cache it for later use.
 
@@ -596,13 +606,13 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
         out.close();
 #ifdef WIN32
 #ifdef _DEBUG
-        string command = compiler+" --ptx -G -g --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
+        string command = compiler+" --ptx -G -g --machine "+bits+" -arch=sm_"+compileArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
 #else
-        string command = compiler+" --ptx -lineinfo --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
+        string command = compiler+" --ptx -lineinfo --machine "+bits+" -arch=sm_"+compileArchitecture+" -o "+outputFile+" "+options+" "+inputFile+" 2> "+logFile;
 #endif
         res = executeInWindows(command);
 #else
-        string command = compiler+" --ptx --machine "+bits+" -arch=sm_"+gpuArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
+        string command = compiler+" --ptx --machine "+bits+" -arch=sm_"+compileArchitecture+" -o \""+outputFile+"\" "+options+" \""+inputFile+"\" 2> \""+logFile+"\"";
         res = std::system(command.c_str());
 #endif
     }

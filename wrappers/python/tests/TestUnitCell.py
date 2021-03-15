@@ -1,10 +1,10 @@
 import unittest
 import math
-from simtk.openmm import Vec3
-from simtk.unit import *
-from simtk.openmm.app.internal.unitcell import computePeriodicBoxVectors
-from simtk.openmm.app.internal.unitcell import computeLengthsAndAngles
-from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
+from openmm import Vec3
+from openmm.unit import *
+from openmm.app.internal.unitcell import computePeriodicBoxVectors
+from openmm.app.internal.unitcell import computeLengthsAndAngles
+from openmm.app.internal.unitcell import reducePeriodicBoxVectors
 
 def strip_units(x):
     if is_quantity(x): return x.value_in_unit_system(md_unit_system)

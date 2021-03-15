@@ -4,9 +4,9 @@ import math
 import sys
 
 from validateModeller import *
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
 
 if sys.version_info >= (3, 0):
     from io import StringIO

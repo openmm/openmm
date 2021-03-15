@@ -1,7 +1,5 @@
 from __future__ import print_function
 import sys, os
-import time
-import getopt
 import re
 import xml.etree.ElementTree as etree
 
@@ -110,7 +108,7 @@ class WrapperGenerator:
             self.findBaseNodes(node, orderedClassNodes)
         return orderedClassNodes
 
-    def findBaseNodes(self, node, excludedClassNodes=[]):
+    def findBaseNodes(self, node, excludedClassNodes):
         if node in excludedClassNodes:
             return
         if node.attrib['prot'] == 'private':
@@ -127,7 +125,6 @@ class WrapperGenerator:
 
     def getClassMethods(self, classNode):
         className = getText("compoundname", classNode)
-        shortClassName = stripOpenMMPrefix(className)
         methodList = []
         for section in findNodes(classNode, "sectiondef", kind="public-static-func")+findNodes(classNode, "sectiondef", kind="public-func"):
             for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):
@@ -211,7 +208,6 @@ class CHeaderGenerator(WrapperGenerator):
             for node in findNodes(section, "memberdef", kind="enum", prot="public"):
                 enumNodes.append(node)
         className = getText("compoundname", classNode)
-        shortClassName = stripOpenMMPrefix(className)
         typeName = convertOpenMMPrefix(className)
         for enumNode in enumNodes:
             enumName = getText("name", enumNode)
@@ -1590,7 +1586,6 @@ class FortranSourceGenerator(WrapperGenerator):
     
     def writeOneConstructor(self, classNode, methodNode, functionName, wrapperFunctionName):
         className = getText("compoundname", classNode)
-        shortClassName = stripOpenMMPrefix(className)
         typeName = convertOpenMMPrefix(className)
         self.out.write("OPENMM_EXPORT void %s(%s*& result" % (wrapperFunctionName, typeName))
         self.writeArguments(methodNode, True)
@@ -1616,8 +1611,6 @@ class FortranSourceGenerator(WrapperGenerator):
         returnType = self.getType(methodType)
         hasReturnValue = (returnType in ('int', 'bool', 'double'))
         hasReturnArg = not (hasReturnValue or returnType == 'void')
-        if methodType in self.classesByShortName:
-            methodType = self.classesByShortName[methodType]
         self.out.write("OPENMM_EXPORT ")
         if hasReturnValue:
             self.out.write(returnType)
@@ -1636,7 +1629,7 @@ class FortranSourceGenerator(WrapperGenerator):
                 returnArg = 'char* result'
             else:
                 returnArg = "%s& result" % returnType
-        numArgs = self.writeArguments(methodNode, isInstanceMethod, returnArg)
+        self.writeArguments(methodNode, isInstanceMethod, returnArg)
         if hasReturnArg and returnType == 'const char*':
             self.out.write(", int result_length")
         self.out.write(") {\n")

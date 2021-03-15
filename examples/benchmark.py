@@ -1,8 +1,7 @@
 from __future__ import print_function
-import simtk.openmm.app as app
-import simtk.openmm as mm
-import simtk.unit as unit
-import sys
+import openmm.app as app
+import openmm as mm
+import openmm.unit as unit
 from datetime import datetime
 import os
 from argparse import ArgumentParser
@@ -68,8 +67,6 @@ def runOneTest(testName, options):
         else:
             ff = app.ForceField('amoeba2009.xml', 'amoeba2009_gk.xml')
             pdb = app.PDBFile('5dfr_minimized.pdb')
-            cutoff = 2.0*unit.nanometers
-            vdwCutoff = 1.2*unit.nanometers
             system = ff.createSystem(pdb.topology, nonbondedMethod=app.NoCutoff, constraints=constraints, mutualInducedTargetEpsilon=epsilon, polarization=options.polarization)
         for f in system.getForces():
             if isinstance(f, mm.AmoebaMultipoleForce) or isinstance(f, mm.AmoebaVdwForce) or isinstance(f, mm.AmoebaGeneralizedKirkwoodForce) or isinstance(f, mm.AmoebaWcaDispersionForce):
@@ -86,7 +83,6 @@ def runOneTest(testName, options):
         fileName = names[testName]
         prmtop = app.AmberPrmtopFile(os.path.join(dirname, f'PME/Topologies/{fileName}.prmtop'))
         inpcrd = app.AmberInpcrdFile(os.path.join(dirname, f'PME/Coordinates/{fileName}.inpcrd'))
-        topology = prmtop.topology
         positions = inpcrd.positions
         dt = 0.004*unit.picoseconds
         method = app.PME

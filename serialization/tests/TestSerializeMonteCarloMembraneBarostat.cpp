@@ -43,6 +43,7 @@ void testSerialization() {
 
     MonteCarloMembraneBarostat force(25.5, 11.2, 250.0, MonteCarloMembraneBarostat::XYAnisotropic, MonteCarloMembraneBarostat::ZFixed, 14);
     force.setForceGroup(3);
+    force.setName("custom name");
     force.setRandomNumberSeed(3);
 
     // Serialize and then deserialize it.
@@ -55,6 +56,7 @@ void testSerialization() {
 
     MonteCarloMembraneBarostat& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getDefaultPressure(), force2.getDefaultPressure());
     ASSERT_EQUAL(force.getDefaultSurfaceTension(), force2.getDefaultSurfaceTension());
     ASSERT_EQUAL(force.getDefaultTemperature(), force2.getDefaultTemperature());

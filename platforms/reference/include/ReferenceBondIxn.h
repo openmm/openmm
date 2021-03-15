@@ -51,7 +51,7 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceBondIxn();
+       virtual ~ReferenceBondIxn();
 
       /**---------------------------------------------------------------------------------------
       
@@ -82,7 +82,7 @@ class OPENMM_EXPORT ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      static double getNormedDotProduct(double* vector1, double* vector2, int hasREntry);
+      static double getNormedDotProduct(double* vector1, double* vector2, int hasREntry=0);
       
       /**---------------------------------------------------------------------------------------
       
@@ -99,7 +99,7 @@ class OPENMM_EXPORT ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
       
       static double getAngleBetweenTwoVectors(double* vector1, double* vector2, 
-                                              double* outputDotProduct, int hasREntry);
+                                              double* outputDotProduct=NULL, int hasREntry=0);
       
       /**---------------------------------------------------------------------------------------
       
@@ -120,9 +120,9 @@ class OPENMM_EXPORT ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
       
       static double getDihedralAngleBetweenThreeVectors(double* vector1, double* vector2, 
-                                                        double* vector3, double** outputCrossProduct, 
-                                                        double* cosineOfAngle, double* signVector, 
-                                                        double* signOfAngle, int hasREntry);
+                                                        double* vector3, double** outputCrossProduct=NULL, 
+                                                        double* cosineOfAngle=NULL, double* signVector=NULL, 
+                                                        double* signOfAngle=NULL, int hasREntry=0);
       
 };
 

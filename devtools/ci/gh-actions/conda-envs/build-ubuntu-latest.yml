@@ -1,0 +1,22 @@
+name: build
+channels:
+- conda-forge
+- bioconda
+dependencies:
+# build
+- cmake
+- make
+- ccache
+# host
+- python
+- cython
+- swig
+- fftw
+- numpy
+- ocl-icd-system
+- doxygen 1.8.14
+# test
+- pytest
+- pytest-xdist
+- pytest-timeout
+- gromacs 2018.*

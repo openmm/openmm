@@ -8,7 +8,7 @@ PyObject *copyVVec3ToList(std::vector<Vec3> vVec3) {
 
   n=vVec3.size(); 
   pyList=PyList_New(n);
-  PyObject* mm = PyImport_AddModule("simtk.openmm");
+  PyObject* mm = PyImport_AddModule("openmm");
   PyObject* vec3 = PyObject_GetAttrString(mm, "Vec3");
   for (i=0; i<n; i++) {
     OpenMM::Vec3& v = vVec3.at(i);

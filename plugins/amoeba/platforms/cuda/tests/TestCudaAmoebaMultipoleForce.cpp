@@ -35,6 +35,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
+#include "openmm/CustomBondForce.h"
 #include "OpenMMAmoeba.h"
 #include "openmm/System.h"
 #include "openmm/AmoebaMultipoleForce.h"
@@ -551,17 +552,17 @@ static void setupAndGetForcesEnergyMultipoleWater(AmoebaMultipoleForce::Nonbonde
  
     // 1-2 bonds needed
 
-    AmoebaBondForce* amoebaBondForce  = new AmoebaBondForce();
+    CustomBondForce* amoebaBondForce  = new CustomBondForce("k*(d^2 - 25.5*d^3 + 379.3125*d^4); d=r-r0");
+    amoebaBondForce->addPerBondParameter("r0");
+    amoebaBondForce->addPerBondParameter("k");
 
     // addBond: particle1, particle2, length, quadraticK
 
     for (unsigned int jj = 0; jj < numberOfParticles; jj += 3) {
-        amoebaBondForce->addBond(jj, jj+1,   0.0000000e+00,   0.0000000e+00);
-        amoebaBondForce->addBond(jj, jj+2,   0.0000000e+00,   0.0000000e+00);
+        amoebaBondForce->addBond(jj, jj+1,   {0.0000000e+00,   0.0000000e+00});
+        amoebaBondForce->addBond(jj, jj+2,   {0.0000000e+00,   0.0000000e+00});
     }
 
-    amoebaBondForce->setAmoebaGlobalBondCubic(-2.5500000e+01); 
-    amoebaBondForce->setAmoebaGlobalBondQuartic(3.7931250e+02); 
     system.addForce(amoebaBondForce);
 
     std::vector<Vec3> positions(numberOfParticles);
@@ -776,17 +777,17 @@ static void testQuadrupoleValidation() {
     
     } 
 */ 
-    AmoebaBondForce* amoebaBondForce  = new AmoebaBondForce();
+    CustomBondForce* amoebaBondForce  = new CustomBondForce("k*(d^2 - 25.5*d^3 + 379.3125*d^4); d=r-r0");
+    amoebaBondForce->addPerBondParameter("r0");
+    amoebaBondForce->addPerBondParameter("k");
 
     // addBond: particle1, particle2, length, quadraticK
 
     for (unsigned int jj = 0; jj < numberOfParticles; jj += 3) {
-        amoebaBondForce->addBond(jj, jj+1,   0.0000000e+00,   0.0000000e+00);
-        amoebaBondForce->addBond(jj, jj+2,   0.0000000e+00,   0.0000000e+00);
+        amoebaBondForce->addBond(jj, jj+1,   {0.0000000e+00,   0.0000000e+00});
+        amoebaBondForce->addBond(jj, jj+2,   {0.0000000e+00,   0.0000000e+00});
     }
 
-    amoebaBondForce->setAmoebaGlobalBondCubic(-2.5500000e+01); 
-    amoebaBondForce->setAmoebaGlobalBondQuartic(3.7931250e+02); 
     system.addForce(amoebaBondForce);
 
     std::vector<Vec3> positions(numberOfParticles);
@@ -1029,17 +1030,17 @@ static void setupAndGetForcesEnergyMultipoleIonsAndWater(AmoebaMultipoleForce::N
  
     // 1-2 bonds needed
 
-    AmoebaBondForce* amoebaBondForce  = new AmoebaBondForce();
+    CustomBondForce* amoebaBondForce  = new CustomBondForce("k*(d^2 - 25.5*d^3 + 379.3125*d^4); d=r-r0");
+    amoebaBondForce->addPerBondParameter("r0");
+    amoebaBondForce->addPerBondParameter("k");
 
     // addBond: particle1, particle2, length, quadraticK
 
     for (unsigned int jj = 2; jj < numberOfParticles; jj += 3) {
-        amoebaBondForce->addBond(jj, jj+1,   0.0000000e+00,   0.0000000e+00);
-        amoebaBondForce->addBond(jj, jj+2,   0.0000000e+00,   0.0000000e+00);
+        amoebaBondForce->addBond(jj, jj+1,   {0.0000000e+00,   0.0000000e+00});
+        amoebaBondForce->addBond(jj, jj+2,   {0.0000000e+00,   0.0000000e+00});
     }
 
-    amoebaBondForce->setAmoebaGlobalBondCubic(-2.5500000e+01); 
-    amoebaBondForce->setAmoebaGlobalBondQuartic(3.7931250e+02); 
     system.addForce(amoebaBondForce);
 
     std::vector<Vec3> positions(numberOfParticles);
@@ -1261,17 +1262,17 @@ static void setupAndGetForcesEnergyMultipoleLargeWater(AmoebaMultipoleForce::Non
  
     // 1-2 bonds needed
 
-    AmoebaBondForce* amoebaBondForce  = new AmoebaBondForce();
+    CustomBondForce* amoebaBondForce  = new CustomBondForce("k*(d^2 - 25.5*d^3 + 379.3125*d^4); d=r-r0");
+    amoebaBondForce->addPerBondParameter("r0");
+    amoebaBondForce->addPerBondParameter("k");
 
     // addBond: particle1, particle2, length, quadraticK
 
     for (unsigned int jj = 0; jj < numberOfParticles; jj += 3) {
-        amoebaBondForce->addBond(jj, jj+1,   0.0000000e+00,   0.0000000e+00);
-        amoebaBondForce->addBond(jj, jj+2,   0.0000000e+00,   0.0000000e+00);
+        amoebaBondForce->addBond(jj, jj+1,   {0.0000000e+00,   0.0000000e+00});
+        amoebaBondForce->addBond(jj, jj+2,   {0.0000000e+00,   0.0000000e+00});
     }
 
-    amoebaBondForce->setAmoebaGlobalBondCubic(0.0); 
-    amoebaBondForce->setAmoebaGlobalBondQuartic(0.0); 
     system.addForce(amoebaBondForce);
 
     static std::vector<Vec3> positions; // Static to work around bug in Visual Studio that makes compilation very very slow.

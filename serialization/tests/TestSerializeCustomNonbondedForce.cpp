@@ -43,6 +43,7 @@ void testSerialization() {
 
     CustomNonbondedForce force("5*sin(x)^2+y*z");
     force.setForceGroup(3);
+    force.setName("custom name");
     force.setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
     force.setUseSwitchingFunction(true);
     force.setUseLongRangeCorrection(true);
@@ -81,6 +82,7 @@ void testSerialization() {
 
     CustomNonbondedForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getEnergyFunction(), force2.getEnergyFunction());
     ASSERT_EQUAL(force.getNonbondedMethod(), force2.getNonbondedMethod());
     ASSERT_EQUAL(force.getCutoffDistance(), force2.getCutoffDistance());

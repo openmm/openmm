@@ -158,7 +158,7 @@ void testWater() {
     // Compute the internal and center of mass temperatures.
 
     double ke = 0;
-    int numSteps = 4000;
+    int numSteps = 8000;
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
         ke += context.getState(State::Energy).getKineticEnergy();
@@ -281,8 +281,8 @@ void testInitialTemperature() {
     }
     double comTemperature = (2*comKineticEnergy / (nDoF*BOLTZ));
     double relTemperature = (2*relKineticEnergy / (nDoF*BOLTZ));
-    ASSERT_USUALLY_EQUAL_TOL(targetTemperature, comTemperature, 0.01);
-    ASSERT_USUALLY_EQUAL_TOL(drudeTemperature, relTemperature, 0.01);
+    ASSERT_USUALLY_EQUAL_TOL(targetTemperature, comTemperature, 0.02);
+    ASSERT_USUALLY_EQUAL_TOL(drudeTemperature, relTemperature, 0.02);
 }
 
 void setupKernels(int argc, char* argv[]);

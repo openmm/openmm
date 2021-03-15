@@ -1,5 +1,4 @@
-
-/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2021 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -40,13 +39,10 @@ class ReferenceCustomManyParticleIxn {
    private:
 
       class ParticleTermInfo;
-      class DistanceTermInfo;
-      class AngleTermInfo;
-      class DihedralTermInfo;
       int numParticlesPerSet, numPerParticleParameters, numTypes;
       bool useCutoff, usePeriodic, centralParticleMode;
       double cutoffDistance;
-      OpenMM::Vec3 periodicBoxVectors[3];
+      OpenMM::Vec3* periodicBoxVectors;
       Lepton::ExpressionProgram energyExpression;
       std::vector<std::vector<std::string> > particleParamNames;
       std::vector<std::set<int> > exclusions;
@@ -54,9 +50,6 @@ class ReferenceCustomManyParticleIxn {
       std::vector<int> orderIndex;
       std::vector<std::vector<int> > particleOrder;
       std::vector<ParticleTermInfo> particleTerms;
-      std::vector<DistanceTermInfo> distanceTerms;
-      std::vector<AngleTermInfo> angleTerms;
-      std::vector<DihedralTermInfo> dihedralTerms;
 
       void loopOverInteractions(std::vector<int>& particles, int loopIndex, std::vector<OpenMM::Vec3>& atomCoordinates,
                                 std::vector<std::vector<double> >& particleParameters, std::map<std::string, double>& variables,
@@ -148,44 +141,6 @@ public:
     Lepton::ExpressionProgram forceExpression;
     ParticleTermInfo(const std::string& name, int atom, int component, const Lepton::ExpressionProgram& forceExpression) :
             name(name), atom(atom), component(component), forceExpression(forceExpression) {
-    }
-};
-
-class ReferenceCustomManyParticleIxn::DistanceTermInfo {
-public:
-    std::string name;
-    int p1, p2;
-    Lepton::ExpressionProgram forceExpression;
-    mutable double delta[ReferenceForce::LastDeltaRIndex];
-    DistanceTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
-            name(name), p1(atoms[0]), p2(atoms[1]), forceExpression(forceExpression) {
-    }
-};
-
-class ReferenceCustomManyParticleIxn::AngleTermInfo {
-public:
-    std::string name;
-    int p1, p2, p3;
-    Lepton::ExpressionProgram forceExpression;
-    mutable double delta1[ReferenceForce::LastDeltaRIndex];
-    mutable double delta2[ReferenceForce::LastDeltaRIndex];
-    AngleTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
-            name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), forceExpression(forceExpression) {
-    }
-};
-
-class ReferenceCustomManyParticleIxn::DihedralTermInfo {
-public:
-    std::string name;
-    int p1, p2, p3, p4;
-    Lepton::ExpressionProgram forceExpression;
-    mutable double delta1[ReferenceForce::LastDeltaRIndex];
-    mutable double delta2[ReferenceForce::LastDeltaRIndex];
-    mutable double delta3[ReferenceForce::LastDeltaRIndex];
-    mutable double cross1[3];
-    mutable double cross2[3];
-    DihedralTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
-            name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), p4(atoms[3]), forceExpression(forceExpression) {
     }
 };
 

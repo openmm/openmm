@@ -1,9 +1,9 @@
 """
-Tests the functionality in the simtk.unit package.
+Tests the functionality in the openmm.unit package.
 """
 from __future__ import division
 
-from simtk import unit as u
+from openmm import unit as u
 import copy
 import math
 import unittest
@@ -672,7 +672,7 @@ class TestNumpyUnits(QuantityTestCase):
 
     def testNumpyIsString(self):
         """ Tests the internal _is_string method with numpy Quantities """
-        from simtk.unit.quantity import _is_string
+        from openmm.unit.quantity import _is_string
         a = np.array([[1, 2, 3], [4, 5, 6]])
         self.assertIsInstance("", str)
         self.assertTrue(_is_string(""))

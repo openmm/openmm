@@ -15,10 +15,8 @@ pipeline {
                     }
                     steps {
                         sh "git clean -fxd && git checkout ."
-                        withEnv(["OPENMM_CUDA_COMPILER=/usr/local/cuda/bin/nvcc"]) {
-                            sh "devtools/ci/jenkins/install.sh"
-                            sh "devtools/ci/jenkins/test.sh -R 'TestCuda' --parallel 2"
-                        }
+                        sh "devtools/ci/jenkins/install.sh"
+                        sh "devtools/ci/jenkins/test.sh -R 'TestCuda' --parallel 2"
                     }
                 }
 

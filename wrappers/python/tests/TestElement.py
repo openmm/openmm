@@ -1,7 +1,7 @@
 import pickle
 import random
-from simtk.unit import dalton, is_quantity
-from simtk.openmm.app import element
+from openmm.unit import dalton, is_quantity
+from openmm.app import element
 import unittest
 
 class TestElement(unittest.TestCase):

@@ -46,6 +46,7 @@ void testSerialization() {
 
     AmoebaWcaDispersionForce force1;
     force1.setForceGroup(3);
+    force1.setName("custom name");
     force1.setEpso(   1.0);
     force1.setEpsh(   1.1);
     force1.setRmino(  1.2);
@@ -70,6 +71,7 @@ void testSerialization() {
     AmoebaWcaDispersionForce& force2 = *copy;
 
     ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force1.getName(), force2.getName());
     ASSERT_EQUAL(force1.getEpso(),    force2.getEpso());
     ASSERT_EQUAL(force1.getEpsh(),    force2.getEpsh());
     ASSERT_EQUAL(force1.getRmino(),   force2.getRmino());

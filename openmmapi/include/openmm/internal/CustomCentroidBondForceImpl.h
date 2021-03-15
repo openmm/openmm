@@ -67,21 +67,14 @@ public:
     std::vector<std::pair<int, int> > getBondedParticles() const;
     void updateParametersInContext(ContextImpl& context);
     /**
-     * This is a utility routine that parses the energy expression, identifies the angles and dihedrals
-     * in it, and replaces them with variables.
+     * This is a utility routine that parses the energy expression, identifies group based functions,
+     * and replaces them with equivalent point based ones.
      *
      * @param force     the CustomCentroidBondForce to process
      * @param functions definitions of custom function that may appear in the expression
-     * @param distances on exit, this will contain an entry for each distance used in the expression.  The key is the name
-     *                  of the corresponding variable, and the value is the list of particle indices.
-     * @param angles    on exit, this will contain an entry for each angle used in the expression.  The key is the name
-     *                  of the corresponding variable, and the value is the list of particle indices.
-     * @param dihedrals on exit, this will contain an entry for each dihedral used in the expression.  The key is the name
-     *                  of the corresponding variable, and the value is the list of particle indices.
      * @return a Parsed expression for the energy
      */
-    static Lepton::ParsedExpression prepareExpression(const CustomCentroidBondForce& force, const std::map<std::string, Lepton::CustomFunction*>& functions, std::map<std::string, std::vector<int> >& distances,
-            std::map<std::string, std::vector<int> >& angles, std::map<std::string, std::vector<int> >& dihedrals);
+    static Lepton::ParsedExpression prepareExpression(const CustomCentroidBondForce& force, const std::map<std::string, Lepton::CustomFunction*>& functions);
     /**
      * Compute the normalized weights to use for each particle in each group.
      *
@@ -92,9 +85,8 @@ public:
     static void computeNormalizedWeights(const CustomCentroidBondForce& force, const System& system, std::vector<std::vector<double> >& weights);
 private:
     class FunctionPlaceholder;
-    static Lepton::ExpressionTreeNode replaceFunctions(const Lepton::ExpressionTreeNode& node, std::map<std::string, int> atoms,
-            std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles,
-            std::map<std::string, std::vector<int> >& dihedrals, std::set<std::string>& variables);
+    static Lepton::ExpressionTreeNode replaceFunctions(const Lepton::ExpressionTreeNode& node, std::map<std::string, int> groups,
+            const std::map<std::string, Lepton::CustomFunction*>& functions, std::set<std::string>& variables);
     void addBondsBetweenGroups(int group1, int group2, std::vector<std::pair<int, int> >& bonds) const;
     const CustomCentroidBondForce& owner;
     Kernel kernel;

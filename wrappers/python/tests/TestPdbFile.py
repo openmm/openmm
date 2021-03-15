@@ -1,9 +1,9 @@
 import sys
 import unittest
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
-import simtk.openmm.app.element as elem
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
+import openmm.app.element as elem
 if sys.version_info >= (3, 0):
     from io import StringIO
 else:

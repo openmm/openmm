@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -806,7 +806,6 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
 private:
-    class PeriodicDistanceFunction;
     int numParticles;
     ReferenceCustomExternalIxn* ixn;
     std::vector<int> particles;
@@ -814,16 +813,6 @@ private:
     Lepton::CompiledExpression energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ;
     std::vector<std::string> parameterNames, globalParameterNames;
     Vec3* boxVectors;
-};
-
-class ReferenceCalcCustomExternalForceKernel::PeriodicDistanceFunction : public Lepton::CustomFunction {
-public:
-    Vec3** boxVectorHandle;
-    PeriodicDistanceFunction(Vec3** boxVectorHandle);
-    int getNumArguments() const;
-    double evaluate(const double* arguments) const;
-    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
-    Lepton::CustomFunction* clone() const;
 };
 
 /**
@@ -904,6 +893,7 @@ private:
     ReferenceCustomCentroidBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
     bool usePeriodic;
+    Vec3* boxVectors;
 };
 
 /**
@@ -943,6 +933,7 @@ private:
     ReferenceCustomCompoundBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
     bool usePeriodic;
+    Vec3* boxVectors;
 };
 
 /**

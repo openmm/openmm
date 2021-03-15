@@ -43,6 +43,7 @@ void testSerialization() {
 
     AndersenThermostat force(250.0, 0.2);
     force.setForceGroup(3);
+    force.setName("custom name");
     force.setRandomNumberSeed(3);
 
     // Serialize and then deserialize it.
@@ -55,6 +56,7 @@ void testSerialization() {
 
     AndersenThermostat& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getDefaultTemperature(), force2.getDefaultTemperature());
     ASSERT_EQUAL(force.getDefaultCollisionFrequency(), force2.getDefaultCollisionFrequency());
     ASSERT_EQUAL(force.getRandomNumberSeed(), force2.getRandomNumberSeed());

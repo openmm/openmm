@@ -45,6 +45,7 @@ void CustomCVForceProxy::serialize(const void* object, SerializationNode& node) 
     node.setIntProperty("version", 0);
     const CustomCVForce& force = *reinterpret_cast<const CustomCVForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& globalParams = node.createChildNode("GlobalParameters");
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -56,8 +57,8 @@ void CustomCVForceProxy::serialize(const void* object, SerializationNode& node) 
     }
     SerializationNode& cvs = node.createChildNode("CollectiveVariables");
     for (int i = 0; i < force.getNumCollectiveVariables(); i++) {
-        SerializationNode& node = cvs.createChildNode("CollectiveVariable").setStringProperty("name", force.getCollectiveVariableName(i));
-        node.createChildNode("Force", &force.getCollectiveVariable(i));
+        SerializationNode& cv = cvs.createChildNode("CollectiveVariable").setStringProperty("name", force.getCollectiveVariableName(i));
+        cv.createChildNode("Force", &force.getCollectiveVariable(i));
     }
     SerializationNode& functions = node.createChildNode("Functions");
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
@@ -72,6 +73,7 @@ void* CustomCVForceProxy::deserialize(const SerializationNode& node) const {
     try {
         CustomCVForce* force = new CustomCVForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
         for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));

@@ -43,6 +43,7 @@ void testSerialization() {
 
     MonteCarloAnisotropicBarostat force(Vec3(15.1, 18.2, 19.3), 250.0, true, false, true, 14);
     force.setForceGroup(3);
+    force.setName("custom name");
     force.setRandomNumberSeed(3);
 
     // Serialize and then deserialize it.
@@ -55,6 +56,7 @@ void testSerialization() {
 
     MonteCarloAnisotropicBarostat& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL_VEC(force.getDefaultPressure(), force2.getDefaultPressure(), 0.0);
     ASSERT_EQUAL(force.getDefaultTemperature(), force2.getDefaultTemperature());
     ASSERT_EQUAL(force.getScaleX(), force2.getScaleX());

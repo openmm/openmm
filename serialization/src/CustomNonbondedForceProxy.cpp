@@ -45,6 +45,7 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
     node.setIntProperty("version", 2);
     const CustomNonbondedForce& force = *reinterpret_cast<const CustomNonbondedForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setStringProperty("energy", force.getEnergyFunction());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
@@ -67,12 +68,12 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
     for (int i = 0; i < force.getNumParticles(); i++) {
         vector<double> params;
         force.getParticleParameters(i, params);
-        SerializationNode& node = particles.createChildNode("Particle");
+        SerializationNode& particle = particles.createChildNode("Particle");
         for (int j = 0; j < (int) params.size(); j++) {
             stringstream key;
             key << "param";
             key << j+1;
-            node.setDoubleProperty(key.str(), params[j]);
+            particle.setDoubleProperty(key.str(), params[j]);
         }
     }
     SerializationNode& exclusions = node.createChildNode("Exclusions");
@@ -108,6 +109,7 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
     try {
         CustomNonbondedForce* force = new CustomNonbondedForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setNonbondedMethod((CustomNonbondedForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction", false));

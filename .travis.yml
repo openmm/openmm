@@ -212,7 +212,7 @@ script:
       else
           make PythonInstall;
       fi;
-      python -m simtk.testInstallation;
+      python -m openmm.testInstallation;
       (cd python/tests && py.test -v);
     fi
 

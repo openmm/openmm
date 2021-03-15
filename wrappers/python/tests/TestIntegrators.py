@@ -2,9 +2,9 @@ import unittest
 import warnings
 import tempfile
 from datetime import datetime, timedelta
-from simtk.openmm import *
-from simtk.openmm.app import *
-from simtk.unit import *
+from openmm import *
+from openmm.app import *
+from openmm.unit import *
 import math, random
 
 class TestIntegrators(unittest.TestCase):

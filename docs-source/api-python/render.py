@@ -8,8 +8,8 @@ from glob import glob
 import inspect
 
 import jinja2
-import simtk.openmm
-import simtk.openmm.app
+import openmm
+import openmm.app
 
 
 
@@ -21,7 +21,7 @@ def library_template_variables():
     """Create the data structure available to the Jinja2 renderer when
     filling in the templates.
 
-    This function extracts all of classes in ``simtk.openmm.openmm`` and returns
+    This function extracts all of classes in ``openmm.openmm`` and returns
     a dictionary with them grouped into three lists, the integrators, the forces,
     and the remainder (library_extras).
 
@@ -35,31 +35,31 @@ def library_template_variables():
         'units': [],
     }
 
-    mm_klasses = inspect.getmembers(simtk.openmm, predicate=inspect.isclass)
+    mm_klasses = inspect.getmembers(openmm, predicate=inspect.isclass)
 
 
     # gather all Force subclasses
     for name, klass in mm_klasses:
-        if issubclass(klass, simtk.openmm.openmm.Force):
+        if issubclass(klass, openmm.openmm.Force):
             data['forces'].append(fullname(klass))
 
     # gather all Integrator subclasses
     for _, klass in mm_klasses:
-        if issubclass(klass, simtk.openmm.openmm.Integrator):
+        if issubclass(klass, openmm.openmm.Integrator):
             data['integrators'].append(fullname(klass))
 
-    # gather all extra subclasses in simtk.openmm.openmm
+    # gather all extra subclasses in openmm.openmm
 
     # core classes that are already included in library.rst.jinja2
-    exclude = ['simtk.openmm.openmm.Platform', 'simtk.openmm.openmm.Context',
-              'simtk.openmm.openmm.System', 'simtk.openmm.openmm.State']
+    exclude = ['openmm.openmm.Platform', 'openmm.openmm.Context',
+              'openmm.openmm.System', 'openmm.openmm.State']
     exclude.extend(data['forces'])
     exclude.extend(data['integrators'])
 
     # these classes are useless and not worth documenting.
     exclude.extend([
-        'simtk.openmm.openmm.SwigPyIterator',
-        'simtk.openmm.openmm.OpenMMException'])
+        'openmm.openmm.SwigPyIterator',
+        'openmm.openmm.OpenMMException'])
 
     for _, klass in mm_klasses:
         full = fullname(klass)
@@ -67,7 +67,7 @@ def library_template_variables():
             data['library_extras'].append(full)
 
     # gather units related classes
-    unit_klasses = inspect.getmembers(simtk.unit, predicate=inspect.isclass)
+    unit_klasses = inspect.getmembers(openmm.unit, predicate=inspect.isclass)
     for name, klass in unit_klasses:
         data['units'].append(fullname(klass))
 
@@ -78,7 +78,7 @@ def app_template_variables():
     """Create the data structure available to the Jinja2 renderer when
     filling in the templates.
 
-    This function extracts all of classes in ``simtk.openmm.app`` and returns
+    This function extracts all of classes in ``openmm.app`` and returns
     a dictionary with them grouped into three lists, the reporters, the
     classes with the word "File" in the name, and the remainder.
 
@@ -90,7 +90,7 @@ def app_template_variables():
         'fileclasses': [],
         'app_extras': [],
     }
-    app_klasses = inspect.getmembers(simtk.openmm.app, predicate=inspect.isclass)
+    app_klasses = inspect.getmembers(openmm.app, predicate=inspect.isclass)
 
     # gather all Reporters
     for name, klass in app_klasses:
@@ -102,14 +102,14 @@ def app_template_variables():
         if 'File' in name or 'CharmmParameterSet' in name:
             data['fileclasses'].append(fullname(klass))
 
-    # gather all extra subclasses in simtk.openmm.app
-    exclude = ['simtk.openmm.app.topology.Topology',
-               'simtk.openmm.app.topology.Chain',
-               'simtk.openmm.app.topology.Residue',
-               'simtk.openmm.app.topology.Atom',
-               'simtk.openmm.app.modeller.Modeller',
-               'simtk.openmm.app.forcefield.ForceField',
-               'simtk.openmm.app.simulation.Simulation']
+    # gather all extra subclasses in openmm.app
+    exclude = ['openmm.app.topology.Topology',
+               'openmm.app.topology.Chain',
+               'openmm.app.topology.Residue',
+               'openmm.app.topology.Atom',
+               'openmm.app.modeller.Modeller',
+               'openmm.app.forcefield.ForceField',
+               'openmm.app.simulation.Simulation']
     exclude.extend(data['reporters'])
     exclude.extend(data['fileclasses'])
 

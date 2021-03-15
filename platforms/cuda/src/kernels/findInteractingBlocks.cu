@@ -98,7 +98,7 @@ __device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, unsign
     int pairIndex = pairStartIndex + (indexInWarp > 0 ? prevSum : 0);
     for (int i = indexInWarp; i < length; i += 32) {
         int count = __popc(flags[i]);
-        if (count <= MAX_BITS_FOR_PAIRS && pairIndex+count < maxSinglePairs) {
+        if (count <= MAX_BITS_FOR_PAIRS && pairIndex+count <= maxSinglePairs) {
             int f = flags[i];
             while (f != 0) {
                 singlePairs[pairIndex] = make_int2(atoms[i], x*TILE_SIZE+__ffs(f)-1);
@@ -304,10 +304,10 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
                 int atomFlags = BALLOT(forceInclude || atomDelta.x*atomDelta.x+atomDelta.y*atomDelta.y+atomDelta.z*atomDelta.z < (PADDED_CUTOFF+blockCenterY.w)*(PADDED_CUTOFF+blockCenterY.w));
                 int interacts = 0;
                 if (atom2 < NUM_ATOMS && atomFlags != 0) {
-                    int first = __ffs(atomFlags)-1;
-                    int last = 32-__clz(atomFlags);
 #ifdef USE_PERIODIC
                     if (!singlePeriodicCopy) {
+                        int first = __ffs(atomFlags)-1;
+                        int last = 32-__clz(atomFlags);
                         for (int j = first; j < last; j++) {
                             real3 delta = trimTo3(pos2)-trimTo3(posBuffer[warpStart+j]);
                             APPLY_PERIODIC_TO_DELTA(delta)

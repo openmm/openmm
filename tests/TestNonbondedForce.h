@@ -536,7 +536,7 @@ void testLargeSystem() {
     ASSERT_EQUAL_TOL(state.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 }
 
-void testHugeSystem() {
+void testHugeSystem(double tol=1e-5) {
     // Create a system with over 3 million particles.
     
     const int gridSize = 150;
@@ -590,7 +590,7 @@ void testHugeSystem() {
     State state2 = context.getState(State::Energy);
     context.setPositions(positions3);
     State state3 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state3.getPotentialEnergy()+norm*delta, 1e-5)
+    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state3.getPotentialEnergy()+norm*delta, tol)
 }
 
 void testDispersionCorrection() {
