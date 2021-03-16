@@ -572,10 +572,13 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     if (!options.empty())
         src << "// Compilation Options: " << options << endl << endl;
     for (auto& pair : compilationDefines) {
-        src << "#define " << pair.first;
-        if (!pair.second.empty())
-            src << " " << pair.second;
-        src << endl;
+        // Query defines to avoid duplicate variables
+        if (defines.find(pair.first) == defines.end()) {
+            src << "#define " << pair.first;
+            if (!pair.second.empty())
+                src << " " << pair.second;
+            src << endl;
+        }
     }
     if (!compilationDefines.empty())
         src << endl;
