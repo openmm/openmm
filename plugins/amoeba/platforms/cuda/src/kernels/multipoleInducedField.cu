@@ -548,53 +548,6 @@ extern "C" __global__ void computeInducedField(
     }
 }
 
-extern "C" __global__ void updateInducedFieldBySOR(const long long* __restrict__ fixedField, const long long* __restrict__ fixedFieldPolar,
-        const long long* __restrict__ fixedFieldS, const long long* __restrict__ inducedField, const long long* __restrict__ inducedFieldPolar,
-        real* __restrict__ inducedDipole, real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability, float2* __restrict__ errors) {
-    extern __shared__ real2 buffer[];
-    const float polarSOR = 0.55f;
-#ifdef USE_EWALD
-    const real ewaldScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
-#else
-    const real ewaldScale = 0;
-#endif
-    const real fieldScale = 1/(real) 0x100000000;
-    real sumErrors = 0;
-    real sumPolarErrors = 0;
-    for (int atom = blockIdx.x*blockDim.x + threadIdx.x; atom < NUM_ATOMS; atom += blockDim.x*gridDim.x) {
-        real scale = polarizability[atom];
-        for (int component = 0; component < 3; component++) {
-            int dipoleIndex = 3*atom+component;
-            int fieldIndex = atom+component*PADDED_NUM_ATOMS;
-            real previousDipole = inducedDipole[dipoleIndex];
-            real previousDipolePolar = inducedDipolePolar[dipoleIndex];
-            long long fixedS = (fixedFieldS == NULL ? (long long) 0 : fixedFieldS[fieldIndex]);
-            real newDipole = scale*((fixedField[fieldIndex]+fixedS+inducedField[fieldIndex])*fieldScale+ewaldScale*previousDipole);
-            real newDipolePolar = scale*((fixedFieldPolar[fieldIndex]+fixedS+inducedFieldPolar[fieldIndex])*fieldScale+ewaldScale*previousDipolePolar);
-            newDipole = previousDipole + polarSOR*(newDipole-previousDipole);
-            newDipolePolar = previousDipolePolar + polarSOR*(newDipolePolar-previousDipolePolar);
-            inducedDipole[dipoleIndex] = newDipole;
-            inducedDipolePolar[dipoleIndex] = newDipolePolar;
-            sumErrors += (newDipole-previousDipole)*(newDipole-previousDipole);
-            sumPolarErrors += (newDipolePolar-previousDipolePolar)*(newDipolePolar-previousDipolePolar);
-        }
-    }
-    
-    // Sum the errors over threads and store the total for this block.
-    
-    buffer[threadIdx.x] = make_real2(sumErrors, sumPolarErrors);
-    __syncthreads();
-    for (int offset = 1; offset < blockDim.x; offset *= 2) {
-        if (threadIdx.x+offset < blockDim.x && (threadIdx.x&(2*offset-1)) == 0) {
-            buffer[threadIdx.x].x += buffer[threadIdx.x+offset].x;
-            buffer[threadIdx.x].y += buffer[threadIdx.x+offset].y;
-        }
-        __syncthreads();
-    }
-    if (threadIdx.x == 0)
-        errors[blockIdx.x] = make_float2((float) buffer[0].x, (float) buffer[0].y);
-}
-
 extern "C" __global__ void recordInducedDipolesForDIIS(const long long* __restrict__ fixedField, const long long* __restrict__ fixedFieldPolar,
         const long long* __restrict__ fixedFieldS, const long long* __restrict__ inducedField, const long long* __restrict__ inducedFieldPolar,
         const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability, float2* __restrict__ errors,

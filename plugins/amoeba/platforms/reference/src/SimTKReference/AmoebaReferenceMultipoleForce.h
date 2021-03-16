@@ -750,7 +750,6 @@ protected:
     std::vector<double>  _extPartCoefficients;
     double  _mutualInducedDipoleEpsilon;
     double  _mutualInducedDipoleTargetEpsilon;
-    double  _polarSOR;
     double  _debye;
 
     /**
@@ -1027,14 +1026,6 @@ protected:
      * @param particleData              vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
      */
-    void convergeInduceDipolesBySOR(const std::vector<MultipoleParticleData>& particleData,
-                                    std::vector<UpdateInducedDipoleFieldStruct>& calculateInducedDipoleField);
-    /**
-     * Converge induced dipoles.
-     * 
-     * @param particleData              vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
-     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
-     */
     void convergeInduceDipolesByDIIS(const std::vector<MultipoleParticleData>& particleData,
                                      std::vector<UpdateInducedDipoleFieldStruct>& calculateInducedDipoleField);
     
@@ -1045,28 +1036,6 @@ protected:
      * @param coefficients  the coefficients will be stored into this
      */
     void computeDIISCoefficients(const std::vector<std::vector<Vec3> >& prevErrors, std::vector<double>& coefficients) const;
-
-    /**
-     * Update fields due to induced dipoles for each particle.
-     * 
-     * @param particleData              vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
-     * @param updateInducedDipoleFields vector of UpdateInducedDipoleFieldStruct containing input induced dipoles and output fields
-     */
-    double updateInducedDipoleFields(const std::vector<MultipoleParticleData>& particleData,
-                                     std::vector<UpdateInducedDipoleFieldStruct>& calculateInducedDipoleField);
-
-    /**
-     * Update induced dipole for a particle given updated induced dipole field at the site.
-     * 
-     * @param particleI                 positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
-     * @param fixedMultipoleField       fields due fixed multipoles at each site
-     * @param inducedDipoleField        fields due induced dipoles at each site
-     * @param inducedDipoles            output vector of updated induced dipoles
-     */
-    double updateInducedDipole(const std::vector<MultipoleParticleData>& particleI,
-                               const std::vector<Vec3>& fixedMultipoleField,
-                               const std::vector<Vec3>& inducedDipoleField,
-                               std::vector<Vec3>& inducedDipoles);
 
     /**
      * Calculate induced dipoles.
