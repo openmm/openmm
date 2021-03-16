@@ -76,7 +76,7 @@ Alternatively you can request a version that is compiled for a specific CUDA
 version with the command
 ::
 
-    conda install -c conda-forge openmm cudatoolkit==10.0
+    conda install -c conda-forge openmm cudatoolkit=10.0
 
 where :code:`10.0` should be replaced with the particular CUDA version
 you want to target.  We build packages for CUDA 9.2 and above on Linux,
