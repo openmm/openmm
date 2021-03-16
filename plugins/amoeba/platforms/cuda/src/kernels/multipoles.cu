@@ -1,5 +1,5 @@
 extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4* __restrict__ multipoleParticles, float* __restrict__ molecularDipoles,
-        float* __restrict__ molecularQuadrupoles, real* __restrict__ labFrameDipoles, real* __restrict__ labFrameQuadrupoles,
+        float* __restrict__ molecularQuadrupoles, real3* __restrict__ labFrameDipoles, real* __restrict__ labFrameQuadrupoles,
         real* __restrict__ sphericalDipoles, real* __restrict__ sphericalQuadrupoles) {
     for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += gridDim.x*blockDim.x) {
         // Load the spherical multipoles.
@@ -176,9 +176,9 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
             molDipole[2] = molecularDipoles[offset+2];
             if (reverse)
                 molDipole[1] *= -1;
-            labFrameDipoles[offset] = molDipole[0]*vectorX.x + molDipole[1]*vectorY.x + molDipole[2]*vectorZ.x;
-            labFrameDipoles[offset+1] = molDipole[0]*vectorX.y + molDipole[1]*vectorY.y + molDipole[2]*vectorZ.y;
-            labFrameDipoles[offset+2] = molDipole[0]*vectorX.z + molDipole[1]*vectorY.z + molDipole[2]*vectorZ.z;
+            labFrameDipoles[atom] = make_real3(molDipole[0]*vectorX.x + molDipole[1]*vectorY.x + molDipole[2]*vectorZ.x,
+                                               molDipole[0]*vectorX.y + molDipole[1]*vectorY.y + molDipole[2]*vectorZ.y,
+                                               molDipole[0]*vectorX.z + molDipole[1]*vectorY.z + molDipole[2]*vectorZ.z);
             
             // ---------------------------------------------------------------------------------------
             
@@ -275,9 +275,7 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
             sphericalQuadrupoles[offset+4] = rotatedQuadrupole[4];
         }
         else {
-            labFrameDipoles[3*atom] = molecularDipoles[3*atom];
-            labFrameDipoles[3*atom+1] = molecularDipoles[3*atom+1];
-            labFrameDipoles[3*atom+2] = molecularDipoles[3*atom+2];
+            labFrameDipoles[atom] = make_real3(molecularDipoles[3*atom], molecularDipoles[3*atom+1], molecularDipoles[3*atom+2]);
             labFrameQuadrupoles[5*atom] = molecularQuadrupoles[5*atom];
             labFrameQuadrupoles[5*atom+1] = molecularQuadrupoles[5*atom+1];
             labFrameQuadrupoles[5*atom+2] = molecularQuadrupoles[5*atom+2];
@@ -289,24 +287,24 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
 
 extern "C" __global__ void recordInducedDipoles(const long long* __restrict__ fieldBuffers, const long long* __restrict__ fieldPolarBuffers,
 #ifdef USE_GK
-        const long long* __restrict__ gkFieldBuffers, real* __restrict__ inducedDipoleS, real* __restrict__ inducedDipolePolarS, 
+        const long long* __restrict__ gkFieldBuffers, real3* __restrict__ inducedDipoleS, real3* __restrict__ inducedDipolePolarS, 
 #endif
-        real* __restrict__ inducedDipole, real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability) {
+        real3* __restrict__ inducedDipole, real3* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability) {
     for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += gridDim.x*blockDim.x) {
         real scale = polarizability[atom]/(real) 0x100000000;
-        inducedDipole[3*atom] = scale*fieldBuffers[atom];
-        inducedDipole[3*atom+1] = scale*fieldBuffers[atom+PADDED_NUM_ATOMS];
-        inducedDipole[3*atom+2] = scale*fieldBuffers[atom+PADDED_NUM_ATOMS*2];
-        inducedDipolePolar[3*atom] = scale*fieldPolarBuffers[atom];
-        inducedDipolePolar[3*atom+1] = scale*fieldPolarBuffers[atom+PADDED_NUM_ATOMS];
-        inducedDipolePolar[3*atom+2] = scale*fieldPolarBuffers[atom+PADDED_NUM_ATOMS*2];
+        inducedDipole[atom].x = scale*fieldBuffers[atom];
+        inducedDipole[atom].y = scale*fieldBuffers[atom+PADDED_NUM_ATOMS];
+        inducedDipole[atom].z = scale*fieldBuffers[atom+PADDED_NUM_ATOMS*2];
+        inducedDipolePolar[atom].x = scale*fieldPolarBuffers[atom];
+        inducedDipolePolar[atom].y = scale*fieldPolarBuffers[atom+PADDED_NUM_ATOMS];
+        inducedDipolePolar[atom].z = scale*fieldPolarBuffers[atom+PADDED_NUM_ATOMS*2];
 #ifdef USE_GK
-        inducedDipoleS[3*atom] = scale*(fieldBuffers[atom]+gkFieldBuffers[atom]);
-        inducedDipoleS[3*atom+1] = scale*(fieldBuffers[atom+PADDED_NUM_ATOMS]+gkFieldBuffers[atom+PADDED_NUM_ATOMS]);
-        inducedDipoleS[3*atom+2] = scale*(fieldBuffers[atom+PADDED_NUM_ATOMS*2]+gkFieldBuffers[atom+PADDED_NUM_ATOMS*2]);
-        inducedDipolePolarS[3*atom] = scale*(fieldPolarBuffers[atom]+gkFieldBuffers[atom]);
-        inducedDipolePolarS[3*atom+1] = scale*(fieldPolarBuffers[atom+PADDED_NUM_ATOMS]+gkFieldBuffers[atom+PADDED_NUM_ATOMS]);
-        inducedDipolePolarS[3*atom+2] = scale*(fieldPolarBuffers[atom+PADDED_NUM_ATOMS*2]+gkFieldBuffers[atom+PADDED_NUM_ATOMS*2]);
+        inducedDipoleS[atom].x = scale*(fieldBuffers[atom]+gkFieldBuffers[atom]);
+        inducedDipoleS[atom].y = scale*(fieldBuffers[atom+PADDED_NUM_ATOMS]+gkFieldBuffers[atom+PADDED_NUM_ATOMS]);
+        inducedDipoleS[atom].z = scale*(fieldBuffers[atom+PADDED_NUM_ATOMS*2]+gkFieldBuffers[atom+PADDED_NUM_ATOMS*2]);
+        inducedDipolePolarS[atom].x = scale*(fieldPolarBuffers[atom]+gkFieldBuffers[atom]);
+        inducedDipolePolarS[atom].y = scale*(fieldPolarBuffers[atom+PADDED_NUM_ATOMS]+gkFieldBuffers[atom+PADDED_NUM_ATOMS]);
+        inducedDipolePolarS[atom].z = scale*(fieldPolarBuffers[atom+PADDED_NUM_ATOMS*2]+gkFieldBuffers[atom+PADDED_NUM_ATOMS*2]);
 #endif
     }
 }
@@ -532,7 +530,7 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
  * Compute the electrostatic potential at each of a set of points.
  */
 extern "C" __global__ void computePotentialAtPoints(const real4* __restrict__ posq, const real* __restrict__ labFrameDipole,
-        const real* __restrict__ labFrameQuadrupole, const real* __restrict__ inducedDipole, const real4* __restrict__ points,
+        const real* __restrict__ labFrameQuadrupole, const real3* __restrict__ inducedDipole, const real4* __restrict__ points,
         real* __restrict__ potential, int numPoints, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     extern __shared__ real4 localPosq[];
     real3* localDipole = (real3*) &localPosq[blockDim.x];
@@ -550,7 +548,7 @@ extern "C" __global__ void computePotentialAtPoints(const real4* __restrict__ po
             if (atom < NUM_ATOMS) {
                 localPosq[threadIdx.x] = posq[atom];
                 localDipole[threadIdx.x] = make_real3(labFrameDipole[3*atom], labFrameDipole[3*atom+1], labFrameDipole[3*atom+2]);
-                localInducedDipole[threadIdx.x] = make_real3(inducedDipole[3*atom], inducedDipole[3*atom+1], inducedDipole[3*atom+2]);
+                localInducedDipole[threadIdx.x] = inducedDipole[atom];
                 localQuadrupole[5*threadIdx.x] = labFrameQuadrupole[5*atom];
                 localQuadrupole[5*threadIdx.x+1] = labFrameQuadrupole[5*atom+1];
                 localQuadrupole[5*threadIdx.x+2] = labFrameQuadrupole[5*atom+2];

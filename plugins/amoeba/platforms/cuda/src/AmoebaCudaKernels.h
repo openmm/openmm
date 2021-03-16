@@ -161,11 +161,11 @@ private:
     bool iterateDipolesByDIIS(int iteration);
     void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
     void ensureMultipolesValid(ContextImpl& context);
-    template <class T, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
+    template <class T, class T3, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
     int numMultipoles, maxInducedIterations, maxExtrapolationOrder;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
-    double alpha, inducedEpsilon;
+    double pmeAlpha, inducedEpsilon;
     bool usePME, hasQuadrupoles, hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid, hasCreatedEvent;
     AmoebaMultipoleForce::PolarizationType polarizationType;
     CudaContext& cu;
@@ -173,10 +173,10 @@ private:
     std::vector<int3> covalentFlagValues;
     std::vector<int2> polarizationFlagValues;
     CudaArray multipoleParticles;
-    CudaArray molecularDipoles;
-    CudaArray molecularQuadrupoles;
-    CudaArray labFrameDipoles;
-    CudaArray labFrameQuadrupoles;
+    CudaArray localDipoles;
+    CudaArray localQuadrupoles;
+    CudaArray labDipoles;
+    CudaArray labQuadrupoles;
     CudaArray sphericalDipoles;
     CudaArray sphericalQuadrupoles;
     CudaArray fracDipoles;
