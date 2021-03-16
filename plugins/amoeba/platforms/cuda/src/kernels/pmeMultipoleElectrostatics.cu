@@ -10,7 +10,7 @@ typedef struct {
 } AtomData;
 
 inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __restrict__ posq, const real* __restrict__ sphericalDipole,
-            const real* __restrict__ sphericalQuadrupole, const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar,
+            const real* __restrict__ sphericalQuadrupole, const real3* __restrict__ inducedDipole, const real3* __restrict__ inducedDipolePolar,
             const float2* __restrict__ dampingAndThole) {
     real4 atomPosq = posq[atom];
     data.pos = make_real3(atomPosq.x, atomPosq.y, atomPosq.z);
@@ -25,12 +25,8 @@ inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __res
     data.sphericalQuadrupole[3] = sphericalQuadrupole[atom*5+3];
     data.sphericalQuadrupole[4] = sphericalQuadrupole[atom*5+4];
 #endif
-    data.inducedDipole.x = inducedDipole[atom*3];
-    data.inducedDipole.y = inducedDipole[atom*3+1];
-    data.inducedDipole.z = inducedDipole[atom*3+2];
-    data.inducedDipolePolar.x = inducedDipolePolar[atom*3];
-    data.inducedDipolePolar.y = inducedDipolePolar[atom*3+1];
-    data.inducedDipolePolar.z = inducedDipolePolar[atom*3+2];
+    data.inducedDipole = inducedDipole[atom];
+    data.inducedDipolePolar = inducedDipolePolar[atom];
     float2 temp = dampingAndThole[atom];
     data.damp = temp.x;
     data.thole = temp.y;
@@ -447,8 +443,8 @@ extern "C" __global__ void computeElectrostatics(
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
         const unsigned int* __restrict__ interactingAtoms,
 #endif
-        const real* __restrict__ sphericalDipole, const real* __restrict__ sphericalQuadrupole, const real* __restrict__ inducedDipole,
-        const real* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole) {
+        const real* __restrict__ sphericalDipole, const real* __restrict__ sphericalQuadrupole, const real3* __restrict__ inducedDipole,
+        const real3* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole) {
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);

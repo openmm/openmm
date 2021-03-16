@@ -18,31 +18,23 @@ typedef struct {
 } AtomData;
 
 #ifdef USE_GK
-inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __restrict__ posq, const real* __restrict__ inducedDipole,
-        const real* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole, const real* __restrict__ inducedDipoleS,
-        const real* __restrict__ inducedDipolePolarS, const real* __restrict__ bornRadii) {
+inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __restrict__ posq, const real3* __restrict__ inducedDipole,
+        const real3* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole, const real3* __restrict__ inducedDipoleS,
+        const real3* __restrict__ inducedDipolePolarS, const real* __restrict__ bornRadii) {
 #else
-inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __restrict__ posq, const real* __restrict__ inducedDipole,
-        const real* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole) {
+inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __restrict__ posq, const real3* __restrict__ inducedDipole,
+        const real3* __restrict__ inducedDipolePolar, const float2* __restrict__ dampingAndThole) {
 #endif
     real4 atomPosq = posq[atom];
     data.pos = make_real3(atomPosq.x, atomPosq.y, atomPosq.z);
-    data.inducedDipole.x = inducedDipole[atom*3];
-    data.inducedDipole.y = inducedDipole[atom*3+1];
-    data.inducedDipole.z = inducedDipole[atom*3+2];
-    data.inducedDipolePolar.x = inducedDipolePolar[atom*3];
-    data.inducedDipolePolar.y = inducedDipolePolar[atom*3+1];
-    data.inducedDipolePolar.z = inducedDipolePolar[atom*3+2];
+    data.inducedDipole = inducedDipole[atom];
+    data.inducedDipolePolar = inducedDipolePolar[atom];
     float2 temp = dampingAndThole[atom];
     data.damp = temp.x;
     data.thole = temp.y;
 #ifdef USE_GK
-    data.inducedDipoleS.x = inducedDipoleS[atom*3];
-    data.inducedDipoleS.y = inducedDipoleS[atom*3+1];
-    data.inducedDipoleS.z = inducedDipoleS[atom*3+2];
-    data.inducedDipolePolarS.x = inducedDipolePolarS[atom*3];
-    data.inducedDipolePolarS.y = inducedDipolePolarS[atom*3+1];
-    data.inducedDipolePolarS.z = inducedDipolePolarS[atom*3+2];
+    data.inducedDipoleS = inducedDipoleS[atom];
+    data.inducedDipolePolarS = inducedDipolePolarS[atom];
     data.bornRadius = bornRadii[atom];
 #endif
 }
@@ -358,7 +350,7 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
  */
 extern "C" __global__ void computeInducedField(
         unsigned long long* __restrict__ field, unsigned long long* __restrict__ fieldPolar, const real4* __restrict__ posq, const int2* __restrict__ exclusionTiles, 
-        const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, unsigned int startTileIndex, unsigned int numTileIndices,
+        const real3* __restrict__ inducedDipole, const real3* __restrict__ inducedDipolePolar, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef EXTRAPOLATED_POLARIZATION
         unsigned long long* __restrict__ fieldGradient, unsigned long long* __restrict__ fieldGradientPolar,
 #endif
@@ -366,8 +358,8 @@ extern "C" __global__ void computeInducedField(
         const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
 #elif defined USE_GK
-        unsigned long long* __restrict__ fieldS, unsigned long long* __restrict__ fieldPolarS, const real* __restrict__ inducedDipoleS,
-        const real* __restrict__ inducedDipolePolarS, const real* __restrict__ bornRadii,
+        unsigned long long* __restrict__ fieldS, unsigned long long* __restrict__ fieldPolarS, const real3* __restrict__ inducedDipoleS,
+        const real3* __restrict__ inducedDipolePolarS, const real* __restrict__ bornRadii,
     #ifdef EXTRAPOLATED_POLARIZATION
         unsigned long long* __restrict__ fieldGradientS, unsigned long long* __restrict__ fieldGradientPolarS,
     #endif
