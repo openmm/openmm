@@ -786,7 +786,7 @@ class CharmmPsfFile(object):
 
         # Add the periodic box if there is one
         if self.box_vectors is not None:
-            topology.setUnitCellDimensions(self.boxLengths)
+            topology.setPeriodicBoxVectors(self.box_vectors)
 
         return topology
 
