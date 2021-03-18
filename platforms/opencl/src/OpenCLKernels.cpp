@@ -27,24 +27,14 @@
 #include "OpenCLKernels.h"
 #include "OpenCLForceInfo.h"
 #include "openmm/Context.h"
-#include "openmm/internal/AndersenThermostatImpl.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/CustomCompoundBondForceImpl.h"
-#include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
-#include "openmm/internal/OSRngSeed.h"
 #include "CommonKernelSources.h"
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLExpressionUtilities.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLKernelSources.h"
-#include "lepton/CustomFunction.h"
-#include "lepton/ExpressionTreeNode.h"
-#include "lepton/Operation.h"
-#include "lepton/Parser.h"
-#include "lepton/ParsedExpression.h"
-#include "ReferenceTabulatedFunction.h"
 #include "SimTKOpenMMRealType.h"
 #include "SimTKOpenMMUtilities.h"
 #include <algorithm>
@@ -55,14 +45,6 @@
 
 using namespace OpenMM;
 using namespace std;
-using namespace Lepton;
-
-static void setPosqCorrectionArg(OpenCLContext& cl, cl::Kernel& kernel, int index) {
-    if (cl.getUseMixedPrecision())
-        kernel.setArg<cl::Buffer>(index, cl.getPosqCorrection().getDeviceBuffer());
-    else
-        kernel.setArg(index, sizeof(void*), NULL);
-}
 
 static void setPeriodicBoxSizeArg(OpenCLContext& cl, cl::Kernel& kernel, int index) {
     if (cl.getUseDoublePrecision())
@@ -85,40 +67,6 @@ static void setPeriodicBoxArgs(OpenCLContext& cl, cl::Kernel& kernel, int index)
         kernel.setArg<mm_float4>(index++, cl.getPeriodicBoxVecX());
         kernel.setArg<mm_float4>(index++, cl.getPeriodicBoxVecY());
         kernel.setArg<mm_float4>(index, cl.getPeriodicBoxVecZ());
-    }
-}
-
-static bool isZeroExpression(const Lepton::ParsedExpression& expression) {
-    const Lepton::Operation& op = expression.getRootNode().getOperation();
-    if (op.getId() != Lepton::Operation::CONSTANT)
-        return false;
-    return (dynamic_cast<const Lepton::Operation::Constant&>(op).getValue() == 0.0);
-}
-
-static bool usesVariable(const Lepton::ExpressionTreeNode& node, const string& variable) {
-    const Lepton::Operation& op = node.getOperation();
-    if (op.getId() == Lepton::Operation::VARIABLE && op.getName() == variable)
-        return true;
-    for (auto& child : node.getChildren())
-        if (usesVariable(child, variable))
-            return true;
-    return false;
-}
-
-static bool usesVariable(const Lepton::ParsedExpression& expression, const string& variable) {
-    return usesVariable(expression.getRootNode(), variable);
-}
-
-static pair<ExpressionTreeNode, string> makeVariable(const string& name, const string& value) {
-    return make_pair(ExpressionTreeNode(new Operation::Variable(name)), value);
-}
-
-static void replaceFunctionsInExpression(map<string, CustomFunction*>& functions, ExpressionProgram& expression) {
-    for (int i = 0; i < expression.getNumOperations(); i++) {
-        if (expression.getOperation(i).getId() == Operation::CUSTOM) {
-            const Operation::Custom& op = dynamic_cast<const Operation::Custom&>(expression.getOperation(i));
-            expression.setOperation(i, new Operation::Custom(op.getName(), functions[op.getName()]->clone(), op.getDerivOrder()));
-        }
     }
 }
 
@@ -478,38 +426,6 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
     SimTKOpenMMUtilities::loadCheckpoint(stream);
     for (auto listener : cl.getReorderListeners())
         listener->execute();
-}
-
-void OpenCLApplyConstraintsKernel::initialize(const System& system) {
-}
-
-void OpenCLApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
-    if (!hasInitializedKernel) {
-        hasInitializedKernel = true;
-        map<string, string> defines;
-        defines["NUM_ATOMS"] = cl.intToString(cl.getNumAtoms());
-        cl::Program program = cl.createProgram(CommonKernelSources::constraints, defines);
-        applyDeltasKernel = cl::Kernel(program, "applyPositionDeltas");
-        applyDeltasKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
-        setPosqCorrectionArg(cl, applyDeltasKernel, 1);
-        applyDeltasKernel.setArg<cl::Buffer>(2, cl.getIntegrationUtilities().getPosDelta().getDeviceBuffer());
-    }
-    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
-    cl.clearBuffer(integration.getPosDelta());
-    integration.applyConstraints(tol);
-    cl.executeKernel(applyDeltasKernel, cl.getNumAtoms());
-    integration.computeVirtualSites();
-}
-
-void OpenCLApplyConstraintsKernel::applyToVelocities(ContextImpl& context, double tol) {
-    cl.getIntegrationUtilities().applyVelocityConstraints(tol);
-}
-
-void OpenCLVirtualSitesKernel::initialize(const System& system) {
-}
-
-void OpenCLVirtualSitesKernel::computePositions(ContextImpl& context) {
-    cl.getIntegrationUtilities().computeVirtualSites();
 }
 
 class OpenCLCalcNonbondedForceKernel::ForceInfo : public OpenCLForceInfo {
@@ -1015,7 +931,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
     // Add the interaction to the default nonbonded kernel.
     
-    string source = cl.replaceStrings(OpenCLKernelSources::coulombLennardJones, defines);
+    string source = cl.replaceStrings(CommonKernelSources::coulombLennardJones, defines);
     charges.initialize(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "charges");
     baseParticleParams.initialize<mm_float4>(cl, cl.getPaddedNumAtoms(), "baseParticleParams");
     baseParticleParams.upload(baseParticleParamVec);
@@ -1668,59 +1584,4 @@ void OpenCLCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, 
         ny = dispersionGridSizeY;
         nz = dispersionGridSizeZ;
     }
-}
-
-void OpenCLApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
-    savedPositions.initialize(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedPositions");
-    savedForces.initialize(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedForces");
-    cl::Program program = cl.createProgram(CommonKernelSources::monteCarloBarostat);
-    kernel = cl::Kernel(program, "scalePositions");
-}
-
-void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
-    if (!hasInitializedKernels) {
-        hasInitializedKernels = true;
-
-        // Create the arrays with the molecule definitions.
-
-        vector<vector<int> > molecules = context.getMolecules();
-        numMolecules = molecules.size();
-        moleculeAtoms.initialize<int>(cl, cl.getNumAtoms(), "moleculeAtoms");
-        moleculeStartIndex.initialize<int>(cl, numMolecules+1, "moleculeStartIndex");
-        vector<int> atoms(moleculeAtoms.getSize());
-        vector<int> startIndex(moleculeStartIndex.getSize());
-        int index = 0;
-        for (int i = 0; i < numMolecules; i++) {
-            startIndex[i] = index;
-            for (int molecule : molecules[i])
-                atoms[index++] = molecule;
-        }
-        startIndex[numMolecules] = index;
-        moleculeAtoms.upload(atoms);
-        moleculeStartIndex.upload(startIndex);
-
-        // Initialize the kernel arguments.
-        
-        kernel.setArg<cl_int>(3, numMolecules);
-        kernel.setArg<cl::Buffer>(9, cl.getPosq().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(10, moleculeAtoms.getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(11, moleculeStartIndex.getDeviceBuffer());
-    }
-    int bytesToCopy = cl.getPosq().getSize()*(cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
-    cl.getQueue().enqueueCopyBuffer(cl.getPosq().getDeviceBuffer(), savedPositions.getDeviceBuffer(), 0, 0, bytesToCopy);
-    cl.getQueue().enqueueCopyBuffer(cl.getForce().getDeviceBuffer(), savedForces.getDeviceBuffer(), 0, 0, bytesToCopy);
-    kernel.setArg<cl_float>(0, (cl_float) scaleX);
-    kernel.setArg<cl_float>(1, (cl_float) scaleY);
-    kernel.setArg<cl_float>(2, (cl_float) scaleZ);
-    setPeriodicBoxArgs(cl, kernel, 4);
-    cl.executeKernel(kernel, cl.getNumAtoms());
-    for (auto& offset : cl.getPosCellOffsets())
-        offset = mm_int4(0, 0, 0, 0);
-    lastAtomOrder = cl.getAtomIndex();
-}
-
-void OpenCLApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
-    int bytesToCopy = cl.getPosq().getSize()*(cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
-    cl.getQueue().enqueueCopyBuffer(savedPositions.getDeviceBuffer(), cl.getPosq().getDeviceBuffer(), 0, 0, bytesToCopy);
-    cl.getQueue().enqueueCopyBuffer(savedForces.getDeviceBuffer(), cl.getForce().getDeviceBuffer(), 0, 0, bytesToCopy);
 }

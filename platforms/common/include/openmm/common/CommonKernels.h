@@ -41,6 +41,63 @@ namespace OpenMM {
 
 
 /**
+ * This kernel modifies the positions of particles to enforce distance constraints.
+ */
+class CommonApplyConstraintsKernel : public ApplyConstraintsKernel {
+public:
+    CommonApplyConstraintsKernel(std::string name, const Platform& platform, ComputeContext& cc) : ApplyConstraintsKernel(name, platform),
+            cc(cc), hasInitializedKernel(false) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    void initialize(const System& system);
+    /**
+     * Update particle positions to enforce constraints.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param tol        the distance tolerance within which constraints must be satisfied.
+     */
+    void apply(ContextImpl& context, double tol);
+    /**
+     * Update particle velocities to enforce constraints.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param tol        the velocity tolerance within which constraints must be satisfied.
+     */
+    void applyToVelocities(ContextImpl& context, double tol);
+private:
+    ComputeContext& cc;
+    bool hasInitializedKernel;
+    ComputeKernel applyDeltasKernel;
+};
+
+/**
+ * This kernel recomputes the positions of virtual sites.
+ */
+class CommonVirtualSitesKernel : public VirtualSitesKernel {
+public:
+    CommonVirtualSitesKernel(std::string name, const Platform& platform, ComputeContext& cc) : VirtualSitesKernel(name, platform), cc(cc) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    void initialize(const System& system);
+    /**
+     * Compute the virtual site locations.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void computePositions(ContextImpl& context);
+private:
+    ComputeContext& cc;
+};
+
+/**
  * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
 class CommonCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
@@ -1457,6 +1514,52 @@ private:
     int randomSeed;
     ComputeArray atomGroups;
     ComputeKernel kernel;
+};
+
+/**
+ * This kernel is invoked by MonteCarloBarostat to adjust the periodic box volume
+ */
+class CommonApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
+public:
+    CommonApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, ComputeContext& cc) : ApplyMonteCarloBarostatKernel(name, platform), cc(cc),
+            hasInitializedKernels(false) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param barostat   the MonteCarloBarostat this kernel will be used for
+     */
+    void initialize(const System& system, const Force& barostat);
+    /**
+     * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
+     * This version scales the x, y, and z positions independently.
+     * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
+     * or cluster into the first periodic box, so that coordinates will still be correct after the box size
+     * is changed.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param scaleX     the scale factor by which to multiply particle x-coordinate
+     * @param scaleY     the scale factor by which to multiply particle y-coordinate
+     * @param scaleZ     the scale factor by which to multiply particle z-coordinate
+     */
+    void scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ);
+    /**
+     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were before
+     * scaleCoordinates() was last called.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void restoreCoordinates(ContextImpl& context);
+private:
+    ComputeContext& cc;
+    bool hasInitializedKernels;
+    int numMolecules;
+    ComputeArray savedPositions, savedFloatForces, savedLongForces;
+    ComputeArray moleculeAtoms;
+    ComputeArray moleculeStartIndex;
+    ComputeKernel kernel;
+    std::vector<int> lastAtomOrder;
 };
 
 } // namespace OpenMM

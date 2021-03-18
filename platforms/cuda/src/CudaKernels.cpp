@@ -27,24 +27,14 @@
 #include "CudaKernels.h"
 #include "CudaForceInfo.h"
 #include "openmm/Context.h"
-#include "openmm/internal/AndersenThermostatImpl.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/CustomCompoundBondForceImpl.h"
-#include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
-#include "openmm/internal/OSRngSeed.h"
 #include "CommonKernelSources.h"
 #include "CudaBondedUtilities.h"
 #include "CudaExpressionUtilities.h"
 #include "CudaIntegrationUtilities.h"
 #include "CudaNonbondedUtilities.h"
 #include "CudaKernelSources.h"
-#include "lepton/CustomFunction.h"
-#include "lepton/ExpressionTreeNode.h"
-#include "lepton/Operation.h"
-#include "lepton/Parser.h"
-#include "lepton/ParsedExpression.h"
-#include "ReferenceTabulatedFunction.h"
 #include "SimTKOpenMMRealType.h"
 #include "SimTKOpenMMUtilities.h"
 #include <algorithm>
@@ -55,7 +45,6 @@
 
 using namespace OpenMM;
 using namespace std;
-using namespace Lepton;
 
 #define CHECK_RESULT(result, prefix) \
     if (result != CUDA_SUCCESS) { \
@@ -63,31 +52,6 @@ using namespace Lepton;
         m<<prefix<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")"<<" at "<<__FILE__<<":"<<__LINE__; \
         throw OpenMMException(m.str());\
     }
-
-static bool isZeroExpression(const Lepton::ParsedExpression& expression) {
-    const Lepton::Operation& op = expression.getRootNode().getOperation();
-    if (op.getId() != Lepton::Operation::CONSTANT)
-        return false;
-    return (dynamic_cast<const Lepton::Operation::Constant&>(op).getValue() == 0.0);
-}
-
-static bool usesVariable(const Lepton::ExpressionTreeNode& node, const string& variable) {
-    const Lepton::Operation& op = node.getOperation();
-    if (op.getId() == Lepton::Operation::VARIABLE && op.getName() == variable)
-        return true;
-    for (auto& child : node.getChildren())
-        if (usesVariable(child, variable))
-            return true;
-    return false;
-}
-
-static bool usesVariable(const Lepton::ParsedExpression& expression, const string& variable) {
-    return usesVariable(expression.getRootNode(), variable);
-}
-
-static pair<ExpressionTreeNode, string> makeVariable(const string& name, const string& value) {
-    return make_pair(ExpressionTreeNode(new Operation::Variable(name)), value);
-}
 
 void CudaCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
@@ -443,38 +407,6 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
     SimTKOpenMMUtilities::loadCheckpoint(stream);
     for (auto listener : cu.getReorderListeners())
         listener->execute();
-}
-
-void CudaApplyConstraintsKernel::initialize(const System& system) {
-}
-
-void CudaApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
-    cu.setAsCurrent();
-    if (!hasInitializedKernel) {
-        hasInitializedKernel = true;
-        map<string, string> defines;
-        CUmodule module = cu.createModule(CommonKernelSources::constraints, defines);
-        applyDeltasKernel = cu.getKernel(module, "applyPositionDeltas");
-    }
-    CudaIntegrationUtilities& integration = cu.getIntegrationUtilities();
-    cu.clearBuffer(integration.getPosDelta());
-    integration.applyConstraints(tol);
-    CUdeviceptr posCorrection = (cu.getUseMixedPrecision() ? cu.getPosqCorrection().getDevicePointer() : 0);
-    int numAtoms = cu.getNumAtoms();
-    void* args[] = {&numAtoms, &cu.getPosq().getDevicePointer(), &posCorrection, &cu.getIntegrationUtilities().getPosDelta().getDevicePointer()};
-    cu.executeKernel(applyDeltasKernel, args, cu.getNumAtoms());
-    integration.computeVirtualSites();
-}
-
-void CudaApplyConstraintsKernel::applyToVelocities(ContextImpl& context, double tol) {
-    cu.getIntegrationUtilities().applyVelocityConstraints(tol);
-}
-
-void CudaVirtualSitesKernel::initialize(const System& system) {
-}
-
-void CudaVirtualSitesKernel::computePositions(ContextImpl& context) {
-    cu.getIntegrationUtilities().computeVirtualSites();
 }
 
 class CudaCalcNonbondedForceKernel::ForceInfo : public CudaForceInfo {
@@ -1053,7 +985,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
 
     // Add the interaction to the default nonbonded kernel.
 
-    string source = cu.replaceStrings(CudaKernelSources::coulombLennardJones, defines);
+    string source = cu.replaceStrings(CommonKernelSources::coulombLennardJones, defines);
     charges.initialize(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "charges");
     baseParticleParams.initialize<float4>(cu, cu.getPaddedNumAtoms(), "baseParticleParams");
     baseParticleParams.upload(baseParticleParamVec);
@@ -1512,81 +1444,5 @@ void CudaCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, in
         nx = dispersionGridSizeX;
         ny = dispersionGridSizeY;
         nz = dispersionGridSizeZ;
-    }
-}
-
-void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
-    cu.setAsCurrent();
-    savedPositions.initialize(cu, cu.getPaddedNumAtoms(), cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4), "savedPositions");
-    savedForces.initialize<long long>(cu, cu.getPaddedNumAtoms()*3, "savedForces");
-    CUmodule module = cu.createModule(CommonKernelSources::monteCarloBarostat);
-    kernel = cu.getKernel(module, "scalePositions");
-}
-
-void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
-    cu.setAsCurrent();
-    if (!hasInitializedKernels) {
-        hasInitializedKernels = true;
-
-        // Create the arrays with the molecule definitions.
-
-        vector<vector<int> > molecules = context.getMolecules();
-        numMolecules = molecules.size();
-        moleculeAtoms.initialize<int>(cu, cu.getNumAtoms(), "moleculeAtoms");
-        moleculeStartIndex.initialize<int>(cu, numMolecules+1, "moleculeStartIndex");
-        vector<int> atoms(moleculeAtoms.getSize());
-        vector<int> startIndex(moleculeStartIndex.getSize());
-        int index = 0;
-        for (int i = 0; i < numMolecules; i++) {
-            startIndex[i] = index;
-            for (int molecule : molecules[i])
-                atoms[index++] = molecule;
-        }
-        startIndex[numMolecules] = index;
-        moleculeAtoms.upload(atoms);
-        moleculeStartIndex.upload(startIndex);
-
-        // Initialize the kernel arguments.
-        
-    }
-    int bytesToCopy = cu.getPosq().getSize()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
-    CUresult result = cuMemcpyDtoD(savedPositions.getDevicePointer(), cu.getPosq().getDevicePointer(), bytesToCopy);
-    if (result != CUDA_SUCCESS) {
-        std::stringstream m;
-        m<<"Error saving positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
-        throw OpenMMException(m.str());
-    }
-    result = cuMemcpyDtoD(savedForces.getDevicePointer(), cu.getForce().getDevicePointer(), savedForces.getSize()*savedForces.getElementSize());
-    if (result != CUDA_SUCCESS) {
-        std::stringstream m;
-        m<<"Error saving forces for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
-        throw OpenMMException(m.str());
-    }
-    float scalefX = (float) scaleX;
-    float scalefY = (float) scaleY;
-    float scalefZ = (float) scaleZ;
-    void* args[] = {&scalefX, &scalefY, &scalefZ, &numMolecules, cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(),
-                    cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
-                    &cu.getPosq().getDevicePointer(), &moleculeAtoms.getDevicePointer(), &moleculeStartIndex.getDevicePointer()};
-    cu.executeKernel(kernel, args, cu.getNumAtoms());
-    for (auto& offset : cu.getPosCellOffsets())
-        offset = mm_int4(0, 0, 0, 0);
-    lastAtomOrder = cu.getAtomIndex();
-}
-
-void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
-    cu.setAsCurrent();
-    int bytesToCopy = cu.getPosq().getSize()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4));
-    CUresult result = cuMemcpyDtoD(cu.getPosq().getDevicePointer(), savedPositions.getDevicePointer(), bytesToCopy);
-    if (result != CUDA_SUCCESS) {
-        std::stringstream m;
-        m<<"Error restoring positions for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
-        throw OpenMMException(m.str());
-    }
-    result = cuMemcpyDtoD(cu.getForce().getDevicePointer(), savedForces.getDevicePointer(), savedForces.getSize()*savedForces.getElementSize());
-    if (result != CUDA_SUCCESS) {
-        std::stringstream m;
-        m<<"Error restoring forces for MC barostat: "<<cu.getErrorString(result)<<" ("<<result<<")";
-        throw OpenMMException(m.str());
     }
 }

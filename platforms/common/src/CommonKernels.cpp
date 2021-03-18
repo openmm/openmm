@@ -107,6 +107,40 @@ static void replaceFunctionsInExpression(map<string, CustomFunction*>& functions
     }
 }
 
+void CommonApplyConstraintsKernel::initialize(const System& system) {
+}
+
+void CommonApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
+    cc.setAsCurrent();
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        map<string, string> defines;
+        ComputeProgram program = cc.compileProgram(CommonKernelSources::constraints, defines);
+        applyDeltasKernel = program->createKernel("applyPositionDeltas");
+        applyDeltasKernel->addArg(cc.getNumAtoms());
+        applyDeltasKernel->addArg(cc.getPosq());
+        applyDeltasKernel->addArg(cc.getIntegrationUtilities().getPosDelta());
+        if (cc.getUseMixedPrecision())
+            applyDeltasKernel->addArg(cc.getPosqCorrection());
+    }
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    cc.clearBuffer(integration.getPosDelta());
+    integration.applyConstraints(tol);
+    applyDeltasKernel->execute(cc.getNumAtoms());
+    integration.computeVirtualSites();
+}
+
+void CommonApplyConstraintsKernel::applyToVelocities(ContextImpl& context, double tol) {
+    cc.getIntegrationUtilities().applyVelocityConstraints(tol);
+}
+
+void CommonVirtualSitesKernel::initialize(const System& system) {
+}
+
+void CommonVirtualSitesKernel::computePositions(ContextImpl& context) {
+    cc.getIntegrationUtilities().computeVirtualSites();
+}
+
 class CommonCalcHarmonicBondForceKernel::ForceInfo : public ComputeForceInfo {
 public:
     ForceInfo(const HarmonicBondForce& force) : force(force) {
@@ -7572,4 +7606,84 @@ void CommonApplyAndersenThermostatKernel::execute(ContextImpl& context) {
         kernel->setArg(4, (float) stepSize);
     kernel->setArg(6, cc.getIntegrationUtilities().prepareRandomNumbers(cc.getPaddedNumAtoms()));
     kernel->execute(cc.getNumAtoms());
+}
+
+void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
+    savedPositions.initialize(cc, cc.getPaddedNumAtoms(), cc.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedPositions");
+    savedLongForces.initialize<long long>(cc, cc.getPaddedNumAtoms()*3, "savedLongForces");
+    try {
+        cc.getFloatForceBuffer(); // This will throw an exception on the CUDA platform.
+        savedFloatForces.initialize(cc, cc.getPaddedNumAtoms(), cc.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedForces");
+    }
+    catch (...) {
+        // The CUDA platform doesn't have a floating point force buffer, so we don't need to copy it.
+    }
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::monteCarloBarostat);
+    kernel = program->createKernel("scalePositions");
+}
+
+void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+
+        // Create the arrays with the molecule definitions.
+
+        vector<vector<int> > molecules = context.getMolecules();
+        numMolecules = molecules.size();
+        moleculeAtoms.initialize<int>(cc, cc.getNumAtoms(), "moleculeAtoms");
+        moleculeStartIndex.initialize<int>(cc, numMolecules+1, "moleculeStartIndex");
+        vector<int> atoms(moleculeAtoms.getSize());
+        vector<int> startIndex(moleculeStartIndex.getSize());
+        int index = 0;
+        for (int i = 0; i < numMolecules; i++) {
+            startIndex[i] = index;
+            for (int molecule : molecules[i])
+                atoms[index++] = molecule;
+        }
+        startIndex[numMolecules] = index;
+        moleculeAtoms.upload(atoms);
+        moleculeStartIndex.upload(startIndex);
+
+        // Initialize the kernel arguments.
+
+//KERNEL void scalePositions(float scaleX, float scaleY, float scaleZ, int numMolecules, real4 periodicBoxSize,
+//        real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, GLOBAL real4* RESTRICT posq,
+//        GLOBAL const int* RESTRICT moleculeAtoms, GLOBAL const int* RESTRICT moleculeStartIndex) {
+        
+        kernel->addArg();
+        kernel->addArg();
+        kernel->addArg();
+        kernel->addArg(numMolecules);
+        for (int i = 0; i < 5; i++)
+            kernel->addArg();
+        kernel->addArg(cc.getPosq());
+        kernel->addArg(moleculeAtoms);
+        kernel->addArg(moleculeStartIndex);
+    }
+    cc.getPosq().copyTo(savedPositions);
+    cc.getLongForceBuffer().copyTo(savedLongForces);
+    if (savedFloatForces.isInitialized())
+        cc.getFloatForceBuffer().copyTo(savedFloatForces);
+//    int bytesToCopy = cc.getPosq().getSize()*(cc.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
+//    cc.getQueue().enqueueCopyBuffer(cc.getPosq().getDeviceBuffer(), savedPositions.getDeviceBuffer(), 0, 0, bytesToCopy);
+//    cc.getQueue().enqueueCopyBuffer(cc.getForce().getDeviceBuffer(), savedForces.getDeviceBuffer(), 0, 0, bytesToCopy);
+    kernel->setArg(0, (float) scaleX);
+    kernel->setArg(1, (float) scaleY);
+    kernel->setArg(2, (float) scaleZ);
+    setPeriodicBoxArgs(cc, kernel, 4);
+    kernel->execute(cc.getNumAtoms());
+    for (auto& offset : cc.getPosCellOffsets())
+        offset = mm_int4(0, 0, 0, 0);
+    lastAtomOrder = cc.getAtomIndex();
+}
+
+void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
+    savedPositions.copyTo(cc.getPosq());
+    savedLongForces.copyTo(cc.getLongForceBuffer());
+    if (savedFloatForces.isInitialized())
+        savedFloatForces.copyTo(cc.getFloatForceBuffer());
+
+//    int bytesToCopy = cc.getPosq().getSize()*(cc.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
+//    cc.getQueue().enqueueCopyBuffer(savedPositions.getDeviceBuffer(), cc.getPosq().getDeviceBuffer(), 0, 0, bytesToCopy);
+//    cc.getQueue().enqueueCopyBuffer(savedForces.getDeviceBuffer(), cc.getForce().getDeviceBuffer(), 0, 0, bytesToCopy);
 }

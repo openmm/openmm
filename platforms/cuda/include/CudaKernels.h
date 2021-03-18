@@ -31,15 +31,10 @@
 #include "CudaArray.h"
 #include "CudaContext.h"
 #include "CudaFFT3D.h"
-#include "CudaParameterSet.h"
 #include "CudaSort.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
-#include "openmm/internal/CompiledExpressionSet.h"
-#include "openmm/internal/CustomIntegratorUtilities.h"
 #include "openmm/common/CommonKernels.h"
-#include "lepton/CompiledExpression.h"
-#include "lepton/ExpressionProgram.h"
 #include <cufft.h>
 
 namespace OpenMM {
@@ -208,63 +203,6 @@ private:
 };
 
 /**
- * This kernel modifies the positions of particles to enforce distance constraints.
- */
-class CudaApplyConstraintsKernel : public ApplyConstraintsKernel {
-public:
-    CudaApplyConstraintsKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyConstraintsKernel(name, platform),
-            cu(cu), hasInitializedKernel(false) {
-    }
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     */
-    void initialize(const System& system);
-    /**
-     * Update particle positions to enforce constraints.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param tol        the distance tolerance within which constraints must be satisfied.
-     */
-    void apply(ContextImpl& context, double tol);
-    /**
-     * Update particle velocities to enforce constraints.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param tol        the velocity tolerance within which constraints must be satisfied.
-     */
-    void applyToVelocities(ContextImpl& context, double tol);
-private:
-    CudaContext& cu;
-    bool hasInitializedKernel;
-    CUfunction applyDeltasKernel;
-};
-
-/**
- * This kernel recomputes the positions of virtual sites.
- */
-class CudaVirtualSitesKernel : public VirtualSitesKernel {
-public:
-    CudaVirtualSitesKernel(std::string name, const Platform& platform, CudaContext& cu) : VirtualSitesKernel(name, platform), cu(cu) {
-    }
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     */
-    void initialize(const System& system);
-    /**
-     * Compute the virtual site locations.
-     *
-     * @param context    the context in which to execute this kernel
-     */
-    void computePositions(ContextImpl& context);
-private:
-    CudaContext& cu;
-};
-
-/**
  * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
 class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
@@ -407,53 +345,6 @@ public:
     ComputeContext& getInnerComputeContext(ContextImpl& innerContext) {
         return *reinterpret_cast<CudaPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
     }
-};
-
-/**
- * This kernel is invoked by MonteCarloBarostat to adjust the periodic box volume
- */
-class CudaApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
-public:
-    CudaApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, CudaContext& cu) : ApplyMonteCarloBarostatKernel(name, platform), cu(cu),
-            hasInitializedKernels(false) {
-    }
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param barostat   the MonteCarloBarostat this kernel will be used for
-     */
-    void initialize(const System& system, const Force& barostat);
-    /**
-     * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
-     * This version scales the x, y, and z positions independently.
-     * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
-     * or cluster into the first periodic box, so that coordinates will still be correct after the box size
-     * is changed.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param scaleX     the scale factor by which to multiply particle x-coordinate
-     * @param scaleY     the scale factor by which to multiply particle y-coordinate
-     * @param scaleZ     the scale factor by which to multiply particle z-coordinate
-     */
-    void scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ);
-    /**
-     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were before
-     * scaleCoordinates() was last called.
-     *
-     * @param context    the context in which to execute this kernel
-     */
-    void restoreCoordinates(ContextImpl& context);
-private:
-    CudaContext& cu;
-    bool hasInitializedKernels;
-    int numMolecules;
-    CudaArray savedPositions;
-    CudaArray savedForces;
-    CudaArray moleculeAtoms;
-    CudaArray moleculeStartIndex;
-    CUfunction kernel;
-    std::vector<int> lastAtomOrder;
 };
 
 } // namespace OpenMM

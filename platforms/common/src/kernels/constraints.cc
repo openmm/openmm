@@ -1,4 +1,8 @@
-KERNEL void applyPositionDeltas(int numAtoms, GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTRICT posqCorrection, GLOBAL mixed4* RESTRICT posDelta) {
+KERNEL void applyPositionDeltas(int numAtoms, GLOBAL real4* RESTRICT posq, GLOBAL mixed4* RESTRICT posDelta
+#ifdef USE_MIXED_PRECISION
+        , GLOBAL real4* RESTRICT posqCorrection
+#endif
+        ) {
     for (unsigned int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
 #ifdef USE_MIXED_PRECISION
         real4 pos1 = posq[index];
