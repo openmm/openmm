@@ -1,11 +1,11 @@
 /**
- * Scale the particle positions with each axis independent
+ * Scale the particle positions with each axis independent.
  */
 
-extern "C" __global__ void scalePositions(float scaleX, float scaleY, float scaleZ, int numMolecules, real4 periodicBoxSize,
-        real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real4* __restrict__ posq,
-        const int* __restrict__ moleculeAtoms, const int* __restrict__ moleculeStartIndex) {
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < numMolecules; index += blockDim.x*gridDim.x) {
+KERNEL void scalePositions(float scaleX, float scaleY, float scaleZ, int numMolecules, real4 periodicBoxSize,
+        real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, GLOBAL real4* RESTRICT posq,
+        GLOBAL const int* RESTRICT moleculeAtoms, GLOBAL const int* RESTRICT moleculeStartIndex) {
+    for (int index = GLOBAL_ID; index < numMolecules; index += GLOBAL_SIZE) {
         int first = moleculeStartIndex[index];
         int last = moleculeStartIndex[index+1];
         int numAtoms = last-first;
@@ -19,7 +19,7 @@ extern "C" __global__ void scalePositions(float scaleX, float scaleY, float scal
             center.y += pos.y;
             center.z += pos.z;
         }
-        real invNumAtoms = RECIP(numAtoms);
+        real invNumAtoms = RECIP((real) numAtoms);
         center.x *= invNumAtoms;
         center.y *= invNumAtoms;
         center.z *= invNumAtoms;

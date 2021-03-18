@@ -413,6 +413,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     compilationDefines["ACOS"] = "acos";
     compilationDefines["ASIN"] = "asin";
     compilationDefines["ATAN"] = "atan";
+    compilationDefines["ERF"] = "erf";
+    compilationDefines["ERFC"] = "erfc";
 
     // Set defines for applying periodic boundary conditions.
 

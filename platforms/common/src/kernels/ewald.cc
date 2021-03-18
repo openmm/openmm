@@ -1,4 +1,4 @@
-__device__ real2 multofReal2(real2 a, real2 b) {
+DEVICE real2 multofReal2(real2 a, real2 b) {
     return make_real2(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x);
 }
 
@@ -6,17 +6,17 @@ __device__ real2 multofReal2(real2 a, real2 b) {
  * Precompute the cosine and sine sums which appear in each force term.
  */
 
-extern "C" __global__ void calculateEwaldCosSinSums(mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, real2* __restrict__ cosSinSum, real4 periodicBoxSize) {
+KERNEL void calculateEwaldCosSinSums(GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL real2* RESTRICT cosSinSum, real4 periodicBoxSize) {
     const unsigned int ksizex = 2*KMAX_X-1;
     const unsigned int ksizey = 2*KMAX_Y-1;
     const unsigned int ksizez = 2*KMAX_Z-1;
     const unsigned int totalK = ksizex*ksizey*ksizez;
     real3 reciprocalBoxSize = make_real3(2*M_PI/periodicBoxSize.x, 2*M_PI/periodicBoxSize.y, 2*M_PI/periodicBoxSize.z);
     real reciprocalCoefficient = ONE_4PI_EPS0*4*M_PI/(periodicBoxSize.x*periodicBoxSize.y*periodicBoxSize.z);
-    unsigned int index = blockIdx.x*blockDim.x+threadIdx.x;
+    unsigned int index = GLOBAL_ID;
     mixed energy = 0;
     while (index < (KMAX_Y-1)*ksizez+KMAX_Z)
-        index += blockDim.x*gridDim.x;
+        index += GLOBAL_SIZE;
     while (index < totalK) {
         // Find the wave vector (kx, ky, kz) this index corresponds to.
 
@@ -49,9 +49,9 @@ extern "C" __global__ void calculateEwaldCosSinSums(mixed* __restrict__ energyBu
         real k2 = kx*kx + ky*ky + kz*kz;
         real ak = EXP(k2*EXP_COEFFICIENT) / k2;
         energy += reciprocalCoefficient*ak*(sum.x*sum.x + sum.y*sum.y);
-        index += blockDim.x*gridDim.x;
+        index += GLOBAL_SIZE;
     }
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+    energyBuffer[GLOBAL_ID] += energy;
 }
 
 /**
@@ -59,8 +59,8 @@ extern "C" __global__ void calculateEwaldCosSinSums(mixed* __restrict__ energyBu
  * previous routine.
  */
 
-extern "C" __global__ void calculateEwaldForces(unsigned long long* __restrict__ forceBuffers, const real4* __restrict__ posq, const real2* __restrict__ cosSinSum, real4 periodicBoxSize) {
-    unsigned int atom = blockIdx.x*blockDim.x+threadIdx.x;
+KERNEL void calculateEwaldForces(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL const real4* RESTRICT posq, GLOBAL const real2* RESTRICT cosSinSum, real4 periodicBoxSize) {
+    unsigned int atom = GLOBAL_ID;
     real3 reciprocalBoxSize = make_real3(2*M_PI/periodicBoxSize.x, 2*M_PI/periodicBoxSize.y, 2*M_PI/periodicBoxSize.z);
     real reciprocalCoefficient = ONE_4PI_EPS0*4*M_PI/(periodicBoxSize.x*periodicBoxSize.y*periodicBoxSize.z);
     while (atom < NUM_ATOMS) {
@@ -102,9 +102,9 @@ extern "C" __global__ void calculateEwaldForces(unsigned long long* __restrict__
 
         // Record the force on the atom.
 
-        atomicAdd(&forceBuffers[atom], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
-        atomicAdd(&forceBuffers[atom+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
-        atomicAdd(&forceBuffers[atom+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
-        atom += blockDim.x*gridDim.x;
+        ATOMIC_ADD(&forceBuffers[atom], (mm_ulong) ((mm_long) (force.x*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[atom+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[atom+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
+        atom += GLOBAL_SIZE;
     }
 }

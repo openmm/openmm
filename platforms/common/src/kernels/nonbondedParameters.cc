@@ -1,19 +1,19 @@
 /**
  * Compute the nonbonded parameters for particles and exceptions.
  */
-extern "C" __global__ void computeParameters(mixed* __restrict__ energyBuffer, bool includeSelfEnergy, real* __restrict__ globalParams,
-        int numAtoms, const float4* __restrict__ baseParticleParams, real4* __restrict__ posq, real* __restrict__ charge,
-        float2* __restrict__ sigmaEpsilon, float4* __restrict__ particleParamOffsets, int* __restrict__ particleOffsetIndices
+KERNEL void computeParameters(GLOBAL mixed* RESTRICT energyBuffer, int includeSelfEnergy, GLOBAL real* RESTRICT globalParams,
+        int numAtoms, GLOBAL const float4* RESTRICT baseParticleParams, GLOBAL real4* RESTRICT posq, GLOBAL real* RESTRICT charge,
+        GLOBAL float2* RESTRICT sigmaEpsilon, GLOBAL float4* RESTRICT particleParamOffsets, GLOBAL int* RESTRICT particleOffsetIndices
 #ifdef HAS_EXCEPTIONS
-        , int numExceptions, const float4* __restrict__ baseExceptionParams, float4* __restrict__ exceptionParams,
-        float4* __restrict__ exceptionParamOffsets, int* __restrict__ exceptionOffsetIndices
+        , int numExceptions, GLOBAL const float4* RESTRICT baseExceptionParams, GLOBAL float4* RESTRICT exceptionParams,
+        GLOBAL float4* RESTRICT exceptionParamOffsets, GLOBAL int* RESTRICT exceptionOffsetIndices
 #endif
         ) {
     mixed energy = 0;
 
     // Compute particle parameters.
     
-    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < numAtoms; i += blockDim.x*gridDim.x) {
+    for (int i = GLOBAL_ID; i < numAtoms; i += GLOBAL_SIZE) {
         float4 params = baseParticleParams[i];
 #ifdef HAS_OFFSETS
         int start = particleOffsetIndices[i], end = particleOffsetIndices[i+1];
@@ -45,7 +45,7 @@ extern "C" __global__ void computeParameters(mixed* __restrict__ energyBuffer, b
     // Compute exception parameters.
     
 #ifdef HAS_EXCEPTIONS
-    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < numExceptions; i += blockDim.x*gridDim.x) {
+    for (int i = GLOBAL_ID; i < numExceptions; i += GLOBAL_SIZE) {
         float4 params = baseExceptionParams[i];
 #ifdef HAS_OFFSETS
         int start = exceptionOffsetIndices[i], end = exceptionOffsetIndices[i+1];
@@ -61,15 +61,15 @@ extern "C" __global__ void computeParameters(mixed* __restrict__ energyBuffer, b
     }
 #endif
     if (includeSelfEnergy)
-        energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+        energyBuffer[GLOBAL_ID] += energy;
 }
 
 /**
  * Compute parameters for subtracting the reciprocal part of excluded interactions.
  */
-extern "C" __global__ void computeExclusionParameters(real4* __restrict__ posq, real* __restrict__ charge, float2* __restrict__ sigmaEpsilon,
-        int numExclusions, const int2* __restrict__ exclusionAtoms, float4* __restrict__ exclusionParams) {
-    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < numExclusions; i += blockDim.x*gridDim.x) {
+KERNEL void computeExclusionParameters(GLOBAL real4* RESTRICT posq, GLOBAL real* RESTRICT charge, GLOBAL float2* RESTRICT sigmaEpsilon,
+        int numExclusions, GLOBAL const int2* RESTRICT exclusionAtoms, GLOBAL float4* RESTRICT exclusionParams) {
+    for (int i = GLOBAL_ID; i < numExclusions; i += GLOBAL_SIZE) {
         int2 atoms = exclusionAtoms[i];
 #ifdef USE_POSQ_CHARGES
         real chargeProd = posq[atoms.x].w*posq[atoms.y].w;

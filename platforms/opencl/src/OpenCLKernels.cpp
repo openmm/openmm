@@ -33,6 +33,7 @@
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/internal/OSRngSeed.h"
+#include "CommonKernelSources.h"
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLExpressionUtilities.h"
 #include "OpenCLIntegrationUtilities.h"
@@ -487,7 +488,7 @@ void OpenCLApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
         hasInitializedKernel = true;
         map<string, string> defines;
         defines["NUM_ATOMS"] = cl.intToString(cl.getNumAtoms());
-        cl::Program program = cl.createProgram(OpenCLKernelSources::constraints, defines);
+        cl::Program program = cl.createProgram(CommonKernelSources::constraints, defines);
         applyDeltasKernel = cl::Kernel(program, "applyPositionDeltas");
         applyDeltasKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
         setPosqCorrectionArg(cl, applyDeltasKernel, 1);
@@ -767,11 +768,14 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
             map<string, string> replacements;
             replacements["NUM_ATOMS"] = cl.intToString(numParticles);
+            replacements["PADDED_NUM_ATOMS"] = cl.intToString(cl.getPaddedNumAtoms());
             replacements["KMAX_X"] = cl.intToString(kmaxx);
             replacements["KMAX_Y"] = cl.intToString(kmaxy);
             replacements["KMAX_Z"] = cl.intToString(kmaxz);
             replacements["EXP_COEFFICIENT"] = cl.doubleToString(-1.0/(4.0*alpha*alpha));
-            cl::Program program = cl.createProgram(OpenCLKernelSources::ewald, replacements);
+            replacements["ONE_4PI_EPS0"] = cl.doubleToString(ONE_4PI_EPS0);
+            replacements["M_PI"] = cl.doubleToString(M_PI);
+            cl::Program program = cl.createProgram(CommonKernelSources::ewald, replacements);
             ewaldSumsKernel = cl::Kernel(program, "calculateEwaldCosSinSums");
             ewaldForcesKernel = cl::Kernel(program, "calculateEwaldForces");
             int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double2) : sizeof(mm_float2));
@@ -1005,7 +1009,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             replacements["USE_PERIODIC"] = force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0";
             if (doLJPME)
                 replacements["EWALD_DISPERSION_ALPHA"] = cl.doubleToString(dispersionAlpha);
-            cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::pmeExclusions, replacements), force.getForceGroup());
+            cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(CommonKernelSources::pmeExclusions, replacements), force.getForceGroup());
         }
     }
 
@@ -1059,7 +1063,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         map<string, string> replacements;
         replacements["APPLY_PERIODIC"] = (usePeriodic && force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0");
         replacements["PARAMS"] = cl.getBondedUtilities().addArgument(exceptionParams.getDeviceBuffer(), "float4");
-        cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(OpenCLKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
+        cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(CommonKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }
     
     // Initialize parameter offsets.
@@ -1131,7 +1135,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     
     // Initialize the kernel for updating parameters.
     
-    cl::Program program = cl.createProgram(OpenCLKernelSources::nonbondedParameters, paramsDefines);
+    cl::Program program = cl.createProgram(CommonKernelSources::nonbondedParameters, paramsDefines);
     computeParamsKernel = cl::Kernel(program, "computeParameters");
     computeExclusionParamsKernel = cl::Kernel(program, "computeExclusionParameters");
     info = new ForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force);
@@ -1172,7 +1176,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             ewaldSumsKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
             ewaldSumsKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
             ewaldSumsKernel.setArg<cl::Buffer>(2, cosSinSums.getDeviceBuffer());
-            ewaldForcesKernel.setArg<cl::Buffer>(0, cl.getForceBuffers().getDeviceBuffer());
+            ewaldForcesKernel.setArg<cl::Buffer>(0, cl.getLongForceBuffer().getDeviceBuffer());
             ewaldForcesKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
             ewaldForcesKernel.setArg<cl::Buffer>(2, cosSinSums.getDeviceBuffer());
         }
@@ -1332,19 +1336,13 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     
     if (cosSinSums.isInitialized() && includeReciprocal) {
         mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
-        mm_double4 recipBoxSize = mm_double4(2*M_PI/boxSize.x, 2*M_PI/boxSize.y, 2*M_PI/boxSize.z, 0.0);
-        double recipCoefficient = ONE_4PI_EPS0*4*M_PI/(boxSize.x*boxSize.y*boxSize.z);
         if (cl.getUseDoublePrecision()) {
-            ewaldSumsKernel.setArg<mm_double4>(3, recipBoxSize);
-            ewaldSumsKernel.setArg<cl_double>(4, recipCoefficient);
-            ewaldForcesKernel.setArg<mm_double4>(3, recipBoxSize);
-            ewaldForcesKernel.setArg<cl_double>(4, recipCoefficient);
+            ewaldSumsKernel.setArg<mm_double4>(3, boxSize);
+            ewaldForcesKernel.setArg<mm_double4>(3, boxSize);
         }
         else {
-            ewaldSumsKernel.setArg<mm_float4>(3, mm_float4((float) recipBoxSize.x, (float) recipBoxSize.y, (float) recipBoxSize.z, 0));
-            ewaldSumsKernel.setArg<cl_float>(4, (cl_float) recipCoefficient);
-            ewaldForcesKernel.setArg<mm_float4>(3, mm_float4((float) recipBoxSize.x, (float) recipBoxSize.y, (float) recipBoxSize.z, 0));
-            ewaldForcesKernel.setArg<cl_float>(4, (cl_float) recipCoefficient);
+            ewaldSumsKernel.setArg<mm_float4>(3, mm_float4((float) boxSize.x, (float) boxSize.y, (float) boxSize.z, 0));
+            ewaldForcesKernel.setArg<mm_float4>(3, mm_float4((float) boxSize.x, (float) boxSize.y, (float) boxSize.z, 0));
         }
         cl.executeKernel(ewaldSumsKernel, cosSinSums.getSize());
         cl.executeKernel(ewaldForcesKernel, cl.getNumAtoms());
@@ -1672,235 +1670,10 @@ void OpenCLCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, 
     }
 }
 
-class OpenCLCalcCustomCVForceKernel::ForceInfo : public OpenCLForceInfo {
-public:
-    ForceInfo(ComputeForceInfo& force) : OpenCLForceInfo(0), force(force) {
-    }
-    bool areParticlesIdentical(int particle1, int particle2) {
-        return force.areParticlesIdentical(particle1, particle2);
-    }
-    int getNumParticleGroups() {
-        return force.getNumParticleGroups();
-    }
-    void getParticlesInGroup(int index, std::vector<int>& particles) {
-        force.getParticlesInGroup(index, particles);
-    }
-    bool areGroupsIdentical(int group1, int group2) {
-        return force.areGroupsIdentical(group1, group2);
-    }
-private:
-    ComputeForceInfo& force;
-};
-
-class OpenCLCalcCustomCVForceKernel::ReorderListener : public OpenCLContext::ReorderListener {
-public:
-    ReorderListener(OpenCLContext& cl, OpenCLArray& invAtomOrder) : cl(cl), invAtomOrder(invAtomOrder) {
-    }
-    void execute() {
-        vector<cl_int> invOrder(cl.getPaddedNumAtoms());
-        const vector<int>& order = cl.getAtomIndex();
-        for (int i = 0; i < order.size(); i++)
-            invOrder[order[i]] = i;
-        invAtomOrder.upload(invOrder);
-    }
-private:
-    OpenCLContext& cl;
-    OpenCLArray& invAtomOrder;
-};
-
-void OpenCLCalcCustomCVForceKernel::initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext) {
-    int numCVs = force.getNumCollectiveVariables();
-    cl.addForce(new OpenCLForceInfo(1));
-    for (int i = 0; i < force.getNumGlobalParameters(); i++)
-        globalParameterNames.push_back(force.getGlobalParameterName(i));
-    for (int i = 0; i < numCVs; i++)
-        variableNames.push_back(force.getCollectiveVariableName(i));
-    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
-        string name = force.getEnergyParameterDerivativeName(i);
-        paramDerivNames.push_back(name);
-        cl.addEnergyParameterDerivative(name);
-    }
-
-    // Create custom functions for the tabulated functions.
-
-    map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
-        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
-
-    // Create the expressions.
-
-    Lepton::ParsedExpression energyExpr = Lepton::Parser::parse(force.getEnergyFunction(), functions);
-    energyExpression = energyExpr.createProgram();
-    variableDerivExpressions.clear();
-    for (auto& name : variableNames)
-        variableDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
-    paramDerivExpressions.clear();
-    for (auto& name : paramDerivNames)
-        paramDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
-
-    // Delete the custom functions.
-
-    for (auto& function : functions)
-        delete function.second;
-
-    // Copy parameter derivatives from the inner context.
-
-    OpenCLContext& cl2 = *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
-    for (auto& param : cl2.getEnergyParamDerivNames())
-        cl.addEnergyParameterDerivative(param);
-    
-    // Create arrays for storing information.
-    
-    int elementSize = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
-    cvForces.resize(numCVs);
-    for (int i = 0; i < numCVs; i++)
-        cvForces[i].initialize(cl, cl.getNumAtoms(), 4*elementSize, "cvForce");
-    invAtomOrder.initialize<cl_int>(cl, cl.getPaddedNumAtoms(), "invAtomOrder");
-    innerInvAtomOrder.initialize<cl_int>(cl, cl.getPaddedNumAtoms(), "innerInvAtomOrder");
-    
-    // Create the kernels.
-    
-    stringstream args, add;
-    for (int i = 0; i < numCVs; i++) {
-        args << ", __global real4* restrict force" << i << ", real dEdV" << i;
-        add << "f += force" << i << "[i]*dEdV" << i << ";\n";
-    }
-    map<string, string> replacements;
-    replacements["PARAMETER_ARGUMENTS"] = args.str();
-    replacements["ADD_FORCES"] = add.str();
-    cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customCVForce, replacements));
-    copyStateKernel = cl::Kernel(program, "copyState");
-    copyForcesKernel = cl::Kernel(program, "copyForces");
-    addForcesKernel = cl::Kernel(program, "addForces");
-
-    // This context needs to respect all forces in the inner context when reordering atoms.
-
-    for (auto* info : cl2.getForceInfos())
-        cl.addForce(new ForceInfo(*info));
-}
-
-double OpenCLCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl& innerContext, bool includeForces, bool includeEnergy) {
-    copyState(context, innerContext);
-    int numCVs = variableNames.size();
-    int numAtoms = cl.getNumAtoms();
-    OpenCLContext& cl2 = *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
-    vector<double> cvValues;
-    vector<map<string, double> > cvDerivs(numCVs);
-    for (int i = 0; i < numCVs; i++) {
-        cvValues.push_back(innerContext.calcForcesAndEnergy(true, true, 1<<i));
-        copyForcesKernel.setArg<cl::Buffer>(0, cvForces[i].getDeviceBuffer());
-        cl.executeKernel(copyForcesKernel, numAtoms);
-        innerContext.getEnergyParameterDerivatives(cvDerivs[i]);
-    }
-    
-    // Compute the energy and forces.
-    
-    map<string, double> variables;
-    for (auto& name : globalParameterNames)
-        variables[name] = context.getParameter(name);
-    for (int i = 0; i < numCVs; i++)
-        variables[variableNames[i]] = cvValues[i];
-    double energy = energyExpression.evaluate(variables);
-    for (int i = 0; i < numCVs; i++) {
-        double dEdV = variableDerivExpressions[i].evaluate(variables);
-        if (cl.getUseDoublePrecision())
-            addForcesKernel.setArg<cl_double>(2*i+3, dEdV);
-        else
-            addForcesKernel.setArg<cl_float>(2*i+3, dEdV);
-    }
-    cl.executeKernel(addForcesKernel, numAtoms);
-    
-    // Compute the energy parameter derivatives.
-    
-    map<string, double>& energyParamDerivs = cl.getEnergyParamDerivWorkspace();
-    for (int i = 0; i < paramDerivExpressions.size(); i++)
-        energyParamDerivs[paramDerivNames[i]] += paramDerivExpressions[i].evaluate(variables);
-    for (int i = 0; i < numCVs; i++) {
-        double dEdV = variableDerivExpressions[i].evaluate(variables);
-        for (auto& deriv : cvDerivs[i])
-            energyParamDerivs[deriv.first] += dEdV*deriv.second;
-    }
-    return energy;
-}
-
-void OpenCLCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext) {
-    int numAtoms = cl.getNumAtoms();
-    OpenCLContext& cl2 = *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
-    if (!hasInitializedKernels) {
-        hasInitializedKernels = true;
-        
-        // Initialize the listeners.
-        
-        ReorderListener* listener1 = new ReorderListener(cl, invAtomOrder);
-        ReorderListener* listener2 = new ReorderListener(cl2, innerInvAtomOrder);
-        cl.addReorderListener(listener1);
-        cl2.addReorderListener(listener2);
-        listener1->execute();
-        listener2->execute();
-        
-        // Initialize the kernels.
-        
-        copyStateKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
-        copyStateKernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
-        copyStateKernel.setArg<cl::Buffer>(3, cl.getAtomIndexArray().getDeviceBuffer());
-        copyStateKernel.setArg<cl::Buffer>(4, cl2.getPosq().getDeviceBuffer());
-        copyStateKernel.setArg<cl::Buffer>(6, cl2.getVelm().getDeviceBuffer());
-        copyStateKernel.setArg<cl::Buffer>(7, innerInvAtomOrder.getDeviceBuffer());
-        copyStateKernel.setArg<cl_int>(8, numAtoms);
-        if (cl.getUseMixedPrecision()) {
-            copyStateKernel.setArg<cl::Buffer>(1, cl.getPosqCorrection().getDeviceBuffer());
-            copyStateKernel.setArg<cl::Buffer>(5, cl2.getPosqCorrection().getDeviceBuffer());
-        }
-        else {
-            copyStateKernel.setArg(1, sizeof(void*), NULL);
-            copyStateKernel.setArg(5, sizeof(void*), NULL);
-        }
-
-        copyForcesKernel.setArg<cl::Buffer>(1, invAtomOrder.getDeviceBuffer());
-        copyForcesKernel.setArg<cl::Buffer>(2, cl2.getForce().getDeviceBuffer());
-        copyForcesKernel.setArg<cl::Buffer>(3, cl2.getAtomIndexArray().getDeviceBuffer());
-        copyForcesKernel.setArg<cl_int>(4, numAtoms);
-
-        addForcesKernel.setArg<cl::Buffer>(0, cl.getForce().getDeviceBuffer());
-        addForcesKernel.setArg<cl_int>(1, numAtoms);
-        for (int i = 0; i < cvForces.size(); i++)
-            addForcesKernel.setArg<cl::Buffer>(2*i+2, cvForces[i].getDeviceBuffer());
-    }
-    cl.executeKernel(copyStateKernel, numAtoms);
-    Vec3 a, b, c;
-    context.getPeriodicBoxVectors(a, b, c);
-    innerContext.setPeriodicBoxVectors(a, b, c);
-    innerContext.setTime(context.getTime());
-    map<string, double> innerParameters = innerContext.getParameters();
-    for (auto& param : innerParameters)
-        innerContext.setParameter(param.first, context.getParameter(param.first));
-}
-
-void OpenCLCalcCustomCVForceKernel::copyParametersToContext(ContextImpl& context, const CustomCVForce& force) {
-    // Create custom functions for the tabulated functions.
-
-    map<string, CustomFunction*> functions;
-    for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
-        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
-
-    // Replace tabulated functions in the expressions.
-
-    replaceFunctionsInExpression(functions, energyExpression);
-    for (auto& expression : variableDerivExpressions)
-        replaceFunctionsInExpression(functions, expression);
-    for (auto& expression : paramDerivExpressions)
-        replaceFunctionsInExpression(functions, expression);
-
-    // Delete the custom functions.
-
-    for (auto& function : functions)
-        delete function.second;
-}
-
 void OpenCLApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
     savedPositions.initialize(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedPositions");
     savedForces.initialize(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedForces");
-    cl::Program program = cl.createProgram(OpenCLKernelSources::monteCarloBarostat);
+    cl::Program program = cl.createProgram(CommonKernelSources::monteCarloBarostat);
     kernel = cl::Kernel(program, "scalePositions");
 }
 
