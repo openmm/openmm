@@ -256,6 +256,13 @@ public:
         return forceBuffers;
     }
     /**
+     * Get the array which contains a contribution to each force represented as a real4.
+     * This is a synonym for getForce().  It exists to satisfy the ComputeContext interface.
+     */
+    ArrayInterface& getFloatForceBuffer() {
+        return force;
+    }
+    /**
      * Get the array which contains a contribution to each force represented as 64 bit fixed point.
      */
     OpenCLArray& getLongForceBuffer() {

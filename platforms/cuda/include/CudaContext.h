@@ -197,6 +197,12 @@ public:
         return force;
     }
     /**
+     * The CUDA platform does not use floating point force buffers, so this throws an exception.
+     */
+    ArrayInterface& getFloatForceBuffer() {
+        throw OpenMMException("CUDA platform does not use floating point force buffers");
+    }
+    /**
      * Get the array which contains a contribution to each force represented as 64 bit fixed point.
      * This is a synonym for getForce().  It exists to satisfy the ComputeContext interface.
      */
@@ -205,7 +211,6 @@ public:
     }
     /**
      * All CUDA devices support 64 bit atomics, so this throws an exception.
-     * @return 
      */
     ArrayInterface& getForceBuffers() {
         throw OpenMMException("CUDA platform does not use floating point force buffers");

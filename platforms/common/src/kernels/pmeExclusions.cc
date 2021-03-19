@@ -36,3 +36,4 @@ if (r > 0)
     delta *= tempForce*invR*invR;
 real3 force1 = -delta;
 real3 force2 = delta;
+
