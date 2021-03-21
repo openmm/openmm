@@ -1,5 +1,5 @@
-#ifndef OPENCL_RPMD_KERNELS_H_
-#define OPENCL_RPMD_KERNELS_H_
+#ifndef COMMON_RPMD_KERNELS_H_
+#define COMMON_RPMD_KERNELS_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,19 +33,20 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/RpmdKernels.h"
-#include "OpenCLContext.h"
-#include "OpenCLArray.h"
+#include "openmm/common/ComputeContext.h"
+#include "openmm/common/ComputeArray.h"
 #include <map>
+
 namespace OpenMM {
 
 /**
  * This kernel is invoked by RPMDIntegrator to take one time step, and to get and
  * set the state of system copies.
  */
-class OpenCLIntegrateRPMDStepKernel : public IntegrateRPMDStepKernel {
+class CommonIntegrateRPMDStepKernel : public IntegrateRPMDStepKernel {
 public:
-    OpenCLIntegrateRPMDStepKernel(const std::string& name, const Platform& platform, OpenCLContext& cl) :
-            IntegrateRPMDStepKernel(name, platform), cl(cl), hasInitializedKernel(false) {
+    CommonIntegrateRPMDStepKernel(const std::string& name, const Platform& platform, ComputeContext& cc) :
+            IntegrateRPMDStepKernel(name, platform), cc(cc), hasInitializedKernels(false) {
     }
     /**
      * Initialize the kernel.
@@ -71,11 +72,11 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const RPMDIntegrator& integrator);
     /**
-     * Get the positions of all particles in one copy of the system.
+     * Set the positions of all particles in one copy of the system.
      */
     void setPositions(int copy, const std::vector<Vec3>& positions);
     /**
-     * Get the velocities of all particles in one copy of the system.
+     * Set the velocities of all particles in one copy of the system.
      */
     void setVelocities(int copy, const std::vector<Vec3>& velocities);
     /**
@@ -86,21 +87,21 @@ private:
     void initializeKernels(ContextImpl& context);
     void computeForces(ContextImpl& context);
     std::string createFFT(int size, const std::string& variable, bool forward);
-    OpenCLContext& cl;
-    bool hasInitializedKernel;
+    ComputeContext& cc;
+    bool hasInitializedKernels;
     int numCopies, numParticles, workgroupSize;
     std::map<int, int> groupsByCopies;
     int groupsNotContracted;
-    OpenCLArray forces;
-    OpenCLArray positions;
-    OpenCLArray velocities;
-    OpenCLArray contractedForces;
-    OpenCLArray contractedPositions;
-    cl::Kernel pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, translateKernel;
-    std::map<int, cl::Kernel> positionContractionKernels;
-    std::map<int, cl::Kernel> forceContractionKernels;
+    ComputeArray forces;
+    ComputeArray positions;
+    ComputeArray velocities;
+    ComputeArray contractedForces;
+    ComputeArray contractedPositions;
+    ComputeKernel pileKernel, stepKernel, velocitiesKernel, copyToContextKernel, copyFromContextKernel, translateKernel;
+    std::map<int, ComputeKernel> positionContractionKernels;
+    std::map<int, ComputeKernel> forceContractionKernels;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENCL_RPMD_KERNELS_H_*/
+#endif /*COMMON_RPMD_KERNELS_H_*/

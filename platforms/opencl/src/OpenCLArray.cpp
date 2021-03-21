@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -96,11 +96,13 @@ ComputeContext& OpenCLArray::getContext() {
     return *context;
 }
 
-void OpenCLArray::upload(const void* data, bool blocking) {
+void OpenCLArray::uploadSubArray(const void* data, int offset, int elements, bool blocking) {
     if (buffer == NULL)
         throw OpenMMException("OpenCLArray has not been initialized");
+    if (offset < 0 || offset+elements > getSize())
+        throw OpenMMException("uploadSubArray: data exceeds range of array");
     try {
-        context->getQueue().enqueueWriteBuffer(*buffer, blocking ? CL_TRUE : CL_FALSE, 0, size*elementSize, data);
+        context->getQueue().enqueueWriteBuffer(*buffer, blocking ? CL_TRUE : CL_FALSE, offset*elementSize, elements*elementSize, data);
     }
     catch (cl::Error err) {
         std::stringstream str;
