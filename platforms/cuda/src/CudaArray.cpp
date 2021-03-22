@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -86,14 +86,16 @@ ComputeContext& CudaArray::getContext() {
     return *context;
 }
 
-void CudaArray::upload(const void* data, bool blocking) {
+void CudaArray::uploadSubArray(const void* data, int offset, int elements, bool blocking) {
     if (pointer == 0)
         throw OpenMMException("CudaArray has not been initialized");
+    if (offset < 0 || offset+elements > getSize())
+        throw OpenMMException("uploadSubArray: data exceeds range of array");
     CUresult result;
     if (blocking)
-        result = cuMemcpyHtoD(pointer, data, size*elementSize);
+        result = cuMemcpyHtoD(pointer+offset*elementSize, data, elements*elementSize);
     else
-        result = cuMemcpyHtoDAsync(pointer, data, size*elementSize, context->getCurrentStream());
+        result = cuMemcpyHtoDAsync(pointer+offset*elementSize, data, elements*elementSize, context->getCurrentStream());
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
         str<<"Error uploading array "<<name<<": "<<CudaContext::getErrorString(result)<<" ("<<result<<")";

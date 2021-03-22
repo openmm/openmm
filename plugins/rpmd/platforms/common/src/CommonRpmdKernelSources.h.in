@@ -1,3 +1,6 @@
+#ifndef OPENMM_COMMONRPMDKERNELSOURCES_H_
+#define OPENMM_COMMONRPMDKERNELSOURCES_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -24,8 +27,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "CudaRpmdKernelSources.h"
+#include <string>
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
+/**
+ * This class is a central holding place for the source code of device kernels.
+ * The CMake build script inserts declarations into it based on the .cc files in the
+ * kernels subfolder.
+ */
+
+class CommonRpmdKernelSources {
+public:
+@KERNEL_FILE_DECLARATIONS@
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_COMMONRPMDKERNELSOURCES_H_*/
