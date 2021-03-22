@@ -24,8 +24,8 @@ KERNEL void applyPileThermostat(GLOBAL mixed4* velm, GLOBAL float4* random, unsi
     const int indexInBlock = LOCAL_ID-blockStart;
     const mixed nkT = NUM_COPIES*kT;
     const mixed twown = 2.0f*nkT/HBAR;
-    const mixed c1_0 = EXP(-0.5f*dt*friction);
-    const mixed c2_0 = SQRT(1.0f-c1_0*c1_0);
+    const mixed c1_0 = exp(-0.5f*dt*friction);
+    const mixed c2_0 = sqrt(1.0f-c1_0*c1_0);
     LOCAL mixed3 v[2*THREAD_BLOCK_SIZE];
     LOCAL mixed3 temp[2*THREAD_BLOCK_SIZE];
     LOCAL mixed2 w[NUM_COPIES];
@@ -38,7 +38,7 @@ KERNEL void applyPileThermostat(GLOBAL mixed4* velm, GLOBAL float4* random, unsi
     for (int particle = (GLOBAL_ID)/NUM_COPIES; particle < NUM_ATOMS; particle += numBlocks) {
         mixed4 particleVelm = velm[particle+indexInBlock*PADDED_NUM_ATOMS];
         mixed invMass = particleVelm.w;
-        mixed c3_0 = c2_0*SQRT(nkT*invMass);
+        mixed c3_0 = c2_0*sqrt(nkT*invMass);
         
         // Forward FFT.
         
@@ -61,9 +61,9 @@ KERNEL void applyPileThermostat(GLOBAL mixed4* velm, GLOBAL float4* random, unsi
             int k = (indexInBlock <= NUM_COPIES/2 ? indexInBlock : NUM_COPIES-indexInBlock);
             const bool isCenter = (NUM_COPIES%2 == 0 && k == NUM_COPIES/2);
             const mixed wk = twown*sin(k*M_PI/NUM_COPIES);
-            const mixed c1 = EXP(-wk*dt);
-            const mixed c2 = SQRT((1.0f-c1*c1)/2.0f) * (isCenter ? sqrt(2.0f) : 1.0f);
-            const mixed c3 = c2*SQRT(nkT*invMass);
+            const mixed c1 = exp(-wk*dt);
+            const mixed c2 = sqrt((1.0f-c1*c1)/2.0f) * (isCenter ? sqrt(2.0f) : 1.0f);
+            const mixed c3 = c2*sqrt(nkT*invMass);
             float4 rand1 = random[randomIndex+k];
             float4 rand2 = (isCenter ? make_float4(0) : random[randomIndex+NUM_COPIES-k]);
             vreal[indexInBlock] = c1*vreal[indexInBlock] + c3*make_mixed3(rand1.x, rand1.y, rand1.z);
