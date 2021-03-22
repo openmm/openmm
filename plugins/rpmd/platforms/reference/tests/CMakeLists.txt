@@ -2,9 +2,8 @@
 # Testing
 #
 ENABLE_TESTING()
-INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/reference/include)
-INCLUDE_DIRECTORIES(${OPENMM_DIR}/openmmapi/include/openmm)
-INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/reference/src)
+INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/reference/tests)
+INCLUDE_DIRECTORIES(${OPENMM_DIR}/plugins/rpmd/tests)
 
 SET(SHARED_OPENMM_RPMD_TARGET OpenMMRPMD)
 
