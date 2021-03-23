@@ -41,39 +41,6 @@ namespace OpenMM {
 class CudaCalcAmoebaGeneralizedKirkwoodForceKernel;
 
 /**
- * This kernel is invoked by AmoebaTorsionTorsionForce to calculate the forces acting on the system and the energy of the system.
- */
-class CudaCalcAmoebaTorsionTorsionForceKernel : public CalcAmoebaTorsionTorsionForceKernel {
-public:
-    CudaCalcAmoebaTorsionTorsionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaTorsionTorsionForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaTorsionTorsionForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-private:
-    class ForceInfo;
-    int numTorsionTorsions;
-    int numTorsionTorsionGrids;
-    CudaContext& cu;
-    const System& system;
-    CudaArray gridValues;
-    CudaArray gridParams;
-    CudaArray torsionParams;
-};
-
-/**
  * This kernel is invoked by AmoebaMultipoleForce to calculate the forces acting on the system and the energy of the system.
  */
 class CudaCalcAmoebaMultipoleForceKernel : public CalcAmoebaMultipoleForceKernel {
@@ -365,44 +332,6 @@ private:
     CudaArray tempForces;
     CudaNonbondedUtilities* nonbonded;
     CUfunction prepareKernel, spreadKernel;
-};
-
-/**
- * This kernel is invoked to calculate the WCA dispersion forces acting on the system and the energy of the system.
- */
-class CudaCalcAmoebaWcaDispersionForceKernel : public CalcAmoebaWcaDispersionForceKernel {
-public:
-    CudaCalcAmoebaWcaDispersionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaMultipoleForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaWcaDispersionForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the AmoebaWcaDispersionForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const AmoebaWcaDispersionForce& force);
-private:
-    class ForceInfo;
-    CudaContext& cu;
-    const System& system;
-    double totalMaximumDispersionEnergy;
-    CudaArray radiusEpsilon;
-    CUfunction forceKernel;
 };
 
 /**

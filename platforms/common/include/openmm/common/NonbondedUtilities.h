@@ -158,6 +158,14 @@ public:
      * on the most recent call to prepareInteractions().
      */
     virtual ArrayInterface& getRebuildNeighborList() = 0;
+    /**
+     * Get the index of the first tile this context is responsible for processing.
+     */
+    virtual int getStartTileIndex() const = 0;
+    /**
+     * Get the total number of tiles this context is responsible for processing.
+     */
+    virtual int getNumTiles() const = 0;
 };
 
 } // namespace OpenMM

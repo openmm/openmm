@@ -6,7 +6,7 @@ typedef struct {
     float radius, epsilon, padding;
 } AtomData;
 
-inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __restrict__ posq, const float2* __restrict__ radiusEpsilon) {
+inline DEVICE void loadAtomData(AtomData& data, int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const float2* RESTRICT radiusEpsilon) {
     real4 atomPosq = posq[atom];
     data.pos = make_real3(atomPosq.x, atomPosq.y, atomPosq.z);
     float2 temp = radiusEpsilon[atom];
@@ -14,7 +14,7 @@ inline __device__ void loadAtomData(AtomData& data, int atom, const real4* __res
     data.epsilon = temp.y;
 }
 
-__device__ void initParticleParameters(float radius, float epsilon, real& rmixo, real& rmixh, real& emixo, real& emixh) {
+DEVICE void initParticleParameters(float radius, float epsilon, real& rmixo, real& rmixh, real& emixo, real& emixh) {
     real sqrtEps = SQRT(epsilon);
     real denominator = SQRT(EPSO) + sqrtEps;
     emixo = 4*EPSO*epsilon / (denominator*denominator);
@@ -27,7 +27,7 @@ __device__ void initParticleParameters(float radius, float epsilon, real& rmixo,
     rmixh = 2*(rminh2*RMINH + radius2*radius) / (rminh2+radius2);
 }
 
-__device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real rmixo, real rmixh, real emixo, real emixh, real3& force, real& energy) {
+DEVICE void computeOneInteraction(AtomData& atom1, AtomData& atom2, real rmixo, real rmixh, real emixo, real emixh, real3& force, real& energy) {
     // get deltaR and r between 2 atoms
     
     force = atom2.pos - atom1.pos;
@@ -191,22 +191,22 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real rmi
 /**
  * Compute WCA interaction.
  */
-extern "C" __global__ void computeWCAForce(unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer,
-        const real4* __restrict__ posq, unsigned int startTileIndex, unsigned int numTileIndices, const float2* __restrict__ radiusEpsilon) {
-    unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
+KERNEL void computeWCAForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed* RESTRICT energyBuffer,
+        GLOBAL const real4* RESTRICT posq, unsigned int startTileIndex, unsigned int numTileIndices, GLOBAL const float2* RESTRICT radiusEpsilon) {
+    unsigned int totalWarps = GLOBAL_SIZE/TILE_SIZE;
+    unsigned int warp = GLOBAL_ID/TILE_SIZE;
     const unsigned int numTiles = numTileIndices;
-    unsigned int pos = (unsigned int) (startTileIndex+warp*(long long)numTiles/totalWarps);
-    unsigned int end = (unsigned int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
+    unsigned int pos = (unsigned int) (startTileIndex+warp*(mm_long)numTiles/totalWarps);
+    unsigned int end = (unsigned int) (startTileIndex+(warp+1)*(mm_long)numTiles/totalWarps);
     mixed energy = 0;
-    __shared__ AtomData localData[THREAD_BLOCK_SIZE];
+    LOCAL AtomData localData[THREAD_BLOCK_SIZE];
     
     do {
         // Extract the coordinates of this tile
         
-        const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
-        const unsigned int tbx = threadIdx.x - tgx;
-        const unsigned int localGroupIndex = threadIdx.x/TILE_SIZE;
+        const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
+        const unsigned int tbx = LOCAL_ID - tgx;
+        const unsigned int localGroupIndex = LOCAL_ID/TILE_SIZE;
         int x, y;
         AtomData data;
         if (pos < end) {
@@ -218,11 +218,11 @@ extern "C" __global__ void computeWCAForce(unsigned long long* __restrict__ forc
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
             loadAtomData(data, atom1, posq, radiusEpsilon);
-            loadAtomData(localData[threadIdx.x], y*TILE_SIZE+tgx, posq, radiusEpsilon);
+            loadAtomData(localData[LOCAL_ID], y*TILE_SIZE+tgx, posq, radiusEpsilon);
             real emixo, emixh, rmixo, rmixh;
             initParticleParameters(data.radius, data.epsilon, rmixo, rmixh, emixo, emixh);
             data.force = make_real3(0);
-            localData[threadIdx.x].force = make_real3(0);
+            localData[LOCAL_ID].force = make_real3(0);
 
             // Compute forces.
 
@@ -246,17 +246,17 @@ extern "C" __global__ void computeWCAForce(unsigned long long* __restrict__ forc
                 tj = (tj+1) & (TILE_SIZE-1);
             }
             unsigned int offset = x*TILE_SIZE + tgx;
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], static_cast<mm_ulong>((mm_long) (data.force.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<mm_ulong>((mm_long) (data.force.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<mm_ulong>((mm_long) (data.force.z*0x100000000)));
             if (x != y) {
                 offset = y*TILE_SIZE + tgx;
-                atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
-                atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
-                atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[offset], static_cast<mm_ulong>((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<mm_ulong>((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<mm_ulong>((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
             }
         }
         pos++;
     } while (pos < end);
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] -= AWATER*energy;
+    energyBuffer[GLOBAL_ID] -= AWATER*energy;
 }

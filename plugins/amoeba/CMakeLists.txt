@@ -124,6 +124,7 @@ ENDIF(OPENMM_BUILD_STATIC_LIB)
 # Which hardware platforms to build
 
 ADD_SUBDIRECTORY(platforms/reference)
+ADD_SUBDIRECTORY(platforms/common)
 
 IF(OPENMM_BUILD_CUDA_LIB)
     SET(OPENMM_BUILD_AMOEBA_CUDA_LIB ON CACHE BOOL "Build OpenMMAmoebaCuda library for Nvidia GPUs")

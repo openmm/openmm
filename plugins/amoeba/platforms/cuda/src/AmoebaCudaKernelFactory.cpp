@@ -26,6 +26,7 @@
 
 #include "AmoebaCudaKernelFactory.h"
 #include "AmoebaCudaKernels.h"
+#include "AmoebaCommonKernels.h"
 #include "CudaPlatform.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
@@ -75,7 +76,7 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
     CudaContext& cu = *data.contexts[0];
 
     if (name == CalcAmoebaTorsionTorsionForceKernel::Name())
-        return new CudaCalcAmoebaTorsionTorsionForceKernel(name, platform, cu, context.getSystem());
+        return new CommonCalcAmoebaTorsionTorsionForceKernel(name, platform, cu, context.getSystem());
 
     if (name == CalcAmoebaMultipoleForceKernel::Name())
         return new CudaCalcAmoebaMultipoleForceKernel(name, platform, cu, context.getSystem());
@@ -87,7 +88,7 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
         return new CudaCalcAmoebaVdwForceKernel(name, platform, cu, context.getSystem());
 
     if (name == CalcAmoebaWcaDispersionForceKernel::Name())
-        return new CudaCalcAmoebaWcaDispersionForceKernel(name, platform, cu, context.getSystem());
+        return new CommonCalcAmoebaWcaDispersionForceKernel(name, platform, cu, context.getSystem());
 
     if (name == CalcHippoNonbondedForceKernel::Name())
         return new CudaCalcHippoNonbondedForceKernel(name, platform, cu, context.getSystem());

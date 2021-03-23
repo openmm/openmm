@@ -279,6 +279,10 @@ public:
         return paddedNumAtoms;
     }
     /**
+     * Get the number of blocks of TileSize atoms.
+     */
+    virtual int getNumAtomBlocks() const = 0;
+    /**
      * Get the standard number of thread blocks to use when executing kernels.
      */
     virtual int getNumThreadBlocks() const = 0;
