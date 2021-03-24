@@ -6,35 +6,37 @@ typedef struct {
     float radius, epsilon, padding;
 } AtomData;
 
-inline DEVICE void loadAtomData(AtomData& data, int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const float2* RESTRICT radiusEpsilon) {
+inline DEVICE AtomData loadAtomData(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const float2* RESTRICT radiusEpsilon) {
+    AtomData data;
     real4 atomPosq = posq[atom];
     data.pos = make_real3(atomPosq.x, atomPosq.y, atomPosq.z);
     float2 temp = radiusEpsilon[atom];
     data.radius = temp.x;
     data.epsilon = temp.y;
+    return data;
 }
 
-DEVICE void initParticleParameters(float radius, float epsilon, real& rmixo, real& rmixh, real& emixo, real& emixh) {
+DEVICE void initParticleParameters(float radius, float epsilon, real* rmixo, real* rmixh, real* emixo, real* emixh) {
     real sqrtEps = SQRT(epsilon);
     real denominator = SQRT(EPSO) + sqrtEps;
-    emixo = 4*EPSO*epsilon / (denominator*denominator);
+    *emixo = 4*EPSO*epsilon / (denominator*denominator);
     denominator = SQRT(EPSH) + sqrtEps;
-    emixh = 4*EPSH*epsilon / (denominator*denominator);
+    *emixh = 4*EPSH*epsilon / (denominator*denominator);
     real radius2 = radius*radius;
     real rmino2 = RMINO*RMINO; 
-    rmixo = 2*(rmino2*RMINO + radius2*radius) / (rmino2 + radius2);
+    *rmixo = 2*(rmino2*RMINO + radius2*radius) / (rmino2 + radius2);
     real rminh2 = RMINH*RMINH;
-    rmixh = 2*(rminh2*RMINH + radius2*radius) / (rminh2+radius2);
+    *rmixh = 2*(rminh2*RMINH + radius2*radius) / (rminh2+radius2);
 }
 
-DEVICE void computeOneInteraction(AtomData& atom1, AtomData& atom2, real rmixo, real rmixh, real emixo, real emixh, real3& force, real& energy) {
+DEVICE void computeOneInteraction(AtomData atom1, AtomData atom2, real rmixo, real rmixh, real emixo, real emixh, real3* force, real* energy) {
     // get deltaR and r between 2 atoms
     
-    force = atom2.pos - atom1.pos;
-    real r2 = dot(force, force);
+    *force = atom2.pos - atom1.pos;
+    real r2 = dot(*force, *force);
     if (r2 <= 0) {
-        force = make_real3(0);
-        energy = 0;
+        *force = make_real3(0);
+        *energy = 0;
         return;
     }
     real rI = RSQRT(r2);
@@ -43,8 +45,8 @@ DEVICE void computeOneInteraction(AtomData& atom1, AtomData& atom2, real rmixo, 
     real sk = atom2.radius*SHCTD;
     real sk2 = sk*sk;
     if (atom1.radius >= (r+sk)) {
-        force = make_real3(0);
-        energy = 0;
+        *force = make_real3(0);
+        *energy = 0;
         return;
     }
 
@@ -183,9 +185,9 @@ DEVICE void computeOneInteraction(AtomData& atom1, AtomData& atom2, real rmixo, 
     de += mask2*(ah*rmixh7*M_PI*(dl+du)/(30*r2));
     sum += mask2*(irep+idisp);
 
-    energy = sum;
+    *energy = sum;
     de *= -AWATER*rI;
-    force *= de;
+    *force *= de;
 }
 
 /**
@@ -217,10 +219,10 @@ KERNEL void computeWCAForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed
                 x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
-            loadAtomData(data, atom1, posq, radiusEpsilon);
-            loadAtomData(localData[LOCAL_ID], y*TILE_SIZE+tgx, posq, radiusEpsilon);
+            data = loadAtomData(atom1, posq, radiusEpsilon);
+            localData[LOCAL_ID] = loadAtomData(y*TILE_SIZE+tgx, posq, radiusEpsilon);
             real emixo, emixh, rmixo, rmixh;
-            initParticleParameters(data.radius, data.epsilon, rmixo, rmixh, emixo, emixh);
+            initParticleParameters(data.radius, data.epsilon, &rmixo, &rmixh, &emixo, &emixh);
             data.force = make_real3(0);
             localData[LOCAL_ID].force = make_real3(0);
 
@@ -232,13 +234,13 @@ KERNEL void computeWCAForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed
                 if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                     real3 tempForce;
                     real tempEnergy;
-                    computeOneInteraction(data, localData[tbx+tj], rmixo, rmixh, emixo, emixh, tempForce, tempEnergy);
+                    computeOneInteraction(data, localData[tbx+tj], rmixo, rmixh, emixo, emixh, &tempForce, &tempEnergy);
                     data.force += tempForce;
                     localData[tbx+tj].force -= tempForce;
                     energy += (x == y ? 0.5f*tempEnergy : tempEnergy);
                     real emjxo, emjxh, rmjxo, rmjxh;
-                    initParticleParameters(localData[tbx+tj].radius, localData[tbx+tj].epsilon, rmjxo, rmjxh, emjxo, emjxh);
-                    computeOneInteraction(localData[tbx+tj], data, rmjxo, rmjxh, emjxo, emjxh, tempForce, tempEnergy);
+                    initParticleParameters(localData[tbx+tj].radius, localData[tbx+tj].epsilon, &rmjxo, &rmjxh, &emjxo, &emjxh);
+                    computeOneInteraction(localData[tbx+tj], data, rmjxo, rmjxh, emjxo, emjxh, &tempForce, &tempEnergy);
                     data.force -= tempForce;
                     localData[tbx+tj].force += tempForce;
                     energy += (x == y ? 0.5f*tempEnergy : tempEnergy);
@@ -246,14 +248,14 @@ KERNEL void computeWCAForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed
                 tj = (tj+1) & (TILE_SIZE-1);
             }
             unsigned int offset = x*TILE_SIZE + tgx;
-            ATOMIC_ADD(&forceBuffers[offset], static_cast<mm_ulong>((mm_long) (data.force.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<mm_ulong>((mm_long) (data.force.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<mm_ulong>((mm_long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
             if (x != y) {
                 offset = y*TILE_SIZE + tgx;
-                ATOMIC_ADD(&forceBuffers[offset], static_cast<mm_ulong>((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<mm_ulong>((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<mm_ulong>((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
             }
         }
         pos++;

@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CudaAmoebaTests.h"
+#include "OpenCLAmoebaTests.h"
 #include "TestWcaDispersionForce.h"
 
 void runPlatformTests() {}

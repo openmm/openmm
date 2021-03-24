@@ -1,5 +1,5 @@
 DEVICE void bicubic(real4 y, real4 y1i, real4 y2i, real4 y12i, real x1, real x1l, real x1u,
-                        real x2, real x2l, real x2u, GLOBAL real* energyOut, GLOBAL real* dang1Out, GLOBAL real* dang2Out) {
+                        real x2, real x2l, real x2u, real* energyOut, real* dang1Out, real* dang2Out) {
     real c[4][4];
     real d1 = x1u - x1l;
     real d2 = x2u - x2l;
