@@ -278,63 +278,6 @@ private:
 };
 
 /**
- * This kernel is invoked to calculate the vdw forces acting on the system and the energy of the system.
- */
-class CudaCalcAmoebaVdwForceKernel : public CalcAmoebaVdwForceKernel {
-public:
-    CudaCalcAmoebaVdwForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
-    ~CudaCalcAmoebaVdwForceKernel();
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaVdwForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaVdwForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the AmoebaVdwForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force);
-private:
-    class ForceInfo;
-    CudaContext& cu;
-    const System& system;
-    bool hasInitializedNonbonded;
-
-    // True if the AmoebaVdwForce AlchemicalMethod is not None.
-    bool hasAlchemical;
-    // Pinned host memory; allocated if necessary in initialize, and freed in the destructor.
-    void* vdwLambdaPinnedBuffer;
-    // Device memory for the alchemical state.
-    CudaArray vdwLambda;
-    // Only update device memory when lambda changes.
-    float currentVdwLambda;
-    // Per particle alchemical flag.
-    CudaArray isAlchemical;
-
-    double dispersionCoefficient;
-    CudaArray sigmaEpsilon, atomType;
-    CudaArray bondReductionAtoms;
-    CudaArray bondReductionFactors;
-    CudaArray tempPosq;
-    CudaArray tempForces;
-    CudaNonbondedUtilities* nonbonded;
-    CUfunction prepareKernel, spreadKernel;
-};
-
-/**
  * This kernel is invoked by HippoNonbondedForce to calculate the forces acting on the system and the energy of the system.
  */
 class CudaCalcHippoNonbondedForceKernel : public CalcHippoNonbondedForceKernel {

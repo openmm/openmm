@@ -1763,214 +1763,215 @@ double CommonCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& context, 
 //    params.upload(paramsVector);
 //    cc.invalidateMolecules();
 //}
-//
-///* -------------------------------------------------------------------------- *
-// *                           AmoebaVdw                                        *
-// * -------------------------------------------------------------------------- */
-//
-//class CommonCalcAmoebaVdwForceKernel::ForceInfo : public ComputeForceInfo {
-//public:
-//    ForceInfo(const AmoebaVdwForce& force) : force(force) {
-//    }
-//    bool areParticlesIdentical(int particle1, int particle2) {
-//        int iv1, iv2, type1, type2;
-//        double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2;
-//        bool isAlchemical1, isAlchemical2;
-//        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1, isAlchemical1, type1);
-//        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2, isAlchemical2, type2);
-//        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && isAlchemical1 == isAlchemical2 && type1 == type2);
-//    }
-//private:
-//    const AmoebaVdwForce& force;
-//};
-//
-//CommonCalcAmoebaVdwForceKernel::CommonCalcAmoebaVdwForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system) :
-//        CalcAmoebaVdwForceKernel(name, platform), cc(cc), system(system), hasInitializedNonbonded(false), nonbonded(NULL), vdwLambdaPinnedBuffer(NULL) {
-//}
-//
-//CommonCalcAmoebaVdwForceKernel::~CommonCalcAmoebaVdwForceKernel() {
-//    cc.setAsCurrent();
-//    if (nonbonded != NULL)
-//        delete nonbonded;
-//    if (vdwLambdaPinnedBuffer != NULL) 
-//        cuMemFreeHost(vdwLambdaPinnedBuffer);                              
-//}
-//
-//void CommonCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
-//    cc.setAsCurrent();
-//    int paddedNumAtoms = cc.getPaddedNumAtoms();
-//    bondReductionAtoms.initialize<int>(cc, paddedNumAtoms, "bondReductionAtoms");
-//    bondReductionFactors.initialize<float>(cc, paddedNumAtoms, "bondReductionFactors");
-//    tempPosq.initialize(cc, paddedNumAtoms, cc.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "tempPosq");
-//    tempForces.initialize<long long>(cc, 3*paddedNumAtoms, "tempForces");
-//    
-//    // Record atom parameters.
-//    vector<int> atomTypeVec;
-//    vector<vector<double> > sigmaMatrix, epsilonMatrix;
-//    AmoebaVdwForceImpl::createParameterMatrix(force, atomTypeVec, sigmaMatrix, epsilonMatrix);
-//    atomTypeVec.resize(paddedNumAtoms, 0);
-//    int numTypes = sigmaMatrix.size();
-//    atomType.initialize<int>(cc, paddedNumAtoms, "atomType");
-//    sigmaEpsilon.initialize<float2>(cc, numTypes*numTypes, "sigmaEpsilon");
-//    vector<float2> sigmaEpsilonVec(sigmaEpsilon.getSize());
-//    for (int i = 0; i < numTypes; i++)
-//        for (int j = 0; j < numTypes; j++)
-//            sigmaEpsilonVec[i*numTypes+j] = mm_float2((float) sigmaMatrix[i][j], (float) epsilonMatrix[i][j]);
-//    atomType.upload(atomTypeVec);
-//    sigmaEpsilon.upload(sigmaEpsilonVec);
-//    
-//    vector<float> isAlchemicalVec(paddedNumAtoms, 0);
-//    vector<int> bondReductionAtomsVec(paddedNumAtoms, 0);
-//    vector<float> bondReductionFactorsVec(paddedNumAtoms, 0);
-//    vector<vector<int> > exclusions(cc.getNumAtoms());
-//
-//    // Handle Alchemical parameters.
-//    hasAlchemical = force.getAlchemicalMethod() != AmoebaVdwForce::None;
-//    if (hasAlchemical) {
-//       isAlchemical.initialize<float>(cc, paddedNumAtoms, "isAlchemical");
-//       vdwLambda.initialize<float>(cc, 1, "vdwLambda");
-//       CHECK_RESULT(cuMemHostAlloc(&vdwLambdaPinnedBuffer, sizeof(float), 0), "Error allocating vdwLambda pinned buffer");
-//    }
-//
-//    for (int i = 0; i < force.getNumParticles(); i++) {
-//        int ivIndex, type;
-//        double sigma, epsilon, reductionFactor;
-//        bool alchemical;
-//        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical, type);
-//        isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
-//        bondReductionAtomsVec[i] = ivIndex;
-//        bondReductionFactorsVec[i] = (float) reductionFactor;
-//        force.getParticleExclusions(i, exclusions[i]);
-//        exclusions[i].push_back(i);
-//    }
-//    bondReductionAtoms.upload(bondReductionAtomsVec);
-//    bondReductionFactors.upload(bondReductionFactorsVec);
-//    if (force.getUseDispersionCorrection())
-//        dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
-//    else
-//        dispersionCoefficient = 0.0;               
-//
-//    // This force is applied based on modified atom positions, where hydrogens have been moved slightly
-//    // closer to their parent atoms.  We therefore create a separate NonbondedUtilities just for
-//    // this force, so it will have its own neighbor list and interaction kernel.
-//    
-//    nonbonded = new NonbondedUtilities(cc);
-//    nonbonded->addParameter(NonbondedUtilities::ParameterInfo("atomType", "int", 1, sizeof(int), atomType.getDevicePointer()));
-//    nonbonded->addArgument(NonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon.getDevicePointer()));
-//
-//    if (hasAlchemical) {
-//       isAlchemical.upload(isAlchemicalVec);
-//       ((float*) vdwLambdaPinnedBuffer)[0] = 1.0f;
-//       currentVdwLambda = 1.0f;
-//       vdwLambda.upload(vdwLambdaPinnedBuffer, false);
-//       nonbonded->addParameter(NonbondedUtilities::ParameterInfo("isAlchemical", "float", 1, sizeof(float), isAlchemical.getDevicePointer()));
-//       nonbonded->addArgument(NonbondedUtilities::ParameterInfo("vdwLambda", "float", 1, sizeof(float), vdwLambda.getDevicePointer()));
-//    }
-//    
-//    // Create the interaction kernel.
-//    
-//    map<string, string> replacements;
-//    replacements["VDW_ALCHEMICAL_METHOD"] = cc.intToString(force.getAlchemicalMethod()); 
-//    replacements["VDW_SOFTCORE_POWER"] = cc.intToString(force.getSoftcorePower());
-//    replacements["VDW_SOFTCORE_ALPHA"] = cc.doubleToString(force.getSoftcoreAlpha()); 
-//    replacements["POTENTIAL_FUNCTION"] = cc.intToString(force.getPotentialFunction());
-//    replacements["NUM_TYPES"] = cc.intToString(numTypes);
-//
-//    double cutoff = force.getCutoffDistance();
-//    double taperCutoff = cutoff*0.9;
-//    replacements["CUTOFF_DISTANCE"] = cc.doubleToString(force.getCutoffDistance());
-//    replacements["TAPER_CUTOFF"] = cc.doubleToString(taperCutoff);
-//    replacements["TAPER_C3"] = cc.doubleToString(10/pow(taperCutoff-cutoff, 3.0));
-//    replacements["TAPER_C4"] = cc.doubleToString(15/pow(taperCutoff-cutoff, 4.0));
-//    replacements["TAPER_C5"] = cc.doubleToString(6/pow(taperCutoff-cutoff, 5.0));
-//    bool useCutoff = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
-//    nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoffDistance(), exclusions,
-//        cc.replaceStrings(CommonAmoebaKernelSources::amoebaVdwForce2, replacements), 0);
-//    
-//    // Create the other kernels.
-//    
-//    map<string, string> defines;
-//    defines["PADDED_NUM_ATOMS"] = cc.intToString(paddedNumAtoms);
-//    CUmodule module = cc.createModule(CommonAmoebaKernelSources::amoebaVdwForce1, defines);
-//    prepareKernel = cc.getKernel(module, "prepareToComputeForce");
-//    spreadKernel = cc.getKernel(module, "spreadForces");
-//    cc.addForce(new ForceInfo(force));
-//}
-//
-//double CommonCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    if (!hasInitializedNonbonded) {
-//        hasInitializedNonbonded = true;
-//        nonbonded->initialize(system);
-//    }
-//
-//    if (hasAlchemical) {
-//       float contextLambda = context.getParameter(AmoebaVdwForce::Lambda());
-//       if (contextLambda != currentVdwLambda) {
-//          // Non-blocking copy of vdwLambda to device memory
-//          ((float*) vdwLambdaPinnedBuffer)[0] = contextLambda;
-//          vdwLambda.upload(vdwLambdaPinnedBuffer, false);
-//          currentVdwLambda = contextLambda;
-//       }
-//    }
-//
-//    cc.getPosq().copyTo(tempPosq);
-//    cc.getForce().copyTo(tempForces);
-//    void* prepareArgs[] = {&cc.getForce().getDevicePointer(), &cc.getPosq().getDevicePointer(), &tempPosq.getDevicePointer(),
-//        &bondReductionAtoms.getDevicePointer(), &bondReductionFactors.getDevicePointer()};
-//    cc.executeKernel(prepareKernel, prepareArgs, cc.getPaddedNumAtoms());
-//    nonbonded->prepareInteractions(1);
-//    nonbonded->computeInteractions(1, includeForces, includeEnergy);
-//    void* spreadArgs[] = {&cc.getForce().getDevicePointer(), &tempForces.getDevicePointer(), &bondReductionAtoms.getDevicePointer(), &bondReductionFactors.getDevicePointer()};
-//    cc.executeKernel(spreadKernel, spreadArgs, cc.getPaddedNumAtoms());
-//    tempPosq.copyTo(cc.getPosq());
-//    tempForces.copyTo(cc.getForce());
-//    mm_double4 box = cc.getPeriodicBoxSize();
-//    return dispersionCoefficient/(box.x*box.y*box.z);
-//}
-//
-//void CommonCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force) {
-//    // Make sure the new parameters are acceptable.
-//    
-//    cc.setAsCurrent();
-//    if (force.getNumParticles() != cc.getNumAtoms())
-//        throw OpenMMException("updateParametersInContext: The number of particles has changed");
-//    
-//    vector<int> atomTypeVec;
-//    vector<vector<double> > sigmaMatrix, epsilonMatrix;
-//    AmoebaVdwForceImpl::createParameterMatrix(force, atomTypeVec, sigmaMatrix, epsilonMatrix);
-//    atomTypeVec.resize(cc.getPaddedNumAtoms(), 0);
-//    int numTypes = sigmaMatrix.size();
-//    if (sigmaEpsilon.getSize() != numTypes*numTypes)
-//        throw OpenMMException("updateParametersInContext: The number of particle types has changed");
-//    vector<float2> sigmaEpsilonVec(sigmaEpsilon.getSize());
-//    for (int i = 0; i < numTypes; i++)
-//        for (int j = 0; j < numTypes; j++)
-//            sigmaEpsilonVec[i*numTypes+j] = mm_float2((float) sigmaMatrix[i][j], (float) epsilonMatrix[i][j]);
-//    atomType.upload(atomTypeVec);
-//    sigmaEpsilon.upload(sigmaEpsilonVec);
-//
-//    // Record the per-particle parameters.
-//    vector<float> isAlchemicalVec(cc.getPaddedNumAtoms(), 0);
-//    vector<int> bondReductionAtomsVec(cc.getPaddedNumAtoms(), 0);
-//    vector<float> bondReductionFactorsVec(cc.getPaddedNumAtoms(), 0);
-//    for (int i = 0; i < force.getNumParticles(); i++) {
-//        int ivIndex, type;
-//        double sigma, epsilon, reductionFactor;
-//        bool alchemical;
-//        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical, type);
-//        isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
-//        bondReductionAtomsVec[i] = ivIndex;
-//        bondReductionFactorsVec[i] = (float) reductionFactor;
-//    }
-//    if (hasAlchemical) isAlchemical.upload(isAlchemicalVec);
-//    bondReductionAtoms.upload(bondReductionAtomsVec);
-//    bondReductionFactors.upload(bondReductionFactorsVec);
-//    if (force.getUseDispersionCorrection())
-//        dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
-//    else
-//        dispersionCoefficient = 0.0;               
-//    cc.invalidateMolecules();
-//}
+
+/* -------------------------------------------------------------------------- *
+ *                           AmoebaVdw                                        *
+ * -------------------------------------------------------------------------- */
+
+class CommonCalcAmoebaVdwForceKernel::ForceInfo : public ComputeForceInfo {
+public:
+    ForceInfo(const AmoebaVdwForce& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        int iv1, iv2, type1, type2;
+        double sigma1, sigma2, epsilon1, epsilon2, reduction1, reduction2;
+        bool isAlchemical1, isAlchemical2;
+        force.getParticleParameters(particle1, iv1, sigma1, epsilon1, reduction1, isAlchemical1, type1);
+        force.getParticleParameters(particle2, iv2, sigma2, epsilon2, reduction2, isAlchemical2, type2);
+        return (sigma1 == sigma2 && epsilon1 == epsilon2 && reduction1 == reduction2 && isAlchemical1 == isAlchemical2 && type1 == type2);
+    }
+private:
+    const AmoebaVdwForce& force;
+};
+
+CommonCalcAmoebaVdwForceKernel::CommonCalcAmoebaVdwForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system) :
+        CalcAmoebaVdwForceKernel(name, platform), cc(cc), system(system), hasInitializedNonbonded(false), nonbonded(NULL) {
+}
+
+CommonCalcAmoebaVdwForceKernel::~CommonCalcAmoebaVdwForceKernel() {
+    cc.setAsCurrent();
+    if (nonbonded != NULL)
+        delete nonbonded;
+}
+
+void CommonCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
+    cc.setAsCurrent();
+    int paddedNumAtoms = cc.getPaddedNumAtoms();
+    bondReductionAtoms.initialize<int>(cc, paddedNumAtoms, "bondReductionAtoms");
+    bondReductionFactors.initialize<float>(cc, paddedNumAtoms, "bondReductionFactors");
+    tempPosq.initialize(cc, paddedNumAtoms, cc.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "tempPosq");
+    tempForces.initialize<long long>(cc, 3*paddedNumAtoms, "tempForces");
+    
+    // Record atom parameters.
+    vector<int> atomTypeVec;
+    vector<vector<double> > sigmaMatrix, epsilonMatrix;
+    AmoebaVdwForceImpl::createParameterMatrix(force, atomTypeVec, sigmaMatrix, epsilonMatrix);
+    atomTypeVec.resize(paddedNumAtoms, 0);
+    int numTypes = sigmaMatrix.size();
+    atomType.initialize<int>(cc, paddedNumAtoms, "atomType");
+    sigmaEpsilon.initialize<mm_float2>(cc, numTypes*numTypes, "sigmaEpsilon");
+    vector<mm_float2> sigmaEpsilonVec(sigmaEpsilon.getSize());
+    for (int i = 0; i < numTypes; i++)
+        for (int j = 0; j < numTypes; j++)
+            sigmaEpsilonVec[i*numTypes+j] = mm_float2((float) sigmaMatrix[i][j], (float) epsilonMatrix[i][j]);
+    atomType.upload(atomTypeVec);
+    sigmaEpsilon.upload(sigmaEpsilonVec);
+    
+    vector<float> isAlchemicalVec(paddedNumAtoms, 0);
+    vector<int> bondReductionAtomsVec(paddedNumAtoms, 0);
+    vector<float> bondReductionFactorsVec(paddedNumAtoms, 0);
+    vector<vector<int> > exclusions(cc.getNumAtoms());
+
+    // Handle Alchemical parameters.
+    hasAlchemical = force.getAlchemicalMethod() != AmoebaVdwForce::None;
+    if (hasAlchemical) {
+       isAlchemical.initialize<float>(cc, paddedNumAtoms, "isAlchemical");
+       vdwLambda.initialize<float>(cc, 1, "vdwLambda");
+    }
+
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        int ivIndex, type;
+        double sigma, epsilon, reductionFactor;
+        bool alchemical;
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical, type);
+        isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
+        bondReductionAtomsVec[i] = ivIndex;
+        bondReductionFactorsVec[i] = (float) reductionFactor;
+        force.getParticleExclusions(i, exclusions[i]);
+        exclusions[i].push_back(i);
+    }
+    bondReductionAtoms.upload(bondReductionAtomsVec);
+    bondReductionFactors.upload(bondReductionFactorsVec);
+    if (force.getUseDispersionCorrection())
+        dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
+    else
+        dispersionCoefficient = 0.0;               
+
+    // This force is applied based on modified atom positions, where hydrogens have been moved slightly
+    // closer to their parent atoms.  We therefore create a separate NonbondedUtilities just for
+    // this force, so it will have its own neighbor list and interaction kernel.
+    
+    nonbonded = cc.createNonbondedUtilities();
+    nonbonded->addParameter(ComputeParameterInfo(atomType, "atomType", "int", 1));
+    nonbonded->addArgument(ComputeParameterInfo(sigmaEpsilon, "sigmaEpsilon", "float", 2));
+
+    if (hasAlchemical) {
+       isAlchemical.upload(isAlchemicalVec);
+       currentVdwLambda = 1.0f;
+       vdwLambda.upload(&currentVdwLambda);
+       nonbonded->addParameter(ComputeParameterInfo(isAlchemical, "isAlchemical", "float", 1));
+       nonbonded->addArgument(ComputeParameterInfo(vdwLambda, "vdwLambda", "float", 1));
+    }
+    
+    // Create the interaction kernel.
+    
+    map<string, string> replacements;
+    replacements["VDW_ALCHEMICAL_METHOD"] = cc.intToString(force.getAlchemicalMethod()); 
+    replacements["VDW_SOFTCORE_POWER"] = cc.intToString(force.getSoftcorePower());
+    replacements["VDW_SOFTCORE_ALPHA"] = cc.doubleToString(force.getSoftcoreAlpha()); 
+    replacements["POTENTIAL_FUNCTION"] = cc.intToString(force.getPotentialFunction());
+    replacements["NUM_TYPES"] = cc.intToString(numTypes);
+
+    double cutoff = force.getCutoffDistance();
+    double taperCutoff = cutoff*0.9;
+    replacements["CUTOFF_DISTANCE"] = cc.doubleToString(force.getCutoffDistance());
+    replacements["TAPER_CUTOFF"] = cc.doubleToString(taperCutoff);
+    replacements["TAPER_C3"] = cc.doubleToString(10/pow(taperCutoff-cutoff, 3.0));
+    replacements["TAPER_C4"] = cc.doubleToString(15/pow(taperCutoff-cutoff, 4.0));
+    replacements["TAPER_C5"] = cc.doubleToString(6/pow(taperCutoff-cutoff, 5.0));
+    bool useCutoff = (force.getNonbondedMethod() != AmoebaVdwForce::NoCutoff);
+    nonbonded->addInteraction(useCutoff, useCutoff, true, force.getCutoffDistance(), exclusions,
+        cc.replaceStrings(CommonAmoebaKernelSources::amoebaVdwForce2, replacements), 0);
+    
+    // Create the other kernels.
+    
+    map<string, string> defines;
+    defines["PADDED_NUM_ATOMS"] = cc.intToString(paddedNumAtoms);
+    ComputeProgram program = cc.compileProgram(CommonAmoebaKernelSources::amoebaVdwForce1, defines);
+    prepareKernel = program->createKernel("prepareToComputeForce");
+    prepareKernel->addArg(cc.getLongForceBuffer());
+    prepareKernel->addArg(cc.getPosq());
+    prepareKernel->addArg(tempPosq);
+    prepareKernel->addArg(bondReductionAtoms);
+    prepareKernel->addArg(bondReductionFactors);
+    spreadKernel = program->createKernel("spreadForces");
+    spreadKernel->addArg(cc.getLongForceBuffer());
+    spreadKernel->addArg(tempForces);
+    spreadKernel->addArg(bondReductionAtoms);
+    spreadKernel->addArg(bondReductionFactors);
+    cc.addForce(new ForceInfo(force));
+}
+
+double CommonCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    if (!hasInitializedNonbonded) {
+        hasInitializedNonbonded = true;
+        nonbonded->initialize(system);
+    }
+
+    if (hasAlchemical) {
+       float contextLambda = context.getParameter(AmoebaVdwForce::Lambda());
+       if (contextLambda != currentVdwLambda) {
+          vdwLambda.upload(&contextLambda);
+          currentVdwLambda = contextLambda;
+       }
+    }
+
+    cc.getPosq().copyTo(tempPosq);
+    cc.getLongForceBuffer().copyTo(tempForces);
+    prepareKernel->execute(cc.getPaddedNumAtoms());
+    nonbonded->prepareInteractions(1);
+    nonbonded->computeInteractions(1, includeForces, includeEnergy);
+    spreadKernel->execute(cc.getPaddedNumAtoms());
+    tempPosq.copyTo(cc.getPosq());
+    tempForces.copyTo(cc.getLongForceBuffer());
+    Vec3 a, b, c;
+    cc.getPeriodicBoxVectors(a, b, c);
+    return dispersionCoefficient/(a[0]*b[1]*c[2]);
+}
+
+void CommonCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force) {
+    // Make sure the new parameters are acceptable.
+    
+    cc.setAsCurrent();
+    if (force.getNumParticles() != cc.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    
+    vector<int> atomTypeVec;
+    vector<vector<double> > sigmaMatrix, epsilonMatrix;
+    AmoebaVdwForceImpl::createParameterMatrix(force, atomTypeVec, sigmaMatrix, epsilonMatrix);
+    atomTypeVec.resize(cc.getPaddedNumAtoms(), 0);
+    int numTypes = sigmaMatrix.size();
+    if (sigmaEpsilon.getSize() != numTypes*numTypes)
+        throw OpenMMException("updateParametersInContext: The number of particle types has changed");
+    vector<mm_float2> sigmaEpsilonVec(sigmaEpsilon.getSize());
+    for (int i = 0; i < numTypes; i++)
+        for (int j = 0; j < numTypes; j++)
+            sigmaEpsilonVec[i*numTypes+j] = mm_float2((float) sigmaMatrix[i][j], (float) epsilonMatrix[i][j]);
+    atomType.upload(atomTypeVec);
+    sigmaEpsilon.upload(sigmaEpsilonVec);
+
+    // Record the per-particle parameters.
+    vector<float> isAlchemicalVec(cc.getPaddedNumAtoms(), 0);
+    vector<int> bondReductionAtomsVec(cc.getPaddedNumAtoms(), 0);
+    vector<float> bondReductionFactorsVec(cc.getPaddedNumAtoms(), 0);
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        int ivIndex, type;
+        double sigma, epsilon, reductionFactor;
+        bool alchemical;
+        force.getParticleParameters(i, ivIndex, sigma, epsilon, reductionFactor, alchemical, type);
+        isAlchemicalVec[i] = (alchemical) ? 1.0f : 0.0f;
+        bondReductionAtomsVec[i] = ivIndex;
+        bondReductionFactorsVec[i] = (float) reductionFactor;
+    }
+    if (hasAlchemical) isAlchemical.upload(isAlchemicalVec);
+    bondReductionAtoms.upload(bondReductionAtomsVec);
+    bondReductionFactors.upload(bondReductionFactorsVec);
+    if (force.getUseDispersionCorrection())
+        dispersionCoefficient = AmoebaVdwForceImpl::calcDispersionCorrection(system, force);
+    else
+        dispersionCoefficient = 0.0;               
+    cc.invalidateMolecules();
+}
 
 /* -------------------------------------------------------------------------- *
  *                           AmoebaWcaDispersion                              *

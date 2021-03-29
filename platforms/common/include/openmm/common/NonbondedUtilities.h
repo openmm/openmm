@@ -166,6 +166,22 @@ public:
      * Get the total number of tiles this context is responsible for processing.
      */
     virtual int getNumTiles() const = 0;
+    /**
+     * Initialize this object in preparation for a simulation.
+     */
+    virtual void initialize(const System& system) = 0;
+    /**
+     * Prepare to compute interactions.  This updates the neighbor list.
+     */
+    virtual void prepareInteractions(int forceGroups) = 0;
+    /**
+     * Compute the nonbonded interactions.
+     * 
+     * @param forceGroups    the flags specifying which force groups to include
+     * @param includeForces  whether to compute forces
+     * @param includeEnergy  whether to compute the potential energy
+     */
+    virtual void computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) = 0;
 };
 
 } // namespace OpenMM

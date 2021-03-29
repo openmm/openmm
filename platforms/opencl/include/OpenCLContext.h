@@ -605,6 +605,15 @@ public:
         return *nonbonded;
     }
     /**
+     * Create a new NonbondedUtilities for use with this context.  This should be called
+     * only in unusual situations, when a Force needs its own NonbondedUtilities object
+     * separate from the standard one.  The caller is responsible for deleting the object
+     * when it is no longer needed.
+     */
+    OpenCLNonbondedUtilities* createNonbondedUtilities() {
+        return new OpenCLNonbondedUtilities(*this);
+    }
+    /**
      * This should be called by the Integrator from its own initialize() method.
      * It ensures all contexts are fully initialized.
      */

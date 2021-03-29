@@ -85,7 +85,7 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
         return new CudaCalcAmoebaGeneralizedKirkwoodForceKernel(name, platform, cu, context.getSystem());
 
     if (name == CalcAmoebaVdwForceKernel::Name())
-        return new CudaCalcAmoebaVdwForceKernel(name, platform, cu, context.getSystem());
+        return new CommonCalcAmoebaVdwForceKernel(name, platform, cu, context.getSystem());
 
     if (name == CalcAmoebaWcaDispersionForceKernel::Name())
         return new CommonCalcAmoebaWcaDispersionForceKernel(name, platform, cu, context.getSystem());

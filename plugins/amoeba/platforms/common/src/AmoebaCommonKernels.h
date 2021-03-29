@@ -309,63 +309,61 @@ private:
 //    ComputeArray inducedDipolePolarS;
 //    ComputeKernel computeBornSumKernel, reduceBornSumKernel, surfaceAreaKernel, gkForceKernel, chainRuleKernel, ediffKernel;
 //};
-//
-///**
-// * This kernel is invoked to calculate the vdw forces acting on the system and the energy of the system.
-// */
-//class CommonCalcAmoebaVdwForceKernel : public CalcAmoebaVdwForceKernel {
-//public:
-//    CommonCalcAmoebaVdwForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system);
-//    ~CommonCalcAmoebaVdwForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     * 
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the AmoebaVdwForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const AmoebaVdwForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the AmoebaVdwForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force);
-//private:
-//    class ForceInfo;
-//    ComputeContext& cc;
-//    const System& system;
-//    bool hasInitializedNonbonded;
-//
-//    // True if the AmoebaVdwForce AlchemicalMethod is not None.
-//    bool hasAlchemical;
-//    // Pinned host memory; allocated if necessary in initialize, and freed in the destructor.
-//    void* vdwLambdaPinnedBuffer;
-//    // Device memory for the alchemical state.
-//    ComputeArray vdwLambda;
-//    // Only update device memory when lambda changes.
-//    float currentVdwLambda;
-//    // Per particle alchemical flag.
-//    ComputeArray isAlchemical;
-//
-//    double dispersionCoefficient;
-//    ComputeArray sigmaEpsilon, atomType;
-//    ComputeArray bondReductionAtoms;
-//    ComputeArray bondReductionFactors;
-//    ComputeArray tempPosq;
-//    ComputeArray tempForces;
-//    CudaNonbondedUtilities* nonbonded;
-//    ComputeKernel prepareKernel, spreadKernel;
-//};
+
+/**
+ * This kernel is invoked to calculate the vdw forces acting on the system and the energy of the system.
+ */
+class CommonCalcAmoebaVdwForceKernel : public CalcAmoebaVdwForceKernel {
+public:
+    CommonCalcAmoebaVdwForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system);
+    ~CommonCalcAmoebaVdwForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaVdwForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaVdwForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaVdwForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force);
+private:
+    class ForceInfo;
+    ComputeContext& cc;
+    const System& system;
+    bool hasInitializedNonbonded;
+
+    // True if the AmoebaVdwForce AlchemicalMethod is not None.
+    bool hasAlchemical;
+    // Device memory for the alchemical state.
+    ComputeArray vdwLambda;
+    // Only update device memory when lambda changes.
+    float currentVdwLambda;
+    // Per particle alchemical flag.
+    ComputeArray isAlchemical;
+
+    double dispersionCoefficient;
+    ComputeArray sigmaEpsilon, atomType;
+    ComputeArray bondReductionAtoms;
+    ComputeArray bondReductionFactors;
+    ComputeArray tempPosq;
+    ComputeArray tempForces;
+    NonbondedUtilities* nonbonded;
+    ComputeKernel prepareKernel, spreadKernel;
+};
 
 /**
  * This kernel is invoked to calculate the WCA dispersion forces acting on the system and the energy of the system.
