@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2021 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,7 +29,14 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferenceAmoebaTests.h"
-#include "TestWcaDispersionForce.h"
+#include "ReferenceTests.h"
 
-void runPlatformTests() {}
+extern "C" void registerAmoebaReferenceKernelFactories();
+
+using namespace OpenMM;
+
+void setupKernels (int argc, char* argv[]) {
+    registerAmoebaReferenceKernelFactories();
+    platform = dynamic_cast<ReferencePlatform&>(Platform::getPlatformByName("Reference"));
+    initializeTests(argc, argv);
+}

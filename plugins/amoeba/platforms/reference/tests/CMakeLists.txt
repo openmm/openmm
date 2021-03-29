@@ -4,6 +4,9 @@
 
 ENABLE_TESTING()
 
+INCLUDE_DIRECTORIES(${OPENMM_DIR}/plugins/amoeba/tests)
+INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/reference/tests)
+
 # Automatically create tests using files named "Test*.cpp"
 FILE(GLOB TEST_PROGS "*Test*.cpp")
 FOREACH(TEST_PROG ${TEST_PROGS})
