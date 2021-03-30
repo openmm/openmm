@@ -864,8 +864,7 @@ small molecule force field you want to use:
 ::
 
     # Define the keyword arguments to feed to ForceField
-    from simtk import unit
-    from openmm import app
+    from openmm import unit, app
     forcefield_kwargs = { 'constraints' : app.HBonds, 'rigidWater' : True, 'removeCMMotion' : False, 'hydrogenMass' : 4*unit.amu }
     # Initialize a SystemGenerator using GAFF
     from openmmforcefields.generators import SystemGenerator
