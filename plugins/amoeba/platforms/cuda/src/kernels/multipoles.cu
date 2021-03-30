@@ -1,3 +1,5 @@
+#define GROUP_SIZE 128
+
 extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4* __restrict__ multipoleParticles, float* __restrict__ molecularDipoles,
         float* __restrict__ molecularQuadrupoles, real3* __restrict__ labFrameDipoles, real* __restrict__ labFrameQuadrupoles,
         real* __restrict__ sphericalDipoles, real* __restrict__ sphericalQuadrupoles) {
@@ -532,10 +534,10 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
 extern "C" __global__ void computePotentialAtPoints(const real4* __restrict__ posq, const real* __restrict__ labFrameDipole,
         const real* __restrict__ labFrameQuadrupole, const real3* __restrict__ inducedDipole, const real4* __restrict__ points,
         real* __restrict__ potential, int numPoints, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
-    extern __shared__ real4 localPosq[];
-    real3* localDipole = (real3*) &localPosq[blockDim.x];
-    real3* localInducedDipole = (real3*) &localDipole[blockDim.x];
-    real* localQuadrupole = (real*) &localInducedDipole[blockDim.x];
+    __shared__ real4 localPosq[GROUP_SIZE];
+    __shared__ real3 localDipole[GROUP_SIZE];
+    __shared__ real3 localInducedDipole[GROUP_SIZE];
+    __shared__ real localQuadrupole[5*GROUP_SIZE];
     for (int basePoint = blockIdx.x*blockDim.x; basePoint < numPoints; basePoint += gridDim.x*blockDim.x) {
         int point = basePoint+threadIdx.x;
         real4 pointPos = points[point];
