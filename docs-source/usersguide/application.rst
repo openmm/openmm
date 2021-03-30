@@ -817,14 +817,14 @@ Field Initiative small molecule force fields using the following example:
 
 ::
 
-    # Create an openforcefield Molecule object for benzene from SMILES
-    from openforcefield.topology import Molecule
+    # Create an OpenFF Molecule object for benzene from SMILES
+    from openff.toolkit.topology import Molecule
     molecule = Molecule.from_smiles('c1ccccc1')
-    # Create the SMIRNOFF template generator with the most up to date Open Force Field Initiative force field
+    # Create the SMIRNOFF template generator with the default installed force field (openff-1.0.0)
     from openmmforcefields.generators import SMIRNOFFTemplateGenerator
     smirnoff = SMIRNOFFTemplateGenerator(molecules=molecule)
     # Create an OpenMM ForceField object with AMBER ff14SB and TIP3P with compatible ions
-    from openmm.app import ForceField
+    from simtk.openmm.app import ForceField
     forcefield = ForceField('amber/protein.ff14SB.xml', 'amber/tip3p_standard.xml', 'amber/tip3p_HFE_multivalent.xml')
     # Register the SMIRNOFF template generator
     forcefield.registerTemplateGenerator(smirnoff.generator)
@@ -833,21 +833,21 @@ Alternatively, you can use the older `AMBER GAFF small molecule force field <htt
 
 ::
 
-    # Create an openforcefield Molecule object for benzene from SMILES
-    from openforcefield.topology import Molecule
+    # Create an OpenFF Molecule object for benzene from SMILES
+    from openff.toolkit.topology import Molecule
     molecule = Molecule.from_smiles('c1ccccc1')
     # Create the GAFF template generator
     from openmmforcefields.generators import GAFFTemplateGenerator
     gaff = GAFFTemplateGenerator(molecules=molecule)
     # Create an OpenMM ForceField object with AMBER ff14SB and TIP3P with compatible ions
-    from openmm.app import ForceField
+    from simtk.openmm.app import ForceField
     forcefield = ForceField('amber/protein.ff14SB.xml', 'amber/tip3p_standard.xml', 'amber/tip3p_HFE_multivalent.xml')
     # Register the GAFF template generator
     forcefield.registerTemplateGenerator(gaff.generator)
     # You can now parameterize an OpenMM Topology object that contains the specified molecule.
     # forcefield will load the appropriate GAFF parameters when needed, and antechamber
     # will be used to generate small molecule parameters on the fly.
-    from openmm.app import PDBFile
+    from simtk.openmm.app import PDBFile
     pdbfile = PDBFile('t4-lysozyme-L99A-with-benzene.pdb')
     system = forcefield.createSystem(pdbfile.topology)
 
@@ -864,15 +864,17 @@ small molecule force field you want to use:
 ::
 
     # Define the keyword arguments to feed to ForceField
-    from openmm import unit
-    from openmm import app
+    from simtk import unit
+    from simtk.openmm import app
     forcefield_kwargs = { 'constraints' : app.HBonds, 'rigidWater' : True, 'removeCMMotion' : False, 'hydrogenMass' : 4*unit.amu }
-    # Initialize a SystemGenerator using the Open Force Field Initiative 1.2.0 force field (openff-1.2.0)
+    # Initialize a SystemGenerator using GAFF
     from openmmforcefields.generators import SystemGenerator
-    system_generator = SystemGenerator(forcefields=['amber/ff14SB.xml', 'amber/tip3p_standard.xml'], small_molecule_forcefield='openff-1.2.0', forcefield_kwargs=forcefield_kwargs, cache='db.json')
-    # Create an OpenMM System from an OpenMM Topology object and a list of openforcefield Molecule objects
+    system_generator = SystemGenerator(forcefields=['amber/ff14SB.xml', 'amber/tip3p_standard.xml'], small_molecule_forcefield='gaff-2.11', forcefield_kwargs=forcefield_kwargs, cache='db.json')
+    # Create an OpenMM System from an OpenMM Topology object
+    system = system_generator.create_system(openmm_topology)
+    # Alternatively, create an OpenMM System from an OpenMM Topology object and a list of OpenFF Molecule objects
     molecules = Molecule.from_file('molecules.sdf', file_format='sdf')
-    system = system_generator.create_system(topology, molecules=molecules)
+    system = system_generator.create_system(openmm_topology, molecules=molecules)
 
 The ``SystemGenerator`` will match any instances of the molecules found in ``molecules.sdf`` to those that appear in ``topology``.
 Note that the protonation and tautomeric states must match exactly between the ``molecules`` read and those appearing in the Topology.
