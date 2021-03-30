@@ -824,7 +824,7 @@ Field Initiative small molecule force fields using the following example:
     from openmmforcefields.generators import SMIRNOFFTemplateGenerator
     smirnoff = SMIRNOFFTemplateGenerator(molecules=molecule)
     # Create an OpenMM ForceField object with AMBER ff14SB and TIP3P with compatible ions
-    from simtk.openmm.app import ForceField
+    from openmm.app import ForceField
     forcefield = ForceField('amber/protein.ff14SB.xml', 'amber/tip3p_standard.xml', 'amber/tip3p_HFE_multivalent.xml')
     # Register the SMIRNOFF template generator
     forcefield.registerTemplateGenerator(smirnoff.generator)
@@ -840,14 +840,14 @@ Alternatively, you can use the older `AMBER GAFF small molecule force field <htt
     from openmmforcefields.generators import GAFFTemplateGenerator
     gaff = GAFFTemplateGenerator(molecules=molecule)
     # Create an OpenMM ForceField object with AMBER ff14SB and TIP3P with compatible ions
-    from simtk.openmm.app import ForceField
+    from openmm.app import ForceField
     forcefield = ForceField('amber/protein.ff14SB.xml', 'amber/tip3p_standard.xml', 'amber/tip3p_HFE_multivalent.xml')
     # Register the GAFF template generator
     forcefield.registerTemplateGenerator(gaff.generator)
     # You can now parameterize an OpenMM Topology object that contains the specified molecule.
     # forcefield will load the appropriate GAFF parameters when needed, and antechamber
     # will be used to generate small molecule parameters on the fly.
-    from simtk.openmm.app import PDBFile
+    from openmm.app import PDBFile
     pdbfile = PDBFile('t4-lysozyme-L99A-with-benzene.pdb')
     system = forcefield.createSystem(pdbfile.topology)
 
@@ -865,7 +865,7 @@ small molecule force field you want to use:
 
     # Define the keyword arguments to feed to ForceField
     from simtk import unit
-    from simtk.openmm import app
+    from openmm import app
     forcefield_kwargs = { 'constraints' : app.HBonds, 'rigidWater' : True, 'removeCMMotion' : False, 'hydrogenMass' : 4*unit.amu }
     # Initialize a SystemGenerator using GAFF
     from openmmforcefields.generators import SystemGenerator
