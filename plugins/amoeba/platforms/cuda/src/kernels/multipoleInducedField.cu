@@ -351,16 +351,16 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
 extern "C" __global__ void computeInducedField(
         unsigned long long* __restrict__ field, unsigned long long* __restrict__ fieldPolar, const real4* __restrict__ posq, const int2* __restrict__ exclusionTiles, 
         const real3* __restrict__ inducedDipole, const real3* __restrict__ inducedDipolePolar, unsigned int startTileIndex, unsigned int numTileIndices,
-#ifdef EXTRAPOLATED_POLARIZATION
-        unsigned long long* __restrict__ fieldGradient, unsigned long long* __restrict__ fieldGradientPolar,
-#endif
 #ifdef USE_CUTOFF
         const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
 #elif defined USE_GK
         unsigned long long* __restrict__ fieldS, unsigned long long* __restrict__ fieldPolarS, const real3* __restrict__ inducedDipoleS,
         const real3* __restrict__ inducedDipolePolarS, const real* __restrict__ bornRadii,
-    #ifdef EXTRAPOLATED_POLARIZATION
+#endif
+#ifdef EXTRAPOLATED_POLARIZATION
+        unsigned long long* __restrict__ fieldGradient, unsigned long long* __restrict__ fieldGradientPolar,
+    #ifdef USE_GK
         unsigned long long* __restrict__ fieldGradientS, unsigned long long* __restrict__ fieldGradientPolarS,
     #endif
 #endif
@@ -549,10 +549,11 @@ extern "C" __global__ void computeInducedField(
 }
 
 extern "C" __global__ void recordInducedDipolesForDIIS(const long long* __restrict__ fixedField, const long long* __restrict__ fixedFieldPolar,
+        const float* __restrict__ polarizability, float2* __restrict__ errors, real* __restrict__ prevErrors, real* __restrict__ matrix,
         const long long* __restrict__ fixedFieldS, const long long* __restrict__ inducedField, const long long* __restrict__ inducedFieldPolar,
-        const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar, const float* __restrict__ polarizability, float2* __restrict__ errors,
-        real* __restrict__ prevDipoles, real* __restrict__ prevDipolesPolar, real* __restrict__ prevErrors, int iteration, bool recordPrevErrors, real* __restrict__ matrix) {
-    extern __shared__ real2 buffer[];
+        const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar,
+        real* __restrict__ prevDipoles, real* __restrict__ prevDipolesPolar, int iteration, bool recordPrevErrors) {
+    __shared__ real2 buffer[64];
     const real fieldScale = 1/(real) 0x100000000;
     real sumErrors = 0;
     real sumPolarErrors = 0;
@@ -617,7 +618,7 @@ extern "C" __global__ void recordInducedDipolesForDIIS(const long long* __restri
 }
 
 extern "C" __global__ void computeDIISMatrix(real* __restrict__ prevErrors, int iteration, real* __restrict__ matrix) {
-    extern __shared__ real sumBuffer[];
+    __shared__ real sumBuffer[512];
     int j = min(iteration, MAX_PREV_DIIS_DIPOLES-1);
     for (int i = blockIdx.x; i <= j; i += gridDim.x) {
         // All the threads in this thread block work together to compute a single matrix element.

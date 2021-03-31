@@ -199,12 +199,11 @@ private:
     CudaArray lastPositions;
     cufftHandle fft;
     ComputeKernel computeMomentsKernel, recordInducedDipolesKernel, mapTorqueKernel, computePotentialKernel, electrostaticsKernel;
-    ComputeKernel computeFixedFieldKernel;
-    CUfunction computeInducedFieldKernel, updateInducedFieldKernel;
+    ComputeKernel computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel;
+    ComputeKernel recordDIISDipolesKernel, buildMatrixKernel, solveMatrixKernel;
+    ComputeKernel initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, addExtrapolatedGradientKernel;
     CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
     CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
-    CUfunction recordDIISDipolesKernel, buildMatrixKernel, solveMatrixKernel;
-    CUfunction initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, addExtrapolatedGradientKernel;
     CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
     CUevent syncEvent;
     CudaCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
