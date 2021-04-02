@@ -202,9 +202,9 @@ private:
     ComputeKernel computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel;
     ComputeKernel recordDIISDipolesKernel, buildMatrixKernel, solveMatrixKernel;
     ComputeKernel initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, addExtrapolatedGradientKernel;
-    CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
-    CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
-    CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
+    ComputeKernel pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
+    ComputeKernel pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
+    ComputeKernel pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
     CUevent syncEvent;
     CudaCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
     static const int PmeOrder = 5;
