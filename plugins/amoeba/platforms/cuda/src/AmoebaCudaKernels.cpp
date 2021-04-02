@@ -228,8 +228,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         extrapolatedDipolePolar.initialize(cu, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipolePolar");
         inducedDipoleFieldGradient.initialize(cu, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradient");
         inducedDipoleFieldGradientPolar.initialize(cu, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradientPolar");
-        extrapolatedDipoleFieldGradient.initialize(cu, 6*numMultipoles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradient");
-        extrapolatedDipoleFieldGradientPolar.initialize(cu, 6*numMultipoles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientPolar");
+        extrapolatedDipoleFieldGradient.initialize(cu, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradient");
+        extrapolatedDipoleFieldGradientPolar.initialize(cu, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientPolar");
     }
     cu.addAutoclearBuffer(field);
     cu.addAutoclearBuffer(fieldPolar);
@@ -386,10 +386,10 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
             int numOrders = force.getExtrapolationCoefficients().size();
             extrapolatedDipoleGk.initialize(cu, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipoleGk");
             extrapolatedDipoleGkPolar.initialize(cu, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipoleGkPolar");
-            inducedDipoleFieldGradientGk.initialize(cu, 6*numMultipoles, elementSize, "inducedDipoleFieldGradientGk");
-            inducedDipoleFieldGradientGkPolar.initialize(cu, 6*numMultipoles, elementSize, "inducedDipoleFieldGradientGkPolar");
-            extrapolatedDipoleFieldGradientGk.initialize(cu, 6*numMultipoles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientGk");
-            extrapolatedDipoleFieldGradientGkPolar.initialize(cu, 6*numMultipoles*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientGkPolar");
+            inducedDipoleFieldGradientGk.initialize(cu, 6*paddedNumAtoms, elementSize, "inducedDipoleFieldGradientGk");
+            inducedDipoleFieldGradientGkPolar.initialize(cu, 6*paddedNumAtoms, elementSize, "inducedDipoleFieldGradientGkPolar");
+            extrapolatedDipoleFieldGradientGk.initialize(cu, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientGk");
+            extrapolatedDipoleFieldGradientGkPolar.initialize(cu, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientGkPolar");
         }
     }
     NonbondedUtilities& nb = cu.getNonbondedUtilities();
@@ -530,6 +530,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         iterateExtrapolatedKernel->addArg();
         iterateExtrapolatedKernel->addArg(inducedDipole);
         iterateExtrapolatedKernel->addArg(extrapolatedDipole);
+        iterateExtrapolatedKernel->addArg(inducedField);
         iterateExtrapolatedKernel->addArg(inducedDipolePolar);
         iterateExtrapolatedKernel->addArg(extrapolatedDipolePolar);
         iterateExtrapolatedKernel->addArg(inducedFieldPolar);
@@ -874,13 +875,16 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
                     computeInducedFieldKernel->setArg(10, gkKernel->getInducedDipoles());
                     computeInducedFieldKernel->setArg(11, gkKernel->getInducedDipolesPolar());
                     computeInducedFieldKernel->setArg(12, gkKernel->getBornRadii());
+                }
+                if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
                     initExtrapolatedKernel->setArg(6, gkKernel->getInducedDipoles());
                     initExtrapolatedKernel->setArg(7, gkKernel->getInducedDipolesPolar());
-                    iterateExtrapolatedKernel->setArg(10, gkKernel->getInducedDipoles());
-                    iterateExtrapolatedKernel->setArg(11, gkKernel->getInducedField());
-                    iterateExtrapolatedKernel->setArg(16, gkKernel->getInducedFieldPolar());
+                    iterateExtrapolatedKernel->setArg(11, gkKernel->getInducedDipoles());
+                    iterateExtrapolatedKernel->setArg(12, gkKernel->getInducedDipolesPolar());
+                    iterateExtrapolatedKernel->setArg(17, gkKernel->getInducedField());
+                    iterateExtrapolatedKernel->setArg(18, gkKernel->getInducedFieldPolar());
                     computeExtrapolatedKernel->setArg(4, gkKernel->getInducedDipoles());
-                    computeExtrapolatedKernel->setArg(4, gkKernel->getInducedDipolesPolar());
+                    computeExtrapolatedKernel->setArg(5, gkKernel->getInducedDipolesPolar());
                 }
                 break;
             }
@@ -901,15 +905,10 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
     if (!pmeGrid.isInitialized()) {
         // Compute induced dipoles.
         
-        if (gkKernel == NULL) {
-            computeFixedFieldKernel->execute(numForceThreadBlocks*fixedFieldThreads, fixedFieldThreads);
-            recordInducedDipolesKernel->execute(cu.getNumAtoms());
-        }
-        else {
+        if (gkKernel != NULL)
             gkKernel->computeBornRadii();
-            computeFixedFieldKernel->execute(numForceThreadBlocks*fixedFieldThreads, fixedFieldThreads);
-            recordInducedDipolesKernel->execute(cu.getNumAtoms());
-        }
+        computeFixedFieldKernel->execute(numForceThreadBlocks*fixedFieldThreads, fixedFieldThreads);
+        recordInducedDipolesKernel->execute(cu.getNumAtoms());
         
         // Iterate until the dipoles converge.
         
@@ -1115,9 +1114,9 @@ void CudaCalcAmoebaMultipoleForceKernel::computeInducedField(void** recipBoxVect
 
 bool CudaCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     void* npt = NULL;
-    
+
     // Record the dipoles and errors into the lists of previous dipoles.
-    
+
     recordDIISDipolesKernel->setArg(13, iteration);
     if (gkKernel != NULL) {
         recordDIISDipolesKernel->setArg(6, gkKernel->getField());
