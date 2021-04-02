@@ -488,10 +488,8 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         }
         computeInducedFieldKernel->addArg(dampingAndThole);
         updateInducedFieldKernel = program->createKernel("updateInducedFieldByDIIS");
-        updateInducedFieldKernel->addArg();
-        updateInducedFieldKernel->addArg();
-        updateInducedFieldKernel->addArg(prevDipoles);
-        updateInducedFieldKernel->addArg(prevDipolesPolar);
+        for (int i = 0; i < 4; i++)
+            updateInducedFieldKernel->addArg();
         updateInducedFieldKernel->addArg(diisCoefficients);
         updateInducedFieldKernel->addArg();
         recordDIISDipolesKernel = program->createKernel("recordInducedDipolesForDIIS");
@@ -1170,11 +1168,15 @@ bool CudaCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     
     updateInducedFieldKernel->setArg(0, inducedDipole);
     updateInducedFieldKernel->setArg(1, inducedDipolePolar);
+    updateInducedFieldKernel->setArg(2, prevDipoles);
+    updateInducedFieldKernel->setArg(3, prevDipolesPolar);
     updateInducedFieldKernel->setArg(5, numPrev);
     updateInducedFieldKernel->execute(3*cu.getNumAtoms(), 256);
     if (gkKernel != NULL) {
         updateInducedFieldKernel->setArg(0, gkKernel->getInducedDipoles());
         updateInducedFieldKernel->setArg(1, gkKernel->getInducedDipolesPolar());
+        updateInducedFieldKernel->setArg(2, prevDipolesGk);
+        updateInducedFieldKernel->setArg(3, prevDipolesGkPolar);
         updateInducedFieldKernel->execute(3*cu.getNumAtoms(), 256);
     }
     return false;
