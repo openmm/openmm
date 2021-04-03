@@ -147,56 +147,56 @@ private:
     const System& system;
     std::vector<int3> covalentFlagValues;
     std::vector<int2> polarizationFlagValues;
-    CudaArray multipoleParticles;
-    CudaArray localDipoles;
-    CudaArray localQuadrupoles;
-    CudaArray labDipoles;
-    CudaArray labQuadrupoles;
-    CudaArray sphericalDipoles;
-    CudaArray sphericalQuadrupoles;
-    CudaArray fracDipoles;
-    CudaArray fracQuadrupoles;
-    CudaArray field;
-    CudaArray fieldPolar;
-    CudaArray inducedField;
-    CudaArray inducedFieldPolar;
-    CudaArray torque;
-    CudaArray dampingAndThole;
-    CudaArray inducedDipole;
-    CudaArray inducedDipolePolar;
-    CudaArray inducedDipoleErrors;
-    CudaArray prevDipoles;
-    CudaArray prevDipolesPolar;
-    CudaArray prevDipolesGk;
-    CudaArray prevDipolesGkPolar;
-    CudaArray prevErrors;
-    CudaArray diisMatrix;
-    CudaArray diisCoefficients;
-    CudaArray extrapolatedDipole;
-    CudaArray extrapolatedDipolePolar;
-    CudaArray extrapolatedDipoleGk;
-    CudaArray extrapolatedDipoleGkPolar;
-    CudaArray inducedDipoleFieldGradient;
-    CudaArray inducedDipoleFieldGradientPolar;
-    CudaArray inducedDipoleFieldGradientGk;
-    CudaArray inducedDipoleFieldGradientGkPolar;
-    CudaArray extrapolatedDipoleFieldGradient;
-    CudaArray extrapolatedDipoleFieldGradientPolar;
-    CudaArray extrapolatedDipoleFieldGradientGk;
-    CudaArray extrapolatedDipoleFieldGradientGkPolar;
-    CudaArray polarizability;
-    CudaArray covalentFlags;
-    CudaArray polarizationGroupFlags;
-    CudaArray pmeGrid;
-    CudaArray pmeBsplineModuliX;
-    CudaArray pmeBsplineModuliY;
-    CudaArray pmeBsplineModuliZ;
-    CudaArray pmePhi;
-    CudaArray pmePhid;
-    CudaArray pmePhip;
-    CudaArray pmePhidp;
-    CudaArray pmeCphi;
-    CudaArray lastPositions;
+    ComputeArray multipoleParticles;
+    ComputeArray localDipoles;
+    ComputeArray localQuadrupoles;
+    ComputeArray labDipoles;
+    ComputeArray labQuadrupoles;
+    ComputeArray sphericalDipoles;
+    ComputeArray sphericalQuadrupoles;
+    ComputeArray fracDipoles;
+    ComputeArray fracQuadrupoles;
+    ComputeArray field;
+    ComputeArray fieldPolar;
+    ComputeArray inducedField;
+    ComputeArray inducedFieldPolar;
+    ComputeArray torque;
+    ComputeArray dampingAndThole;
+    ComputeArray inducedDipole;
+    ComputeArray inducedDipolePolar;
+    ComputeArray inducedDipoleErrors;
+    ComputeArray prevDipoles;
+    ComputeArray prevDipolesPolar;
+    ComputeArray prevDipolesGk;
+    ComputeArray prevDipolesGkPolar;
+    ComputeArray prevErrors;
+    ComputeArray diisMatrix;
+    ComputeArray diisCoefficients;
+    ComputeArray extrapolatedDipole;
+    ComputeArray extrapolatedDipolePolar;
+    ComputeArray extrapolatedDipoleGk;
+    ComputeArray extrapolatedDipoleGkPolar;
+    ComputeArray inducedDipoleFieldGradient;
+    ComputeArray inducedDipoleFieldGradientPolar;
+    ComputeArray inducedDipoleFieldGradientGk;
+    ComputeArray inducedDipoleFieldGradientGkPolar;
+    ComputeArray extrapolatedDipoleFieldGradient;
+    ComputeArray extrapolatedDipoleFieldGradientPolar;
+    ComputeArray extrapolatedDipoleFieldGradientGk;
+    ComputeArray extrapolatedDipoleFieldGradientGkPolar;
+    ComputeArray polarizability;
+    ComputeArray covalentFlags;
+    ComputeArray polarizationGroupFlags;
+    ComputeArray pmeGrid;
+    ComputeArray pmeBsplineModuliX;
+    ComputeArray pmeBsplineModuliY;
+    ComputeArray pmeBsplineModuliZ;
+    ComputeArray pmePhi;
+    ComputeArray pmePhid;
+    ComputeArray pmePhip;
+    ComputeArray pmePhidp;
+    ComputeArray pmeCphi;
+    ComputeArray lastPositions;
     cufftHandle fft;
     ComputeKernel computeMomentsKernel, recordInducedDipolesKernel, mapTorqueKernel, computePotentialKernel, electrostaticsKernel;
     ComputeKernel computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel;
@@ -236,27 +236,27 @@ public:
     /**
      * Perform the computation of Born radii.
      */
-    void computeBornRadii();
+    void computeBornRadii(ComputeArray& torque, ComputeArray& labFrameDipoles, ComputeArray& labFrameQuadrupoles, ComputeArray& inducedDipole, ComputeArray& inducedDipolePolar, ComputeArray& dampingAndThole, ComputeArray& covalentFlags, ComputeArray& polarizationGroupFlags);
     /**
      * Perform the final parts of the force/energy computation.
      */
-    void finishComputation(CudaArray& torque, CudaArray& labFrameDipoles, CudaArray& labFrameQuadrupoles, CudaArray& inducedDipole, CudaArray& inducedDipolePolar, CudaArray& dampingAndThole, CudaArray& covalentFlags, CudaArray& polarizationGroupFlags);
-    CudaArray& getBornRadii() {
+    void finishComputation();
+    ComputeArray& getBornRadii() {
         return bornRadii;
     }
-    CudaArray& getField() {
+    ComputeArray& getField() {
         return field;
     }
-    CudaArray& getInducedField() {
+    ComputeArray& getInducedField() {
         return inducedField;
     }
-    CudaArray& getInducedFieldPolar() {
+    ComputeArray& getInducedFieldPolar() {
         return inducedFieldPolar;
     }
-    CudaArray& getInducedDipoles() {
+    ComputeArray& getInducedDipoles() {
         return inducedDipoleS;
     }
-    CudaArray& getInducedDipolesPolar() {
+    ComputeArray& getInducedDipolesPolar() {
         return inducedDipolePolarS;
     }
     /**
@@ -274,16 +274,16 @@ private:
     int computeBornSumThreads, gkForceThreads, chainRuleThreads, ediffThreads;
     AmoebaMultipoleForce::PolarizationType polarizationType;
     std::map<std::string, std::string> defines;
-    CudaArray params;
-    CudaArray bornSum;
-    CudaArray bornRadii;
-    CudaArray bornForce;
-    CudaArray field;
-    CudaArray inducedField;
-    CudaArray inducedFieldPolar;
-    CudaArray inducedDipoleS;
-    CudaArray inducedDipolePolarS;
-    CUfunction computeBornSumKernel, reduceBornSumKernel, surfaceAreaKernel, gkForceKernel, chainRuleKernel, ediffKernel;
+    ComputeArray params;
+    ComputeArray bornSum;
+    ComputeArray bornRadii;
+    ComputeArray bornForce;
+    ComputeArray field;
+    ComputeArray inducedField;
+    ComputeArray inducedFieldPolar;
+    ComputeArray inducedDipoleS;
+    ComputeArray inducedDipolePolarS;
+    ComputeKernel computeBornSumKernel, reduceBornSumKernel, surfaceAreaKernel, gkForceKernel, chainRuleKernel, ediffKernel;
 };
 
 /**

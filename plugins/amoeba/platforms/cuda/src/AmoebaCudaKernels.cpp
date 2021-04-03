@@ -231,6 +231,9 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         extrapolatedDipoleFieldGradient.initialize(cu, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradient");
         extrapolatedDipoleFieldGradientPolar.initialize(cu, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientPolar");
     }
+    // The next two arrays will get resized once we know the number of exclusions.
+    covalentFlags.initialize<uint2>(cu, 1, "covalentFlags");
+    polarizationGroupFlags.initialize<unsigned int>(cu, 1, "polarizationGroupFlags");
     cu.addAutoclearBuffer(field);
     cu.addAutoclearBuffer(fieldPolar);
     cu.addAutoclearBuffer(torque);
@@ -487,90 +490,94 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
             }
         }
         computeInducedFieldKernel->addArg(dampingAndThole);
-        updateInducedFieldKernel = program->createKernel("updateInducedFieldByDIIS");
-        for (int i = 0; i < 4; i++)
+        if (polarizationType == AmoebaMultipoleForce::Mutual) {
+            updateInducedFieldKernel = program->createKernel("updateInducedFieldByDIIS");
+            for (int i = 0; i < 4; i++)
+                updateInducedFieldKernel->addArg();
+            updateInducedFieldKernel->addArg(diisCoefficients);
             updateInducedFieldKernel->addArg();
-        updateInducedFieldKernel->addArg(diisCoefficients);
-        updateInducedFieldKernel->addArg();
-        recordDIISDipolesKernel = program->createKernel("recordInducedDipolesForDIIS");
-        recordDIISDipolesKernel->addArg(field);
-        recordDIISDipolesKernel->addArg(fieldPolar);
-        recordDIISDipolesKernel->addArg(polarizability);
-        recordDIISDipolesKernel->addArg(inducedDipoleErrors);
-        recordDIISDipolesKernel->addArg(prevErrors);
-        recordDIISDipolesKernel->addArg(diisMatrix);
-        for (int i = 0; i < 9; i++)
-            recordDIISDipolesKernel->addArg();
-        buildMatrixKernel = program->createKernel("computeDIISMatrix");
-        buildMatrixKernel->addArg(prevErrors);
-        buildMatrixKernel->addArg();
-        buildMatrixKernel->addArg(diisMatrix);
-        solveMatrixKernel = program->createKernel("solveDIISMatrix");
-        solveMatrixKernel->addArg();
-        solveMatrixKernel->addArg(diisMatrix);
-        solveMatrixKernel->addArg(diisCoefficients);
-        initExtrapolatedKernel = program->createKernel("initExtrapolatedDipoles");
-        initExtrapolatedKernel->addArg(inducedDipole);
-        initExtrapolatedKernel->addArg(extrapolatedDipole);
-        initExtrapolatedKernel->addArg(inducedDipolePolar);
-        initExtrapolatedKernel->addArg(extrapolatedDipolePolar);
-        initExtrapolatedKernel->addArg(inducedDipoleFieldGradient);
-        initExtrapolatedKernel->addArg(inducedDipoleFieldGradientPolar);
-        if (gk != NULL) {
-            initExtrapolatedKernel->addArg();
-            initExtrapolatedKernel->addArg();
-            initExtrapolatedKernel->addArg(extrapolatedDipoleGk);
-            initExtrapolatedKernel->addArg(extrapolatedDipoleGkPolar);
-            initExtrapolatedKernel->addArg(inducedDipoleFieldGradientGk);
-            initExtrapolatedKernel->addArg(inducedDipoleFieldGradientGkPolar);
+            recordDIISDipolesKernel = program->createKernel("recordInducedDipolesForDIIS");
+            recordDIISDipolesKernel->addArg(field);
+            recordDIISDipolesKernel->addArg(fieldPolar);
+            recordDIISDipolesKernel->addArg(polarizability);
+            recordDIISDipolesKernel->addArg(inducedDipoleErrors);
+            recordDIISDipolesKernel->addArg(prevErrors);
+            recordDIISDipolesKernel->addArg(diisMatrix);
+            for (int i = 0; i < 9; i++)
+                recordDIISDipolesKernel->addArg();
+            buildMatrixKernel = program->createKernel("computeDIISMatrix");
+            buildMatrixKernel->addArg(prevErrors);
+            buildMatrixKernel->addArg();
+            buildMatrixKernel->addArg(diisMatrix);
+            solveMatrixKernel = program->createKernel("solveDIISMatrix");
+            solveMatrixKernel->addArg();
+            solveMatrixKernel->addArg(diisMatrix);
+            solveMatrixKernel->addArg(diisCoefficients);
         }
-        iterateExtrapolatedKernel = program->createKernel("iterateExtrapolatedDipoles");
-        iterateExtrapolatedKernel->addArg();
-        iterateExtrapolatedKernel->addArg(inducedDipole);
-        iterateExtrapolatedKernel->addArg(extrapolatedDipole);
-        iterateExtrapolatedKernel->addArg(inducedField);
-        iterateExtrapolatedKernel->addArg(inducedDipolePolar);
-        iterateExtrapolatedKernel->addArg(extrapolatedDipolePolar);
-        iterateExtrapolatedKernel->addArg(inducedFieldPolar);
-        iterateExtrapolatedKernel->addArg(inducedDipoleFieldGradient);
-        iterateExtrapolatedKernel->addArg(inducedDipoleFieldGradientPolar);
-        iterateExtrapolatedKernel->addArg(extrapolatedDipoleFieldGradient);
-        iterateExtrapolatedKernel->addArg(extrapolatedDipoleFieldGradientPolar);
-        if (gk != NULL) {
+        if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+            initExtrapolatedKernel = program->createKernel("initExtrapolatedDipoles");
+            initExtrapolatedKernel->addArg(inducedDipole);
+            initExtrapolatedKernel->addArg(extrapolatedDipole);
+            initExtrapolatedKernel->addArg(inducedDipolePolar);
+            initExtrapolatedKernel->addArg(extrapolatedDipolePolar);
+            initExtrapolatedKernel->addArg(inducedDipoleFieldGradient);
+            initExtrapolatedKernel->addArg(inducedDipoleFieldGradientPolar);
+            if (gk != NULL) {
+                initExtrapolatedKernel->addArg();
+                initExtrapolatedKernel->addArg();
+                initExtrapolatedKernel->addArg(extrapolatedDipoleGk);
+                initExtrapolatedKernel->addArg(extrapolatedDipoleGkPolar);
+                initExtrapolatedKernel->addArg(inducedDipoleFieldGradientGk);
+                initExtrapolatedKernel->addArg(inducedDipoleFieldGradientGkPolar);
+            }
+            iterateExtrapolatedKernel = program->createKernel("iterateExtrapolatedDipoles");
             iterateExtrapolatedKernel->addArg();
-            iterateExtrapolatedKernel->addArg();
-            iterateExtrapolatedKernel->addArg(extrapolatedDipoleGk);
-            iterateExtrapolatedKernel->addArg(extrapolatedDipoleGkPolar);
-            iterateExtrapolatedKernel->addArg(inducedDipoleFieldGradientGk);
-            iterateExtrapolatedKernel->addArg(inducedDipoleFieldGradientGkPolar);
-            iterateExtrapolatedKernel->addArg();
-            iterateExtrapolatedKernel->addArg();
-            iterateExtrapolatedKernel->addArg(extrapolatedDipoleFieldGradientGk);
-            iterateExtrapolatedKernel->addArg(extrapolatedDipoleFieldGradientGkPolar);
-        }
-        iterateExtrapolatedKernel->addArg(polarizability);
-        computeExtrapolatedKernel = program->createKernel("computeExtrapolatedDipoles");
-        computeExtrapolatedKernel->addArg(inducedDipole);
-        computeExtrapolatedKernel->addArg(extrapolatedDipole);
-        computeExtrapolatedKernel->addArg(inducedDipolePolar);
-        computeExtrapolatedKernel->addArg(extrapolatedDipolePolar);
-        if (gk != NULL) {
-            computeExtrapolatedKernel->addArg();
-            computeExtrapolatedKernel->addArg();
-            computeExtrapolatedKernel->addArg(extrapolatedDipoleGk);
-            computeExtrapolatedKernel->addArg(extrapolatedDipoleGkPolar);
-        }
-        addExtrapolatedGradientKernel = program->createKernel("addExtrapolatedFieldGradientToForce");
-        addExtrapolatedGradientKernel->addArg(cu.getLongForceBuffer());
-        addExtrapolatedGradientKernel->addArg(extrapolatedDipole);
-        addExtrapolatedGradientKernel->addArg(extrapolatedDipolePolar);
-        addExtrapolatedGradientKernel->addArg(extrapolatedDipoleFieldGradient);
-        addExtrapolatedGradientKernel->addArg(extrapolatedDipoleFieldGradientPolar);
-        if (gk != NULL) {
-            addExtrapolatedGradientKernel->addArg(extrapolatedDipoleGk);
-            addExtrapolatedGradientKernel->addArg(extrapolatedDipoleGkPolar);
-            addExtrapolatedGradientKernel->addArg(extrapolatedDipoleFieldGradientGk);
-            addExtrapolatedGradientKernel->addArg(extrapolatedDipoleFieldGradientGkPolar);
+            iterateExtrapolatedKernel->addArg(inducedDipole);
+            iterateExtrapolatedKernel->addArg(extrapolatedDipole);
+            iterateExtrapolatedKernel->addArg(inducedField);
+            iterateExtrapolatedKernel->addArg(inducedDipolePolar);
+            iterateExtrapolatedKernel->addArg(extrapolatedDipolePolar);
+            iterateExtrapolatedKernel->addArg(inducedFieldPolar);
+            iterateExtrapolatedKernel->addArg(inducedDipoleFieldGradient);
+            iterateExtrapolatedKernel->addArg(inducedDipoleFieldGradientPolar);
+            iterateExtrapolatedKernel->addArg(extrapolatedDipoleFieldGradient);
+            iterateExtrapolatedKernel->addArg(extrapolatedDipoleFieldGradientPolar);
+            if (gk != NULL) {
+                iterateExtrapolatedKernel->addArg();
+                iterateExtrapolatedKernel->addArg();
+                iterateExtrapolatedKernel->addArg(extrapolatedDipoleGk);
+                iterateExtrapolatedKernel->addArg(extrapolatedDipoleGkPolar);
+                iterateExtrapolatedKernel->addArg(inducedDipoleFieldGradientGk);
+                iterateExtrapolatedKernel->addArg(inducedDipoleFieldGradientGkPolar);
+                iterateExtrapolatedKernel->addArg();
+                iterateExtrapolatedKernel->addArg();
+                iterateExtrapolatedKernel->addArg(extrapolatedDipoleFieldGradientGk);
+                iterateExtrapolatedKernel->addArg(extrapolatedDipoleFieldGradientGkPolar);
+            }
+            iterateExtrapolatedKernel->addArg(polarizability);
+            computeExtrapolatedKernel = program->createKernel("computeExtrapolatedDipoles");
+            computeExtrapolatedKernel->addArg(inducedDipole);
+            computeExtrapolatedKernel->addArg(extrapolatedDipole);
+            computeExtrapolatedKernel->addArg(inducedDipolePolar);
+            computeExtrapolatedKernel->addArg(extrapolatedDipolePolar);
+            if (gk != NULL) {
+                computeExtrapolatedKernel->addArg();
+                computeExtrapolatedKernel->addArg();
+                computeExtrapolatedKernel->addArg(extrapolatedDipoleGk);
+                computeExtrapolatedKernel->addArg(extrapolatedDipoleGkPolar);
+            }
+            addExtrapolatedGradientKernel = program->createKernel("addExtrapolatedFieldGradientToForce");
+            addExtrapolatedGradientKernel->addArg(cu.getLongForceBuffer());
+            addExtrapolatedGradientKernel->addArg(extrapolatedDipole);
+            addExtrapolatedGradientKernel->addArg(extrapolatedDipolePolar);
+            addExtrapolatedGradientKernel->addArg(extrapolatedDipoleFieldGradient);
+            addExtrapolatedGradientKernel->addArg(extrapolatedDipoleFieldGradientPolar);
+            if (gk != NULL) {
+                addExtrapolatedGradientKernel->addArg(extrapolatedDipoleGk);
+                addExtrapolatedGradientKernel->addArg(extrapolatedDipoleGkPolar);
+                addExtrapolatedGradientKernel->addArg(extrapolatedDipoleFieldGradientGk);
+                addExtrapolatedGradientKernel->addArg(extrapolatedDipoleFieldGradientGkPolar);
+            }
         }
     }
     stringstream electrostaticsSource;
@@ -610,6 +617,20 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     // Set up PME.
     
     if (usePME) {
+        // Create required data structures.
+
+        int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+        pmeGrid.initialize(cu, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
+        cu.addAutoclearBuffer(pmeGrid);
+        pmeBsplineModuliX.initialize(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
+        pmeBsplineModuliY.initialize(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
+        pmeBsplineModuliZ.initialize(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
+        pmePhi.initialize(cu, 20*numMultipoles, elementSize, "pmePhi");
+        pmePhid.initialize(cu, 10*numMultipoles, elementSize, "pmePhid");
+        pmePhip.initialize(cu, 10*numMultipoles, elementSize, "pmePhip");
+        pmePhidp.initialize(cu, 20*numMultipoles, elementSize, "pmePhidp");
+        pmeCphi.initialize(cu, 10*numMultipoles, elementSize, "pmeCphi");
+
         // Create the PME kernels.
 
         map<string, string> pmeDefines;
@@ -713,33 +734,24 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         pmeInducedForceKernel->addArg(pmeCphi);
         for (int i = 0; i < 3; i++)
             pmeInducedForceKernel->addArg();
-        pmeRecordInducedFieldDipolesKernel = program->createKernel("recordInducedFieldDipoles");
-        pmeRecordInducedFieldDipolesKernel->addArg(pmePhid);
-        pmeRecordInducedFieldDipolesKernel->addArg(pmePhip);
-        pmeRecordInducedFieldDipolesKernel->addArg(inducedField);
-        pmeRecordInducedFieldDipolesKernel->addArg(inducedFieldPolar);
-        pmeRecordInducedFieldDipolesKernel->addArg(inducedDipole);
-        pmeRecordInducedFieldDipolesKernel->addArg(inducedDipolePolar);
-        for (int i = 0; i < 3; i++)
-            pmeRecordInducedFieldDipolesKernel->addArg();
-        if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
-            pmeRecordInducedFieldDipolesKernel->addArg(inducedDipoleFieldGradient);
-            pmeRecordInducedFieldDipolesKernel->addArg(inducedDipoleFieldGradientPolar);
+        if (polarizationType != AmoebaMultipoleForce::Direct) {
+            pmeRecordInducedFieldDipolesKernel = program->createKernel("recordInducedFieldDipoles");
+            pmeRecordInducedFieldDipolesKernel->addArg(pmePhid);
+            pmeRecordInducedFieldDipolesKernel->addArg(pmePhip);
+            pmeRecordInducedFieldDipolesKernel->addArg(inducedField);
+            pmeRecordInducedFieldDipolesKernel->addArg(inducedFieldPolar);
+            pmeRecordInducedFieldDipolesKernel->addArg(inducedDipole);
+            pmeRecordInducedFieldDipolesKernel->addArg(inducedDipolePolar);
+            for (int i = 0; i < 3; i++)
+                pmeRecordInducedFieldDipolesKernel->addArg();
+            if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+                pmeRecordInducedFieldDipolesKernel->addArg(inducedDipoleFieldGradient);
+                pmeRecordInducedFieldDipolesKernel->addArg(inducedDipoleFieldGradientPolar);
+            }
         }
 
-        // Create required data structures.
+        // Initialize the FFT.
 
-        int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-        pmeGrid.initialize(cu, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
-        cu.addAutoclearBuffer(pmeGrid);
-        pmeBsplineModuliX.initialize(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
-        pmeBsplineModuliY.initialize(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
-        pmeBsplineModuliZ.initialize(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
-        pmePhi.initialize(cu, 20*numMultipoles, elementSize, "pmePhi");
-        pmePhid.initialize(cu, 10*numMultipoles, elementSize, "pmePhid");
-        pmePhip.initialize(cu, 10*numMultipoles, elementSize, "pmePhip");
-        pmePhidp.initialize(cu, 20*numMultipoles, elementSize, "pmePhidp");
-        pmeCphi.initialize(cu, 10*numMultipoles, elementSize, "pmeCphi");
         cufftResult result = cufftPlan3d(&fft, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2Z : CUFFT_C2C);
         if (result != CUFFT_SUCCESS)
             throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
@@ -862,7 +874,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
         int2 tile = exclusionTiles[i];
         exclusionTileMap[make_pair(tile.x, tile.y)] = i;
     }
-    covalentFlags.initialize<uint2>(cu, nb.getExclusions().getSize(), "covalentFlags");
+    covalentFlags.resize(nb.getExclusions().getSize());
     vector<uint2> covalentFlagsVec(nb.getExclusions().getSize(), make_uint2(0, 0));
     for (int3 values : covalentFlagValues) {
         int atom1 = values.x;
@@ -896,7 +908,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
     
     // Do the same for the polarization flags.
     
-    polarizationGroupFlags.initialize<unsigned int>(cu, nb.getExclusions().getSize(), "polarizationGroupFlags");
+    polarizationGroupFlags.resize(nb.getExclusions().getSize());
     vector<unsigned int> polarizationGroupFlagsVec(nb.getExclusions().getSize(), 0);
     for (int2 values : polarizationFlagValues) {
         int atom1 = values.x;
@@ -923,17 +935,19 @@ void CudaCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
 }
 
 void CudaCalcAmoebaMultipoleForceKernel::computeForwardFFT() {
+    CudaArray& grid = cu.unwrap(pmeGrid);
     if (cu.getUseDoublePrecision())
-        cufftExecZ2Z(fft, (double2*) pmeGrid.getDevicePointer(), (double2*) pmeGrid.getDevicePointer(), CUFFT_FORWARD);
+        cufftExecZ2Z(fft, (double2*) grid.getDevicePointer(), (double2*) grid.getDevicePointer(), CUFFT_FORWARD);
     else
-        cufftExecC2C(fft, (float2*) pmeGrid.getDevicePointer(), (float2*) pmeGrid.getDevicePointer(), CUFFT_FORWARD);
+        cufftExecC2C(fft, (float2*) grid.getDevicePointer(), (float2*) grid.getDevicePointer(), CUFFT_FORWARD);
 }
 
 void CudaCalcAmoebaMultipoleForceKernel::computeInverseFFT() {
+    CudaArray& grid = cu.unwrap(pmeGrid);
     if (cu.getUseDoublePrecision())
-        cufftExecZ2Z(fft, (double2*) pmeGrid.getDevicePointer(), (double2*) pmeGrid.getDevicePointer(), CUFFT_INVERSE);
+        cufftExecZ2Z(fft, (double2*) grid.getDevicePointer(), (double2*) grid.getDevicePointer(), CUFFT_INVERSE);
     else
-        cufftExecC2C(fft, (float2*) pmeGrid.getDevicePointer(), (float2*) pmeGrid.getDevicePointer(), CUFFT_INVERSE);
+        cufftExecC2C(fft, (float2*) grid.getDevicePointer(), (float2*) grid.getDevicePointer(), CUFFT_INVERSE);
 }
 
 double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -985,7 +999,7 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         // Compute induced dipoles.
         
         if (gkKernel != NULL)
-            gkKernel->computeBornRadii();
+            gkKernel->computeBornRadii(torque, labDipoles, labQuadrupoles, inducedDipole, inducedDipolePolar, dampingAndThole, covalentFlags, polarizationGroupFlags);
         computeFixedFieldKernel->execute(numForceThreadBlocks*fixedFieldThreads, fixedFieldThreads);
         recordInducedDipolesKernel->execute(cu.getNumAtoms());
         
@@ -1004,7 +1018,7 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
         
         electrostaticsKernel->execute(numForceThreadBlocks*electrostaticsThreads, electrostaticsThreads);
         if (gkKernel != NULL)
-            gkKernel->finishComputation(torque, labDipoles, labQuadrupoles, inducedDipole, inducedDipolePolar, dampingAndThole, covalentFlags, polarizationGroupFlags);
+            gkKernel->finishComputation();
     }
     else {
         // Compute reciprocal box vectors.
@@ -1039,7 +1053,8 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
                 pmeInducedPotentialKernel->setArg(8+i, recipBoxVectors[i]);
                 pmeFixedForceKernel->setArg(10+i, recipBoxVectors[i]);
                 pmeInducedForceKernel->setArg(15+i, recipBoxVectors[i]);
-                pmeRecordInducedFieldDipolesKernel->setArg(6+i, recipBoxVectors[i]);
+                if (polarizationType != AmoebaMultipoleForce::Direct)
+                    pmeRecordInducedFieldDipolesKernel->setArg(6+i, recipBoxVectors[i]);
             }
         }
         else {
@@ -1065,7 +1080,8 @@ double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool in
                 pmeInducedPotentialKernel->setArg(8+i, recipBoxVectorsFloat[i]);
                 pmeFixedForceKernel->setArg(10+i, recipBoxVectorsFloat[i]);
                 pmeInducedForceKernel->setArg(15+i, recipBoxVectorsFloat[i]);
-                pmeRecordInducedFieldDipolesKernel->setArg(6+i, recipBoxVectorsFloat[i]);
+                if (polarizationType != AmoebaMultipoleForce::Direct)
+                    pmeRecordInducedFieldDipolesKernel->setArg(6+i, recipBoxVectorsFloat[i]);
             }
         }
 
@@ -1734,13 +1750,15 @@ double CudaCalcAmoebaGeneralizedKirkwoodForceKernel::execute(ContextImpl& contex
     return 0.0;
 }
 
-void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::computeBornRadii() {
+void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::computeBornRadii(ComputeArray& torque, ComputeArray& labDipoles, ComputeArray& labQuadrupoles,
+            ComputeArray& inducedDipole, ComputeArray& inducedDipolePolar, ComputeArray& dampingAndThole, ComputeArray& covalentFlags, ComputeArray& polarizationGroupFlags) {
+    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         
         // Create the kernels.
         
-        int numExclusionTiles = cu.getNonbondedUtilities().getExclusionTiles().getSize();
+        int numExclusionTiles = nb.getExclusionTiles().getSize();
         defines["NUM_TILES_WITH_EXCLUSIONS"] = cu.intToString(numExclusionTiles);
         int numContexts = cu.getPlatformData().contexts.size();
         int startExclusionIndex = cu.getContextIndex()*numExclusionTiles/numContexts;
@@ -1748,7 +1766,6 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::computeBornRadii() {
         defines["FIRST_EXCLUSION_TILE"] = cu.intToString(startExclusionIndex);
         defines["LAST_EXCLUSION_TILE"] = cu.intToString(endExclusionIndex);
         stringstream forceSource;
-        forceSource << CudaKernelSources::vectorOps;
         forceSource << CudaAmoebaKernelSources::amoebaGk;
         forceSource << "#define F1\n";
         forceSource << CudaAmoebaKernelSources::gkPairForce1;
@@ -1775,27 +1792,69 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::computeBornRadii() {
         forceSource << "#define B2\n";
         forceSource << CudaAmoebaKernelSources::gkPairForce1;
         forceSource << CudaAmoebaKernelSources::gkPairForce2;
-        CUmodule module = cu.createModule(forceSource.str(), defines);
-        computeBornSumKernel = cu.getKernel(module, "computeBornSum");
-        reduceBornSumKernel = cu.getKernel(module, "reduceBornSum");
-        gkForceKernel = cu.getKernel(module, "computeGKForces");
-        chainRuleKernel = cu.getKernel(module, "computeChainRuleForce");
-        ediffKernel = cu.getKernel(module, "computeEDiffForce");
-        if (includeSurfaceArea)
-            surfaceAreaKernel = cu.getKernel(module, "computeSurfaceAreaForce");
+        ComputeProgram program = cu.compileProgram(forceSource.str(), defines);
+        computeBornSumKernel = program->createKernel("computeBornSum");
+        computeBornSumKernel->addArg(bornSum);
+        computeBornSumKernel->addArg(cu.getPosq());
+        computeBornSumKernel->addArg(params);
+        computeBornSumKernel->addArg();
+        reduceBornSumKernel = program->createKernel("reduceBornSum");
+        reduceBornSumKernel->addArg(bornSum);
+        reduceBornSumKernel->addArg(params);
+        reduceBornSumKernel->addArg(bornRadii);
+        gkForceKernel = program->createKernel("computeGKForces");
+        gkForceKernel->addArg(cu.getLongForceBuffer());
+        gkForceKernel->addArg(torque);
+        gkForceKernel->addArg(cu.getEnergyBuffer());
+        gkForceKernel->addArg(cu.getPosq());
+        gkForceKernel->addArg();
+        gkForceKernel->addArg();
+        gkForceKernel->addArg(labDipoles);
+        gkForceKernel->addArg(labQuadrupoles);
+        gkForceKernel->addArg(inducedDipoleS);
+        gkForceKernel->addArg(inducedDipolePolarS);
+        gkForceKernel->addArg(bornRadii);
+        gkForceKernel->addArg(bornForce);
+        chainRuleKernel = program->createKernel("computeChainRuleForce");
+        chainRuleKernel->addArg(cu.getLongForceBuffer());
+        chainRuleKernel->addArg(cu.getPosq());
+        chainRuleKernel->addArg();
+        chainRuleKernel->addArg();
+        chainRuleKernel->addArg(params);
+        chainRuleKernel->addArg(bornRadii);
+        chainRuleKernel->addArg(bornForce);
+        ediffKernel = program->createKernel("computeEDiffForce");
+        ediffKernel->addArg(cu.getLongForceBuffer());
+        ediffKernel->addArg(torque);
+        ediffKernel->addArg(cu.getEnergyBuffer());
+        ediffKernel->addArg(cu.getPosq());
+        ediffKernel->addArg(covalentFlags);
+        ediffKernel->addArg(polarizationGroupFlags);
+        ediffKernel->addArg(nb.getExclusionTiles());
+        ediffKernel->addArg();
+        ediffKernel->addArg();
+        ediffKernel->addArg(labDipoles);
+        ediffKernel->addArg(labQuadrupoles);
+        ediffKernel->addArg(inducedDipole);
+        ediffKernel->addArg(inducedDipolePolar);
+        ediffKernel->addArg(inducedDipoleS);
+        ediffKernel->addArg(inducedDipolePolarS);
+        ediffKernel->addArg(dampingAndThole);
+        if (includeSurfaceArea) {
+            surfaceAreaKernel = program->createKernel("computeSurfaceAreaForce");
+            surfaceAreaKernel->addArg(bornForce);
+            surfaceAreaKernel->addArg(cu.getEnergyBuffer());
+            surfaceAreaKernel->addArg(params);
+            surfaceAreaKernel->addArg(bornRadii);
+        }
     }
-    CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
-    int numTiles = nb.getNumTiles();
+    computeBornSumKernel->setArg(3, nb.getNumTiles());
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
-    void* computeBornSumArgs[] = {&bornSum.getDevicePointer(), &cu.getPosq().getDevicePointer(),
-        &params.getDevicePointer(), &numTiles};
-    cu.executeKernel(computeBornSumKernel, computeBornSumArgs, numForceThreadBlocks*computeBornSumThreads, computeBornSumThreads);
-    void* reduceBornSumArgs[] = {&bornSum.getDevicePointer(), &params.getDevicePointer(), &bornRadii.getDevicePointer()};
-    cu.executeKernel(reduceBornSumKernel, reduceBornSumArgs, cu.getNumAtoms());
+    computeBornSumKernel->execute(numForceThreadBlocks*computeBornSumThreads, computeBornSumThreads);
+    reduceBornSumKernel->execute(cu.getNumAtoms());
 }
 
-void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& torque, CudaArray& labDipoles, CudaArray& labQuadrupoles,
-            CudaArray& inducedDipole, CudaArray& inducedDipolePolar, CudaArray& dampingAndThole, CudaArray& covalentFlags, CudaArray& polarizationGroupFlags) {
+void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation() {
     CudaNonbondedUtilities& nb = cu.getNonbondedUtilities();
     int startTileIndex = nb.getStartTileIndex();
     int numTileIndices = nb.getNumTiles();
@@ -1803,31 +1862,23 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation(CudaArray& 
     
     // Compute the GK force.
     
-    void* gkForceArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
-        &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices, &labDipoles.getDevicePointer(),
-        &labQuadrupoles.getDevicePointer(), &inducedDipoleS.getDevicePointer(), &inducedDipolePolarS.getDevicePointer(),
-        &bornRadii.getDevicePointer(), &bornForce.getDevicePointer()};
-    cu.executeKernel(gkForceKernel, gkForceArgs, numForceThreadBlocks*gkForceThreads, gkForceThreads);
+    gkForceKernel->setArg(4, startTileIndex);
+    gkForceKernel->setArg(5, numTileIndices);
+    gkForceKernel->execute(numForceThreadBlocks*gkForceThreads, gkForceThreads);
 
     // Compute the surface area force.
     
-    if (includeSurfaceArea) {
-        void* surfaceAreaArgs[] = {&bornForce.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &params.getDevicePointer(), &bornRadii.getDevicePointer()};
-        cu.executeKernel(surfaceAreaKernel, surfaceAreaArgs, cu.getNumAtoms());
-    }
+    if (includeSurfaceArea)
+        surfaceAreaKernel->execute(cu.getNumAtoms());
     
     // Apply the remaining terms.
     
-    void* chainRuleArgs[] = {&cu.getForce().getDevicePointer(), &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices,
-        &params.getDevicePointer(), &bornRadii.getDevicePointer(), &bornForce.getDevicePointer()};
-    cu.executeKernel(chainRuleKernel, chainRuleArgs, numForceThreadBlocks*chainRuleThreads, chainRuleThreads);    
-    void* ediffArgs[] = {&cu.getForce().getDevicePointer(), &torque.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
-        &cu.getPosq().getDevicePointer(), &covalentFlags.getDevicePointer(), &polarizationGroupFlags.getDevicePointer(),
-        &nb.getExclusionTiles().getDevicePointer(), &startTileIndex, &numTileIndices,
-        &labDipoles.getDevicePointer(), &labQuadrupoles.getDevicePointer(), &inducedDipole.getDevicePointer(),
-        &inducedDipolePolar.getDevicePointer(), &inducedDipoleS.getDevicePointer(), &inducedDipolePolarS.getDevicePointer(),
-        &dampingAndThole.getDevicePointer()};
-    cu.executeKernel(ediffKernel, ediffArgs, numForceThreadBlocks*ediffThreads, ediffThreads);
+    chainRuleKernel->setArg(2, startTileIndex);
+    chainRuleKernel->setArg(3, numTileIndices);
+    chainRuleKernel->execute(numForceThreadBlocks*chainRuleThreads, chainRuleThreads);    
+    ediffKernel->setArg(7, startTileIndex);
+    ediffKernel->setArg(8, numTileIndices);
+    ediffKernel->execute(numForceThreadBlocks*ediffThreads, ediffThreads);
 }
 
 void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaGeneralizedKirkwoodForce& force) {
