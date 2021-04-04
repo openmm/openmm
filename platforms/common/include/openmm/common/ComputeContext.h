@@ -65,6 +65,8 @@ public:
     class ReorderListener;
     class ForcePreComputation;
     class ForcePostComputation;
+    static const int ThreadBlockSize;
+    static const int TileSize;
     ComputeContext(const System& system);
     virtual ~ComputeContext();
     /**
@@ -122,6 +124,13 @@ public:
      * @param defines            a set of preprocessor definitions (name, value) to define when compiling the program
      */
     virtual ComputeProgram compileProgram(const std::string source, const std::map<std::string, std::string>& defines=std::map<std::string, std::string>()) = 0;
+    /**
+     * Compute the largest thread block size that can be used for a kernel that requires a particular amount of
+     * shared memory per thread.
+     * 
+     * @param memory        the number of bytes of shared memory per thread
+     */
+    virtual int computeThreadBlockSize(double memory) const = 0;
     /**
      * Set all elements of an array to 0.
      */

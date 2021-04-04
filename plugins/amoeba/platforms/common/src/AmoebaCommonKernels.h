@@ -76,239 +76,247 @@ private:
 /**
  * This kernel is invoked by AmoebaMultipoleForce to calculate the forces acting on the system and the energy of the system.
  */
-//class CommonCalcAmoebaMultipoleForceKernel : public CalcAmoebaMultipoleForceKernel {
-//public:
-//    CommonCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system);
-//    ~CommonCalcAmoebaMultipoleForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     * 
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the AmoebaMultipoleForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const AmoebaMultipoleForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//     /**
-//     * Get the LabFrame dipole moments of all particles.
-//     * 
-//     * @param context    the Context for which to get the induced dipoles
-//     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
-//     */
-//    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-//    /**
-//     * Get the induced dipole moments of all particles.
-//     * 
-//     * @param context    the Context for which to get the induced dipoles
-//     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
-//     */
-//    void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-//    /**
-//     * Get the total dipole moments of all particles.
-//     * 
-//     * @param context    the Context for which to get the induced dipoles
-//     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
-//     */
-//    void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-//    /**
-//     * Execute the kernel to calculate the electrostatic potential
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param inputGrid      input grid coordinates
-//     * @param outputElectrostaticPotential output potential 
-//     */
-//    void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
-//                                   std::vector< double >& outputElectrostaticPotential);
-//
-//   /** 
-//     * Get the system multipole moments
-//     *
-//     * @param context      context
-//     * @param outputMultipoleMoments (charge,
-//     *                                dipole_x, dipole_y, dipole_z,
-//     *                                quadrupole_xx, quadrupole_xy, quadrupole_xz,
-//     *                                quadrupole_yx, quadrupole_yy, quadrupole_yz,
-//     *                                quadrupole_zx, quadrupole_zy, quadrupole_zz)
-//     */
-//    void getSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the AmoebaMultipoleForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force);
-//    /**
-//     * Get the parameters being used for PME.
-//     * 
-//     * @param alpha   the separation parameter
-//     * @param nx      the number of grid points along the X axis
-//     * @param ny      the number of grid points along the Y axis
-//     * @param nz      the number of grid points along the Z axis
-//     */
-//    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
-//private:
-//    class ForceInfo;
-//    void initializeScaleFactors();
-//    void computeInducedField(void** recipBoxVectorPointer);
-//    bool iterateDipolesByDIIS(int iteration);
-//    void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
-//    void ensureMultipolesValid(ContextImpl& context);
-//    template <class T, class T3, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
-//    int numMultipoles, maxInducedIterations, maxExtrapolationOrder;
-//    int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
-//    int gridSizeX, gridSizeY, gridSizeZ;
-//    double pmeAlpha, inducedEpsilon;
-//    bool usePME, hasQuadrupoles, hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid, hasCreatedEvent;
-//    AmoebaMultipoleForce::PolarizationType polarizationType;
-//    ComputeContext& cc;
-//    const System& system;
-//    std::vector<int3> covalentFlagValues;
-//    std::vector<int2> polarizationFlagValues;
-//    ComputeArray multipoleParticles;
-//    ComputeArray localDipoles;
-//    ComputeArray localQuadrupoles;
-//    ComputeArray labDipoles;
-//    ComputeArray labQuadrupoles;
-//    ComputeArray sphericalDipoles;
-//    ComputeArray sphericalQuadrupoles;
-//    ComputeArray fracDipoles;
-//    ComputeArray fracQuadrupoles;
-//    ComputeArray field;
-//    ComputeArray fieldPolar;
-//    ComputeArray inducedField;
-//    ComputeArray inducedFieldPolar;
-//    ComputeArray torque;
-//    ComputeArray dampingAndThole;
-//    ComputeArray inducedDipole;
-//    ComputeArray inducedDipolePolar;
-//    ComputeArray inducedDipoleErrors;
-//    ComputeArray prevDipoles;
-//    ComputeArray prevDipolesPolar;
-//    ComputeArray prevDipolesGk;
-//    ComputeArray prevDipolesGkPolar;
-//    ComputeArray prevErrors;
-//    ComputeArray diisMatrix;
-//    ComputeArray diisCoefficients;
-//    ComputeArray extrapolatedDipole;
-//    ComputeArray extrapolatedDipolePolar;
-//    ComputeArray extrapolatedDipoleGk;
-//    ComputeArray extrapolatedDipoleGkPolar;
-//    ComputeArray inducedDipoleFieldGradient;
-//    ComputeArray inducedDipoleFieldGradientPolar;
-//    ComputeArray inducedDipoleFieldGradientGk;
-//    ComputeArray inducedDipoleFieldGradientGkPolar;
-//    ComputeArray extrapolatedDipoleFieldGradient;
-//    ComputeArray extrapolatedDipoleFieldGradientPolar;
-//    ComputeArray extrapolatedDipoleFieldGradientGk;
-//    ComputeArray extrapolatedDipoleFieldGradientGkPolar;
-//    ComputeArray polarizability;
-//    ComputeArray covalentFlags;
-//    ComputeArray polarizationGroupFlags;
-//    ComputeArray pmeGrid;
-//    ComputeArray pmeBsplineModuliX;
-//    ComputeArray pmeBsplineModuliY;
-//    ComputeArray pmeBsplineModuliZ;
-//    ComputeArray pmePhi;
-//    ComputeArray pmePhid;
-//    ComputeArray pmePhip;
-//    ComputeArray pmePhidp;
-//    ComputeArray pmeCphi;
-//    ComputeArray lastPositions;
-//    cufftHandle fft;
-//    ComputeKernel computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
-//    ComputeKernel pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
-//    ComputeKernel pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
-//    ComputeKernel recordDIISDipolesKernel, buildMatrixKernel, solveMatrixKernel;
-//    ComputeKernel initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, addExtrapolatedGradientKernel;
-//    ComputeKernel pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
-//    CUevent syncEvent;
-//    CommonCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
-//    static const int PmeOrder = 5;
-//    static const int MaxPrevDIISDipoles = 20;
-//};
-//
-///**
-// * This kernel is invoked by AmoebaMultipoleForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class CommonCalcAmoebaGeneralizedKirkwoodForceKernel : public CalcAmoebaGeneralizedKirkwoodForceKernel {
-//public:
-//    CommonCalcAmoebaGeneralizedKirkwoodForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system);
-//    /**
-//     * Initialize the kernel.
-//     * 
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the AmoebaMultipoleForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces and/or energy.
-//     *
-//     * @param context        the context in which to execute this kernel
-//     * @param includeForces  true if forces should be calculated
-//     * @param includeEnergy  true if the energy should be calculated
-//     * @return the potential energy due to the force
-//     */
-//    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-//    /**
-//     * Perform the computation of Born radii.
-//     */
-//    void computeBornRadii();
-//    /**
-//     * Perform the final parts of the force/energy computation.
-//     */
-//    void finishComputation(ComputeArray& torque, ComputeArray& labFrameDipoles, ComputeArray& labFrameQuadrupoles, ComputeArray& inducedDipole, ComputeArray& inducedDipolePolar, ComputeArray& dampingAndThole, ComputeArray& covalentFlags, ComputeArray& polarizationGroupFlags);
-//    ComputeArray& getBornRadii() {
-//        return bornRadii;
-//    }
-//    ComputeArray& getField() {
-//        return field;
-//    }
-//    ComputeArray& getInducedField() {
-//        return inducedField;
-//    }
-//    ComputeArray& getInducedFieldPolar() {
-//        return inducedFieldPolar;
-//    }
-//    ComputeArray& getInducedDipoles() {
-//        return inducedDipoleS;
-//    }
-//    ComputeArray& getInducedDipolesPolar() {
-//        return inducedDipolePolarS;
-//    }
-//    /**
-//     * Copy changed parameters over to a context.
-//     *
-//     * @param context    the context to copy parameters to
-//     * @param force      the AmoebaGeneralizedKirkwoodForce to copy the parameters from
-//     */
-//    void copyParametersToContext(ContextImpl& context, const AmoebaGeneralizedKirkwoodForce& force);
-//private:
-//    class ForceInfo;
-//    ComputeContext& cc;
-//    const System& system;
-//    bool includeSurfaceArea, hasInitializedKernels;
-//    int computeBornSumThreads, gkForceThreads, chainRuleThreads, ediffThreads;
-//    AmoebaMultipoleForce::PolarizationType polarizationType;
-//    std::map<std::string, std::string> defines;
-//    ComputeArray params;
-//    ComputeArray bornSum;
-//    ComputeArray bornRadii;
-//    ComputeArray bornForce;
-//    ComputeArray field;
-//    ComputeArray inducedField;
-//    ComputeArray inducedFieldPolar;
-//    ComputeArray inducedDipoleS;
-//    ComputeArray inducedDipolePolarS;
-//    ComputeKernel computeBornSumKernel, reduceBornSumKernel, surfaceAreaKernel, gkForceKernel, chainRuleKernel, ediffKernel;
-//};
+class CommonCalcAmoebaMultipoleForceKernel : public CalcAmoebaMultipoleForceKernel {
+public:
+    CommonCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system);
+    ~CommonCalcAmoebaMultipoleForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaMultipoleForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaMultipoleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+     /**
+     * Get the LabFrame dipole moments of all particles.
+     * 
+     * @param context    the Context for which to get the induced dipoles
+     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
+     */
+    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    /**
+     * Get the induced dipole moments of all particles.
+     * 
+     * @param context    the Context for which to get the induced dipoles
+     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
+     */
+    void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    /**
+     * Get the total dipole moments of all particles.
+     * 
+     * @param context    the Context for which to get the induced dipoles
+     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
+     */
+    void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    /**
+     * Execute the kernel to calculate the electrostatic potential
+     *
+     * @param context        the context in which to execute this kernel
+     * @param inputGrid      input grid coordinates
+     * @param outputElectrostaticPotential output potential 
+     */
+    void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
+                                   std::vector< double >& outputElectrostaticPotential);
+
+   /** 
+     * Get the system multipole moments
+     *
+     * @param context      context
+     * @param outputMultipoleMoments (charge,
+     *                                dipole_x, dipole_y, dipole_z,
+     *                                quadrupole_xx, quadrupole_xy, quadrupole_xz,
+     *                                quadrupole_yx, quadrupole_yy, quadrupole_yz,
+     *                                quadrupole_zx, quadrupole_zy, quadrupole_zz)
+     */
+    void getSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaMultipoleForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force);
+    /**
+     * Get the parameters being used for PME.
+     * 
+     * @param alpha   the separation parameter
+     * @param nx      the number of grid points along the X axis
+     * @param ny      the number of grid points along the Y axis
+     * @param nz      the number of grid points along the Z axis
+     */
+    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    /**
+     * Compute the FFT in the forward direction.
+     */
+    virtual void computeForwardFFT() = 0;
+    /**
+     * Compute the FFT in the inverse direction.
+     */
+    virtual void computeInverseFFT() = 0;
+protected:
+    class ForceInfo;
+    void initializeScaleFactors();
+    void computeInducedField(void** recipBoxVectorPointer);
+    bool iterateDipolesByDIIS(int iteration);
+    void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
+    void ensureMultipolesValid(ContextImpl& context);
+    template <class T, class T3, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
+    int numMultipoles, maxInducedIterations, maxExtrapolationOrder;
+    int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
+    int gridSizeX, gridSizeY, gridSizeZ;
+    double pmeAlpha, inducedEpsilon;
+    bool usePME, hasQuadrupoles, hasInitializedScaleFactors, multipolesAreValid, hasCreatedEvent;
+    AmoebaMultipoleForce::PolarizationType polarizationType;
+    ComputeContext& cc;
+    const System& system;
+    std::vector<mm_int3> covalentFlagValues;
+    std::vector<mm_int2> polarizationFlagValues;
+    ComputeArray multipoleParticles;
+    ComputeArray localDipoles;
+    ComputeArray localQuadrupoles;
+    ComputeArray labDipoles;
+    ComputeArray labQuadrupoles;
+    ComputeArray sphericalDipoles;
+    ComputeArray sphericalQuadrupoles;
+    ComputeArray fracDipoles;
+    ComputeArray fracQuadrupoles;
+    ComputeArray field;
+    ComputeArray fieldPolar;
+    ComputeArray inducedField;
+    ComputeArray inducedFieldPolar;
+    ComputeArray torque;
+    ComputeArray dampingAndThole;
+    ComputeArray inducedDipole;
+    ComputeArray inducedDipolePolar;
+    ComputeArray inducedDipoleErrors;
+    ComputeArray prevDipoles;
+    ComputeArray prevDipolesPolar;
+    ComputeArray prevDipolesGk;
+    ComputeArray prevDipolesGkPolar;
+    ComputeArray prevErrors;
+    ComputeArray diisMatrix;
+    ComputeArray diisCoefficients;
+    ComputeArray extrapolatedDipole;
+    ComputeArray extrapolatedDipolePolar;
+    ComputeArray extrapolatedDipoleGk;
+    ComputeArray extrapolatedDipoleGkPolar;
+    ComputeArray inducedDipoleFieldGradient;
+    ComputeArray inducedDipoleFieldGradientPolar;
+    ComputeArray inducedDipoleFieldGradientGk;
+    ComputeArray inducedDipoleFieldGradientGkPolar;
+    ComputeArray extrapolatedDipoleFieldGradient;
+    ComputeArray extrapolatedDipoleFieldGradientPolar;
+    ComputeArray extrapolatedDipoleFieldGradientGk;
+    ComputeArray extrapolatedDipoleFieldGradientGkPolar;
+    ComputeArray polarizability;
+    ComputeArray covalentFlags;
+    ComputeArray polarizationGroupFlags;
+    ComputeArray pmeGrid;
+    ComputeArray pmeBsplineModuliX;
+    ComputeArray pmeBsplineModuliY;
+    ComputeArray pmeBsplineModuliZ;
+    ComputeArray pmePhi;
+    ComputeArray pmePhid;
+    ComputeArray pmePhip;
+    ComputeArray pmePhidp;
+    ComputeArray pmeCphi;
+    ComputeArray lastPositions;
+    ComputeKernel computeMomentsKernel, recordInducedDipolesKernel, mapTorqueKernel, computePotentialKernel, electrostaticsKernel;
+    ComputeKernel computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel;
+    ComputeKernel recordDIISDipolesKernel, buildMatrixKernel, solveMatrixKernel;
+    ComputeKernel initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, addExtrapolatedGradientKernel;
+    ComputeKernel pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
+    ComputeKernel pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
+    ComputeKernel pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
+    ComputeEvent syncEvent;
+    CommonCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
+    static const int PmeOrder = 5;
+    static const int MaxPrevDIISDipoles = 20;
+};
+
+/**
+ * This kernel is invoked by AmoebaMultipoleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CommonCalcAmoebaGeneralizedKirkwoodForceKernel : public CalcAmoebaGeneralizedKirkwoodForceKernel {
+public:
+    CommonCalcAmoebaGeneralizedKirkwoodForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system);
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaMultipoleForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * Perform the computation of Born radii.
+     */
+    void computeBornRadii(ComputeArray& torque, ComputeArray& labFrameDipoles, ComputeArray& labFrameQuadrupoles, ComputeArray& inducedDipole, ComputeArray& inducedDipolePolar, ComputeArray& dampingAndThole, ComputeArray& covalentFlags, ComputeArray& polarizationGroupFlags);
+    /**
+     * Perform the final parts of the force/energy computation.
+     */
+    void finishComputation();
+    ComputeArray& getBornRadii() {
+        return bornRadii;
+    }
+    ComputeArray& getField() {
+        return field;
+    }
+    ComputeArray& getInducedField() {
+        return inducedField;
+    }
+    ComputeArray& getInducedFieldPolar() {
+        return inducedFieldPolar;
+    }
+    ComputeArray& getInducedDipoles() {
+        return inducedDipoleS;
+    }
+    ComputeArray& getInducedDipolesPolar() {
+        return inducedDipolePolarS;
+    }
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the AmoebaGeneralizedKirkwoodForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const AmoebaGeneralizedKirkwoodForce& force);
+private:
+    class ForceInfo;
+    ComputeContext& cc;
+    const System& system;
+    bool includeSurfaceArea, hasInitializedKernels;
+    int computeBornSumThreads, gkForceThreads, chainRuleThreads, ediffThreads;
+    AmoebaMultipoleForce::PolarizationType polarizationType;
+    std::map<std::string, std::string> defines;
+    ComputeArray params;
+    ComputeArray bornSum;
+    ComputeArray bornRadii;
+    ComputeArray bornForce;
+    ComputeArray field;
+    ComputeArray inducedField;
+    ComputeArray inducedFieldPolar;
+    ComputeArray inducedDipoleS;
+    ComputeArray inducedDipolePolarS;
+    ComputeKernel computeBornSumKernel, reduceBornSumKernel, surfaceAreaKernel, gkForceKernel, chainRuleKernel, ediffKernel;
+};
 
 /**
  * This kernel is invoked to calculate the vdw forces acting on the system and the energy of the system.

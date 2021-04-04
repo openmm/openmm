@@ -289,9 +289,8 @@ public:
      * shared memory per thread.
      * 
      * @param memory        the number of bytes of shared memory per thread
-     * @param preferShared  whether the kernel is set to prefer shared memory over cache
      */
-    int computeThreadBlockSize(double memory, bool preferShared=true) const;
+    int computeThreadBlockSize(double memory) const;
     /**
      * Set all elements of an array to 0.
      */

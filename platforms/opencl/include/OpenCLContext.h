@@ -329,6 +329,13 @@ public:
      */
     void executeKernel(cl::Kernel& kernel, int workUnits, int blockSize = -1);
     /**
+     * Compute the largest thread block size that can be used for a kernel that requires a particular amount of
+     * shared memory per thread.
+     * 
+     * @param memory        the number of bytes of shared memory per thread
+     */
+    int computeThreadBlockSize(double memory) const;
+    /**
      * Set all elements of an array to 0.
      */
     void clearBuffer(ArrayInterface& array);

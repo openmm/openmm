@@ -37,7 +37,7 @@ struct mm_short2 {
     }
 };
 struct mm_short3 {
-    short x, y, z, w;
+    short x, y, z;
     mm_short3() {
     }
     mm_short3(short x, short y, short z) : x(x), y(y), z(z) {
@@ -58,7 +58,7 @@ struct mm_int2 {
     }
 };
 struct mm_int3 {
-    int x, y, z, w;
+    int x, y, z;
     mm_int3() {
     }
     mm_int3(int x, int y, int z) : x(x), y(y), z(z) {
@@ -79,7 +79,7 @@ struct mm_float2 {
     }
 };
 struct mm_float3 {
-    float x, y, z, w;
+    float x, y, z;
     mm_float3() {
     }
     mm_float3(float x, float y, float z) : x(x), y(y), z(z) {
@@ -100,7 +100,7 @@ struct mm_double2 {
     }
 };
 struct mm_double3 {
-    double x, y, z, w;
+    double x, y, z;
     mm_double3() {
     }
     mm_double3(double x, double y, double z) : x(x), y(y), z(z) {

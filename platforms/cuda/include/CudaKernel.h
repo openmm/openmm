@@ -53,6 +53,10 @@ public:
      */
     std::string getName() const;
     /**
+     * Get the maximum block size that can be used when executing this kernel.
+     */
+    int getMaxBlockSize() const;
+    /**
      * Execute this kernel.
      *
      * @param threads      the maximum number of threads that should be used.  Depending on the

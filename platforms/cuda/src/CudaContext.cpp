@@ -723,10 +723,8 @@ void CudaContext::executeKernel(CUfunction kernel, void** arguments, int threads
     }
 }
 
-int CudaContext::computeThreadBlockSize(double memory, bool preferShared) const {
+int CudaContext::computeThreadBlockSize(double memory) const {
     int maxShared = 16*1024;
-    if (computeCapability >= 2.0 && preferShared)
-        maxShared = 48*1024;
     int max = (int) (maxShared/memory);
     if (max < 64)
         return 32;

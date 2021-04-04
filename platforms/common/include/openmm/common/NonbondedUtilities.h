@@ -167,6 +167,14 @@ public:
      */
     virtual int getNumTiles() const = 0;
     /**
+     * Set whether to add padding to the cutoff distance when building the neighbor list.
+     * This increases the size of the neighbor list (and thus the cost of computing interactions),
+     * but also means we don't need to rebuild it every time step.  The default value is true,
+     * since usually this improves performance.  For very expensive interactions, however,
+     * it may be better to set this to false.
+     */
+    virtual void setUsePadding(bool padding) = 0;
+    /**
      * Initialize this object in preparation for a simulation.
      */
     virtual void initialize(const System& system) = 0;
