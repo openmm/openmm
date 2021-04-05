@@ -1,4 +1,4 @@
-__device__ void buildQIRotationMatrix(real3 deltaR, real rInv, real (&rotationMatrix)[3][3]) {
+DEVICE void buildQIRotationMatrix(real3 deltaR, real rInv, real rotationMatrix[][3]) {
     real3 vectorZ = deltaR*rInv;
     real3 vectorX = vectorZ;
     if (deltaR.y != 0 || deltaR.z != 0)
@@ -23,14 +23,13 @@ __device__ void buildQIRotationMatrix(real3 deltaR, real rInv, real (&rotationMa
     rotationMatrix[2][2] = vectorY.y;
 }
 
-__device__ real3 rotateDipole(real3& dipole, const real (&rotationMatrix)[3][3]) {
+DEVICE real3 rotateDipole(real3 dipole, const real rotationMatrix[][3]) {
     return make_real3(rotationMatrix[0][0]*dipole.x + rotationMatrix[0][1]*dipole.y + rotationMatrix[0][2]*dipole.z,
                       rotationMatrix[1][0]*dipole.x + rotationMatrix[1][1]*dipole.y + rotationMatrix[1][2]*dipole.z,
                       rotationMatrix[2][0]*dipole.x + rotationMatrix[2][1]*dipole.y + rotationMatrix[2][2]*dipole.z);
 }
 
-
-__device__ void rotateQuadupoles(const real (&rotationMatrix)[3][3], const real* quad1, const real* quad2, real* rotated1, real* rotated2) {
+DEVICE void rotateQuadupoles(const real rotationMatrix[][3], const real* quad1, LOCAL_ARG const real* quad2, real* rotated1, real* rotated2) {
     real sqrtThree = SQRT((real) 3);
     real element;
     element = 0.5f*(3.0f*rotationMatrix[0][0]*rotationMatrix[0][0] - 1.0f);

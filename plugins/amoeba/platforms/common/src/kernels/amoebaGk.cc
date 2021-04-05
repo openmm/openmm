@@ -3,8 +3,8 @@
 /**
  * Reduce the Born sums to compute the Born radii.
  */
-extern "C" __global__ void reduceBornSum(const long long* __restrict__ bornSum, const float2* __restrict__ params, real* __restrict__ bornRadii) {
-    for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
+KERNEL void reduceBornSum(GLOBAL const mm_long* RESTRICT bornSum, GLOBAL const float2* RESTRICT params, GLOBAL real* RESTRICT bornRadii) {
+    for (unsigned int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         // Get summed Born data
 
         real sum = RECIP(0x100000000)*bornSum[index];
@@ -23,9 +23,9 @@ extern "C" __global__ void reduceBornSum(const long long* __restrict__ bornSum, 
 /**
  * Apply the surface area term to the force and energy.
  */
-extern "C" __global__ void computeSurfaceAreaForce(long long* __restrict__ bornForce, mixed* __restrict__ energyBuffer, const float2* __restrict__ params, const real* __restrict__ bornRadii) {
+KERNEL void computeSurfaceAreaForce(GLOBAL mm_long* RESTRICT bornForce, GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const float2* RESTRICT params, GLOBAL const real* RESTRICT bornRadii) {
     mixed energy = 0;
-    for (unsigned int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_ATOMS; index += blockDim.x*gridDim.x) {
+    for (unsigned int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         real bornRadius = bornRadii[index];
         float radius = params[index].x;
         real r = radius + DIELECTRIC_OFFSET + PROBE_RADIUS;
@@ -33,10 +33,10 @@ extern "C" __global__ void computeSurfaceAreaForce(long long* __restrict__ bornF
         ratio6 = ratio6*ratio6*ratio6;
         ratio6 = ratio6*ratio6;
         real saTerm = SURFACE_AREA_FACTOR * r * r * ratio6;
-        bornForce[index] += (long long) (saTerm*0x100000000/bornRadius);
+        bornForce[index] += (mm_long) (saTerm*0x100000000/bornRadius);
         energy += saTerm;
     }
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] -= energy/6;
+    energyBuffer[GLOBAL_ID] -= energy/6;
 }
 #endif
 
@@ -49,7 +49,7 @@ typedef struct {
     float radius, scaledRadius, padding;
 } AtomData1;
 
-__device__ void computeBornSumOneInteraction(AtomData1& atom1, AtomData1& atom2) {
+DEVICE void computeBornSumOneInteraction(AtomData1& atom1, AtomData1& atom2) {
     if (atom1.radius <= 0)
         return; // Ignore this interaction
     real3 delta = atom2.pos - atom1.pos;
@@ -89,18 +89,18 @@ __device__ void computeBornSumOneInteraction(AtomData1& atom1, AtomData1& atom2)
 /**
  * Compute the Born sum.
  */
-extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ bornSum, const real4* __restrict__ posq,
-        const float2* __restrict__ params, unsigned int numTiles) {
-    unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
-    unsigned int pos = (unsigned int) (warp*(long long)numTiles/totalWarps);
-    unsigned int end = (unsigned int) ((warp+1)*(long long)numTiles/totalWarps);
+KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4* RESTRICT posq,
+        GLOBAL const float2* RESTRICT params, unsigned int numTiles) {
+    unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
+    unsigned int warp = (GLOBAL_ID)/TILE_SIZE;
+    unsigned int pos = (unsigned int) (warp*(mm_long)numTiles/totalWarps);
+    unsigned int end = (unsigned int) ((warp+1)*(mm_long)numTiles/totalWarps);
     unsigned int lasty = 0xFFFFFFFF;
-    __shared__ AtomData1 localData[BORN_SUM_THREAD_BLOCK_SIZE];
+    LOCAL AtomData1 localData[BORN_SUM_THREAD_BLOCK_SIZE];
     do {
         // Extract the coordinates of this tile
-        const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
-        const unsigned int tbx = threadIdx.x - tgx;
+        const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
+        const unsigned int tbx = LOCAL_ID - tgx;
         int x, y;
         AtomData1 data;
         data.bornSum = 0;
@@ -121,9 +121,9 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ bornS
             else if (x == y) {
                 // This tile is on the diagonal.
 
-                localData[threadIdx.x].pos = data.pos;
-                localData[threadIdx.x].radius = params1.x;
-                localData[threadIdx.x].scaledRadius = params1.y;
+                localData[LOCAL_ID].pos = data.pos;
+                localData[LOCAL_ID].radius = params1.x;
+                localData[LOCAL_ID].scaledRadius = params1.y;
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+j;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2)
@@ -136,12 +136,12 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ bornS
                 if (lasty != y) {
                     unsigned int j = y*TILE_SIZE + tgx;
                     real4 tempPosq = posq[j];
-                    localData[threadIdx.x].pos = trimTo3(tempPosq);
+                    localData[LOCAL_ID].pos = trimTo3(tempPosq);
                     float2 tempParams = params[j];
-                    localData[threadIdx.x].radius = tempParams.x;
-                    localData[threadIdx.x].scaledRadius = tempParams.y;
+                    localData[LOCAL_ID].radius = tempParams.x;
+                    localData[LOCAL_ID].scaledRadius = tempParams.y;
                 }
-                localData[threadIdx.x].bornSum = 0;
+                localData[LOCAL_ID].bornSum = 0;
                 
                 // Compute the full set of interactions in this tile.
 
@@ -161,11 +161,11 @@ extern "C" __global__ void computeBornSum(unsigned long long* __restrict__ bornS
         
         if (pos < end) {
             const unsigned int offset = x*TILE_SIZE + tgx;
-            atomicAdd(&bornSum[offset], static_cast<unsigned long long>((long long) (data.bornSum*0x100000000)));
+            ATOMIC_ADD(&bornSum[offset], (mm_ulong) ((mm_long) (data.bornSum*0x100000000)));
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
-            atomicAdd(&bornSum[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].bornSum*0x100000000)));
+            ATOMIC_ADD(&bornSum[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].bornSum*0x100000000)));
         }
         lasty = y;
         pos++;
@@ -182,14 +182,14 @@ typedef struct {
     real q, bornRadius, bornForce;
 } AtomData2;
 
-__device__ void computeOneInteractionF1(AtomData2& atom1, volatile AtomData2& atom2, real& outputEnergy, real3& force);
-__device__ void computeOneInteractionF2(AtomData2& atom1, volatile AtomData2& atom2, real& outputEnergy, real3& force);
-__device__ void computeOneInteractionT1(AtomData2& atom1, volatile AtomData2& atom2, real3& torque);
-__device__ void computeOneInteractionT2(AtomData2& atom1, volatile AtomData2& atom2, real3& torque);
-__device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& atom2);
+DEVICE void computeOneInteractionF1(AtomData2& atom1, volatile AtomData2& atom2, real& outputEnergy, real3& force);
+DEVICE void computeOneInteractionF2(AtomData2& atom1, volatile AtomData2& atom2, real& outputEnergy, real3& force);
+DEVICE void computeOneInteractionT1(AtomData2& atom1, volatile AtomData2& atom2, real3& torque);
+DEVICE void computeOneInteractionT2(AtomData2& atom1, volatile AtomData2& atom2, real3& torque);
+DEVICE void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& atom2);
 
-inline __device__ void loadAtomData2(AtomData2& data, int atom, const real4* __restrict__ posq, const real* __restrict__ labFrameDipole,
-        const real* __restrict__ labFrameQuadrupole, const real3* __restrict__ inducedDipole, const real3* __restrict__ inducedDipolePolar, const real* __restrict__ bornRadius) {
+inline DEVICE void loadAtomData2(AtomData2& data, int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
+        GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar, GLOBAL const real* RESTRICT bornRadius) {
     real4 atomPosq = posq[atom];
     data.pos = trimTo3(atomPosq);
     data.q = atomPosq.w;
@@ -207,7 +207,7 @@ inline __device__ void loadAtomData2(AtomData2& data, int atom, const real4* __r
     data.bornRadius = bornRadius[atom];
 }
 
-inline __device__ void zeroAtomData(AtomData2& data) {
+inline DEVICE void zeroAtomData(AtomData2& data) {
     data.force = make_real3(0);
     data.bornForce = 0;
 }
@@ -215,23 +215,23 @@ inline __device__ void zeroAtomData(AtomData2& data) {
 /**
  * Compute electrostatic interactions.
  */
-extern "C" __global__ void computeGKForces(
-        unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer,
-        const real4* __restrict__ posq, unsigned int startTileIndex, unsigned int numTileIndices, const real* __restrict__ labFrameDipole,
-        const real* __restrict__ labFrameQuadrupole, const real3* __restrict__ inducedDipole, const real3* __restrict__ inducedDipolePolar,
-        const real* __restrict__ bornRadii, unsigned long long* __restrict__ bornForce) {
-    unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
+KERNEL void computeGKForces(
+        GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mm_ulong* RESTRICT torqueBuffers, GLOBAL mixed* RESTRICT energyBuffer,
+        GLOBAL const real4* RESTRICT posq, unsigned int startTileIndex, unsigned int numTileIndices, GLOBAL const real* RESTRICT labFrameDipole,
+        GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar,
+        GLOBAL const real* RESTRICT bornRadii, GLOBAL mm_ulong* RESTRICT bornForce) {
+    unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
+    unsigned int warp = (GLOBAL_ID)/TILE_SIZE;
     const unsigned int numTiles = numTileIndices;
-    unsigned int pos = (unsigned int) (startTileIndex+warp*(long long)numTiles/totalWarps);
-    unsigned int end = (unsigned int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
+    unsigned int pos = (unsigned int) (startTileIndex+warp*(mm_long)numTiles/totalWarps);
+    unsigned int end = (unsigned int) (startTileIndex+(warp+1)*(mm_long)numTiles/totalWarps);
     mixed energy = 0;
-    __shared__ AtomData2 localData[GK_FORCE_THREAD_BLOCK_SIZE];
+    LOCAL AtomData2 localData[GK_FORCE_THREAD_BLOCK_SIZE];
     
     do {
         // Extract the coordinates of this tile
-        const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
-        const unsigned int tbx = threadIdx.x - tgx;
+        const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
+        const unsigned int tbx = LOCAL_ID - tgx;
         int x, y;
         AtomData2 data;
         if (pos < end) {
@@ -249,18 +249,18 @@ extern "C" __global__ void computeGKForces(
             else if (x == y) {
                 // This tile is on the diagonal.
 
-                localData[threadIdx.x].pos = data.pos;
-                localData[threadIdx.x].q = data.q;
-                localData[threadIdx.x].dipole = data.dipole;
-                localData[threadIdx.x].quadrupoleXX = data.quadrupoleXX;
-                localData[threadIdx.x].quadrupoleXY = data.quadrupoleXY;
-                localData[threadIdx.x].quadrupoleXZ = data.quadrupoleXZ;
-                localData[threadIdx.x].quadrupoleYY = data.quadrupoleYY;
-                localData[threadIdx.x].quadrupoleYZ = data.quadrupoleYZ;
-                localData[threadIdx.x].quadrupoleZZ = data.quadrupoleZZ;
-                localData[threadIdx.x].inducedDipole = data.inducedDipole;
-                localData[threadIdx.x].inducedDipolePolar = data.inducedDipolePolar;
-                localData[threadIdx.x].bornRadius = data.bornRadius;
+                localData[LOCAL_ID].pos = data.pos;
+                localData[LOCAL_ID].q = data.q;
+                localData[LOCAL_ID].dipole = data.dipole;
+                localData[LOCAL_ID].quadrupoleXX = data.quadrupoleXX;
+                localData[LOCAL_ID].quadrupoleXY = data.quadrupoleXY;
+                localData[LOCAL_ID].quadrupoleXZ = data.quadrupoleXZ;
+                localData[LOCAL_ID].quadrupoleYY = data.quadrupoleYY;
+                localData[LOCAL_ID].quadrupoleYZ = data.quadrupoleYZ;
+                localData[LOCAL_ID].quadrupoleZZ = data.quadrupoleZZ;
+                localData[LOCAL_ID].inducedDipole = data.inducedDipole;
+                localData[LOCAL_ID].inducedDipolePolar = data.inducedDipolePolar;
+                localData[LOCAL_ID].bornRadius = data.bornRadius;
                 
                 // Compute forces.
                 
@@ -276,9 +276,9 @@ extern "C" __global__ void computeGKForces(
                     }
                 }
                 data.force *= 0.5f;
-                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
                 
                 // Compute torques.
                 
@@ -292,9 +292,9 @@ extern "C" __global__ void computeGKForces(
                         data.force += tempTorque;
                     }
                 }
-                atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-                atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-                atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+                ATOMIC_ADD(&torqueBuffers[atom1], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
+                ATOMIC_ADD(&torqueBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
+                ATOMIC_ADD(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
                 
                 // Compute chain rule terms.
                 
@@ -304,14 +304,14 @@ extern "C" __global__ void computeGKForces(
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
                         computeOneInteractionB1B2(data, localData[tbx+j]);
                 }
-                atomicAdd(&bornForce[atom1], static_cast<unsigned long long>((long long) (data.bornForce*0x100000000)));
+                ATOMIC_ADD(&bornForce[atom1], (mm_ulong) ((mm_long) (data.bornForce*0x100000000)));
             }
             else {
                 // This is an off-diagonal tile.
 
                 unsigned int j = y*TILE_SIZE + tgx;
-                loadAtomData2(localData[threadIdx.x], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, bornRadii);
-                zeroAtomData(localData[threadIdx.x]);
+                loadAtomData2(localData[LOCAL_ID], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, bornRadii);
+                zeroAtomData(localData[LOCAL_ID]);
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
@@ -327,22 +327,22 @@ extern "C" __global__ void computeGKForces(
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
                 data.force *= 0.5f;
-                localData[threadIdx.x].force *= 0.5f;
+                localData[LOCAL_ID].force *= 0.5f;
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
                     offset = y*TILE_SIZE + tgx;
-                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
-                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
-                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
                 }
 
                 // Compute torques.
 
                 zeroAtomData(data);
-                zeroAtomData(localData[threadIdx.x]);
+                zeroAtomData(localData[LOCAL_ID]);
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -358,19 +358,19 @@ extern "C" __global__ void computeGKForces(
                 }
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-                    atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-                    atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+                    ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
+                    ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
+                    ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
                     offset = y*TILE_SIZE + tgx;
-                    atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
-                    atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
-                    atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
+                    ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
+                    ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
+                    ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
                 }
 
                 // Compute chain rule terms.
 
                 zeroAtomData(data);
-                zeroAtomData(localData[threadIdx.x]);
+                zeroAtomData(localData[LOCAL_ID]);
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
@@ -379,15 +379,15 @@ extern "C" __global__ void computeGKForces(
                 }
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    atomicAdd(&bornForce[offset], static_cast<unsigned long long>((long long) (data.bornForce*0x100000000)));
+                    ATOMIC_ADD(&bornForce[offset], (mm_ulong) ((mm_long) (data.bornForce*0x100000000)));
                     offset = y*TILE_SIZE + tgx;
-                    atomicAdd(&bornForce[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].bornForce*0x100000000)));
+                    ATOMIC_ADD(&bornForce[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].bornForce*0x100000000)));
                 }
             }
         }
         pos++;
     } while (pos < end);
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy*0.5f;
+    energyBuffer[GLOBAL_ID] += energy*0.5f;
 }
 
 
@@ -399,7 +399,8 @@ typedef struct {
     real radius, scaledRadius, bornRadius, bornForce;
 } AtomData3;
 
-inline __device__ void loadAtomData3(AtomData3& data, int atom, const real4* __restrict__ posq, const float2* __restrict__ params, const real* __restrict__ bornRadius, const long long* __restrict__ bornForce) {
+inline DEVICE void loadAtomData3(AtomData3& data, int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const float2* RESTRICT params,
+        GLOBAL const real* RESTRICT bornRadius, GLOBAL const mm_long* RESTRICT bornForce) {
     data.pos = trimTo3(posq[atom]);
     data.bornRadius = bornRadius[atom];
     float2 params1 = params[atom];
@@ -408,7 +409,7 @@ inline __device__ void loadAtomData3(AtomData3& data, int atom, const real4* __r
     data.bornForce = bornForce[atom]/(real) 0x100000000;
 }
 
-__device__ void computeBornChainRuleInteraction(AtomData3& atom1, AtomData3& atom2, real3& force) {
+DEVICE void computeBornChainRuleInteraction(AtomData3& atom1, AtomData3& atom2, real3& force) {
     real third = 1/(real) 3;
     real pi43 = 4*third*M_PI;
     real factor = -POW(M_PI, third)*POW((real) 6, 2/(real) 3)/9;
@@ -460,20 +461,20 @@ __device__ void computeBornChainRuleInteraction(AtomData3& atom1, AtomData3& ato
 /**
  * Compute chain rule terms.
  */
-extern "C" __global__ void computeChainRuleForce(
-        unsigned long long* __restrict__ forceBuffers, const real4* __restrict__ posq, unsigned int startTileIndex, unsigned int numTileIndices,
-        const float2* __restrict__ params, const real* __restrict__ bornRadii, const long long* __restrict__ bornForce) {
-    unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
+KERNEL void computeChainRuleForce(
+        GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL const real4* RESTRICT posq, unsigned int startTileIndex, unsigned int numTileIndices,
+        GLOBAL const float2* RESTRICT params, GLOBAL const real* RESTRICT bornRadii, GLOBAL const mm_long* RESTRICT bornForce) {
+    unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
+    unsigned int warp = (GLOBAL_ID)/TILE_SIZE;
     const unsigned int numTiles = numTileIndices;
     unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
     unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
-    __shared__ AtomData3 localData[CHAIN_RULE_THREAD_BLOCK_SIZE];
+    LOCAL AtomData3 localData[CHAIN_RULE_THREAD_BLOCK_SIZE];
     
     do {
         // Extract the coordinates of this tile
-        const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
-        const unsigned int tbx = threadIdx.x - tgx;
+        const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
+        const unsigned int tbx = LOCAL_ID - tgx;
         int x, y;
         AtomData3 data;
         if (pos < end) {
@@ -491,12 +492,12 @@ extern "C" __global__ void computeChainRuleForce(
             else if (x == y) {
                 // This tile is on the diagonal.
 
-                localData[threadIdx.x].pos = data.pos;
-                localData[threadIdx.x].radius = data.radius;
-                localData[threadIdx.x].scaledRadius = data.scaledRadius;
-                localData[threadIdx.x].bornRadius = data.bornRadius;
-                localData[threadIdx.x].bornForce = data.bornForce;
-                localData[threadIdx.x].force = make_real3(0);
+                localData[LOCAL_ID].pos = data.pos;
+                localData[LOCAL_ID].radius = data.radius;
+                localData[LOCAL_ID].scaledRadius = data.scaledRadius;
+                localData[LOCAL_ID].bornRadius = data.bornRadius;
+                localData[LOCAL_ID].bornForce = data.bornForce;
+                localData[LOCAL_ID].force = make_real3(0);
                 
                 // Compute forces.
                 
@@ -509,16 +510,16 @@ extern "C" __global__ void computeChainRuleForce(
                         localData[tbx+j].force += tempForce;
                     }
                 }
-                atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) ((data.force.x+localData[threadIdx.x].force.x)*0x100000000)));
-                atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) ((data.force.y+localData[threadIdx.x].force.y)*0x100000000)));
-                atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) ((data.force.z+localData[threadIdx.x].force.z)*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) ((data.force.x+localData[LOCAL_ID].force.x)*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) ((data.force.y+localData[LOCAL_ID].force.y)*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) ((data.force.z+localData[LOCAL_ID].force.z)*0x100000000)));
             }
             else {
                 // This is an off-diagonal tile.
 
                 unsigned int j = y*TILE_SIZE + tgx;
-                loadAtomData3(localData[threadIdx.x], j, posq, params, bornRadii, bornForce);
-                localData[threadIdx.x].force = make_real3(0);
+                loadAtomData3(localData[LOCAL_ID], j, posq, params, bornRadii, bornForce);
+                localData[LOCAL_ID].force = make_real3(0);
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
@@ -535,13 +536,13 @@ extern "C" __global__ void computeChainRuleForce(
                 }
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
                     offset = y*TILE_SIZE + tgx;
-                    atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
-                    atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
-                    atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
                 }
             }
         }
@@ -556,13 +557,13 @@ typedef struct {
     float thole, damp;
 } AtomData4;
 
-__device__ void computeOneEDiffInteractionF1(AtomData4& atom1, volatile AtomData4& atom2, float dScale, float pScale, real& outputEnergy, real3& outputForce);
-__device__ void computeOneEDiffInteractionT1(AtomData4& atom1, volatile AtomData4& atom2, float dScale, float pScale, real3& outputForce);
-__device__ void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData4& atom2, float dScale, float pScale, real3& outputForce);
+DEVICE void computeOneEDiffInteractionF1(AtomData4& atom1, volatile AtomData4& atom2, float dScale, float pScale, real& outputEnergy, real3& outputForce);
+DEVICE void computeOneEDiffInteractionT1(AtomData4& atom1, volatile AtomData4& atom2, float dScale, float pScale, real3& outputForce);
+DEVICE void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData4& atom2, float dScale, float pScale, real3& outputForce);
 
-inline __device__ void loadAtomData4(AtomData4& data, int atom, const real4* __restrict__ posq, const real* __restrict__ labFrameDipole,
-        const real* __restrict__ labFrameQuadrupole, const real3* __restrict__ inducedDipole, const real3* __restrict__ inducedDipolePolar,
-        const real3* __restrict__ inducedDipoleS, const real3* __restrict__ inducedDipolePolarS, const float2* __restrict__ dampingAndThole) {
+inline DEVICE void loadAtomData4(AtomData4& data, int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
+        GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar,
+        GLOBAL const real3* RESTRICT inducedDipoleS, GLOBAL const real3* RESTRICT inducedDipolePolarS, GLOBAL const float2* RESTRICT dampingAndThole) {
     real4 atomPosq = posq[atom];
     data.pos = make_real3(atomPosq.x, atomPosq.y, atomPosq.z);
     data.q = atomPosq.w;
@@ -584,11 +585,11 @@ inline __device__ void loadAtomData4(AtomData4& data, int atom, const real4* __r
     data.thole = temp.y;
 }
 
-__device__ real computeDScaleFactor(unsigned int polarizationGroup, int index) {
+DEVICE real computeDScaleFactor(unsigned int polarizationGroup, int index) {
     return (polarizationGroup & 1<<index ? 0 : 1);
 }
 
-__device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup, int index) {
+DEVICE float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup, int index) {
     int mask = 1<<index;
     bool x = (covalent.x & mask);
     bool y = (covalent.y & mask);
@@ -599,19 +600,19 @@ __device__ float computePScaleFactor(uint2 covalent, unsigned int polarizationGr
 /**
  * Compute electrostatic interactions.
  */
-extern "C" __global__ void computeEDiffForce(
-        unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer,
-        const real4* __restrict__ posq, const uint2* __restrict__ covalentFlags, const unsigned int* __restrict__ polarizationGroupFlags,
-        const int2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices,
-        const real* __restrict__ labFrameDipole, const real* __restrict__ labFrameQuadrupole, const real3* __restrict__ inducedDipole,
-        const real3* __restrict__ inducedDipolePolar, const real3* __restrict__ inducedDipoleS, const real3* __restrict__ inducedDipolePolarS,
-        const float2* __restrict__ dampingAndThole) {
-    const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
-    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
-    const unsigned int tbx = threadIdx.x - tgx;
+KERNEL void computeEDiffForce(
+        GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mm_ulong* RESTRICT torqueBuffers, GLOBAL mixed* RESTRICT energyBuffer,
+        GLOBAL const real4* RESTRICT posq, GLOBAL const uint2* RESTRICT covalentFlags, GLOBAL const unsigned int* RESTRICT polarizationGroupFlags,
+        GLOBAL const int2* RESTRICT exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices,
+        GLOBAL const real* RESTRICT labFrameDipole, GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real3* RESTRICT inducedDipole,
+        GLOBAL const real3* RESTRICT inducedDipolePolar, GLOBAL const real3* RESTRICT inducedDipoleS, GLOBAL const real3* RESTRICT inducedDipolePolarS,
+        GLOBAL const float2* RESTRICT dampingAndThole) {
+    const unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
+    const unsigned int warp = (GLOBAL_ID)/TILE_SIZE;
+    const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
+    const unsigned int tbx = LOCAL_ID - tgx;
     mixed energy = 0;
-    __shared__ AtomData4 localData[EDIFF_THREAD_BLOCK_SIZE];
+    LOCAL AtomData4 localData[EDIFF_THREAD_BLOCK_SIZE];
 
     // First loop: process tiles that contain exclusions.
     
@@ -630,21 +631,21 @@ extern "C" __global__ void computeEDiffForce(
         if (x == y) {
             // This tile is on the diagonal.
 
-            localData[threadIdx.x].pos = data.pos;
-            localData[threadIdx.x].q = data.q;
-            localData[threadIdx.x].dipole = data.dipole;
-            localData[threadIdx.x].quadrupoleXX = data.quadrupoleXX;
-            localData[threadIdx.x].quadrupoleXY = data.quadrupoleXY;
-            localData[threadIdx.x].quadrupoleXZ = data.quadrupoleXZ;
-            localData[threadIdx.x].quadrupoleYY = data.quadrupoleYY;
-            localData[threadIdx.x].quadrupoleYZ = data.quadrupoleYZ;
-            localData[threadIdx.x].quadrupoleZZ = data.quadrupoleZZ;
-            localData[threadIdx.x].inducedDipole = data.inducedDipole;
-            localData[threadIdx.x].inducedDipolePolar = data.inducedDipolePolar;
-            localData[threadIdx.x].inducedDipoleS = data.inducedDipoleS;
-            localData[threadIdx.x].inducedDipolePolarS = data.inducedDipolePolarS;
-            localData[threadIdx.x].thole = data.thole;
-            localData[threadIdx.x].damp = data.damp;
+            localData[LOCAL_ID].pos = data.pos;
+            localData[LOCAL_ID].q = data.q;
+            localData[LOCAL_ID].dipole = data.dipole;
+            localData[LOCAL_ID].quadrupoleXX = data.quadrupoleXX;
+            localData[LOCAL_ID].quadrupoleXY = data.quadrupoleXY;
+            localData[LOCAL_ID].quadrupoleXZ = data.quadrupoleXZ;
+            localData[LOCAL_ID].quadrupoleYY = data.quadrupoleYY;
+            localData[LOCAL_ID].quadrupoleYZ = data.quadrupoleYZ;
+            localData[LOCAL_ID].quadrupoleZZ = data.quadrupoleZZ;
+            localData[LOCAL_ID].inducedDipole = data.inducedDipole;
+            localData[LOCAL_ID].inducedDipolePolar = data.inducedDipolePolar;
+            localData[LOCAL_ID].inducedDipoleS = data.inducedDipoleS;
+            localData[LOCAL_ID].inducedDipolePolarS = data.inducedDipolePolarS;
+            localData[LOCAL_ID].thole = data.thole;
+            localData[LOCAL_ID].damp = data.damp;
 
             // Compute forces.
 
@@ -661,9 +662,9 @@ extern "C" __global__ void computeEDiffForce(
                 }
             }
             data.force *= ENERGY_SCALE_FACTOR;
-            atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
 
             // Compute torques.
 
@@ -679,16 +680,16 @@ extern "C" __global__ void computeEDiffForce(
                 }
             }
             data.force *= ENERGY_SCALE_FACTOR;
-            atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-            atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-            atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom1], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
         }
         else {
             // This is an off-diagonal tile.
 
             unsigned int j = y*TILE_SIZE + tgx;
-            loadAtomData4(localData[threadIdx.x], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
-            localData[threadIdx.x].force = make_real3(0);
+            loadAtomData4(localData[LOCAL_ID], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
+            localData[LOCAL_ID].force = make_real3(0);
 
             // Compute forces.
 
@@ -708,20 +709,20 @@ extern "C" __global__ void computeEDiffForce(
                 tj = (tj + 1) & (TILE_SIZE - 1);
             }
             data.force *= ENERGY_SCALE_FACTOR;
-            localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
+            localData[LOCAL_ID].force *= ENERGY_SCALE_FACTOR;
             unsigned int offset = x*TILE_SIZE + tgx;
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
             offset = y*TILE_SIZE + tgx;
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
 
             // Compute torques.
 
             data.force = make_real3(0);
-            localData[threadIdx.x].force = make_real3(0);
+            localData[LOCAL_ID].force = make_real3(0);
             for (j = 0; j < TILE_SIZE; j++) {
                 int atom2 = y*TILE_SIZE+tj;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -736,15 +737,15 @@ extern "C" __global__ void computeEDiffForce(
                 tj = (tj + 1) & (TILE_SIZE - 1);
             }
             data.force *= ENERGY_SCALE_FACTOR;
-            localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
+            localData[LOCAL_ID].force *= ENERGY_SCALE_FACTOR;
             offset = x*TILE_SIZE + tgx;
-            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
             offset = y*TILE_SIZE + tgx;
-            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
-            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
-            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
         }
     }
 
@@ -755,8 +756,8 @@ extern "C" __global__ void computeEDiffForce(
     int end = startTileIndex+(warp+1)*numTiles/totalWarps;
     int skipBase = 0;
     int currentSkipIndex = tbx;
-    __shared__ volatile int skipTiles[EDIFF_THREAD_BLOCK_SIZE];
-    skipTiles[threadIdx.x] = -1;
+    LOCAL volatile int skipTiles[EDIFF_THREAD_BLOCK_SIZE];
+    skipTiles[LOCAL_ID] = -1;
 
     while (pos < end) {
         // Extract the coordinates of this tile.
@@ -774,10 +775,10 @@ extern "C" __global__ void computeEDiffForce(
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
-                skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else
-                skipTiles[threadIdx.x] = end;
+                skipTiles[LOCAL_ID] = end;
             skipBase += TILE_SIZE;            
             currentSkipIndex = tbx;
         }
@@ -792,10 +793,10 @@ extern "C" __global__ void computeEDiffForce(
             AtomData4 data;
             data.force = make_real3(0);
             loadAtomData4(data, atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
-            loadAtomData4(localData[threadIdx.x], atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
+            loadAtomData4(localData[LOCAL_ID], atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
             unsigned int j = y*TILE_SIZE + tgx;
-            loadAtomData4(localData[threadIdx.x], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
-            localData[threadIdx.x].force = make_real3(0);
+            loadAtomData4(localData[LOCAL_ID], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
+            localData[LOCAL_ID].force = make_real3(0);
 
             // Compute forces.
 
@@ -813,20 +814,20 @@ extern "C" __global__ void computeEDiffForce(
                 tj = (tj + 1) & (TILE_SIZE - 1);
             }
             data.force *= ENERGY_SCALE_FACTOR;
-            localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
+            localData[LOCAL_ID].force *= ENERGY_SCALE_FACTOR;
             unsigned int offset = x*TILE_SIZE + tgx;
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
             offset = y*TILE_SIZE + tgx;
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
 
             // Compute torques.
 
             data.force = make_real3(0);
-            localData[threadIdx.x].force = make_real3(0);
+            localData[LOCAL_ID].force = make_real3(0);
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 int atom2 = y*TILE_SIZE+tj;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -839,17 +840,17 @@ extern "C" __global__ void computeEDiffForce(
                 tj = (tj + 1) & (TILE_SIZE - 1);
             }
             data.force *= ENERGY_SCALE_FACTOR;
-            localData[threadIdx.x].force *= ENERGY_SCALE_FACTOR;
+            localData[LOCAL_ID].force *= ENERGY_SCALE_FACTOR;
             offset = x*TILE_SIZE + tgx;
-            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (data.force.x*0x100000000)));
-            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.y*0x100000000)));
-            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
             offset = y*TILE_SIZE + tgx;
-            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.x*0x100000000)));
-            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.y*0x100000000)));
-            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].force.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
         }
         pos++;
     }
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy*ENERGY_SCALE_FACTOR;
+    energyBuffer[GLOBAL_ID] += energy*ENERGY_SCALE_FACTOR;
 }

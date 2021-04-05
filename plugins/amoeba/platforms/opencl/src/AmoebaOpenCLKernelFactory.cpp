@@ -25,6 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "AmoebaOpenCLKernelFactory.h"
+#include "AmoebaOpenCLKernels.h"
 #include "AmoebaCommonKernels.h"
 #include "OpenCLContext.h"
 #include "OpenCLPlatform.h"
@@ -50,8 +51,8 @@ extern "C" OPENMM_EXPORT void registerKernelFactories() {
         Platform& platform = Platform::getPlatformByName("OpenCL");
         AmoebaOpenCLKernelFactory* factory = new AmoebaOpenCLKernelFactory();
         platform.registerKernelFactory(CalcAmoebaTorsionTorsionForceKernel::Name(), factory);
-//        platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(), factory);
-//        platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
+        platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(), factory);
+        platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaWcaDispersionForceKernel::Name(), factory);
 //        platform.registerKernelFactory(CalcHippoNonbondedForceKernel::Name(), factory);
@@ -78,11 +79,11 @@ KernelImpl* AmoebaOpenCLKernelFactory::createKernelImpl(std::string name, const 
     if (name == CalcAmoebaTorsionTorsionForceKernel::Name())
         return new CommonCalcAmoebaTorsionTorsionForceKernel(name, platform, cc, context.getSystem());
 
-//    if (name == CalcAmoebaMultipoleForceKernel::Name())
-//        return new CommonCalcAmoebaMultipoleForceKernel(name, platform, cc, context.getSystem());
-//
-//    if (name == CalcAmoebaGeneralizedKirkwoodForceKernel::Name())
-//        return new CommonCalcAmoebaGeneralizedKirkwoodForceKernel(name, platform, cc, context.getSystem());
+    if (name == CalcAmoebaMultipoleForceKernel::Name())
+        return new OpenCLCalcAmoebaMultipoleForceKernel(name, platform, cc, context.getSystem());
+
+    if (name == CalcAmoebaGeneralizedKirkwoodForceKernel::Name())
+        return new CommonCalcAmoebaGeneralizedKirkwoodForceKernel(name, platform, cc, context.getSystem());
 
     if (name == CalcAmoebaVdwForceKernel::Name())
         return new CommonCalcAmoebaVdwForceKernel(name, platform, cc, context.getSystem());

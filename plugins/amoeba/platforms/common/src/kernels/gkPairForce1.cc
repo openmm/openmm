@@ -4,15 +4,15 @@
  */
 
 #if defined F1
-__device__ void computeOneInteractionF1(AtomData2& atom1, volatile AtomData2& atom2, real& outputEnergy, real3& force) {
+DEVICE void computeOneInteractionF1(AtomData2& atom1, volatile AtomData2& atom2, real& outputEnergy, real3& force) {
 #elif defined F2
-__device__ void computeOneInteractionF2(AtomData2& atom1, volatile AtomData2& atom2, real& outputEnergy, real3& force) {
+DEVICE void computeOneInteractionF2(AtomData2& atom1, volatile AtomData2& atom2, real& outputEnergy, real3& force) {
 #elif defined T1
-__device__ void computeOneInteractionT1(AtomData2& atom1, volatile AtomData2& atom2, real3& torque) {
+DEVICE void computeOneInteractionT1(AtomData2& atom1, volatile AtomData2& atom2, real3& torque) {
 #elif defined T2
-__device__ void computeOneInteractionT2(AtomData2& atom1, volatile AtomData2& atom2, real3& torque) {
+DEVICE void computeOneInteractionT2(AtomData2& atom1, volatile AtomData2& atom2, real3& torque) {
 #elif defined B1 && defined B2
-__device__ void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& atom2) {
+DEVICE void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& atom2) {
 #endif
 
     const real fc = EPSILON_FACTOR*GK_FC;
