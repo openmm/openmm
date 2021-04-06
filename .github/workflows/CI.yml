@@ -131,7 +131,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
           - name: Linux CPU Pypy 3.7
-            python-version: "pypy-3.7"
+            python-version: "3.7"
+            installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge-pypy3-Linux-x86_64.sh
             os: ubuntu-latest
             OPENCL: false
             cuda-version: ""
@@ -158,6 +159,7 @@ jobs:
           activate-environment: build
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
           auto-activate-base: false
+          installer-url: ${{ matrix.installer-url }}
 
       - name: "Install CUDA on Ubuntu (if needed)"
         if: matrix.cuda-version != '' && startsWith(matrix.os, 'ubuntu')
