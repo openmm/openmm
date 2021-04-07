@@ -387,7 +387,7 @@ class CharmmParameterSet(object):
                             if dtype != dihedral:
                                 warnings.warn('Replacing dihedral %r with %r' %
                                               (dtype, dihedral))
-                            self.dihedral_types[key]
+                                self.dihedral_types[key][i]=dihedral
                             replaced = True
                             break
                     if not replaced:
@@ -413,10 +413,20 @@ class CharmmParameterSet(object):
                     theteq = tmp
                 except IndexError:
                     pass # Do nothing
-                # Improper types seem not to have the central atom defined in
-                # the first place, so just have the key a fully sorted list. We
-                # still depend on the PSF having properly ordered improper atoms
-                key = tuple(sorted([type1, type2, type3, type4]))
+                if type1 < type4:
+                    key = (type1, type2, type3, type4)
+                elif type1 > type4:
+                    key = (type4, type3, type2, type1)
+                else:
+                    # OK, we need to sort by the middle atoms now
+                    if type2 < type3:
+                        key = (type1, type2, type3, type4)
+                    else:
+                        key = (type4, type3, type2, type1)
+                # check repeat improper dihedral
+                if key in self.improper_types:
+                    warnings.warn('Repeat improper dihedral found %r and New param. k: %f  ,thetaq: %f will use' %
+                                  (key,k,theteq))                        
                 self.improper_types[key] = ImproperType(k, theteq)
                 continue
             if section == 'CMAP':
