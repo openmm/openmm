@@ -130,7 +130,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux CPU Pypy 3
+          - name: Linux CPU Pypy 3.6
+            python-version: "3.6=*pypy*"
             installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge-pypy3-Linux-x86_64.sh
             os: ubuntu-latest
             OPENCL: false
