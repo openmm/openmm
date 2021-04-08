@@ -158,7 +158,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
-          environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}${{ env-file-suffix }}.yml
+          environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}${{ matrix.env-file-suffix }}.yml
           auto-activate-base: false
           installer-url: ${{ matrix.installer-url }}
 
