@@ -312,9 +312,9 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
     inducedDipolePolar.initialize(cc, paddedNumAtoms, 3*elementSize, "inducedDipolePolar");
     if (polarizationType == AmoebaMultipoleForce::Mutual) {
         inducedDipoleErrors.initialize(cc, cc.getNumThreadBlocks(), sizeof(mm_float2), "inducedDipoleErrors");
-        prevDipoles.initialize(cc, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipoles");
-        prevDipolesPolar.initialize(cc, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesPolar");
-        prevErrors.initialize(cc, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevErrors");
+        prevDipoles.initialize(cc, numMultipoles*MaxPrevDIISDipoles, 3*elementSize, "prevDipoles");
+        prevDipolesPolar.initialize(cc, numMultipoles*MaxPrevDIISDipoles, 3*elementSize, "prevDipolesPolar");
+        prevErrors.initialize(cc, numMultipoles*MaxPrevDIISDipoles, 3*elementSize, "prevErrors");
         diisMatrix.initialize(cc, MaxPrevDIISDipoles*MaxPrevDIISDipoles, elementSize, "diisMatrix");
         diisCoefficients.initialize(cc, MaxPrevDIISDipoles+1, sizeof(float), "diisMatrix");
         syncEvent = cc.createEvent();
@@ -322,12 +322,12 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
     }
     else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
         int numOrders = force.getExtrapolationCoefficients().size();
-        extrapolatedDipole.initialize(cc, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipole");
-        extrapolatedDipolePolar.initialize(cc, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipolePolar");
+        extrapolatedDipole.initialize(cc, numMultipoles*numOrders, 3*elementSize, "extrapolatedDipole");
+        extrapolatedDipolePolar.initialize(cc, numMultipoles*numOrders, 3*elementSize, "extrapolatedDipolePolar");
         inducedDipoleFieldGradient.initialize(cc, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradient");
         inducedDipoleFieldGradientPolar.initialize(cc, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradientPolar");
-        extrapolatedDipoleFieldGradient.initialize(cc, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradient");
-        extrapolatedDipoleFieldGradientPolar.initialize(cc, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientPolar");
+        extrapolatedDipoleFieldGradient.initialize(cc, 2*paddedNumAtoms*(numOrders-1), 3*elementSize, "extrapolatedDipoleFieldGradient");
+        extrapolatedDipoleFieldGradientPolar.initialize(cc, 2*paddedNumAtoms*(numOrders-1), 3*elementSize, "extrapolatedDipoleFieldGradientPolar");
     }
     // The next two arrays will get resized once we know the number of exclusions.
     covalentFlags.initialize<mm_int2>(cc, 1, "covalentFlags");
@@ -479,18 +479,18 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         fixedThreadMemory += 4*elementSize;
         inducedThreadMemory += 13*elementSize;
         if (polarizationType == AmoebaMultipoleForce::Mutual) {
-            prevDipolesGk.initialize(cc, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesGk");
-            prevDipolesGkPolar.initialize(cc, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesGkPolar");
+            prevDipolesGk.initialize(cc, numMultipoles*MaxPrevDIISDipoles, 3*elementSize, "prevDipolesGk");
+            prevDipolesGkPolar.initialize(cc, numMultipoles*MaxPrevDIISDipoles, 3*elementSize, "prevDipolesGkPolar");
         }
         else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
             inducedThreadMemory += 12*elementSize;
             int numOrders = force.getExtrapolationCoefficients().size();
-            extrapolatedDipoleGk.initialize(cc, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipoleGk");
-            extrapolatedDipoleGkPolar.initialize(cc, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipoleGkPolar");
-            inducedDipoleFieldGradientGk.initialize(cc, 6*paddedNumAtoms, elementSize, "inducedDipoleFieldGradientGk");
-            inducedDipoleFieldGradientGkPolar.initialize(cc, 6*paddedNumAtoms, elementSize, "inducedDipoleFieldGradientGkPolar");
-            extrapolatedDipoleFieldGradientGk.initialize(cc, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientGk");
-            extrapolatedDipoleFieldGradientGkPolar.initialize(cc, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientGkPolar");
+            extrapolatedDipoleGk.initialize(cc, numMultipoles*numOrders, 3*elementSize, "extrapolatedDipoleGk");
+            extrapolatedDipoleGkPolar.initialize(cc, numMultipoles*numOrders, 3*elementSize, "extrapolatedDipoleGkPolar");
+            inducedDipoleFieldGradientGk.initialize(cc, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradientGk");
+            inducedDipoleFieldGradientGkPolar.initialize(cc, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradientGkPolar");
+            extrapolatedDipoleFieldGradientGk.initialize(cc, 2*paddedNumAtoms*(numOrders-1), 3*elementSize, "extrapolatedDipoleFieldGradientGk");
+            extrapolatedDipoleFieldGradientGkPolar.initialize(cc, 2*paddedNumAtoms*(numOrders-1), 3*elementSize, "extrapolatedDipoleFieldGradientGkPolar");
         }
     }
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
@@ -718,7 +718,8 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         // Create required data structures.
 
         int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-        pmeGrid.initialize(cc, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid");
+        int gridElementSize = (useFixedPointChargeSpreading() ? sizeof(long long) : sizeof(float));
+        pmeGrid.initialize(cc, gridSizeX*gridSizeY*gridSizeZ, 2*gridElementSize, "pmeGrid");
         cc.addAutoclearBuffer(pmeGrid);
         pmeBsplineModuliX.initialize(cc, gridSizeX, elementSize, "pmeBsplineModuliX");
         pmeBsplineModuliY.initialize(cc, gridSizeY, elementSize, "pmeBsplineModuliY");
@@ -748,6 +749,8 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
             pmeDefines["MUTUAL_POLARIZATION"] = "";
         else if (polarizationType == AmoebaMultipoleForce::Extrapolated)
             pmeDefines["EXTRAPOLATED_POLARIZATION"] = "";
+        if (useFixedPointChargeSpreading())
+            pmeDefines["USE_FIXED_POINT_CHARGE_SPREADING"] = "";
         program = cc.compileProgram(CommonAmoebaKernelSources::multipolePme, pmeDefines);
         pmeTransformMultipolesKernel = program->createKernel("transformMultipolesToFractionalCoordinates");
         pmeTransformMultipolesKernel->addArg(labDipoles);
@@ -1081,9 +1084,9 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
         // Iterate until the dipoles converge.
         
         if (polarizationType == AmoebaMultipoleForce::Extrapolated)
-            computeExtrapolatedDipoles(NULL);
+            computeExtrapolatedDipoles();
         for (int i = 0; i < maxInducedIterations; i++) {
-            computeInducedField(NULL);
+            computeInducedField();
             bool converged = iterateDipolesByDIIS(i);
             if (converged)
                 break;
@@ -1102,17 +1105,12 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
         cc.getPeriodicBoxVectors(a, b, c);
         double determinant = a[0]*b[1]*c[2];
         double scale = 1.0/determinant;
-        mm_double3 recipBoxVectors[3];
-        recipBoxVectors[0] = mm_double3(b[1]*c[2]*scale, 0, 0);
-        recipBoxVectors[1] = mm_double3(-b[0]*c[2]*scale, a[0]*c[2]*scale, 0);
-        recipBoxVectors[2] = mm_double3((b[0]*c[1]-b[1]*c[0])*scale, -a[0]*c[1]*scale, a[0]*b[1]*scale);
-        mm_float3 recipBoxVectorsFloat[3];
-        void* recipBoxVectorPointer[3];
+        mm_double4 recipBoxVectors[3];
+        recipBoxVectors[0] = mm_double4(b[1]*c[2]*scale, 0, 0, 0);
+        recipBoxVectors[1] = mm_double4(-b[0]*c[2]*scale, a[0]*c[2]*scale, 0, 0);
+        recipBoxVectors[2] = mm_double4((b[0]*c[1]-b[1]*c[0])*scale, -a[0]*c[1]*scale, a[0]*b[1]*scale, 0);
         if (cc.getUseDoublePrecision()) {
-            recipBoxVectorPointer[0] = &recipBoxVectors[0];
-            recipBoxVectorPointer[1] = &recipBoxVectors[1];
-            recipBoxVectorPointer[2] = &recipBoxVectors[2];
-            mm_double3 boxVectors[] = {mm_double3(a[0], a[1], a[2]), mm_double3(b[0], b[1], b[2]), mm_double3(c[0], c[1], c[2])};
+            mm_double4 boxVectors[] = {mm_double4(a[0], a[1], a[2], 0), mm_double4(b[0], b[1], b[2], 0), mm_double4(c[0], c[1], c[2], 0)};
             pmeConvolutionKernel->setArg(4, mm_double4(a[0], b[1], c[2], 0));
             for (int i = 0; i < 3; i++) {
                 pmeTransformMultipolesKernel->setArg(4+i, recipBoxVectors[i]);
@@ -1133,13 +1131,11 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
             }
         }
         else {
-            recipBoxVectorsFloat[0] = mm_float3((float) recipBoxVectors[0].x, 0, 0);
-            recipBoxVectorsFloat[1] = mm_float3((float) recipBoxVectors[1].x, (float) recipBoxVectors[1].y, 0);
-            recipBoxVectorsFloat[2] = mm_float3((float) recipBoxVectors[2].x, (float) recipBoxVectors[2].y, (float) recipBoxVectors[2].z);
-            recipBoxVectorPointer[0] = &recipBoxVectorsFloat[0];
-            recipBoxVectorPointer[1] = &recipBoxVectorsFloat[1];
-            recipBoxVectorPointer[2] = &recipBoxVectorsFloat[2];
-            mm_float3 boxVectors[] = {mm_float3(a[0], a[1], a[2]), mm_float3(b[0], b[1], b[2]), mm_float3(c[0], c[1], c[2])};
+            mm_float4 recipBoxVectorsFloat[3];
+            recipBoxVectorsFloat[0] = mm_float4((float) recipBoxVectors[0].x, 0, 0, 0);
+            recipBoxVectorsFloat[1] = mm_float4((float) recipBoxVectors[1].x, (float) recipBoxVectors[1].y, 0, 0);
+            recipBoxVectorsFloat[2] = mm_float4((float) recipBoxVectors[2].x, (float) recipBoxVectors[2].y, (float) recipBoxVectors[2].z, 0);
+            mm_float4 boxVectors[] = {mm_float4(a[0], a[1], a[2], 0), mm_float4(b[0], b[1], b[2], 0), mm_float4(c[0], c[1], c[2], 0)};
             pmeConvolutionKernel->setArg(4, mm_float4(a[0], b[1], c[2], 0));
             for (int i = 0; i < 3; i++) {
                 pmeTransformMultipolesKernel->setArg(4+i, recipBoxVectorsFloat[i]);
@@ -1165,11 +1161,11 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
         unsigned int maxTiles = nb.getInteractingTiles().getSize();
         pmeTransformMultipolesKernel->execute(cc.getNumAtoms());
         pmeSpreadFixedMultipolesKernel->execute(cc.getNumAtoms());
-        if (cc.getUseDoublePrecision())
+        if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid.getSize());
-        computeForwardFFT();
+        computeFFT(true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeInverseFFT();
+        computeFFT(false);
         pmeFixedPotentialKernel->execute(cc.getNumAtoms());
         pmeTransformPotentialKernel->setArg(0, pmePhi);
         pmeTransformPotentialKernel->execute(cc.getNumAtoms());
@@ -1186,19 +1182,19 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
 
         cc.clearBuffer(pmeGrid);
         pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
-        if (cc.getUseDoublePrecision())
+        if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid.getSize());
-        computeForwardFFT();
+        computeFFT(true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeInverseFFT();
+        computeFFT(false);
         pmeInducedPotentialKernel->execute(cc.getNumAtoms());
         
         // Iterate until the dipoles converge.
         
         if (polarizationType == AmoebaMultipoleForce::Extrapolated)
-            computeExtrapolatedDipoles(recipBoxVectorPointer);
+            computeExtrapolatedDipoles();
         for (int i = 0; i < maxInducedIterations; i++) {
-            computeInducedField(recipBoxVectorPointer);
+            computeInducedField();
             bool converged = iterateDipolesByDIIS(i);
             if (converged)
                 break;
@@ -1230,7 +1226,7 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
     return 0.0;
 }
 
-void CommonCalcAmoebaMultipoleForceKernel::computeInducedField(void** recipBoxVectorPointer) {
+void CommonCalcAmoebaMultipoleForceKernel::computeInducedField() {
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
     int startTileIndex = nb.getStartTileIndex();
     int numTileIndices = nb.getNumTiles();
@@ -1259,12 +1255,11 @@ void CommonCalcAmoebaMultipoleForceKernel::computeInducedField(void** recipBoxVe
     if (pmeGrid.isInitialized()) {
         cc.clearBuffer(pmeGrid);
         pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
-        if (cc.getUseDoublePrecision()) {
+        if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid.getSize());
-        }
-        computeForwardFFT();
+        computeFFT(true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeInverseFFT();
+        computeFFT(false);
         pmeInducedPotentialKernel->execute(cc.getNumAtoms());
         if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
             pmeRecordInducedFieldDipolesKernel->execute(cc.getNumAtoms());
@@ -1289,7 +1284,7 @@ bool CommonCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
         recordDIISDipolesKernel->setArg(10, gkKernel->getInducedDipolesPolar());
         recordDIISDipolesKernel->setArg(11, prevDipolesGk);
         recordDIISDipolesKernel->setArg(12, prevDipolesGkPolar);
-        recordDIISDipolesKernel->setArg(14, false);
+        recordDIISDipolesKernel->setArg(14, 0);
         recordDIISDipolesKernel->execute(cc.getNumThreadBlocks()*64, 64);
     }
     recordDIISDipolesKernel->setArg(6, npt);
@@ -1299,7 +1294,7 @@ bool CommonCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     recordDIISDipolesKernel->setArg(10, inducedDipolePolar);
     recordDIISDipolesKernel->setArg(11, prevDipoles);
     recordDIISDipolesKernel->setArg(12, prevDipolesPolar);
-    recordDIISDipolesKernel->setArg(14, true);
+    recordDIISDipolesKernel->setArg(14, 1);
     recordDIISDipolesKernel->execute(cc.getNumThreadBlocks()*64, 64);
     mm_float2* errors = (mm_float2*) cc.getPinnedBuffer();
     inducedDipoleErrors.download(errors, false);
@@ -1347,7 +1342,7 @@ bool CommonCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     return false;
 }
 
-void CommonCalcAmoebaMultipoleForceKernel::computeExtrapolatedDipoles(void** recipBoxVectorPointer) {
+void CommonCalcAmoebaMultipoleForceKernel::computeExtrapolatedDipoles() {
     // Start by storing the direct dipoles as PT0
 
     initExtrapolatedKernel->execute(extrapolatedDipole.getSize());
@@ -1355,7 +1350,7 @@ void CommonCalcAmoebaMultipoleForceKernel::computeExtrapolatedDipoles(void** rec
     // Recursively apply alpha.Tau to the µ_(n) components to generate µ_(n+1), and store the result
 
     for (int order = 1; order < maxExtrapolationOrder; ++order) {
-        computeInducedField(recipBoxVectorPointer);
+        computeInducedField();
         iterateExtrapolatedKernel->setArg(0, order);
         iterateExtrapolatedKernel->execute(extrapolatedDipole.getSize());
     }
@@ -1363,7 +1358,7 @@ void CommonCalcAmoebaMultipoleForceKernel::computeExtrapolatedDipoles(void** rec
     // Take a linear combination of the µ_(n) components to form the total dipole
 
     computeExtrapolatedKernel->execute(extrapolatedDipole.getSize());
-    computeInducedField(recipBoxVectorPointer);
+    computeInducedField();
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& context) {

@@ -217,8 +217,8 @@
         atom1.quadrupoleYZ*(atom2.quadrupoleXX*gqxx29 + atom2.quadrupoleYY*gqyy29 + atom2.quadrupoleZZ*gqzz29 + 2*(atom2.quadrupoleXY*gqxy29 + atom2.quadrupoleXZ*gqxz29 + atom2.quadrupoleYZ*gqyz29)));
 
     dsumdrB1 *= 0.5f;
-    atom1.bornForce += atom2.bornRadius*dsumdrB1;
-    atom2.bornForce += atom1.bornRadius*dsumdrB1;
+    *bornForce1 += atom2.bornRadius*dsumdrB1;
+    *bornForce2 += atom1.bornRadius*dsumdrB1;
 #endif
 
     // unweighted 3rd reaction potential gradient tensor;
@@ -530,21 +530,21 @@
         trq2 -= (atom1.quadrupoleXZ*fidg11 + atom1.quadrupoleYZ*fidg12 + atom1.quadrupoleZZ*fidg13 -atom1.quadrupoleXX*fidg13-atom1.quadrupoleXY*fidg23-atom1.quadrupoleXZ*fidg33);
         trq3 -= (atom1.quadrupoleXX*fidg12 + atom1.quadrupoleXY*fidg22 + atom1.quadrupoleXZ*fidg23 -atom1.quadrupoleXY*fidg11-atom1.quadrupoleYY*fidg12-atom1.quadrupoleYZ*fidg13);
 
-        torque.x = trq1;
-        torque.y = trq2;
-        torque.z = trq3;
+        torque->x = trq1;
+        torque->y = trq2;
+        torque->z = trq3;
 
     } else {
-        torque.x = 0;
-        torque.y = 0;
-        torque.z = 0;
+        torque->x = 0;
+        torque->y = 0;
+        torque->z = 0;
     }
 #endif
 
 #if defined B2 
     dsumdrB2 *= 0.5f;
-    atom1.bornForce += 0.5f*atom2.bornRadius*dsumdrB2;
-    atom2.bornForce += 0.5f*atom1.bornRadius*dsumdrB2;
+    *bornForce1 += 0.5f*atom2.bornRadius*dsumdrB2;
+    *bornForce2 += 0.5f*atom1.bornRadius*dsumdrB2;
 #endif
 
 #if defined T2
@@ -566,36 +566,36 @@
     trqi3 -= atom1.quadrupoleXX*fidg12 + atom1.quadrupoleXY*fidg22 + atom1.quadrupoleXZ*fidg23
                                 -atom1.quadrupoleXY*fidg11 - atom1.quadrupoleYY*fidg12 - atom1.quadrupoleYZ*fidg13;
 
-    torque.x += 0.5f*trqi1;
-    torque.y += 0.5f*trqi2;
-    torque.z += 0.5f*trqi3;
+    torque->x += 0.5f*trqi1;
+    torque->y += 0.5f*trqi2;
+    torque->z += 0.5f*trqi3;
 #endif
 
 #if defined F1
 
-    outputEnergy = energy;
+    *outputEnergy = energy;
 
     if ((xr != 0 || yr != 0 || zr != 0)) {
-        force.x = dedx;
-        force.y = dedy;
-        force.z = dedz;
+        force->x = dedx;
+        force->y = dedy;
+        force->z = dedz;
     } else {
-        force.x = force.y = force.z = 0;
+        force->x = force->y = force->z = 0;
     }
 
 #endif
 
 #if defined F2
-    outputEnergy += 0.5f*energy;
+    *outputEnergy += 0.5f*energy;
 
     dpdx *= 0.5f;
     dpdy *= 0.5f;
     dpdz *= 0.5f;
 
     if ((xr != 0 || yr != 0 || zr != 0)) {
-        force.x += dpdx;
-        force.y += dpdy;
-        force.z += dpdz;
+        force->x += dpdx;
+        force->y += dpdy;
+        force->z += dpdz;
     }
 #endif
 }

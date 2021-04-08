@@ -53,13 +53,15 @@ public:
      */
     void initialize(const System& system, const AmoebaMultipoleForce& force);
     /**
-     * Compute the FFT in the forward direction.
+     * Compute the FFT.
      */
-    void computeForwardFFT();
+    void computeFFT(bool forward);
     /**
-     * Compute the FFT in the inverse direction.
+     * Get whether charge spreading should be done in fixed point.
      */
-    void computeInverseFFT();
+    bool useFixedPointChargeSpreading() const {
+        return true;
+    }
 private:
     OpenCLFFT3D* fft;
 };

@@ -7,7 +7,7 @@ KERNEL void reduceBornSum(GLOBAL const mm_long* RESTRICT bornSum, GLOBAL const f
     for (unsigned int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         // Get summed Born data
 
-        real sum = RECIP(0x100000000)*bornSum[index];
+        real sum = RECIP((real) 0x100000000)*bornSum[index];
 
         // Now calculate Born radius.
 
@@ -49,16 +49,16 @@ typedef struct {
     float radius, scaledRadius, padding;
 } AtomData1;
 
-DEVICE void computeBornSumOneInteraction(AtomData1& atom1, AtomData1& atom2) {
+DEVICE real computeBornSumOneInteraction(AtomData1 atom1, AtomData1 atom2) {
     if (atom1.radius <= 0)
-        return; // Ignore this interaction
+        return 0; // Ignore this interaction
     real3 delta = atom2.pos - atom1.pos;
     real r2 = dot(delta, delta);
     real r = SQRT(r2);
     float sk = atom2.scaledRadius;
 
     if (atom1.radius > r + sk)
-        return; // No descreening due to atom1 engulfing atom2.
+        return 0; // No descreening due to atom1 engulfing atom2.
 
     real sk2 = sk*sk;
     if (atom1.radius+r < sk) {
@@ -83,7 +83,7 @@ DEVICE void computeBornSumOneInteraction(AtomData1& atom1, AtomData1& atom2) {
     real ur = uik*r; 
     real u4r = u4*r;
     real term = (3*(r2-sk2)+6*u2-8*ur)/u4r - (3*(r2-sk2)+6*l2-8*lr)/l4r;
-    atom1.bornSum += term/16;
+    return term/16;
 }
 
 /**
@@ -126,8 +126,10 @@ KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4
                 localData[LOCAL_ID].scaledRadius = params1.y;
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+j;
-                    if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2)
-                        computeBornSumOneInteraction(data, localData[tbx+j]);
+                    if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2) {
+                        real bornSum = computeBornSumOneInteraction(data, localData[tbx+j]);
+                        data.bornSum += bornSum;
+                    }
                 }
             }
             else {
@@ -149,8 +151,10 @@ KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                        computeBornSumOneInteraction(data, localData[tbx+tj]);
-                        computeBornSumOneInteraction(localData[tbx+tj], data);
+                        real bornSum = computeBornSumOneInteraction(data, localData[tbx+tj]);
+                        data.bornSum += bornSum;
+                        bornSum = computeBornSumOneInteraction(localData[tbx+tj], data);
+                        localData[tbx+tj].bornSum += bornSum;
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
@@ -182,14 +186,15 @@ typedef struct {
     real q, bornRadius, bornForce;
 } AtomData2;
 
-DEVICE void computeOneInteractionF1(AtomData2& atom1, volatile AtomData2& atom2, real& outputEnergy, real3& force);
-DEVICE void computeOneInteractionF2(AtomData2& atom1, volatile AtomData2& atom2, real& outputEnergy, real3& force);
-DEVICE void computeOneInteractionT1(AtomData2& atom1, volatile AtomData2& atom2, real3& torque);
-DEVICE void computeOneInteractionT2(AtomData2& atom1, volatile AtomData2& atom2, real3& torque);
-DEVICE void computeOneInteractionB1B2(AtomData2& atom1, volatile AtomData2& atom2);
+DEVICE void computeOneInteractionF1(AtomData2 atom1, volatile AtomData2 atom2, real* outputEnergy, real3* force);
+DEVICE void computeOneInteractionF2(AtomData2 atom1, volatile AtomData2 atom2, real* outputEnergy, real3* force);
+DEVICE void computeOneInteractionT1(AtomData2 atom1, volatile AtomData2 atom2, real3* torque);
+DEVICE void computeOneInteractionT2(AtomData2 atom1, volatile AtomData2 atom2, real3* torque);
+DEVICE void computeOneInteractionB1B2(AtomData2 atom1, volatile AtomData2 atom2, real* bornForce1, real* bornForce2);
 
-inline DEVICE void loadAtomData2(AtomData2& data, int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
+inline DEVICE AtomData2 loadAtomData2(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
         GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar, GLOBAL const real* RESTRICT bornRadius) {
+    AtomData2 data;
     real4 atomPosq = posq[atom];
     data.pos = trimTo3(atomPosq);
     data.q = atomPosq.w;
@@ -205,11 +210,7 @@ inline DEVICE void loadAtomData2(AtomData2& data, int atom, GLOBAL const real4* 
     data.inducedDipole = inducedDipole[atom];
     data.inducedDipolePolar = inducedDipolePolar[atom];
     data.bornRadius = bornRadius[atom];
-}
-
-inline DEVICE void zeroAtomData(AtomData2& data) {
-    data.force = make_real3(0);
-    data.bornForce = 0;
+    return data;
 }
 
 /**
@@ -233,7 +234,6 @@ KERNEL void computeGKForces(
         const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
         const unsigned int tbx = LOCAL_ID - tgx;
         int x, y;
-        AtomData2 data;
         if (pos < end) {
             y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
@@ -242,8 +242,9 @@ KERNEL void computeGKForces(
                 x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
-            loadAtomData2(data, atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, bornRadii);
-            zeroAtomData(data);
+            AtomData2 data = loadAtomData2(atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, bornRadii);
+            data.force = make_real3(0);
+            data.bornForce = 0;
             if (pos >= end)
                 ; // This warp is done.
             else if (x == y) {
@@ -269,8 +270,8 @@ KERNEL void computeGKForces(
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 tempForce;
                         real tempEnergy;
-                        computeOneInteractionF1(data, localData[tbx+j], tempEnergy, tempForce);
-                        computeOneInteractionF2(data, localData[tbx+j], tempEnergy, tempForce);
+                        computeOneInteractionF1(data, localData[tbx+j], &tempEnergy, &tempForce);
+                        computeOneInteractionF2(data, localData[tbx+j], &tempEnergy, &tempForce);
                         data.force += tempForce;
                         energy += 0.5f*tempEnergy;
                     }
@@ -282,13 +283,14 @@ KERNEL void computeGKForces(
                 
                 // Compute torques.
                 
-                zeroAtomData(data);
+                data.force = make_real3(0);
+                data.bornForce = 0;
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+j;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 tempTorque;
-                        computeOneInteractionT1(data, localData[tbx+j], tempTorque);
-                        computeOneInteractionT2(data, localData[tbx+j], tempTorque);
+                        computeOneInteractionT1(data, localData[tbx+j], &tempTorque);
+                        computeOneInteractionT2(data, localData[tbx+j], &tempTorque);
                         data.force += tempTorque;
                     }
                 }
@@ -298,11 +300,16 @@ KERNEL void computeGKForces(
                 
                 // Compute chain rule terms.
                 
-                zeroAtomData(data);
+                data.force = make_real3(0);
+                data.bornForce = 0;
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+j;
-                    if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
-                        computeOneInteractionB1B2(data, localData[tbx+j]);
+                    if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                        real bornForce1 = 0, bornForce2 = 0;
+                        computeOneInteractionB1B2(data, localData[tbx+j], &bornForce1, &bornForce2);
+                        data.bornForce += bornForce1;
+                        localData[tbx+j].bornForce += bornForce2;
+                    }
                 }
                 ATOMIC_ADD(&bornForce[atom1], (mm_ulong) ((mm_long) (data.bornForce*0x100000000)));
             }
@@ -310,16 +317,17 @@ KERNEL void computeGKForces(
                 // This is an off-diagonal tile.
 
                 unsigned int j = y*TILE_SIZE + tgx;
-                loadAtomData2(localData[LOCAL_ID], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, bornRadii);
-                zeroAtomData(localData[LOCAL_ID]);
+                localData[LOCAL_ID] = loadAtomData2(j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, bornRadii);
+                localData[LOCAL_ID].force = make_real3(0);
+                localData[LOCAL_ID].bornForce = 0;
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 tempForce;
                         real tempEnergy;
-                        computeOneInteractionF1(data, localData[tbx+tj], tempEnergy, tempForce);
-                        computeOneInteractionF2(data, localData[tbx+tj], tempEnergy, tempForce);
+                        computeOneInteractionF1(data, localData[tbx+tj], &tempEnergy, &tempForce);
+                        computeOneInteractionF2(data, localData[tbx+tj], &tempEnergy, &tempForce);
                         data.force += tempForce;
                         localData[tbx+tj].force -= tempForce;
                         energy += tempEnergy;
@@ -341,17 +349,19 @@ KERNEL void computeGKForces(
 
                 // Compute torques.
 
-                zeroAtomData(data);
-                zeroAtomData(localData[LOCAL_ID]);
+                data.force = make_real3(0);
+                data.bornForce = 0;
+                localData[LOCAL_ID].force = make_real3(0);
+                localData[LOCAL_ID].bornForce = 0;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 tempTorque;
-                        computeOneInteractionT1(data, localData[tbx+tj], tempTorque);
-                        computeOneInteractionT2(data, localData[tbx+tj], tempTorque);
+                        computeOneInteractionT1(data, localData[tbx+tj], &tempTorque);
+                        computeOneInteractionT2(data, localData[tbx+tj], &tempTorque);
                         data.force += tempTorque;
-                        computeOneInteractionT1(localData[tbx+tj], data, tempTorque);
-                        computeOneInteractionT2(localData[tbx+tj], data, tempTorque);
+                        computeOneInteractionT1(localData[tbx+tj], data, &tempTorque);
+                        computeOneInteractionT2(localData[tbx+tj], data, &tempTorque);
                         localData[tbx+tj].force += tempTorque;
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
@@ -369,12 +379,18 @@ KERNEL void computeGKForces(
 
                 // Compute chain rule terms.
 
-                zeroAtomData(data);
-                zeroAtomData(localData[LOCAL_ID]);
+                data.force = make_real3(0);
+                data.bornForce = 0;
+                localData[LOCAL_ID].force = make_real3(0);
+                localData[LOCAL_ID].bornForce = 0;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
-                    if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
-                        computeOneInteractionB1B2(data, localData[tbx+tj]);
+                    if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                        real bornForce1 = 0, bornForce2 = 0;
+                        computeOneInteractionB1B2(data, localData[tbx+tj], &bornForce1, &bornForce2);
+                        data.bornForce += bornForce1;
+                        localData[tbx+tj].bornForce += bornForce2;
+                    }
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
                 if (pos < end) {
@@ -399,17 +415,19 @@ typedef struct {
     real radius, scaledRadius, bornRadius, bornForce;
 } AtomData3;
 
-inline DEVICE void loadAtomData3(AtomData3& data, int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const float2* RESTRICT params,
+inline DEVICE AtomData3 loadAtomData3(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const float2* RESTRICT params,
         GLOBAL const real* RESTRICT bornRadius, GLOBAL const mm_long* RESTRICT bornForce) {
+    AtomData3 data;
     data.pos = trimTo3(posq[atom]);
     data.bornRadius = bornRadius[atom];
     float2 params1 = params[atom];
     data.radius = params1.x;
     data.scaledRadius = params1.y;
     data.bornForce = bornForce[atom]/(real) 0x100000000;
+    return data;
 }
 
-DEVICE void computeBornChainRuleInteraction(AtomData3& atom1, AtomData3& atom2, real3& force) {
+DEVICE void computeBornChainRuleInteraction(AtomData3 atom1, AtomData3 atom2, real3* force) {
     real third = 1/(real) 3;
     real pi43 = 4*third*M_PI;
     real factor = -POW(M_PI, third)*POW((real) 6, 2/(real) 3)/9;
@@ -455,7 +473,7 @@ DEVICE void computeBornChainRuleInteraction(AtomData3& atom1, AtomData3& atom2, 
     de -= 0.25f*M_PI*(sk2+4*sk*r+r2)/(r2*uik4);
     real dbr = term*de/r;
     de = dbr*atom1.bornForce;
-    force = delta*de;
+    *force = delta*de;
 }
 
 /**
@@ -476,7 +494,6 @@ KERNEL void computeChainRuleForce(
         const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
         const unsigned int tbx = LOCAL_ID - tgx;
         int x, y;
-        AtomData3 data;
         if (pos < end) {
             y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
@@ -485,7 +502,7 @@ KERNEL void computeChainRuleForce(
                 x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
-            loadAtomData3(data, atom1, posq, params, bornRadii, bornForce);
+            AtomData3 data = loadAtomData3(atom1, posq, params, bornRadii, bornForce);
             data.force = make_real3(0);
             if (pos >= end)
                 ; // This warp is done.
@@ -505,7 +522,7 @@ KERNEL void computeChainRuleForce(
                     int atom2 = y*TILE_SIZE+j;
                     if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 tempForce;
-                        computeBornChainRuleInteraction(data, localData[tbx+j], tempForce);
+                        computeBornChainRuleInteraction(data, localData[tbx+j], &tempForce);
                         data.force -= tempForce;
                         localData[tbx+j].force += tempForce;
                     }
@@ -518,17 +535,17 @@ KERNEL void computeChainRuleForce(
                 // This is an off-diagonal tile.
 
                 unsigned int j = y*TILE_SIZE + tgx;
-                loadAtomData3(localData[LOCAL_ID], j, posq, params, bornRadii, bornForce);
+                localData[LOCAL_ID] = loadAtomData3(j, posq, params, bornRadii, bornForce);
                 localData[LOCAL_ID].force = make_real3(0);
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         real3 tempForce;
-                        computeBornChainRuleInteraction(data, localData[tbx+tj], tempForce);
+                        computeBornChainRuleInteraction(data, localData[tbx+tj], &tempForce);
                         data.force -= tempForce;
                         localData[tbx+tj].force += tempForce;
-                        computeBornChainRuleInteraction(localData[tbx+tj], data, tempForce);
+                        computeBornChainRuleInteraction(localData[tbx+tj], data, &tempForce);
                         data.force += tempForce;
                         localData[tbx+tj].force -= tempForce;
                     }
@@ -557,13 +574,14 @@ typedef struct {
     float thole, damp;
 } AtomData4;
 
-DEVICE void computeOneEDiffInteractionF1(AtomData4& atom1, volatile AtomData4& atom2, float dScale, float pScale, real& outputEnergy, real3& outputForce);
-DEVICE void computeOneEDiffInteractionT1(AtomData4& atom1, volatile AtomData4& atom2, float dScale, float pScale, real3& outputForce);
-DEVICE void computeOneEDiffInteractionT3(AtomData4& atom1, volatile AtomData4& atom2, float dScale, float pScale, real3& outputForce);
+DEVICE void computeOneEDiffInteractionF1(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real* outputEnergy, real3* outputForce);
+DEVICE void computeOneEDiffInteractionT1(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real3* outputForce);
+DEVICE void computeOneEDiffInteractionT3(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real3* outputForce);
 
-inline DEVICE void loadAtomData4(AtomData4& data, int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
+inline DEVICE AtomData4 loadAtomData4(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
         GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar,
         GLOBAL const real3* RESTRICT inducedDipoleS, GLOBAL const real3* RESTRICT inducedDipolePolarS, GLOBAL const float2* RESTRICT dampingAndThole) {
+    AtomData4 data;
     real4 atomPosq = posq[atom];
     data.pos = make_real3(atomPosq.x, atomPosq.y, atomPosq.z);
     data.q = atomPosq.w;
@@ -583,6 +601,7 @@ inline DEVICE void loadAtomData4(AtomData4& data, int atom, GLOBAL const real4* 
     float2 temp = dampingAndThole[atom];
     data.damp = temp.x;
     data.thole = temp.y;
+    return data;
 }
 
 DEVICE real computeDScaleFactor(unsigned int polarizationGroup, int index) {
@@ -622,10 +641,9 @@ KERNEL void computeEDiffForce(
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
-        AtomData4 data;
-        data.force = make_real3(0);
         unsigned int atom1 = x*TILE_SIZE + tgx;
-        loadAtomData4(data, atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
+        AtomData4 data = loadAtomData4(atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
+        data.force = make_real3(0);
         uint2 covalent = covalentFlags[pos*TILE_SIZE+tgx];
         unsigned int polarizationGroup = polarizationGroupFlags[pos*TILE_SIZE+tgx];
         if (x == y) {
@@ -656,7 +674,7 @@ KERNEL void computeEDiffForce(
                     real tempEnergy;
                     float d = computeDScaleFactor(polarizationGroup, j);
                     float p = computePScaleFactor(covalent, polarizationGroup, j);
-                    computeOneEDiffInteractionF1(data, localData[tbx+j], d, p, tempEnergy, tempForce);
+                    computeOneEDiffInteractionF1(&data, &localData[tbx+j], d, p, &tempEnergy, &tempForce);
                     energy += 0.25f*tempEnergy;
                     data.force += tempForce;
                 }
@@ -675,7 +693,7 @@ KERNEL void computeEDiffForce(
                     real3 tempTorque;
                     float d = computeDScaleFactor(polarizationGroup, j);
                     float p = computePScaleFactor(covalent, polarizationGroup, j);
-                    computeOneEDiffInteractionT1(data, localData[tbx+j], d, p, tempTorque);
+                    computeOneEDiffInteractionT1(&data, &localData[tbx+j], d, p, &tempTorque);
                     data.force += tempTorque;
                 }
             }
@@ -688,7 +706,7 @@ KERNEL void computeEDiffForce(
             // This is an off-diagonal tile.
 
             unsigned int j = y*TILE_SIZE + tgx;
-            loadAtomData4(localData[LOCAL_ID], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
+            localData[LOCAL_ID] = loadAtomData4(j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
             localData[LOCAL_ID].force = make_real3(0);
 
             // Compute forces.
@@ -701,7 +719,7 @@ KERNEL void computeEDiffForce(
                     real tempEnergy;
                     float d = computeDScaleFactor(polarizationGroup, tj);
                     float p = computePScaleFactor(covalent, polarizationGroup, tj);
-                    computeOneEDiffInteractionF1(data, localData[tbx+tj], d, p, tempEnergy, tempForce);
+                    computeOneEDiffInteractionF1(&data, &localData[tbx+tj], d, p, &tempEnergy, &tempForce);
                     energy += 0.5f*tempEnergy;
                     data.force += tempForce;
                     localData[tbx+tj].force -= tempForce;
@@ -729,9 +747,9 @@ KERNEL void computeEDiffForce(
                     real3 tempTorque;
                     float d = computeDScaleFactor(polarizationGroup, tj);
                     float p = computePScaleFactor(covalent, polarizationGroup, tj);
-                    computeOneEDiffInteractionT1(data, localData[tbx+tj], d, p, tempTorque);
+                    computeOneEDiffInteractionT1(&data, &localData[tbx+tj], d, p, &tempTorque);
                     data.force += tempTorque;
-                    computeOneEDiffInteractionT3(data, localData[tbx+tj], d, p, tempTorque);
+                    computeOneEDiffInteractionT3(&data, &localData[tbx+tj], d, p, &tempTorque);
                     localData[tbx+tj].force += tempTorque;
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
@@ -790,12 +808,11 @@ KERNEL void computeEDiffForce(
 
             // Load atom data for this tile.
 
-            AtomData4 data;
+            AtomData4 data = loadAtomData4(atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
             data.force = make_real3(0);
-            loadAtomData4(data, atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
-            loadAtomData4(localData[LOCAL_ID], atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
+            localData[LOCAL_ID] = loadAtomData4(atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
             unsigned int j = y*TILE_SIZE + tgx;
-            loadAtomData4(localData[LOCAL_ID], j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
+            localData[LOCAL_ID] = loadAtomData4(j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
             localData[LOCAL_ID].force = make_real3(0);
 
             // Compute forces.
@@ -806,7 +823,7 @@ KERNEL void computeEDiffForce(
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                     real3 tempForce;
                     real tempEnergy;
-                    computeOneEDiffInteractionF1(data, localData[tbx+tj], 1, 1, tempEnergy, tempForce);
+                    computeOneEDiffInteractionF1(&data, &localData[tbx+tj], 1, 1, &tempEnergy, &tempForce);
                     energy += 0.5f*tempEnergy;
                     data.force += tempForce;
                     localData[tbx+tj].force -= tempForce;
@@ -832,9 +849,9 @@ KERNEL void computeEDiffForce(
                 int atom2 = y*TILE_SIZE+tj;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                     real3 tempTorque;
-                    computeOneEDiffInteractionT1(data, localData[tbx+tj], 1, 1, tempTorque);
+                    computeOneEDiffInteractionT1(&data, &localData[tbx+tj], 1, 1, &tempTorque);
                     data.force += tempTorque;
-                    computeOneEDiffInteractionT3(data, localData[tbx+tj], 1, 1, tempTorque);
+                    computeOneEDiffInteractionT3(&data, &localData[tbx+tj], 1, 1, &tempTorque);
                     localData[tbx+tj].force += tempTorque;
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);

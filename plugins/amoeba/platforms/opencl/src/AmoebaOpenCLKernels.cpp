@@ -44,12 +44,7 @@ void OpenCLCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         fft = new OpenCLFFT3D(dynamic_cast<OpenCLContext&>(cc), gridSizeX, gridSizeY, gridSizeZ, false);
 }
 
-void OpenCLCalcAmoebaMultipoleForceKernel::computeForwardFFT() {
+void OpenCLCalcAmoebaMultipoleForceKernel::computeFFT(bool forward) {
     OpenCLArray& grid = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid);
-    fft->execFFT(grid, grid, true);
-}
-
-void OpenCLCalcAmoebaMultipoleForceKernel::computeInverseFFT() {
-    OpenCLArray& grid = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid);
-    fft->execFFT(grid, grid, false);
+    fft->execFFT(grid, grid, forward);
 }

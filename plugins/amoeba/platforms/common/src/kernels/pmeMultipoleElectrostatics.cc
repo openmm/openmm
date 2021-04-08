@@ -53,7 +53,7 @@ DEVICE float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup,
     return (x && y ? 0.0f : (x && p ? 0.5f : 1.0f));
 }
 
-DEVICE void computeOneInteraction(AtomData* atom1, AtomData* atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor,
+DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, bool hasExclusions, float dScale, float pScale, float mScale, float forceFactor,
                                       mixed* energy, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     // Compute the displacement.
     
@@ -93,7 +93,7 @@ DEVICE void computeOneInteraction(AtomData* atom1, AtomData* atom2, bool hasExcl
     real rotatedQuadrupole1[] = {0, 0, 0, 0, 0};
     real rotatedQuadrupole2[] = {0, 0, 0, 0, 0};
 #ifdef INCLUDE_QUADRUPOLES
-    rotateQuadupoles(qiRotationMatrix, atom1->sphericalQuadrupole, atom2->sphericalQuadrupole, rotatedQuadrupole1, rotatedQuadrupole2);
+    rotateQuadrupoles(qiRotationMatrix, atom1->sphericalQuadrupole, atom2->sphericalQuadrupole, rotatedQuadrupole1, rotatedQuadrupole2);
 #endif    
     
     // The field derivatives at I due to permanent and induced moments on J, and vice-versa.

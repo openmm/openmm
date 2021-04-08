@@ -32,4 +32,7 @@
 #include "CudaAmoebaTests.h"
 #include "TestAmoebaMultipoleForce.h"
 
-void runPlatformTests() {}
+void runPlatformTests() {
+    testNoQuadrupoles(false);
+    testNoQuadrupoles(true);
+}

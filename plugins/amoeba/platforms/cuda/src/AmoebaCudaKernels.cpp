@@ -98,20 +98,12 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     }
 }
 
-void CudaCalcAmoebaMultipoleForceKernel::computeForwardFFT() {
+void CudaCalcAmoebaMultipoleForceKernel::computeFFT(bool forward) {
     CudaArray& grid = dynamic_cast<CudaContext&>(cc).unwrap(pmeGrid);
     if (cc.getUseDoublePrecision())
-        cufftExecZ2Z(fft, (double2*) grid.getDevicePointer(), (double2*) grid.getDevicePointer(), CUFFT_FORWARD);
+        cufftExecZ2Z(fft, (double2*) grid.getDevicePointer(), (double2*) grid.getDevicePointer(), forward ? CUFFT_FORWARD : CUFFT_INVERSE);
     else
-        cufftExecC2C(fft, (float2*) grid.getDevicePointer(), (float2*) grid.getDevicePointer(), CUFFT_FORWARD);
-}
-
-void CudaCalcAmoebaMultipoleForceKernel::computeInverseFFT() {
-    CudaArray& grid = dynamic_cast<CudaContext&>(cc).unwrap(pmeGrid);
-    if (cc.getUseDoublePrecision())
-        cufftExecZ2Z(fft, (double2*) grid.getDevicePointer(), (double2*) grid.getDevicePointer(), CUFFT_INVERSE);
-    else
-        cufftExecC2C(fft, (float2*) grid.getDevicePointer(), (float2*) grid.getDevicePointer(), CUFFT_INVERSE);
+        cufftExecC2C(fft, (float2*) grid.getDevicePointer(), (float2*) grid.getDevicePointer(), forward ? CUFFT_FORWARD : CUFFT_INVERSE);
 }
 
 /* -------------------------------------------------------------------------- *

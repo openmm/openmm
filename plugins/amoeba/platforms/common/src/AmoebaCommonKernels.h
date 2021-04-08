@@ -155,19 +155,19 @@ public:
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     /**
-     * Compute the FFT in the forward direction.
+     * Compute the FFT.
      */
-    virtual void computeForwardFFT() = 0;
+    virtual void computeFFT(bool forward) = 0;
     /**
-     * Compute the FFT in the inverse direction.
+     * Get whether charge spreading should be done in fixed point.
      */
-    virtual void computeInverseFFT() = 0;
+    virtual bool useFixedPointChargeSpreading() const = 0;
 protected:
     class ForceInfo;
     void initializeScaleFactors();
-    void computeInducedField(void** recipBoxVectorPointer);
+    void computeInducedField();
     bool iterateDipolesByDIIS(int iteration);
-    void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
+    void computeExtrapolatedDipoles();
     void ensureMultipolesValid(ContextImpl& context);
     template <class T, class T3, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
     int numMultipoles, maxInducedIterations, maxExtrapolationOrder;

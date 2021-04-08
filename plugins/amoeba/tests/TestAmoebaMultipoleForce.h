@@ -3308,9 +3308,6 @@ int main(int argc, char* argv[]) {
         // large box of water
         testPMEMutualPolarizationLargeWater();
         
-        testNoQuadrupoles(false);
-        testNoQuadrupoles(true);
-        
         // triclinic box of water
         
         testTriclinic();

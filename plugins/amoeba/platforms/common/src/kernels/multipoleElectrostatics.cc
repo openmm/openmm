@@ -88,7 +88,7 @@ DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, bo
     real rotatedQuadrupole1[] = {0, 0, 0, 0, 0};
     real rotatedQuadrupole2[] = {0, 0, 0, 0, 0};
 #ifdef INCLUDE_QUADRUPOLES
-    rotateQuadupoles(qiRotationMatrix, atom1->sphericalQuadrupole, atom2->sphericalQuadrupole, rotatedQuadrupole1, rotatedQuadrupole2);
+    rotateQuadrupoles(qiRotationMatrix, atom1->sphericalQuadrupole, atom2->sphericalQuadrupole, rotatedQuadrupole1, rotatedQuadrupole2);
 #endif    
     
     // The field derivatives at I due to permanent and induced moments on J, and vice-versa.

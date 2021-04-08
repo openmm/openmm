@@ -29,7 +29,7 @@ DEVICE real3 rotateDipole(real3 dipole, const real rotationMatrix[][3]) {
                       rotationMatrix[2][0]*dipole.x + rotationMatrix[2][1]*dipole.y + rotationMatrix[2][2]*dipole.z);
 }
 
-DEVICE void rotateQuadupoles(const real rotationMatrix[][3], const real* quad1, LOCAL_ARG const real* quad2, real* rotated1, real* rotated2) {
+DEVICE void rotateQuadrupoles(const real rotationMatrix[][3], const real* quad1, LOCAL_ARG const real* quad2, real* rotated1, real* rotated2) {
     real sqrtThree = SQRT((real) 3);
     real element;
     element = 0.5f*(3.0f*rotationMatrix[0][0]*rotationMatrix[0][0] - 1.0f);

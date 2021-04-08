@@ -14,13 +14,11 @@ typedef struct {
 #endif
 } AtomData;
 
-inline DEVICE AtomData loadAtomData(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
+inline DEVICE AtomData loadAtomData(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real3* RESTRICT labFrameDipole,
         GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const float2* RESTRICT dampingAndThole) {
     AtomData data;
     data.posq = posq[atom];
-    data.dipole.x = labFrameDipole[atom*3];
-    data.dipole.y = labFrameDipole[atom*3+1];
-    data.dipole.z = labFrameDipole[atom*3+2];
+    data.dipole = labFrameDipole[atom];
 #ifdef INCLUDE_QUADRUPOLES
     data.quadrupoleXX = labFrameQuadrupole[atom*5];
     data.quadrupoleXY = labFrameQuadrupole[atom*5+1];
@@ -449,7 +447,7 @@ KERNEL void computeFixedField(
 #elif defined USE_GK
         GLOBAL const real* RESTRICT bornRadii, GLOBAL mm_ulong* RESTRICT gkFieldBuffers,
 #endif
-        GLOBAL const real* RESTRICT labFrameDipole, GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const float2* RESTRICT dampingAndThole) {
+        GLOBAL const real3* RESTRICT labFrameDipole, GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const float2* RESTRICT dampingAndThole) {
     const unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
     const unsigned int warp = (GLOBAL_ID)/TILE_SIZE;
     const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);

@@ -20,7 +20,7 @@ DEVICE void computeBSplinePoint(real4* thetai, real w, real* array) {
     for (int i = 4; i <= PME_ORDER; i++)
     {
         int k = i - 1;
-        real denom = RECIP(k);
+        real denom = RECIP((real) k);
         ARRAY(i,i) = denom * w * ARRAY(k,k);
         for (int j = 1; j <= i-2; j++)
             ARRAY(i,i-j) = denom * ((w+j)*ARRAY(k,i-j-1)+(i-j-w)*ARRAY(k,i-j));
@@ -269,15 +269,15 @@ KERNEL void gridSpreadFixedMultipoles(GLOBAL const real4* RESTRICT posq, GLOBAL 
                     real4 v = theta3[iz];
                     real add = term0*v.x + term1*v.y + term2*v.z;
 #ifdef HIPPO
-    #ifdef USE_DOUBLE_PRECISION
-                mm_ulong* ulonglong_p = (mm_ulong*) pmeGrid;
+    #ifdef USE_FIXED_POINT_CHARGE_SPREADING
+                GLOBAL mm_ulong* ulonglong_p = (GLOBAL mm_ulong*) pmeGrid;
                 ATOMIC_ADD(&ulonglong_p[index],  (mm_ulong) ((mm_long) (add*0x100000000)));
     #else
                 ATOMIC_ADD(&pmeGrid[index], add);
     #endif
 #else
-    #ifdef USE_DOUBLE_PRECISION
-                mm_ulong* ulonglong_p = (mm_ulong*) pmeGrid;
+    #ifdef USE_FIXED_POINT_CHARGE_SPREADING
+                GLOBAL mm_ulong* ulonglong_p = (GLOBAL mm_ulong*) pmeGrid;
                 ATOMIC_ADD(&ulonglong_p[2*index],  (mm_ulong) ((mm_long) (add*0x100000000)));
     #else
                 ATOMIC_ADD(&pmeGrid[index].x, add);
@@ -388,16 +388,16 @@ KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL c
 
                     real add1 = term01*v.x + term11*v.y;
 #ifdef HIPPO
-    #ifdef USE_DOUBLE_PRECISION
-                    mm_ulong * ulonglong_p = (mm_ulong *) pmeGrid;
+    #ifdef USE_FIXED_POINT_CHARGE_SPREADING
+                    GLOBAL mm_ulong* ulonglong_p = (GLOBAL mm_ulong*) pmeGrid;
                     ATOMIC_ADD(&ulonglong_p[index],  (mm_ulong) ((mm_long) (add1*0x100000000)));
     #else
                     ATOMIC_ADD(&pmeGrid[index], add1);
     #endif
 #else
                     real add2 = term02*v.x + term12*v.y;
-    #ifdef USE_DOUBLE_PRECISION
-                    mm_ulong * ulonglong_p = (mm_ulong *) pmeGrid;
+    #ifdef USE_FIXED_POINT_CHARGE_SPREADING
+                    GLOBAL mm_ulong* ulonglong_p = (GLOBAL mm_ulong*) pmeGrid;
                     ATOMIC_ADD(&ulonglong_p[2*index],  (mm_ulong) ((mm_long) (add1*0x100000000)));
                     ATOMIC_ADD(&ulonglong_p[2*index+1],  (mm_ulong) ((mm_long) (add2*0x100000000)));
     #else
@@ -415,7 +415,7 @@ KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL c
  * In double precision, we have to use fixed point to accumulate the grid values, so convert them to floating point.
  */
 KERNEL void finishSpreadCharge(GLOBAL mm_long* RESTRICT pmeGrid) {
-    real* floatGrid = (real*) pmeGrid;
+    GLOBAL real* floatGrid = (GLOBAL real*) pmeGrid;
 #ifdef HIPPO
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
 #else
@@ -992,7 +992,7 @@ KERNEL void computeFixedMultipoleForceAndEnergy(GLOBAL real4* RESTRICT posq, GLO
 #endif
         multipole[6] = -(multipole[4]+multipole[5]);
 
-        const real* cphi = &cphi_global[10*i];
+        GLOBAL const real* cphi = &cphi_global[10*i];
 
         torqueBuffers[i] = (mm_long) (EPSILON_FACTOR*(multipole[3]*cphi[2] - multipole[2]*cphi[3]
                       + 2*(multipole[6]-multipole[5])*cphi[9]
@@ -1103,7 +1103,7 @@ KERNEL void computeInducedDipoleForceAndEnergy(GLOBAL real4* RESTRICT posq, GLOB
         const real scale = EPSILON_FACTOR/2;
 #endif
         multipole[6] = -(multipole[4]+multipole[5]);
-        const real* cphi = &cphi_global[10*i];
+        GLOBAL const real* cphi = &cphi_global[10*i];
  
         torqueBuffers[i] += (mm_long) (scale*(multipole[3]*cphi[2] - multipole[2]*cphi[3]
                       + 2*(multipole[6]-multipole[5])*cphi[9]
