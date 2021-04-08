@@ -131,9 +131,10 @@ jobs:
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
           - name: Linux CPU Pypy 3.6
-            python-version: "3.6.*=*pypy*"
+            python-version: "3.6"
             installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge-pypy3-Linux-x86_64.sh
             os: ubuntu-latest
+            env-file-suffix: "-pypy"
             OPENCL: false
             cuda-version: ""
             CMAKE_FLAGS: |
@@ -157,7 +158,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
-          environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
+          environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}${{ env-file-suffix }}.yml
           auto-activate-base: false
           installer-url: ${{ matrix.installer-url }}
 
