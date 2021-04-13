@@ -718,9 +718,14 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         // Create required data structures.
 
         int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-        int gridElementSize = (useFixedPointChargeSpreading() ? sizeof(long long) : sizeof(float));
-        pmeGrid.initialize(cc, gridSizeX*gridSizeY*gridSizeZ, 2*gridElementSize, "pmeGrid");
-        cc.addAutoclearBuffer(pmeGrid);
+        pmeGrid1.initialize(cc, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid1");
+        pmeGrid2.initialize(cc, gridSizeX*gridSizeY*gridSizeZ, 2*elementSize, "pmeGrid2");
+        if (useFixedPointChargeSpreading()) {
+            pmeGridLong.initialize(cc, 2*gridSizeX*gridSizeY*gridSizeZ, sizeof(long long), "pmeGridLong");
+            cc.addAutoclearBuffer(pmeGridLong);
+        }
+        else
+            cc.addAutoclearBuffer(pmeGrid1);
         pmeBsplineModuliX.initialize(cc, gridSizeX, elementSize, "pmeBsplineModuliX");
         pmeBsplineModuliY.initialize(cc, gridSizeY, elementSize, "pmeBsplineModuliY");
         pmeBsplineModuliZ.initialize(cc, gridSizeZ, elementSize, "pmeBsplineModuliZ");
@@ -768,27 +773,36 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         pmeSpreadFixedMultipolesKernel->addArg(cc.getPosq());
         pmeSpreadFixedMultipolesKernel->addArg(fracDipoles);
         pmeSpreadFixedMultipolesKernel->addArg(fracQuadrupoles);
-        pmeSpreadFixedMultipolesKernel->addArg(pmeGrid);
+        if (useFixedPointChargeSpreading())
+            pmeSpreadFixedMultipolesKernel->addArg(pmeGridLong);
+        else
+            pmeSpreadFixedMultipolesKernel->addArg(pmeGrid1);
         for (int i = 0; i < 6; i++)
             pmeSpreadFixedMultipolesKernel->addArg();
         pmeSpreadInducedDipolesKernel = program->createKernel("gridSpreadInducedDipoles");
         pmeSpreadInducedDipolesKernel->addArg(cc.getPosq());
         pmeSpreadInducedDipolesKernel->addArg(inducedDipole);
         pmeSpreadInducedDipolesKernel->addArg(inducedDipolePolar);
-        pmeSpreadInducedDipolesKernel->addArg(pmeGrid);
+        if (useFixedPointChargeSpreading())
+            pmeSpreadInducedDipolesKernel->addArg(pmeGridLong);
+        else
+            pmeSpreadInducedDipolesKernel->addArg(pmeGrid1);
         for (int i = 0; i < 6; i++)
             pmeSpreadInducedDipolesKernel->addArg();
-        pmeFinishSpreadChargeKernel = program->createKernel("finishSpreadCharge");
-        pmeFinishSpreadChargeKernel->addArg(pmeGrid);
+        if (useFixedPointChargeSpreading()) {
+            pmeFinishSpreadChargeKernel = program->createKernel("finishSpreadCharge");
+            pmeFinishSpreadChargeKernel->addArg(pmeGridLong);
+            pmeFinishSpreadChargeKernel->addArg(pmeGrid1);
+        }
         pmeConvolutionKernel = program->createKernel("reciprocalConvolution");
-        pmeConvolutionKernel->addArg(pmeGrid);
+        pmeConvolutionKernel->addArg(pmeGrid2);
         pmeConvolutionKernel->addArg(pmeBsplineModuliX);
         pmeConvolutionKernel->addArg(pmeBsplineModuliY);
         pmeConvolutionKernel->addArg(pmeBsplineModuliZ);
         for (int i = 0; i < 4; i++)
             pmeConvolutionKernel->addArg();
         pmeFixedPotentialKernel = program->createKernel("computeFixedPotentialFromGrid");
-        pmeFixedPotentialKernel->addArg(pmeGrid);
+        pmeFixedPotentialKernel->addArg(pmeGrid1);
         pmeFixedPotentialKernel->addArg(pmePhi);
         pmeFixedPotentialKernel->addArg(field);
         pmeFixedPotentialKernel->addArg(fieldPolar);
@@ -797,7 +811,7 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         for (int i = 0; i < 6; i++)
             pmeFixedPotentialKernel->addArg();
         pmeInducedPotentialKernel = program->createKernel("computeInducedPotentialFromGrid");
-        pmeInducedPotentialKernel->addArg(pmeGrid);
+        pmeInducedPotentialKernel->addArg(pmeGrid1);
         pmeInducedPotentialKernel->addArg(pmePhid);
         pmeInducedPotentialKernel->addArg(pmePhip);
         pmeInducedPotentialKernel->addArg(pmePhidp);
@@ -1073,7 +1087,7 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
     electrostaticsKernel->setArg(8, numTileIndices);
     computeFixedFieldKernel->setArg(6, startTileIndex);
     computeFixedFieldKernel->setArg(7, numTileIndices);
-    if (!pmeGrid.isInitialized()) {
+    if (!pmeGrid1.isInitialized()) {
         // Compute induced dipoles.
         
         if (gkKernel != NULL)
@@ -1162,7 +1176,7 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
         pmeTransformMultipolesKernel->execute(cc.getNumAtoms());
         pmeSpreadFixedMultipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
-            pmeFinishSpreadChargeKernel->execute(pmeGrid.getSize());
+            pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
         computeFFT(true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
         computeFFT(false);
@@ -1180,10 +1194,13 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
 
         // Reciprocal space calculation for the induced dipoles.
 
-        cc.clearBuffer(pmeGrid);
+        if (useFixedPointChargeSpreading())
+            cc.clearBuffer(pmeGridLong);
+        else
+            cc.clearBuffer(pmeGrid1);
         pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
-            pmeFinishSpreadChargeKernel->execute(pmeGrid.getSize());
+            pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
         computeFFT(true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
         computeFFT(false);
@@ -1252,11 +1269,14 @@ void CommonCalcAmoebaMultipoleForceKernel::computeInducedField() {
         }
     }
     computeInducedFieldKernel->execute(numForceThreadBlocks*inducedFieldThreads, inducedFieldThreads);
-    if (pmeGrid.isInitialized()) {
-        cc.clearBuffer(pmeGrid);
+    if (pmeGrid1.isInitialized()) {
+        if (useFixedPointChargeSpreading())
+            cc.clearBuffer(pmeGridLong);
+        else
+            cc.clearBuffer(pmeGrid1);
         pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
-            pmeFinishSpreadChargeKernel->execute(pmeGrid.getSize());
+            pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
         computeFFT(true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
         computeFFT(false);

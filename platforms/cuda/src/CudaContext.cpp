@@ -724,7 +724,8 @@ void CudaContext::executeKernel(CUfunction kernel, void** arguments, int threads
 }
 
 int CudaContext::computeThreadBlockSize(double memory) const {
-    int maxShared = 16*1024;
+    int maxShared;
+    CHECK_RESULT2(cuDeviceGetAttribute(&maxShared, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, device), "Error querying device property");
     int max = (int) (maxShared/memory);
     if (max < 64)
         return 32;

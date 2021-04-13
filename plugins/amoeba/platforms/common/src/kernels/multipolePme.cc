@@ -78,7 +78,7 @@ KERNEL void transformMultipolesToFractionalCoordinates(GLOBAL const real* RESTRI
 #else
         GLOBAL const real* RESTRICT labQuadrupole,
 #endif
-        GLOBAL real* RESTRICT fracDipole, GLOBAL real* RESTRICT fracQuadrupole, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+        GLOBAL real* RESTRICT fracDipole, GLOBAL real* RESTRICT fracQuadrupole, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     // Build matrices for transforming the dipoles and quadrupoles.
     
     LOCAL real a[3][3];
@@ -138,7 +138,7 @@ KERNEL void transformMultipolesToFractionalCoordinates(GLOBAL const real* RESTRI
 /**
  * Convert the potential from fractional to Cartesian coordinates.
  */
-KERNEL void transformPotentialToCartesianCoordinates(GLOBAL const real* RESTRICT fphi, GLOBAL real* RESTRICT cphi, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+KERNEL void transformPotentialToCartesianCoordinates(GLOBAL const real* RESTRICT fphi, GLOBAL real* RESTRICT cphi, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     // Build matrices for transforming the potential.
 
     LOCAL real a[3][3];
@@ -183,12 +183,17 @@ KERNEL void transformPotentialToCartesianCoordinates(GLOBAL const real* RESTRICT
 
 KERNEL void gridSpreadFixedMultipoles(GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT fracDipole,
         GLOBAL const real* RESTRICT fracQuadrupole,
-#ifdef HIPPO
-        GLOBAL real* RESTRICT pmeGrid, GLOBAL const real* RESTRICT coreCharge, GLOBAL const real* RESTRICT valenceCharge,
+#ifdef USE_FIXED_POINT_CHARGE_SPREADING
+        GLOBAL mm_ulong* RESTRICT pmeGrid,
+#elif defined(HIPPO)
+        GLOBAL real* RESTRICT pmeGrid,
 #else
         GLOBAL real2* RESTRICT pmeGrid,
 #endif
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+#ifdef HIPPO
+        GLOBAL const real* RESTRICT coreCharge, GLOBAL const real* RESTRICT valenceCharge,
+#endif
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
 #if __CUDA_ARCH__ < 500
     real array[PME_ORDER*PME_ORDER];
 #else
@@ -270,15 +275,13 @@ KERNEL void gridSpreadFixedMultipoles(GLOBAL const real4* RESTRICT posq, GLOBAL 
                     real add = term0*v.x + term1*v.y + term2*v.z;
 #ifdef HIPPO
     #ifdef USE_FIXED_POINT_CHARGE_SPREADING
-                GLOBAL mm_ulong* ulonglong_p = (GLOBAL mm_ulong*) pmeGrid;
-                ATOMIC_ADD(&ulonglong_p[index],  (mm_ulong) ((mm_long) (add*0x100000000)));
+                ATOMIC_ADD(&pmeGrid[index], (mm_ulong) ((mm_long) (add*0x100000000)));
     #else
                 ATOMIC_ADD(&pmeGrid[index], add);
     #endif
 #else
     #ifdef USE_FIXED_POINT_CHARGE_SPREADING
-                GLOBAL mm_ulong* ulonglong_p = (GLOBAL mm_ulong*) pmeGrid;
-                ATOMIC_ADD(&ulonglong_p[2*index],  (mm_ulong) ((mm_long) (add*0x100000000)));
+                ATOMIC_ADD(&pmeGrid[2*index], (mm_ulong) ((mm_long) (add*0x100000000)));
     #else
                 ATOMIC_ADD(&pmeGrid[index].x, add);
     #endif
@@ -290,12 +293,17 @@ KERNEL void gridSpreadFixedMultipoles(GLOBAL const real4* RESTRICT posq, GLOBAL 
 }
 
 KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL const real3* RESTRICT inducedDipole,
-#ifdef HIPPO
+#ifndef HIPPO
+        GLOBAL const real3* RESTRICT inducedDipolePolar,
+#endif
+#ifdef USE_FIXED_POINT_CHARGE_SPREADING
+        GLOBAL mm_ulong* RESTRICT pmeGrid,
+#elif defined(HIPPO)
         GLOBAL real* RESTRICT pmeGrid,
 #else
-        GLOBAL const real3* RESTRICT inducedDipolePolar, GLOBAL real2* RESTRICT pmeGrid,
+        GLOBAL real2* RESTRICT pmeGrid,
 #endif
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
 #if __CUDA_ARCH__ < 500
     real array[PME_ORDER*PME_ORDER];
 #else
@@ -389,17 +397,15 @@ KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL c
                     real add1 = term01*v.x + term11*v.y;
 #ifdef HIPPO
     #ifdef USE_FIXED_POINT_CHARGE_SPREADING
-                    GLOBAL mm_ulong* ulonglong_p = (GLOBAL mm_ulong*) pmeGrid;
-                    ATOMIC_ADD(&ulonglong_p[index],  (mm_ulong) ((mm_long) (add1*0x100000000)));
+                    ATOMIC_ADD(&pmeGrid[index], (mm_ulong) ((mm_long) (add1*0x100000000)));
     #else
                     ATOMIC_ADD(&pmeGrid[index], add1);
     #endif
 #else
                     real add2 = term02*v.x + term12*v.y;
     #ifdef USE_FIXED_POINT_CHARGE_SPREADING
-                    GLOBAL mm_ulong* ulonglong_p = (GLOBAL mm_ulong*) pmeGrid;
-                    ATOMIC_ADD(&ulonglong_p[2*index],  (mm_ulong) ((mm_long) (add1*0x100000000)));
-                    ATOMIC_ADD(&ulonglong_p[2*index+1],  (mm_ulong) ((mm_long) (add2*0x100000000)));
+                    ATOMIC_ADD(&pmeGrid[2*index], (mm_ulong) ((mm_long) (add1*0x100000000)));
+                    ATOMIC_ADD(&pmeGrid[2*index+1], (mm_ulong) ((mm_long) (add2*0x100000000)));
     #else
                     ATOMIC_ADD(&pmeGrid[index].x, add1);
                     ATOMIC_ADD(&pmeGrid[index].y, add2);
@@ -414,8 +420,7 @@ KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL c
 /**
  * In double precision, we have to use fixed point to accumulate the grid values, so convert them to floating point.
  */
-KERNEL void finishSpreadCharge(GLOBAL mm_long* RESTRICT pmeGrid) {
-    GLOBAL real* floatGrid = (GLOBAL real*) pmeGrid;
+KERNEL void finishSpreadCharge(GLOBAL mm_long* RESTRICT pmeGridLong, GLOBAL real* RESTRICT pmeGrid) {
 #ifdef HIPPO
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
 #else
@@ -423,12 +428,12 @@ KERNEL void finishSpreadCharge(GLOBAL mm_long* RESTRICT pmeGrid) {
 #endif
     real scale = 1/(real) 0x100000000;
     for (int index = GLOBAL_ID; index < gridSize; index += GLOBAL_SIZE)
-        floatGrid[index] = scale*pmeGrid[index];
+        pmeGrid[index] = scale*pmeGridLong[index];
 }
 
 KERNEL void reciprocalConvolution(GLOBAL real2* RESTRICT pmeGrid, GLOBAL const real* RESTRICT pmeBsplineModuliX,
         GLOBAL const real* RESTRICT pmeBsplineModuliY, GLOBAL const real* RESTRICT pmeBsplineModuliZ, real4 periodicBoxSize,
-        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+        real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
 #ifdef HIPPO
     // R2C stores into a half complex matrix where the last dimension is cut by half
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*(GRID_SIZE_Z/2+1);
@@ -481,7 +486,7 @@ KERNEL void computeFixedPotentialFromGrid(
         GLOBAL mm_long* RESTRICT fieldPolarBuffers,
 #endif
         GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labDipole, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+        real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
 #if __CUDA_ARCH__ < 500
     real array[PME_ORDER*PME_ORDER];
 #else
@@ -664,8 +669,8 @@ KERNEL void computeInducedPotentialFromGrid(
         GLOBAL const real2* RESTRICT pmeGrid, GLOBAL real* RESTRICT phid, GLOBAL real* RESTRICT phip,
 #endif
         GLOBAL real* RESTRICT phidp, GLOBAL const real4* RESTRICT posq,
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX,
-        real3 recipBoxVecY, real3 recipBoxVecZ) {
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real4 recipBoxVecX,
+        real4 recipBoxVecY, real4 recipBoxVecZ) {
 #if __CUDA_ARCH__ < 500
     real array[PME_ORDER*PME_ORDER];
 #else
@@ -950,7 +955,7 @@ KERNEL void computeFixedMultipoleForceAndEnergy(GLOBAL real4* RESTRICT posq, GLO
         GLOBAL const real* RESTRICT labQuadrupole,
 #endif
         GLOBAL const real* RESTRICT fracDipole, GLOBAL const real* RESTRICT fracQuadrupole,
-        GLOBAL const real* RESTRICT phi, GLOBAL const real* RESTRICT cphi_global, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+        GLOBAL const real* RESTRICT phi, GLOBAL const real* RESTRICT cphi_global, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     real multipole[10];
     const int deriv1[] = {1, 4, 7, 8, 10, 15, 17, 13, 14, 19};
     const int deriv2[] = {2, 7, 5, 9, 13, 11, 18, 15, 19, 16};
@@ -1055,7 +1060,7 @@ KERNEL void computeInducedDipoleForceAndEnergy(GLOBAL real4* RESTRICT posq, GLOB
 #ifndef HIPPO
         GLOBAL const real* RESTRICT phid, GLOBAL const real* RESTRICT phip,
 #endif
-        GLOBAL const real* RESTRICT phidp, GLOBAL const real* RESTRICT cphi_global, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+        GLOBAL const real* RESTRICT phidp, GLOBAL const real* RESTRICT cphi_global, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     real multipole[10];
     real cinducedDipole[3], inducedDipole[3];
     real cinducedDipolePolar[3], inducedDipolePolar[3];
@@ -1212,7 +1217,7 @@ KERNEL void computeInducedDipoleForceAndEnergy(GLOBAL real4* RESTRICT posq, GLOB
 
 #ifdef HIPPO
 KERNEL void recordInducedFieldDipoles(GLOBAL const real* RESTRICT phidp, GLOBAL mm_long* RESTRICT inducedField,
-        GLOBAL const real3* RESTRICT inducedDipole, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+        GLOBAL const real3* RESTRICT inducedDipole, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     LOCAL real fracToCart[3][3];
     if (LOCAL_ID == 0) {
         fracToCart[0][0] = GRID_SIZE_X*recipBoxVecX.x;
@@ -1271,7 +1276,7 @@ KERNEL void calculateSelfEnergyAndTorque(GLOBAL mm_long* RESTRICT torqueBuffers,
 #else
 KERNEL void recordInducedFieldDipoles(GLOBAL const real* RESTRICT phid, GLOBAL real* const RESTRICT phip, GLOBAL mm_long* RESTRICT inducedField,
         GLOBAL mm_long* RESTRICT inducedFieldPolar, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar,
-        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ
+        real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ
 #ifdef EXTRAPOLATED_POLARIZATION
         , GLOBAL mm_ulong* RESTRICT fieldGradient, GLOBAL mm_ulong* RESTRICT fieldGradientPolar
 #endif

@@ -98,12 +98,12 @@ inline DEVICE void zeroAtomDataLocal(LOCAL_ARG AtomData* data) {
 
 inline DEVICE void saveAtomData(int index, AtomData data, GLOBAL mm_ulong* RESTRICT field, GLOBAL mm_ulong* RESTRICT fieldPolar
 #ifdef EXTRAPOLATED_POLARIZATION
-        , mm_ulong* RESTRICT fieldGradient, mm_ulong* RESTRICT fieldGradientPolar
+        , GLOBAL mm_ulong* RESTRICT fieldGradient, GLOBAL mm_ulong* RESTRICT fieldGradientPolar
 #endif
 #ifdef USE_GK
-        , mm_ulong* RESTRICT fieldS, mm_ulong* RESTRICT fieldPolarS
+        , GLOBAL mm_ulong* RESTRICT fieldS, GLOBAL mm_ulong* RESTRICT fieldPolarS
     #ifdef EXTRAPOLATED_POLARIZATION
-        , mm_ulong* RESTRICT fieldGradientS, mm_ulong* RESTRICT fieldGradientPolarS
+        , GLOBAL mm_ulong* RESTRICT fieldGradientS, GLOBAL mm_ulong* RESTRICT fieldGradientPolarS
     #endif
 #endif
         ) {

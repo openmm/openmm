@@ -45,6 +45,10 @@ void OpenCLCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
 }
 
 void OpenCLCalcAmoebaMultipoleForceKernel::computeFFT(bool forward) {
-    OpenCLArray& grid = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid);
-    fft->execFFT(grid, grid, forward);
+    OpenCLArray& grid1 = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid1);
+    OpenCLArray& grid2 = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid2);
+    if (forward)
+        fft->execFFT(grid1, grid2, true);
+    else
+        fft->execFFT(grid2, grid1, false);
 }

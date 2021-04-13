@@ -220,7 +220,9 @@ protected:
     ComputeArray polarizability;
     ComputeArray covalentFlags;
     ComputeArray polarizationGroupFlags;
-    ComputeArray pmeGrid;
+    ComputeArray pmeGrid1;
+    ComputeArray pmeGrid2;
+    ComputeArray pmeGridLong;
     ComputeArray pmeBsplineModuliX;
     ComputeArray pmeBsplineModuliY;
     ComputeArray pmeBsplineModuliZ;
