@@ -194,9 +194,11 @@ class Metadynamics(object):
 
     def getHillHeight(self, simulation):
         """Get the current height of the Gaussian hill in kJ/mol"""
-        energy = simulation.context.getState(getEnergy=True, groups={31}).getPotentialEnergy()
+        forceGroup = self._force.getForceGroup()
+        energy = simulation.context.getState(getEnergy=True, groups={forceGroup}).getPotentialEnergy()
         currentHillHeight = self.height*np.exp(-energy/(unit.MOLAR_GAS_CONSTANT_R*self._deltaT))
-        return currentHillHeight.value_in_unit(unit.kilojoules_per_mole)
+        scaledHillHeight = ((self.temperature+self._deltaT)/self._deltaT)*currentHillHeight
+        return scaledHillHeight.value_in_unit(unit.kilojoules_per_mole)
 
     def _addGaussian(self, position, height, context):
         """Add a Gaussian to the bias function."""
