@@ -10,7 +10,7 @@ typedef struct {
 } AtomData;
 
 inline DEVICE AtomData loadAtomData(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT sphericalDipole,
-            GLOBAL const real* RESTRICT sphericalQuadrupole, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar,
+            GLOBAL const real* RESTRICT sphericalQuadrupole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar,
             GLOBAL const float2* RESTRICT dampingAndThole) {
     AtomData data;
     real4 atomPosq = posq[atom];
@@ -26,8 +26,8 @@ inline DEVICE AtomData loadAtomData(int atom, GLOBAL const real4* RESTRICT posq,
     data.sphericalQuadrupole[3] = sphericalQuadrupole[atom*5+3];
     data.sphericalQuadrupole[4] = sphericalQuadrupole[atom*5+4];
 #endif
-    data.inducedDipole = inducedDipole[atom];
-    data.inducedDipolePolar = inducedDipolePolar[atom];
+    data.inducedDipole = make_real3(inducedDipole[3*atom], inducedDipole[3*atom+1], inducedDipole[3*atom+2]);
+    data.inducedDipolePolar = make_real3(inducedDipolePolar[3*atom], inducedDipolePolar[3*atom+1], inducedDipolePolar[3*atom+2]);
     float2 temp = dampingAndThole[atom];
     data.damp = temp.x;
     data.thole = temp.y;
@@ -445,8 +445,8 @@ KERNEL void computeElectrostatics(
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
         GLOBAL const unsigned int* RESTRICT interactingAtoms,
 #endif
-        GLOBAL const real* RESTRICT sphericalDipole, GLOBAL const real* RESTRICT sphericalQuadrupole, GLOBAL const real3* RESTRICT inducedDipole,
-        GLOBAL const real3* RESTRICT inducedDipolePolar, GLOBAL const float2* RESTRICT dampingAndThole) {
+        GLOBAL const real* RESTRICT sphericalDipole, GLOBAL const real* RESTRICT sphericalQuadrupole, GLOBAL const real* RESTRICT inducedDipole,
+        GLOBAL const real* RESTRICT inducedDipolePolar, GLOBAL const float2* RESTRICT dampingAndThole) {
     const unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
     const unsigned int warp = (GLOBAL_ID)/TILE_SIZE;
     const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);

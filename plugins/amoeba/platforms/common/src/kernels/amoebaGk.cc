@@ -193,7 +193,7 @@ DEVICE void computeOneInteractionT2(AtomData2 atom1, volatile AtomData2 atom2, r
 DEVICE void computeOneInteractionB1B2(AtomData2 atom1, volatile AtomData2 atom2, real* bornForce1, real* bornForce2);
 
 inline DEVICE AtomData2 loadAtomData2(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
-        GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar, GLOBAL const real* RESTRICT bornRadius) {
+        GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar, GLOBAL const real* RESTRICT bornRadius) {
     AtomData2 data;
     real4 atomPosq = posq[atom];
     data.pos = trimTo3(atomPosq);
@@ -207,8 +207,8 @@ inline DEVICE AtomData2 loadAtomData2(int atom, GLOBAL const real4* RESTRICT pos
     data.quadrupoleYY = labFrameQuadrupole[atom*5+3];
     data.quadrupoleYZ = labFrameQuadrupole[atom*5+4];
     data.quadrupoleZZ = -(data.quadrupoleXX+data.quadrupoleYY);
-    data.inducedDipole = inducedDipole[atom];
-    data.inducedDipolePolar = inducedDipolePolar[atom];
+    data.inducedDipole = make_real3(inducedDipole[3*atom], inducedDipole[3*atom+1], inducedDipole[3*atom+2]);
+    data.inducedDipolePolar = make_real3(inducedDipolePolar[3*atom], inducedDipolePolar[3*atom+1], inducedDipolePolar[3*atom+2]);
     data.bornRadius = bornRadius[atom];
     return data;
 }
@@ -219,7 +219,7 @@ inline DEVICE AtomData2 loadAtomData2(int atom, GLOBAL const real4* RESTRICT pos
 KERNEL void computeGKForces(
         GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mm_ulong* RESTRICT torqueBuffers, GLOBAL mixed* RESTRICT energyBuffer,
         GLOBAL const real4* RESTRICT posq, unsigned int startTileIndex, unsigned int numTileIndices, GLOBAL const real* RESTRICT labFrameDipole,
-        GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar,
+        GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar,
         GLOBAL const real* RESTRICT bornRadii, GLOBAL mm_ulong* RESTRICT bornForce) {
     unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
     unsigned int warp = (GLOBAL_ID)/TILE_SIZE;
@@ -579,8 +579,8 @@ DEVICE void computeOneEDiffInteractionT1(AtomData4* atom1, LOCAL_ARG volatile At
 DEVICE void computeOneEDiffInteractionT3(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real3* outputForce);
 
 inline DEVICE AtomData4 loadAtomData4(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
-        GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar,
-        GLOBAL const real3* RESTRICT inducedDipoleS, GLOBAL const real3* RESTRICT inducedDipolePolarS, GLOBAL const float2* RESTRICT dampingAndThole) {
+        GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar,
+        GLOBAL const real* RESTRICT inducedDipoleS, GLOBAL const real* RESTRICT inducedDipolePolarS, GLOBAL const float2* RESTRICT dampingAndThole) {
     AtomData4 data;
     real4 atomPosq = posq[atom];
     data.pos = make_real3(atomPosq.x, atomPosq.y, atomPosq.z);
@@ -594,10 +594,10 @@ inline DEVICE AtomData4 loadAtomData4(int atom, GLOBAL const real4* RESTRICT pos
     data.quadrupoleYY = labFrameQuadrupole[atom*5+3];
     data.quadrupoleYZ = labFrameQuadrupole[atom*5+4];
     data.quadrupoleZZ = -(data.quadrupoleXX+data.quadrupoleYY);
-    data.inducedDipole = inducedDipole[atom];
-    data.inducedDipolePolar = inducedDipolePolar[atom];
-    data.inducedDipoleS = inducedDipoleS[atom];
-    data.inducedDipolePolarS = inducedDipolePolarS[atom];
+    data.inducedDipole = make_real3(inducedDipole[3*atom], inducedDipole[3*atom+1], inducedDipole[3*atom+2]);
+    data.inducedDipolePolar = make_real3(inducedDipolePolar[3*atom], inducedDipolePolar[3*atom+1], inducedDipolePolar[3*atom+2]);
+    data.inducedDipoleS = make_real3(inducedDipoleS[3*atom], inducedDipoleS[3*atom+1], inducedDipoleS[3*atom+2]);
+    data.inducedDipolePolarS = make_real3(inducedDipolePolarS[3*atom], inducedDipolePolarS[3*atom+1], inducedDipolePolarS[3*atom+2]);
     float2 temp = dampingAndThole[atom];
     data.damp = temp.x;
     data.thole = temp.y;
@@ -623,8 +623,8 @@ KERNEL void computeEDiffForce(
         GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mm_ulong* RESTRICT torqueBuffers, GLOBAL mixed* RESTRICT energyBuffer,
         GLOBAL const real4* RESTRICT posq, GLOBAL const uint2* RESTRICT covalentFlags, GLOBAL const unsigned int* RESTRICT polarizationGroupFlags,
         GLOBAL const int2* RESTRICT exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices,
-        GLOBAL const real* RESTRICT labFrameDipole, GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real3* RESTRICT inducedDipole,
-        GLOBAL const real3* RESTRICT inducedDipolePolar, GLOBAL const real3* RESTRICT inducedDipoleS, GLOBAL const real3* RESTRICT inducedDipolePolarS,
+        GLOBAL const real* RESTRICT labFrameDipole, GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole,
+        GLOBAL const real* RESTRICT inducedDipolePolar, GLOBAL const real* RESTRICT inducedDipoleS, GLOBAL const real* RESTRICT inducedDipolePolarS,
         GLOBAL const float2* RESTRICT dampingAndThole) {
     const unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
     const unsigned int warp = (GLOBAL_ID)/TILE_SIZE;

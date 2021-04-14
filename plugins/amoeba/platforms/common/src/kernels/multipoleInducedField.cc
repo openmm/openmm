@@ -18,24 +18,24 @@ typedef struct {
 } AtomData;
 
 #ifdef USE_GK
-inline DEVICE AtomData loadAtomData(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real3* RESTRICT inducedDipole,
-        GLOBAL const real3* RESTRICT inducedDipolePolar, GLOBAL const float2* RESTRICT dampingAndThole, GLOBAL const real3* RESTRICT inducedDipoleS,
-        GLOBAL const real3* RESTRICT inducedDipolePolarS, GLOBAL const real* RESTRICT bornRadii) {
+inline DEVICE AtomData loadAtomData(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT inducedDipole,
+        GLOBAL const real* RESTRICT inducedDipolePolar, GLOBAL const float2* RESTRICT dampingAndThole, GLOBAL const real* RESTRICT inducedDipoleS,
+        GLOBAL const real* RESTRICT inducedDipolePolarS, GLOBAL const real* RESTRICT bornRadii) {
 #else
-inline DEVICE AtomData loadAtomData(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real3* RESTRICT inducedDipole,
-        GLOBAL const real3* RESTRICT inducedDipolePolar, GLOBAL const float2* RESTRICT dampingAndThole) {
+inline DEVICE AtomData loadAtomData(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT inducedDipole,
+        GLOBAL const real* RESTRICT inducedDipolePolar, GLOBAL const float2* RESTRICT dampingAndThole) {
 #endif
     AtomData data;
     real4 atomPosq = posq[atom];
     data.pos = make_real3(atomPosq.x, atomPosq.y, atomPosq.z);
-    data.inducedDipole = inducedDipole[atom];
-    data.inducedDipolePolar = inducedDipolePolar[atom];
+    data.inducedDipole = make_real3(inducedDipole[3*atom], inducedDipole[3*atom+1], inducedDipole[3*atom+2]);
+    data.inducedDipolePolar = make_real3(inducedDipolePolar[3*atom], inducedDipolePolar[3*atom+1], inducedDipolePolar[3*atom+2]);
     float2 temp = dampingAndThole[atom];
     data.damp = temp.x;
     data.thole = temp.y;
 #ifdef USE_GK
-    data.inducedDipoleS = inducedDipoleS[atom];
-    data.inducedDipolePolarS = inducedDipolePolarS[atom];
+    data.inducedDipoleS = make_real3(inducedDipoleS[3*atom], inducedDipoleS[3*atom+1], inducedDipoleS[3*atom+2]);
+    data.inducedDipolePolarS = make_real3(inducedDipolePolarS[3*atom], inducedDipolePolarS[3*atom+1], inducedDipolePolarS[3*atom+2]);
     data.bornRadius = bornRadii[atom];
 #endif
     return data;
@@ -374,13 +374,13 @@ DEVICE void computeOneInteraction(AtomData* atom1, LOCAL_ARG AtomData* atom2, re
  */
 KERNEL void computeInducedField(
         GLOBAL mm_ulong* RESTRICT field, GLOBAL mm_ulong* RESTRICT fieldPolar, GLOBAL const real4* RESTRICT posq, GLOBAL const int2* RESTRICT exclusionTiles, 
-        GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar, unsigned int startTileIndex, unsigned int numTileIndices,
+        GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar, unsigned int startTileIndex, unsigned int numTileIndices,
 #ifdef USE_CUTOFF
         GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter, GLOBAL const unsigned int* RESTRICT interactingAtoms,
 #elif defined USE_GK
-        GLOBAL mm_ulong* RESTRICT fieldS, GLOBAL mm_ulong* RESTRICT fieldPolarS, GLOBAL const real3* RESTRICT inducedDipoleS,
-        GLOBAL const real3* RESTRICT inducedDipolePolarS, GLOBAL const real* RESTRICT bornRadii,
+        GLOBAL mm_ulong* RESTRICT fieldS, GLOBAL mm_ulong* RESTRICT fieldPolarS, GLOBAL const real* RESTRICT inducedDipoleS,
+        GLOBAL const real* RESTRICT inducedDipolePolarS, GLOBAL const real* RESTRICT bornRadii,
 #endif
 #ifdef EXTRAPOLATED_POLARIZATION
         GLOBAL mm_ulong* RESTRICT fieldGradient, GLOBAL mm_ulong* RESTRICT fieldGradientPolar,
@@ -571,10 +571,10 @@ KERNEL void computeInducedField(
 }
 
 KERNEL void recordInducedDipolesForDIIS(GLOBAL const mm_long* RESTRICT fixedField, GLOBAL const mm_long* RESTRICT fixedFieldPolar,
-        GLOBAL const float* RESTRICT polarizability, GLOBAL float2* RESTRICT errors, GLOBAL real3* RESTRICT prevErrors, GLOBAL real* RESTRICT matrix,
+        GLOBAL const float* RESTRICT polarizability, GLOBAL float2* RESTRICT errors, GLOBAL real* RESTRICT prevErrors, GLOBAL real* RESTRICT matrix,
         GLOBAL const mm_long* RESTRICT fixedFieldS, GLOBAL const mm_long* RESTRICT inducedField, GLOBAL const mm_long* RESTRICT inducedFieldPolar,
-        GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar,
-        GLOBAL real3* RESTRICT prevDipoles, GLOBAL real3* RESTRICT prevDipolesPolar, int iteration, int recordPrevErrors) {
+        GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar,
+        GLOBAL real* RESTRICT prevDipoles, GLOBAL real* RESTRICT prevDipolesPolar, int iteration, int recordPrevErrors) {
     LOCAL real2 buffer[64];
     const real fieldScale = 1/(real) 0x100000000;
     real sumErrors = 0;
@@ -587,17 +587,19 @@ KERNEL void recordInducedDipolesForDIIS(GLOBAL const mm_long* RESTRICT fixedFiel
             for (int i = 1; i < MAX_PREV_DIIS_DIPOLES; i++) {
                 int index1 = atom+(i-1)*NUM_ATOMS;
                 int index2 = atom+i*NUM_ATOMS;
-                prevDipoles[index1] = prevDipoles[index2];
-                prevDipolesPolar[index1] = prevDipolesPolar[index2];
-                if (recordPrevErrors)
-                    prevErrors[index1] = prevErrors[index2];
+                for (int j = 0; j < 3; j++) {
+                    prevDipoles[3*index1+j] = prevDipoles[3*index2+j];
+                    prevDipolesPolar[3*index1+j] = prevDipolesPolar[3*index2+j];
+                    if (recordPrevErrors)
+                        prevErrors[3*index1+j] = prevErrors[3*index2+j];
+                }
             }
         }
 
         // Compute the new dipole, and record it along with the error.
 
-        real3 oldDipole = inducedDipole[atom];
-        real3 oldDipolePolar = inducedDipolePolar[atom];
+        real3 oldDipole = make_real3(inducedDipole[3*atom], inducedDipole[3*atom+1], inducedDipole[3*atom+2]);
+        real3 oldDipolePolar = make_real3(inducedDipolePolar[3*atom], inducedDipolePolar[3*atom+1], inducedDipolePolar[3*atom+2]);
         real3 fixed = make_real3(fixedField[atom], fixedField[atom+PADDED_NUM_ATOMS], fixedField[atom+2*PADDED_NUM_ATOMS])*fieldScale;
         real3 fixedPolar = make_real3(fixedFieldPolar[atom], fixedFieldPolar[atom+PADDED_NUM_ATOMS], fixedFieldPolar[atom+2*PADDED_NUM_ATOMS])*fieldScale;
         real3 induced = make_real3(inducedField[atom], inducedField[atom+PADDED_NUM_ATOMS], inducedField[atom+2*PADDED_NUM_ATOMS])*fieldScale;
@@ -608,10 +610,17 @@ KERNEL void recordInducedDipolesForDIIS(GLOBAL const mm_long* RESTRICT fixedFiel
         real3 newDipole = scale*(fixed+fixedS+induced);
         real3 newDipolePolar = scale*(fixedPolar+fixedS+inducedPolar);
         int storePrevIndex = atom+min(iteration, MAX_PREV_DIIS_DIPOLES-1)*NUM_ATOMS;
-        prevDipoles[storePrevIndex] = newDipole;
-        prevDipolesPolar[storePrevIndex] = newDipolePolar;
-        if (recordPrevErrors)
-            prevErrors[storePrevIndex] = newDipole-oldDipole;
+        prevDipoles[3*storePrevIndex] = newDipole.x;
+        prevDipoles[3*storePrevIndex+1] = newDipole.y;
+        prevDipoles[3*storePrevIndex+2] = newDipole.z;
+        prevDipolesPolar[3*storePrevIndex] = newDipolePolar.x;
+        prevDipolesPolar[3*storePrevIndex+1] = newDipolePolar.y;
+        prevDipolesPolar[3*storePrevIndex+2] = newDipolePolar.z;
+        if (recordPrevErrors) {
+            prevErrors[3*storePrevIndex] = newDipole.x-oldDipole.x;
+            prevErrors[3*storePrevIndex+1] = newDipole.y-oldDipole.y;
+            prevErrors[3*storePrevIndex+2] = newDipole.z-oldDipole.z;
+        }
         real3 errors = (newDipole-oldDipole)*(newDipole-oldDipole);
         real3 errorsPolar = (newDipolePolar-oldDipolePolar)*(newDipolePolar-oldDipolePolar);
         sumErrors += errors.x + errors.y + errors.z;
@@ -643,16 +652,16 @@ KERNEL void recordInducedDipolesForDIIS(GLOBAL const mm_long* RESTRICT fixedFiel
     }
 }
 
-KERNEL void computeDIISMatrix(GLOBAL real3* RESTRICT prevErrors, int iteration, GLOBAL real* RESTRICT matrix) {
+KERNEL void computeDIISMatrix(GLOBAL real* RESTRICT prevErrors, int iteration, GLOBAL real* RESTRICT matrix) {
     LOCAL real sumBuffer[512];
     int j = min(iteration, MAX_PREV_DIIS_DIPOLES-1);
     for (int i = GROUP_ID; i <= j; i += NUM_GROUPS) {
         // All the threads in this thread block work together to compute a single matrix element.
 
-        real3 sum = make_real3(0);
-        for (int index = LOCAL_ID; index < NUM_ATOMS; index += LOCAL_SIZE)
-            sum += prevErrors[index+i*NUM_ATOMS]*prevErrors[index+j*NUM_ATOMS];
-        sumBuffer[LOCAL_ID] = sum.x + sum.y + sum.z;
+        real sum = 0;
+        for (int index = LOCAL_ID; index < 3*NUM_ATOMS; index += LOCAL_SIZE)
+            sum += prevErrors[index+i*3*NUM_ATOMS]*prevErrors[index+j*3*NUM_ATOMS];
+        sumBuffer[LOCAL_ID] = sum;
         SYNC_THREADS;
         for (int offset = 1; offset < LOCAL_SIZE; offset *= 2) { 
             if (LOCAL_ID+offset < LOCAL_SIZE && (LOCAL_ID&(2*offset-1)) == 0)
@@ -787,14 +796,14 @@ KERNEL void solveDIISMatrix(int iteration, GLOBAL const real* RESTRICT matrix, G
     }
 }
 
-KERNEL void updateInducedFieldByDIIS(GLOBAL real3* RESTRICT inducedDipole, GLOBAL real3* RESTRICT inducedDipolePolar, 
-        GLOBAL const real3* RESTRICT prevDipoles, GLOBAL const real3* RESTRICT prevDipolesPolar, GLOBAL const float* RESTRICT coefficients, int numPrev) {
-    for (int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
-        real3 sum = make_real3(0);
-        real3 sumPolar = make_real3(0);
+KERNEL void updateInducedFieldByDIIS(GLOBAL real* RESTRICT inducedDipole, GLOBAL real* RESTRICT inducedDipolePolar, 
+        GLOBAL const real* RESTRICT prevDipoles, GLOBAL const real* RESTRICT prevDipolesPolar, GLOBAL const float* RESTRICT coefficients, int numPrev) {
+    for (int index = GLOBAL_ID; index < 3*NUM_ATOMS; index += GLOBAL_SIZE) {
+        real sum = 0;
+        real sumPolar = 0;
         for (int i = 0; i < numPrev; i++) {
-            sum += coefficients[i]*prevDipoles[i*NUM_ATOMS+index];
-            sumPolar += coefficients[i]*prevDipolesPolar[i*NUM_ATOMS+index];
+            sum += coefficients[i]*prevDipoles[i*3*NUM_ATOMS+index];
+            sumPolar += coefficients[i]*prevDipolesPolar[i*3*NUM_ATOMS+index];
         }
         inducedDipole[index] = sum;
         inducedDipolePolar[index] = sumPolar;
@@ -802,16 +811,16 @@ KERNEL void updateInducedFieldByDIIS(GLOBAL real3* RESTRICT inducedDipole, GLOBA
 }
 #endif // not HIPPO
 
-KERNEL void initExtrapolatedDipoles(GLOBAL real3* RESTRICT inducedDipole, GLOBAL real3* RESTRICT extrapolatedDipole
+KERNEL void initExtrapolatedDipoles(GLOBAL real* RESTRICT inducedDipole, GLOBAL real* RESTRICT extrapolatedDipole
 #ifndef HIPPO
-        , GLOBAL real3* RESTRICT inducedDipolePolar, GLOBAL real3* RESTRICT extrapolatedDipolePolar, GLOBAL mm_long* RESTRICT inducedDipoleFieldGradient, GLOBAL mm_long* RESTRICT inducedDipoleFieldGradientPolar
+        , GLOBAL real* RESTRICT inducedDipolePolar, GLOBAL real* RESTRICT extrapolatedDipolePolar, GLOBAL mm_long* RESTRICT inducedDipoleFieldGradient, GLOBAL mm_long* RESTRICT inducedDipoleFieldGradientPolar
 #endif
 #ifdef USE_GK
-        , GLOBAL real3* RESTRICT inducedDipoleGk, GLOBAL real3* RESTRICT inducedDipoleGkPolar, GLOBAL real3* RESTRICT extrapolatedDipoleGk, GLOBAL real3* RESTRICT extrapolatedDipoleGkPolar,
+        , GLOBAL real* RESTRICT inducedDipoleGk, GLOBAL real* RESTRICT inducedDipoleGkPolar, GLOBAL real* RESTRICT extrapolatedDipoleGk, GLOBAL real* RESTRICT extrapolatedDipoleGkPolar,
         GLOBAL mm_long* RESTRICT inducedDipoleFieldGradientGk, GLOBAL mm_long* RESTRICT inducedDipoleFieldGradientGkPolar
 #endif
         ) {
-    for (int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
+    for (int index = GLOBAL_ID; index < 3*NUM_ATOMS; index += GLOBAL_SIZE) {
         extrapolatedDipole[index] = inducedDipole[index];
 #ifndef HIPPO
         extrapolatedDipolePolar[index] = inducedDipolePolar[index];
@@ -833,15 +842,15 @@ KERNEL void initExtrapolatedDipoles(GLOBAL real3* RESTRICT inducedDipole, GLOBAL
 #endif
 }
 
-KERNEL void iterateExtrapolatedDipoles(int order, GLOBAL real3* RESTRICT inducedDipole, GLOBAL real3* RESTRICT extrapolatedDipole, GLOBAL mm_long* RESTRICT inducedDipoleField,
+KERNEL void iterateExtrapolatedDipoles(int order, GLOBAL real* RESTRICT inducedDipole, GLOBAL real* RESTRICT extrapolatedDipole, GLOBAL mm_long* RESTRICT inducedDipoleField,
 #ifndef HIPPO
-        GLOBAL real3* RESTRICT inducedDipolePolar, GLOBAL real3* RESTRICT extrapolatedDipolePolar, GLOBAL mm_long* RESTRICT inducedDipoleFieldPolar, GLOBAL mm_long* RESTRICT inducedDipoleFieldGradient,
-        GLOBAL mm_long* RESTRICT inducedDipoleFieldGradientPolar, GLOBAL real3* RESTRICT extrapolatedDipoleFieldGradient, GLOBAL real3* RESTRICT extrapolatedDipoleFieldGradientPolar,
+        GLOBAL real* RESTRICT inducedDipolePolar, GLOBAL real* RESTRICT extrapolatedDipolePolar, GLOBAL mm_long* RESTRICT inducedDipoleFieldPolar, GLOBAL mm_long* RESTRICT inducedDipoleFieldGradient,
+        GLOBAL mm_long* RESTRICT inducedDipoleFieldGradientPolar, GLOBAL real* RESTRICT extrapolatedDipoleFieldGradient, GLOBAL real* RESTRICT extrapolatedDipoleFieldGradientPolar,
 #endif
 #ifdef USE_GK
-        GLOBAL real3* RESTRICT inducedDipoleGk, GLOBAL real3* RESTRICT inducedDipoleGkPolar, GLOBAL real3* RESTRICT extrapolatedDipoleGk, GLOBAL real3* RESTRICT extrapolatedDipoleGkPolar,
+        GLOBAL real* RESTRICT inducedDipoleGk, GLOBAL real* RESTRICT inducedDipoleGkPolar, GLOBAL real* RESTRICT extrapolatedDipoleGk, GLOBAL real* RESTRICT extrapolatedDipoleGkPolar,
         GLOBAL mm_long* RESTRICT inducedDipoleFieldGradientGk, GLOBAL mm_long* RESTRICT inducedDipoleFieldGradientGkPolar, GLOBAL mm_long* RESTRICT inducedDipoleFieldGk,
-        GLOBAL mm_long* RESTRICT inducedDipoleFieldGkPolar, GLOBAL real3* RESTRICT extrapolatedDipoleFieldGradientGk, GLOBAL real3* RESTRICT extrapolatedDipoleFieldGradientGkPolar,
+        GLOBAL mm_long* RESTRICT inducedDipoleFieldGkPolar, GLOBAL real* RESTRICT extrapolatedDipoleFieldGradientGk, GLOBAL real* RESTRICT extrapolatedDipoleFieldGradientGkPolar,
 #endif
 #ifdef HIPPO
         GLOBAL const real* RESTRICT polarizability
@@ -853,54 +862,72 @@ KERNEL void iterateExtrapolatedDipoles(int order, GLOBAL real3* RESTRICT induced
     for (int atom = GLOBAL_ID; atom < NUM_ATOMS; atom += GLOBAL_SIZE) {
         float polar = polarizability[atom];
         real3 value = make_real3(inducedDipoleField[atom], inducedDipoleField[atom+PADDED_NUM_ATOMS], inducedDipoleField[atom+2*PADDED_NUM_ATOMS])*fieldScale*polar;
-        inducedDipole[atom] = value;
-        extrapolatedDipole[order*NUM_ATOMS+atom] = value;
+        inducedDipole[3*atom] = value.x;
+        inducedDipole[3*atom+1] = value.y;
+        inducedDipole[3*atom+2] = value.z;
+        extrapolatedDipole[3*(order*NUM_ATOMS+atom)] = value.x;
+        extrapolatedDipole[3*(order*NUM_ATOMS+atom)+1] = value.y;
+        extrapolatedDipole[3*(order*NUM_ATOMS+atom)+2] = value.z;
 #ifndef HIPPO
         value = make_real3(inducedDipoleFieldPolar[atom], inducedDipoleFieldPolar[atom+PADDED_NUM_ATOMS], inducedDipoleFieldPolar[atom+2*PADDED_NUM_ATOMS])*fieldScale*polar;
-        inducedDipolePolar[atom] = value;
-        extrapolatedDipolePolar[order*NUM_ATOMS+atom] = value;
+        inducedDipolePolar[3*atom] = value.x;
+        inducedDipolePolar[3*atom+1] = value.y;
+        inducedDipolePolar[3*atom+2] = value.z;
+        extrapolatedDipolePolar[3*(order*NUM_ATOMS+atom)] = value.x;
+        extrapolatedDipolePolar[3*(order*NUM_ATOMS+atom)+1] = value.y;
+        extrapolatedDipolePolar[3*(order*NUM_ATOMS+atom)+2] = value.z;
 #endif
 #ifdef USE_GK
         value = make_real3(inducedDipoleFieldGk[atom], inducedDipoleFieldGk[atom+PADDED_NUM_ATOMS], inducedDipoleFieldGk[atom+2*PADDED_NUM_ATOMS])*fieldScale*polar;
-        inducedDipoleGk[atom] = value;
-        extrapolatedDipoleGk[order*NUM_ATOMS+atom] = value;
+        inducedDipoleGk[3*atom] = value.x;
+        inducedDipoleGk[3*atom+1] = value.y;
+        inducedDipoleGk[3*atom+2] = value.z;
+        extrapolatedDipoleGk[3*(order*NUM_ATOMS+atom)] = value.x;
+        extrapolatedDipoleGk[3*(order*NUM_ATOMS+atom)+1] = value.y;
+        extrapolatedDipoleGk[3*(order*NUM_ATOMS+atom)+2] = value.z;
         value = make_real3(inducedDipoleFieldGkPolar[atom], inducedDipoleFieldGkPolar[atom+PADDED_NUM_ATOMS], inducedDipoleFieldGkPolar[atom+2*PADDED_NUM_ATOMS])*fieldScale*polar;
-        inducedDipoleGkPolar[atom] = value;
-        extrapolatedDipoleGkPolar[order*NUM_ATOMS+atom] = value;
+        inducedDipoleGkPolar[3*atom] = value.x;
+        inducedDipoleGkPolar[3*atom+1] = value.y;
+        inducedDipoleGkPolar[3*atom+2] = value.z;
+        extrapolatedDipoleGkPolar[3*(order*NUM_ATOMS+atom)] = value.x;
+        extrapolatedDipoleGkPolar[3*(order*NUM_ATOMS+atom)+1] = value.y;
+        extrapolatedDipoleGkPolar[3*(order*NUM_ATOMS+atom)+2] = value.z;
 #endif
     }
 #ifndef HIPPO
     for (int index = GLOBAL_ID; index < 2*NUM_ATOMS; index += GLOBAL_SIZE) {
         int index2 = (order-1)*2*NUM_ATOMS+index;
-        extrapolatedDipoleFieldGradient[index2] = fieldScale*make_real3(inducedDipoleFieldGradient[3*index], inducedDipoleFieldGradient[3*index+1], inducedDipoleFieldGradient[3*index+2]);
-        extrapolatedDipoleFieldGradientPolar[index2] = fieldScale*make_real3(inducedDipoleFieldGradientPolar[3*index], inducedDipoleFieldGradientPolar[3*index+1], inducedDipoleFieldGradientPolar[3*index+2]);
+        for (int i = 0; i < 3; i++) {
+            extrapolatedDipoleFieldGradient[3*index2+i] = fieldScale*inducedDipoleFieldGradient[3*index+i];
+            extrapolatedDipoleFieldGradientPolar[3*index2+i] = fieldScale*inducedDipoleFieldGradientPolar[3*index+i];
 #ifdef USE_GK
-        extrapolatedDipoleFieldGradientGk[index2] = fieldScale*make_real3(inducedDipoleFieldGradientGk[3*index], inducedDipoleFieldGradientGk[3*index+1], inducedDipoleFieldGradientGk[3*index+2]);
-        extrapolatedDipoleFieldGradientGkPolar[index2] = fieldScale*make_real3(inducedDipoleFieldGradientGkPolar[3*index], inducedDipoleFieldGradientGkPolar[3*index+1], inducedDipoleFieldGradientGkPolar[3*index+2]);
+            extrapolatedDipoleFieldGradientGk[3*index2+i] = fieldScale*inducedDipoleFieldGradientGk[3*index+i];
+            extrapolatedDipoleFieldGradientGkPolar[3*index2+i] = fieldScale*inducedDipoleFieldGradientGkPolar[3*index+i];
 #endif
+        }
     }
 #endif
 }
 
-KERNEL void computeExtrapolatedDipoles(GLOBAL real3* RESTRICT inducedDipole, GLOBAL real3* RESTRICT extrapolatedDipole
+KERNEL void computeExtrapolatedDipoles(GLOBAL real* RESTRICT inducedDipole, GLOBAL real* RESTRICT extrapolatedDipole
 #ifndef HIPPO
-        , GLOBAL real3* RESTRICT inducedDipolePolar, GLOBAL real3* RESTRICT extrapolatedDipolePolar
+        , GLOBAL real* RESTRICT inducedDipolePolar, GLOBAL real* RESTRICT extrapolatedDipolePolar
 #endif
 #ifdef USE_GK
-        , GLOBAL real3* RESTRICT inducedDipoleGk, GLOBAL real3* RESTRICT inducedDipoleGkPolar, GLOBAL real3* RESTRICT extrapolatedDipoleGk, GLOBAL real3* RESTRICT extrapolatedDipoleGkPolar
+        , GLOBAL real* RESTRICT inducedDipoleGk, GLOBAL real* RESTRICT inducedDipoleGkPolar, GLOBAL real* RESTRICT extrapolatedDipoleGk, GLOBAL real* RESTRICT extrapolatedDipoleGkPolar
 #endif
         ) {
     real coeff[] = {EXTRAPOLATION_COEFFICIENTS_SUM};
-    for (int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
-        real3 sum = make_real3(0), sumPolar = make_real3(0), sumGk = make_real3(0), sumGkPolar = make_real3(0);
+    for (int index = GLOBAL_ID; index < 3*NUM_ATOMS; index += GLOBAL_SIZE) {
+        real sum = 0, sumPolar = 0, sumGk = 0, sumGkPolar = 0;
         for (int order = 0; order < MAX_EXTRAPOLATION_ORDER; order++) {
-            sum += extrapolatedDipole[order*NUM_ATOMS+index]*coeff[order];
+            sum += extrapolatedDipole[order*3*NUM_ATOMS+index]*coeff[order];
 #ifndef HIPPO
-            sumPolar += extrapolatedDipolePolar[order*NUM_ATOMS+index]*coeff[order];
+            sumPolar += extrapolatedDipolePolar[order*3*NUM_ATOMS+index]*coeff[order];
 #endif
 #ifdef USE_GK
-            sumGk += extrapolatedDipoleGk[order*NUM_ATOMS+index]*coeff[order];
-            sumGkPolar += extrapolatedDipoleGkPolar[order*NUM_ATOMS+index]*coeff[order];
+            sumGk += extrapolatedDipoleGk[order*3*NUM_ATOMS+index]*coeff[order];
+            sumGkPolar += extrapolatedDipoleGkPolar[order*3*NUM_ATOMS+index]*coeff[order];
 #endif
         }
         inducedDipole[index] = sum;
@@ -914,59 +941,64 @@ KERNEL void computeExtrapolatedDipoles(GLOBAL real3* RESTRICT inducedDipole, GLO
     }
 }
 
-KERNEL void addExtrapolatedFieldGradientToForce(GLOBAL mm_long* RESTRICT forceBuffers, GLOBAL real3* RESTRICT extrapolatedDipole,
-        GLOBAL real3* RESTRICT extrapolatedDipolePolar, GLOBAL real3* RESTRICT extrapolatedDipoleFieldGradient, GLOBAL real3* RESTRICT extrapolatedDipoleFieldGradientPolar
+KERNEL void addExtrapolatedFieldGradientToForce(GLOBAL mm_long* RESTRICT forceBuffers, GLOBAL real* RESTRICT extrapolatedDipole,
+        GLOBAL real* RESTRICT extrapolatedDipolePolar, GLOBAL real* RESTRICT extrapolatedDipoleFieldGradient, GLOBAL real* RESTRICT extrapolatedDipoleFieldGradientPolar
 #ifdef USE_GK
-        , GLOBAL real3* RESTRICT extrapolatedDipoleGk, GLOBAL real3* RESTRICT extrapolatedDipoleGkPolar,
-        GLOBAL real3* RESTRICT extrapolatedDipoleFieldGradientGk, GLOBAL real3* RESTRICT extrapolatedDipoleFieldGradientGkPolar
+        , GLOBAL real* RESTRICT extrapolatedDipoleGk, GLOBAL real* RESTRICT extrapolatedDipoleGkPolar,
+        GLOBAL real* RESTRICT extrapolatedDipoleFieldGradientGk, GLOBAL real* RESTRICT extrapolatedDipoleFieldGradientGkPolar
 #endif
         ) {
     real coeff[] = {EXTRAPOLATION_COEFFICIENTS_SUM};
     for (int atom = GLOBAL_ID; atom < NUM_ATOMS; atom += GLOBAL_SIZE) {
-        real3 f = make_real3(0);
+        real fx = 0, fy = 0, fz = 0;
         for (int l = 0; l < MAX_EXTRAPOLATION_ORDER-1; l++) {
-            int index1 = (l*NUM_ATOMS+atom);
-            real3 dipole = extrapolatedDipole[index1];
-            real3 dipolePolar = extrapolatedDipolePolar[index1];
+            int index1 = 3*(l*NUM_ATOMS+atom);
+            real dipole[] = {extrapolatedDipole[index1], extrapolatedDipole[index1+1], extrapolatedDipole[index1+2]};
+            real dipolePolar[] = {extrapolatedDipolePolar[index1], extrapolatedDipolePolar[index1+1], extrapolatedDipolePolar[index1+2]};
 #ifdef USE_GK
-            real3 dipoleGk = extrapolatedDipoleGk[index1];
-            real3 dipoleGkPolar = extrapolatedDipoleGkPolar[index1];
+            real dipoleGk[] = {extrapolatedDipoleGk[index1], extrapolatedDipoleGk[index1+1], extrapolatedDipoleGk[index1+2]};
+            real dipoleGkPolar[] = {extrapolatedDipoleGkPolar[index1], extrapolatedDipoleGkPolar[index1+1], extrapolatedDipoleGkPolar[index1+2]};
 #endif
             for (int m = 0; m < MAX_EXTRAPOLATION_ORDER-1-l; m++) {
-                int index2 = 2*(m*NUM_ATOMS+atom);
+                int index2 = 6*(m*NUM_ATOMS+atom);
                 real scale = 0.5f*coeff[l+m+1]*ENERGY_SCALE_FACTOR;
-                real3 gradient[] = {extrapolatedDipoleFieldGradient[index2], extrapolatedDipoleFieldGradient[index2+1]};
-                real3 gradientPolar[] = {extrapolatedDipoleFieldGradientPolar[index2], extrapolatedDipoleFieldGradientPolar[index2+1]};
-                f.x += scale*(dipole.x*gradientPolar[0].x + dipole.y*gradientPolar[1].x + dipole.z*gradientPolar[1].y);
-                f.y += scale*(dipole.x*gradientPolar[1].x + dipole.y*gradientPolar[0].y + dipole.z*gradientPolar[1].z);
-                f.z += scale*(dipole.x*gradientPolar[1].y + dipole.y*gradientPolar[1].z + dipole.z*gradientPolar[0].z);
-                f.x += scale*(dipolePolar.x*gradient[0].x + dipolePolar.y*gradient[1].x + dipolePolar.z*gradient[1].y);
-                f.y += scale*(dipolePolar.x*gradient[1].x + dipolePolar.y*gradient[0].y + dipolePolar.z*gradient[1].z);
-                f.z += scale*(dipolePolar.x*gradient[1].y + dipolePolar.y*gradient[1].z + dipolePolar.z*gradient[0].z);
+                real gradient[] = {extrapolatedDipoleFieldGradient[index2], extrapolatedDipoleFieldGradient[index2+1], extrapolatedDipoleFieldGradient[index2+2],
+                                   extrapolatedDipoleFieldGradient[index2+3], extrapolatedDipoleFieldGradient[index2+4], extrapolatedDipoleFieldGradient[index2+5]};
+                real gradientPolar[] = {extrapolatedDipoleFieldGradientPolar[index2], extrapolatedDipoleFieldGradientPolar[index2+1], extrapolatedDipoleFieldGradientPolar[index2+2],
+                                        extrapolatedDipoleFieldGradientPolar[index2+3], extrapolatedDipoleFieldGradientPolar[index2+4], extrapolatedDipoleFieldGradientPolar[index2+5]};
+                fx += scale*(dipole[0]*gradientPolar[0] + dipole[1]*gradientPolar[3] + dipole[2]*gradientPolar[4]);
+                fy += scale*(dipole[0]*gradientPolar[3] + dipole[1]*gradientPolar[1] + dipole[2]*gradientPolar[5]);
+                fz += scale*(dipole[0]*gradientPolar[4] + dipole[1]*gradientPolar[5] + dipole[2]*gradientPolar[2]);
+                fx += scale*(dipolePolar[0]*gradient[0] + dipolePolar[1]*gradient[3] + dipolePolar[2]*gradient[4]);
+                fy += scale*(dipolePolar[0]*gradient[3] + dipolePolar[1]*gradient[1] + dipolePolar[2]*gradient[5]);
+                fz += scale*(dipolePolar[0]*gradient[4] + dipolePolar[1]*gradient[5] + dipolePolar[2]*gradient[2]);
 #ifdef USE_GK
-                real3 gradientGk[] = {extrapolatedDipoleFieldGradient[index2], extrapolatedDipoleFieldGradient[index2+1]};
-                real3 gradientGkPolar[] = {extrapolatedDipoleFieldGradientPolar[index2], extrapolatedDipoleFieldGradientPolar[index2+1]};
-                f.x += scale*(dipoleGk.x*gradientGkPolar[0].x + dipoleGk.y*gradientGkPolar[1].x + dipoleGk.z*gradientGkPolar[1].y);
-                f.y += scale*(dipoleGk.x*gradientGkPolar[1].x + dipoleGk.y*gradientGkPolar[0].y + dipoleGk.z*gradientGkPolar[1].z);
-                f.z += scale*(dipoleGk.x*gradientGkPolar[1].y + dipoleGk.y*gradientGkPolar[1].z + dipoleGk.z*gradientGkPolar[0].z);
-                f.x += scale*(dipoleGkPolar.x*gradientGk[0].x + dipoleGkPolar.y*gradientGk[1].x + dipoleGkPolar.z*gradientGk[1].y);
-                f.y += scale*(dipoleGkPolar.x*gradientGk[1].x + dipoleGkPolar.y*gradientGk[0].y + dipoleGkPolar.z*gradientGk[1].z);
-                f.z += scale*(dipoleGkPolar.x*gradientGk[1].y + dipoleGkPolar.y*gradientGk[1].z + dipoleGkPolar.z*gradientGk[0].z);
+                real gradientGk[] = {extrapolatedDipoleFieldGradient[index2], extrapolatedDipoleFieldGradient[index2+1], extrapolatedDipoleFieldGradient[index2+2],
+                                   extrapolatedDipoleFieldGradient[index2+3], extrapolatedDipoleFieldGradient[index2+4], extrapolatedDipoleFieldGradient[index2+5]};
+                real gradientGkPolar[] = {extrapolatedDipoleFieldGradientPolar[index2], extrapolatedDipoleFieldGradientPolar[index2+1], extrapolatedDipoleFieldGradientPolar[index2+2],
+                                        extrapolatedDipoleFieldGradientPolar[index2+3], extrapolatedDipoleFieldGradientPolar[index2+4], extrapolatedDipoleFieldGradientPolar[index2+5]};
+                fx += scale*(dipoleGk[0]*gradientGkPolar[0] + dipoleGk[1]*gradientGkPolar[3] + dipoleGk[2]*gradientGkPolar[4]);
+                fy += scale*(dipoleGk[0]*gradientGkPolar[3] + dipoleGk[1]*gradientGkPolar[1] + dipoleGk[2]*gradientGkPolar[5]);
+                fz += scale*(dipoleGk[0]*gradientGkPolar[4] + dipoleGk[1]*gradientGkPolar[5] + dipoleGk[2]*gradientGkPolar[2]);
+                fx += scale*(dipoleGkPolar[0]*gradientGk[0] + dipoleGkPolar[1]*gradientGk[3] + dipoleGkPolar[2]*gradientGk[4]);
+                fy += scale*(dipoleGkPolar[0]*gradientGk[3] + dipoleGkPolar[1]*gradientGk[1] + dipoleGkPolar[2]*gradientGk[5]);
+                fz += scale*(dipoleGkPolar[0]*gradientGk[4] + dipoleGkPolar[1]*gradientGk[5] + dipoleGkPolar[2]*gradientGk[2]);
 #endif
             }
         }
-        forceBuffers[atom] += (mm_long) (f.x*0x100000000);
-        forceBuffers[atom+PADDED_NUM_ATOMS] += (mm_long) (f.y*0x100000000);
-        forceBuffers[atom+PADDED_NUM_ATOMS*2] += (mm_long) (f.z*0x100000000);
+        forceBuffers[atom] += (mm_long) (fx*0x100000000);
+        forceBuffers[atom+PADDED_NUM_ATOMS] += (mm_long) (fy*0x100000000);
+        forceBuffers[atom+PADDED_NUM_ATOMS*2] += (mm_long) (fz*0x100000000);
     }
 }
 
 #ifdef HIPPO
-KERNEL void computePolarizationEnergy(GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real3* RESTRICT inducedDipole,
-        GLOBAL const real3* RESTRICT extrapolatedDipole, GLOBAL const real* RESTRICT polarizability) {
+KERNEL void computePolarizationEnergy(GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real* RESTRICT inducedDipole,
+        GLOBAL const real* RESTRICT extrapolatedDipole, GLOBAL const real* RESTRICT polarizability) {
     mixed energy = 0;
-    for (int atom = GLOBAL_ID; atom < NUM_ATOMS; atom += GLOBAL_SIZE)
-        energy -= (ENERGY_SCALE_FACTOR/2)*dot(extrapolatedDipole[atom], inducedDipole[atom])/polarizability[atom];
+    for (int atom = GLOBAL_ID; atom < 3*NUM_ATOMS; atom += GLOBAL_SIZE)
+        for (int i = 0; i < 3; i++)
+            energy -= (ENERGY_SCALE_FACTOR/2)*extrapolatedDipole[3*atom+i]*inducedDipole[3*atom+i]/polarizability[atom];
     energyBuffer[GLOBAL_ID] += energy;
 }
 #endif

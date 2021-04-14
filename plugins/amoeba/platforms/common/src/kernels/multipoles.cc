@@ -1,7 +1,7 @@
 #define GROUP_SIZE 128
 
 KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RESTRICT multipoleParticles, GLOBAL float* RESTRICT molecularDipoles,
-        GLOBAL float* RESTRICT molecularQuadrupoles, GLOBAL real3* RESTRICT labFrameDipoles, GLOBAL real* RESTRICT labFrameQuadrupoles,
+        GLOBAL float* RESTRICT molecularQuadrupoles, GLOBAL real* RESTRICT labFrameDipoles, GLOBAL real* RESTRICT labFrameQuadrupoles,
         GLOBAL real* RESTRICT sphericalDipoles, GLOBAL real* RESTRICT sphericalQuadrupoles) {
     for (int atom = GLOBAL_ID; atom < NUM_ATOMS; atom += GLOBAL_SIZE) {
         // Load the spherical multipoles.
@@ -178,9 +178,9 @@ KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RES
             molDipole[2] = molecularDipoles[offset+2];
             if (reverse)
                 molDipole[1] *= -1;
-            labFrameDipoles[atom] = make_real3(molDipole[0]*vectorX.x + molDipole[1]*vectorY.x + molDipole[2]*vectorZ.x,
-                                               molDipole[0]*vectorX.y + molDipole[1]*vectorY.y + molDipole[2]*vectorZ.y,
-                                               molDipole[0]*vectorX.z + molDipole[1]*vectorY.z + molDipole[2]*vectorZ.z);
+            labFrameDipoles[3*atom] = molDipole[0]*vectorX.x + molDipole[1]*vectorY.x + molDipole[2]*vectorZ.x;
+            labFrameDipoles[3*atom+1] = molDipole[0]*vectorX.y + molDipole[1]*vectorY.y + molDipole[2]*vectorZ.y,
+            labFrameDipoles[3*atom+2] = molDipole[0]*vectorX.z + molDipole[1]*vectorY.z + molDipole[2]*vectorZ.z;
             
             // ---------------------------------------------------------------------------------------
             
@@ -277,7 +277,9 @@ KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RES
             sphericalQuadrupoles[offset+4] = rotatedQuadrupole[4];
         }
         else {
-            labFrameDipoles[atom] = make_real3(molecularDipoles[3*atom], molecularDipoles[3*atom+1], molecularDipoles[3*atom+2]);
+            labFrameDipoles[3*atom] = molecularDipoles[3*atom];
+            labFrameDipoles[3*atom+1] = molecularDipoles[3*atom+1];
+            labFrameDipoles[3*atom+2] = molecularDipoles[3*atom+2];
             labFrameQuadrupoles[5*atom] = molecularQuadrupoles[5*atom];
             labFrameQuadrupoles[5*atom+1] = molecularQuadrupoles[5*atom+1];
             labFrameQuadrupoles[5*atom+2] = molecularQuadrupoles[5*atom+2];
@@ -289,24 +291,24 @@ KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RES
 
 KERNEL void recordInducedDipoles(GLOBAL const mm_long* RESTRICT fieldBuffers, GLOBAL const mm_long* RESTRICT fieldPolarBuffers,
 #ifdef USE_GK
-        GLOBAL const mm_long* RESTRICT gkFieldBuffers, GLOBAL real3* RESTRICT inducedDipoleS, GLOBAL real3* RESTRICT inducedDipolePolarS, 
+        GLOBAL const mm_long* RESTRICT gkFieldBuffers, GLOBAL real* RESTRICT inducedDipoleS, GLOBAL real* RESTRICT inducedDipolePolarS, 
 #endif
-        GLOBAL real3* RESTRICT inducedDipole, GLOBAL real3* RESTRICT inducedDipolePolar, GLOBAL const float* RESTRICT polarizability) {
+        GLOBAL real* RESTRICT inducedDipole, GLOBAL real* RESTRICT inducedDipolePolar, GLOBAL const float* RESTRICT polarizability) {
     for (int atom = GLOBAL_ID; atom < NUM_ATOMS; atom += GLOBAL_SIZE) {
         real scale = polarizability[atom]/(real) 0x100000000;
-        inducedDipole[atom].x = scale*fieldBuffers[atom];
-        inducedDipole[atom].y = scale*fieldBuffers[atom+PADDED_NUM_ATOMS];
-        inducedDipole[atom].z = scale*fieldBuffers[atom+PADDED_NUM_ATOMS*2];
-        inducedDipolePolar[atom].x = scale*fieldPolarBuffers[atom];
-        inducedDipolePolar[atom].y = scale*fieldPolarBuffers[atom+PADDED_NUM_ATOMS];
-        inducedDipolePolar[atom].z = scale*fieldPolarBuffers[atom+PADDED_NUM_ATOMS*2];
+        inducedDipole[3*atom] = scale*fieldBuffers[atom];
+        inducedDipole[3*atom+1] = scale*fieldBuffers[atom+PADDED_NUM_ATOMS];
+        inducedDipole[3*atom+2] = scale*fieldBuffers[atom+PADDED_NUM_ATOMS*2];
+        inducedDipolePolar[3*atom] = scale*fieldPolarBuffers[atom];
+        inducedDipolePolar[3*atom+1] = scale*fieldPolarBuffers[atom+PADDED_NUM_ATOMS];
+        inducedDipolePolar[3*atom+2] = scale*fieldPolarBuffers[atom+PADDED_NUM_ATOMS*2];
 #ifdef USE_GK
-        inducedDipoleS[atom].x = scale*(fieldBuffers[atom]+gkFieldBuffers[atom]);
-        inducedDipoleS[atom].y = scale*(fieldBuffers[atom+PADDED_NUM_ATOMS]+gkFieldBuffers[atom+PADDED_NUM_ATOMS]);
-        inducedDipoleS[atom].z = scale*(fieldBuffers[atom+PADDED_NUM_ATOMS*2]+gkFieldBuffers[atom+PADDED_NUM_ATOMS*2]);
-        inducedDipolePolarS[atom].x = scale*(fieldPolarBuffers[atom]+gkFieldBuffers[atom]);
-        inducedDipolePolarS[atom].y = scale*(fieldPolarBuffers[atom+PADDED_NUM_ATOMS]+gkFieldBuffers[atom+PADDED_NUM_ATOMS]);
-        inducedDipolePolarS[atom].z = scale*(fieldPolarBuffers[atom+PADDED_NUM_ATOMS*2]+gkFieldBuffers[atom+PADDED_NUM_ATOMS*2]);
+        inducedDipoleS[3*atom] = scale*(fieldBuffers[atom]+gkFieldBuffers[atom]);
+        inducedDipoleS[3*atom+1] = scale*(fieldBuffers[atom+PADDED_NUM_ATOMS]+gkFieldBuffers[atom+PADDED_NUM_ATOMS]);
+        inducedDipoleS[3*atom+2] = scale*(fieldBuffers[atom+PADDED_NUM_ATOMS*2]+gkFieldBuffers[atom+PADDED_NUM_ATOMS*2]);
+        inducedDipolePolarS[3*atom] = scale*(fieldPolarBuffers[atom]+gkFieldBuffers[atom]);
+        inducedDipolePolarS[3*atom+1] = scale*(fieldPolarBuffers[atom+PADDED_NUM_ATOMS]+gkFieldBuffers[atom+PADDED_NUM_ATOMS]);
+        inducedDipolePolarS[3*atom+2] = scale*(fieldPolarBuffers[atom+PADDED_NUM_ATOMS*2]+gkFieldBuffers[atom+PADDED_NUM_ATOMS*2]);
 #endif
     }
 }
@@ -531,7 +533,7 @@ KERNEL void mapTorqueToForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL cons
  * Compute the electrostatic potential at each of a set of points.
  */
 KERNEL void computePotentialAtPoints(GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
-        GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real4* RESTRICT points,
+        GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real4* RESTRICT points,
         GLOBAL real* RESTRICT potential, int numPoints, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     LOCAL real4 localPosq[GROUP_SIZE];
     LOCAL real3 localDipole[GROUP_SIZE];
@@ -549,7 +551,7 @@ KERNEL void computePotentialAtPoints(GLOBAL const real4* RESTRICT posq, GLOBAL c
             if (atom < NUM_ATOMS) {
                 localPosq[LOCAL_ID] = posq[atom];
                 localDipole[LOCAL_ID] = make_real3(labFrameDipole[3*atom], labFrameDipole[3*atom+1], labFrameDipole[3*atom+2]);
-                localInducedDipole[LOCAL_ID] = inducedDipole[atom];
+                localInducedDipole[LOCAL_ID] = make_real3(inducedDipole[3*atom], inducedDipole[3*atom+1], inducedDipole[3*atom+2]);
                 localQuadrupole[5*LOCAL_ID] = labFrameQuadrupole[5*atom];
                 localQuadrupole[5*LOCAL_ID+1] = labFrameQuadrupole[5*atom+1];
                 localQuadrupole[5*LOCAL_ID+2] = labFrameQuadrupole[5*atom+2];

@@ -299,22 +299,22 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
     
     polarizationType = force.getPolarizationType();
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-    labDipoles.initialize(cc, paddedNumAtoms, 3*elementSize, "labDipoles");
+    labDipoles.initialize(cc, 3*paddedNumAtoms, elementSize, "labDipoles");
     labQuadrupoles.initialize(cc, 5*paddedNumAtoms, elementSize, "labQuadrupoles");
     sphericalDipoles.initialize(cc, 3*paddedNumAtoms, elementSize, "sphericalDipoles");
     sphericalQuadrupoles.initialize(cc, 5*paddedNumAtoms, elementSize, "sphericalQuadrupoles");
-    fracDipoles.initialize(cc, paddedNumAtoms, 3*elementSize, "fracDipoles");
+    fracDipoles.initialize(cc, 3*paddedNumAtoms, elementSize, "fracDipoles");
     fracQuadrupoles.initialize(cc, 6*paddedNumAtoms, elementSize, "fracQuadrupoles");
     field.initialize(cc, 3*paddedNumAtoms, sizeof(long long), "field");
     fieldPolar.initialize(cc, 3*paddedNumAtoms, sizeof(long long), "fieldPolar");
     torque.initialize(cc, 3*paddedNumAtoms, sizeof(long long), "torque");
-    inducedDipole.initialize(cc, paddedNumAtoms, 3*elementSize, "inducedDipole");
-    inducedDipolePolar.initialize(cc, paddedNumAtoms, 3*elementSize, "inducedDipolePolar");
+    inducedDipole.initialize(cc, 3*paddedNumAtoms, elementSize, "inducedDipole");
+    inducedDipolePolar.initialize(cc, 3*paddedNumAtoms, elementSize, "inducedDipolePolar");
     if (polarizationType == AmoebaMultipoleForce::Mutual) {
         inducedDipoleErrors.initialize(cc, cc.getNumThreadBlocks(), sizeof(mm_float2), "inducedDipoleErrors");
-        prevDipoles.initialize(cc, numMultipoles*MaxPrevDIISDipoles, 3*elementSize, "prevDipoles");
-        prevDipolesPolar.initialize(cc, numMultipoles*MaxPrevDIISDipoles, 3*elementSize, "prevDipolesPolar");
-        prevErrors.initialize(cc, numMultipoles*MaxPrevDIISDipoles, 3*elementSize, "prevErrors");
+        prevDipoles.initialize(cc, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipoles");
+        prevDipolesPolar.initialize(cc, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesPolar");
+        prevErrors.initialize(cc, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevErrors");
         diisMatrix.initialize(cc, MaxPrevDIISDipoles*MaxPrevDIISDipoles, elementSize, "diisMatrix");
         diisCoefficients.initialize(cc, MaxPrevDIISDipoles+1, sizeof(float), "diisMatrix");
         syncEvent = cc.createEvent();
@@ -322,12 +322,12 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
     }
     else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
         int numOrders = force.getExtrapolationCoefficients().size();
-        extrapolatedDipole.initialize(cc, numMultipoles*numOrders, 3*elementSize, "extrapolatedDipole");
-        extrapolatedDipolePolar.initialize(cc, numMultipoles*numOrders, 3*elementSize, "extrapolatedDipolePolar");
+        extrapolatedDipole.initialize(cc, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipole");
+        extrapolatedDipolePolar.initialize(cc, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipolePolar");
         inducedDipoleFieldGradient.initialize(cc, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradient");
         inducedDipoleFieldGradientPolar.initialize(cc, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradientPolar");
-        extrapolatedDipoleFieldGradient.initialize(cc, 2*paddedNumAtoms*(numOrders-1), 3*elementSize, "extrapolatedDipoleFieldGradient");
-        extrapolatedDipoleFieldGradientPolar.initialize(cc, 2*paddedNumAtoms*(numOrders-1), 3*elementSize, "extrapolatedDipoleFieldGradientPolar");
+        extrapolatedDipoleFieldGradient.initialize(cc, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradient");
+        extrapolatedDipoleFieldGradientPolar.initialize(cc, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientPolar");
     }
     // The next two arrays will get resized once we know the number of exclusions.
     covalentFlags.initialize<mm_int2>(cc, 1, "covalentFlags");
@@ -479,18 +479,18 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         fixedThreadMemory += 4*elementSize;
         inducedThreadMemory += 13*elementSize;
         if (polarizationType == AmoebaMultipoleForce::Mutual) {
-            prevDipolesGk.initialize(cc, numMultipoles*MaxPrevDIISDipoles, 3*elementSize, "prevDipolesGk");
-            prevDipolesGkPolar.initialize(cc, numMultipoles*MaxPrevDIISDipoles, 3*elementSize, "prevDipolesGkPolar");
+            prevDipolesGk.initialize(cc, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesGk");
+            prevDipolesGkPolar.initialize(cc, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesGkPolar");
         }
         else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
             inducedThreadMemory += 12*elementSize;
             int numOrders = force.getExtrapolationCoefficients().size();
-            extrapolatedDipoleGk.initialize(cc, numMultipoles*numOrders, 3*elementSize, "extrapolatedDipoleGk");
-            extrapolatedDipoleGkPolar.initialize(cc, numMultipoles*numOrders, 3*elementSize, "extrapolatedDipoleGkPolar");
+            extrapolatedDipoleGk.initialize(cc, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipoleGk");
+            extrapolatedDipoleGkPolar.initialize(cc, 3*numMultipoles*numOrders, elementSize, "extrapolatedDipoleGkPolar");
             inducedDipoleFieldGradientGk.initialize(cc, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradientGk");
             inducedDipoleFieldGradientGkPolar.initialize(cc, 6*paddedNumAtoms, sizeof(long long), "inducedDipoleFieldGradientGkPolar");
-            extrapolatedDipoleFieldGradientGk.initialize(cc, 2*paddedNumAtoms*(numOrders-1), 3*elementSize, "extrapolatedDipoleFieldGradientGk");
-            extrapolatedDipoleFieldGradientGkPolar.initialize(cc, 2*paddedNumAtoms*(numOrders-1), 3*elementSize, "extrapolatedDipoleFieldGradientGkPolar");
+            extrapolatedDipoleFieldGradientGk.initialize(cc, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientGk");
+            extrapolatedDipoleFieldGradientGkPolar.initialize(cc, 6*paddedNumAtoms*(numOrders-1), elementSize, "extrapolatedDipoleFieldGradientGkPolar");
         }
     }
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
@@ -1415,16 +1415,16 @@ void CommonCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextIm
     dipoles.resize(numParticles);
     const vector<int>& order = cc.getAtomIndex();
     if (cc.getUseDoublePrecision()) {
-        vector<mm_double3> labDipoleVec;
+        vector<double> labDipoleVec;
         labDipoles.download(labDipoleVec);
         for (int i = 0; i < numParticles; i++)
-            dipoles[order[i]] = Vec3(labDipoleVec[i].x, labDipoleVec[i].y, labDipoleVec[i].z);
+            dipoles[order[i]] = Vec3(labDipoleVec[3*i], labDipoleVec[3*i+1], labDipoleVec[3*i+2]);
     }
     else {
-        vector<mm_float3> labDipoleVec;
+        vector<float> labDipoleVec;
         labDipoles.download(labDipoleVec);
         for (int i = 0; i < numParticles; i++)
-            dipoles[order[i]] = Vec3(labDipoleVec[i].x, labDipoleVec[i].y, labDipoleVec[i].z);
+            dipoles[order[i]] = Vec3(labDipoleVec[3*i], labDipoleVec[3*i+1], labDipoleVec[3*i+2]);
     }
 }
 
@@ -1435,16 +1435,16 @@ void CommonCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& contex
     dipoles.resize(numParticles);
     const vector<int>& order = cc.getAtomIndex();
     if (cc.getUseDoublePrecision()) {
-        vector<mm_double3> d;
+        vector<double> d;
         inducedDipole.download(d);
         for (int i = 0; i < numParticles; i++)
-            dipoles[order[i]] = Vec3(d[i].x, d[i].y, d[i].z);
+            dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
     }
     else {
-        vector<mm_float3> d;
+        vector<float> d;
         inducedDipole.download(d);
         for (int i = 0; i < numParticles; i++)
-            dipoles[order[i]] = Vec3(d[i].x, d[i].y, d[i].z);
+            dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
     }
 }
 
@@ -1456,8 +1456,8 @@ void CommonCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context,
     const vector<int>& order = cc.getAtomIndex();
     if (cc.getUseDoublePrecision()) {
         vector<mm_double4> posqVec;
-        vector<mm_double3> labDipoleVec;
-        vector<mm_double3> inducedDipoleVec;
+        vector<double> labDipoleVec;
+        vector<double> inducedDipoleVec;
         double totalDipoleVecX;
         double totalDipoleVecY;
         double totalDipoleVecZ;
@@ -1465,16 +1465,16 @@ void CommonCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context,
         labDipoles.download(labDipoleVec);
         cc.getPosq().download(posqVec);
         for (int i = 0; i < numParticles; i++) {
-            totalDipoleVecX = labDipoleVec[i].x + inducedDipoleVec[i].x;
-            totalDipoleVecY = labDipoleVec[i].y + inducedDipoleVec[i].y;
-            totalDipoleVecZ = labDipoleVec[i].z + inducedDipoleVec[i].z;
+            totalDipoleVecX = labDipoleVec[3*i] + inducedDipoleVec[3*i];
+            totalDipoleVecY = labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
+            totalDipoleVecZ = labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
             dipoles[order[i]] = Vec3(totalDipoleVecX, totalDipoleVecY, totalDipoleVecZ);
         }
     }
     else {
         vector<mm_float4> posqVec;
-        vector<mm_float3> labDipoleVec;
-        vector<mm_float3> inducedDipoleVec;
+        vector<float> labDipoleVec;
+        vector<float> inducedDipoleVec;
         float totalDipoleVecX;
         float totalDipoleVecY;
         float totalDipoleVecZ;
@@ -1482,9 +1482,9 @@ void CommonCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context,
         labDipoles.download(labDipoleVec);
         cc.getPosq().download(posqVec);
         for (int i = 0; i < numParticles; i++) {
-            totalDipoleVecX = labDipoleVec[i].x + inducedDipoleVec[i].x;
-            totalDipoleVecY = labDipoleVec[i].y + inducedDipoleVec[i].y;
-            totalDipoleVecZ = labDipoleVec[i].z + inducedDipoleVec[i].z;
+            totalDipoleVecX = labDipoleVec[3*i] + inducedDipoleVec[3*i];
+            totalDipoleVecY = labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1];
+            totalDipoleVecZ = labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2];
             dipoles[order[i]] = Vec3(totalDipoleVecX, totalDipoleVecY, totalDipoleVecZ);
         }
     }
@@ -1531,7 +1531,7 @@ void CommonCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl
     }
 }
 
-template <class T, class T3, class T4, class M4>
+template <class T, class T4, class M4>
 void CommonCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
     // Compute the local coordinates relative to the center of mass.
     int numAtoms = cc.getNumAtoms();
@@ -1576,16 +1576,15 @@ void CommonCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(Context
     double zxqdp = 0.0;
     double zyqdp = 0.0;
     double zzqdp = 0.0;
-    vector<T3> labDipoleVec, inducedDipoleVec;
-    vector<T> quadrupoleVec;
+    vector<T> labDipoleVec, inducedDipoleVec, quadrupoleVec;
     labDipoles.download(labDipoleVec);
     inducedDipole.download(inducedDipoleVec);
     labQuadrupoles.download(quadrupoleVec);
     for (int i = 0; i < numAtoms; i++) {
         totalCharge += posqLocal[i].w;
-        double netDipoleX = (labDipoleVec[i].x + inducedDipoleVec[i].x);
-        double netDipoleY = (labDipoleVec[i].y + inducedDipoleVec[i].y);
-        double netDipoleZ = (labDipoleVec[i].z + inducedDipoleVec[i].z);
+        double netDipoleX = (labDipoleVec[3*i] + inducedDipoleVec[3*i]);
+        double netDipoleY = (labDipoleVec[3*i+1] + inducedDipoleVec[3*i+1]);
+        double netDipoleZ = (labDipoleVec[3*i+2] + inducedDipoleVec[3*i+2]);
         xdpl += posqLocal[i].x*posqLocal[i].w + netDipoleX;
         ydpl += posqLocal[i].y*posqLocal[i].w + netDipoleY;
         zdpl += posqLocal[i].z*posqLocal[i].w + netDipoleZ;
@@ -1648,11 +1647,11 @@ void CommonCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(Context
 void CommonCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
     ensureMultipolesValid(context);
     if (cc.getUseDoublePrecision())
-        computeSystemMultipoleMoments<double, mm_double3, mm_double4, mm_double4>(context, outputMultipoleMoments);
+        computeSystemMultipoleMoments<double, mm_double4, mm_double4>(context, outputMultipoleMoments);
     else if (cc.getUseMixedPrecision())
-        computeSystemMultipoleMoments<float, mm_float3, mm_float4, mm_double4>(context, outputMultipoleMoments);
+        computeSystemMultipoleMoments<float, mm_float4, mm_double4>(context, outputMultipoleMoments);
     else
-        computeSystemMultipoleMoments<float, mm_float3, mm_float4, mm_float4>(context, outputMultipoleMoments);
+        computeSystemMultipoleMoments<float, mm_float4, mm_float4>(context, outputMultipoleMoments);
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force) {

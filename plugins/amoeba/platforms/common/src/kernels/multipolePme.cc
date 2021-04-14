@@ -292,9 +292,9 @@ KERNEL void gridSpreadFixedMultipoles(GLOBAL const real4* RESTRICT posq, GLOBAL 
     }
 }
 
-KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL const real3* RESTRICT inducedDipole,
+KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT inducedDipole,
 #ifndef HIPPO
-        GLOBAL const real3* RESTRICT inducedDipolePolar,
+        GLOBAL const real* RESTRICT inducedDipolePolar,
 #endif
 #ifdef USE_FIXED_POINT_CHARGE_SPREADING
         GLOBAL mm_ulong* RESTRICT pmeGrid,
@@ -333,12 +333,12 @@ KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL c
         pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
         pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
         pos -= periodicBoxVecX*floor(pos.x*recipBoxVecX.z+0.5f);
-        real3 cinducedDipole = inducedDipole[m];
+        real3 cinducedDipole = make_real3(inducedDipole[3*m], inducedDipole[3*m+1], inducedDipole[3*m+2]);
         real3 finducedDipole = make_real3(cinducedDipole.x*cartToFrac[0][0] + cinducedDipole.y*cartToFrac[0][1] + cinducedDipole.z*cartToFrac[0][2],
                                           cinducedDipole.x*cartToFrac[1][0] + cinducedDipole.y*cartToFrac[1][1] + cinducedDipole.z*cartToFrac[1][2],
                                           cinducedDipole.x*cartToFrac[2][0] + cinducedDipole.y*cartToFrac[2][1] + cinducedDipole.z*cartToFrac[2][2]);
 #ifndef HIPPO
-        real3 cinducedDipolePolar = inducedDipolePolar[m];
+        real3 cinducedDipolePolar = make_real3(inducedDipolePolar[3*m], inducedDipolePolar[3*m+1], inducedDipolePolar[3*m+2]);
         real3 finducedDipolePolar = make_real3(cinducedDipolePolar.x*cartToFrac[0][0] + cinducedDipolePolar.y*cartToFrac[0][1] + cinducedDipolePolar.z*cartToFrac[0][2],
                                                cinducedDipolePolar.x*cartToFrac[1][0] + cinducedDipolePolar.y*cartToFrac[1][1] + cinducedDipolePolar.z*cartToFrac[1][2],
                                                cinducedDipolePolar.x*cartToFrac[2][0] + cinducedDipolePolar.y*cartToFrac[2][1] + cinducedDipolePolar.z*cartToFrac[2][2]);
@@ -1052,9 +1052,9 @@ KERNEL void computeInducedDipoleForceAndEnergy(GLOBAL real4* RESTRICT posq, GLOB
 #else
         GLOBAL const real* RESTRICT labQuadrupole,
 #endif
-        GLOBAL const real* RESTRICT fracDipole, GLOBAL const real* RESTRICT fracQuadrupole, GLOBAL const real3* RESTRICT inducedDipole_global,
+        GLOBAL const real* RESTRICT fracDipole, GLOBAL const real* RESTRICT fracQuadrupole, GLOBAL const real* RESTRICT inducedDipole_global,
 #ifndef HIPPO
-        GLOBAL const real3* RESTRICT inducedDipolePolar_global,
+        GLOBAL const real* RESTRICT inducedDipolePolar_global,
 #endif
         GLOBAL const real* RESTRICT phi,
 #ifndef HIPPO
@@ -1137,13 +1137,13 @@ KERNEL void computeInducedDipoleForceAndEnergy(GLOBAL real4* RESTRICT posq, GLOB
         multipole[8] = fracQuadrupole[i*6+2];
         multipole[9] = fracQuadrupole[i*6+4];
 
-        cinducedDipole[0] = inducedDipole_global[i].x;
-        cinducedDipole[1] = inducedDipole_global[i].y;
-        cinducedDipole[2] = inducedDipole_global[i].z;
+        cinducedDipole[0] = inducedDipole_global[3*i];
+        cinducedDipole[1] = inducedDipole_global[3*i+1];
+        cinducedDipole[2] = inducedDipole_global[3*i+2];
 #ifndef HIPPO
-        cinducedDipolePolar[0] = inducedDipolePolar_global[i].x;
-        cinducedDipolePolar[1] = inducedDipolePolar_global[i].y;
-        cinducedDipolePolar[2] = inducedDipolePolar_global[i].z;
+        cinducedDipolePolar[0] = inducedDipolePolar_global[3*i];
+        cinducedDipolePolar[1] = inducedDipolePolar_global[3*i+1];
+        cinducedDipolePolar[2] = inducedDipolePolar_global[3*i+2];
 #endif
         
         // Multiply the dipoles by cartToFrac, which is just the transpose of fracToCart.
@@ -1217,7 +1217,7 @@ KERNEL void computeInducedDipoleForceAndEnergy(GLOBAL real4* RESTRICT posq, GLOB
 
 #ifdef HIPPO
 KERNEL void recordInducedFieldDipoles(GLOBAL const real* RESTRICT phidp, GLOBAL mm_long* RESTRICT inducedField,
-        GLOBAL const real3* RESTRICT inducedDipole, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
+        GLOBAL const real* RESTRICT inducedDipole, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     LOCAL real fracToCart[3][3];
     if (LOCAL_ID == 0) {
         fracToCart[0][0] = GRID_SIZE_X*recipBoxVecX.x;
@@ -1233,15 +1233,15 @@ KERNEL void recordInducedFieldDipoles(GLOBAL const real* RESTRICT phidp, GLOBAL 
     SYNC_THREADS;
     real selfDipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
     for (int i = GLOBAL_ID; i < NUM_ATOMS; i += GLOBAL_SIZE) {
-        inducedField[i] -= (mm_long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[0][0] + phidp[i+NUM_ATOMS*2]*fracToCart[0][1] + phidp[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[i].x));
-        inducedField[i+PADDED_NUM_ATOMS] -= (mm_long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[1][0] + phidp[i+NUM_ATOMS*2]*fracToCart[1][1] + phidp[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[i].y));
-        inducedField[i+PADDED_NUM_ATOMS*2] -= (mm_long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[2][0] + phidp[i+NUM_ATOMS*2]*fracToCart[2][1] + phidp[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[i].z));
+        inducedField[i] -= (mm_long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[0][0] + phidp[i+NUM_ATOMS*2]*fracToCart[0][1] + phidp[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[3*i]));
+        inducedField[i+PADDED_NUM_ATOMS] -= (mm_long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[1][0] + phidp[i+NUM_ATOMS*2]*fracToCart[1][1] + phidp[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[3*i+1]));
+        inducedField[i+PADDED_NUM_ATOMS*2] -= (mm_long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[2][0] + phidp[i+NUM_ATOMS*2]*fracToCart[2][1] + phidp[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[3*i+2]));
     }
 }
 
 KERNEL void calculateSelfEnergyAndTorque(GLOBAL mm_long* RESTRICT torqueBuffers, GLOBAL mixed* RESTRICT energyBuffer,
-        GLOBAL const real3* RESTRICT labDipole, GLOBAL const real* RESTRICT coreCharge, GLOBAL const real* RESTRICT valenceCharge,
-        GLOBAL const real* RESTRICT c6, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real* RESTRICT labQXX, GLOBAL const real* RESTRICT labQXY,
+        GLOBAL const real* RESTRICT labDipole, GLOBAL const real* RESTRICT coreCharge, GLOBAL const real* RESTRICT valenceCharge,
+        GLOBAL const real* RESTRICT c6, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT labQXX, GLOBAL const real* RESTRICT labQXY,
         GLOBAL const real* RESTRICT labQXZ, GLOBAL const real* RESTRICT labQYY, GLOBAL const real* RESTRICT labQYZ) {
     const real torqueScale = 4*EPSILON_FACTOR*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/(3*SQRT_PI);
     real cii = 0;
@@ -1250,8 +1250,8 @@ KERNEL void calculateSelfEnergyAndTorque(GLOBAL mm_long* RESTRICT torqueBuffers,
     real c6ii = 0;
     for (int i = GLOBAL_ID; i < NUM_ATOMS; i += GLOBAL_SIZE) {
         real charge = coreCharge[i]+valenceCharge[i];
-        real3 dipole = labDipole[i];
-        real3 induced = inducedDipole[i];
+        real3 dipole = make_real3(labDipole[3*i], labDipole[3*i+1], labDipole[3*i+2]);
+        real3 induced = make_real3(inducedDipole[3*i], inducedDipole[3*i+1], inducedDipole[3*i+2]);
         real qXX = labQXX[i];
         real qXY = labQXY[i];
         real qXZ = labQXZ[i];
@@ -1275,7 +1275,7 @@ KERNEL void calculateSelfEnergyAndTorque(GLOBAL mm_long* RESTRICT torqueBuffers,
 }
 #else
 KERNEL void recordInducedFieldDipoles(GLOBAL const real* RESTRICT phid, GLOBAL real* const RESTRICT phip, GLOBAL mm_long* RESTRICT inducedField,
-        GLOBAL mm_long* RESTRICT inducedFieldPolar, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real3* RESTRICT inducedDipolePolar,
+        GLOBAL mm_long* RESTRICT inducedFieldPolar, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar,
         real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ
 #ifdef EXTRAPOLATED_POLARIZATION
         , GLOBAL mm_ulong* RESTRICT fieldGradient, GLOBAL mm_ulong* RESTRICT fieldGradientPolar
@@ -1296,12 +1296,12 @@ KERNEL void recordInducedFieldDipoles(GLOBAL const real* RESTRICT phid, GLOBAL r
     SYNC_THREADS;
     real selfDipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
     for (int i = GLOBAL_ID; i < NUM_ATOMS; i += GLOBAL_SIZE) {
-        inducedField[i] -= (mm_long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[0][0] + phid[i+NUM_ATOMS*2]*fracToCart[0][1] + phid[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[i].x));
-        inducedField[i+PADDED_NUM_ATOMS] -= (mm_long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[1][0] + phid[i+NUM_ATOMS*2]*fracToCart[1][1] + phid[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[i].y));
-        inducedField[i+PADDED_NUM_ATOMS*2] -= (mm_long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[2][0] + phid[i+NUM_ATOMS*2]*fracToCart[2][1] + phid[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[i].z));
-        inducedFieldPolar[i] -= (mm_long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[0][0] + phip[i+NUM_ATOMS*2]*fracToCart[0][1] + phip[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipolePolar[i].x));
-        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (mm_long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[1][0] + phip[i+NUM_ATOMS*2]*fracToCart[1][1] + phip[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipolePolar[i].y));
-        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (mm_long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[2][0] + phip[i+NUM_ATOMS*2]*fracToCart[2][1] + phip[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipolePolar[i].z));
+        inducedField[i] -= (mm_long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[0][0] + phid[i+NUM_ATOMS*2]*fracToCart[0][1] + phid[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[3*i]));
+        inducedField[i+PADDED_NUM_ATOMS] -= (mm_long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[1][0] + phid[i+NUM_ATOMS*2]*fracToCart[1][1] + phid[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[3*i+1]));
+        inducedField[i+PADDED_NUM_ATOMS*2] -= (mm_long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[2][0] + phid[i+NUM_ATOMS*2]*fracToCart[2][1] + phid[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[3*i+2]));
+        inducedFieldPolar[i] -= (mm_long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[0][0] + phip[i+NUM_ATOMS*2]*fracToCart[0][1] + phip[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipolePolar[3*i]));
+        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (mm_long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[1][0] + phip[i+NUM_ATOMS*2]*fracToCart[1][1] + phip[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipolePolar[3*i+1]));
+        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (mm_long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[2][0] + phip[i+NUM_ATOMS*2]*fracToCart[2][1] + phip[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipolePolar[3*i+2]));
 #ifdef EXTRAPOLATED_POLARIZATION
         // Compute and store the field gradients for later use.
 

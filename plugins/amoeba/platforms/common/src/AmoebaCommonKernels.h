@@ -169,7 +169,7 @@ protected:
     bool iterateDipolesByDIIS(int iteration);
     void computeExtrapolatedDipoles();
     void ensureMultipolesValid(ContextImpl& context);
-    template <class T, class T3, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
+    template <class T, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
     int numMultipoles, maxInducedIterations, maxExtrapolationOrder;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
