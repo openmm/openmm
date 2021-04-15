@@ -1304,7 +1304,7 @@ bool CommonCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
         recordDIISDipolesKernel->setArg(10, gkKernel->getInducedDipolesPolar());
         recordDIISDipolesKernel->setArg(11, prevDipolesGk);
         recordDIISDipolesKernel->setArg(12, prevDipolesGkPolar);
-        recordDIISDipolesKernel->setArg(14, 0);
+        recordDIISDipolesKernel->setArg(14, 1);
         recordDIISDipolesKernel->execute(cc.getNumThreadBlocks()*64, 64);
     }
     recordDIISDipolesKernel->setArg(6, npt);
@@ -1314,7 +1314,7 @@ bool CommonCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     recordDIISDipolesKernel->setArg(10, inducedDipolePolar);
     recordDIISDipolesKernel->setArg(11, prevDipoles);
     recordDIISDipolesKernel->setArg(12, prevDipolesPolar);
-    recordDIISDipolesKernel->setArg(14, 1);
+    recordDIISDipolesKernel->setArg(14, 0);
     recordDIISDipolesKernel->execute(cc.getNumThreadBlocks()*64, 64);
     mm_float2* errors = (mm_float2*) cc.getPinnedBuffer();
     inducedDipoleErrors.download(errors, false);

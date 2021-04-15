@@ -574,7 +574,7 @@ KERNEL void recordInducedDipolesForDIIS(GLOBAL const mm_long* RESTRICT fixedFiel
         GLOBAL const float* RESTRICT polarizability, GLOBAL float2* RESTRICT errors, GLOBAL real* RESTRICT prevErrors, GLOBAL real* RESTRICT matrix,
         GLOBAL const mm_long* RESTRICT fixedFieldS, GLOBAL const mm_long* RESTRICT inducedField, GLOBAL const mm_long* RESTRICT inducedFieldPolar,
         GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar,
-        GLOBAL real* RESTRICT prevDipoles, GLOBAL real* RESTRICT prevDipolesPolar, int iteration, int recordPrevErrors) {
+        GLOBAL real* RESTRICT prevDipoles, GLOBAL real* RESTRICT prevDipolesPolar, int iteration, int isGK) {
     LOCAL real2 buffer[64];
     const real fieldScale = 1/(real) 0x100000000;
     real sumErrors = 0;
@@ -590,7 +590,7 @@ KERNEL void recordInducedDipolesForDIIS(GLOBAL const mm_long* RESTRICT fixedFiel
                 for (int j = 0; j < 3; j++) {
                     prevDipoles[3*index1+j] = prevDipoles[3*index2+j];
                     prevDipolesPolar[3*index1+j] = prevDipolesPolar[3*index2+j];
-                    if (recordPrevErrors)
+                    if (!isGK)
                         prevErrors[3*index1+j] = prevErrors[3*index2+j];
                 }
             }
@@ -605,7 +605,7 @@ KERNEL void recordInducedDipolesForDIIS(GLOBAL const mm_long* RESTRICT fixedFiel
         real3 induced = make_real3(inducedField[atom], inducedField[atom+PADDED_NUM_ATOMS], inducedField[atom+2*PADDED_NUM_ATOMS])*fieldScale;
         real3 inducedPolar = make_real3(inducedFieldPolar[atom], inducedFieldPolar[atom+PADDED_NUM_ATOMS], inducedFieldPolar[atom+2*PADDED_NUM_ATOMS])*fieldScale;
         real3 fixedS = make_real3(0);
-        if (fixedFieldS != NULL)
+        if (isGK)
             fixedS = make_real3(fixedFieldS[atom], fixedFieldS[atom+PADDED_NUM_ATOMS], fixedFieldS[atom+2*PADDED_NUM_ATOMS])*fieldScale;
         real3 newDipole = scale*(fixed+fixedS+induced);
         real3 newDipolePolar = scale*(fixedPolar+fixedS+inducedPolar);
@@ -616,7 +616,7 @@ KERNEL void recordInducedDipolesForDIIS(GLOBAL const mm_long* RESTRICT fixedFiel
         prevDipolesPolar[3*storePrevIndex] = newDipolePolar.x;
         prevDipolesPolar[3*storePrevIndex+1] = newDipolePolar.y;
         prevDipolesPolar[3*storePrevIndex+2] = newDipolePolar.z;
-        if (recordPrevErrors) {
+        if (!isGK) {
             prevErrors[3*storePrevIndex] = newDipole.x-oldDipole.x;
             prevErrors[3*storePrevIndex+1] = newDipole.y-oldDipole.y;
             prevErrors[3*storePrevIndex+2] = newDipole.z-oldDipole.z;
@@ -641,7 +641,7 @@ KERNEL void recordInducedDipolesForDIIS(GLOBAL const mm_long* RESTRICT fixedFiel
     if (LOCAL_ID == 0)
         errors[GROUP_ID] = make_float2((float) buffer[0].x, (float) buffer[0].y);
     
-    if (iteration >= MAX_PREV_DIIS_DIPOLES && recordPrevErrors && GROUP_ID == 0) {
+    if (iteration >= MAX_PREV_DIIS_DIPOLES && !isGK && GROUP_ID == 0) {
         // Shift over the existing matrix elements.
         
         for (int i = 0; i < MAX_PREV_DIIS_DIPOLES-1; i++) {
