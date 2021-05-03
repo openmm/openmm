@@ -15,7 +15,20 @@ Create a new version tag on `openmm/openmm` and publish a new GitHub release. Th
 6. Review the checklist and open the PR.
 7. In the opened PR, post a comment with `@conda-forge-admin, please rerender`.
 8. Wait for all green, reviews and then merge. Always make sure you are merging to `master`.
-9. Once merged, check the CI status on the `master` branch. It should be green. If it's red, a network error might have happened and you need to _re-run_ the failing job (a link will appear next to it, if you click on the Details menu).
+9. Once merged, check the CI status on the `master` branch.
+
+   - It should be green. If it's red, a network error might have happened and you need to _re-run_ the failing job (a link will appear next to it, if you click on the Details menu).
+   - If a CI provider was not triggered (for whatever reason), `master` might need a little _push_ (no pun intended). An empty commit to `master` will do:
+
+   ```
+   # make sure conda-forge/openmm-feedstock is configured as `upstream`
+   git remote -v
+   git checkout master
+   git fetch upstream master
+   git merge upstream/master
+   git commit --allow-empty -m "Trigger CI"
+   git push upstream master
+   ```
 
 ## Release candidates
 
@@ -43,4 +56,17 @@ Manual instructions:
 7. Review the checklist and open the PR.
 8. In the opened PR, post a comment with `@conda-forge-admin, please rerender`.
 9. Wait for all green, reviews and then merge. Always make sure you are merging to `rc`.
-10. Once merged, check the CI status on the `rc` branch. It should be green. If it's red, a network error might have happened and you need to _re-run_ the failing job (a link will appear next to it, if you click on the Details menu).
+10. Once merged, check the CI status on the `rc` branch.
+
+- It should be green. If it's red, a network error might have happened and you need to _re-run_ the failing job (a link will appear next to it, if you click on the Details menu).
+- If a CI provider was not triggered (for whatever reason), `rc` might need a little _push_ (no pun intended). An empty commit to `rc` will do:
+
+```
+# make sure conda-forge/openmm-feedstock is configured as `upstream`
+git remote -v
+git checkout rc
+git fetch upstream rc
+git merge upstream/rc
+git commit --allow-empty -m "Trigger CI"
+git push upstream rc
+```
