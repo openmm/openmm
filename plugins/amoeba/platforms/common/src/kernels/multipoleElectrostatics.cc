@@ -424,6 +424,7 @@ KERNEL void computeElectrostatics(
 
             // Compute forces.
 
+            SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 int atom2 = y*TILE_SIZE+j;
                 if (atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -441,6 +442,7 @@ KERNEL void computeElectrostatics(
             ATOMIC_ADD(&torqueBuffers[atom1], (mm_ulong) ((mm_long) (data.torque.x*0x100000000)));
             ATOMIC_ADD(&torqueBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.torque.y*0x100000000)));
             ATOMIC_ADD(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.torque.z*0x100000000)));
+            SYNC_WARPS;
         }
         else {
             // This is an off-diagonal tile.
@@ -450,6 +452,7 @@ KERNEL void computeElectrostatics(
             localData[LOCAL_ID].force = make_real3(0);
             localData[LOCAL_ID].torque = make_real3(0);
             unsigned int tj = tgx;
+            SYNC_WARPS;
             for (j = 0; j < TILE_SIZE; j++) {
                 int atom2 = y*TILE_SIZE+tj;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -478,6 +481,7 @@ KERNEL void computeElectrostatics(
             ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].torque.x*0x100000000)));
             ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].torque.y*0x100000000)));
             ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].torque.z*0x100000000)));
+            SYNC_WARPS;
         }
     }
 
@@ -519,7 +523,9 @@ KERNEL void computeElectrostatics(
 
         // Skip over tiles that have exclusions, since they were already processed.
 
+        SYNC_WARPS;
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+            SYNC_WARPS;
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
                 skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
@@ -528,6 +534,7 @@ KERNEL void computeElectrostatics(
                 skipTiles[LOCAL_ID] = end;
             skipBase += TILE_SIZE;            
             currentSkipIndex = tbx;
+            SYNC_WARPS;
         }
         while (skipTiles[currentSkipIndex] < pos)
             currentSkipIndex++;

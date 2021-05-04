@@ -423,6 +423,7 @@ KERNEL void computeInducedField(
             localData[LOCAL_ID].inducedDipolePolarS = data.inducedDipolePolarS;
             localData[LOCAL_ID].bornRadius = data.bornRadius;
 #endif
+            SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 real3 delta = localData[tbx+j].pos-data.pos;
 #ifdef USE_PERIODIC
@@ -432,6 +433,7 @@ KERNEL void computeInducedField(
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
                     computeOneInteraction(&data, &localData[tbx+j], delta, atom1 == atom2);
             }
+            SYNC_WARPS;
         }
         else {
             // This is an off-diagonal tile.
@@ -443,6 +445,7 @@ KERNEL void computeInducedField(
 #endif
             zeroAtomDataLocal(&localData[LOCAL_ID]);
             unsigned int tj = tgx;
+            SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 real3 delta = localData[tbx+tj].pos-data.pos;
 #ifdef USE_PERIODIC
@@ -453,6 +456,7 @@ KERNEL void computeInducedField(
                     computeOneInteraction(&data, &localData[tbx+tj], delta, false);
                 tj = (tj + 1) & (TILE_SIZE - 1);
             }
+            SYNC_WARPS;
         }
 
         // Write results.
@@ -503,7 +507,9 @@ KERNEL void computeInducedField(
 
         // Skip over tiles that have exclusions, since they were already processed.
 
+        SYNC_WARPS;
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+            SYNC_WARPS;
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
                 skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
@@ -512,6 +518,7 @@ KERNEL void computeInducedField(
                 skipTiles[LOCAL_ID] = end;
             skipBase += TILE_SIZE;            
             currentSkipIndex = tbx;
+            SYNC_WARPS;
         }
         while (skipTiles[currentSkipIndex] < pos)
             currentSkipIndex++;

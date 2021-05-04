@@ -1324,7 +1324,7 @@ bool CommonCalcAmoebaMultipoleForceKernel::iterateDipolesByDIIS(int iteration) {
     
     int numPrev = (iteration+1 < MaxPrevDIISDipoles ? iteration+1 : MaxPrevDIISDipoles);
     int threadBlocks = min(numPrev, cc.getNumThreadBlocks());
-    int blockSize = 512;
+    int blockSize = min(512, buildMatrixKernel->getMaxBlockSize());
     buildMatrixKernel->setArg(1, iteration);
     buildMatrixKernel->execute(threadBlocks*blockSize, blockSize);
     
