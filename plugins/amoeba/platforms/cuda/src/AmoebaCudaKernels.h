@@ -159,8 +159,7 @@ private:
     void ensureMultipolesValid(ContextImpl& context);
     void addTorquesToForces();
     void createFieldKernel(const std::string& interactionSrc, std::vector<CudaArray*> params, CudaArray& fieldBuffer,
-        CUfunction& kernel, std::vector<void*>& args, CUfunction& exceptionKernel, std::vector<void*>& exceptionArgs,
-        CudaArray& exceptionScale);
+        ComputeKernel& kernel, ComputeKernel& exceptionKernel, CudaArray& exceptionScale);
     int numParticles, maxExtrapolationOrder, maxTiles;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
@@ -188,15 +187,14 @@ private:
     CudaArray exceptionAtoms;
     CudaSort* sort;
     cufftHandle fftForward, fftBackward, dfftForward, dfftBackward;
-    CUfunction computeMomentsKernel, fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel, computeExceptionsKernel;
-    CUfunction recordInducedDipolesKernel, mapTorqueKernel;
+    ComputeKernel computeMomentsKernel, recordInducedDipolesKernel, mapTorqueKernel;
+    ComputeKernel fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel, computeExceptionsKernel;
     CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
     CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
     CUfunction pmeSelfEnergyKernel;
     CUfunction dpmeGridIndexKernel, dpmeSpreadChargeKernel, dpmeFinishSpreadChargeKernel, dpmeEvalEnergyKernel, dpmeConvolutionKernel, dpmeInterpolateForceKernel;
-    CUfunction initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, polarizationEnergyKernel;
+    ComputeKernel initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, polarizationEnergyKernel;
     CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
-    std::vector<void*> fixedFieldArgs, fixedFieldExceptionArgs, mutualFieldArgs, mutualFieldExceptionArgs, computeExceptionsArgs;
     static const int PmeOrder = 5;
 };
 
