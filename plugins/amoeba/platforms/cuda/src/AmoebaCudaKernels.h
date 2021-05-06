@@ -30,7 +30,6 @@
 #include "openmm/amoebaKernels.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
-#include "CudaArray.h"
 #include "CudaContext.h"
 #include "CudaNonbondedUtilities.h"
 #include "CudaSort.h"
@@ -84,6 +83,14 @@ public:
      * @param force      the HippoNonbondedForce this kernel will be used for
      */
     void initialize(const System& system, const HippoNonbondedForce& force);
+    /**
+     * Compute the FFT.
+     */
+    void computeFFT(bool forward, bool dispersion);
+    /**
+     * Sort the atom grid indices.
+     */
+    void sortGridIndex();
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -154,12 +161,12 @@ private:
         const char* getMaxValue() const {return "make_int2(2147483647, 2147483647)";}
         const char* getSortKey() const {return "value.y";}
     };
-    void computeInducedField(void** recipBoxVectorPointer, int optOrder);
-    void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
+    void computeInducedField(int optOrder);
+    void computeExtrapolatedDipoles();
     void ensureMultipolesValid(ContextImpl& context);
     void addTorquesToForces();
-    void createFieldKernel(const std::string& interactionSrc, std::vector<CudaArray*> params, CudaArray& fieldBuffer,
-        ComputeKernel& kernel, ComputeKernel& exceptionKernel, CudaArray& exceptionScale);
+    void createFieldKernel(const std::string& interactionSrc, std::vector<ComputeArray*> params, ComputeArray& fieldBuffer,
+        ComputeKernel& kernel, ComputeKernel& exceptionKernel, ComputeArray& exceptionScale);
     int numParticles, maxExtrapolationOrder, maxTiles;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
@@ -168,23 +175,23 @@ private:
     std::vector<double> extrapolationCoefficients;
     CudaContext& cu;
     const System& system;
-    CudaArray multipoleParticles;
-    CudaArray coreCharge, valenceCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
-    CudaArray localDipoles, labDipoles, fracDipoles;
-    CudaArray localQuadrupoles, labQuadrupoles[5], fracQuadrupoles;
-    CudaArray field;
-    CudaArray inducedField;
-    CudaArray torque;
-    CudaArray inducedDipole;
-    CudaArray extrapolatedDipole, extrapolatedPhi;
-    CudaArray pmeGrid1, pmeGrid2;
-    CudaArray pmeAtomGridIndex;
-    CudaArray pmeBsplineModuliX, pmeBsplineModuliY, pmeBsplineModuliZ;
-    CudaArray dpmeBsplineModuliX, dpmeBsplineModuliY, dpmeBsplineModuliZ;
-    CudaArray pmePhi, pmePhidp, pmeCphi;
-    CudaArray lastPositions;
-    CudaArray exceptionScales[6];
-    CudaArray exceptionAtoms;
+    ComputeArray multipoleParticles;
+    ComputeArray coreCharge, valenceCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
+    ComputeArray localDipoles, labDipoles, fracDipoles;
+    ComputeArray localQuadrupoles, labQuadrupoles[5], fracQuadrupoles;
+    ComputeArray field;
+    ComputeArray inducedField;
+    ComputeArray torque;
+    ComputeArray inducedDipole;
+    ComputeArray extrapolatedDipole, extrapolatedPhi;
+    ComputeArray pmeGrid1, pmeGrid2;
+    ComputeArray pmeAtomGridIndex;
+    ComputeArray pmeBsplineModuliX, pmeBsplineModuliY, pmeBsplineModuliZ;
+    ComputeArray dpmeBsplineModuliX, dpmeBsplineModuliY, dpmeBsplineModuliZ;
+    ComputeArray pmePhi, pmePhidp, pmeCphi;
+    ComputeArray lastPositions;
+    ComputeArray exceptionScales[6];
+    ComputeArray exceptionAtoms;
     CudaSort* sort;
     cufftHandle fftForward, fftBackward, dfftForward, dfftBackward;
     ComputeKernel computeMomentsKernel, recordInducedDipolesKernel, mapTorqueKernel;

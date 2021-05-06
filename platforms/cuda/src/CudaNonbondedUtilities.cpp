@@ -117,7 +117,7 @@ void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, 
 
 void CudaNonbondedUtilities::addParameter(ComputeParameterInfo parameter) {
     parameters.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
-            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer()));
+            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer(), parameter.isConstant()));
 }
 
 void CudaNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
@@ -126,7 +126,7 @@ void CudaNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
 
 void CudaNonbondedUtilities::addArgument(ComputeParameterInfo parameter) {
     arguments.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
-            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer()));
+            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer(), parameter.isConstant()));
 }
 
 void CudaNonbondedUtilities::addArgument(const ParameterInfo& parameter) {
