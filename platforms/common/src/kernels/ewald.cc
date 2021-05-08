@@ -59,7 +59,7 @@ KERNEL void calculateEwaldCosSinSums(GLOBAL mixed* RESTRICT energyBuffer, GLOBAL
  * previous routine.
  */
 
-KERNEL void calculateEwaldForces(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL const real4* RESTRICT posq, GLOBAL const real2* RESTRICT cosSinSum, real4 periodicBoxSize) {
+KERNEL void calculateEwaldForces(GLOBAL mm_long* RESTRICT forceBuffers, GLOBAL const real4* RESTRICT posq, GLOBAL const real2* RESTRICT cosSinSum, real4 periodicBoxSize) {
     unsigned int atom = GLOBAL_ID;
     real3 reciprocalBoxSize = make_real3(2*M_PI/periodicBoxSize.x, 2*M_PI/periodicBoxSize.y, 2*M_PI/periodicBoxSize.z);
     real reciprocalCoefficient = ONE_4PI_EPS0*4*M_PI/(periodicBoxSize.x*periodicBoxSize.y*periodicBoxSize.z);
@@ -102,9 +102,9 @@ KERNEL void calculateEwaldForces(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL 
 
         // Record the force on the atom.
 
-        ATOMIC_ADD(&forceBuffers[atom], (mm_ulong) ((mm_long) (force.x*0x100000000)));
-        ATOMIC_ADD(&forceBuffers[atom+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
-        ATOMIC_ADD(&forceBuffers[atom+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
+        forceBuffers[atom] += (mm_long) (force.x*0x100000000);
+        forceBuffers[atom+PADDED_NUM_ATOMS] += (mm_long) (force.y*0x100000000);
+        forceBuffers[atom+2*PADDED_NUM_ATOMS] += (mm_long) (force.z*0x100000000);
         atom += GLOBAL_SIZE;
     }
 }
