@@ -1908,7 +1908,7 @@ The CUDA Platform recognizes the following Platform-specific properties:
 
   * Mac/Linux: It first looks for an environment variable called
     OPENMM_CUDA_COMPILER.  If that is set, its value is used.  Otherwise, the
-    default location is set to /usr/local/cuda/bin/nvcc.
+    default location is set to nvcc.
   * Windows: It looks for an environment variable called CUDA_BIN_PATH, then
     appends \nvcc.exe to it.  That environment variable is set by the CUDA
     installer, so it usually is present.
