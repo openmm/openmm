@@ -736,15 +736,13 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             pmeDefines["GRID_SIZE_Z"] = cu.intToString(gridSizeZ);
             pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(sqrt(ONE_4PI_EPS0));
             pmeDefines["M_PI"] = cu.doubleToString(M_PI);
-            if (cu.getUseDoublePrecision())
-                pmeDefines["USE_DOUBLE_PRECISION"] = "1";
+            if (cu.getUseDoublePrecision() || cu.getPlatformData().deterministicForces)
+                pmeDefines["USE_FIXED_POINT_CHARGE_SPREADING"] = "1";
             if (usePmeStream)
                 pmeDefines["USE_PME_STREAM"] = "1";
-            if (cu.getPlatformData().deterministicForces)
-                pmeDefines["USE_DETERMINISTIC_FORCES"] = "1";
             map<string, string> replacements;
             replacements["CHARGE"] = (usePosqCharges ? "pos.w" : "charges[atom]");
-            CUmodule module = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CudaKernelSources::pme, replacements), pmeDefines);
+            CUmodule module = cu.createModule(CudaKernelSources::vectorOps+cu.replaceStrings(CommonKernelSources::pme, replacements), pmeDefines);
             if (cu.getPlatformData().useCpuPme && !doLJPME && usePosqCharges) {
                 // Create the CPU PME kernel.
 
@@ -777,6 +775,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     pmeDefines["RECIP_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(dispersionAlpha*dispersionAlpha));
                     pmeDefines["USE_LJPME"] = "1";
                     pmeDefines["CHARGE_FROM_SIGEPS"] = "1";
+                    if (cu.getUseDoublePrecision() || cu.getPlatformData().deterministicForces)
+                        pmeDefines["USE_FIXED_POINT_CHARGE_SPREADING"] = "1";
                     double invRCut6 = pow(force.getCutoffDistance(), -6);
                     double dalphaR = dispersionAlpha * force.getCutoffDistance();
                     double dar2 = dalphaR*dalphaR;
@@ -784,7 +784,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     double multShift6 = -invRCut6*(1.0 - exp(-dar2) * (1.0 + dar2 + 0.5*dar4));
                     defines["INVCUT6"] = cu.doubleToString(invRCut6);
                     defines["MULTSHIFT6"] = cu.doubleToString(multShift6);
-                    module = cu.createModule(CudaKernelSources::vectorOps+CudaKernelSources::pme, pmeDefines);
+                    module = cu.createModule(CudaKernelSources::vectorOps+CommonKernelSources::pme, pmeDefines);
                     pmeDispersionFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
                     pmeDispersionGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");
                     pmeDispersionSpreadChargeKernel = cu.getKernel(module, "gridSpreadCharge");
@@ -1308,8 +1308,8 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                 cu.executeKernel(pmeEvalDispersionEnergyKernel, computeEnergyArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
             }
 
-            void* convolutionArgs[] = {&pmeGrid2.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(),
-                    &pmeDispersionBsplineModuliX.getDevicePointer(), &pmeDispersionBsplineModuliY.getDevicePointer(), &pmeDispersionBsplineModuliZ.getDevicePointer(),
+            void* convolutionArgs[] = {&pmeGrid2.getDevicePointer(), &pmeDispersionBsplineModuliX.getDevicePointer(),
+                    &pmeDispersionBsplineModuliY.getDevicePointer(), &pmeDispersionBsplineModuliZ.getDevicePointer(),
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeDispersionConvolutionKernel, convolutionArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
 

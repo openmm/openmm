@@ -738,6 +738,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             pmeDefines["GRID_SIZE_Z"] = cl.intToString(gridSizeZ);
             pmeDefines["EPSILON_FACTOR"] = cl.doubleToString(sqrt(ONE_4PI_EPS0));
             pmeDefines["M_PI"] = cl.doubleToString(M_PI);
+            pmeDefines["USE_FIXED_POINT_CHARGE_SPREADING"] = "1";
             bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
             if (deviceIsCpu)
                 pmeDefines["DEVICE_IS_CPU"] = "1";
@@ -747,7 +748,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 try {
                     cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cl.getPlatformData().context);
                     cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha, false);
-                    cl::Program program = cl.createProgram(OpenCLKernelSources::pme, pmeDefines);
+                    cl::Program program = cl.createProgram(CommonKernelSources::pme, pmeDefines);
                     cl::Kernel addForcesKernel = cl::Kernel(program, "addForces");
                     pmeio = new PmeIO(cl, addForcesKernel);
                     cl.addPreComputation(new PmePreComputation(cl, cpuPme, *pmeio));
@@ -802,7 +803,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                     dispersionFft = new OpenCLFFT3D(cl, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
                 string vendor = cl.getDevice().getInfo<CL_DEVICE_VENDOR>();
                 bool isNvidia = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
-                usePmeQueue = (!cl.getPlatformData().disablePmeStream && isNvidia);
+                usePmeQueue = (!cl.getPlatformData().disablePmeStream && cl.getSupports64BitGlobalAtomics() && isNvidia);
                 if (usePmeQueue) {
                     pmeDefines["USE_PME_STREAM"] = "1";
                     pmeQueue = cl::CommandQueue(cl.getContext(), cl.getDevice());
@@ -1102,10 +1103,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             
             map<string, string> replacements;
             replacements["CHARGE"] = (usePosqCharges ? "pos.w" : "charges[atom]");
-            cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::pme, replacements), pmeDefines);
+            cl::Program program = cl.createProgram(cl.replaceStrings(CommonKernelSources::pme, replacements), pmeDefines);
             pmeGridIndexKernel = cl::Kernel(program, "findAtomGridIndex");
-            pmeAtomRangeKernel = cl::Kernel(program, "findAtomRangeForGrid");
-            pmeZIndexKernel = cl::Kernel(program, "recordZIndex");
             pmeSpreadChargeKernel = cl::Kernel(program, "gridSpreadCharge");
             pmeConvolutionKernel = cl::Kernel(program, "reciprocalConvolution");
             pmeEvalEnergyKernel = cl::Kernel(program, "gridEvaluateEnergy");
@@ -1117,12 +1116,14 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeGridIndexKernel.setArg<cl::Buffer>(10, pmeBsplineTheta.getDeviceBuffer());
                 pmeGridIndexKernel.setArg(11, OpenCLContext::ThreadBlockSize*PmeOrder*elementSize, NULL);
                 pmeGridIndexKernel.setArg<cl::Buffer>(12, charges.getDeviceBuffer());
+                pmeAtomRangeKernel = cl::Kernel(program, "findAtomRangeForGrid");
+                pmeZIndexKernel = cl::Kernel(program, "recordZIndex");
+                pmeAtomRangeKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex.getDeviceBuffer());
+                pmeAtomRangeKernel.setArg<cl::Buffer>(1, pmeAtomRange.getDeviceBuffer());
+                pmeAtomRangeKernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+                pmeZIndexKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex.getDeviceBuffer());
+                pmeZIndexKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
             }
-            pmeAtomRangeKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex.getDeviceBuffer());
-            pmeAtomRangeKernel.setArg<cl::Buffer>(1, pmeAtomRange.getDeviceBuffer());
-            pmeAtomRangeKernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
-            pmeZIndexKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex.getDeviceBuffer());
-            pmeZIndexKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
             if (cl.getSupports64BitGlobalAtomics())
                 pmeSpreadChargeKernel.setArg<cl::Buffer>(1, pmeGrid2.getDeviceBuffer());
@@ -1150,7 +1151,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeEvalEnergyKernel.setArg<cl::Buffer>(3, pmeBsplineModuliY.getDeviceBuffer());
             pmeEvalEnergyKernel.setArg<cl::Buffer>(4, pmeBsplineModuliZ.getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
-            pmeInterpolateForceKernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
+            pmeInterpolateForceKernel.setArg<cl::Buffer>(1, cl.getLongForceBuffer().getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(2, pmeGrid1.getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(11, pmeAtomGridIndex.getDeviceBuffer());
             pmeInterpolateForceKernel.setArg<cl::Buffer>(12, charges.getDeviceBuffer());
@@ -1173,10 +1174,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeDefines["RECIP_EXP_FACTOR"] = cl.doubleToString(M_PI*M_PI/(dispersionAlpha*dispersionAlpha));
                 pmeDefines["USE_LJPME"] = "1";
                 pmeDefines["CHARGE_FROM_SIGEPS"] = "1";
-                program = cl.createProgram(OpenCLKernelSources::pme, pmeDefines);
+                program = cl.createProgram(CommonKernelSources::pme, pmeDefines);
                 pmeDispersionGridIndexKernel = cl::Kernel(program, "findAtomGridIndex");
-                pmeDispersionAtomRangeKernel = cl::Kernel(program, "findAtomRangeForGrid");
-                pmeDispersionZIndexKernel = cl::Kernel(program, "recordZIndex");
                 pmeDispersionSpreadChargeKernel = cl::Kernel(program, "gridSpreadCharge");
                 pmeDispersionConvolutionKernel = cl::Kernel(program, "reciprocalConvolution");
                 pmeDispersionEvalEnergyKernel = cl::Kernel(program, "gridEvaluateEnergy");
@@ -1188,12 +1187,14 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                     pmeDispersionGridIndexKernel.setArg<cl::Buffer>(10, pmeBsplineTheta.getDeviceBuffer());
                     pmeDispersionGridIndexKernel.setArg(11, OpenCLContext::ThreadBlockSize*PmeOrder*elementSize, NULL);
                     pmeDispersionGridIndexKernel.setArg<cl::Buffer>(12, sigmaEpsilon.getDeviceBuffer());
+                    pmeDispersionAtomRangeKernel = cl::Kernel(program, "findAtomRangeForGrid");
+                    pmeDispersionZIndexKernel = cl::Kernel(program, "recordZIndex");
+                    pmeDispersionAtomRangeKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex.getDeviceBuffer());
+                    pmeDispersionAtomRangeKernel.setArg<cl::Buffer>(1, pmeAtomRange.getDeviceBuffer());
+                    pmeDispersionAtomRangeKernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+                    pmeDispersionZIndexKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex.getDeviceBuffer());
+                    pmeDispersionZIndexKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
                 }
-                pmeDispersionAtomRangeKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex.getDeviceBuffer());
-                pmeDispersionAtomRangeKernel.setArg<cl::Buffer>(1, pmeAtomRange.getDeviceBuffer());
-                pmeDispersionAtomRangeKernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
-                pmeDispersionZIndexKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex.getDeviceBuffer());
-                pmeDispersionZIndexKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
                 pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
                 if (cl.getSupports64BitGlobalAtomics())
                     pmeDispersionSpreadChargeKernel.setArg<cl::Buffer>(1, pmeGrid2.getDeviceBuffer());
@@ -1221,7 +1222,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeDispersionEvalEnergyKernel.setArg<cl::Buffer>(3, pmeDispersionBsplineModuliY.getDeviceBuffer());
                 pmeDispersionEvalEnergyKernel.setArg<cl::Buffer>(4, pmeDispersionBsplineModuliZ.getDeviceBuffer());
                 pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
-                pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
+                pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(1, cl.getLongForceBuffer().getDeviceBuffer());
                 pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(2, pmeGrid1.getDeviceBuffer());
                 pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(11, pmeAtomGridIndex.getDeviceBuffer());
                 pmeDispersionInterpolateForceKernel.setArg<cl::Buffer>(12, sigmaEpsilon.getDeviceBuffer());

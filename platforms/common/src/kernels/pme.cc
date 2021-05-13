@@ -58,51 +58,15 @@ KERNEL void findAtomGridIndex(GLOBAL const real4* RESTRICT posq, GLOBAL int2* RE
     }
 }
 
-/**
- * For each grid point, find the range of sorted atoms associated with that point.
- */
-KERNEL void findAtomRangeForGrid(GLOBAL int2* RESTRICT pmeAtomGridIndex, GLOBAL int* RESTRICT pmeAtomRange, GLOBAL const real4* RESTRICT posq) {
-    int start = (NUM_ATOMS*GLOBAL_ID)/GLOBAL_SIZE;
-    int end = (NUM_ATOMS*(GLOBAL_ID+1))/GLOBAL_SIZE;
-    int last = (start == 0 ? -1 : pmeAtomGridIndex[start-1].y);
-    for (int i = start; i < end; ++i) {
-        int2 atomData = pmeAtomGridIndex[i];
-        int gridIndex = atomData.y;
-        if (gridIndex != last) {
-            for (int j = last+1; j <= gridIndex; ++j)
-                pmeAtomRange[j] = i;
-            last = gridIndex;
-        }
-    }
-
-    // Fill in values beyond the last atom.
-
-    if (GLOBAL_ID == GLOBAL_SIZE-1) {
-        int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-        for (int j = last+1; j <= gridSize; ++j)
-            pmeAtomRange[j] = NUM_ATOMS;
-    }
-}
-
-/**
- * The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
- * some work in the charge spreading kernel.
- */
-KERNEL void recordZIndex(GLOBAL int2* RESTRICT pmeAtomGridIndex, GLOBAL const real4* RESTRICT posq, real4 periodicBoxSize, real4 recipBoxVecZ) {
-    int start = (NUM_ATOMS*GLOBAL_ID)/GLOBAL_SIZE;
-    int end = (NUM_ATOMS*(GLOBAL_ID+1))/GLOBAL_SIZE;
-    for (int i = start; i < end; ++i) {
-        real posz = posq[pmeAtomGridIndex[i].x].z;
-        posz -= floor(posz*recipBoxVecZ.z)*periodicBoxSize.z;
-        int z = ((int) ((posz*recipBoxVecZ.z)*GRID_SIZE_Z)) % GRID_SIZE_Z;
-        pmeAtomGridIndex[i].y = z;
-    }
-}
-
 #ifdef SUPPORTS_64_BIT_ATOMICS
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 
-KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq, GLOBAL long* RESTRICT pmeGrid,
+KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
+#ifdef USE_FIXED_POINT_CHARGE_SPREADING
+        GLOBAL mm_ulong* RESTRICT pmeGrid,
+#else
+        GLOBAL real* RESTRICT pmeGrid,
+#endif
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ, GLOBAL const int2* RESTRICT pmeAtomGridIndex,
 #ifdef CHARGE_FROM_SIGEPS
@@ -189,17 +153,28 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq, GLOBAL long* RES
                     int zindex = gridIndex.z+iz;
                     int index = ybase + zindexTable[zindex];
                     real add = dxdy*data[iz].z;
-                    atom_add(&pmeGrid[index], (long) (add*0x100000000));
+#ifdef USE_FIXED_POINT_CHARGE_SPREADING
+                    ATOMIC_ADD(&pmeGrid[index], (mm_ulong) ((mm_long) (add*0x100000000)));
+#else
+                    ATOMIC_ADD(&pmeGrid[index], add);
+#endif
                 }
             }
         }
     }
 }
 
-KERNEL void finishSpreadCharge(GLOBAL long* RESTRICT grid1, GLOBAL real* RESTRICT grid2) {
+KERNEL void finishSpreadCharge(
+#ifdef USE_FIXED_POINT_CHARGE_SPREADING
+        GLOBAL const mm_long* RESTRICT grid1,
+#else
+        GLOBAL const real* RESTRICT grid1,
+#endif
+        GLOBAL real* RESTRICT grid2) {
     // During charge spreading, we shuffled the order of indices along the z
     // axis to make memory access more efficient.  We now need to unshuffle
-    // them and convert fixed point values to floating point.
+    // them.  If the values were accumulated as fixed point, we also need to
+    // convert them to floating point.
 
     LOCAL int zindexTable[GRID_SIZE_Z];
     int blockSize = (int) ceil(GRID_SIZE_Z/(real) PME_ORDER);
@@ -213,7 +188,11 @@ KERNEL void finishSpreadCharge(GLOBAL long* RESTRICT grid1, GLOBAL real* RESTRIC
     for (int index = GLOBAL_ID; index < gridSize; index += GLOBAL_SIZE) {
         int zindex = index%GRID_SIZE_Z;
         int loadIndex = zindexTable[zindex] + blockSize*(int) (index/GRID_SIZE_Z);
+#ifdef USE_FIXED_POINT_CHARGE_SPREADING
         grid2[index] = scale*grid1[loadIndex];
+#else
+        grid2[index] = grid1[loadIndex];
+#endif
     }
 }
 #elif defined(DEVICE_IS_CPU)
@@ -302,6 +281,47 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq, GLOBAL real* RES
     }
 }
 #else
+/**
+ * For each grid point, find the range of sorted atoms associated with that point.
+ */
+KERNEL void findAtomRangeForGrid(GLOBAL int2* RESTRICT pmeAtomGridIndex, GLOBAL int* RESTRICT pmeAtomRange, GLOBAL const real4* RESTRICT posq) {
+    int start = (NUM_ATOMS*GLOBAL_ID)/GLOBAL_SIZE;
+    int end = (NUM_ATOMS*(GLOBAL_ID+1))/GLOBAL_SIZE;
+    int last = (start == 0 ? -1 : pmeAtomGridIndex[start-1].y);
+    for (int i = start; i < end; ++i) {
+        int2 atomData = pmeAtomGridIndex[i];
+        int gridIndex = atomData.y;
+        if (gridIndex != last) {
+            for (int j = last+1; j <= gridIndex; ++j)
+                pmeAtomRange[j] = i;
+            last = gridIndex;
+        }
+    }
+
+    // Fill in values beyond the last atom.
+
+    if (GLOBAL_ID == GLOBAL_SIZE-1) {
+        int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
+        for (int j = last+1; j <= gridSize; ++j)
+            pmeAtomRange[j] = NUM_ATOMS;
+    }
+}
+
+/**
+ * The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
+ * some work in the charge spreading kernel.
+ */
+KERNEL void recordZIndex(GLOBAL int2* RESTRICT pmeAtomGridIndex, GLOBAL const real4* RESTRICT posq, real4 periodicBoxSize, real4 recipBoxVecZ) {
+    int start = (NUM_ATOMS*GLOBAL_ID)/GLOBAL_SIZE;
+    int end = (NUM_ATOMS*(GLOBAL_ID+1))/GLOBAL_SIZE;
+    for (int i = start; i < end; ++i) {
+        real posz = posq[pmeAtomGridIndex[i].x].z;
+        posz -= floor(posz*recipBoxVecZ.z)*periodicBoxSize.z;
+        int z = ((int) ((posz*recipBoxVecZ.z)*GRID_SIZE_Z)) % GRID_SIZE_Z;
+        pmeAtomGridIndex[i].y = z;
+    }
+}
+
 KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq, GLOBAL real* RESTRICT pmeGrid,
         GLOBAL const int2* RESTRICT pmeAtomGridIndex, GLOBAL const int* RESTRICT pmeAtomRange,
         GLOBAL const real4* RESTRICT pmeBsplineTheta
@@ -483,7 +503,7 @@ KERNEL void gridEvaluateEnergy(GLOBAL real2* RESTRICT pmeGrid, GLOBAL mixed* RES
 #endif
 }
 
-KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL real4* RESTRICT forceBuffers, GLOBAL const real* RESTRICT pmeGrid,
+KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL const real* RESTRICT pmeGrid,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ, GLOBAL const int2* RESTRICT pmeAtomGridIndex,
 #ifdef CHARGE_FROM_SIGEPS
@@ -557,23 +577,30 @@ KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL real4
                     zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     int index = ybase + zindex;
                     real gridvalue = pmeGrid[index];
-                    force.x += ddata[ix].x*data[iy].y*data[iz].z*gridvalue;
-                    force.y += data[ix].x*ddata[iy].y*data[iz].z*gridvalue;
-                    force.z += data[ix].x*data[iy].y*ddata[iz].z*gridvalue;
+                    force.x += ddx*dy*data[iz].z*gridvalue;
+                    force.y += dx*ddy*data[iz].z*gridvalue;
+                    force.z += dx*dy*ddata[iz].z*gridvalue;
                 }
             }
         }
-        real4 totalForce = forceBuffers[atom];
 #ifdef CHARGE_FROM_SIGEPS
         const float2 sigEps = sigmaEpsilon[atom];
         real q = 8*sigEps.x*sigEps.x*sigEps.x*sigEps.y;
 #else
         real q = CHARGE*EPSILON_FACTOR;
 #endif
-        totalForce.x -= q*(force.x*GRID_SIZE_X*recipBoxVecX.x);
-        totalForce.y -= q*(force.x*GRID_SIZE_X*recipBoxVecY.x+force.y*GRID_SIZE_Y*recipBoxVecY.y);
-        totalForce.z -= q*(force.x*GRID_SIZE_X*recipBoxVecZ.x+force.y*GRID_SIZE_Y*recipBoxVecZ.y+force.z*GRID_SIZE_Z*recipBoxVecZ.z);
-        forceBuffers[atom] = totalForce;
+        real forceX = -q*(force.x*GRID_SIZE_X*recipBoxVecX.x);
+        real forceY = -q*(force.x*GRID_SIZE_X*recipBoxVecY.x+force.y*GRID_SIZE_Y*recipBoxVecY.y);
+        real forceZ = -q*(force.x*GRID_SIZE_X*recipBoxVecZ.x+force.y*GRID_SIZE_Y*recipBoxVecZ.y+force.z*GRID_SIZE_Z*recipBoxVecZ.z);
+#ifdef USE_PME_STREAM
+        ATOMIC_ADD(&forceBuffers[atom], (mm_ulong) ((mm_long) (forceX*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[atom+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forceY*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[atom+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forceZ*0x100000000)));
+#else
+        forceBuffers[atom] += (mm_ulong) ((mm_long) (forceX*0x100000000)));
+        forceBuffers[atom+PADDED_NUM_ATOMS] += (mm_ulong) ((mm_long) (forceY*0x100000000)));
+        forceBuffers[atom+2*PADDED_NUM_ATOMS] += (mm_ulong) ((mm_long) (forceZ*0x100000000)));
+#endif
     }
 }
 
