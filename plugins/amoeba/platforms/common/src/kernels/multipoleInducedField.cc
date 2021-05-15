@@ -1003,7 +1003,7 @@ KERNEL void addExtrapolatedFieldGradientToForce(GLOBAL mm_long* RESTRICT forceBu
 KERNEL void computePolarizationEnergy(GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real* RESTRICT inducedDipole,
         GLOBAL const real* RESTRICT extrapolatedDipole, GLOBAL const real* RESTRICT polarizability) {
     mixed energy = 0;
-    for (int atom = GLOBAL_ID; atom < 3*NUM_ATOMS; atom += GLOBAL_SIZE)
+    for (int atom = GLOBAL_ID; atom < NUM_ATOMS; atom += GLOBAL_SIZE)
         for (int i = 0; i < 3; i++)
             energy -= (ENERGY_SCALE_FACTOR/2)*extrapolatedDipole[3*atom+i]*inducedDipole[3*atom+i]/polarizability[atom];
     energyBuffer[GLOBAL_ID] += energy;

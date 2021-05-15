@@ -190,6 +190,10 @@ public:
      * @param includeEnergy  whether to compute the potential energy
      */
     virtual void computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) = 0;
+    /**
+     * Set the source code for the main kernel.  It only needs to be changed in very unusual circumstances.
+     */
+    virtual void setKernelSource(const std::string& source) = 0;
 };
 
 } // namespace OpenMM

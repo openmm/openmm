@@ -72,9 +72,11 @@ private:
 /**
  * This kernel is invoked by HippoNonbondedForce to calculate the forces acting on the system and the energy of the system.
  */
-class CudaCalcHippoNonbondedForceKernel : public CalcHippoNonbondedForceKernel {
+class CudaCalcHippoNonbondedForceKernel : public CommonCalcHippoNonbondedForceKernel {
 public:
-    CudaCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
+            CommonCalcHippoNonbondedForceKernel(name, platform, cu, system), sort(NULL), hasInitializedFFT(false) {
+    }
     ~CudaCalcHippoNonbondedForceKernel();
     /**
      * Initialize the kernel.
@@ -88,69 +90,16 @@ public:
      */
     void computeFFT(bool forward, bool dispersion);
     /**
+     * Get whether charge spreading should be done in fixed point.
+     */
+    bool useFixedPointChargeSpreading() const {
+        return cc.getUseDoublePrecision();
+    }
+    /**
      * Sort the atom grid indices.
      */
     void sortGridIndex();
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Get the induced dipole moments of all particles.
-     * 
-     * @param context    the Context for which to get the induced dipoles
-     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
-     */
-    void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    /**
-     * Get the fixed dipole moments of all particles in the global reference frame.
-     * 
-     * @param context    the Context for which to get the fixed dipoles
-     * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
-     */
-    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    /** 
-     * Calculate the electrostatic potential given vector of grid coordinates.
-     *
-     * @param context                      context
-     * @param inputGrid                    input grid coordinates
-     * @param outputElectrostaticPotential output potential 
-     */
-    void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
-                                   std::vector< double >& outputElectrostaticPotential);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the HippoNonbondedForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const HippoNonbondedForce& force);
-    /**
-     * Get the parameters being used for PME.
-     * 
-     * @param alpha   the separation parameter
-     * @param nx      the number of grid points along the X axis
-     * @param ny      the number of grid points along the Y axis
-     * @param nz      the number of grid points along the Z axis
-     */
-    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
-    /**
-     * Get the parameters being used for dispersion PME.
-     * 
-     * @param alpha   the separation parameter
-     * @param nx      the number of grid points along the X axis
-     * @param ny      the number of grid points along the Y axis
-     * @param nz      the number of grid points along the Z axis
-     */
-    void getDPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
-    class ForceInfo;
-    class TorquePostComputation;
     class SortTrait : public CudaSort::SortTrait {
         int getDataSize() const {return 8;}
         int getKeySize() const {return 4;}
@@ -161,47 +110,9 @@ private:
         const char* getMaxValue() const {return "make_int2(2147483647, 2147483647)";}
         const char* getSortKey() const {return "value.y";}
     };
-    void computeInducedField(int optOrder);
-    void computeExtrapolatedDipoles();
-    void ensureMultipolesValid(ContextImpl& context);
-    void addTorquesToForces();
-    void createFieldKernel(const std::string& interactionSrc, std::vector<ComputeArray*> params, ComputeArray& fieldBuffer,
-        ComputeKernel& kernel, ComputeKernel& exceptionKernel, ComputeArray& exceptionScale);
-    int numParticles, maxExtrapolationOrder, maxTiles;
-    int gridSizeX, gridSizeY, gridSizeZ;
-    int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    double pmeAlpha, dpmeAlpha, cutoff;
-    bool usePME, hasInitializedKernels, hasInitializedFFT, multipolesAreValid;
-    std::vector<double> extrapolationCoefficients;
-    CudaContext& cu;
-    const System& system;
-    ComputeArray multipoleParticles;
-    ComputeArray coreCharge, valenceCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
-    ComputeArray localDipoles, labDipoles, fracDipoles;
-    ComputeArray localQuadrupoles, labQuadrupoles[5], fracQuadrupoles;
-    ComputeArray field;
-    ComputeArray inducedField;
-    ComputeArray torque;
-    ComputeArray inducedDipole;
-    ComputeArray extrapolatedDipole, extrapolatedPhi;
-    ComputeArray pmeGrid1, pmeGrid2;
-    ComputeArray pmeAtomGridIndex;
-    ComputeArray pmeBsplineModuliX, pmeBsplineModuliY, pmeBsplineModuliZ;
-    ComputeArray dpmeBsplineModuliX, dpmeBsplineModuliY, dpmeBsplineModuliZ;
-    ComputeArray pmePhi, pmePhidp, pmeCphi;
-    ComputeArray lastPositions;
-    ComputeArray exceptionScales[6];
-    ComputeArray exceptionAtoms;
+    bool hasInitializedFFT;
     CudaSort* sort;
     cufftHandle fftForward, fftBackward, dfftForward, dfftBackward;
-    ComputeKernel computeMomentsKernel, recordInducedDipolesKernel, mapTorqueKernel;
-    ComputeKernel fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel, computeExceptionsKernel;
-    ComputeKernel pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
-    ComputeKernel pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
-    ComputeKernel pmeSelfEnergyKernel, pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
-    ComputeKernel dpmeGridIndexKernel, dpmeSpreadChargeKernel, dpmeFinishSpreadChargeKernel, dpmeEvalEnergyKernel, dpmeConvolutionKernel, dpmeInterpolateForceKernel;
-    ComputeKernel initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, polarizationEnergyKernel;
-    static const int PmeOrder = 5;
 };
 
 } // namespace OpenMM

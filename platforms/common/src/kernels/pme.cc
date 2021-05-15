@@ -597,9 +597,9 @@ KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ul
         ATOMIC_ADD(&forceBuffers[atom+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forceY*0x100000000)));
         ATOMIC_ADD(&forceBuffers[atom+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forceZ*0x100000000)));
 #else
-        forceBuffers[atom] += (mm_ulong) ((mm_long) (forceX*0x100000000)));
-        forceBuffers[atom+PADDED_NUM_ATOMS] += (mm_ulong) ((mm_long) (forceY*0x100000000)));
-        forceBuffers[atom+2*PADDED_NUM_ATOMS] += (mm_ulong) ((mm_long) (forceZ*0x100000000)));
+        forceBuffers[atom] += (mm_ulong) ((mm_long) (forceX*0x100000000));
+        forceBuffers[atom+PADDED_NUM_ATOMS] += (mm_ulong) ((mm_long) (forceY*0x100000000));
+        forceBuffers[atom+2*PADDED_NUM_ATOMS] += (mm_ulong) ((mm_long) (forceZ*0x100000000));
 #endif
     }
 }

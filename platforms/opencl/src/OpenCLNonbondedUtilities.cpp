@@ -91,6 +91,7 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
     }
     pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(int));
     pinnedCountMemory = (int*) context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(int));
+    setKernelSource(deviceIsCpu ? OpenCLKernelSources::nonbonded_cpu : OpenCLKernelSources::nonbonded);
 }
 
 OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
@@ -700,12 +701,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     defines["LAST_EXCLUSION_TILE"] = context.intToString(endExclusionIndex);
     if ((localDataSize/4)%2 == 0)
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
-    string file;
-    if (deviceIsCpu)
-        file = OpenCLKernelSources::nonbonded_cpu;
-    else
-        file = OpenCLKernelSources::nonbonded;
-    cl::Program program = context.createProgram(context.replaceStrings(file, replacements), defines);
+    cl::Program program = context.createProgram(context.replaceStrings(kernelSource, replacements), defines);
     cl::Kernel kernel(program, "computeNonbonded");
 
     // Set arguments to the Kernel.
@@ -739,4 +735,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     if (energyParameterDerivatives.size() > 0)
         kernel.setArg<cl::Memory>(index++, context.getEnergyParamDerivBuffer().getDeviceBuffer());
     return kernel;
+}
+
+void OpenCLNonbondedUtilities::setKernelSource(const string& source) {
+    kernelSource = source;
 }

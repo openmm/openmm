@@ -296,6 +296,10 @@ public:
      * @param groups    the set of force groups
      */
     void createKernelsForGroups(int groups);
+    /**
+     * Set the source code for the main kernel.  It only needs to be changed in very unusual circumstances.
+     */
+    void setKernelSource(const std::string& source);
 private:
     class KernelSet;
     class BlockSortTrait;
@@ -330,6 +334,7 @@ private:
     int numForceBuffers, startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
     int forceThreadBlockSize, interactingBlocksThreadBlockSize, groupFlags;
     long long numTiles;
+    std::string kernelSource;
 };
 
 /**

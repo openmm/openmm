@@ -275,15 +275,15 @@ KERNEL void gridSpreadFixedMultipoles(GLOBAL const real4* RESTRICT posq, GLOBAL 
                     real add = term0*v.x + term1*v.y + term2*v.z;
 #ifdef HIPPO
     #ifdef USE_FIXED_POINT_CHARGE_SPREADING
-                ATOMIC_ADD(&pmeGrid[index], (mm_ulong) ((mm_long) (add*0x100000000)));
+                    ATOMIC_ADD(&pmeGrid[index], (mm_ulong) ((mm_long) (add*0x100000000)));
     #else
-                ATOMIC_ADD(&pmeGrid[index], add);
+                    ATOMIC_ADD(&pmeGrid[index], add);
     #endif
 #else
     #ifdef USE_FIXED_POINT_CHARGE_SPREADING
-                ATOMIC_ADD(&pmeGrid[2*index], (mm_ulong) ((mm_long) (add*0x100000000)));
+                    ATOMIC_ADD(&pmeGrid[2*index], (mm_ulong) ((mm_long) (add*0x100000000)));
     #else
-                ATOMIC_ADD(&pmeGrid[index].x, add);
+                    ATOMIC_ADD(&pmeGrid[index].x, add);
     #endif
 #endif
                 }
@@ -420,7 +420,7 @@ KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL c
 /**
  * In double precision, we have to use fixed point to accumulate the grid values, so convert them to floating point.
  */
-KERNEL void finishSpreadCharge(GLOBAL mm_long* RESTRICT pmeGridLong, GLOBAL real* RESTRICT pmeGrid) {
+KERNEL void finishSpreadCharge(GLOBAL const mm_long* RESTRICT pmeGridLong, GLOBAL real* RESTRICT pmeGrid) {
 #ifdef HIPPO
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
 #else
