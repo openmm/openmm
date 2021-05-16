@@ -1,7 +1,7 @@
-extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4* __restrict__ multipoleParticles, real3* __restrict__ localDipoles,
-        real* __restrict__ localQuadrupoles, real3* __restrict__ labDipoles, real* __restrict__ labQXX, real* __restrict__ labQXY, real* __restrict__ labQXZ,
-        real* __restrict__ labQYY, real* __restrict__ labQYZ) {
-    for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += gridDim.x*blockDim.x) {
+KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RESTRICT multipoleParticles, GLOBAL real3* RESTRICT localDipoles,
+        GLOBAL real* RESTRICT localQuadrupoles, GLOBAL real3* RESTRICT labDipoles, GLOBAL real* RESTRICT labQXX, GLOBAL real* RESTRICT labQXY, GLOBAL real* RESTRICT labQXZ,
+        GLOBAL real* RESTRICT labQYY, GLOBAL real* RESTRICT labQYZ) {
+    for (int atom = GLOBAL_ID; atom < NUM_ATOMS; atom += GLOBAL_SIZE) {
         int4 particles = multipoleParticles[atom];
         if (particles.z >= 0) {
             real4 thisParticlePos = posq[atom];
@@ -155,8 +155,8 @@ extern "C" __global__ void computeLabFrameMoments(real4* __restrict__ posq, int4
     }
 }
 
-extern "C" __global__ void recordInducedDipoles(const long long* __restrict__ fieldBuffers, real* __restrict__ inducedDipole, const real* __restrict__ polarizability) {
-    for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < NUM_ATOMS; atom += gridDim.x*blockDim.x) {
+KERNEL void recordInducedDipoles(GLOBAL const mm_long* RESTRICT fieldBuffers, GLOBAL real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT polarizability) {
+    for (int atom = GLOBAL_ID; atom < NUM_ATOMS; atom += GLOBAL_SIZE) {
         real scale = polarizability[atom]/(real) 0x100000000;
         inducedDipole[3*atom] = scale*fieldBuffers[atom];
         inducedDipole[3*atom+1] = scale*fieldBuffers[atom+PADDED_NUM_ATOMS];
@@ -167,17 +167,17 @@ extern "C" __global__ void recordInducedDipoles(const long long* __restrict__ fi
 /**
  * Normalize a vector and return what its magnitude was.
  */
-inline __device__ real normVector(real3& v) {
-    real n = SQRT(dot(v, v));
-    v *= (n > 0 ? RECIP(n) : 0);
+inline DEVICE real normVector(real3* v) {
+    real n = SQRT(dot(*v, *v));
+    *v *= (n > 0 ? RECIP(n) : 0);
     return n;
 }
 
 /**
  * Compute the force on each particle due to the torque.
  */
-extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ forceBuffers, const long long* __restrict__ torqueBuffers,
-        const real4* __restrict__ posq, const int4* __restrict__ multipoleParticles) {
+KERNEL void mapTorqueToForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL const mm_long* RESTRICT torqueBuffers,
+        GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT multipoleParticles) {
     const int U = 0;
     const int V = 1;
     const int W = 2;
@@ -190,7 +190,6 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
     const int US = 9;
     const int VS = 10;
     const int WS = 11;
-    const int LastVectorIndex = 12;
     
     const int X = 0;
     const int Y = 1;
@@ -200,11 +199,11 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
     const real torqueScale = RECIP((double) 0x100000000);
     
     real3 forces[4];
-    real norms[LastVectorIndex];
-    real3 vector[LastVectorIndex];
-    real angles[LastVectorIndex][2];
+    real norms[12];
+    real3 vector[12];
+    real angles[12][2];
   
-    for (int atom = blockIdx.x*blockDim.x + threadIdx.x; atom < NUM_ATOMS; atom += gridDim.x*blockDim.x) {
+    for (int atom = GLOBAL_ID; atom < NUM_ATOMS; atom += GLOBAL_SIZE) {
         int4 particles = multipoleParticles[atom];
         int axisAtom = particles.z;
         int axisType = particles.w;
@@ -214,7 +213,7 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
         if (axisType < 5 && particles.z >= 0) {
             real3 atomPos = trimTo3(posq[atom]);
             vector[U] = atomPos - trimTo3(posq[axisAtom]);
-            norms[U] = normVector(vector[U]);
+            norms[U] = normVector(&vector[U]);
             if (axisType != 4 && particles.x >= 0)
                 vector[V] = atomPos - trimTo3(posq[particles.x]);
             else {
@@ -223,7 +222,7 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
                 else
                     vector[V] = make_real3(0, 1, 0);
             }
-            norms[V] = normVector(vector[V]);
+            norms[V] = normVector(&vector[V]);
         
             // W = UxV
         
@@ -231,15 +230,15 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
                 vector[W] = cross(vector[U], vector[V]);
             else
                 vector[W] = trimTo3(posq[particles.y]) - atomPos;
-            norms[W] = normVector(vector[W]);
+            norms[W] = normVector(&vector[W]);
         
             vector[UV] = cross(vector[V], vector[U]);
             vector[UW] = cross(vector[W], vector[U]);
             vector[VW] = cross(vector[W], vector[V]);
         
-            norms[UV] = normVector(vector[UV]);
-            norms[UW] = normVector(vector[UW]);
-            norms[VW] = normVector(vector[VW]);
+            norms[UV] = normVector(&vector[UV]);
+            norms[UW] = normVector(&vector[UW]);
+            norms[VW] = normVector(&vector[VW]);
         
             angles[UV][0] = dot(vector[U], vector[V]);
             angles[UV][1] = SQRT(1 - angles[UV][0]*angles[UV][0]);
@@ -279,18 +278,18 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
         
                 vector[S] = cross(vector[U], vector[R]);
         
-                norms[R] = normVector(vector[R]);
-                norms[S] = normVector(vector[S]);
+                norms[R] = normVector(&vector[R]);
+                norms[S] = normVector(&vector[S]);
         
                 vector[UR] = cross(vector[R], vector[U]);
                 vector[US] = cross(vector[S], vector[U]);
                 vector[VS] = cross(vector[S], vector[V]);
                 vector[WS] = cross(vector[S], vector[W]);
         
-                norms[UR] = normVector(vector[UR]);
-                norms[US] = normVector(vector[US]);
-                norms[VS] = normVector(vector[VS]);
-                norms[WS] = normVector(vector[WS]);
+                norms[UR] = normVector(&vector[UR]);
+                norms[US] = normVector(&vector[US]);
+                norms[VS] = normVector(&vector[VS]);
+                norms[WS] = normVector(&vector[WS]);
         
                 angles[UR][0] = dot(vector[U], vector[R]);
                 angles[UR][1] = SQRT(1 - angles[UR][0]*angles[UR][0]);
@@ -306,8 +305,8 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
          
                 real3 t1 = vector[V] - vector[S]*angles[VS][0];
                 real3 t2 = vector[W] - vector[S]*angles[WS][0];
-                normVector(t1);
-                normVector(t2);
+                normVector(&t1);
+                normVector(&t2);
                 real ut1cos = dot(vector[U], t1);
                 real ut1sin = SQRT(1 - ut1cos*ut1cos);
                 real ut2cos = dot(vector[U], t2);
@@ -361,22 +360,22 @@ extern "C" __global__ void mapTorqueToForce(unsigned long long* __restrict__ for
         
             // Store results
         
-            atomicAdd(&forceBuffers[particles.z], static_cast<unsigned long long>((long long) (forces[Z].x*0x100000000)));
-            atomicAdd(&forceBuffers[particles.z+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (forces[Z].y*0x100000000)));
-            atomicAdd(&forceBuffers[particles.z+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (forces[Z].z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[particles.z], (mm_ulong) ((mm_long) (forces[Z].x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[particles.z+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forces[Z].y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[particles.z+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forces[Z].z*0x100000000)));
             if (axisType != 4) {
-                atomicAdd(&forceBuffers[particles.x], static_cast<unsigned long long>((long long) (forces[X].x*0x100000000)));
-                atomicAdd(&forceBuffers[particles.x+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (forces[X].y*0x100000000)));
-                atomicAdd(&forceBuffers[particles.x+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (forces[X].z*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[particles.x], (mm_ulong) ((mm_long) (forces[X].x*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[particles.x+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forces[X].y*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[particles.x+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forces[X].z*0x100000000)));
             }
             if ((axisType == 2 || axisType == 3) && particles.y > -1) {
-                atomicAdd(&forceBuffers[particles.y], static_cast<unsigned long long>((long long) (forces[Y].x*0x100000000)));
-                atomicAdd(&forceBuffers[particles.y+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (forces[Y].y*0x100000000)));
-                atomicAdd(&forceBuffers[particles.y+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (forces[Y].z*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[particles.y], (mm_ulong) ((mm_long) (forces[Y].x*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[particles.y+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forces[Y].y*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[particles.y+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forces[Y].z*0x100000000)));
             }
-            atomicAdd(&forceBuffers[atom], static_cast<unsigned long long>((long long) (forces[I].x*0x100000000)));
-            atomicAdd(&forceBuffers[atom+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (forces[I].y*0x100000000)));
-            atomicAdd(&forceBuffers[atom+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (forces[I].z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom], (mm_ulong) ((mm_long) (forces[I].x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forces[I].y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forces[I].z*0x100000000)));
         }
     }
 }

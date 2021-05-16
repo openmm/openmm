@@ -3,15 +3,15 @@
 /**
  * Compute exceptions for HIPPO.
  */
-extern "C" __global__ void computeNonbondedExceptions(
-        unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, unsigned long long* __restrict__ torqueBuffers,
-        const real4* __restrict__ posq, const real3* __restrict__ extDipole, const int2* __restrict__ exceptionAtoms, const real* __restrict__ mmScale,
-        const real* __restrict__ dmScale, const real* __restrict__ ddScale, const real* __restrict__ dispScale, const real* __restrict__ repScale, const real* __restrict__ ctScale,
-        const real* __restrict__ coreCharge, const real* __restrict__ valenceCharge, const real* __restrict__ alpha, const real* __restrict__ epsilon,
-        const real* __restrict__ damping, const real* __restrict__ c6, const real* __restrict__ pauliK, const real* __restrict__ pauliQ,
-        const real* __restrict__ pauliAlpha, const real3* __restrict__ dipole, const real3* __restrict__ inducedDipole, const real* __restrict__ qXX,
-        const real* __restrict__ qXY, const real* __restrict__ qXZ, const real* __restrict__ qYY, const real* __restrict__ qYZ,
-        const real3* __restrict__ extrapolatedDipole
+KERNEL void computeNonbondedExceptions(
+        GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed* RESTRICT energyBuffer, GLOBAL mm_ulong* RESTRICT torqueBuffers,
+        GLOBAL const real4* RESTRICT posq, GLOBAL const real3* RESTRICT extDipole, GLOBAL const int2* RESTRICT exceptionAtoms, GLOBAL const real* RESTRICT mmScale,
+        GLOBAL const real* RESTRICT dmScale, GLOBAL const real* RESTRICT ddScale, GLOBAL const real* RESTRICT dispScale, GLOBAL const real* RESTRICT repScale, GLOBAL const real* RESTRICT ctScale,
+        GLOBAL const real* RESTRICT coreCharge, GLOBAL const real* RESTRICT valenceCharge, GLOBAL const real* RESTRICT alpha, GLOBAL const real* RESTRICT epsilon,
+        GLOBAL const real* RESTRICT damping, GLOBAL const real* RESTRICT c6, GLOBAL const real* RESTRICT pauliK, GLOBAL const real* RESTRICT pauliQ,
+        GLOBAL const real* RESTRICT pauliAlpha, GLOBAL const real3* RESTRICT dipole, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real* RESTRICT qXX,
+        GLOBAL const real* RESTRICT qXY, GLOBAL const real* RESTRICT qXZ, GLOBAL const real* RESTRICT qYY, GLOBAL const real* RESTRICT qYZ,
+        GLOBAL const real3* RESTRICT extrapolatedDipole
 #ifdef USE_CUTOFF
         , real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVec
 #endif
@@ -19,7 +19,7 @@ extern "C" __global__ void computeNonbondedExceptions(
     mixed energy = 0;
     const bool isExcluded = false;
     const real interactionScale = 1.0f;
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_EXCEPTIONS; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_EXCEPTIONS; index += GLOBAL_SIZE) {
         int2 atoms = exceptionAtoms[index];
         int atom1 = atoms.x;
         int atom2 = atoms.y;
@@ -79,21 +79,21 @@ extern "C" __global__ void computeNonbondedExceptions(
             real tempEnergy = 0.0f;
             COMPUTE_INTERACTION
             energy += tempEnergy;
-            atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (tempForce.x*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempForce.y*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempForce.z*0x100000000)));
-            atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (-tempForce.x*0x100000000)));
-            atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-tempForce.y*0x100000000)));
-            atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-tempForce.z*0x100000000)));
-            atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (tempTorque1.x*0x100000000)));
-            atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempTorque1.y*0x100000000)));
-            atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempTorque1.z*0x100000000)));
-            atomicAdd(&torqueBuffers[atom2], static_cast<unsigned long long>((long long) (tempTorque2.x*0x100000000)));
-            atomicAdd(&torqueBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempTorque2.y*0x100000000)));
-            atomicAdd(&torqueBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempTorque2.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) (tempForce.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempForce.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempForce.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom2], (mm_ulong) ((mm_long) (-tempForce.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (-tempForce.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (-tempForce.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom1], (mm_ulong) ((mm_long) (tempTorque1.x*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempTorque1.y*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempTorque1.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom2], (mm_ulong) ((mm_long) (tempTorque2.x*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempTorque2.y*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempTorque2.z*0x100000000)));
 #ifdef USE_CUTOFF
         }
 #endif
     }
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+    energyBuffer[GLOBAL_ID] += energy;
 }

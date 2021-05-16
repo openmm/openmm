@@ -566,11 +566,11 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     } else {
         for (int i = 0; i < (int) params.size(); i++) {
             if (params[i].getNumComponents() == 1) {
-                loadLocal1<<"localData[threadIdx.x]."<<params[i].getName()<<" = "<<params[i].getName()<<"1;\n";
+                loadLocal1<<"localData[LOCAL_ID]."<<params[i].getName()<<" = "<<params[i].getName()<<"1;\n";
             }
             else {
                 for (int j = 0; j < params[i].getNumComponents(); ++j)
-                    loadLocal1<<"localData[threadIdx.x]."<<params[i].getName()<<"_"<<suffixes[j]<<" = "<<params[i].getName()<<"1."<<suffixes[j]<<";\n";
+                    loadLocal1<<"localData[LOCAL_ID]."<<params[i].getName()<<"_"<<suffixes[j]<<" = "<<params[i].getName()<<"1."<<suffixes[j]<<";\n";
             }
         }
     }
@@ -618,12 +618,12 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     } else {
         for (int i = 0; i < (int) params.size(); i++) {
             if (params[i].getNumComponents() == 1) {
-                loadLocal2<<"localData[threadIdx.x]."<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+                loadLocal2<<"localData[LOCAL_ID]."<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
             }
             else {
                 loadLocal2<<params[i].getType()<<" temp_"<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
                 for (int j = 0; j < params[i].getNumComponents(); ++j)
-                    loadLocal2<<"localData[threadIdx.x]."<<params[i].getName()<<"_"<<suffixes[j]<<" = temp_"<<params[i].getName()<<"."<<suffixes[j]<<";\n";
+                    loadLocal2<<"localData[LOCAL_ID]."<<params[i].getName()<<"_"<<suffixes[j]<<" = temp_"<<params[i].getName()<<"."<<suffixes[j]<<";\n";
             }
         }
     }
@@ -675,7 +675,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     for (int i = 0; i < energyParameterDerivatives.size(); i++)
         for (int index = 0; index < numDerivs; index++)
             if (allParamDerivNames[index] == energyParameterDerivatives[i])
-                saveDerivs<<"energyParamDerivs[(blockIdx.x*blockDim.x+threadIdx.x)*"<<numDerivs<<"+"<<index<<"] += energyParamDeriv"<<i<<";\n";
+                saveDerivs<<"energyParamDerivs[GLOBAL_ID*"<<numDerivs<<"+"<<index<<"] += energyParamDeriv"<<i<<";\n";
     replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
 
     stringstream shuffleWarpData;

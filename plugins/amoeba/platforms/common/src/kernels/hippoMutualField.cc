@@ -1,5 +1,5 @@
 real fdamp3, fdamp5;
-computeMutualFieldDampingFactors(alpha1, alpha2, r, fdamp3, fdamp5);
+computeMutualFieldDampingFactors(alpha1, alpha2, r, &fdamp3, &fdamp5);
 #ifdef COMPUTING_EXCEPTIONS
 fdamp3 *= scale;
 fdamp5 *= scale;

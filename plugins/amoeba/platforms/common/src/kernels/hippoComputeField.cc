@@ -1,16 +1,16 @@
-__device__ void computeDirectFieldDampingFactors(real alpha, real r, real& fdamp3, real& fdamp5, real& fdamp7) {
+DEVICE void computeDirectFieldDampingFactors(real alpha, real r, real* fdamp3, real* fdamp5, real* fdamp7) {
     real ar = alpha*r;
     real ar2 = ar*ar;
     real ar3 = ar2*ar;
     real ar4 = ar2*ar2;
     real expAR = EXP(-ar);
     real one = 1;
-    fdamp3 = 1 - (1 + ar + ar2*(one/2))*expAR;
-    fdamp5 = 1 - (1 + ar + ar2*(one/2) + ar3*(one/6))*expAR;
-    fdamp7 = 1 - (1 + ar + ar2*(one/2) + ar3*(one/6) + ar4*(one/30))*expAR;
+    *fdamp3 = 1 - (1 + ar + ar2*(one/2))*expAR;
+    *fdamp5 = 1 - (1 + ar + ar2*(one/2) + ar3*(one/6))*expAR;
+    *fdamp7 = 1 - (1 + ar + ar2*(one/2) + ar3*(one/6) + ar4*(one/30))*expAR;
 }
 
-__device__ void computeMutualFieldDampingFactors(real alphaI, real alphaJ, real r, real& fdamp3, real& fdamp5) {
+DEVICE void computeMutualFieldDampingFactors(real alphaI, real alphaJ, real r, real* fdamp3, real* fdamp5) {
     real arI = alphaI*r;
     real arI2 = arI*arI;
     real arI3 = arI2*arI;
@@ -20,8 +20,8 @@ __device__ void computeMutualFieldDampingFactors(real alphaI, real alphaJ, real 
     if (alphaI == alphaJ) {
         real arI4 = arI3*arI;
         real arI5 = arI4*arI;
-        fdamp3 = 1 - (1 + arI + arI2*(one/2) + arI3*(seven/48) + arI4*(one/48))*expARI;
-        fdamp5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/24) + arI5*(one/144))*expARI;
+        *fdamp3 = 1 - (1 + arI + arI2*(one/2) + arI3*(seven/48) + arI4*(one/48))*expARI;
+        *fdamp5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/24) + arI5*(one/144))*expARI;
     }
     else {
         real arJ = alphaJ*r;
@@ -34,14 +34,14 @@ __device__ void computeMutualFieldDampingFactors(real alphaI, real alphaJ, real 
         real B = aI2/(aI2-aJ2);
         real A2expARI = A*A*expARI;
         real B2expARJ = B*B*expARJ;
-        fdamp3 = 1 - (1 + arI + arI2*(one/2))*A2expARI -
-                     (1 + arJ + arJ2*(one/2))*B2expARJ -
-                     (1 + arI)*2*B*A2expARI -
-                     (1 + arJ)*2*A*B2expARJ;
-        fdamp5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6))*A2expARI -
-                     (1 + arJ + arJ2*(one/2) + arJ3*(one/6))*B2expARJ -
-                     (1 + arI + arI2*(one/3))*2*B*A2expARI -
-                     (1 + arJ + arJ2*(one/3))*2*A*B2expARJ;
+        *fdamp3 = 1 - (1 + arI + arI2*(one/2))*A2expARI -
+                      (1 + arJ + arJ2*(one/2))*B2expARJ -
+                      (1 + arI)*2*B*A2expARI -
+                      (1 + arJ)*2*A*B2expARJ;
+        *fdamp5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6))*A2expARI -
+                      (1 + arJ + arJ2*(one/2) + arJ3*(one/6))*B2expARJ -
+                      (1 + arI + arI2*(one/3))*2*B*A2expARI -
+                      (1 + arJ + arJ2*(one/3))*2*A*B2expARJ;
     }
 }
 
@@ -54,21 +54,21 @@ typedef struct {
 /**
  * Compute the electrostatic field.
  */
-extern "C" __global__ void computeField(const real4* __restrict__ posq, const unsigned int* __restrict__ exclusions,
-        const int2* __restrict__ exclusionTiles, unsigned long long* __restrict__ fieldBuffers,
+KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigned int* RESTRICT exclusions,
+        GLOBAL const int2* RESTRICT exclusionTiles, GLOBAL mm_ulong* RESTRICT fieldBuffers,
 #ifdef USE_CUTOFF
-        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
-        const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms
+        GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
+        GLOBAL const real4* RESTRICT blockSize, GLOBAL const unsigned int* RESTRICT interactingAtoms
 #else
         unsigned int numTiles
 #endif
         PARAMETER_ARGUMENTS) {
-    const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE;
-    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1);
-    const unsigned int tbx = threadIdx.x - tgx;
-    __shared__ AtomData localData[THREAD_BLOCK_SIZE];
+    const unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
+    const unsigned int warp = (GLOBAL_ID)/TILE_SIZE;
+    const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1);
+    const unsigned int tbx = LOCAL_ID - tgx;
+    LOCAL AtomData localData[THREAD_BLOCK_SIZE];
 
     // First loop: process tiles that contain exclusions.
     
@@ -86,7 +86,7 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
         if (x == y) {
             // This tile is on the diagonal.
 
-            const unsigned int localAtomIndex = threadIdx.x;
+            const unsigned int localAtomIndex = LOCAL_ID;
             localData[localAtomIndex].pos = make_real3(pos1.x, pos1.y, pos1.z);
             LOAD_LOCAL_PARAMETERS_FROM_1
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
@@ -120,7 +120,7 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
         else {
             // This is an off-diagonal tile.
 
-            const unsigned int localAtomIndex = threadIdx.x;
+            const unsigned int localAtomIndex = LOCAL_ID;
             unsigned int j = y*TILE_SIZE + tgx;
             real4 tempPosq = posq[j];
             localData[localAtomIndex].pos = make_real3(tempPosq.x, tempPosq.y, tempPosq.z);
@@ -162,14 +162,14 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
         // Write results.
 
         unsigned int offset1 = x*TILE_SIZE + tgx;
-        atomicAdd(&fieldBuffers[offset1], static_cast<unsigned long long>((long long) (field.x*0x100000000)));
-        atomicAdd(&fieldBuffers[offset1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (field.y*0x100000000)));
-        atomicAdd(&fieldBuffers[offset1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (field.z*0x100000000)));
+        ATOMIC_ADD(&fieldBuffers[offset1], (mm_ulong) ((mm_long) (field.x*0x100000000)));
+        ATOMIC_ADD(&fieldBuffers[offset1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (field.y*0x100000000)));
+        ATOMIC_ADD(&fieldBuffers[offset1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (field.z*0x100000000)));
         if (x != y) {
             unsigned int offset2 = y*TILE_SIZE + tgx;
-            atomicAdd(&fieldBuffers[offset2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.x*0x100000000)));
-            atomicAdd(&fieldBuffers[offset2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.y*0x100000000)));
-            atomicAdd(&fieldBuffers[offset2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.z*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[offset2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.x*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[offset2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.y*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[offset2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.z*0x100000000)));
         }
     }
 
@@ -180,17 +180,17 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
     unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int tile = (int) (warp*(numTiles > maxTiles ? NUM_BLOCKS*((long long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
-    int end = (int) ((warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*((long long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
+    int tile = (int) (warp*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
+    int end = (int) ((warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : (long)numTiles)/totalWarps);
 #else
-    int tile = (int) (warp*(long long)numTiles/totalWarps);
-    int end = (int) ((warp+1)*(long long)numTiles/totalWarps);
+    int tile = (int) (warp*(mm_long)numTiles/totalWarps);
+    int end = (int) ((warp+1)*(mm_long)numTiles/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
-    __shared__ int atomIndices[THREAD_BLOCK_SIZE];
-    __shared__ volatile int skipTiles[THREAD_BLOCK_SIZE];
-    skipTiles[threadIdx.x] = -1;
+    LOCAL int atomIndices[THREAD_BLOCK_SIZE];
+    LOCAL volatile int skipTiles[THREAD_BLOCK_SIZE];
+    skipTiles[LOCAL_ID] = -1;
     
     while (tile < end) {
         real3 field = make_real3(0);
@@ -219,10 +219,10 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
         while (skipTiles[tbx+TILE_SIZE-1] < tile) {
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
-                skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else
-                skipTiles[threadIdx.x] = end;
+                skipTiles[LOCAL_ID] = end;
             skipBase += TILE_SIZE;            
             currentSkipIndex = tbx;
         }
@@ -237,13 +237,13 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
             
             real4 pos1 = posq[atom1];
             LOAD_ATOM1_PARAMETERS
-            const unsigned int localAtomIndex = threadIdx.x;
+            const unsigned int localAtomIndex = LOCAL_ID;
 #ifdef USE_CUTOFF
             unsigned int j = interactingAtoms[tile*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
-            atomIndices[threadIdx.x] = j;
+            atomIndices[LOCAL_ID] = j;
             if (j < PADDED_NUM_ATOMS) {
                 real4 tempPosq = posq[j];
                 localData[localAtomIndex].pos = make_real3(tempPosq.x, tempPosq.y, tempPosq.z);
@@ -257,7 +257,7 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
 
                 real4 blockCenterX = blockCenter[x];
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(pos1, blockCenterX)
-                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[threadIdx.x].pos, blockCenterX)
+                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[LOCAL_ID].pos, blockCenterX)
                 unsigned int tj = tgx;
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
@@ -317,18 +317,18 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
         
             // Write results.
 
-            atomicAdd(&fieldBuffers[atom1], static_cast<unsigned long long>((long long) (field.x*0x100000000)));
-            atomicAdd(&fieldBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (field.y*0x100000000)));
-            atomicAdd(&fieldBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (field.z*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[atom1], (mm_ulong) ((mm_long) (field.x*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (field.y*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (field.z*0x100000000)));
 #ifdef USE_CUTOFF
-            unsigned int atom2 = atomIndices[threadIdx.x];
+            unsigned int atom2 = atomIndices[LOCAL_ID];
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
             if (atom2 < PADDED_NUM_ATOMS) {
-                atomicAdd(&fieldBuffers[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.x*0x100000000)));
-                atomicAdd(&fieldBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.y*0x100000000)));
-                atomicAdd(&fieldBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].field.z*0x100000000)));
+                ATOMIC_ADD(&fieldBuffers[atom2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.x*0x100000000)));
+                ATOMIC_ADD(&fieldBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.y*0x100000000)));
+                ATOMIC_ADD(&fieldBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.z*0x100000000)));
             }
         }
         tile++;
@@ -340,13 +340,13 @@ extern "C" __global__ void computeField(const real4* __restrict__ posq, const un
 /**
  * Compute the electrostatic field from nonbonded exceptions.
  */
-extern "C" __global__ void computeFieldExceptions(const real4* __restrict__ posq, unsigned long long* __restrict__ fieldBuffers,
-        const int2* __restrict__ exceptionAtoms, const real* __restrict__ exceptionScale
+KERNEL void computeFieldExceptions(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ulong* RESTRICT fieldBuffers,
+        GLOBAL const int2* RESTRICT exceptionAtoms, GLOBAL const real* RESTRICT exceptionScale
 #ifdef USE_CUTOFF
         , real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
 #endif
         PARAMETER_ARGUMENTS) {
-    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < NUM_EXCEPTIONS; index += blockDim.x*gridDim.x) {
+    for (int index = GLOBAL_ID; index < NUM_EXCEPTIONS; index += GLOBAL_SIZE) {
         int2 atoms = exceptionAtoms[index];
         int atom1 = atoms.x;
         int atom2 = atoms.y;
@@ -368,12 +368,12 @@ extern "C" __global__ void computeFieldExceptions(const real4* __restrict__ posq
             real3 tempField1 = make_real3(0);
             real3 tempField2 = make_real3(0);
             COMPUTE_FIELD
-            atomicAdd(&fieldBuffers[atom1], static_cast<unsigned long long>((long long) (tempField1.x*0x100000000)));
-            atomicAdd(&fieldBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempField1.y*0x100000000)));
-            atomicAdd(&fieldBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempField1.z*0x100000000)));
-            atomicAdd(&fieldBuffers[atom2], static_cast<unsigned long long>((long long) (tempField2.x*0x100000000)));
-            atomicAdd(&fieldBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempField2.y*0x100000000)));
-            atomicAdd(&fieldBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (tempField2.z*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[atom1], (mm_ulong) ((mm_long) (tempField1.x*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempField1.y*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempField1.z*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[atom2], (mm_ulong) ((mm_long) (tempField2.x*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempField2.y*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempField2.z*0x100000000)));
 #ifdef USE_CUTOFF
         }
 #endif

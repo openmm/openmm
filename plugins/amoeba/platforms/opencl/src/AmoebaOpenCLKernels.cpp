@@ -52,3 +52,41 @@ void OpenCLCalcAmoebaMultipoleForceKernel::computeFFT(bool forward) {
     else
         fft->execFFT(grid2, grid1, false);
 }
+
+/* -------------------------------------------------------------------------- *
+ *                           HippoNonbondedForce                              *
+ * -------------------------------------------------------------------------- */
+
+OpenCLCalcHippoNonbondedForceKernel::~OpenCLCalcHippoNonbondedForceKernel() {
+    if (sort != NULL)
+        delete sort;
+    if (hasInitializedFFT) {
+        delete fftForward;
+        delete dfftForward;
+    }
+}
+
+void OpenCLCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
+    CommonCalcHippoNonbondedForceKernel::initialize(system, force);
+    if (usePME) {
+        OpenCLContext& cl = dynamic_cast<OpenCLContext&>(cc);
+        sort = new OpenCLSort(cl, new SortTrait(), cc.getNumAtoms());
+        fftForward = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ, true);
+        dfftForward = new OpenCLFFT3D(cl, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
+        hasInitializedFFT = true;
+    }
+}
+
+void OpenCLCalcHippoNonbondedForceKernel::computeFFT(bool forward, bool dispersion) {
+    OpenCLArray& grid1 = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid1);
+    OpenCLArray& grid2 = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid2);
+    OpenCLFFT3D* fft = (dispersion ? dfftForward : fftForward);
+    if (forward)
+        fft->execFFT(grid1, grid2, true);
+    else
+        fft->execFFT(grid2, grid1, false);
+}
+
+void OpenCLCalcHippoNonbondedForceKernel::sortGridIndex() {
+    sort->sort(dynamic_cast<OpenCLContext&>(cc).unwrap(pmeAtomGridIndex));
+}

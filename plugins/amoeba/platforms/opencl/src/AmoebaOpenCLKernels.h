@@ -33,6 +33,7 @@
 #include "AmoebaCommonKernels.h"
 #include "OpenCLContext.h"
 #include "OpenCLFFT3D.h"
+#include "OpenCLSort.h"
 
 namespace OpenMM {
 
@@ -64,6 +65,53 @@ public:
     }
 private:
     OpenCLFFT3D* fft;
+};
+
+
+/**
+ * This kernel is invoked by HippoNonbondedForce to calculate the forces acting on the system and the energy of the system.
+ */
+class OpenCLCalcHippoNonbondedForceKernel : public CommonCalcHippoNonbondedForceKernel {
+public:
+    OpenCLCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, OpenCLContext& cl, const System& system) :
+            CommonCalcHippoNonbondedForceKernel(name, platform, cl, system), sort(NULL), hasInitializedFFT(false) {
+    }
+    ~OpenCLCalcHippoNonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the HippoNonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const HippoNonbondedForce& force);
+    /**
+     * Compute the FFT.
+     */
+    void computeFFT(bool forward, bool dispersion);
+    /**
+     * Get whether charge spreading should be done in fixed point.
+     */
+    bool useFixedPointChargeSpreading() const {
+        return true;
+    }
+    /**
+     * Sort the atom grid indices.
+     */
+    void sortGridIndex();
+private:
+    class SortTrait : public OpenCLSort::SortTrait {
+        int getDataSize() const {return 8;}
+        int getKeySize() const {return 4;}
+        const char* getDataType() const {return "int2";}
+        const char* getKeyType() const {return "int";}
+        const char* getMinKey() const {return "(-2147483647-1)";}
+        const char* getMaxKey() const {return "2147483647";}
+        const char* getMaxValue() const {return "make_int2(2147483647, 2147483647)";}
+        const char* getSortKey() const {return "value.y";}
+    };
+    bool hasInitializedFFT;
+    OpenCLSort* sort;
+    OpenCLFFT3D *fftForward, *fftBackward, *dfftForward, *dfftBackward;
 };
 
 } // namespace OpenMM

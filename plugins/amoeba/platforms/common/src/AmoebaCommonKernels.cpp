@@ -235,6 +235,8 @@ CommonCalcAmoebaMultipoleForceKernel::~CommonCalcAmoebaMultipoleForceKernel() {
 
 void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
     cc.setAsCurrent();
+    if (!cc.getSupports64BitGlobalAtomics())
+        throw OpenMMException("AmoebaMultipoleForce requires a device that supports 64 bit atomic operations");
 
     // Initialize multipole parameters.
 
@@ -2373,6 +2375,8 @@ CommonCalcHippoNonbondedForceKernel::CommonCalcHippoNonbondedForceKernel(const s
 
 void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
     cc.setAsCurrent();
+    if (!cc.getSupports64BitGlobalAtomics())
+        throw OpenMMException("HippoNonbondedForce requires a device that supports 64 bit atomic operations");
     extrapolationCoefficients = force.getExtrapolationCoefficients();
     usePME = (force.getNonbondedMethod() == HippoNonbondedForce::PME);
 
@@ -2989,7 +2993,7 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
     
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
     nb.setKernelSource(CommonAmoebaKernelSources::hippoInteractionHeader+CommonAmoebaKernelSources::hippoNonbonded);
-    nb.addArgument(ComputeParameterInfo(torque, "torqueBuffers", "unsigned long long", 1, false));
+    nb.addArgument(ComputeParameterInfo(torque, "torqueBuffers", "mm_ulong", 1, false));
     nb.addArgument(ComputeParameterInfo(extrapolatedDipole, "extrapolatedDipole", "real3", 1));
     nb.addParameter(ComputeParameterInfo(coreCharge, "coreCharge", "real", 1));
     nb.addParameter(ComputeParameterInfo(valenceCharge, "valenceCharge", "real", 1));
@@ -3079,7 +3083,7 @@ void CommonCalcHippoNonbondedForceKernel::createFieldKernel(const string& intera
     for (auto param : params) {
         string name = param->getName();
         string type = (param->getElementSize() == 4 || param->getElementSize() == 8 ? "real" : "real3");
-        extraArgs << ", const " << type << "* __restrict__ " << name;
+        extraArgs << ", GLOBAL const " << type << "* RESTRICT " << name;
         atomParams << type << " " << name << ";\n";
         loadLocal1 << "localData[localAtomIndex]." << name << " = " << name << "1;\n";
         loadLocal2 << "localData[localAtomIndex]." << name << " = " << name << "[j];\n";

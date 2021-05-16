@@ -367,9 +367,10 @@ public:
      * @param numComponents  the number of components in the parameter
      * @param size           the size of the parameter in bytes
      * @param memory         the memory containing the parameter values
+     * @param constant       whether the memory should be marked as constant
      */
-    ParameterInfo(const std::string& name, const std::string& componentType, int numComponents, int size, cl::Memory& memory) :
-            name(name), componentType(componentType), numComponents(numComponents), size(size), memory(&memory) {
+    ParameterInfo(const std::string& name, const std::string& componentType, int numComponents, int size, cl::Memory& memory, bool constant=true) :
+            name(name), componentType(componentType), numComponents(numComponents), size(size), memory(&memory), constant(constant) {
         if (numComponents == 1)
             type = componentType;
         else {
@@ -396,12 +397,16 @@ public:
     cl::Memory& getMemory() const {
         return *memory;
     }
+    bool isConstant() const {
+        return constant;
+    }
 private:
     std::string name;
     std::string componentType;
     std::string type;
     int size, numComponents;
     cl::Memory* memory;
+    bool constant;
 };
 
 } // namespace OpenMM

@@ -15,8 +15,8 @@ real3 qiInducedDipole1 = rotateVectorToQI(inducedDipole1, mat);
 real3 qiInducedDipole2 = rotateVectorToQI(inducedDipole2, mat);
 real qiQXX1, qiQXY1, qiQXZ1, qiQYY1, qiQYZ1, qiQZZ1;
 real qiQXX2, qiQXY2, qiQXZ2, qiQYY2, qiQYZ2, qiQZZ2;
-rotateQuadrupoleToQI(qXX1, qXY1, qXZ1, qYY1, qYZ1, qiQXX1, qiQXY1, qiQXZ1, qiQYY1, qiQYZ1, qiQZZ1, mat);
-rotateQuadrupoleToQI(qXX2, qXY2, qXZ2, qYY2, qYZ2, qiQXX2, qiQXY2, qiQXZ2, qiQYY2, qiQYZ2, qiQZZ2, mat);
+rotateQuadrupoleToQI(qXX1, qXY1, qXZ1, qYY1, qYZ1, &qiQXX1, &qiQXY1, &qiQXZ1, &qiQYY1, &qiQYZ1, &qiQZZ1, mat);
+rotateQuadrupoleToQI(qXX2, qXY2, qXZ2, qYY2, qYZ2, &qiQXX2, &qiQXY2, &qiQXZ2, &qiQYY2, &qiQYZ2, &qiQZZ2, mat);
 
 // Compute intermediates used for dipole and quadrupole calculations.
 
@@ -68,8 +68,8 @@ real rr11 = 9*rr9*rInv2;
 real fdampI1, fdampI3, fdampI5, fdampI7, fdampI9;
 real fdampK1, fdampK3, fdampK5, fdampK7, fdampK9;
 real fdampIK1, fdampIK3, fdampIK5, fdampIK7, fdampIK9, fdampIK11;
-computeOverlapDampingFactors(alpha1, alpha2, r, fdampI1, fdampI3, fdampI5, fdampI7, fdampI9, fdampK1, fdampK3, fdampK5, fdampK7, fdampK9,
-                             fdampIK1, fdampIK3, fdampIK5, fdampIK7, fdampIK9, fdampIK11);
+computeOverlapDampingFactors(alpha1, alpha2, r, &fdampI1, &fdampI3, &fdampI5, &fdampI7, &fdampI9, &fdampK1, &fdampK3, &fdampK5, &fdampK7, &fdampK9,
+                             &fdampIK1, &fdampIK3, &fdampIK5, &fdampIK7, &fdampIK9, &fdampIK11);
 
 #if USE_EWALD
 // Calculate the error function damping terms.
@@ -321,7 +321,7 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
     // Compute damping coefficients.
 
     real fdamp1, fdamp3, fdamp5, fdamp7, fdamp9, fdamp11;
-    computeRepulsionDampingFactors(pauliAlpha1, pauliAlpha2, r, fdamp1, fdamp3, fdamp5, fdamp7, fdamp9, fdamp11);
+    computeRepulsionDampingFactors(pauliAlpha1, pauliAlpha2, r, &fdamp1, &fdamp3, &fdamp5, &fdamp7, &fdamp9, &fdamp11);
 
     // Calculate intermediate terms needed for the energy
 
@@ -385,7 +385,7 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
     real dispersionScale = 1;
 #endif
     real fdamp, ddamp;
-    computeDispersionDampingFactors(alpha1, alpha2, r, fdamp, ddamp);
+    computeDispersionDampingFactors(alpha1, alpha2, r, &fdamp, &ddamp);
 #if USE_EWALD
     real ralpha2 = r2*DPME_ALPHA*DPME_ALPHA;
     real ralpha4 = ralpha2*ralpha2;

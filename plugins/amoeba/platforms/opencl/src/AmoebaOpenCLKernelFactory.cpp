@@ -55,7 +55,7 @@ extern "C" OPENMM_EXPORT void registerKernelFactories() {
         platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaWcaDispersionForceKernel::Name(), factory);
-//        platform.registerKernelFactory(CalcHippoNonbondedForceKernel::Name(), factory);
+        platform.registerKernelFactory(CalcHippoNonbondedForceKernel::Name(), factory);
     }
     catch (...) {
         // Ignore.  The OpenCL platform isn't available.
@@ -91,8 +91,8 @@ KernelImpl* AmoebaOpenCLKernelFactory::createKernelImpl(std::string name, const 
     if (name == CalcAmoebaWcaDispersionForceKernel::Name())
         return new CommonCalcAmoebaWcaDispersionForceKernel(name, platform, cc, context.getSystem());
 
-//    if (name == CalcHippoNonbondedForceKernel::Name())
-//        return new CommonCalcHippoNonbondedForceKernel(name, platform, cc, context.getSystem());
+    if (name == CalcHippoNonbondedForceKernel::Name())
+        return new OpenCLCalcHippoNonbondedForceKernel(name, platform, cc, context.getSystem());
 
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

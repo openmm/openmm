@@ -134,7 +134,7 @@ CudaCalcHippoNonbondedForceKernel::~CudaCalcHippoNonbondedForceKernel() {
 void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
     CommonCalcHippoNonbondedForceKernel::initialize(system, force);
     if (usePME) {
-    CudaContext& cu = dynamic_cast<CudaContext&>(cc);
+        CudaContext& cu = dynamic_cast<CudaContext&>(cc);
         sort = new CudaSort(cu, new SortTrait(), cc.getNumAtoms());
         cufftResult result = cufftPlan3d(&fftForward, gridSizeX, gridSizeY, gridSizeZ, cc.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
         if (result != CUFFT_SUCCESS)

@@ -32,7 +32,7 @@ real bn3 = (5*bn2+alsq2n*exp2a)*invR2;
 // Calculate the field at particle 1 due to multipoles at particle 2
 
 real fdamp3, fdamp5, fdamp7;
-computeDirectFieldDampingFactors(alpha2, r, fdamp3, fdamp5, fdamp7);
+computeDirectFieldDampingFactors(alpha2, r, &fdamp3, &fdamp5, &fdamp7);
 #ifndef COMPUTING_EXCEPTIONS
 real scale = 1;
 #endif
@@ -58,7 +58,7 @@ tempField1 = -delta*factor2 - dipole2*rr3j + qDotDelta2*2*rr5j;
 
 // Calculate the field at particle 2 due to multipoles at particle 1
 
-computeDirectFieldDampingFactors(alpha1, r, fdamp3, fdamp5, fdamp7);
+computeDirectFieldDampingFactors(alpha1, r, &fdamp3, &fdamp5, &fdamp7);
 #ifdef USE_EWALD
 real rr3i = bn1 - (1-scale*fdamp3)*invR3;
 real rr5i = bn2 - (1-scale*fdamp5)*3*invR5;

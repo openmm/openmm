@@ -32,35 +32,35 @@ static __inline__ __device__ double real_shfl(double var, int srcLane) {
     return __hiloint2double( hi, lo );
 }
 
-static __inline__ __device__ long long real_shfl(long long var, int srcLane) {
+static __inline__ __device__ mm_long real_shfl(mm_long var, int srcLane) {
     int hi, lo;
     asm volatile("mov.b64 { %0, %1 }, %2;" : "=r"(lo), "=r"(hi) : "l"(var));
     hi = SHFL(hi, srcLane);
     lo = SHFL(lo, srcLane);
     // unforunately there isn't an __nv_hiloint2long(hi,lo) intrinsic cast
     int2 fuse; fuse.x = lo; fuse.y = hi;
-    return *reinterpret_cast<long long*>(&fuse);
+    return *reinterpret_cast<mm_long*>(&fuse);
 }
 #endif
 
-extern "C" __global__ void computeNonbonded(
-        unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
-        const int2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices
+KERNEL void computeNonbonded(
+        GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const unsigned int* RESTRICT exclusions,
+        GLOBAL const int2* RESTRICT exclusionTiles, unsigned int startTileIndex, mm_ulong numTileIndices
 #ifdef USE_CUTOFF
-        , const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
-        const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms, unsigned int maxSinglePairs,
-        const int2* __restrict__ singlePairs
+        , GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
+        GLOBAL const real4* RESTRICT blockSize, GLOBAL const unsigned int* RESTRICT interactingAtoms, unsigned int maxSinglePairs,
+        GLOBAL const int2* RESTRICT singlePairs
 #endif
         PARAMETER_ARGUMENTS) {
-    const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE; // global warpIndex
-    const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
-    const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
+    const unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
+    const unsigned int warp = (GLOBAL_ID)/TILE_SIZE; // global warpIndex
+    const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1); // index within the warp
+    const unsigned int tbx = LOCAL_ID - tgx;           // block warpIndex
     mixed energy = 0;
     // used shared memory if the device cannot shuffle
 #ifndef ENABLE_SHUFFLE
-    __shared__ AtomData localData[THREAD_BLOCK_SIZE];
+    LOCAL AtomData localData[THREAD_BLOCK_SIZE];
 #endif
 
     // First loop: process tiles that contain exclusions.
@@ -76,17 +76,17 @@ extern "C" __global__ void computeNonbonded(
         unsigned int atom1 = x*TILE_SIZE + tgx;
         real4 posq1 = posq[atom1];
         LOAD_ATOM1_PARAMETERS
-        tileflags excl = exclusions[pos*TILE_SIZE+tgx];
+        unsigned int excl = exclusions[pos*TILE_SIZE+tgx];
         const bool hasExclusions = true;
         if (x == y) {
             // This tile is on the diagonal.
 #ifdef ENABLE_SHUFFLE
             real4 shflPosq = posq1;
 #else
-            localData[threadIdx.x].x = posq1.x;
-            localData[threadIdx.x].y = posq1.y;
-            localData[threadIdx.x].z = posq1.z;
-            localData[threadIdx.x].q = posq1.w;
+            localData[LOCAL_ID].x = posq1.x;
+            localData[LOCAL_ID].y = posq1.y;
+            localData[LOCAL_ID].z = posq1.z;
+            localData[LOCAL_ID].q = posq1.w;
             LOAD_LOCAL_PARAMETERS_FROM_1
 #endif
 
@@ -130,16 +130,16 @@ extern "C" __global__ void computeNonbonded(
             real3 shflForce = make_real3(0);
             real3 shflTorque = make_real3(0);
 #else
-            localData[threadIdx.x].x = shflPosq.x;
-            localData[threadIdx.x].y = shflPosq.y;
-            localData[threadIdx.x].z = shflPosq.z;
-            localData[threadIdx.x].q = shflPosq.w;
-            localData[threadIdx.x].fx = 0.0f;
-            localData[threadIdx.x].fy = 0.0f;
-            localData[threadIdx.x].fz = 0.0f;
-            localData[threadIdx.x].tx = 0.0f;
-            localData[threadIdx.x].ty = 0.0f;
-            localData[threadIdx.x].tz = 0.0f;
+            localData[LOCAL_ID].x = shflPosq.x;
+            localData[LOCAL_ID].y = shflPosq.y;
+            localData[LOCAL_ID].z = shflPosq.z;
+            localData[LOCAL_ID].q = shflPosq.w;
+            localData[LOCAL_ID].fx = 0.0f;
+            localData[LOCAL_ID].fy = 0.0f;
+            localData[LOCAL_ID].fz = 0.0f;
+            localData[LOCAL_ID].tx = 0.0f;
+            localData[LOCAL_ID].ty = 0.0f;
+            localData[LOCAL_ID].tz = 0.0f;
 #endif
             DECLARE_LOCAL_PARAMETERS
             LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
@@ -194,30 +194,30 @@ extern "C" __global__ void computeNonbonded(
             const unsigned int offset = y*TILE_SIZE + tgx;
             // write results for off diagonal tiles
 #ifdef ENABLE_SHUFFLE
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (shflForce.x*0x100000000)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.y*0x100000000)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.z*0x100000000)));
-            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (shflTorque.x*0x100000000)));
-            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflTorque.y*0x100000000)));
-            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflTorque.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (shflForce.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (shflForce.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (shflForce.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (shflTorque.x*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (shflTorque.y*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (shflTorque.z*0x100000000)));
 #else
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0x100000000)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0x100000000)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
-            atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].tx*0x100000000)));
-            atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].ty*0x100000000)));
-            atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].tz*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fx*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fy*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fz*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].tx*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].ty*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].tz*0x100000000)));
 #endif
         }
         // Write results for on and off diagonal tiles
 
         const unsigned int offset = x*TILE_SIZE + tgx;
-        atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
-        atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
-        atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
-        atomicAdd(&torqueBuffers[offset], static_cast<unsigned long long>((long long) (torque.x*0x100000000)));
-        atomicAdd(&torqueBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (torque.y*0x100000000)));
-        atomicAdd(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (torque.z*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (force.x*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
+        ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (torque.x*0x100000000)));
+        ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque.y*0x100000000)));
+        ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque.z*0x100000000)));
     }
 
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
@@ -227,20 +227,20 @@ extern "C" __global__ void computeNonbonded(
     const unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(long long)numTileIndices/totalWarps : warp*(long long)numTiles/totalWarps);
-    int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(long long)numTileIndices/totalWarps : (warp+1)*(long long)numTiles/totalWarps);
+    int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(mm_long)numTileIndices/totalWarps : warp*(mm_long)numTiles/totalWarps);
+    int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(mm_long)numTileIndices/totalWarps : (warp+1)*(mm_long)numTiles/totalWarps);
 #else
     const unsigned int numTiles = numTileIndices;
-    int pos = (int) (startTileIndex+warp*(long long)numTiles/totalWarps);
-    int end = (int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
+    int pos = (int) (startTileIndex+warp*(mm_long)numTiles/totalWarps);
+    int end = (int) (startTileIndex+(warp+1)*(mm_long)numTiles/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
     // atomIndices can probably be shuffled as well
     // but it probably wouldn't make things any faster
-    __shared__ int atomIndices[THREAD_BLOCK_SIZE];
-    __shared__ volatile int skipTiles[THREAD_BLOCK_SIZE];
-    skipTiles[threadIdx.x] = -1;
+    LOCAL int atomIndices[THREAD_BLOCK_SIZE];
+    LOCAL volatile int skipTiles[THREAD_BLOCK_SIZE];
+    skipTiles[LOCAL_ID] = -1;
     
     while (pos < end) {
         const bool hasExclusions = false;
@@ -270,10 +270,10 @@ extern "C" __global__ void computeNonbonded(
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
-                skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else
-                skipTiles[threadIdx.x] = end;
+                skipTiles[LOCAL_ID] = end;
             skipBase += TILE_SIZE;            
             currentSkipIndex = tbx;
         }
@@ -286,13 +286,12 @@ extern "C" __global__ void computeNonbonded(
             // Load atom data for this tile.
             real4 posq1 = posq[atom1];
             LOAD_ATOM1_PARAMETERS
-            //const unsigned int localAtomIndex = threadIdx.x;
 #ifdef USE_CUTOFF
             unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
-            atomIndices[threadIdx.x] = j;
+            atomIndices[LOCAL_ID] = j;
 #ifdef ENABLE_SHUFFLE
             DECLARE_LOCAL_PARAMETERS
             real4 shflPosq;
@@ -304,13 +303,13 @@ extern "C" __global__ void computeNonbonded(
 #ifdef ENABLE_SHUFFLE
                 shflPosq = posq[j];
 #else
-                localData[threadIdx.x].x = posq[j].x;
-                localData[threadIdx.x].y = posq[j].y;
-                localData[threadIdx.x].z = posq[j].z;
-                localData[threadIdx.x].q = posq[j].w;
-                localData[threadIdx.x].fx = 0.0f;
-                localData[threadIdx.x].fy = 0.0f;
-                localData[threadIdx.x].fz = 0.0f;
+                localData[LOCAL_ID].x = posq[j].x;
+                localData[LOCAL_ID].y = posq[j].y;
+                localData[LOCAL_ID].z = posq[j].z;
+                localData[LOCAL_ID].q = posq[j].w;
+                localData[LOCAL_ID].fx = 0.0f;
+                localData[LOCAL_ID].fy = 0.0f;
+                localData[LOCAL_ID].fz = 0.0f;
 #endif                
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
@@ -318,9 +317,9 @@ extern "C" __global__ void computeNonbonded(
 #ifdef ENABLE_SHUFFLE
                 shflPosq = make_real4(0, 0, 0, 0);
 #else
-                localData[threadIdx.x].x = 0;
-                localData[threadIdx.x].y = 0;
-                localData[threadIdx.x].z = 0;
+                localData[LOCAL_ID].x = 0;
+                localData[LOCAL_ID].y = 0;
+                localData[LOCAL_ID].z = 0;
 #endif
             }
 #ifdef USE_PERIODIC
@@ -332,7 +331,7 @@ extern "C" __global__ void computeNonbonded(
 #ifdef ENABLE_SHUFFLE
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(shflPosq, blockCenterX)
 #else
-                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[threadIdx.x], blockCenterX)
+                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[LOCAL_ID], blockCenterX)
 #endif
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
@@ -418,9 +417,9 @@ extern "C" __global__ void computeNonbonded(
                     localData[tbx+tj].fx -= tempForce.x;
                     localData[tbx+tj].fy -= tempForce.y;
                     localData[tbx+tj].fz -= tempForce.z;
-                    localData[tbx+tj].tx += tempTorque.x;
-                    localData[tbx+tj].ty += tempTorque.y;
-                    localData[tbx+tj].tz += tempTorque.z;
+                    localData[tbx+tj].tx += tempTorque2.x;
+                    localData[tbx+tj].ty += tempTorque2.y;
+                    localData[tbx+tj].tz += tempTorque2.z;
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
@@ -428,38 +427,38 @@ extern "C" __global__ void computeNonbonded(
 
             // Write results.
 
-            atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
-            atomicAdd(&torqueBuffers[atom1], static_cast<unsigned long long>((long long) (torque.x*0x100000000)));
-            atomicAdd(&torqueBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (torque.y*0x100000000)));
-            atomicAdd(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (torque.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) (force.x*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom1], (mm_ulong) ((mm_long) (torque.x*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque.y*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque.z*0x100000000)));
 #ifdef USE_CUTOFF
-            unsigned int atom2 = atomIndices[threadIdx.x];
+            unsigned int atom2 = atomIndices[LOCAL_ID];
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
             if (atom2 < PADDED_NUM_ATOMS) {
 #ifdef ENABLE_SHUFFLE
-                atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (shflForce.x*0x100000000)));
-                atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.y*0x100000000)));
-                atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.z*0x100000000)));
-                atomicAdd(&torqueBuffers[atom2], static_cast<unsigned long long>((long long) (shflTorque.x*0x100000000)));
-                atomicAdd(&torqueBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflTorque.y*0x100000000)));
-                atomicAdd(&torqueBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflTorque.z*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom2], (mm_ulong) ((mm_long) (shflForce.x*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (shflForce.y*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (shflForce.z*0x100000000)));
+                ATOMIC_ADD(&torqueBuffers[atom2], (mm_ulong) ((mm_long) (shflTorque.x*0x100000000)));
+                ATOMIC_ADD(&torqueBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (shflTorque.y*0x100000000)));
+                ATOMIC_ADD(&torqueBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (shflTorque.z*0x100000000)));
 #else
-                atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0x100000000)));
-                atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0x100000000)));
-                atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
-                atomicAdd(&torqueBuffers[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].tx*0x100000000)));
-                atomicAdd(&torqueBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].ty*0x100000000)));
-                atomicAdd(&torqueBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].tz*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fx*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fy*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fz*0x100000000)));
+                ATOMIC_ADD(&torqueBuffers[atom2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].tx*0x100000000)));
+                ATOMIC_ADD(&torqueBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].ty*0x100000000)));
+                ATOMIC_ADD(&torqueBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].tz*0x100000000)));
 #endif
             }
         }
         pos++;
     }
 #ifdef INCLUDE_ENERGY
-    energyBuffer[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+    energyBuffer[GLOBAL_ID] += energy;
 #endif
 }

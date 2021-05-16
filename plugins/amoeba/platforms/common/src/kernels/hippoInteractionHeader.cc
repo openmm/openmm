@@ -1,6 +1,6 @@
 // Functions that are called from hippoInteraction.cu.
 
-__device__ void formQIRotationMatrix(real3 deltaR, real rInv, real (&rotationMatrix)[3][3]) {
+DEVICE void formQIRotationMatrix(real3 deltaR, real rInv, real rotationMatrix[3][3]) {
     real3 vectorZ = deltaR*rInv;
     real3 vectorX = make_real3(0);
     if (fabs(vectorZ.y) > fabs(vectorZ.x))
@@ -23,33 +23,33 @@ __device__ void formQIRotationMatrix(real3 deltaR, real rInv, real (&rotationMat
     rotationMatrix[2][2] = vectorZ.z;
 }
 
-__device__ real3 rotateVectorToQI(real3 v, const real (&mat)[3][3]) {
+DEVICE real3 rotateVectorToQI(real3 v, const real mat[3][3]) {
     return make_real3(mat[0][0]*v.x + mat[0][1]*v.y + mat[0][2]*v.z,
                       mat[1][0]*v.x + mat[1][1]*v.y + mat[1][2]*v.z,
                       mat[2][0]*v.x + mat[2][1]*v.y + mat[2][2]*v.z);
 }
 
-__device__ real3 rotateVectorFromQI(real3 v, const real (&mat)[3][3]) {
+DEVICE real3 rotateVectorFromQI(real3 v, const real mat[3][3]) {
     return make_real3(mat[0][0]*v.x + mat[1][0]*v.y + mat[2][0]*v.z,
                       mat[0][1]*v.x + mat[1][1]*v.y + mat[2][1]*v.z,
                       mat[0][2]*v.x + mat[1][2]*v.y + mat[2][2]*v.z);
 }
 
-__device__ void rotateQuadrupoleToQI(real qXX, real qXY, real qXZ, real qYY, real qYZ, 
-            real &qiQXX, real &qiQXY, real &qiQXZ, real &qiQYY, real &qiQYZ, real &qiQZZ, const real (&mat)[3][3]) {
+DEVICE void rotateQuadrupoleToQI(real qXX, real qXY, real qXZ, real qYY, real qYZ, 
+            real* qiQXX, real* qiQXY, real* qiQXZ, real* qiQYY, real* qiQYZ, real* qiQZZ, const real mat[3][3]) {
     real qZZ = -qXX-qYY;
-    qiQXX = mat[0][0]*(mat[0][0]*qXX + 2*(mat[0][1]*qXY + mat[0][2]*qXZ)) + mat[0][1]*(mat[0][1]*qYY + 2*mat[0][2]*qYZ) + mat[0][2]*mat[0][2]*qZZ;
-    qiQYY = mat[1][0]*(mat[1][0]*qXX + 2*(mat[1][1]*qXY + mat[1][2]*qXZ)) + mat[1][1]*(mat[1][1]*qYY + 2*mat[1][2]*qYZ) + mat[1][2]*mat[1][2]*qZZ;
-    qiQXY = mat[0][0]*mat[1][0]*qXX + mat[0][1]*mat[1][1]*qYY + mat[0][2]*mat[1][2]*qZZ + (mat[0][0]*mat[1][1] + mat[0][1]*mat[1][0])*qXY + (mat[0][0]*mat[1][2] + mat[0][2]*mat[1][0])*qXZ + (mat[0][1]*mat[1][2] + mat[0][2]*mat[1][1])*qYZ;
-    qiQXZ = mat[0][0]*mat[2][0]*qXX + mat[0][1]*mat[2][1]*qYY + mat[0][2]*mat[2][2]*qZZ + (mat[0][0]*mat[2][1] + mat[0][1]*mat[2][0])*qXY + (mat[0][0]*mat[2][2] + mat[0][2]*mat[2][0])*qXZ + (mat[0][1]*mat[2][2] + mat[0][2]*mat[2][1])*qYZ;
-    qiQYZ = mat[1][0]*mat[2][0]*qXX + mat[1][1]*mat[2][1]*qYY + mat[1][2]*mat[2][2]*qZZ + (mat[1][0]*mat[2][1] + mat[1][1]*mat[2][0])*qXY + (mat[1][0]*mat[2][2] + mat[1][2]*mat[2][0])*qXZ + (mat[1][1]*mat[2][2] + mat[1][2]*mat[2][1])*qYZ;
-    qiQZZ = -qiQXX-qiQYY;
+    *qiQXX = mat[0][0]*(mat[0][0]*qXX + 2*(mat[0][1]*qXY + mat[0][2]*qXZ)) + mat[0][1]*(mat[0][1]*qYY + 2*mat[0][2]*qYZ) + mat[0][2]*mat[0][2]*qZZ;
+    *qiQYY = mat[1][0]*(mat[1][0]*qXX + 2*(mat[1][1]*qXY + mat[1][2]*qXZ)) + mat[1][1]*(mat[1][1]*qYY + 2*mat[1][2]*qYZ) + mat[1][2]*mat[1][2]*qZZ;
+    *qiQXY = mat[0][0]*mat[1][0]*qXX + mat[0][1]*mat[1][1]*qYY + mat[0][2]*mat[1][2]*qZZ + (mat[0][0]*mat[1][1] + mat[0][1]*mat[1][0])*qXY + (mat[0][0]*mat[1][2] + mat[0][2]*mat[1][0])*qXZ + (mat[0][1]*mat[1][2] + mat[0][2]*mat[1][1])*qYZ;
+    *qiQXZ = mat[0][0]*mat[2][0]*qXX + mat[0][1]*mat[2][1]*qYY + mat[0][2]*mat[2][2]*qZZ + (mat[0][0]*mat[2][1] + mat[0][1]*mat[2][0])*qXY + (mat[0][0]*mat[2][2] + mat[0][2]*mat[2][0])*qXZ + (mat[0][1]*mat[2][2] + mat[0][2]*mat[2][1])*qYZ;
+    *qiQYZ = mat[1][0]*mat[2][0]*qXX + mat[1][1]*mat[2][1]*qYY + mat[1][2]*mat[2][2]*qZZ + (mat[1][0]*mat[2][1] + mat[1][1]*mat[2][0])*qXY + (mat[1][0]*mat[2][2] + mat[1][2]*mat[2][0])*qXZ + (mat[1][1]*mat[2][2] + mat[1][2]*mat[2][1])*qYZ;
+    *qiQZZ = -*qiQXX-*qiQYY;
 }
 
-__device__ void computeOverlapDampingFactors(real alphaI, real alphaJ, real r,
-                                  real& fdampI1, real& fdampI3, real& fdampI5, real& fdampI7, real& fdampI9,
-                                  real& fdampJ1, real& fdampJ3, real& fdampJ5, real& fdampJ7, real& fdampJ9,
-                                  real& fdampIJ1, real& fdampIJ3, real& fdampIJ5, real& fdampIJ7, real& fdampIJ9, real& fdampIJ11) {
+DEVICE void computeOverlapDampingFactors(real alphaI, real alphaJ, real r,
+                                  real* fdampI1, real* fdampI3, real* fdampI5, real* fdampI7, real* fdampI9,
+                                  real* fdampJ1, real* fdampJ3, real* fdampJ5, real* fdampJ7, real* fdampJ9,
+                                  real* fdampIJ1, real* fdampIJ3, real* fdampIJ5, real* fdampIJ7, real* fdampIJ9, real* fdampIJ11) {
     real arI = alphaI*r;
     real arI2 = arI*arI;
     real arI3 = arI2*arI;
@@ -64,25 +64,25 @@ __device__ void computeOverlapDampingFactors(real alphaI, real alphaJ, real r,
     real five = 5;
     real seven = 7;
     real eleven = 11;
-    fdampI1 = 1 - (1 + arI*(one/2))*expARI;
-    fdampI3 = 1 - (1 + arI + arI2*(one/2))*expARI;
-    fdampI5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6))*expARI;
-    fdampI7 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/30))*expARI;
-    fdampI9 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(four/105) + arI5*(one/210))*expARI;
+    *fdampI1 = 1 - (1 + arI*(one/2))*expARI;
+    *fdampI3 = 1 - (1 + arI + arI2*(one/2))*expARI;
+    *fdampI5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6))*expARI;
+    *fdampI7 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/30))*expARI;
+    *fdampI9 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(four/105) + arI5*(one/210))*expARI;
     if (alphaI == alphaJ) {
-        fdampJ1 = fdampI1;
-        fdampJ3 = fdampI3;
-        fdampJ5 = fdampI5;
-        fdampJ7 = fdampI7;
-        fdampJ9 = fdampI9;
+        *fdampJ1 = *fdampI1;
+        *fdampJ3 = *fdampI3;
+        *fdampJ5 = *fdampI5;
+        *fdampJ7 = *fdampI7;
+        *fdampJ9 = *fdampI9;
         real arI7 = arI4*arI3;
         real arI8 = arI4*arI4;
-        fdampIJ1 = 1 - (1 + arI*(eleven/16) + arI2*(three/16) + arI3*(one/48))*expARI;
-        fdampIJ3 = 1 - (1 + arI + arI2*(one/2) + arI3*(seven/48) + arI4*(one/48))*expARI;
-        fdampIJ5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/24) + arI5*(one/144))*expARI;
-        fdampIJ7 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/24) + arI5*(one/120) + arI6*(one/720))*expARI;
-        fdampIJ9 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/24) + arI5*(one/120) + arI6*(one/720) + arI7*(one/5040))*expARI;
-        fdampIJ11 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/24) + arI5*(one/120) + arI6*(one/720) + arI7*(one/5040) + arI8*(one/45360))*expARI;
+        *fdampIJ1 = 1 - (1 + arI*(eleven/16) + arI2*(three/16) + arI3*(one/48))*expARI;
+        *fdampIJ3 = 1 - (1 + arI + arI2*(one/2) + arI3*(seven/48) + arI4*(one/48))*expARI;
+        *fdampIJ5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/24) + arI5*(one/144))*expARI;
+        *fdampIJ7 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/24) + arI5*(one/120) + arI6*(one/720))*expARI;
+        *fdampIJ9 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/24) + arI5*(one/120) + arI6*(one/720) + arI7*(one/5040))*expARI;
+        *fdampIJ11 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/24) + arI5*(one/120) + arI6*(one/720) + arI7*(one/5040) + arI8*(one/45360))*expARI;
     }
     else {
         real arJ = alphaJ*r;
@@ -98,37 +98,37 @@ __device__ void computeOverlapDampingFactors(real alphaI, real alphaJ, real r,
         real B = aI2/(aI2-aJ2);
         real A2expARI = A*A*expARI;
         real B2expARJ = B*B*expARJ;
-        fdampJ1 = 1 - (1 + arJ*(one/2))*expARJ;
-        fdampJ3 = 1 - (1 + arJ + arJ2*(one/2))*expARJ;
-        fdampJ5 = 1 - (1 + arJ + arJ2*(one/2) + arJ3*(one/6))*expARJ;
-        fdampJ7 = 1 - (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*(one/30))*expARJ;
-        fdampJ9 = 1 - (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + 4*arJ4*(one/105) + arJ5*(one/210))*expARJ;
-        fdampIJ1 = 1 - (1 + 2*B + arI*(one/2))*A2expARI -
-                       (1 + 2*A + arJ*(one/2))*B2expARJ;
-        fdampIJ3 = 1 - (1 + arI + arI2*(one/2))*A2expARI -
-                       (1 + arJ + arJ2*(one/2))*B2expARJ -
-                       (1 + arI)*2*B*A2expARI -
-                       (1 + arJ)*2*A*B2expARJ;
-        fdampIJ5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6))*A2expARI -
-                       (1 + arJ + arJ2*(one/2) + arJ3*(one/6))*B2expARJ -
-                       (1 + arI + arI2*(one/3))*2*B*A2expARI -
-                       (1 + arJ + arJ2*(one/3))*2*A*B2expARJ;
-        fdampIJ7 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/30))*A2expARI -
-                       (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*(one/30))*B2expARJ -
-                       (1 + arI + arI2*(two/5) + arI3*(one/15))*2*B*A2expARI -
-                       (1 + arJ + arJ2*(two/5) + arJ3*(one/15))*2*A*B2expARJ;
-        fdampIJ9 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*4*(one/105) + arI5*(one/210))*A2expARI -
-                       (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*4*(one/105) + arJ5*(one/210))*B2expARJ -
-                       (1 + arI + arI2*(three/7) + arI3*(two/21) + arI4*(one/105))*2*B*A2expARI -
-                       (1 + arJ + arJ2*(three/7) + arJ3*(two/21) + arJ4*(one/105))*2*A*B2expARJ;
-        fdampIJ11 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(five/126) + arI5*(two/315) + arI6*(one/1890))*A2expARI -
-                        (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*(five/126) + arJ5*(two/315) + arJ6*(one/1890))*B2expARJ -
-                        (1 + arI + arI2*(four/9) + arI3*(one/9) + arI4*(one/63) + arI5*(one/945))*2*B*A2expARI -
-                        (1 + arJ + arJ2*(four/9) + arJ3*(one/9) + arJ4*(one/63) + arJ5*(one/945))*2*A*B2expARJ;
+        *fdampJ1 = 1 - (1 + arJ*(one/2))*expARJ;
+        *fdampJ3 = 1 - (1 + arJ + arJ2*(one/2))*expARJ;
+        *fdampJ5 = 1 - (1 + arJ + arJ2*(one/2) + arJ3*(one/6))*expARJ;
+        *fdampJ7 = 1 - (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*(one/30))*expARJ;
+        *fdampJ9 = 1 - (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + 4*arJ4*(one/105) + arJ5*(one/210))*expARJ;
+        *fdampIJ1 = 1 - (1 + 2*B + arI*(one/2))*A2expARI -
+                        (1 + 2*A + arJ*(one/2))*B2expARJ;
+        *fdampIJ3 = 1 - (1 + arI + arI2*(one/2))*A2expARI -
+                        (1 + arJ + arJ2*(one/2))*B2expARJ -
+                        (1 + arI)*2*B*A2expARI -
+                        (1 + arJ)*2*A*B2expARJ;
+        *fdampIJ5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6))*A2expARI -
+                        (1 + arJ + arJ2*(one/2) + arJ3*(one/6))*B2expARJ -
+                        (1 + arI + arI2*(one/3))*2*B*A2expARI -
+                        (1 + arJ + arJ2*(one/3))*2*A*B2expARJ;
+        *fdampIJ7 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/30))*A2expARI -
+                        (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*(one/30))*B2expARJ -
+                        (1 + arI + arI2*(two/5) + arI3*(one/15))*2*B*A2expARI -
+                        (1 + arJ + arJ2*(two/5) + arJ3*(one/15))*2*A*B2expARJ;
+        *fdampIJ9 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*4*(one/105) + arI5*(one/210))*A2expARI -
+                        (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*4*(one/105) + arJ5*(one/210))*B2expARJ -
+                        (1 + arI + arI2*(three/7) + arI3*(two/21) + arI4*(one/105))*2*B*A2expARI -
+                        (1 + arJ + arJ2*(three/7) + arJ3*(two/21) + arJ4*(one/105))*2*A*B2expARJ;
+        *fdampIJ11 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(five/126) + arI5*(two/315) + arI6*(one/1890))*A2expARI -
+                         (1 + arJ + arJ2*(one/2) + arJ3*(one/6) + arJ4*(five/126) + arJ5*(two/315) + arJ6*(one/1890))*B2expARJ -
+                         (1 + arI + arI2*(four/9) + arI3*(one/9) + arI4*(one/63) + arI5*(one/945))*2*B*A2expARI -
+                         (1 + arJ + arJ2*(four/9) + arJ3*(one/9) + arJ4*(one/63) + arJ5*(one/945))*2*A*B2expARJ;
     }
 }
 
-__device__ void computeDispersionDampingFactors(real alphaI, real alphaJ, real r, real& fdamp, real& ddamp) {
+DEVICE void computeDispersionDampingFactors(real alphaI, real alphaJ, real r, real* fdamp, real* ddamp) {
     real arI = alphaI*r;
     real arI2 = arI*arI;
     real arI3 = arI2*arI;
@@ -141,7 +141,7 @@ __device__ void computeDispersionDampingFactors(real alphaI, real alphaJ, real r
         real arI5 = arI4*arI;
         fdamp3 = 1 - (1 + arI + arI2*(one/2) + arI3*(seven/48) + arI4*(one/48))*expARI;
         fdamp5 = 1 - (1 + arI + arI2*(one/2) + arI3*(one/6) + arI4*(one/24) + arI5*(one/144))*expARI;
-        ddamp = alphaI*(arI5 - 3*arI3 - 3*arI2)*expARI*(one/96);
+        *ddamp = alphaI*(arI5 - 3*arI3 - 3*arI2)*expARI*(one/96);
     }
     else {
         real arJ = alphaJ*r;
@@ -162,14 +162,14 @@ __device__ void computeDispersionDampingFactors(real alphaI, real alphaJ, real r
                      (1 + arJ + arJ2*(one/2) + arJ3*(one/6))*B2expARJ -
                      (1 + arI + arI2*(one/3))*2*B*A2expARI -
                      (1 + arJ + arJ2*(one/3))*2*A*B2expARJ;
-        ddamp = (arI2*alphaI*A2expARI*(r*alphaI + 4*B - 1) +
-                (arJ2*alphaJ*B2expARJ*(r*alphaJ + 4*A - 1)))*(one/4);
+        *ddamp = (arI2*alphaI*A2expARI*(r*alphaI + 4*B - 1) +
+                 (arJ2*alphaJ*B2expARJ*(r*alphaJ + 4*A - 1)))*(one/4);
     }
-    fdamp = 1.5f*fdamp5 - 0.5f*fdamp3;
+    *fdamp = 1.5f*fdamp5 - 0.5f*fdamp3;
 }
 
-__device__ void computeRepulsionDampingFactors(real pauliAlphaI, real pauliAlphaJ, real r,
-            real& fdamp1, real& fdamp3, real& fdamp5, real& fdamp7, real& fdamp9, real& fdamp11) {
+DEVICE void computeRepulsionDampingFactors(real pauliAlphaI, real pauliAlphaJ, real r,
+            real* fdamp1, real* fdamp3, real* fdamp5, real* fdamp7, real* fdamp9, real* fdamp11) {
     real r2 = r*r;
     real r3 = r2*r;
     real r4 = r2*r2;
@@ -233,11 +233,11 @@ __device__ void computeRepulsionDampingFactors(real pauliAlphaI, real pauliAlpha
     fexp3 = 15*fexp3/(r5*r2);
     fexp4 = 105*fexp4/(r5*r4);
     fexp5 = 945*fexp5/(r5*r6);
-    fdamp1 = 0.5f*pre*fexp*fexp;
-    fdamp3 = pre*fexp*fexp1;
-    fdamp5 = pre*(fexp*fexp2 + fexp1*fexp1);
-    fdamp7 = pre*(fexp*fexp3 + 3*fexp1*fexp2);
-    fdamp9 = pre*(fexp*fexp4 + 4*fexp1*fexp3 + 3*fexp2*fexp2);
-    fdamp11 = pre*(fexp*fexp5 + 5*fexp1*fexp4 + 10*fexp2*fexp3);
+    *fdamp1 = 0.5f*pre*fexp*fexp;
+    *fdamp3 = pre*fexp*fexp1;
+    *fdamp5 = pre*(fexp*fexp2 + fexp1*fexp1);
+    *fdamp7 = pre*(fexp*fexp3 + 3*fexp1*fexp2);
+    *fdamp9 = pre*(fexp*fexp4 + 4*fexp1*fexp3 + 3*fexp2*fexp2);
+    *fdamp11 = pre*(fexp*fexp5 + 5*fexp1*fexp4 + 10*fexp2*fexp3);
 }
 
