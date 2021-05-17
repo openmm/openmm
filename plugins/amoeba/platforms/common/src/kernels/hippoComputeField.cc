@@ -46,8 +46,8 @@ DEVICE void computeMutualFieldDampingFactors(real alphaI, real alphaJ, real r, r
 }
 
 typedef struct {
-    real3 pos;
-    real3 field;
+    real x, y, z;
+    real fx, fy, fz;
     ATOM_PARAMETER_DATA
 } AtomData;
 
@@ -87,11 +87,14 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
             // This tile is on the diagonal.
 
             const unsigned int localAtomIndex = LOCAL_ID;
-            localData[localAtomIndex].pos = make_real3(pos1.x, pos1.y, pos1.z);
+            localData[LOCAL_ID].x = pos1.x;
+            localData[LOCAL_ID].y = pos1.y;
+            localData[LOCAL_ID].z = pos1.z;
             LOAD_LOCAL_PARAMETERS_FROM_1
+            SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 int atom2 = tbx+j;
-                real3 pos2 = localData[atom2].pos;
+                real3 pos2 = make_real3(localData[atom2].x, localData[atom2].y, localData[atom2].z);
                 real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(delta)
@@ -115,6 +118,7 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
                 }
 #endif
                 excl >>= 1;
+                SYNC_WARPS;
             }
         }
         else {
@@ -123,14 +127,19 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
             const unsigned int localAtomIndex = LOCAL_ID;
             unsigned int j = y*TILE_SIZE + tgx;
             real4 tempPosq = posq[j];
-            localData[localAtomIndex].pos = make_real3(tempPosq.x, tempPosq.y, tempPosq.z);
+            localData[LOCAL_ID].x = tempPosq.x;
+            localData[LOCAL_ID].y = tempPosq.y;
+            localData[LOCAL_ID].z = tempPosq.z;
             LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
-            localData[localAtomIndex].field = make_real3(0);
+            localData[localAtomIndex].fx = 0;
+            localData[localAtomIndex].fy = 0;
+            localData[localAtomIndex].fz = 0;
+            SYNC_WARPS;
             excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
             unsigned int tj = tgx;
             for (j = 0; j < TILE_SIZE; j++) {
                 int atom2 = tbx+tj;
-                real3 pos2 = localData[atom2].pos;
+                real3 pos2 = make_real3(localData[atom2].x, localData[atom2].y, localData[atom2].z);
                 real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(delta)
@@ -150,12 +159,15 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
                         COMPUTE_FIELD
                     }
                     field += tempField1;
-                    localData[tbx+tj].field += tempField2;
+                    localData[tbx+tj].fx += tempField2.x;
+                    localData[tbx+tj].fy += tempField2.y;
+                    localData[tbx+tj].fz += tempField2.z;
 #ifdef USE_CUTOFF
                 }
 #endif
                 excl >>= 1;
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
         }
 
@@ -167,9 +179,9 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
         ATOMIC_ADD(&fieldBuffers[offset1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (field.z*0x100000000)));
         if (x != y) {
             unsigned int offset2 = y*TILE_SIZE + tgx;
-            ATOMIC_ADD(&fieldBuffers[offset2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.x*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[offset2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.y*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[offset2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.z*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[offset2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fx*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[offset2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fy*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[offset2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fz*0x100000000)));
         }
     }
 
@@ -216,7 +228,9 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
 
         // Skip over tiles that have exclusions, since they were already processed.
 
+        SYNC_WARPS;
         while (skipTiles[tbx+TILE_SIZE-1] < tile) {
+            SYNC_WARPS;
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
                 skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
@@ -225,6 +239,7 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
                 skipTiles[LOCAL_ID] = end;
             skipBase += TILE_SIZE;            
             currentSkipIndex = tbx;
+            SYNC_WARPS;
         }
         while (skipTiles[currentSkipIndex] < tile)
             currentSkipIndex++;
@@ -246,10 +261,15 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
             atomIndices[LOCAL_ID] = j;
             if (j < PADDED_NUM_ATOMS) {
                 real4 tempPosq = posq[j];
-                localData[localAtomIndex].pos = make_real3(tempPosq.x, tempPosq.y, tempPosq.z);
+                localData[localAtomIndex].x = tempPosq.x;
+                localData[localAtomIndex].y = tempPosq.y;
+                localData[localAtomIndex].z = tempPosq.z;
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
-                localData[localAtomIndex].field = make_real3(0);
+                localData[localAtomIndex].fx = 0;
+                localData[localAtomIndex].fy = 0;
+                localData[localAtomIndex].fz = 0;
             }
+            SYNC_WARPS;
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
                 // The box is small enough that we can just translate all the atoms into a single periodic
@@ -257,11 +277,12 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
 
                 real4 blockCenterX = blockCenter[x];
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(pos1, blockCenterX)
-                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[LOCAL_ID].pos, blockCenterX)
+                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[LOCAL_ID], blockCenterX)
+                SYNC_WARPS;
                 unsigned int tj = tgx;
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
-                    real3 pos2 = localData[atom2].pos;
+                    real3 pos2 = make_real3(localData[atom2].x, localData[atom2].y, localData[atom2].z);
                     real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     if (r2 < CUTOFF_SQUARED) {
@@ -275,9 +296,12 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
                             COMPUTE_FIELD
                         }
                         field += tempField1;
-                        localData[tbx+tj].field += tempField2;
+                        localData[tbx+tj].fx += tempField2.x;
+                        localData[tbx+tj].fy += tempField2.y;
+                        localData[tbx+tj].fz += tempField2.z;
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
             else
@@ -288,7 +312,7 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
                 unsigned int tj = tgx;
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
-                    real3 pos2 = localData[atom2].pos;
+                    real3 pos2 = make_real3(localData[atom2].x, localData[atom2].y, localData[atom2].z);
                     real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(delta)
@@ -307,11 +331,14 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
                             COMPUTE_FIELD
                         }
                         field += tempField1;
-                        localData[tbx+tj].field += tempField2;
+                        localData[tbx+tj].fx += tempField2.x;
+                        localData[tbx+tj].fy += tempField2.y;
+                        localData[tbx+tj].fz += tempField2.z;
 #ifdef USE_CUTOFF
                     }
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
         
@@ -326,9 +353,9 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
             if (atom2 < PADDED_NUM_ATOMS) {
-                ATOMIC_ADD(&fieldBuffers[atom2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.x*0x100000000)));
-                ATOMIC_ADD(&fieldBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.y*0x100000000)));
-                ATOMIC_ADD(&fieldBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.z*0x100000000)));
+                ATOMIC_ADD(&fieldBuffers[atom2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fx*0x100000000)));
+                ATOMIC_ADD(&fieldBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fy*0x100000000)));
+                ATOMIC_ADD(&fieldBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fz*0x100000000)));
             }
         }
         tile++;

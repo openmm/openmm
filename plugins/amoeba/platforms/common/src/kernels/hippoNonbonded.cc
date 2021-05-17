@@ -90,6 +90,7 @@ KERNEL void computeNonbonded(
             localData[LOCAL_ID].z = posq1.z;
             localData[LOCAL_ID].q = posq1.w;
             LOAD_LOCAL_PARAMETERS_FROM_1
+            SYNC_WARPS;
 #endif
 
             // we do not need to fetch parameters from global since this is a symmetric tile
@@ -122,6 +123,7 @@ KERNEL void computeNonbonded(
                 force += tempForce;
                 torque += tempTorque1;
                 excl >>= 1;
+                SYNC_WARPS;
             }
         }
         else {
@@ -145,6 +147,7 @@ KERNEL void computeNonbonded(
 #endif
             DECLARE_LOCAL_PARAMETERS
             LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
+            SYNC_WARPS;
             excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
             unsigned int tj = tgx;
             for (j = 0; j < TILE_SIZE; j++) {
@@ -192,6 +195,7 @@ KERNEL void computeNonbonded(
                 // cycles the indices
                 // 0 1 2 3 4 5 6 7 -> 1 2 3 4 5 6 7 0
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
             const unsigned int offset = y*TILE_SIZE + tgx;
             // write results for off diagonal tiles
@@ -269,7 +273,9 @@ KERNEL void computeNonbonded(
 
         // Skip over tiles that have exclusions, since they were already processed.
 
+        SYNC_WARPS;
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+            SYNC_WARPS;
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
                 skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
@@ -278,6 +284,7 @@ KERNEL void computeNonbonded(
                 skipTiles[LOCAL_ID] = end;
             skipBase += TILE_SIZE;            
             currentSkipIndex = tbx;
+            SYNC_WARPS;
         }
         while (skipTiles[currentSkipIndex] < pos)
             currentSkipIndex++;
@@ -312,6 +319,9 @@ KERNEL void computeNonbonded(
                 localData[LOCAL_ID].fx = 0.0f;
                 localData[LOCAL_ID].fy = 0.0f;
                 localData[LOCAL_ID].fz = 0.0f;
+                localData[LOCAL_ID].tx = 0.0f;
+                localData[LOCAL_ID].ty = 0.0f;
+                localData[LOCAL_ID].tz = 0.0f;
 #endif                
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
@@ -324,6 +334,7 @@ KERNEL void computeNonbonded(
                 localData[LOCAL_ID].z = 0;
 #endif
             }
+            SYNC_WARPS;
 #ifdef USE_PERIODIC
             if (singlePeriodicCopy) {
                 // The box is small enough that we can just translate all the atoms into a single periodic
@@ -335,6 +346,7 @@ KERNEL void computeNonbonded(
 #else
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[LOCAL_ID], blockCenterX)
 #endif
+                SYNC_WARPS;
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
@@ -375,6 +387,7 @@ KERNEL void computeNonbonded(
                     localData[tbx+tj].tz += tempTorque2.z;
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
             else
@@ -424,6 +437,7 @@ KERNEL void computeNonbonded(
                     localData[tbx+tj].tz += tempTorque2.z;
 #endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
 
