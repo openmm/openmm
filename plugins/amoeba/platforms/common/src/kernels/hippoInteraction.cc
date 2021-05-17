@@ -172,10 +172,10 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
             term3*(diqkTemp-dkqiTemp) + term4*qi + term5*qk + term6*(qikTemp+qkiTemp));
     real3 tI = scale*(-rr3ik*dikCross + term1*dirCross + term3*(dqik+dkqirCross) + term4*qirCross - term6*(qikrCross+qikCross));
     real3 tK = scale*(rr3ik*dikCross + term2*dkrCross - term3*(dqik+diqkrCross) + term5*qkrCross - term6*(qkirCross-qikCross));
-    tempEnergy += includeInteraction ? elecEnergy : 0;
-    tempForce += includeInteraction ? elecForce : make_real3(0);
-    tempTorque1 += includeInteraction ? tI : make_real3(0);
-    tempTorque2 += includeInteraction ? tK : make_real3(0);
+    tempEnergy += elecEnergy;
+    tempForce += elecForce;
+    tempTorque1 += tI;
+    tempTorque2 += tK;
 }
 
 // Compute the induced dipole interactions.
@@ -268,18 +268,20 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
     tK.x += -qxK.y*dtorqueField2.x - 2*qyK.z*dtorqueField2.z + (qzK.z-qyK.y)*dtorqueField2.y;
     tK.y += qxK.y*dtorqueField2.y + 2*qxK.z*dtorqueField2.z + (qxK.x-qzK.z)*dtorqueField2.x;
     tK.z += qyK.z*dtorqueField2.x - qxK.z*dtorqueField2.y;
-    tempForce -= includeInteraction ? indForce : make_real3(0);
-    tempTorque1 += includeInteraction ? tI : make_real3(0);
-    tempTorque2 += includeInteraction ? tK : make_real3(0);
+    tempForce -= indForce;
+    tempTorque1 += tI;
+    tempTorque2 += tK;
 
     // Get the dtau/dr terms used for OPT polarization force.
 
     real coeff[] = {EXTRAPOLATION_COEFFICIENTS_SUM};
     for (int j = 0; j < MAX_EXTRAPOLATION_ORDER-1; j++) {
-        real3 extDipole1 = (atom1 < NUM_ATOMS ? extrapolatedDipole[j*NUM_ATOMS+atom1] : make_real3(0));
+        int ij = 3*(j*NUM_ATOMS+atom1);
+        real3 extDipole1 = (atom1 < NUM_ATOMS ? make_real3(extrapolatedDipole[ij], extrapolatedDipole[ij+1], extrapolatedDipole[ij+2]) : make_real3(0));
         real uirm = dot(extDipole1, delta);
         for (int m = 0; m < MAX_EXTRAPOLATION_ORDER-1-j; m++) {
-            real3 extDipole2 = (atom2 < NUM_ATOMS ? extrapolatedDipole[m*NUM_ATOMS+atom2] : make_real3(0));
+            int im = 3*(m*NUM_ATOMS+atom2);
+            real3 extDipole2 = (atom2 < NUM_ATOMS ? make_real3(extrapolatedDipole[im], extrapolatedDipole[im+1], extrapolatedDipole[im+2]) : make_real3(0));
             real ukrm = dot(extDipole2, delta);
             real term1 = 2*rr5ik;
             real term2 = term1*delta.x;
@@ -371,10 +373,10 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
         tK *= switchValue;
     }
 #endif
-    tempEnergy += includeInteraction ? repEnergy : 0;
-    tempForce += includeInteraction ? repForce : make_real3(0);
-    tempTorque1 += includeInteraction ? tI : make_real3(0);
-    tempTorque2 += includeInteraction ? tK : make_real3(0);
+    tempEnergy += repEnergy;
+    tempForce += repForce;
+    tempTorque1 += tI;
+    tempTorque2 += tK;
 }
 
 // Compute the dispersion force and energy.
@@ -402,8 +404,8 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
     dispForce = dispForce*fdamp*fdamp + 2*dispEnergy*fdamp*ddamp;
     dispEnergy *= fdamp*fdamp;
 #endif
-    tempEnergy += includeInteraction ? dispEnergy : 0;
-    tempForce.z += includeInteraction ? dispForce : 0;
+    tempEnergy += dispEnergy;
+    tempForce.z += dispForce;
 }
 
 // Compute the charge transfer force and energy.
@@ -426,8 +428,8 @@ real bn5 = (9*bn4+alsq2n*exp2a)*rInv2;
     ctForce *= chargeTransferScale;
     ctEnergy *= chargeTransferScale;
 #endif
-    tempEnergy += includeInteraction ? ctEnergy : 0;
-    tempForce.z += includeInteraction ? ctForce*r : 0;
+    tempEnergy += ctEnergy;
+    tempForce.z += ctForce*r;
 }
 
 // Rotate back to the lab frame.
@@ -436,4 +438,10 @@ if (includeInteraction) {
     tempForce = rotateVectorFromQI(tempForce, mat) - labForce;
     tempTorque1 = rotateVectorFromQI(tempTorque1, mat);
     tempTorque2 = rotateVectorFromQI(tempTorque2, mat);
+}
+else {
+    tempEnergy = 0;
+    tempForce = make_real3(0);
+    tempTorque1 = make_real3(0);
+    tempTorque2 = make_real3(0);
 }

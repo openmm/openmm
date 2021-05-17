@@ -5,13 +5,13 @@
  */
 KERNEL void computeNonbondedExceptions(
         GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed* RESTRICT energyBuffer, GLOBAL mm_ulong* RESTRICT torqueBuffers,
-        GLOBAL const real4* RESTRICT posq, GLOBAL const real3* RESTRICT extDipole, GLOBAL const int2* RESTRICT exceptionAtoms, GLOBAL const real* RESTRICT mmScale,
+        GLOBAL const real4* RESTRICT posq, GLOBAL const int2* RESTRICT exceptionAtoms, GLOBAL const real* RESTRICT mmScale,
         GLOBAL const real* RESTRICT dmScale, GLOBAL const real* RESTRICT ddScale, GLOBAL const real* RESTRICT dispScale, GLOBAL const real* RESTRICT repScale, GLOBAL const real* RESTRICT ctScale,
         GLOBAL const real* RESTRICT coreCharge, GLOBAL const real* RESTRICT valenceCharge, GLOBAL const real* RESTRICT alpha, GLOBAL const real* RESTRICT epsilon,
         GLOBAL const real* RESTRICT damping, GLOBAL const real* RESTRICT c6, GLOBAL const real* RESTRICT pauliK, GLOBAL const real* RESTRICT pauliQ,
-        GLOBAL const real* RESTRICT pauliAlpha, GLOBAL const real3* RESTRICT dipole, GLOBAL const real3* RESTRICT inducedDipole, GLOBAL const real* RESTRICT qXX,
+        GLOBAL const real* RESTRICT pauliAlpha, GLOBAL const real* RESTRICT dipole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT qXX,
         GLOBAL const real* RESTRICT qXY, GLOBAL const real* RESTRICT qXZ, GLOBAL const real* RESTRICT qYY, GLOBAL const real* RESTRICT qYZ,
-        GLOBAL const real3* RESTRICT extrapolatedDipole
+        GLOBAL const real* RESTRICT extrapolatedDipole
 #ifdef USE_CUTOFF
         , real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVec
 #endif
@@ -42,8 +42,8 @@ KERNEL void computeNonbondedExceptions(
             real pauliK1 = pauliK[atom1];
             real pauliQ1 = pauliQ[atom1];
             real pauliAlpha1 = pauliAlpha[atom1];
-            real3 dipole1 = dipole[atom1];
-            real3 inducedDipole1 = inducedDipole[atom1];
+            real3 dipole1 = make_real3(dipole[3*atom1], dipole[3*atom1+1], dipole[3*atom1+2]);
+            real3 inducedDipole1 = make_real3(inducedDipole[3*atom1], inducedDipole[3*atom1+1], inducedDipole[3*atom1+2]);
             real qXX1 = qXX[atom1];
             real qXY1 = qXY[atom1];
             real qXZ1 = qXZ[atom1];
@@ -58,8 +58,8 @@ KERNEL void computeNonbondedExceptions(
             real pauliK2 = pauliK[atom2];
             real pauliQ2 = pauliQ[atom2];
             real pauliAlpha2 = pauliAlpha[atom2];
-            real3 dipole2 = dipole[atom2];
-            real3 inducedDipole2 = inducedDipole[atom2];
+            real3 dipole2 = make_real3(dipole[3*atom2], dipole[3*atom2+1], dipole[3*atom2+2]);
+            real3 inducedDipole2 = make_real3(inducedDipole[3*atom2], inducedDipole[3*atom2+1], inducedDipole[3*atom2+2]);
             real qXX2 = qXX[atom2];
             real qXY2 = qXY[atom2];
             real qXZ2 = qXZ[atom2];

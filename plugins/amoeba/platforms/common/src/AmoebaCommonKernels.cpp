@@ -2462,18 +2462,18 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
     
     // Create workspace arrays.
     
-    labDipoles.initialize(cc, paddedNumAtoms, 3*elementSize, "dipole");
+    labDipoles.initialize(cc, 3*paddedNumAtoms, elementSize, "dipole");
     labQuadrupoles[0].initialize(cc, paddedNumAtoms, elementSize, "qXX");
     labQuadrupoles[1].initialize(cc, paddedNumAtoms, elementSize, "qXY");
     labQuadrupoles[2].initialize(cc, paddedNumAtoms, elementSize, "qXZ");
     labQuadrupoles[3].initialize(cc, paddedNumAtoms, elementSize, "qYY");
     labQuadrupoles[4].initialize(cc, paddedNumAtoms, elementSize, "qYZ");
-    fracDipoles.initialize(cc, paddedNumAtoms, 3*elementSize, "fracDipoles");
+    fracDipoles.initialize(cc, 3*paddedNumAtoms, elementSize, "fracDipoles");
     fracQuadrupoles.initialize(cc, 6*paddedNumAtoms, elementSize, "fracQuadrupoles");
     field.initialize(cc, 3*paddedNumAtoms, sizeof(long long), "field");
     inducedField.initialize(cc, 3*paddedNumAtoms, sizeof(long long), "inducedField");
     torque.initialize(cc, 3*paddedNumAtoms, sizeof(long long), "torque");
-    inducedDipole.initialize(cc, paddedNumAtoms, 3*elementSize, "inducedDipole");
+    inducedDipole.initialize(cc, 3*paddedNumAtoms, elementSize, "inducedDipole");
     int numOrders = extrapolationCoefficients.size();
     extrapolatedDipole.initialize(cc, 3*numParticles*numOrders, elementSize, "extrapolatedDipole");
     extrapolatedPhi.initialize(cc, 10*numParticles*numOrders, elementSize, "extrapolatedPhi");
@@ -2994,7 +2994,7 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
     nb.setKernelSource(CommonAmoebaKernelSources::hippoInteractionHeader+CommonAmoebaKernelSources::hippoNonbonded);
     nb.addArgument(ComputeParameterInfo(torque, "torqueBuffers", "mm_ulong", 1, false));
-    nb.addArgument(ComputeParameterInfo(extrapolatedDipole, "extrapolatedDipole", "real3", 1));
+    nb.addArgument(ComputeParameterInfo(extrapolatedDipole, "extrapolatedDipole", "real", 1));
     nb.addParameter(ComputeParameterInfo(coreCharge, "coreCharge", "real", 1));
     nb.addParameter(ComputeParameterInfo(valenceCharge, "valenceCharge", "real", 1));
     nb.addParameter(ComputeParameterInfo(alpha, "alpha", "real", 1));
@@ -3040,7 +3040,6 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
         computeExceptionsKernel->addArg(cc.getEnergyBuffer());
         computeExceptionsKernel->addArg(torque);
         computeExceptionsKernel->addArg(cc.getPosq());
-        computeExceptionsKernel->addArg(extrapolatedDipole);
         computeExceptionsKernel->addArg(exceptionAtoms);
         computeExceptionsKernel->addArg(exceptionScales[0]);
         computeExceptionsKernel->addArg(exceptionScales[1]);
@@ -3082,14 +3081,22 @@ void CommonCalcHippoNonbondedForceKernel::createFieldKernel(const string& intera
     stringstream extraArgs, atomParams, loadLocal1, loadLocal2, load1, load2, load3;
     for (auto param : params) {
         string name = param->getName();
-        string type = (param->getElementSize() == 4 || param->getElementSize() == 8 ? "real" : "real3");
-        extraArgs << ", GLOBAL const " << type << "* RESTRICT " << name;
+        bool isReal3 = (param->getSize() == cc.getPaddedNumAtoms()*3);
+        string type = (isReal3 ? "real3" : "real");
+        extraArgs << ", GLOBAL const real* RESTRICT " << name;
         atomParams << type << " " << name << ";\n";
         loadLocal1 << "localData[localAtomIndex]." << name << " = " << name << "1;\n";
-        loadLocal2 << "localData[localAtomIndex]." << name << " = " << name << "[j];\n";
-        load1 << type << " " << name << "1 = " << name << "[atom1];\n";
+        if (isReal3) {
+            loadLocal2 << "localData[localAtomIndex]." << name << " = make_real3(" << name << "[3*j], " << name << "[3*j+1], " << name << "[3*j+2]);\n";
+            load1 << type << " " << name << "1 = make_real3(" << name << "[3*atom1], " << name << "[3*atom1+1], " << name << "[3*atom1+2]);\n";
+            load3 << type << " " << name << "2 = make_real3(" << name << "[3*atom2], " << name << "[3*atom2+1], " << name << "[3*atom2+2]);\n";
+        }
+        else {
+            loadLocal2 << "localData[localAtomIndex]." << name << " = " << name << "[j];\n";
+            load1 << type << " " << name << "1 = " << name << "[atom1];\n";
+            load3 << type << " " << name << "2 = " << name << "[atom2];\n";
+        }
         load2 << type << " " << name << "2 = localData[atom2]." << name << ";\n";
-        load3 << type << " " << name << "2 = " << name << "[atom2];\n";
     }
     replacements["PARAMETER_ARGUMENTS"] = extraArgs.str();
     replacements["ATOM_PARAMETER_DATA"] = atomParams.str();
@@ -3313,7 +3320,7 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
 
     if (exceptionAtoms.isInitialized()) {
         if (nb.getUseCutoff())
-            setPeriodicBoxArgs(cc, computeExceptionsKernel, 29);
+            setPeriodicBoxArgs(cc, computeExceptionsKernel, 28);
         computeExceptionsKernel->execute(exceptionAtoms.getSize());
     }
 
@@ -3382,16 +3389,16 @@ void CommonCalcHippoNonbondedForceKernel::getInducedDipoles(ContextImpl& context
     dipoles.resize(numParticles);
     const vector<int>& order = cc.getAtomIndex();
     if (cc.getUseDoublePrecision()) {
-        vector<mm_double3> d;
+        vector<double> d;
         inducedDipole.download(d);
         for (int i = 0; i < numParticles; i++)
-            dipoles[order[i]] = Vec3(d[i].x, d[i].y, d[i].z);
+            dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
     }
     else {
-        vector<mm_float3> d;
+        vector<float> d;
         inducedDipole.download(d);
         for (int i = 0; i < numParticles; i++)
-            dipoles[order[i]] = Vec3(d[i].x, d[i].y, d[i].z);
+            dipoles[order[i]] = Vec3(d[3*i], d[3*i+1], d[3*i+2]);
     }
 }
 
@@ -3429,16 +3436,16 @@ void CommonCalcHippoNonbondedForceKernel::getLabFramePermanentDipoles(ContextImp
     dipoles.resize(numParticles);
     const vector<int>& order = cc.getAtomIndex();
     if (cc.getUseDoublePrecision()) {
-        vector<mm_double3> labDipoleVec;
+        vector<double> labDipoleVec;
         labDipoles.download(labDipoleVec);
         for (int i = 0; i < numParticles; i++)
-            dipoles[order[i]] = Vec3(labDipoleVec[i].x, labDipoleVec[i].y, labDipoleVec[i].z);
+            dipoles[order[i]] = Vec3(labDipoleVec[3*i], labDipoleVec[3*i+1], labDipoleVec[3*i+2]);
     }
     else {
-        vector<mm_float3> labDipoleVec;
+        vector<float> labDipoleVec;
         labDipoles.download(labDipoleVec);
         for (int i = 0; i < numParticles; i++)
-            dipoles[order[i]] = Vec3(labDipoleVec[i].x, labDipoleVec[i].y, labDipoleVec[i].z);
+            dipoles[order[i]] = Vec3(labDipoleVec[3*i], labDipoleVec[3*i+1], labDipoleVec[3*i+2]);
     }
 }
 

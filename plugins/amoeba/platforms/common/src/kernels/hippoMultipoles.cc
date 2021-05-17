@@ -1,5 +1,5 @@
-KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RESTRICT multipoleParticles, GLOBAL real3* RESTRICT localDipoles,
-        GLOBAL real* RESTRICT localQuadrupoles, GLOBAL real3* RESTRICT labDipoles, GLOBAL real* RESTRICT labQXX, GLOBAL real* RESTRICT labQXY, GLOBAL real* RESTRICT labQXZ,
+KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RESTRICT multipoleParticles, GLOBAL real* RESTRICT localDipoles,
+        GLOBAL real* RESTRICT localQuadrupoles, GLOBAL real* RESTRICT labDipoles, GLOBAL real* RESTRICT labQXX, GLOBAL real* RESTRICT labQXY, GLOBAL real* RESTRICT labQXZ,
         GLOBAL real* RESTRICT labQYY, GLOBAL real* RESTRICT labQYZ) {
     for (int atom = GLOBAL_ID; atom < NUM_ATOMS; atom += GLOBAL_SIZE) {
         int4 particles = multipoleParticles[atom];
@@ -107,12 +107,12 @@ KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RES
         
             // Transform the dipole
             
-            real3 dipole = localDipoles[atom];
+            real3 dipole = make_real3(localDipoles[3*atom], localDipoles[3*atom+1], localDipoles[3*atom+2]);
             if (reverse)
                 dipole.y *= -1;
-            labDipoles[atom] = make_real3(dipole.x*vectorX.x + dipole.y*vectorY.x + dipole.z*vectorZ.x,
-                                          dipole.x*vectorX.y + dipole.y*vectorY.y + dipole.z*vectorZ.y,
-                                          dipole.x*vectorX.z + dipole.y*vectorY.z + dipole.z*vectorZ.z);
+            labDipoles[3*atom] = dipole.x*vectorX.x + dipole.y*vectorY.x + dipole.z*vectorZ.x;
+            labDipoles[3*atom+1] = dipole.x*vectorX.y + dipole.y*vectorY.y + dipole.z*vectorZ.y;
+            labDipoles[3*atom+2] = dipole.x*vectorX.z + dipole.y*vectorY.z + dipole.z*vectorZ.z;
             
             // Transform the quadrupole
             
@@ -145,7 +145,9 @@ KERNEL void computeLabFrameMoments(GLOBAL real4* RESTRICT posq, GLOBAL int4* RES
                          + vectorZ.y*(vectorX.z*mPoleXZ + vectorY.z*mPoleYZ + vectorZ.z*mPoleZZ);
         }
         else {
-            labDipoles[atom] = make_real3(localDipoles[atom].x, localDipoles[atom].y, localDipoles[atom].z);
+            labDipoles[3*atom] = localDipoles[3*atom];
+            labDipoles[3*atom+1] = localDipoles[3*atom+1];
+            labDipoles[3*atom+2] = localDipoles[3*atom+2];
             labQXX[atom] = localQuadrupoles[5*atom];
             labQXY[atom] = localQuadrupoles[5*atom+1];
             labQXZ[atom] = localQuadrupoles[5*atom+2];
@@ -357,9 +359,9 @@ KERNEL void mapTorqueToForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL cons
                 forces[Y] = make_real3(0);
                 forces[I] = make_real3(0);
             }
-        
+
             // Store results
-        
+
             ATOMIC_ADD(&forceBuffers[particles.z], (mm_ulong) ((mm_long) (forces[Z].x*0x100000000)));
             ATOMIC_ADD(&forceBuffers[particles.z+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forces[Z].y*0x100000000)));
             ATOMIC_ADD(&forceBuffers[particles.z+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forces[Z].z*0x100000000)));

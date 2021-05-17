@@ -49,8 +49,10 @@ KERNEL void computeNonbonded(
 #ifdef USE_CUTOFF
         , GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
-        GLOBAL const real4* RESTRICT blockSize, GLOBAL const unsigned int* RESTRICT interactingAtoms, unsigned int maxSinglePairs,
-        GLOBAL const int2* RESTRICT singlePairs
+        GLOBAL const real4* RESTRICT blockSize, GLOBAL const unsigned int* RESTRICT interactingAtoms
+#ifdef __CUDA_ARCH__
+        , unsigned int maxSinglePairs, GLOBAL const int2* RESTRICT singlePairs
+#endif
 #endif
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
