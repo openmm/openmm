@@ -176,7 +176,7 @@ protected:
     AmoebaMultipoleForce::PolarizationType polarizationType;
     ComputeContext& cc;
     const System& system;
-    std::vector<mm_int3> covalentFlagValues;
+    std::vector<mm_int4> covalentFlagValues;
     std::vector<mm_int2> polarizationFlagValues;
     ComputeArray multipoleParticles;
     ComputeArray localDipoles;

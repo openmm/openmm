@@ -351,14 +351,14 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         force.getCovalentMap(i, AmoebaMultipoleForce::Covalent13, atoms);
         allAtoms.insert(atoms.begin(), atoms.end());
         for (int atom : allAtoms)
-            covalentFlagValues.push_back(mm_int3(i, atom, 0));
+            covalentFlagValues.push_back(mm_int4(i, atom, 0, 0));
         force.getCovalentMap(i, AmoebaMultipoleForce::Covalent14, atoms);
         allAtoms.insert(atoms.begin(), atoms.end());
         for (int atom : atoms)
-            covalentFlagValues.push_back(mm_int3(i, atom, 1));
+            covalentFlagValues.push_back(mm_int4(i, atom, 1, 0));
         force.getCovalentMap(i, AmoebaMultipoleForce::Covalent15, atoms);
         for (int atom : atoms)
-            covalentFlagValues.push_back(mm_int3(i, atom, 2));
+            covalentFlagValues.push_back(mm_int4(i, atom, 2, 0));
         allAtoms.insert(atoms.begin(), atoms.end());
         force.getCovalentMap(i, AmoebaMultipoleForce::PolarizationCovalent11, atoms);
         allAtoms.insert(atoms.begin(), atoms.end());
@@ -986,7 +986,7 @@ void CommonCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
     }
     covalentFlags.resize(nb.getExclusions().getSize());
     vector<mm_int2> covalentFlagsVec(nb.getExclusions().getSize(), mm_int2(0, 0));
-    for (mm_int3 values : covalentFlagValues) {
+    for (mm_int4 values : covalentFlagValues) {
         int atom1 = values.x;
         int atom2 = values.y;
         int value = values.z;

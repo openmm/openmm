@@ -7362,7 +7362,7 @@ void CommonRemoveCMMotionKernel::initialize(const System& system, const CMMotion
     cc.setAsCurrent();
     frequency = force.getFrequency();
     int numAtoms = cc.getNumAtoms();
-    cmMomentum.initialize<mm_float3>(cc, cc.getPaddedNumAtoms(), "cmMomentum");
+    cmMomentum.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "cmMomentum");
     double totalMass = 0.0;
     for (int i = 0; i < numAtoms; i++)
         totalMass += system.getParticleMass(i);

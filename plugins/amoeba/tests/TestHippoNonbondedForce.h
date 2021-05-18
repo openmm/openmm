@@ -1551,7 +1551,7 @@ int main(int argc, char* argv[]) {
         try {
             string precision = platform.getPropertyDefaultValue("Precision");
             if (precision != "double") {
-                forceTol = 5e-3;
+                forceTol = 1e-2;
                 energyTol = 1e-3;
                 consistencyTol = 5e-2;
             }
