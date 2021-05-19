@@ -603,11 +603,11 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     stringstream loadLocal1;
     for (const ParameterInfo& param : params) {
         if (param.getNumComponents() == 1) {
-            loadLocal1<<"localData[LOCAL_ID]."<<param.getName()<<" = "<<param.getName()<<"1;\n";
+            loadLocal1<<"localData[localAtomIndex]."<<param.getName()<<" = "<<param.getName()<<"1;\n";
         }
         else {
             for (int j = 0; j < param.getNumComponents(); ++j)
-                loadLocal1<<"localData[LOCAL_ID]."<<param.getName()<<"_"<<suffixes[j]<<" = "<<param.getName()<<"1."<<suffixes[j]<<";\n";
+                loadLocal1<<"localData[localAtomIndex]."<<param.getName()<<"_"<<suffixes[j]<<" = "<<param.getName()<<"1."<<suffixes[j]<<";\n";
         }
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
@@ -615,7 +615,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     stringstream loadLocal2;
     for (const ParameterInfo& param : params) {
         if (param.getNumComponents() == 1) {
-            loadLocal2<<"localData[LOCAL_ID]."<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
+            loadLocal2<<"localData[localAtomIndex]."<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
         }
         else {
             if (param.getNumComponents() == 3)
@@ -623,7 +623,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
             else
                 loadLocal2<<param.getType()<<" temp_"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
             for (int j = 0; j < param.getNumComponents(); ++j)
-                loadLocal2<<"localData[LOCAL_ID]."<<param.getName()<<"_"<<suffixes[j]<<" = temp_"<<param.getName()<<"."<<suffixes[j]<<";\n";
+                loadLocal2<<"localData[localAtomIndex]."<<param.getName()<<"_"<<suffixes[j]<<" = temp_"<<param.getName()<<"."<<suffixes[j]<<";\n";
         }
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
@@ -655,10 +655,10 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     stringstream clearLocal;
     for (const ParameterInfo& param : params) {
         if (param.getNumComponents() == 1)
-            clearLocal<<"localData[LOCAL_ID]."<<param.getName()<<" = 0;\n";
+            clearLocal<<"localData[localAtomIndex]."<<param.getName()<<" = 0;\n";
         else
             for (int j = 0; j < param.getNumComponents(); ++j)
-                clearLocal<<"localData[LOCAL_ID]."<<param.getName()<<"_"<<suffixes[j]<<" = 0;\n";
+                clearLocal<<"localData[localAtomIndex]."<<param.getName()<<"_"<<suffixes[j]<<" = 0;\n";
     }
     replacements["CLEAR_LOCAL_PARAMETERS"] = clearLocal.str();
     stringstream initDerivs;

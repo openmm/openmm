@@ -59,6 +59,7 @@ KERNEL void computeNonbonded(
     const unsigned int warp = (GLOBAL_ID)/TILE_SIZE; // global warpIndex
     const unsigned int tgx = LOCAL_ID & (TILE_SIZE-1); // index within the warp
     const unsigned int tbx = LOCAL_ID - tgx;           // block warpIndex
+    const unsigned int localAtomIndex = LOCAL_ID;
     mixed energy = 0;
     // used shared memory if the device cannot shuffle
 #ifndef ENABLE_SHUFFLE

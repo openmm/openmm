@@ -34,6 +34,7 @@ __kernel void computeNonbonded(
     const unsigned int warp = get_global_id(0)/TILE_SIZE;
     const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
     const unsigned int tbx = get_local_id(0) - tgx;
+    const unsigned int localAtomIndex = get_local_id(0);
     mixed energy = 0;
     INIT_DERIVATIVES
     __local AtomData localData[FORCE_WORK_GROUP_SIZE];
@@ -57,10 +58,10 @@ __kernel void computeNonbonded(
         if (x == y) {
             // This tile is on the diagonal.
 
-            localData[LOCAL_ID].x = posq1.x;
-            localData[LOCAL_ID].y = posq1.y;
-            localData[LOCAL_ID].z = posq1.z;
-            localData[LOCAL_ID].q = posq1.w;
+            localData[localAtomIndex].x = posq1.x;
+            localData[localAtomIndex].y = posq1.y;
+            localData[localAtomIndex].z = posq1.z;
+            localData[localAtomIndex].q = posq1.w;
             LOAD_LOCAL_PARAMETERS_FROM_1
             SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
@@ -106,14 +107,14 @@ __kernel void computeNonbonded(
 
             unsigned int j = y*TILE_SIZE + tgx;
             real4 tempPosq = posq[j];
-            localData[LOCAL_ID].x = tempPosq.x;
-            localData[LOCAL_ID].y = tempPosq.y;
-            localData[LOCAL_ID].z = tempPosq.z;
-            localData[LOCAL_ID].q = tempPosq.w;
+            localData[localAtomIndex].x = tempPosq.x;
+            localData[localAtomIndex].y = tempPosq.y;
+            localData[localAtomIndex].z = tempPosq.z;
+            localData[localAtomIndex].q = tempPosq.w;
             LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
-            localData[LOCAL_ID].fx = 0;
-            localData[LOCAL_ID].fy = 0;
-            localData[LOCAL_ID].fz = 0;
+            localData[localAtomIndex].fx = 0;
+            localData[localAtomIndex].fy = 0;
+            localData[localAtomIndex].fz = 0;
             SYNC_WARPS;
 #ifdef USE_EXCLUSIONS
             excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
@@ -272,19 +273,19 @@ __kernel void computeNonbonded(
             atomIndices[get_local_id(0)] = j;
             if (j < PADDED_NUM_ATOMS) {
                 real4 tempPosq = posq[j];
-                localData[LOCAL_ID].x = tempPosq.x;
-                localData[LOCAL_ID].y = tempPosq.y;
-                localData[LOCAL_ID].z = tempPosq.z;
-                localData[LOCAL_ID].q = tempPosq.w;
+                localData[localAtomIndex].x = tempPosq.x;
+                localData[localAtomIndex].y = tempPosq.y;
+                localData[localAtomIndex].z = tempPosq.z;
+                localData[localAtomIndex].q = tempPosq.w;
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
-                localData[LOCAL_ID].fx = 0;
-                localData[LOCAL_ID].fy = 0;
-                localData[LOCAL_ID].fz = 0;
+                localData[localAtomIndex].fx = 0;
+                localData[localAtomIndex].fy = 0;
+                localData[localAtomIndex].fz = 0;
             }
             else {
-                localData[LOCAL_ID].x = 0;
-                localData[LOCAL_ID].y = 0;
-                localData[LOCAL_ID].z = 0;
+                localData[localAtomIndex].x = 0;
+                localData[localAtomIndex].y = 0;
+                localData[localAtomIndex].z = 0;
                 CLEAR_LOCAL_PARAMETERS
             }
             SYNC_WARPS;
@@ -295,7 +296,7 @@ __kernel void computeNonbonded(
 
                 real4 blockCenterX = blockCenter[x];
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
-                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[LOCAL_ID], blockCenterX)
+                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[localAtomIndex], blockCenterX)
                 SYNC_WARPS;
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
