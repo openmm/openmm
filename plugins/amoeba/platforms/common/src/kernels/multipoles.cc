@@ -586,6 +586,7 @@ KERNEL void computePotentialAtPoints(GLOBAL const real4* RESTRICT posq, GLOBAL c
             }
             SYNC_THREADS;
         }
-        potential[point] = p*ENERGY_SCALE_FACTOR;
+        if (point < numPoints)
+            potential[point] = p*ENERGY_SCALE_FACTOR;
     }
 }

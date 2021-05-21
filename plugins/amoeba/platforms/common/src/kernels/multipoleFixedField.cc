@@ -672,6 +672,7 @@ KERNEL void computeFixedField(
             localData[localAtomIndex].bornRadius = bornRadii[j];
             localData[localAtomIndex].gkField = make_real3(0);
 #endif
+            SYNC_WARPS;
 
             // Compute the full set of interactions in this tile.
 
@@ -699,6 +700,7 @@ KERNEL void computeFixedField(
 #endif
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
 
             // Write results.

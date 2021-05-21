@@ -496,7 +496,7 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         }
     }
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
-    int maxThreads = nb.getForceThreadBlockSize();
+    int maxThreads = max(32, nb.getForceThreadBlockSize());
     fixedFieldThreads = min(maxThreads, cc.computeThreadBlockSize(fixedThreadMemory));
     inducedFieldThreads = min(maxThreads, cc.computeThreadBlockSize(inducedThreadMemory));
     ComputeProgram program = cc.compileProgram(CommonAmoebaKernelSources::multipoles, defines);

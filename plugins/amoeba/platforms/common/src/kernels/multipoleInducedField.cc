@@ -547,6 +547,7 @@ KERNEL void computeInducedField(
             localData[LOCAL_ID] = loadAtomData(j, posq, inducedDipole, inducedDipolePolar, dampingAndThole);
 #endif
             zeroAtomDataLocal(&localData[LOCAL_ID]);
+            SYNC_WARPS;
 
             // Compute the full set of interactions in this tile.
 
@@ -560,6 +561,7 @@ KERNEL void computeInducedField(
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS)
                     computeOneInteraction(&data, &localData[tbx+tj], delta, false);
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
 
             // Write results.
