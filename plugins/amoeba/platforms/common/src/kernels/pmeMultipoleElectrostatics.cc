@@ -624,6 +624,7 @@ KERNEL void computeElectrostatics(
             localData[LOCAL_ID] = loadAtomData(j, posq, sphericalDipole, sphericalQuadrupole, inducedDipole, inducedDipolePolar, dampingAndThole);
             localData[LOCAL_ID].force = make_real3(0);
             localData[LOCAL_ID].torque = make_real3(0);
+            SYNC_WARPS;
 
             // Compute forces.
 
@@ -634,6 +635,7 @@ KERNEL void computeElectrostatics(
                     computeOneInteraction(&data, &localData[tbx+tj], false, 1, 1, 1, 1, &energy, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
             data.force *= -ENERGY_SCALE_FACTOR;
             data.torque *= ENERGY_SCALE_FACTOR;

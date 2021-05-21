@@ -1798,7 +1798,7 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
     double gkForceThreadMemory = 24*elementSize;
     double chainRuleThreadMemory = 10*elementSize;
     double ediffThreadMemory = 28*elementSize+2*sizeof(float)+3*sizeof(int)/(double) cc.TileSize;
-    int maxThreads = cc.getNonbondedUtilities().getForceThreadBlockSize();
+    int maxThreads = max(32, cc.getNonbondedUtilities().getForceThreadBlockSize());
     computeBornSumThreads = min(maxThreads, cc.computeThreadBlockSize(computeBornSumThreadMemory));
     gkForceThreads = min(maxThreads, cc.computeThreadBlockSize(gkForceThreadMemory));
     chainRuleThreads = min(maxThreads, cc.computeThreadBlockSize(chainRuleThreadMemory));
@@ -2240,10 +2240,11 @@ void CommonCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, 
     
     // Create the kernel.
     
+    forceThreadBlockSize = max(32, cc.getNonbondedUtilities().getForceThreadBlockSize());
     map<string, string> defines;
     defines["NUM_ATOMS"] = cc.intToString(numParticles);
     defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
-    defines["THREAD_BLOCK_SIZE"] = cc.intToString(cc.getNonbondedUtilities().getForceThreadBlockSize());
+    defines["THREAD_BLOCK_SIZE"] = cc.intToString(forceThreadBlockSize);
     defines["NUM_BLOCKS"] = cc.intToString(cc.getNumAtomBlocks());
     defines["EPSO"] = cc.doubleToString(force.getEpso());
     defines["EPSH"] = cc.doubleToString(force.getEpsh());
@@ -2275,7 +2276,6 @@ double CommonCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, b
     int startTileIndex = nb.getStartTileIndex();
     int numTileIndices = nb.getNumTiles();
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
-    int forceThreadBlockSize = nb.getForceThreadBlockSize();
     forceKernel->setArg(3, startTileIndex);
     forceKernel->setArg(4, numTileIndices);
     forceKernel->execute(numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
@@ -3070,6 +3070,7 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
     }
     cc.addForce(new ForceInfo(force));
     cc.addPostComputation(new TorquePostComputation(*this));
+    fieldThreadBlockSize = max(32, cc.getNonbondedUtilities().getForceThreadBlockSize());
 }
 
 void CommonCalcHippoNonbondedForceKernel::createFieldKernel(const string& interactionSrc, vector<ComputeArray*> params,
@@ -3117,8 +3118,8 @@ void CommonCalcHippoNonbondedForceKernel::createFieldKernel(const string& intera
         defines["PME_ALPHA"] = cc.doubleToString(pmeAlpha);
         defines["SQRT_PI"] = cc.doubleToString(sqrt(M_PI));
     }
-    defines["WARPS_PER_GROUP"] = cc.intToString(cc.getNonbondedUtilities().getForceThreadBlockSize()/ComputeContext::TileSize);
-    defines["THREAD_BLOCK_SIZE"] = cc.intToString(cc.getNonbondedUtilities().getForceThreadBlockSize());
+    defines["WARPS_PER_GROUP"] = cc.intToString(fieldThreadBlockSize/ComputeContext::TileSize);
+    defines["THREAD_BLOCK_SIZE"] = cc.intToString(fieldThreadBlockSize);
     defines["CUTOFF"] = cc.doubleToString(cutoff);
     defines["CUTOFF_SQUARED"] = cc.doubleToString(cutoff*cutoff);
     defines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
@@ -3291,7 +3292,7 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
 
     if (nb.getUseCutoff())
         setPeriodicBoxArgs(cc, fixedFieldKernel, 6);
-    fixedFieldKernel->execute(nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
+    fixedFieldKernel->execute(nb.getNumForceThreadBlocks()*fieldThreadBlockSize, fieldThreadBlockSize);
     if (exceptionAtoms.isInitialized()) {
         if (nb.getUseCutoff())
             setPeriodicBoxArgs(cc, fixedFieldExceptionKernel, 4);
@@ -3336,7 +3337,7 @@ void CommonCalcHippoNonbondedForceKernel::computeInducedField(int optOrder) {
     cc.clearBuffer(inducedField);
     if (nb.getUseCutoff())
         setPeriodicBoxArgs(cc, mutualFieldKernel, 6);
-    mutualFieldKernel->execute(nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
+    mutualFieldKernel->execute(nb.getNumForceThreadBlocks()*fieldThreadBlockSize, fieldThreadBlockSize);
     if (exceptionAtoms.isInitialized()) {
         if (nb.getUseCutoff())
             setPeriodicBoxArgs(cc, mutualFieldExceptionKernel, 4);

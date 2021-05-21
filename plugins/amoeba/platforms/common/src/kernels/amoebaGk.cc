@@ -124,6 +124,7 @@ KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4
                 localData[LOCAL_ID].pos = data.pos;
                 localData[LOCAL_ID].radius = params1.x;
                 localData[LOCAL_ID].scaledRadius = params1.y;
+                SYNC_WARPS;
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+j;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2) {
@@ -131,6 +132,7 @@ KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4
                         data.bornSum += bornSum;
                     }
                 }
+                SYNC_WARPS;
             }
             else {
                 // This is an off-diagonal tile.
@@ -144,6 +146,7 @@ KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4
                     localData[LOCAL_ID].scaledRadius = tempParams.y;
                 }
                 localData[LOCAL_ID].bornSum = 0;
+                SYNC_WARPS;
                 
                 // Compute the full set of interactions in this tile.
 
@@ -157,6 +160,7 @@ KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4
                         localData[tbx+tj].bornSum += bornSum;
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
             }
         }
@@ -262,6 +266,7 @@ KERNEL void computeGKForces(
                 localData[LOCAL_ID].inducedDipole = data.inducedDipole;
                 localData[LOCAL_ID].inducedDipolePolar = data.inducedDipolePolar;
                 localData[LOCAL_ID].bornRadius = data.bornRadius;
+                SYNC_WARPS;
                 
                 // Compute forces.
                 
@@ -276,6 +281,7 @@ KERNEL void computeGKForces(
                         energy += 0.5f*tempEnergy;
                     }
                 }
+                SYNC_WARPS;
                 data.force *= 0.5f;
                 ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
                 ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
@@ -294,6 +300,7 @@ KERNEL void computeGKForces(
                         data.force += tempTorque;
                     }
                 }
+                SYNC_WARPS;
                 ATOMIC_ADD(&torqueBuffers[atom1], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
                 ATOMIC_ADD(&torqueBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
                 ATOMIC_ADD(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
@@ -309,6 +316,7 @@ KERNEL void computeGKForces(
                         computeOneInteractionB1B2(data, localData[tbx+j], &bornForce1, &bornForce2);
                         data.bornForce += bornForce1;
                         localData[tbx+j].bornForce += bornForce2;
+                        SYNC_WARPS;
                     }
                 }
                 ATOMIC_ADD(&bornForce[atom1], (mm_ulong) ((mm_long) (data.bornForce*0x100000000)));
@@ -320,6 +328,7 @@ KERNEL void computeGKForces(
                 localData[LOCAL_ID] = loadAtomData2(j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, bornRadii);
                 localData[LOCAL_ID].force = make_real3(0);
                 localData[LOCAL_ID].bornForce = 0;
+                SYNC_WARPS;
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
@@ -333,6 +342,7 @@ KERNEL void computeGKForces(
                         energy += tempEnergy;
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
                 data.force *= 0.5f;
                 localData[LOCAL_ID].force *= 0.5f;
@@ -353,6 +363,7 @@ KERNEL void computeGKForces(
                 data.bornForce = 0;
                 localData[LOCAL_ID].force = make_real3(0);
                 localData[LOCAL_ID].bornForce = 0;
+                SYNC_WARPS;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -365,6 +376,7 @@ KERNEL void computeGKForces(
                         localData[tbx+tj].force += tempTorque;
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
@@ -383,6 +395,7 @@ KERNEL void computeGKForces(
                 data.bornForce = 0;
                 localData[LOCAL_ID].force = make_real3(0);
                 localData[LOCAL_ID].bornForce = 0;
+                SYNC_WARPS;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -392,6 +405,7 @@ KERNEL void computeGKForces(
                         localData[tbx+tj].bornForce += bornForce2;
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
@@ -515,6 +529,7 @@ KERNEL void computeChainRuleForce(
                 localData[LOCAL_ID].bornRadius = data.bornRadius;
                 localData[LOCAL_ID].bornForce = data.bornForce;
                 localData[LOCAL_ID].force = make_real3(0);
+                SYNC_WARPS;
                 
                 // Compute forces.
                 
@@ -526,6 +541,7 @@ KERNEL void computeChainRuleForce(
                         data.force -= tempForce;
                         localData[tbx+j].force += tempForce;
                     }
+                    SYNC_WARPS;
                 }
                 ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) ((data.force.x+localData[LOCAL_ID].force.x)*0x100000000)));
                 ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) ((data.force.y+localData[LOCAL_ID].force.y)*0x100000000)));
@@ -537,6 +553,7 @@ KERNEL void computeChainRuleForce(
                 unsigned int j = y*TILE_SIZE + tgx;
                 localData[LOCAL_ID] = loadAtomData3(j, posq, params, bornRadii, bornForce);
                 localData[LOCAL_ID].force = make_real3(0);
+                SYNC_WARPS;
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = y*TILE_SIZE+tj;
@@ -550,6 +567,7 @@ KERNEL void computeChainRuleForce(
                         localData[tbx+tj].force -= tempForce;
                     }
                     tj = (tj + 1) & (TILE_SIZE - 1);
+                    SYNC_WARPS;
                 }
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
@@ -680,6 +698,7 @@ KERNEL void computeEDiffForce(
                     data.force += tempForce;
                 }
             }
+            SYNC_WARPS;
             data.force *= ENERGY_SCALE_FACTOR;
             ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
             ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
@@ -710,6 +729,7 @@ KERNEL void computeEDiffForce(
             unsigned int j = y*TILE_SIZE + tgx;
             localData[LOCAL_ID] = loadAtomData4(j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
             localData[LOCAL_ID].force = make_real3(0);
+            SYNC_WARPS;
 
             // Compute forces.
 
@@ -728,6 +748,7 @@ KERNEL void computeEDiffForce(
                     localData[tbx+tj].force -= tempForce;
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
             data.force *= ENERGY_SCALE_FACTOR;
             localData[LOCAL_ID].force *= ENERGY_SCALE_FACTOR;
@@ -744,6 +765,7 @@ KERNEL void computeEDiffForce(
 
             data.force = make_real3(0);
             localData[LOCAL_ID].force = make_real3(0);
+            SYNC_WARPS;
             for (j = 0; j < TILE_SIZE; j++) {
                 int atom2 = y*TILE_SIZE+tj;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -756,6 +778,7 @@ KERNEL void computeEDiffForce(
                     localData[tbx+tj].force += tempTorque;
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
             data.force *= ENERGY_SCALE_FACTOR;
             localData[LOCAL_ID].force *= ENERGY_SCALE_FACTOR;
@@ -821,6 +844,7 @@ KERNEL void computeEDiffForce(
             unsigned int j = y*TILE_SIZE + tgx;
             localData[LOCAL_ID] = loadAtomData4(j, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS, dampingAndThole);
             localData[LOCAL_ID].force = make_real3(0);
+            SYNC_WARPS;
 
             // Compute forces.
 
@@ -836,6 +860,7 @@ KERNEL void computeEDiffForce(
                     localData[tbx+tj].force -= tempForce;
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
             data.force *= ENERGY_SCALE_FACTOR;
             localData[LOCAL_ID].force *= ENERGY_SCALE_FACTOR;
@@ -852,6 +877,7 @@ KERNEL void computeEDiffForce(
 
             data.force = make_real3(0);
             localData[LOCAL_ID].force = make_real3(0);
+            SYNC_WARPS;
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 int atom2 = y*TILE_SIZE+tj;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
@@ -862,6 +888,7 @@ KERNEL void computeEDiffForce(
                     localData[tbx+tj].force += tempTorque;
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
+                SYNC_WARPS;
             }
             data.force *= ENERGY_SCALE_FACTOR;
             localData[LOCAL_ID].force *= ENERGY_SCALE_FACTOR;

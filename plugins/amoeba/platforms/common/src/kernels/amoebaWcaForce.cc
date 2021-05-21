@@ -225,6 +225,7 @@ KERNEL void computeWCAForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed
             initParticleParameters(data.radius, data.epsilon, &rmixo, &rmixh, &emixo, &emixh);
             data.force = make_real3(0);
             localData[LOCAL_ID].force = make_real3(0);
+            SYNC_WARPS;
 
             // Compute forces.
 
@@ -246,6 +247,7 @@ KERNEL void computeWCAForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed
                     energy += (x == y ? 0.5f*tempEnergy : tempEnergy);
                 }
                 tj = (tj+1) & (TILE_SIZE-1);
+                SYNC_WARPS;
             }
             unsigned int offset = x*TILE_SIZE + tgx;
             ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
