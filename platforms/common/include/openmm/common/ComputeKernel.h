@@ -98,6 +98,10 @@ public:
         setArrayArg(index, value);
     }
     /**
+     * Get the maximum block size that can be used when executing this kernel.
+     */
+    virtual int getMaxBlockSize() const = 0;
+    /**
      * Execute this kernel.
      *
      * @param threads      the maximum number of threads that should be used.  Depending on the

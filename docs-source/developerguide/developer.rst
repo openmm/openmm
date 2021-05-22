@@ -975,4 +975,14 @@ CUDA both define types for them, but they have different names, and in any case
 you want to avoid using OpenCL-specific or CUDA-specific types in common code.
 OpenMM therefore defines types for vectors in host code.  They have the same
 names as the corresponding types in device code, only with the prefix :code:`mm_`\ ,
-for example :code:`mm_int2` and :code:`mm_float3`\ .
+for example :code:`mm_int2` and :code:`mm_float4`\ .
+
+Three component vectors need special care in this context, because the platforms
+define them differently.  In OpenCL, a three component vector is essentially a
+four component vector whose last component is ignored.  For example,
+:code:`sizeof(float3)` is 12 in CUDA but 16 in OpenCL.  Within a kernel this
+distinction can usually be ignored, but when communicating between host and
+device it becomes vitally important.  It is generally best to avoid storing
+three component vectors in arrays or passing them as arguments.  There are no
+:code:`mm_` host types defined for three component vectors, because CUDA and
+OpenCL would require them to be defined in different ways.

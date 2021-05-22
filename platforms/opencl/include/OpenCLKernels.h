@@ -288,8 +288,8 @@ private:
     cl::Kernel pmeDispersionAtomRangeKernel;
     cl::Kernel pmeZIndexKernel;
     cl::Kernel pmeDispersionZIndexKernel;
-    cl::Kernel pmeUpdateBsplinesKernel;
-    cl::Kernel pmeDispersionUpdateBsplinesKernel;
+    cl::Kernel pmeGridIndexKernel;
+    cl::Kernel pmeDispersionGridIndexKernel;
     cl::Kernel pmeSpreadChargeKernel;
     cl::Kernel pmeDispersionSpreadChargeKernel;
     cl::Kernel pmeFinishSpreadChargeKernel;

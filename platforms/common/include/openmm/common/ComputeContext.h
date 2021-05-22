@@ -65,6 +65,8 @@ public:
     class ReorderListener;
     class ForcePreComputation;
     class ForcePostComputation;
+    static const int ThreadBlockSize;
+    static const int TileSize;
     ComputeContext(const System& system);
     virtual ~ComputeContext();
     /**
@@ -122,6 +124,13 @@ public:
      * @param defines            a set of preprocessor definitions (name, value) to define when compiling the program
      */
     virtual ComputeProgram compileProgram(const std::string source, const std::map<std::string, std::string>& defines=std::map<std::string, std::string>()) = 0;
+    /**
+     * Compute the largest thread block size that can be used for a kernel that requires a particular amount of
+     * shared memory per thread.
+     * 
+     * @param memory        the number of bytes of shared memory per thread
+     */
+    virtual int computeThreadBlockSize(double memory) const = 0;
     /**
      * Set all elements of an array to 0.
      */
@@ -279,6 +288,10 @@ public:
         return paddedNumAtoms;
     }
     /**
+     * Get the number of blocks of TileSize atoms.
+     */
+    virtual int getNumAtomBlocks() const = 0;
+    /**
      * Get the standard number of thread blocks to use when executing kernels.
      */
     virtual int getNumThreadBlocks() const = 0;
@@ -398,6 +411,13 @@ public:
      * Get the NonbondedUtilities for this context.
      */
     virtual NonbondedUtilities& getNonbondedUtilities() = 0;
+    /**
+     * Create a new NonbondedUtilities for use with this context.  This should be called
+     * only in unusual situations, when a Force needs its own NonbondedUtilities object
+     * separate from the standard one.  The caller is responsible for deleting the object
+     * when it is no longer needed.
+     */
+    virtual NonbondedUtilities* createNonbondedUtilities() = 0;
     /**
      * This should be called by the Integrator from its own initialize() method.
      * It ensures all contexts are fully initialized.

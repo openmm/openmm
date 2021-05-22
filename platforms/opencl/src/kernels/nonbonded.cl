@@ -34,6 +34,7 @@ __kernel void computeNonbonded(
     const unsigned int warp = get_global_id(0)/TILE_SIZE;
     const unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
     const unsigned int tbx = get_local_id(0) - tgx;
+    const unsigned int localAtomIndex = get_local_id(0);
     mixed energy = 0;
     INIT_DERIVATIVES
     __local AtomData localData[FORCE_WORK_GROUP_SIZE];
@@ -57,7 +58,6 @@ __kernel void computeNonbonded(
         if (x == y) {
             // This tile is on the diagonal.
 
-            const unsigned int localAtomIndex = get_local_id(0);
             localData[localAtomIndex].x = posq1.x;
             localData[localAtomIndex].y = posq1.y;
             localData[localAtomIndex].z = posq1.z;
@@ -105,7 +105,6 @@ __kernel void computeNonbonded(
         else {
             // This is an off-diagonal tile.
 
-            const unsigned int localAtomIndex = get_local_id(0);
             unsigned int j = y*TILE_SIZE + tgx;
             real4 tempPosq = posq[j];
             localData[localAtomIndex].x = tempPosq.x;
@@ -266,7 +265,6 @@ __kernel void computeNonbonded(
 
             real4 posq1 = posq[atom1];
             LOAD_ATOM1_PARAMETERS
-            const unsigned int localAtomIndex = get_local_id(0);
 #ifdef USE_CUTOFF
             unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else

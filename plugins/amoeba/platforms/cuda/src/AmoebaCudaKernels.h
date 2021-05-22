@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,55 +30,22 @@
 #include "openmm/amoebaKernels.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
-#include "CudaArray.h"
 #include "CudaContext.h"
 #include "CudaNonbondedUtilities.h"
 #include "CudaSort.h"
+#include "AmoebaCommonKernels.h"
 #include <cufft.h>
 
 namespace OpenMM {
 
-class CudaCalcAmoebaGeneralizedKirkwoodForceKernel;
-
-/**
- * This kernel is invoked by AmoebaTorsionTorsionForce to calculate the forces acting on the system and the energy of the system.
- */
-class CudaCalcAmoebaTorsionTorsionForceKernel : public CalcAmoebaTorsionTorsionForceKernel {
-public:
-    CudaCalcAmoebaTorsionTorsionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaTorsionTorsionForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaTorsionTorsionForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-private:
-    class ForceInfo;
-    int numTorsionTorsions;
-    int numTorsionTorsionGrids;
-    CudaContext& cu;
-    const System& system;
-    CudaArray gridValues;
-    CudaArray gridParams;
-    CudaArray torsionParams;
-};
-
 /**
  * This kernel is invoked by AmoebaMultipoleForce to calculate the forces acting on the system and the energy of the system.
  */
-class CudaCalcAmoebaMultipoleForceKernel : public CalcAmoebaMultipoleForceKernel {
+class CudaCalcAmoebaMultipoleForceKernel : public CommonCalcAmoebaMultipoleForceKernel {
 public:
-    CudaCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
+            CommonCalcAmoebaMultipoleForceKernel(name, platform, cu, system), hasInitializedFFT(false) {
+    }
     ~CudaCalcAmoebaMultipoleForceKernel();
     /**
      * Initialize the kernel.
@@ -88,329 +55,28 @@ public:
      */
     void initialize(const System& system, const AmoebaMultipoleForce& force);
     /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
+     * Compute the FFT.
      */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-     /**
-     * Get the LabFrame dipole moments of all particles.
-     * 
-     * @param context    the Context for which to get the induced dipoles
-     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
-     */
-    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    void computeFFT(bool forward);
     /**
-     * Get the induced dipole moments of all particles.
-     * 
-     * @param context    the Context for which to get the induced dipoles
-     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
+     * Get whether charge spreading should be done in fixed point.
      */
-    void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    /**
-     * Get the total dipole moments of all particles.
-     * 
-     * @param context    the Context for which to get the induced dipoles
-     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
-     */
-    void getTotalDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    /**
-     * Execute the kernel to calculate the electrostatic potential
-     *
-     * @param context        the context in which to execute this kernel
-     * @param inputGrid      input grid coordinates
-     * @param outputElectrostaticPotential output potential 
-     */
-    void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
-                                   std::vector< double >& outputElectrostaticPotential);
-
-   /** 
-     * Get the system multipole moments
-     *
-     * @param context      context
-     * @param outputMultipoleMoments (charge,
-     *                                dipole_x, dipole_y, dipole_z,
-     *                                quadrupole_xx, quadrupole_xy, quadrupole_xz,
-     *                                quadrupole_yx, quadrupole_yy, quadrupole_yz,
-     *                                quadrupole_zx, quadrupole_zy, quadrupole_zz)
-     */
-    void getSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the AmoebaMultipoleForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force);
-    /**
-     * Get the parameters being used for PME.
-     * 
-     * @param alpha   the separation parameter
-     * @param nx      the number of grid points along the X axis
-     * @param ny      the number of grid points along the Y axis
-     * @param nz      the number of grid points along the Z axis
-     */
-    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    bool useFixedPointChargeSpreading() const {
+        return cc.getUseDoublePrecision();
+    }
 private:
-    class ForceInfo;
-    void initializeScaleFactors();
-    void computeInducedField(void** recipBoxVectorPointer);
-    bool iterateDipolesByDIIS(int iteration);
-    void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
-    void ensureMultipolesValid(ContextImpl& context);
-    template <class T, class T3, class T4, class M4> void computeSystemMultipoleMoments(ContextImpl& context, std::vector<double>& outputMultipoleMoments);
-    int numMultipoles, maxInducedIterations, maxExtrapolationOrder;
-    int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
-    int gridSizeX, gridSizeY, gridSizeZ;
-    double pmeAlpha, inducedEpsilon;
-    bool usePME, hasQuadrupoles, hasInitializedScaleFactors, hasInitializedFFT, multipolesAreValid, hasCreatedEvent;
-    AmoebaMultipoleForce::PolarizationType polarizationType;
-    CudaContext& cu;
-    const System& system;
-    std::vector<int3> covalentFlagValues;
-    std::vector<int2> polarizationFlagValues;
-    CudaArray multipoleParticles;
-    CudaArray localDipoles;
-    CudaArray localQuadrupoles;
-    CudaArray labDipoles;
-    CudaArray labQuadrupoles;
-    CudaArray sphericalDipoles;
-    CudaArray sphericalQuadrupoles;
-    CudaArray fracDipoles;
-    CudaArray fracQuadrupoles;
-    CudaArray field;
-    CudaArray fieldPolar;
-    CudaArray inducedField;
-    CudaArray inducedFieldPolar;
-    CudaArray torque;
-    CudaArray dampingAndThole;
-    CudaArray inducedDipole;
-    CudaArray inducedDipolePolar;
-    CudaArray inducedDipoleErrors;
-    CudaArray prevDipoles;
-    CudaArray prevDipolesPolar;
-    CudaArray prevDipolesGk;
-    CudaArray prevDipolesGkPolar;
-    CudaArray prevErrors;
-    CudaArray diisMatrix;
-    CudaArray diisCoefficients;
-    CudaArray extrapolatedDipole;
-    CudaArray extrapolatedDipolePolar;
-    CudaArray extrapolatedDipoleGk;
-    CudaArray extrapolatedDipoleGkPolar;
-    CudaArray inducedDipoleFieldGradient;
-    CudaArray inducedDipoleFieldGradientPolar;
-    CudaArray inducedDipoleFieldGradientGk;
-    CudaArray inducedDipoleFieldGradientGkPolar;
-    CudaArray extrapolatedDipoleFieldGradient;
-    CudaArray extrapolatedDipoleFieldGradientPolar;
-    CudaArray extrapolatedDipoleFieldGradientGk;
-    CudaArray extrapolatedDipoleFieldGradientGkPolar;
-    CudaArray polarizability;
-    CudaArray covalentFlags;
-    CudaArray polarizationGroupFlags;
-    CudaArray pmeGrid;
-    CudaArray pmeBsplineModuliX;
-    CudaArray pmeBsplineModuliY;
-    CudaArray pmeBsplineModuliZ;
-    CudaArray pmePhi;
-    CudaArray pmePhid;
-    CudaArray pmePhip;
-    CudaArray pmePhidp;
-    CudaArray pmeCphi;
-    CudaArray lastPositions;
+    bool hasInitializedFFT;
     cufftHandle fft;
-    CUfunction computeMomentsKernel, recordInducedDipolesKernel, computeFixedFieldKernel, computeInducedFieldKernel, updateInducedFieldKernel, electrostaticsKernel, mapTorqueKernel;
-    CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
-    CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel, computePotentialKernel;
-    CUfunction recordDIISDipolesKernel, buildMatrixKernel, solveMatrixKernel;
-    CUfunction initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, addExtrapolatedGradientKernel;
-    CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
-    CUevent syncEvent;
-    CudaCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
-    static const int PmeOrder = 5;
-    static const int MaxPrevDIISDipoles = 20;
-};
-
-/**
- * This kernel is invoked by AmoebaMultipoleForce to calculate the forces acting on the system and the energy of the system.
- */
-class CudaCalcAmoebaGeneralizedKirkwoodForceKernel : public CalcAmoebaGeneralizedKirkwoodForceKernel {
-public:
-    CudaCalcAmoebaGeneralizedKirkwoodForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaMultipoleForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Perform the computation of Born radii.
-     */
-    void computeBornRadii();
-    /**
-     * Perform the final parts of the force/energy computation.
-     */
-    void finishComputation(CudaArray& torque, CudaArray& labFrameDipoles, CudaArray& labFrameQuadrupoles, CudaArray& inducedDipole, CudaArray& inducedDipolePolar, CudaArray& dampingAndThole, CudaArray& covalentFlags, CudaArray& polarizationGroupFlags);
-    CudaArray& getBornRadii() {
-        return bornRadii;
-    }
-    CudaArray& getField() {
-        return field;
-    }
-    CudaArray& getInducedField() {
-        return inducedField;
-    }
-    CudaArray& getInducedFieldPolar() {
-        return inducedFieldPolar;
-    }
-    CudaArray& getInducedDipoles() {
-        return inducedDipoleS;
-    }
-    CudaArray& getInducedDipolesPolar() {
-        return inducedDipolePolarS;
-    }
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the AmoebaGeneralizedKirkwoodForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const AmoebaGeneralizedKirkwoodForce& force);
-private:
-    class ForceInfo;
-    CudaContext& cu;
-    const System& system;
-    bool includeSurfaceArea, hasInitializedKernels;
-    int computeBornSumThreads, gkForceThreads, chainRuleThreads, ediffThreads;
-    AmoebaMultipoleForce::PolarizationType polarizationType;
-    std::map<std::string, std::string> defines;
-    CudaArray params;
-    CudaArray bornSum;
-    CudaArray bornRadii;
-    CudaArray bornForce;
-    CudaArray field;
-    CudaArray inducedField;
-    CudaArray inducedFieldPolar;
-    CudaArray inducedDipoleS;
-    CudaArray inducedDipolePolarS;
-    CUfunction computeBornSumKernel, reduceBornSumKernel, surfaceAreaKernel, gkForceKernel, chainRuleKernel, ediffKernel;
-};
-
-/**
- * This kernel is invoked to calculate the vdw forces acting on the system and the energy of the system.
- */
-class CudaCalcAmoebaVdwForceKernel : public CalcAmoebaVdwForceKernel {
-public:
-    CudaCalcAmoebaVdwForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
-    ~CudaCalcAmoebaVdwForceKernel();
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaVdwForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaVdwForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the AmoebaVdwForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force);
-private:
-    class ForceInfo;
-    CudaContext& cu;
-    const System& system;
-    bool hasInitializedNonbonded;
-
-    // True if the AmoebaVdwForce AlchemicalMethod is not None.
-    bool hasAlchemical;
-    // Pinned host memory; allocated if necessary in initialize, and freed in the destructor.
-    void* vdwLambdaPinnedBuffer;
-    // Device memory for the alchemical state.
-    CudaArray vdwLambda;
-    // Only update device memory when lambda changes.
-    float currentVdwLambda;
-    // Per particle alchemical flag.
-    CudaArray isAlchemical;
-
-    double dispersionCoefficient;
-    CudaArray sigmaEpsilon, atomType;
-    CudaArray bondReductionAtoms;
-    CudaArray bondReductionFactors;
-    CudaArray tempPosq;
-    CudaArray tempForces;
-    CudaNonbondedUtilities* nonbonded;
-    CUfunction prepareKernel, spreadKernel;
-};
-
-/**
- * This kernel is invoked to calculate the WCA dispersion forces acting on the system and the energy of the system.
- */
-class CudaCalcAmoebaWcaDispersionForceKernel : public CalcAmoebaWcaDispersionForceKernel {
-public:
-    CudaCalcAmoebaWcaDispersionForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaMultipoleForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaWcaDispersionForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the AmoebaWcaDispersionForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const AmoebaWcaDispersionForce& force);
-private:
-    class ForceInfo;
-    CudaContext& cu;
-    const System& system;
-    double totalMaximumDispersionEnergy;
-    CudaArray radiusEpsilon;
-    CUfunction forceKernel;
 };
 
 /**
  * This kernel is invoked by HippoNonbondedForce to calculate the forces acting on the system and the energy of the system.
  */
-class CudaCalcHippoNonbondedForceKernel : public CalcHippoNonbondedForceKernel {
+class CudaCalcHippoNonbondedForceKernel : public CommonCalcHippoNonbondedForceKernel {
 public:
-    CudaCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system);
+    CudaCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, CudaContext& cu, const System& system) :
+            CommonCalcHippoNonbondedForceKernel(name, platform, cu, system), sort(NULL), hasInitializedFFT(false) {
+    }
     ~CudaCalcHippoNonbondedForceKernel();
     /**
      * Initialize the kernel.
@@ -420,65 +86,20 @@ public:
      */
     void initialize(const System& system, const HippoNonbondedForce& force);
     /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
+     * Compute the FFT.
      */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    void computeFFT(bool forward, bool dispersion);
     /**
-     * Get the induced dipole moments of all particles.
-     * 
-     * @param context    the Context for which to get the induced dipoles
-     * @param dipoles    the induced dipole moment of particle i is stored into the i'th element
+     * Get whether charge spreading should be done in fixed point.
      */
-    void getInducedDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
+    bool useFixedPointChargeSpreading() const {
+        return cc.getUseDoublePrecision();
+    }
     /**
-     * Get the fixed dipole moments of all particles in the global reference frame.
-     * 
-     * @param context    the Context for which to get the fixed dipoles
-     * @param dipoles    the fixed dipole moment of particle i is stored into the i'th element
+     * Sort the atom grid indices.
      */
-    void getLabFramePermanentDipoles(ContextImpl& context, std::vector<Vec3>& dipoles);
-    /** 
-     * Calculate the electrostatic potential given vector of grid coordinates.
-     *
-     * @param context                      context
-     * @param inputGrid                    input grid coordinates
-     * @param outputElectrostaticPotential output potential 
-     */
-    void getElectrostaticPotential(ContextImpl& context, const std::vector< Vec3 >& inputGrid,
-                                   std::vector< double >& outputElectrostaticPotential);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the HippoNonbondedForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const HippoNonbondedForce& force);
-    /**
-     * Get the parameters being used for PME.
-     * 
-     * @param alpha   the separation parameter
-     * @param nx      the number of grid points along the X axis
-     * @param ny      the number of grid points along the Y axis
-     * @param nz      the number of grid points along the Z axis
-     */
-    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
-    /**
-     * Get the parameters being used for dispersion PME.
-     * 
-     * @param alpha   the separation parameter
-     * @param nx      the number of grid points along the X axis
-     * @param ny      the number of grid points along the Y axis
-     * @param nz      the number of grid points along the Z axis
-     */
-    void getDPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
+    void sortGridIndex();
 private:
-    class ForceInfo;
-    class TorquePostComputation;
     class SortTrait : public CudaSort::SortTrait {
         int getDataSize() const {return 8;}
         int getKeySize() const {return 4;}
@@ -489,50 +110,9 @@ private:
         const char* getMaxValue() const {return "make_int2(2147483647, 2147483647)";}
         const char* getSortKey() const {return "value.y";}
     };
-    void computeInducedField(void** recipBoxVectorPointer, int optOrder);
-    void computeExtrapolatedDipoles(void** recipBoxVectorPointer);
-    void ensureMultipolesValid(ContextImpl& context);
-    void addTorquesToForces();
-    void createFieldKernel(const std::string& interactionSrc, std::vector<CudaArray*> params, CudaArray& fieldBuffer,
-        CUfunction& kernel, std::vector<void*>& args, CUfunction& exceptionKernel, std::vector<void*>& exceptionArgs,
-        CudaArray& exceptionScale);
-    int numParticles, maxExtrapolationOrder, maxTiles;
-    int gridSizeX, gridSizeY, gridSizeZ;
-    int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    double pmeAlpha, dpmeAlpha, cutoff;
-    bool usePME, hasInitializedKernels, hasInitializedFFT, multipolesAreValid;
-    std::vector<double> extrapolationCoefficients;
-    CudaContext& cu;
-    const System& system;
-    CudaArray multipoleParticles;
-    CudaArray coreCharge, valenceCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
-    CudaArray localDipoles, labDipoles, fracDipoles;
-    CudaArray localQuadrupoles, labQuadrupoles[5], fracQuadrupoles;
-    CudaArray field;
-    CudaArray inducedField;
-    CudaArray torque;
-    CudaArray inducedDipole;
-    CudaArray extrapolatedDipole, extrapolatedPhi;
-    CudaArray pmeGrid1, pmeGrid2;
-    CudaArray pmeAtomGridIndex;
-    CudaArray pmeBsplineModuliX, pmeBsplineModuliY, pmeBsplineModuliZ;
-    CudaArray dpmeBsplineModuliX, dpmeBsplineModuliY, dpmeBsplineModuliZ;
-    CudaArray pmePhi, pmePhidp, pmeCphi;
-    CudaArray lastPositions;
-    CudaArray exceptionScales[6];
-    CudaArray exceptionAtoms;
+    bool hasInitializedFFT;
     CudaSort* sort;
     cufftHandle fftForward, fftBackward, dfftForward, dfftBackward;
-    CUfunction computeMomentsKernel, fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel, computeExceptionsKernel;
-    CUfunction recordInducedDipolesKernel, mapTorqueKernel;
-    CUfunction pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
-    CUfunction pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
-    CUfunction pmeSelfEnergyKernel;
-    CUfunction dpmeGridIndexKernel, dpmeSpreadChargeKernel, dpmeFinishSpreadChargeKernel, dpmeEvalEnergyKernel, dpmeConvolutionKernel, dpmeInterpolateForceKernel;
-    CUfunction initExtrapolatedKernel, iterateExtrapolatedKernel, computeExtrapolatedKernel, polarizationEnergyKernel;
-    CUfunction pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
-    std::vector<void*> fixedFieldArgs, fixedFieldExceptionArgs, mutualFieldArgs, mutualFieldExceptionArgs, computeExceptionsArgs;
-    static const int PmeOrder = 5;
 };
 
 } // namespace OpenMM

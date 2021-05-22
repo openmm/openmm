@@ -681,6 +681,19 @@ void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSi
     }
 }
 
+int OpenCLContext::computeThreadBlockSize(double memory) const {
+    int maxShared = device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+    // On some implementations, more local memory gets used than we calculate by
+    // adding up the sizes of the fields.  To be safe, include a factor of 0.5.
+    int max = (int) (0.5*maxShared/memory);
+    if (max < 64)
+        return 32;
+    int threads = 64;
+    while (threads+64 < max)
+        threads += 64;
+    return threads;
+}
+
 void OpenCLContext::clearBuffer(ArrayInterface& array) {
     clearBuffer(unwrap(array).getDeviceBuffer(), array.getSize()*array.getElementSize());
 }

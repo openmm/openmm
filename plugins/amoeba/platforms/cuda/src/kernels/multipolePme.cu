@@ -1271,10 +1271,11 @@ extern "C" __global__ void calculateSelfEnergyAndTorque(long long* __restrict__ 
 #else
 extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ phid, real* const __restrict__ phip, long long* __restrict__ inducedField,
         long long* __restrict__ inducedFieldPolar, const real3* __restrict__ inducedDipole, const real3* __restrict__ inducedDipolePolar,
+        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ
 #ifdef EXTRAPOLATED_POLARIZATION
-        unsigned long long* __restrict__ fieldGradient, unsigned long long* __restrict__ fieldGradientPolar,
+        , unsigned long long* __restrict__ fieldGradient, unsigned long long* __restrict__ fieldGradientPolar
 #endif
-        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+        ) {
     __shared__ real fracToCart[3][3];
     if (threadIdx.x == 0) {
         fracToCart[0][0] = GRID_SIZE_X*recipBoxVecX.x;

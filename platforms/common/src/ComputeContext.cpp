@@ -39,6 +39,9 @@
 using namespace OpenMM;
 using namespace std;
 
+const int ComputeContext::ThreadBlockSize = 64;
+const int ComputeContext::TileSize = 32;
+
 ComputeContext::ComputeContext(const System& system) : system(system), time(0.0), stepCount(0), computeForceCount(0), stepsSinceReorder(99999),
         atomsWereReordered(false), forcesValid(false), thread(NULL) {
     thread = new WorkThread();
