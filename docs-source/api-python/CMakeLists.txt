@@ -42,7 +42,7 @@ add_custom_command(
             "${CMAKE_CURRENT_BINARY_DIR}/index.rst"
             "${CMAKE_CURRENT_BINARY_DIR}/_static/logo.png"
             "${CMAKE_CURRENT_BINARY_DIR}/_templates/class.rst"
-            # PythonInstall
+            PythonInstall
 )
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/api-python/)
 add_custom_target(PythonApiDocs DEPENDS ${CMAKE_BINARY_DIR}/api-python/index.html)
