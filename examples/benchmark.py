@@ -97,11 +97,11 @@ def runOneTest(testName, options):
     print('Step Size: %g fs' % dt.value_in_unit(unit.femtoseconds))
     properties = {}
     initialSteps = 5
-    if options.device is not None and platform.getName() in ('CUDA', 'OpenCL'):
+    if options.device is not None and platform.getName() in ('CUDA', 'OpenCL', 'HIP'):
         properties['DeviceIndex'] = options.device
         if ',' in options.device or ' ' in options.device:
             initialSteps = 250
-    if options.precision is not None and platform.getName() in ('CUDA', 'OpenCL'):
+    if options.precision is not None and platform.getName() in ('CUDA', 'OpenCL', 'HIP'):
         properties['Precision'] = options.precision
 
     # Run the simulation.
