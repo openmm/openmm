@@ -63,8 +63,8 @@ KERNEL void integrateLangevinPart2(int numAtoms, GLOBAL real4* RESTRICT posq, GL
             vel.z = (mixed) (invStepSize*delta.z);
 #else
             vel.x = invStepSize*delta.x + correction*delta.x;
-            vel.y = invStepSize*delta.y + correction*delta.x;
-            vel.z = invStepSize*delta.z + correction*delta.x;
+            vel.y = invStepSize*delta.y + correction*delta.y;
+            vel.z = invStepSize*delta.z + correction*delta.z;
 #endif
 #ifdef USE_MIXED_PRECISION
             posq[index] = make_real4((real) pos.x, (real) pos.y, (real) pos.z, (real) pos.w);
