@@ -12,8 +12,9 @@ dependencies:
 - cython
 - swig
 - doxygen 1.8.14
+# Docs
+- sphinx==2.3.1
+- sphinxcontrib-bibtex<2.0.0
 - pip:
-  - sphinx==2.3.1
-  - sphinxcontrib-bibtex<2.0.0
   - sphinxcontrib-lunrsearch
   - sphinxcontrib-autodoc_doxygen

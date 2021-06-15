@@ -690,7 +690,7 @@ Building the Documentation (Optional)
 *************************************
 
 The documentation that you're currently reading, as well as the developer guide and API
-documentation can be built through CMake by setting the OpenMM option :code:`OPENMM_GENERATE_API_DOCS=ON`. Building the documentation requires that at least the Python API is built (see above).
+documentation can be built through CMake by setting the OpenMM option :code:`OPENMM_GENERATE_API_DOCS=ON`.
 
 User Guide and Developer Guide
 ==============================

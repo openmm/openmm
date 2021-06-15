@@ -83,8 +83,6 @@ make PythonInstall
 
 ### Compiling the documentation
 
-The docs require the Python API to be compiled, as described in the previous step
-
 ```shell
 # Compile the User's and Developer's guides as HTML
 make sphinxhtml
