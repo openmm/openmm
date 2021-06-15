@@ -13,8 +13,8 @@ dependencies:
 - swig
 - doxygen 1.8.14
 # Docs
-- sphinx==2.3.1
-- sphinxcontrib-bibtex<2.0.0
+- sphinx>=4.0.2,<5.0.0
+- sphinxcontrib-bibtex
 - pip:
   - sphinxcontrib-lunrsearch
   - sphinxcontrib-autodoc_doxygen

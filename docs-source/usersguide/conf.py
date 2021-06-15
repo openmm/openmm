@@ -27,6 +27,7 @@ sys.path.append(os.path.abspath('../sphinx'))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.mathjax', 'sphinxcontrib.bibtex', 'autonumber', 'samepage', 'caption', 'numsec']
+bibtex_bibfiles = ['references.bib']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
