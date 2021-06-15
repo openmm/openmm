@@ -235,7 +235,7 @@ class CHeaderGenerator(WrapperGenerator):
         shortClassName = stripOpenMMPrefix(className)
         typeName = convertOpenMMPrefix(className)
         destructorName = '~'+shortClassName
-        isAbstract = any('virt' in method.attrib and method.attrib['virt'] == 'pure-virtual' for method in classNode.getiterator('memberdef'))
+        isAbstract = any('virt' in method.attrib and method.attrib['virt'] == 'pure-virtual' for method in classNode.iter('memberdef'))
 
         if not isAbstract:
             # Write constructors
@@ -488,7 +488,7 @@ class CSourceGenerator(WrapperGenerator):
         shortClassName = stripOpenMMPrefix(className)
         typeName = convertOpenMMPrefix(className)
         destructorName = '~'+shortClassName
-        isAbstract = any('virt' in method.attrib and method.attrib['virt'] == 'pure-virtual' for method in classNode.getiterator('memberdef'))
+        isAbstract = any('virt' in method.attrib and method.attrib['virt'] == 'pure-virtual' for method in classNode.iter('memberdef'))
 
         if not isAbstract:
             # Write constructors
@@ -943,7 +943,7 @@ class FortranHeaderGenerator(WrapperGenerator):
         shortClassName = stripOpenMMPrefix(className)
         typeName = convertOpenMMPrefix(className)
         destructorName = '~'+shortClassName
-        isAbstract = any('virt' in method.attrib and method.attrib['virt'] == 'pure-virtual' for method in classNode.getiterator('memberdef'))
+        isAbstract = any('virt' in method.attrib and method.attrib['virt'] == 'pure-virtual' for method in classNode.iter('memberdef'))
 
         if not isAbstract:
             # Write constructors
@@ -1505,7 +1505,7 @@ class FortranSourceGenerator(WrapperGenerator):
         shortClassName = stripOpenMMPrefix(className)
         typeName = convertOpenMMPrefix(className)
         destructorName = '~'+shortClassName
-        isAbstract = any('virt' in method.attrib and method.attrib['virt'] == 'pure-virtual' for method in classNode.getiterator('memberdef'))
+        isAbstract = any('virt' in method.attrib and method.attrib['virt'] == 'pure-virtual' for method in classNode.iter('memberdef'))
 
         if not isAbstract:
             # Write constructors
