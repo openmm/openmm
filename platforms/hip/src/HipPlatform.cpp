@@ -126,7 +126,15 @@ HipPlatform::HipPlatform() {
     setPropertyDefaultValue(HipDisablePmeStream(), "false");
     setPropertyDefaultValue(HipDeterministicForces(), "false");
     char* compiler = getenv("OPENMM_HIP_COMPILER");
-    string hipcc = (compiler == NULL ? "/opt/rocm/bin/hipcc" : string(compiler));
+    char* rocm_path = getenv("ROCM_PATH");
+    string hipcc;
+    if (rocm_path != NULL) {
+        hipcc = string(rocm_path) + "/bin/hipcc"
+    } else if (compiler != NULL) {
+        hipcc = compiler;
+    } else {
+        hipcc = "/opt/rocm/bin/hipcc"
+    }
     setPropertyDefaultValue(HipCompiler(), hipcc);
     char* tmpdir = getenv("TMPDIR");
     string tmp = (tmpdir == NULL ? string(P_tmpdir) : string(tmpdir));
