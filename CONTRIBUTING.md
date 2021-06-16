@@ -66,8 +66,9 @@ conda env update -n openmm-dev -f devtools/ci/gh-actions/conda-envs/docs.yml
 ```shell
 mkdir build
 cd build
+conda activate openmm-dev
 # For other options, check the User Guide or try `ccmake ..`
-cmake .. -DOPENMM_GENERATE_API_DOCS=ON
+cmake .. -DOPENMM_GENERATE_API_DOCS=ON -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} -DOPENMM_BUILD_PYTHON_WRAPPERS=ON
 ```
 
 ### Compiling OpenMM
