@@ -460,7 +460,7 @@ class PrmtopLoader(object):
         return self._dihedralList
 
     def getNumMaps(self):
-        """ """
+        """Return number of CMAPs. Return 0 if CMAP does not exist"""
         try:
             return self._numCMAP
         except AttributeError:
@@ -468,10 +468,10 @@ class PrmtopLoader(object):
         if "CMAP_COUNT" in self._raw_data.keys():
             self._numCMAP=int(self._raw_data["CMAP_COUNT"][1])
             return self._numCMAP
-        return False
+        return 0
 
     def getCMAPResolutions(self):
-        """ """
+        """Return CMAP resolution info. Return 0 if CMAP does not exist"""
         try:
             return self._cmapResolution
         except AttributeError:
@@ -479,17 +479,12 @@ class PrmtopLoader(object):
         if "CMAP_RESOLUTION" in self._raw_data.keys():
             self._cmapResolution=self._raw_data["CMAP_RESOLUTION"]
             return self._cmapResolution
-        return False
+        return 0
 
     def getCMAPParameters(self, index):
-        num_str=str(index)
-        zero_index = num_str.zfill(2)
-        name="CMAP_PARAMETER_" + zero_index
-        cmapPointers = self._raw_data[name]
-        _cmapParameterList=[]
-        for ii in range(0,len(cmapPointers)):
-            _cmapParameterList.append(float(cmapPointers[ii]))
-        return _cmapParameterList
+        """Return list of CMAP energy values"""
+        flag="CMAP_PARAMETER_{:02d}".format(index)
+        return [float(pointer) for pointer in self._raw_data[flag]]
 
     def getCMAPDihedrals(self):
         """Return CMAP type, list of first four atoms, and list of second four atoms"""
@@ -502,7 +497,7 @@ class PrmtopLoader(object):
         forceConstConversionFactor = (units.kilocalorie_per_mole).conversion_factor_to(units.kilojoule_per_mole)
         for ii in range(0,len(cmapPointers),6):
             if any([int(cmapPointers[ii+jj])<0 for jj in range(5)]):
-                raise Exception("Found negative cmap atom pointers %s"
+                raise ValueError("Found negative cmap atom pointers %s"
                                 % ((cmapPointers[ii],
                                    cmapPointers[ii+1],
                                    cmapPointers[ii+2],
@@ -806,7 +801,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
     numMap = prmtop.getNumMaps()
     mapSize = prmtop.getCMAPResolutions()
 
-    if numMap and mapSize and numMap == len(mapSize):
+    if numMap > 0:
         if verbose: print("Adding CMAPs...")
         force = mm.CMAPTorsionForce()
         ### Get map energies
