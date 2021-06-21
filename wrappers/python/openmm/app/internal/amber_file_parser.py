@@ -14,7 +14,7 @@ Medical Research, grant U54 GM072970. See https://simtk.org.
 
 Portions copyright (c) 2012-2014 Stanford University and the Authors.
 Authors: Randall J. Radmer, John D. Chodera, Peter Eastman
-Contributors: Christoph Klein, Michael R. Shirts, Jason Swails
+Contributors: Christoph Klein, Michael R. Shirts, Jason Swails, Kye Won Wang
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -62,7 +62,7 @@ from . import customgbforces as customgb
 #=============================================================================================
 
 # A regex for extracting print format info from the FORMAT lines.
-FORMAT_RE_PATTERN=re.compile("([0-9]+)([a-zA-Z]+)([0-9]+)\.?([0-9]*)")
+FORMAT_RE_PATTERN=re.compile("([0-9]+)\(?([a-zA-Z]+)([0-9]+)\.?([0-9]*)\)?")
 
 # Pointer labels which map to pointer numbers at top of prmtop files
 POINTER_LABELS  = """
@@ -132,8 +132,6 @@ class PrmtopLoader(object):
                             raise TypeError('CHAMBER-style topology files are not supported here. '
                                             'Consider using the CHARMM files directly with CharmmPsfFile '
                                             'or ParmEd (where CHAMBER topologies are supported)')
-                        if 'CMAP' in flag:
-                            raise TypeError("CMAP terms in AMBER topology files are not supported. You can use ParmEd instead")
                         self._flags.append(flag)
                         self._raw_data[flag] = []
                     elif line.startswith('%FORMAT'):
@@ -461,6 +459,62 @@ class PrmtopLoader(object):
                                 int(0.5+float(periodicity[iType]))))
         return self._dihedralList
 
+    def getNumMaps(self):
+        """Return number of CMAPs. Return 0 if CMAP does not exist"""
+        try:
+            return self._numCMAP
+        except AttributeError:
+            pass
+        if "CMAP_COUNT" in self._raw_data.keys():
+            self._numCMAP=int(self._raw_data["CMAP_COUNT"][1])
+            return self._numCMAP
+        return 0
+
+    def getCMAPResolutions(self):
+        """Return CMAP resolution info. Return 0 if CMAP does not exist"""
+        try:
+            return self._cmapResolution
+        except AttributeError:
+            pass
+        if "CMAP_RESOLUTION" in self._raw_data.keys():
+            self._cmapResolution=self._raw_data["CMAP_RESOLUTION"]
+            return self._cmapResolution
+        return 0
+
+    def getCMAPParameters(self, index):
+        """Return list of CMAP energy values"""
+        flag="CMAP_PARAMETER_{:02d}".format(index)
+        return [float(pointer) for pointer in self._raw_data[flag]]
+
+    def getCMAPDihedrals(self):
+        """Return CMAP type, list of first four atoms, and list of second four atoms"""
+        try:
+            return self._cmapList
+        except AttributeError:
+            pass
+        cmapPointers = self._raw_data["CMAP_INDEX"]
+        self._cmapList=[]
+        forceConstConversionFactor = (units.kilocalorie_per_mole).conversion_factor_to(units.kilojoule_per_mole)
+        for ii in range(0,len(cmapPointers),6):
+            if any([int(cmapPointers[ii+jj])<0 for jj in range(5)]):
+                raise ValueError("Found negative cmap atom pointers %s"
+                                % ((cmapPointers[ii],
+                                   cmapPointers[ii+1],
+                                   cmapPointers[ii+2],
+                                   cmapPointers[ii+3],
+                                   cmapPointers[ii+4]),))
+            iType=int(cmapPointers[ii+5])-1
+            self._cmapList.append((int(iType),
+                               int(cmapPointers[ii])-1,
+                               int(cmapPointers[ii+1])-1,
+                               int(cmapPointers[ii+2])-1,
+                               int(cmapPointers[ii+3])-1,
+                               int(cmapPointers[ii+1])-1,
+                               int(cmapPointers[ii+2])-1,
+                               int(cmapPointers[ii+3])-1,
+                               int(cmapPointers[ii+4])-1))
+        return self._cmapList
+
     def get14Interactions(self):
         """Return list of atom pairs, chargeProduct, rMin and epsilon for each 1-4 interaction"""
         dihedralPointers = self._raw_data["DIHEDRALS_INC_HYDROGEN"] \
@@ -741,6 +795,34 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
     for (iAtom, jAtom, kAtom, lAtom, forceConstant, phase, periodicity) in prmtop.getDihedrals():
         force.addTorsion(iAtom, jAtom, kAtom, lAtom, periodicity, phase, forceConstant)
     system.addForce(force)
+
+    # Add CMAP info.
+    ## Get mapSize and Resolutions
+    numMap = prmtop.getNumMaps()
+    mapSize = prmtop.getCMAPResolutions()
+
+    if numMap > 0:
+        if verbose: print("Adding CMAPs...")
+        force = mm.CMAPTorsionForce()
+        ### Get map energies
+        for field in range(numMap):
+            index = field + 1
+            ngrid = int(mapSize[field])
+            cmap = []
+            cmap_param = prmtop.getCMAPParameters(index)
+            forceConstConversionFactor = (units.kilocalorie_per_mole).conversion_factor_to(units.kilojoule_per_mole)
+            for i in range(ngrid):
+                for j in range(ngrid):
+                    idx = ngrid*((j+ngrid//2)%ngrid)+((i+ngrid//2)%ngrid)
+                    cmap.append(cmap_param[idx]*forceConstConversionFactor)
+            cmap = tuple(cmap)
+            force.addMap(ngrid, cmap)
+
+        #### Add CMAPtorsions.
+        if verbose: print("Adding CMAP torsions...")
+        for (Type, iAtom, jAtom, kAtom, lAtom, jAtom, kAtom, lAtom, mAtom) in prmtop.getCMAPDihedrals():
+            index=force.addTorsion(Type, iAtom, jAtom, kAtom, lAtom, jAtom, kAtom, lAtom, mAtom)
+        system.addForce(force)
 
     # Add nonbonded interactions.
     if verbose: print("Adding nonbonded interactions...")

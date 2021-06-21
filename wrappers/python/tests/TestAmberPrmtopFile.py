@@ -13,8 +13,10 @@ prmtop3 = AmberPrmtopFile('systems/ff14ipq.parm7')
 prmtop4 = AmberPrmtopFile('systems/Mg_water.prmtop')
 prmtop5 = AmberPrmtopFile('systems/tz2.truncoct.parm7')
 prmtop6 = AmberPrmtopFile('systems/gaffwat.parm7')
+prmtop7 = AmberPrmtopFile('systems/18protein.parm7')
 inpcrd3 = AmberInpcrdFile('systems/ff14ipq.rst7')
 inpcrd4 = AmberInpcrdFile('systems/Mg_water.inpcrd')
+inpcrd7 = AmberInpcrdFile('systems/18protein.rst7')
 
 class TestAmberPrmtopFile(unittest.TestCase):
 
@@ -402,6 +404,33 @@ class TestAmberPrmtopFile(unittest.TestCase):
             context.setPositions(inpcrd.positions)
             energy = context.getState(getEnergy=True, groups={1}).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
             self.assertAlmostEqual(energy, expectedEnergy, delta=5e-4*abs(energy))
+
+    def testAmberCMAP(self):
+        """Check that CMAP energy calcultion compared to AMber."""
+        temperature = 50*kelvin
+        conversion = 4.184 # 4.184 kJ/mol
+        sander_CMAP_E = 8.2864 # CMAP energy calcluated by Amber, unit kcal/mol
+
+        prmtop = prmtop7  # systems/18protein.parm7
+        inpcrd = inpcrd7  # systems/18protein.rst7
+
+        system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1.2)
+        integrator = LangevinIntegrator(temperature, 1.0 / picosecond, 0.002 * picoseconds)
+
+        simulation = Simulation(prmtop.topology, system, integrator)
+        simulation.context.setPositions(inpcrd.positions)
+        simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
+        
+        for i, force in enumerate(system.getForces()):
+            force.setForceGroup(i)
+            
+        simulation.context.reinitialize(True)
+
+        for i in range(system.getNumForces()):
+            if i == 3: # 3 indicates CMAP force
+#                print(simulation.context.getState(getEnergy=True, groups=1<<i).getPotentialEnergy().value_in_unit(kilojoules_per_mole))
+                OpenMM_CMAP_E = simulation.context.getState(getEnergy=True, groups=1<<i).getPotentialEnergy().value_in_unit(kilojoules_per_mole)/conversion
+                self.assertAlmostEqual(OpenMM_CMAP_E, sander_CMAP_E, places=4)
 
 if __name__ == '__main__':
     unittest.main()
