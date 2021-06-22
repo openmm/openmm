@@ -129,11 +129,11 @@ HipPlatform::HipPlatform() {
     char* rocm_path = getenv("ROCM_PATH");
     string hipcc;
     if (rocm_path != NULL) {
-        hipcc = string(rocm_path) + "/bin/hipcc"
+        hipcc = string(rocm_path) + "/bin/hipcc";
     } else if (compiler != NULL) {
         hipcc = compiler;
     } else {
-        hipcc = "/opt/rocm/bin/hipcc"
+        hipcc = "/opt/rocm/bin/hipcc";
     }
     setPropertyDefaultValue(HipCompiler(), hipcc);
     char* tmpdir = getenv("TMPDIR");
