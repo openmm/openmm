@@ -130,6 +130,15 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
+          - name: Linux CPU Pypy 3.6
+            python-version: "3.6.*=*pypy*"
+            os: ubuntu-latest
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
           - name: MacOS Intel CPU/OpenCL Python 3.9
             python-version: "3.9"
             os: macos-latest

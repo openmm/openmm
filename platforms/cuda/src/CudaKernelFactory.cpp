@@ -74,9 +74,9 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == UpdateStateDataKernel::Name())
         return new CudaUpdateStateDataKernel(name, platform, cu);
     if (name == ApplyConstraintsKernel::Name())
-        return new CudaApplyConstraintsKernel(name, platform, cu);
+        return new CommonApplyConstraintsKernel(name, platform, cu);
     if (name == VirtualSitesKernel::Name())
-        return new CudaVirtualSitesKernel(name, platform, cu);
+        return new CommonVirtualSitesKernel(name, platform, cu);
     if (name == CalcHarmonicBondForceKernel::Name())
         return new CommonCalcHarmonicBondForceKernel(name, platform, cu, context.getSystem());
     if (name == CalcCustomBondForceKernel::Name())
@@ -136,7 +136,7 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == IntegrateNoseHooverStepKernel::Name())
         return new CommonIntegrateNoseHooverStepKernel(name, platform, cu);
     if (name == ApplyMonteCarloBarostatKernel::Name())
-        return new CudaApplyMonteCarloBarostatKernel(name, platform, cu);
+        return new CommonApplyMonteCarloBarostatKernel(name, platform, cu);
     if (name == RemoveCMMotionKernel::Name())
         return new CommonRemoveCMMotionKernel(name, platform, cu);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());

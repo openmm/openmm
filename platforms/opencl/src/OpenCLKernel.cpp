@@ -26,6 +26,7 @@
 
 #include "OpenCLKernel.h"
 #include "openmm/common/ComputeArray.h"
+#include "openmm/internal/AssertionUtilities.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -35,6 +36,10 @@ OpenCLKernel::OpenCLKernel(OpenCLContext& context, cl::Kernel kernel) : context(
 
 string OpenCLKernel::getName() const {
     return kernel.getInfo<CL_KERNEL_FUNCTION_NAME>();
+}
+
+int OpenCLKernel::getMaxBlockSize() const {
+    return kernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice());
 }
 
 void OpenCLKernel::execute(int threads, int blockSize) {
@@ -65,10 +70,12 @@ void OpenCLKernel::addEmptyArg() {
 }
 
 void OpenCLKernel::setArrayArg(int index, ArrayInterface& value) {
+    ASSERT_VALID_INDEX(index, arrayArgs);
     arrayArgs[index] = &context.unwrap(value);
 }
 
 void OpenCLKernel::setPrimitiveArg(int index, const void* value, int size) {
+    ASSERT_VALID_INDEX(index, arrayArgs);
     // The const_cast is needed because of a bug in the OpenCL C++ wrappers.  clSetKernelArg()
     // declares the value to be const, but the C++ wrapper doesn't.
     kernel.setArg(index, size, const_cast<void*>(value));

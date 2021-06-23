@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -84,10 +84,10 @@ ComputeContext& ComputeArray::getContext() {
     return impl->getContext();
 }
 
-void ComputeArray::upload(const void* data, bool blocking) {
+void ComputeArray::uploadSubArray(const void* data, int offset, int elements, bool blocking) {
     if (impl == NULL)
         throw OpenMMException("ComputeArray has not been initialized");
-    impl->upload(data, blocking);
+    impl->uploadSubArray(data, offset, elements, blocking);
 }
 
 void ComputeArray::download(void* data, bool blocking) const {

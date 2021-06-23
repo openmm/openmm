@@ -44,7 +44,6 @@ AmoebaReferenceMultipoleForce::AmoebaReferenceMultipoleForce() :
                                                    _maximumMutualInducedDipoleIterations(100),
                                                    _mutualInducedDipoleEpsilon(1.0e+50),
                                                    _mutualInducedDipoleTargetEpsilon(1.0e-04),
-                                                   _polarSOR(0.55),
                                                    _debye(48.033324)
 {
     initialize();
@@ -60,7 +59,6 @@ AmoebaReferenceMultipoleForce::AmoebaReferenceMultipoleForce(NonbondedMethod non
                                                    _maximumMutualInducedDipoleIterations(100),
                                                    _mutualInducedDipoleEpsilon(1.0e+50),
                                                    _mutualInducedDipoleTargetEpsilon(1.0e-04),
-                                                   _polarSOR(0.55),
                                                    _debye(48.033324)
 {
     initialize();
@@ -889,78 +887,6 @@ void AmoebaReferenceMultipoleForce::calculateInducedDipoleFields(const vector<Mu
         for (unsigned int jj = ii; jj < particleData.size(); jj++)
             calculateInducedDipolePairIxns(particleData[ii], particleData[jj], updateInducedDipoleFields);
 }
-
-double AmoebaReferenceMultipoleForce::updateInducedDipoleFields(const vector<MultipoleParticleData>& particleData,
-                                                                vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleFields)
-{
-    // Calculate the fields coming from induced dipoles.
-
-    calculateInducedDipoleFields(particleData, updateInducedDipoleFields);
-
-    // Update the induced dipoles and calculate the convergence factor, maxEpsilon
-
-    double maxEpsilon = 0.0;
-    for (auto& field : updateInducedDipoleFields) {
-        double epsilon = updateInducedDipole(particleData,
-                                             *field.fixedMultipoleField,
-                                             field.inducedDipoleField,
-                                             *field.inducedDipoles);
-
-        maxEpsilon = epsilon > maxEpsilon ? epsilon : maxEpsilon;
-    }
-
-    return maxEpsilon;
-}
-
-double AmoebaReferenceMultipoleForce::updateInducedDipole(const vector<MultipoleParticleData>& particleData,
-                                                          const vector<Vec3>& fixedMultipoleField,
-                                                          const vector<Vec3>& inducedDipoleField,
-                                                          vector<Vec3>& inducedDipole)
-{
-
-    double epsilon = 0.0;
-    for (unsigned int ii = 0; ii < particleData.size(); ii++) {
-        Vec3 oldValue               = inducedDipole[ii];
-        Vec3 newValue               = fixedMultipoleField[ii] + inducedDipoleField[ii]*particleData[ii].polarity;
-        Vec3 delta                  = newValue - oldValue;
-        inducedDipole[ii]           = oldValue + delta*_polarSOR;
-        epsilon                    += delta.dot(delta);
-    }
-    return epsilon;
-}
-
-void AmoebaReferenceMultipoleForce::convergeInduceDipolesBySOR(const vector<MultipoleParticleData>& particleData,
-                                                               vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleField)
-{
-
-    bool done = false;
-    setMutualInducedDipoleConverged(false);
-    int iteration = 0;
-    double currentEpsilon = 1.0e+50;
-
-    // loop until (1) induced dipoles are converged or
-    //            (2) iterations == max iterations or
-    //            (3) convergence factor (spsilon) increases
-
-    while (!done) {
-
-        double epsilon = updateInducedDipoleFields(particleData, updateInducedDipoleField);
-               epsilon = _polarSOR*_debye*sqrt(epsilon/_numParticles);
-
-        if (epsilon < getMutualInducedDipoleTargetEpsilon()) {
-            setMutualInducedDipoleConverged(true);
-            done = true;
-        } else if (currentEpsilon < epsilon || iteration >= getMaximumMutualInducedDipoleIterations()) {
-            done = true;
-        }
-
-        currentEpsilon = epsilon;
-        iteration++;
-    }
-    setMutualInducedDipoleEpsilon(currentEpsilon);
-    setMutualInducedDipoleIterations(iteration);
-}
-
 
 void AmoebaReferenceMultipoleForce::convergeInduceDipolesByExtrapolation(const vector<MultipoleParticleData>& particleData, vector<UpdateInducedDipoleFieldStruct>& updateInducedDipoleField) {
     // Start by storing the direct dipoles as PT0

@@ -489,10 +489,13 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
     if (!options.empty())
         src << "// Compilation Options: " << options << endl << endl;
     for (auto& pair : compilationDefines) {
-        src << "#define " << pair.first;
-        if (!pair.second.empty())
-            src << " " << pair.second;
-        src << endl;
+        // Query defines to avoid duplicate variables
+        if (defines.find(pair.first) == defines.end()) {
+            src << "#define " << pair.first;
+            if (!pair.second.empty())
+                src << " " << pair.second;
+            src << endl;
+        }
     }
     if (!compilationDefines.empty())
         src << endl;
@@ -720,10 +723,9 @@ void CudaContext::executeKernel(CUfunction kernel, void** arguments, int threads
     }
 }
 
-int CudaContext::computeThreadBlockSize(double memory, bool preferShared) const {
-    int maxShared = 16*1024;
-    if (computeCapability >= 2.0 && preferShared)
-        maxShared = 48*1024;
+int CudaContext::computeThreadBlockSize(double memory) const {
+    int maxShared;
+    CHECK_RESULT2(cuDeviceGetAttribute(&maxShared, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, device), "Error querying device property");
     int max = (int) (maxShared/memory);
     if (max < 64)
         return 32;

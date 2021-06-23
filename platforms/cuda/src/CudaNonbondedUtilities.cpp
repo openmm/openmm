@@ -117,7 +117,7 @@ void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, 
 
 void CudaNonbondedUtilities::addParameter(ComputeParameterInfo parameter) {
     parameters.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
-            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer()));
+            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer(), parameter.isConstant()));
 }
 
 void CudaNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
@@ -126,7 +126,7 @@ void CudaNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
 
 void CudaNonbondedUtilities::addArgument(ComputeParameterInfo parameter) {
     arguments.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
-            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer()));
+            parameter.getSize(), context.unwrap(parameter.getArray()).getDevicePointer(), parameter.isConstant()));
 }
 
 void CudaNonbondedUtilities::addArgument(const ParameterInfo& parameter) {
@@ -311,8 +311,8 @@ void CudaNonbondedUtilities::initialize(const System& system) {
     }
     for (int i = 0; i < (int) parameters.size(); i++)
         forceArgs.push_back(&parameters[i].getMemory());
-    for (int i = 0; i < (int) arguments.size(); i++)
-        forceArgs.push_back(&arguments[i].getMemory());
+    for (ParameterInfo& arg : arguments)
+        forceArgs.push_back(&arg.getMemory());
     if (energyParameterDerivatives.size() > 0)
         forceArgs.push_back(&context.getEnergyParamDerivBuffer().getDevicePointer());
     if (useCutoff) {
@@ -513,44 +513,44 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     const string suffixes[] = {"x", "y", "z", "w"};
     stringstream localData;
     int localDataSize = 0;
-    for (int i = 0; i < (int) params.size(); i++) {
-        if (params[i].getNumComponents() == 1)
-            localData<<params[i].getType()<<" "<<params[i].getName()<<";\n";
+    for (const ParameterInfo& param : params) {
+        if (param.getNumComponents() == 1)
+            localData<<param.getType()<<" "<<param.getName()<<";\n";
         else {
-            for (int j = 0; j < params[i].getNumComponents(); ++j)
-                localData<<params[i].getComponentType()<<" "<<params[i].getName()<<"_"<<suffixes[j]<<";\n";
+            for (int j = 0; j < param.getNumComponents(); ++j)
+                localData<<param.getComponentType()<<" "<<param.getName()<<"_"<<suffixes[j]<<";\n";
         }
-        localDataSize += params[i].getSize();
+        localDataSize += param.getSize();
     }
     replacements["ATOM_PARAMETER_DATA"] = localData.str();
     stringstream args;
-    for (int i = 0; i < (int) params.size(); i++) {
+    for (const ParameterInfo& param : params) {
         args << ", ";
-        if (params[i].isConstant())
+        if (param.isConstant())
             args << "const ";
-        args << params[i].getType();
+        args << param.getType();
         args << "* __restrict__ global_";
-        args << params[i].getName();
+        args << param.getName();
     }
-    for (int i = 0; i < (int) arguments.size(); i++) {
+    for (const ParameterInfo& arg : arguments) {
         args << ", ";
-        if (arguments[i].isConstant())
+        if (arg.isConstant())
             args << "const ";
-        args << arguments[i].getType();
+        args << arg.getType();
         args << "* __restrict__ ";
-        args << arguments[i].getName();
+        args << arg.getName();
     }
     if (energyParameterDerivatives.size() > 0)
         args << ", mixed* __restrict__ energyParamDerivs";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
 
     stringstream load1;
-    for (int i = 0; i < (int) params.size(); i++) {
-        load1 << params[i].getType();
+    for (const ParameterInfo& param : params) {
+        load1 << param.getType();
         load1 << " ";
-        load1 << params[i].getName();
+        load1 << param.getName();
         load1 << "1 = global_";
-        load1 << params[i].getName();
+        load1 << param.getName();
         load1 << "[atom1];\n";
     }
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
@@ -564,34 +564,30 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     if(useShuffle) {
         // not needed if using shuffles as we can directly fetch from register
     } else {
-        for (int i = 0; i < (int) params.size(); i++) {
-            if (params[i].getNumComponents() == 1) {
-                loadLocal1<<"localData[threadIdx.x]."<<params[i].getName()<<" = "<<params[i].getName()<<"1;\n";
-            }
+        for (const ParameterInfo& param : params) {
+            if (param.getNumComponents() == 1)
+                loadLocal1<<"localData[LOCAL_ID]."<<param.getName()<<" = "<<param.getName()<<"1;\n";
             else {
-                for (int j = 0; j < params[i].getNumComponents(); ++j)
-                    loadLocal1<<"localData[threadIdx.x]."<<params[i].getName()<<"_"<<suffixes[j]<<" = "<<params[i].getName()<<"1."<<suffixes[j]<<";\n";
+                for (int j = 0; j < param.getNumComponents(); ++j)
+                    loadLocal1<<"localData[LOCAL_ID]."<<param.getName()<<"_"<<suffixes[j]<<" = "<<param.getName()<<"1."<<suffixes[j]<<";\n";
             }
         }
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
 
     stringstream broadcastWarpData;
-    if(useShuffle) {
+    if (useShuffle) {
         broadcastWarpData << "posq2.x = real_shfl(shflPosq.x, j);\n";
         broadcastWarpData << "posq2.y = real_shfl(shflPosq.y, j);\n";
         broadcastWarpData << "posq2.z = real_shfl(shflPosq.z, j);\n";
         broadcastWarpData << "posq2.w = real_shfl(shflPosq.w, j);\n";
-        for(int i=0; i< (int) params.size();i++) {
-            broadcastWarpData << params[i].getType() << " shfl" << params[i].getName() << ";\n";
-            for(int j=0; j < params[i].getNumComponents(); j++) {
-                string name;
-                if (params[i].getNumComponents() == 1) {
-                    broadcastWarpData << "shfl" << params[i].getName() << "=real_shfl(" << params[i].getName() <<"1,j);\n";
-
-                } else {
-                    broadcastWarpData << "shfl" << params[i].getName()+"."+suffixes[j] << "=real_shfl(" << params[i].getName()+"1."+suffixes[j] <<",j);\n";
-                }
+        for (const ParameterInfo& param : params) {
+            broadcastWarpData << param.getType() << " shfl" << param.getName() << ";\n";
+            for (int j = 0; j < param.getNumComponents(); j++) {
+                if (param.getNumComponents() == 1)
+                    broadcastWarpData << "shfl" << param.getName() << "=real_shfl(" << param.getName() <<"1,j);\n";
+                else
+                    broadcastWarpData << "shfl" << param.getName()+"."+suffixes[j] << "=real_shfl(" << param.getName()+"1."+suffixes[j] <<",j);\n";
             }
         }
     } else {
@@ -601,49 +597,48 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     
     // Part 2. Defines for off-diagonal exclusions, and neighborlist tiles. 
     stringstream declareLocal2;
-    if(useShuffle) {
-        for(int i=0; i< (int) params.size(); i++) {
-            declareLocal2<<params[i].getType()<<" shfl"<<params[i].getName()<<";\n";
-        }
-    } else {
+    if (useShuffle) {
+        for (const ParameterInfo& param : params)
+            declareLocal2<<param.getType()<<" shfl"<<param.getName()<<";\n";
+    }
+    else {
         // not used if using shared memory
     }
     replacements["DECLARE_LOCAL_PARAMETERS"] = declareLocal2.str();
 
     stringstream loadLocal2;
-    if(useShuffle) {
-        for(int i=0; i< (int) params.size(); i++) {
-            loadLocal2<<"shfl"<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
-        }
-    } else {
-        for (int i = 0; i < (int) params.size(); i++) {
-            if (params[i].getNumComponents() == 1) {
-                loadLocal2<<"localData[threadIdx.x]."<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
-            }
+    if (useShuffle) {
+        for (const ParameterInfo& param : params)
+            loadLocal2<<"shfl"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
+    }
+    else {
+        for (const ParameterInfo& param : params) {
+            if (param.getNumComponents() == 1)
+                loadLocal2<<"localData[LOCAL_ID]."<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
             else {
-                loadLocal2<<params[i].getType()<<" temp_"<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
-                for (int j = 0; j < params[i].getNumComponents(); ++j)
-                    loadLocal2<<"localData[threadIdx.x]."<<params[i].getName()<<"_"<<suffixes[j]<<" = temp_"<<params[i].getName()<<"."<<suffixes[j]<<";\n";
+                loadLocal2<<param.getType()<<" temp_"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
+                for (int j = 0; j < param.getNumComponents(); ++j)
+                    loadLocal2<<"localData[LOCAL_ID]."<<param.getName()<<"_"<<suffixes[j]<<" = temp_"<<param.getName()<<"."<<suffixes[j]<<";\n";
             }
         }
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
    
     stringstream load2j;
-    if(useShuffle) {
-        for(int i = 0; i < (int) params.size(); i++)
-            load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = shfl"<<params[i].getName()<<";\n";
-    } else {
-        for (int i = 0; i < (int) params.size(); i++) {
-            if (params[i].getNumComponents() == 1) {
-                load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = localData[atom2]."<<params[i].getName()<<";\n";
-            }
+    if (useShuffle) {
+        for (const ParameterInfo& param : params)
+            load2j<<param.getType()<<" "<<param.getName()<<"2 = shfl"<<param.getName()<<";\n";
+    }
+    else {
+        for (const ParameterInfo& param : params) {
+            if (param.getNumComponents() == 1)
+                load2j<<param.getType()<<" "<<param.getName()<<"2 = localData[atom2]."<<param.getName()<<";\n";
             else {
-                load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = make_"<<params[i].getType()<<"(";
-                for (int j = 0; j < params[i].getNumComponents(); ++j) {
+                load2j<<param.getType()<<" "<<param.getName()<<"2 = make_"<<param.getType()<<"(";
+                for (int j = 0; j < param.getNumComponents(); ++j) {
                     if (j > 0)
                         load2j<<", ";
-                    load2j<<"localData[atom2]."<<params[i].getName()<<"_"<<suffixes[j];
+                    load2j<<"localData[atom2]."<<param.getName()<<"_"<<suffixes[j];
                 }
                 load2j<<");\n";
             }
@@ -652,16 +647,16 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
     
     stringstream clearLocal;
-    for (int i = 0; i < (int) params.size(); i++) {
+    for (const ParameterInfo& param : params) {
         if (useShuffle)
             clearLocal<<"shfl";
         else
             clearLocal<<"localData[atom2].";
-        clearLocal<<params[i].getName()<<" = ";
-        if (params[i].getNumComponents() == 1)
+        clearLocal<<param.getName()<<" = ";
+        if (param.getNumComponents() == 1)
             clearLocal<<"0;\n";
         else
-            clearLocal<<"make_"<<params[i].getType()<<"(0);\n";
+            clearLocal<<"make_"<<param.getType()<<"(0);\n";
     }
     replacements["CLEAR_LOCAL_PARAMETERS"] = clearLocal.str();
 
@@ -675,7 +670,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     for (int i = 0; i < energyParameterDerivatives.size(); i++)
         for (int index = 0; index < numDerivs; index++)
             if (allParamDerivNames[index] == energyParameterDerivatives[i])
-                saveDerivs<<"energyParamDerivs[(blockIdx.x*blockDim.x+threadIdx.x)*"<<numDerivs<<"+"<<index<<"] += energyParamDeriv"<<i<<";\n";
+                saveDerivs<<"energyParamDerivs[GLOBAL_ID*"<<numDerivs<<"+"<<index<<"] += energyParamDeriv"<<i<<";\n";
     replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
 
     stringstream shuffleWarpData;
@@ -687,15 +682,15 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         shuffleWarpData << "shflForce.x = real_shfl(shflForce.x, tgx+1);\n";
         shuffleWarpData << "shflForce.y = real_shfl(shflForce.y, tgx+1);\n";
         shuffleWarpData << "shflForce.z = real_shfl(shflForce.z, tgx+1);\n";
-        for(int i=0; i < (int) params.size(); i++) {
-            if(params[i].getNumComponents() == 1) {
-                shuffleWarpData<<"shfl"<<params[i].getName()<<"=real_shfl(shfl"<<params[i].getName()<<", tgx+1);\n";
-            } else {
-                for(int j=0;j<params[i].getNumComponents();j++) {
+        for (const ParameterInfo& param : params) {
+            if (param.getNumComponents() == 1)
+                shuffleWarpData<<"shfl"<<param.getName()<<"=real_shfl(shfl"<<param.getName()<<", tgx+1);\n";
+            else {
+                for (int j = 0; j < param.getNumComponents(); j++) {
                     // looks something like shflsigmaEpsilon.x = real_shfl(shflsigmaEpsilon.x,tgx+1);
-                    shuffleWarpData<<"shfl"<<params[i].getName()
+                    shuffleWarpData<<"shfl"<<param.getName()
                         <<"."<<suffixes[j]<<"=real_shfl(shfl"
-                        <<params[i].getName()<<"."<<suffixes[j]
+                        <<param.getName()<<"."<<suffixes[j]
                         <<", tgx+1);\n";
                 }
             }

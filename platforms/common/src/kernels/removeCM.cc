@@ -2,9 +2,9 @@
  * Calculate the center of mass momentum.
  */
 
-KERNEL void calcCenterOfMassMomentum(int numAtoms, GLOBAL const mixed4* RESTRICT velm, GLOBAL float3* RESTRICT cmMomentum) {
-    LOCAL float3 temp[64];
-    float3 cm = make_float3(0, 0, 0);
+KERNEL void calcCenterOfMassMomentum(int numAtoms, GLOBAL const mixed4* RESTRICT velm, GLOBAL float4* RESTRICT cmMomentum) {
+    LOCAL float4 temp[64];
+    float4 cm = make_float4(0);
     for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
         mixed4 velocity = velm[index];
         if (velocity.w != 0) {
@@ -43,11 +43,11 @@ KERNEL void calcCenterOfMassMomentum(int numAtoms, GLOBAL const mixed4* RESTRICT
  * Remove center of mass motion.
  */
 
-KERNEL void removeCenterOfMassMomentum(int numAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL const float3* RESTRICT cmMomentum) {
+KERNEL void removeCenterOfMassMomentum(int numAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL const float4* RESTRICT cmMomentum) {
     // First sum all of the momenta that were calculated by individual groups.
 
-    LOCAL float3 temp[64];
-    float3 cm = make_float3(0, 0, 0);
+    LOCAL float4 temp[64];
+    float4 cm = make_float4(0);
     for (int index = LOCAL_ID; index < NUM_GROUPS; index += LOCAL_SIZE)
         cm += cmMomentum[index];
     int thread = LOCAL_ID;
@@ -68,7 +68,7 @@ KERNEL void removeCenterOfMassMomentum(int numAtoms, GLOBAL mixed4* RESTRICT vel
     if (thread < 2)
         temp[thread] += temp[thread+2];
     SYNC_THREADS;
-    cm = make_float3(INVERSE_TOTAL_MASS*(temp[0].x+temp[1].x), INVERSE_TOTAL_MASS*(temp[0].y+temp[1].y), INVERSE_TOTAL_MASS*(temp[0].z+temp[1].z));
+    cm = make_float4(INVERSE_TOTAL_MASS*(temp[0].x+temp[1].x), INVERSE_TOTAL_MASS*(temp[0].y+temp[1].y), INVERSE_TOTAL_MASS*(temp[0].z+temp[1].z), 0);
 
     // Now remove the center of mass velocity from each atom.
 

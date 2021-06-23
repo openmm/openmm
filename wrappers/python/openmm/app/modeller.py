@@ -569,6 +569,7 @@ class Modeller(object):
             # Compute a new periodic box size.
 
             maxSize = max(max((pos[i] for index, pos in addedWaters))-min((pos[i] for index, pos in addedWaters)) for i in range(3))
+            maxSize += 0.1  # Add padding to reduce clashes at the edge.
             newTopology.setUnitCellDimensions(Vec3(maxSize, maxSize, maxSize))
         else:
             # There could be clashes between water molecules at the box edges.  Find ones to remove.

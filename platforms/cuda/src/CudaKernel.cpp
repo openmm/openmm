@@ -26,6 +26,7 @@
 
 #include "CudaKernel.h"
 #include "openmm/common/ComputeArray.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include <cstring>
 #include <vector>
 
@@ -37,6 +38,14 @@ CudaKernel::CudaKernel(CudaContext& context, CUfunction kernel, const string& na
 
 string CudaKernel::getName() const {
     return name;
+}
+
+int CudaKernel::getMaxBlockSize() const {
+    int size;
+    CUresult result = cuFuncGetAttribute(&size, CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK, kernel);
+    if (result != CUDA_SUCCESS)
+        throw OpenMMException("Error querying max thread block size: "+context.getErrorString(result));
+    return size;
 }
 
 void CudaKernel::execute(int threads, int blockSize) {
@@ -69,10 +78,12 @@ void CudaKernel::addEmptyArg() {
 }
 
 void CudaKernel::setArrayArg(int index, ArrayInterface& value) {
+    ASSERT_VALID_INDEX(index, arrayArgs);
     arrayArgs[index] = &context.unwrap(value);
 }
 
 void CudaKernel::setPrimitiveArg(int index, const void* value, int size) {
+    ASSERT_VALID_INDEX(index, primitiveArgs);
     if (size > sizeof(double4))
         throw OpenMMException("Unsupported value type for kernel argument");
     memcpy(&primitiveArgs[index], value, size);

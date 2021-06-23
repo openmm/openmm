@@ -76,7 +76,7 @@ Alternatively you can request a version that is compiled for a specific CUDA
 version with the command
 ::
 
-    conda install -c conda-forge openmm cudatoolkit==10.0
+    conda install -c conda-forge openmm cudatoolkit=10.0
 
 where :code:`10.0` should be replaced with the particular CUDA version
 you want to target.  We build packages for CUDA 9.2 and above on Linux,
@@ -817,10 +817,10 @@ Field Initiative small molecule force fields using the following example:
 
 ::
 
-    # Create an openforcefield Molecule object for benzene from SMILES
-    from openforcefield.topology import Molecule
+    # Create an OpenFF Molecule object for benzene from SMILES
+    from openff.toolkit.topology import Molecule
     molecule = Molecule.from_smiles('c1ccccc1')
-    # Create the SMIRNOFF template generator with the most up to date Open Force Field Initiative force field
+    # Create the SMIRNOFF template generator with the default installed force field (openff-1.0.0)
     from openmmforcefields.generators import SMIRNOFFTemplateGenerator
     smirnoff = SMIRNOFFTemplateGenerator(molecules=molecule)
     # Create an OpenMM ForceField object with AMBER ff14SB and TIP3P with compatible ions
@@ -833,8 +833,8 @@ Alternatively, you can use the older `AMBER GAFF small molecule force field <htt
 
 ::
 
-    # Create an openforcefield Molecule object for benzene from SMILES
-    from openforcefield.topology import Molecule
+    # Create an OpenFF Molecule object for benzene from SMILES
+    from openff.toolkit.topology import Molecule
     molecule = Molecule.from_smiles('c1ccccc1')
     # Create the GAFF template generator
     from openmmforcefields.generators import GAFFTemplateGenerator
@@ -864,15 +864,16 @@ small molecule force field you want to use:
 ::
 
     # Define the keyword arguments to feed to ForceField
-    from openmm import unit
-    from openmm import app
+    from openmm import unit, app
     forcefield_kwargs = { 'constraints' : app.HBonds, 'rigidWater' : True, 'removeCMMotion' : False, 'hydrogenMass' : 4*unit.amu }
-    # Initialize a SystemGenerator using the Open Force Field Initiative 1.2.0 force field (openff-1.2.0)
+    # Initialize a SystemGenerator using GAFF
     from openmmforcefields.generators import SystemGenerator
-    system_generator = SystemGenerator(forcefields=['amber/ff14SB.xml', 'amber/tip3p_standard.xml'], small_molecule_forcefield='openff-1.2.0', forcefield_kwargs=forcefield_kwargs, cache='db.json')
-    # Create an OpenMM System from an OpenMM Topology object and a list of openforcefield Molecule objects
+    system_generator = SystemGenerator(forcefields=['amber/ff14SB.xml', 'amber/tip3p_standard.xml'], small_molecule_forcefield='gaff-2.11', forcefield_kwargs=forcefield_kwargs, cache='db.json')
+    # Create an OpenMM System from an OpenMM Topology object
+    system = system_generator.create_system(openmm_topology)
+    # Alternatively, create an OpenMM System from an OpenMM Topology object and a list of OpenFF Molecule objects
     molecules = Molecule.from_file('molecules.sdf', file_format='sdf')
-    system = system_generator.create_system(topology, molecules=molecules)
+    system = system_generator.create_system(openmm_topology, molecules=molecules)
 
 The ``SystemGenerator`` will match any instances of the molecules found in ``molecules.sdf`` to those that appear in ``topology``.
 Note that the protonation and tautomeric states must match exactly between the ``molecules`` read and those appearing in the Topology.

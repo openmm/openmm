@@ -413,6 +413,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     compilationDefines["ACOS"] = "acos";
     compilationDefines["ASIN"] = "asin";
     compilationDefines["ATAN"] = "atan";
+    compilationDefines["ERF"] = "erf";
+    compilationDefines["ERFC"] = "erfc";
 
     // Set defines for applying periodic boundary conditions.
 
@@ -572,10 +574,13 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     if (!options.empty())
         src << "// Compilation Options: " << options << endl << endl;
     for (auto& pair : compilationDefines) {
-        src << "#define " << pair.first;
-        if (!pair.second.empty())
-            src << " " << pair.second;
-        src << endl;
+        // Query defines to avoid duplicate variables
+        if (defines.find(pair.first) == defines.end()) {
+            src << "#define " << pair.first;
+            if (!pair.second.empty())
+                src << " " << pair.second;
+            src << endl;
+        }
     }
     if (!compilationDefines.empty())
         src << endl;
@@ -674,6 +679,19 @@ void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSi
         str<<"Error invoking kernel "<<kernel.getInfo<CL_KERNEL_FUNCTION_NAME>()<<": "<<err.what()<<" ("<<err.err()<<")";
         throw OpenMMException(str.str());
     }
+}
+
+int OpenCLContext::computeThreadBlockSize(double memory) const {
+    int maxShared = device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+    // On some implementations, more local memory gets used than we calculate by
+    // adding up the sizes of the fields.  To be safe, include a factor of 0.5.
+    int max = (int) (0.5*maxShared/memory);
+    if (max < 64)
+        return 32;
+    int threads = 64;
+    while (threads+64 < max)
+        threads += 64;
+    return threads;
 }
 
 void OpenCLContext::clearBuffer(ArrayInterface& array) {

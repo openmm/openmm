@@ -169,7 +169,37 @@ class TestCharmmFiles(unittest.TestCase):
         state = con.getState(getEnergy=True, enforcePeriodicBox=True)
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, -292.73015, delta=1.0)
-        
+
+    def test_PSFSetUnitCellDimensions(self):
+        """Test that setting the box via unit cell dimensions works correctly."""
+        psf = CharmmPsfFile('systems/ala3_solv_drude.psf')
+
+        # Orthorhombic
+        psf.setBox(2.1*nanometer, 2.3*nanometer, 2.4*nanometer)
+        pbv1 = psf.topology.getPeriodicBoxVectors()
+        self.assertAlmostEqual(pbv1[0][0]/nanometers, 2.1)
+        self.assertAlmostEqual(pbv1[0][1]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv1[0][2]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv1[1][0]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv1[1][1]/nanometers, 2.3)
+        self.assertAlmostEqual(pbv1[1][2]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv1[2][0]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv1[2][1]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv1[2][2]/nanometers, 2.4)
+
+        # Triclinic
+        psf.setBox(2.1*nanometer, 2.3*nanometer, 2.4*nanometer, 65*degrees, 75*degrees, 85*degrees)
+        pbv2 = psf.topology.getPeriodicBoxVectors()
+        self.assertAlmostEqual(pbv2[0][0]/nanometers, 2.1)
+        self.assertAlmostEqual(pbv2[0][1]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv2[0][2]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv2[1][0]/nanometers, 0.20045820831961367)
+        self.assertAlmostEqual(pbv2[1][1]/nanometers, 2.2912478056110146)
+        self.assertAlmostEqual(pbv2[1][2]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv2[2][0]/nanometers, 0.6211657082460498)
+        self.assertAlmostEqual(pbv2[2][1]/nanometers, 0.963813269981581)
+        self.assertAlmostEqual(pbv2[2][2]/nanometers, 2.1083683604879377)
+
     def test_Drude(self):
         """Test CHARMM systems with Drude force field"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)

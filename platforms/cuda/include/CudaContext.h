@@ -197,6 +197,12 @@ public:
         return force;
     }
     /**
+     * The CUDA platform does not use floating point force buffers, so this throws an exception.
+     */
+    ArrayInterface& getFloatForceBuffer() {
+        throw OpenMMException("CUDA platform does not use floating point force buffers");
+    }
+    /**
      * Get the array which contains a contribution to each force represented as 64 bit fixed point.
      * This is a synonym for getForce().  It exists to satisfy the ComputeContext interface.
      */
@@ -205,7 +211,6 @@ public:
     }
     /**
      * All CUDA devices support 64 bit atomics, so this throws an exception.
-     * @return 
      */
     ArrayInterface& getForceBuffers() {
         throw OpenMMException("CUDA platform does not use floating point force buffers");
@@ -284,9 +289,8 @@ public:
      * shared memory per thread.
      * 
      * @param memory        the number of bytes of shared memory per thread
-     * @param preferShared  whether the kernel is set to prefer shared memory over cache
      */
-    int computeThreadBlockSize(double memory, bool preferShared=true) const;
+    int computeThreadBlockSize(double memory) const;
     /**
      * Set all elements of an array to 0.
      */
@@ -475,6 +479,15 @@ public:
      */
     CudaNonbondedUtilities& getNonbondedUtilities() {
         return *nonbonded;
+    }
+    /**
+     * Create a new NonbondedUtilities for use with this context.  This should be called
+     * only in unusual situations, when a Force needs its own NonbondedUtilities object
+     * separate from the standard one.  The caller is responsible for deleting the object
+     * when it is no longer needed.
+     */
+    CudaNonbondedUtilities* createNonbondedUtilities() {
+        return new CudaNonbondedUtilities(*this);
     }
     /**
      * This should be called by the Integrator from its own initialize() method.

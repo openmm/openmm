@@ -9,8 +9,11 @@ extensions = ['sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.autosumma
               'sphinxcontrib.lunrsearch']
 
 autosummary_generate = True
-autodoc_default_flags = ['members', 'inherited-members']
-autodoc_member_order = 'bysource'
+autodoc_default_options = {
+    'members': True,
+    'inherited-members': True,
+    'member-order': 'bysource'
+}
 
 source_suffix = '.rst'
 master_doc = 'index'

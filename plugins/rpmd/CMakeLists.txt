@@ -108,6 +108,7 @@ ENDIF(OPENMM_BUILD_STATIC_LIB)
 # Which hardware platforms to build
 
 ADD_SUBDIRECTORY(platforms/reference)
+ADD_SUBDIRECTORY(platforms/common)
 
 IF(OPENMM_BUILD_OPENCL_LIB)
     SET(OPENMM_BUILD_RPMD_OPENCL_LIB ON CACHE BOOL "Build RPMD implementation for OpenCL")
