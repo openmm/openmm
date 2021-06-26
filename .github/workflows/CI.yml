@@ -622,3 +622,72 @@ jobs:
           ((exitcode+=$?))
           echo "::endgroup::"
           exit $exitcode
+
+  contributing:
+    runs-on: ${{ matrix.os }}
+    name: CONTRIBUTING.md on ${{ matrix.name }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-latest
+
+          - name: MacOS
+            os: macos-latest
+
+          - name: Windows
+            os: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: conda-incubator/setup-miniconda@v2
+        name: "Prepare base dependencies"
+        with:
+          activate-environment: openmm-dev
+          environment-file: devtools/environment.yml
+          auto-activate-base: true
+
+      - name: "Configure build with CMake"
+        shell: bash -l {0}
+        run: |
+          mkdir build
+          cd build
+
+          cmake .. \
+            -DOPENMM_GENERATE_API_DOCS=ON \
+            -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
+            -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
+            -DOPENMM_BUILD_PYTHON_WRAPPERS=ON \
+            -DOPENMM_BUILD_OPENCL_LIB=OFF
+
+      - name: "Build OpenMM"
+        shell: bash -l {0}
+        run: |
+          cd build
+          make -j2
+
+      - name: "Build Python wrappers and install to Conda environment"
+        shell: bash -l {0}
+        run: |
+          cd build
+          make install PythonInstall
+
+      - name: "Build Manuals"
+        shell: bash -l {0}
+        run: |
+          cd build
+          make sphinxhtml
+
+      - name: "Build C++ API docs"
+        shell: bash -l {0}
+        run: |
+          cd build
+          make C++ApiDocs
+
+      - name: "Build Python API docs"
+        shell: bash -l {0}
+        run: |
+          cd build
+          make PythonApiDocs

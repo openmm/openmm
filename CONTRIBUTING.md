@@ -28,36 +28,25 @@ with the code, the pull request will be merged.  Congratulations on a successful
 
 ## Building OpenMM
 
-OpenMM uses [cmake](https://cmake.org/) as our build system and requires quite a number of dependencies. Detailed instructions for compiling OpenMM from source are found in the [User Guide](http://docs.openmm.org/latest/userguide/library.html#compiling-openmm-from-source-code). The following is a summary of the most important steps.
+OpenMM uses [cmake](https://cmake.org/) as our build system and requires quite a number of dependencies. Detailed instructions for compiling OpenMM from source are found in the [User Guide](http://docs.openmm.org/latest/userguide/library.html#compiling-openmm-from-source-code). The following is a summary of the most important steps to compile the CPU platform and documentation.
 
-### Installing dependencies
+### Installing dependencies with Conda
 
-#### on Linux
-
-```shell
-# Install build requirements
-conda env create -n openmm-dev -f devtools/ci/gh-actions/conda-envs/build-ubuntu-latest.yml
-# Add documentation requirements to environment - optional
-conda env update -n openmm-dev -f devtools/ci/gh-actions/conda-envs/docs.yml
-```
-
-#### on MacOS
+We provide the core dependencies for the CPU platform and documentation in a Conda environment file. They can be installed easily:
 
 ```shell
-# Install build requirements
-conda env create -n openmm-dev -f devtools/ci/gh-actions/conda-envs/build-macos-latest.yml
-# Add documentation requirements to environment - optional
-conda env update -n openmm-dev -f devtools/ci/gh-actions/conda-envs/docs.yml
+conda env create -f devtools/environment.yml
 ```
 
-#### on Windows
+Since this environment includes the compiler toolchains necessary to build OpenMM, the build system will not be able to use any system-installed GPU SDK. On NVIDIA GPUs, the CUDA toolkit can be installed relatively easily:
 
 ```shell
-# Install build requirements
-conda env create -n openmm-dev -f devtools/ci/gh-actions/conda-envs/build-windows-latest.yml
-# Add documentation requirements to environment - optional
-conda env update -n openmm-dev -f devtools/ci/gh-actions/conda-envs/docs.yml
+conda install -n openmm-dev -c conda-forge cudatoolkit-dev
 ```
+
+Unfortunately, no equivalent metapackage exists for OpenCL.
+On 64 bit x86 platforms, try the `mesa-libgl-devel-cos6-x86_64` package; otherwise, check the [available Mesa development packages on `conda-forge`](https://anaconda.org/search?q=access%3Apublic+type%3Aconda+mesa-libgl-devel) for your architecture.
+You may also need an OCL loader; try `ocl-icd-system` on Linux or `khronos-opencl-icd-loader` on Windows or MacOS.
 
 ### Configuring make files
 
@@ -67,7 +56,13 @@ cd build
 # Activate the Conda environment
 conda activate openmm-dev
 # Configure build. For other options, check the User Guide or try `ccmake ..`
-cmake .. -DOPENMM_GENERATE_API_DOCS=ON -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} -DOPENMM_BUILD_PYTHON_WRAPPERS=ON
+# Remove the last switch to try building the OpenCL platform
+cmake .. \
+    -DOPENMM_GENERATE_API_DOCS=ON \
+    -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
+    -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
+    -DOPENMM_BUILD_PYTHON_WRAPPERS=ON \
+    -DOPENMM_BUILD_OPENCL_LIB=OFF
 ```
 
 ### Compiling OpenMM
@@ -79,8 +74,8 @@ From the `build` directory created in the previous step:
 conda activate openmm-dev
 # Build libraries and tests
 make
-# Build Python API
-make PythonInstall
+# Build the Python layer and install the OpenMM libraries to the conda environment
+make install PythonInstall
 ```
 
 ### Compiling the documentation

@@ -1,0 +1,30 @@
+name: openmm-dev
+channels:
+- conda-forge
+dependencies:
+# build
+- cmake
+- make
+- c-compiler
+- cxx-compiler
+- fortran-compiler
+# host
+- python
+- cython
+- swig
+- fftw
+- pip
+- numpy
+- cython
+- swig
+- doxygen 1.8.14
+# test
+- pytest
+- pytest-xdist
+- pytest-timeout
+# Docs
+- sphinx>=4.0.2,<5.0.0
+- sphinxcontrib-bibtex
+- pip:
+  - sphinxcontrib-lunrsearch
+  - sphinxcontrib-autodoc_doxygen
