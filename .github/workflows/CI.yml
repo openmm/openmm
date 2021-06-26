@@ -627,7 +627,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: CONTRIBUTING.md on ${{ matrix.name }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - name: Linux
@@ -636,8 +636,8 @@ jobs:
           - name: MacOS
             os: macos-latest
 
-          - name: Windows
-            os: windows-latest
+          # - name: Windows
+          #   os: windows-latest
 
     steps:
       - uses: actions/checkout@v2
