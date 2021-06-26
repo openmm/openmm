@@ -10,7 +10,7 @@ OpenMM Users Manual and Theory Guide
 
 .. toctree::
    :numbered:
-   :maxdepth: 4
+   :maxdepth: 2
 
    introduction
    application
