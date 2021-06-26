@@ -28,11 +28,9 @@ with the code, the pull request will be merged.  Congratulations on a successful
 
 ## Building OpenMM
 
-OpenMM uses [cmake](https://cmake.org/) as our build system and requires quite a number of dependencies.
+OpenMM uses [cmake](https://cmake.org/) as our build system and requires quite a number of dependencies. Detailed instructions for compiling OpenMM from source are found in the [User Guide](http://docs.openmm.org/latest/userguide/library.html#compiling-openmm-from-source-code). The following is a summary of the most important steps.
 
 ### Installing dependencies
-
-OpenMM's dependencies are described in detail in [the User Guide](http://docs.openmm.org/latest/userguide/library.html#compiling-openmm-from-source-code). The easiest and fastest way to install all required dependencies is to use the [Conda package manager](https://conda.io).
 
 #### on Linux
 
@@ -43,7 +41,7 @@ conda env create -n openmm-dev -f devtools/ci/gh-actions/conda-envs/build-ubuntu
 conda env update -n openmm-dev -f devtools/ci/gh-actions/conda-envs/docs.yml
 ```
 
-#### on OSX
+#### on MacOS
 
 ```shell
 # Install build requirements
@@ -66,8 +64,9 @@ conda env update -n openmm-dev -f devtools/ci/gh-actions/conda-envs/docs.yml
 ```shell
 mkdir build
 cd build
+# Activate the Conda environment
 conda activate openmm-dev
-# For other options, check the User Guide or try `ccmake ..`
+# Configure build. For other options, check the User Guide or try `ccmake ..`
 cmake .. -DOPENMM_GENERATE_API_DOCS=ON -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} -DOPENMM_BUILD_PYTHON_WRAPPERS=ON
 ```
 
@@ -76,6 +75,8 @@ cmake .. -DOPENMM_GENERATE_API_DOCS=ON -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} -D
 From the `build` directory created in the previous step:
 
 ```shell
+# Activate the Conda environment
+conda activate openmm-dev
 # Build libraries and tests
 make
 # Build Python API
@@ -85,6 +86,8 @@ make PythonInstall
 ### Compiling the documentation
 
 ```shell
+# Activate the Conda environment
+conda activate openmm-dev
 # Compile the User's and Developer's guides as HTML
 make sphinxhtml
 # Compile the C++ API docs

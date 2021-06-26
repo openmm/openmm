@@ -697,14 +697,13 @@ User Guide and Developer Guide
 
 Generating the user guide and developer guide requires the following dependencies
 
-* Sphinx --- version 2.3.1 (http://sphinx-doc.org/)
+* Sphinx (http://sphinx-doc.org/)
 
-* sphinxcontrib-bibtex --- any version before 2.0.0 (https://pypi.python.org/pypi/sphinxcontrib-bibtex)
+* sphinxcontrib-bibtex (https://pypi.python.org/pypi/sphinxcontrib-bibtex)
 
-These dependencies may not be available in your system package manager, but should
-be installable through Python's ``pip`` package manager. ::
+These dependencies may not be available in your system package manager, but can be installed through Python's ``pip`` package manager. ::
 
-   pip install sphinx==2.3.1 sphinxcontrib-bibtex<2.0.0
+   pip install sphinx sphinxcontrib-bibtex
 
 The developer and user guides can be built either as HTML or a PDFs. Building the
 PDF version will also require a functional LaTeX installation.
@@ -723,7 +722,7 @@ Python and C++ API Documentation
 
 The following dependencies are required to build the Python and C++ API documentation.
 
-* Sphinx version 2.3.1 (http://sphinx-doc.org/)
+* Sphinx version (http://sphinx-doc.org/)
 
 * sphinxcontrib-lunrsearch (https://pypi.python.org/pypi/sphinxcontrib-lunrsearch)
 
@@ -733,7 +732,7 @@ The following dependencies are required to build the Python and C++ API document
 These dependencies may not be available in your system package manager, but should
 be installable through Python's ``pip`` package manager. ::
 
-   pip install sphinx==2.3.1 sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen
+   pip install sphinx sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen
 
 To build the C++ API documentation, type: ::
 
