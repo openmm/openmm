@@ -208,6 +208,7 @@ class ForceField(object):
         self._atomClasses = {'':set()}
         self._forces = []
         self._scripts = []
+        self._templateMatchers = []
         self._templateGenerators = []
         self.loadFile(files)
 
@@ -478,6 +479,21 @@ class ForceField(object):
     def registerScript(self, script):
         """Register a new script to be executed after building the System."""
         self._scripts.append(script)
+    
+    def registerTemplateMatcher(self, matcher):
+        """Register an object that can override the default logic for matching templates to residues.
+
+        A template matcher is a callable object that can be invoked as::
+        
+            template = f(forcefield, residue)
+        
+        where ``forcefield`` is the ForceField invoking it and ``residue`` is a openmm.app.Residue object.
+        It should return a _TemplateData object that matches the residue.  Alternatively it may return
+        None, in which case the standard logic will be used to find a template for the residue.
+
+        .. CAUTION:: This method is experimental, and its API is subject to change.        
+        """
+        self._templateMatchers.append(matcher)
 
     def registerTemplateGenerator(self, generator):
         """Register a residue template generator that can be used to parameterize residues that do not match existing forcefield templates.
@@ -957,6 +973,13 @@ class ForceField(object):
         """
         template = None
         matches = None
+        for matcher in self._templateMatchers:
+            template = matcher(self, res)
+            if template is not None:
+                match = compiled.matchResidueToTemplate(res, template, bondedToAtom, ignoreExternalBonds, ignoreExtraParticles)
+                if match is None:
+                    raise ValueError('A custom template matcher returned a template for residue %s, but it does not match the residue.' % res.name)
+                return [template, match]
         if templateSignatures is None:
             templateSignatures = self._templateSignatures
         signature = _createResidueSignature([atom.element for atom in res.atoms()])
