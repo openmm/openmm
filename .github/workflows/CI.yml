@@ -630,14 +630,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Linux
-            os: ubuntu-latest
-
-          - name: MacOS
-            os: macos-latest
-
-          # - name: Windows
-          #   os: windows-latest
+          matrix:
+            os: [ubuntu-latest, macos-latest]
+            gpu: [NONE, OPENCL, CUDA]
 
     steps:
       - uses: actions/checkout@v2
@@ -647,14 +642,46 @@ jobs:
         with:
           activate-environment: openmm-dev
           environment-file: devtools/environment.yml
-          auto-activate-base: true
+          auto-activate-base: false
 
-      - name: "Configure build with CMake"
+      - name: "Create build directory"
         shell: bash -l {0}
         run: |
           mkdir build
-          cd build
 
+      - name: "Install CUDA SDK and configure build with CMake"
+        if: ${{ matrix.gpu == CUDA }}
+        shell: bash -l {0}
+        run: |
+          conda install -c conda-forge cudatoolkit-dev
+
+          cd build
+          cmake .. \
+            -DOPENMM_GENERATE_API_DOCS=ON \
+            -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
+            -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
+            -DOPENMM_BUILD_PYTHON_WRAPPERS=ON \
+            -DOPENMM_BUILD_CUDA_LIB=ON
+
+      - name: "Install OpenCL SDK and configure build with CMake"
+        if: ${{ matrix.gpu == OPENCL }}
+        shell: bash -l {0}
+        run: |
+          conda install -c conda-forge mesa-libgl-devel-cos6-x86_64
+
+          cd build
+          cmake .. \
+            -DOPENMM_GENERATE_API_DOCS=ON \
+            -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
+            -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
+            -DOPENMM_BUILD_PYTHON_WRAPPERS=ON \
+            -DOPENMM_BUILD_OPENCL_LIB=ON
+
+      - name: "Configure build with CMake"
+        if: ${{ matrix.gpu == NONE }}
+        shell: bash -l {0}
+        run: |
+          cd build
           cmake .. \
             -DOPENMM_GENERATE_API_DOCS=ON \
             -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
