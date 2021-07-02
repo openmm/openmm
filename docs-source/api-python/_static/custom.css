@@ -1,3 +1,67 @@
+/* Fix responsiveness */
+body {
+    overflow-x: hidden;
+}
+div.body {
+    min-width: unset;
+}
+
+@media screen and (max-width: 870px) {
+    div.sphinxsidebar p.logo {
+        display: unset;
+    }
+}
+
+@media screen and (max-width: 875px) {
+    ul {
+        margin-left: 30px;
+    }
+}
+
+@media screen and (min-width: 871px) and (max-width: 940px) {
+    div.document {
+        width: 100vw
+    }
+}
+
+/* When search bar is in nav footer, don't let it stretch too far */
+.searchformwrapper {
+    max-width: 250px;
+}
+
+/* Fix next/prev links in footer */
+/* Don't just float the whole thing right */
+nav#rellinks {
+    float: unset;
+}
+nav#rellinks ul {
+    padding-left: 0;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+nav#rellinks li {
+    line-height: 1.3;
+    padding: 5px 0px;
+}
+nav#rellinks li:first-child {
+    display: block;
+    text-indent: -17px;
+    padding-left: 17px;
+}
+nav#rellinks li + li {
+    margin-left: auto;
+    text-align: right;
+    display: flex;
+}
+nav#rellinks li + li a {
+    display: inline-block;
+    margin-right: 5px;
+}
+nav#rellinks li + li:before {
+    content: "";
+}
+
 /* Put the title and logo side by side*/
 .sphinxsidebarwrapper {
     display: flex;
@@ -48,4 +112,15 @@ and don't get squished together by flex.*/
 .sphinxsidebarwrapper hr /* Horizontal rules */
 {
     display: none;
+}
+
+/* Hide logo on tiny screens */
+@media screen and (max-width: 280px) {
+    div.sphinxsidebar p.logo {
+        display: none;
+    }
+
+    .sphinxsidebar .logo-name {
+        flex-basis: 100%;
+    }
 }
