@@ -12,8 +12,8 @@ Introduction
 This guide describes the internal architecture of the OpenMM library.  It is
 targeted at developers who want to add features to OpenMM, either by modifying
 the core library directly or by writing plugins.  If you just want to write
-applications that use OpenMM, you do not need to read this guide; the Users
-Manual tells you everything you need to know.  This guide is *only* for
+applications that use OpenMM, you do not need to read this guide; the User's
+Manual tells you everything you need to know.  This guide is intended for
 people who want to contribute to OpenMM itself.
 
 It is organized as follows:
@@ -38,7 +38,7 @@ It is organized as follows:
 
 This guide assumes you are already familiar with the public API and how to use
 OpenMM in applications.  If that is not the case, you should first read the
-Users Manual and work through some of the example programs.  Pay especially
+User's Manual and work through some of the example programs.  Pay especially
 close attention to the “Introduction to the OpenMM Library” chapter, since it
 introduces concepts that are important in understanding this guide.
 

@@ -1,8 +1,8 @@
 .. include:: header.rst
 
-####################################
-OpenMM Users Manual and Theory Guide
-####################################
+#####################################
+OpenMM User's Manual and Theory Guide
+#####################################
 
 .. only:: latex
 

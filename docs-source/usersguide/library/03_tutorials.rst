@@ -75,7 +75,7 @@ debug binaries.
 
 
 
-.. figure:: images/VisualStudioSetConfiguration.jpg
+.. figure:: ../../images/VisualStudioSetConfiguration.jpg
    :align: center
    :width: 100%
 
@@ -90,7 +90,7 @@ previously been compiled.
 
 
 
-.. figure:: images/VisualStudioLaunch.jpg
+.. figure:: ../../images/VisualStudioLaunch.jpg
    :align: center
    :width: 100%
 
@@ -486,7 +486,7 @@ visualized using programs like VMD or PyMol (see Section :ref:`running-example-f
 You should see three atoms moving linearly away and towards one another:
 
 
-.. figure:: images/Argon.png
+.. figure:: ../../images/Argon.png
    :align: center
 
 

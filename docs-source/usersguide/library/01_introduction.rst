@@ -151,7 +151,7 @@ Architectural Overview
 OpenMM is based on a layered architecture, as shown in the following diagram:
 
 
-.. figure:: images/ArchitectureLayers.jpg
+.. figure:: ../../images/ArchitectureLayers.jpg
    :align: center
    :width: 100%
 

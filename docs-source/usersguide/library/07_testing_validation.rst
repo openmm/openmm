@@ -161,7 +161,7 @@ cutoff on the nonbonded interactions.  They differ only in the level of numeric
 precision that was used for calculations (see Chapter :ref:`platform-specific-properties`\ ).
 
 
-.. figure:: images/EnergyDrift.png
+.. figure:: ../../images/EnergyDrift.png
    :align: center
 
    :autonumber:`Figure,energy drift`: Total energy versus time for simulations run in three different

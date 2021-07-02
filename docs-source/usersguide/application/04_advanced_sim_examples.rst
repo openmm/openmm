@@ -20,9 +20,9 @@ give you a sense of what is possible, and inspire you to experiment further on
 your own.
 
 Starting in this section, we will assume some knowledge of programming, as well
-as familiarity with the OpenMM API.  Consult the OpenMM Users Guide and API
-documentation if you are uncertain about how something works.   You can also use
-the Python :code:`help` command.  For example,
+as familiarity with the OpenMM API.  Consult this User's Guide and the OpenMM
+API documentation if you are uncertain about how something works. You can also
+usethe Python :code:`help` command.  For example,
 ::
 
     help(Simulation)
@@ -116,7 +116,7 @@ not an arbitrary choice.
 Extracting and Reporting Forces (and other data)
 ************************************************
 
-OpenMM provides reporters for three output formats: PDB_, `PDBx/mmCIF`_ and DCD_.
+OpenMM provides reporters for three output formats: `PDB <https://www.wwpdb.org/documentation/file-format-content/format33/v3.3.html>`_, `PDBx/mmCIF <https://mmcif.wwpdb.org/pdbx-mmcif-home-page.html>`_ and `DCD <https://www.ks.uiuc.edu/Research/namd/2.6/ug/node13.html>`_.
 All of those formats store only positions, not velocities, forces, or other data.  In this
 section, we create a new reporter that outputs forces.  This illustrates two
 important things: how to write a reporter, and how to query the simulation for

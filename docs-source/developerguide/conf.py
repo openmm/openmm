@@ -106,7 +106,7 @@ html_theme_options = {
     "logo": "logo.png",
     "extra_nav_links": {
         "OpenMM.org": "https://openmm.org",
-        "User Guide": "http://docs.openmm.org/latest/userguide/",
+        "User's Manual": "http://docs.openmm.org/latest/userguide/",
         "Python API reference": "http://docs.openmm.org/latest/api-python/",
         "C++ API reference": "http://docs.openmm.org/latest/api-c++/",
         "GitHub": "https://github.com/openmm",

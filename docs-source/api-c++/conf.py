@@ -36,8 +36,8 @@ html_theme_options = {
     "logo": "logo.png",
     "extra_nav_links": {
         "OpenMM.org": "https://openmm.org",
-        "Developer Guide": "http://docs.openmm.org/latest/developerguide/",
-        "User Guide": "http://docs.openmm.org/latest/userguide/",
+        "Developer's Guide": "http://docs.openmm.org/latest/developerguide/",
+        "User's Guide": "http://docs.openmm.org/latest/userguide/",
         "Python API reference": "http://docs.openmm.org/latest/api-python/",
         "GitHub": "https://github.com/openmm",
     },

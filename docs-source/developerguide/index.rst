@@ -1,6 +1,6 @@
-######################
-OpenMM Developer Guide
-######################
+########################
+OpenMM Developer's Guide
+########################
 
 .. only:: latex
 

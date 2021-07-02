@@ -390,7 +390,7 @@ OpenMM-Setup is a graphical application that walks you through the whole process
 of loading your input files and setting options.  It then generates a complete
 script, and can even run it for you.
 
-.. figure:: images/OpenMMSetup.png
+.. figure:: ../../images/OpenMMSetup.png
    :align: center
    :width: 100%
 

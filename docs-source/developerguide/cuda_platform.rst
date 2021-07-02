@@ -36,7 +36,7 @@ where it can write out temporary files, and the path to the nvcc compiler.
 These are specified by the “CudaTempDirectory” and “CudaCompiler” properties
 when you create a new Context.  It often can figure out suitable values for them
 on its own, but sometimes it needs help.  See the “Platform-Specific Properties”
-chapter of the Users Manual for details.
+chapter of the User's Manual for details.
 
 Accumulating Forces
 *******************
