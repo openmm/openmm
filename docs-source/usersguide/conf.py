@@ -38,7 +38,7 @@ extensions = [
 bibtex_bibfiles = ["references.bib"]
 
 # Autonumber by part and chapter
-autonumber_by_depth = 1
+autonumber_by_depth = 2
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
