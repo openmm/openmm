@@ -53,7 +53,7 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = u"OpenMM Users Guide"
+project = u"OpenMM User Guide"
 copyright = u"2008-2017, Stanford University"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -109,7 +109,23 @@ html_theme = "alabaster"
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-# html_theme_options = {}
+html_theme_options = {
+    "github_button": False,
+    "github_user": "openmm",
+    "github_repo": "openmm",
+    "logo_name": True,
+    "logo": "logo.png",
+    "extra_nav_links": {
+        "Developer Guide": "http://docs.openmm.org/latest/developerguide/",
+        "Python API reference": "http://docs.openmm.org/latest/api-python/",
+        "C++ API reference": "http://docs.openmm.org/latest/api-c++/",
+        "GitHub": "https://github.com/openmm",
+        "Home": "https://openmm.org",
+    },
+    "show_relbar_bottom": True,
+}
+# Custom sidebar templates, maps document names to template names.
+html_sidebars = {"**": ["about.html", "searchbox.html", "navigation.html"]}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -133,7 +149,7 @@ html_theme = "alabaster"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ["_static"]
+html_static_path = ["_static"]
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -142,9 +158,6 @@ html_theme = "alabaster"
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
 # html_use_smartypants = True
-
-# Custom sidebar templates, maps document names to template names.
-# html_sidebars = {}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.

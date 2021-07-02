@@ -1,0 +1,51 @@
+/* Put the title and logo side by side*/
+.sphinxsidebarwrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    flex-direction: row-reverse;
+    padding-top: 0 !important;
+    justify-content: space-between;
+}
+
+.sphinxsidebar .logo-name {
+    flex-basis: 140px;
+    font-size: 20px;
+}
+
+.sphinxsidebar p.logo {
+    flex-basis: 60px;
+    text-align: right;
+    display: block;
+    margin-top: 0 !important;
+}
+
+/* Get control over the image */
+.sphinxsidebar p.logo a {
+    height: auto;
+    display: block;
+}
+
+/* Make sure the remaining items use the whole navbar
+and don't get squished together by flex.*/
+.sphinxsidebar .logo-name ~ * {
+    flex-basis: 100%
+}
+/* Emulate a placeholder rather than a heading for search */
+.sphinxsidebar #searchbox form.search input[type="text"] {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='50px' width='120px'><text x='10' y='17' fill='gray' font-size='15'>Search...</text></svg>");
+    background-repeat: no-repeat;
+}
+.sphinxsidebar #searchbox form.search input[type="text"]:focus {
+    background-image: none;
+}
+
+/* Hide unwanted elements*/
+.sphinxsidebarwrapper #searchbox h3, /* Search heading */
+.sphinxsidebarwrapper > h3, /* Navigation heading */
+.sphinxsidebarwrapper p:empty, /* Empty elements taking up space */
+.sphinxsidebar .logo-name + a[href], /* Inexplicable but ugly link */
+.sphinxsidebarwrapper hr /* Horizontal rules */
+{
+    display: none;
+}

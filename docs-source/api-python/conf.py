@@ -1,49 +1,63 @@
 # -*- coding: utf-8 -*-
 
-import sys
 import os
+import sys
+
 import openmm.version
 
-extensions = ['sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.autosummary',
-              'sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'process-docstring',
-              'sphinxcontrib.lunrsearch']
+extensions = [
+    "sphinx.ext.mathjax",
+    "sphinx.ext.ifconfig",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "process-docstring",
+    "sphinxcontrib.lunrsearch",
+]
 
 autosummary_generate = True
 autodoc_default_options = {
-    'members': True,
-    'inherited-members': True,
-    'member-order': 'bysource'
+    "members": True,
+    "inherited-members": True,
+    "member-order": "bysource",
 }
 
-source_suffix = '.rst'
-master_doc = 'index'
+source_suffix = ".rst"
+master_doc = "index"
 
-project = u'OpenMM'
-copyright = u'2015, Stanford University and the Authors'
+project = u"OpenMM Python API"
+copyright = u"2015, Stanford University and the Authors"
 
 version = openmm.version.short_version
 release = openmm.version.full_version
 
-exclude_patterns = ['_build', '_templates']
-html_static_path = ['_static']
-templates_path = ['_templates']
+exclude_patterns = ["_build", "_templates"]
+html_static_path = ["_static"]
+templates_path = ["_templates"]
 
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 html_theme = "alabaster"
 html_theme_options = {
-    'description': "High performance molecular simulation on GPUs",
-    'github_button': False,
-    # 'github_user': 'pandegroup',
-    # 'github_repo': 'openmm',
-    'logo_name': False,
-    'logo': 'logo.png',
+    "github_button": False,
+    "github_user": "openmm",
+    "github_repo": "openmm",
+    "logo_name": True,
+    "logo": "logo.png",
+    "extra_nav_links": {
+        "Developer Guide": "http://docs.openmm.org/latest/developerguide/",
+        "User Guide": "http://docs.openmm.org/latest/userguide/",
+        "C++ API reference": "http://docs.openmm.org/latest/api-c++/",
+        "GitHub": "https://github.com/openmm",
+        "Home": "https://openmm.org",
+    },
+    "show_relbar_bottom": True,
 }
 html_sidebars = {
-    '**': [
-        'about.html',
-        'searchbox.html',
-        'navigation.html',
+    "**": [
+        "about.html",
+        "searchbox.html",
+        "navigation.html",
     ]
 }
 
