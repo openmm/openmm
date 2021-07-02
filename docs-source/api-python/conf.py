@@ -56,7 +56,7 @@ html_theme_options = {
 html_sidebars = {
     "**": [
         "about.html",
-        "searchbox.html",
+        "lunrsearch.html",
         "navigation.html",
     ]
 }
