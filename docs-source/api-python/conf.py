@@ -45,11 +45,11 @@ html_theme_options = {
     "logo_name": True,
     "logo": "logo.png",
     "extra_nav_links": {
+        "OpenMM.org": "https://openmm.org",
         "Developer Guide": "http://docs.openmm.org/latest/developerguide/",
         "User Guide": "http://docs.openmm.org/latest/userguide/",
         "C++ API reference": "http://docs.openmm.org/latest/api-c++/",
         "GitHub": "https://github.com/openmm",
-        "Home": "https://openmm.org",
     },
     "show_relbar_bottom": True,
 }

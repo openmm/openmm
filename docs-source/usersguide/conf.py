@@ -38,7 +38,7 @@ extensions = [
 bibtex_bibfiles = ["references.bib"]
 
 # Autonumber by part and chapter
-autonumber_by_depth = 2
+autonumber_by_depth = 1
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -116,11 +116,11 @@ html_theme_options = {
     "logo_name": True,
     "logo": "logo.png",
     "extra_nav_links": {
+        "OpenMM.org": "https://openmm.org",
         "Developer Guide": "http://docs.openmm.org/latest/developerguide/",
         "Python API reference": "http://docs.openmm.org/latest/api-python/",
         "C++ API reference": "http://docs.openmm.org/latest/api-c++/",
         "GitHub": "https://github.com/openmm",
-        "Home": "https://openmm.org",
     },
     "show_relbar_bottom": True,
 }
