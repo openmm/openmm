@@ -2,8 +2,8 @@
 
 .. _the-openmm-application-layer-introduction:
 
-The OpenMM Application Layer: Getting Started
-#############################################
+Getting Started
+###############
 
 Introduction
 ************
