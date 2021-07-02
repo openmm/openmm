@@ -18,7 +18,8 @@ def autonumber_role(name, rawtext, text, lineno, inliner, options={}, content=[]
 def doctree_resolved(app, doctree, docname):
     index = {}
     ref_table = {}
-    if app.config.autonumber_by_chapter:
+    autonum_depth = app.config.autonumber_by_depth
+    if autonum_depth:
         # Record the number of each chapter
         env = app.builder.env
         section_numbers = {}
@@ -26,7 +27,7 @@ def doctree_resolved(app, doctree, docname):
             sections = env.toc_secnumbers[doc]
             for section_id in sections:
                 section_numbers[section_id[1:]] = sections[section_id]
-        last_chapter = -1
+        last_chapter = None
 
     # Assign numbers to all the autonumbered objects.
 
@@ -36,16 +37,16 @@ def doctree_resolved(app, doctree, docname):
             next_number = index[category] + 1
         else:
             next_number = 1
-        if app.config.autonumber_by_chapter:
+        if autonum_depth:
             parent = node.parent
             chapter = None
             while chapter is None:
                 if isinstance(parent, section):
                     chapter = parent
                 parent = parent.parent
-            # If assigning a number fails, ignore app.config.autonumber_by_chapter
+            # If assigning a number fails, ignore autonumber_by_depth config option
             try:
-                chapter = section_numbers[chapter.attributes["ids"][0]][0]
+                chapter = section_numbers[chapter.attributes["ids"][0]][:autonum_depth]
             except Exception:
                 index[category] = next_number
                 new_node = Text("%s %d" % (category, next_number))
@@ -53,7 +54,8 @@ def doctree_resolved(app, doctree, docname):
                 if chapter != last_chapter:
                     index = {}
                     next_number = 1
-                new_node = Text("%s %d-%d" % (category, chapter, next_number))
+                chapter_fmt = ".".join(str(i) for i in chapter)
+                new_node = Text("%s %s-%d" % (category, chapter_fmt, next_number))
                 last_chapter = chapter
         else:
             new_node = Text("%s %d" % (category, next_number))
@@ -71,7 +73,7 @@ def doctree_resolved(app, doctree, docname):
 
 
 def setup(app):
-    app.add_config_value("autonumber_by_chapter", True, False)
+    app.add_config_value("autonumber_by_depth", 1, "env")
     roles.register_local_role("autonumber", autonumber_role)
     app.add_node(autonumber)
     app.add_node(autonumber_ref)
