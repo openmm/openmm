@@ -10,7 +10,14 @@ OpenMM Developer Guide
    :maxdepth: 3
    :numbered:
    
-   developer
+   introduction.rst
+   core_library.rst
+   writing_plugins.rst
+   reference_platform.rst
+   cpu_platform.rst
+   opencl_platform.rst
+   cuda_platform.rst
+   common_compute.rst
 
 .. only:: html
 
