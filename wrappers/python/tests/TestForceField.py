@@ -1149,6 +1149,19 @@ END"""))
         self.assertAlmostEqual(26.10373, propers, delta=propers*1e-3) # DIHEdrals
         self.assertAlmostEqual(0.14113, impropers, delta=impropers*1e-3) # IMPRopers
 
+    def test_InitializationScript(self):
+        """Test that <InitializationScript> tags get executed."""
+        xml = """
+<ForceField>
+  <InitializationScript>
+self.scriptExecuted = True
+  </InitializationScript>
+</ForceField>
+"""
+        ff = ForceField(StringIO(xml))
+        self.assertTrue(ff.scriptExecuted)
+        
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 
