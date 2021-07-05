@@ -330,7 +330,7 @@ class ForceField(object):
                             self.registerTemplatePatch(resName, patchName, 0)
                     self.registerResidueTemplate(template)
 
-        # Load the patch defintions.
+        # Load the patch definitions.
 
         for tree in trees:
             if tree.getroot().find('Patches') is not None:
@@ -410,6 +410,12 @@ class ForceField(object):
         for tree in trees:
             for node in tree.getroot().findall('Script'):
                 self.registerScript(node.text)
+
+        # Execute initialization scripts.
+
+        for tree in trees:
+            for node in tree.getroot().findall('InitializationScript'):
+                exec(node.text, locals())
 
     def getGenerators(self):
         """Get the list of all registered generators."""
