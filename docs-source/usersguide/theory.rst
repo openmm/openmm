@@ -1,10 +1,11 @@
 .. _the-theory-behind-openmm:
 
-########################
-The Theory Behind OpenMM
-########################
+##################################
+Part III: The Theory Behind OpenMM
+##################################
 
 .. toctree::
+   :numbered: 3
    :maxdepth: 3
 
    theory/01_introduction

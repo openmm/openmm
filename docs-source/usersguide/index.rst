@@ -11,9 +11,18 @@ OpenMM User's Manual and Theory Guide
    :maxdepth: 3
 
    introduction
+
+.. toctree::
+   :maxdepth: 3
+
    application
    library
    theory
+
+.. toctree::
+   :numbered:
+   :maxdepth: 3
+
    zbibliography
 
 .. only:: html

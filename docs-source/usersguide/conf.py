@@ -33,11 +33,9 @@ extensions = [
     "autonumber",
     "samepage",
     "caption",
+    "continuous",
 ]
 bibtex_bibfiles = ["references.bib"]
-
-# Autonumber by part and chapter
-autonumber_by_depth = 2
 
 # :numref: role should just use the number
 numfig_format = {

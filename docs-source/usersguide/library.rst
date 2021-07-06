@@ -1,11 +1,12 @@
 .. _the-openmm-library:
 
-##################
-The OpenMM Library
-##################
+###########################
+Part II: The OpenMM Library
+###########################
 
 
 .. toctree::
+   :numbered: 3
    :maxdepth: 3
 
    library/01_introduction
