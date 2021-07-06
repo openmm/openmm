@@ -1,5 +1,3 @@
-.. include:: ../header.rst
-
 .. _the-theory-behind-openmm-introduction:
 
 Introduction

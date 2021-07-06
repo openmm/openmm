@@ -1,5 +1,3 @@
-.. include:: ../header.rst
-
 .. _testing-and-validation-of-openmm:
 
 Testing and Validation of OpenMM

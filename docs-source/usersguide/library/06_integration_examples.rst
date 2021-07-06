@@ -1,5 +1,3 @@
-.. include:: ../header.rst
-
 .. _examples-of-openmm-integration:
 
 Examples of OpenMM Integration

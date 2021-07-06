@@ -1,5 +1,3 @@
-.. include:: ../header.rst
-
 .. _using-openmm-with-software-written-in-languages-other-than-c++:
 
 Using OpenMM with Software Written in Languages Other than C++

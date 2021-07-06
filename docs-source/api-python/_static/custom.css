@@ -124,3 +124,9 @@ and don't get squished together by flex.*/
         flex-basis: 100%;
     }
 }
+
+/* Custom body styling */
+/* Center captions of figures, examples, etc. */
+.body .caption {
+    text-align: center;
+}

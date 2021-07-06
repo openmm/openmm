@@ -1,5 +1,3 @@
-.. include:: ../header.rst
-
 .. _other-features:
 
 Other Features

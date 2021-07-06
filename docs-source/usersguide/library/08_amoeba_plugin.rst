@@ -1,5 +1,3 @@
-.. include:: ../header.rst
-
 .. _amoeba-plugin:
 
 AMOEBA Plugin

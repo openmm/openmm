@@ -1,5 +1,3 @@
-.. include:: ../header.rst
-
 .. _ring-polymer-molecular-dynamics-plugin:
 
 Ring Polymer Molecular Dynamics (RPMD) Plugin

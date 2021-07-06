@@ -1,5 +1,3 @@
-.. include:: ../header.rst
-
 .. _compiling-openmm-from-source-code:
 
 Compiling OpenMM from Source Code

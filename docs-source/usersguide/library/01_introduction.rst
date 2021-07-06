@@ -1,5 +1,3 @@
-.. include:: ../header.rst
-
 .. _the-openmm-library-introduction:
 
 Introduction

@@ -1,5 +1,3 @@
-.. include:: header.rst
-
 #####################################
 OpenMM User's Manual and Theory Guide
 #####################################

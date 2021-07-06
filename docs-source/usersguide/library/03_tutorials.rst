@@ -1,5 +1,3 @@
-.. include:: ../header.rst
-
 .. _openmm-tutorials:
 
 OpenMM Tutorials

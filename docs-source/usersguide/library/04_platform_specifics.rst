@@ -1,5 +1,3 @@
-.. include:: ../header.rst
-
 .. _platform-specific-properties:
 
 Platform-Specific Properties

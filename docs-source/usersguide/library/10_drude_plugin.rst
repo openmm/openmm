@@ -1,5 +1,3 @@
-.. include:: ../header.rst
-
 .. _drude-plugin:
 
 Drude Plugin

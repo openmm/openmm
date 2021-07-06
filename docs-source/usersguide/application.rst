@@ -1,5 +1,3 @@
-.. include:: header.rst
-
 .. default-domain:: py
 
 .. _the-openmm-application-layer:
