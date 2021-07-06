@@ -6,7 +6,7 @@ The OpenMM Library
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    library/01_introduction
    library/02_compiling

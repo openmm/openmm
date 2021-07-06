@@ -5,7 +5,7 @@ The Theory Behind OpenMM
 ########################
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    theory/01_introduction
    theory/02_standard_forces

@@ -7,7 +7,7 @@ The OpenMM Application Layer
 ############################
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    application/01_getting_started
    application/02_running_sims
