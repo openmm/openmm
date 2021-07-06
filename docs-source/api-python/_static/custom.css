@@ -130,3 +130,15 @@ and don't get squished together by flex.*/
 .body .caption {
     text-align: center;
 }
+
+.body .toctree-l1 {
+    font-weight: bold;
+}
+
+.body .toctree-l2 {
+    font-weight: normal;
+}
+
+.body .toctree-l3 {
+    font-size: 0.8em;
+}
