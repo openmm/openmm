@@ -39,7 +39,7 @@ Unit tests
 ===========
 
 The unit tests are with the source code, so if you build from source you can run
-them yourself.  See Section :ref:`test-your-build` for details.  When you run the tests
+them yourself.  See Section :numref:`test-your-build` for details.  When you run the tests
 (for example, by typing “make test” on Linux or Mac), it should produce output
 something like this:
 ::
@@ -156,7 +156,7 @@ Energy Conservation
 ubiquitin in OBC implicit solvent.  All three simulations used the CUDA
 platform, a Verlet integrator, a time step of 0.5 fs, no constraints, and no
 cutoff on the nonbonded interactions.  They differ only in the level of numeric
-precision that was used for calculations (see Chapter :ref:`platform-specific-properties`\ ).
+precision that was used for calculations (see Chapter :numref:`platform-specific-properties`\ ).
 
 
 .. figure:: ../../images/EnergyDrift.png

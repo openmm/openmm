@@ -43,7 +43,7 @@ steps.
 
 You can find this script in the :file:`examples` folder of your OpenMM installation.
 It is called :file:`simulatePdb.py`.  To execute it from a command line, go to your
-terminal/console/command prompt window (see Section :ref:`installing-openmm`
+terminal/console/command prompt window (see Section :numref:`installing-openmm`
 on setting up the window to use OpenMM).  Navigate to the :file:`examples` folder by typing
 ::
 
@@ -82,7 +82,7 @@ argument, and assigns the object to a variable called :code:`pdb`\ .  The
 molecular topology and atom positions.  Your file need not be called
 :file:`input.pdb`.  Feel free to change this line to specify any file you want,
 though it must contain all of the atoms needed by the force field.
-(More information on how to add missing atoms and residues using OpenMM tools can be found in Chapter :ref:`model-building-and-editing`.)
+(More information on how to add missing atoms and residues using OpenMM tools can be found in Chapter :numref:`model-building-and-editing`.)
 Make sure you include the single quotes around the file name.  OpenMM also can load
 files in the newer PDBx/mmCIF format: just change :class:`PDBFile` to :class:`PDBxFile`.
 ::
@@ -90,9 +90,9 @@ files in the newer PDBx/mmCIF format: just change :class:`PDBFile` to :class:`PD
     forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
 
 This line specifies the force field to use for the simulation.  Force fields are
-defined by XML files.  OpenMM includes XML files defining lots of standard force fields (see Section :ref:`force-fields`).
+defined by XML files.  OpenMM includes XML files defining lots of standard force fields (see Section :numref:`force-fields`).
 If you find you need to extend the repertoire of force fields available,
-you can find more information on how to create these XML files in Chapter :ref:`creating-force-fields`.
+you can find more information on how to create these XML files in Chapter :numref:`creating-force-fields`.
 In this case we load two of those files: :file:`amber14-all.xml`, which contains the
 Amber14 force field, and :file:`amber14/tip3pfb.xml`, which contains the TIP3P-FB water model.  The
 :class:`ForceField` object is assigned to a variable called :code:`forcefield`\ .
@@ -115,7 +115,7 @@ This is an example of the powerful units tracking and automatic conversion facil
 built into the OpenMM Python API that makes specifying unit-bearing quantities
 convenient and less error-prone.  We could have equivalently specified
 :code:`10*angstrom` instead of :code:`1*nanometer` and achieved the same result.
-The units system will be described in more detail later, in Section :ref:`units-and-dimensional-analysis`.
+The units system will be described in more detail later, in Section :numref:`units-and-dimensional-analysis`.
 ::
 
     integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
@@ -128,7 +128,7 @@ simulation temperature (300 K), the friction coefficient (1 ps\ :sup:`-1`\ ), an
 the step size (0.004 ps).  Lots of other integration methods are also available.
 For example, if you wanted to simulate the system at constant energy rather than
 constant temperature you would use a :code:`VerletIntegrator`\ .  The available
-integration methods are listed in Section :ref:`integrators`.
+integration methods are listed in Section :numref:`integrators`.
 ::
 
     simulation = Simulation(pdb.topology, system, integrator)
@@ -425,7 +425,7 @@ Platforms
 
 When creating a :class:`Simulation`, you can optionally tell it what :class:`Platform` to use.
 OpenMM includes four platforms: :class:`Reference`, :class:`CPU`, :class:`CUDA`, and :class:`OpenCL`.  For a
-description of the differences between them, see Section :ref:`platforms`.  There are three ways in which
+description of the differences between them, see Section :numref:`platforms`.  There are three ways in which
 the :class:`Platform` can be chosen:
 
 1. By default, OpenMM will try to select the fastest available :class:`Platform`.  Usually its choice will
@@ -445,7 +445,7 @@ The platform name should be one of :code:`OpenCL`, :code:`CUDA`, :code:`CPU`, or
 :code:`Reference`.
 
 You also can specify platform-specific properties that customize how
-calculations should be done.  See Chapter :ref:`platform-specific-properties` for details of the
+calculations should be done.  See Chapter :numref:`platform-specific-properties` for details of the
 properties that each Platform supports.  For example, the following lines specify to parallelize
 work across two different GPUs (CUDA devices 0 and 1), doing all computations in
 double precision:
@@ -477,7 +477,7 @@ Be aware that some force fields and water models include "extra particles", such
 as lone pairs or Drude particles.  Examples include the CHARMM polarizable force
 field and all of the 4 and 5 site water models.  To use these force fields, you
 must first add the extra particles to the :class:`Topology`.  See section
-:ref:`adding-or-removing-extra-particles` for details.
+:numref:`adding-or-removing-extra-particles` for details.
 
 The force fields described below are the ones that are bundled with OpenMM.
 Additional force fields are available online at https://github.com/choderalab/openmm-forcefields.
@@ -578,7 +578,7 @@ such as :file:`charmm36/water.xml`, which specifies the default CHARMM water mod
          trying to read in PDB files from sources such as `CHARMM-GUI <http://charmm-gui.org/>`_
          that do not generate PDB files that comply with the `PDB standard <http://www.wwpdb.org/documentation/file-format>`_.
          If you're using files from `CHARMM-GUI <http://charmm-gui.org/>`_, it's easiest to load
-         the PSF file directly, as discussed in Section :ref:`using-charmm-files`.
+         the PSF file directly, as discussed in Section :numref:`using-charmm-files`.
 
 .. tip:: Trying to read in PDB files from sources such as `CHARMM-GUI <http://charmm-gui.org/>`_
          that do not generate PDB files that comply with the `PDB standard <http://www.wwpdb.org/documentation/file-format>`_
@@ -588,7 +588,7 @@ such as :file:`charmm36/water.xml`, which specifies the default CHARMM water mod
          Make sure the files you read in comply with the appropriate standards regarding
          additional bonds and nonstandard residue definitions. If you're using files from
          `CHARMM-GUI <http://charmm-gui.org/>`_, it's easiest to load
-         the PSF file directly, as discussed in Section :ref:`using-charmm-files`.
+         the PSF file directly, as discussed in Section :numref:`using-charmm-files`.
 
 The converted parameter sets come from the `CHARMM36 July 2017 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_
 and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `parmed <https://github.com/parmed/parmed>`_.
@@ -623,7 +623,7 @@ CHARMM Polarizable Force Field
 To use the CHARMM 2019 polarizable force field\ :cite:`Lopes2013`, include the
 single file :file:`charmm_polar_2019.xml`.  It includes parameters for proteins, lipids,
 water, and ions.  When using this force field, remember to add extra particles to
-the :class:`Topology` as described in section :ref:`adding-or-removing-extra-particles`.
+the :class:`Topology` as described in section :numref:`adding-or-removing-extra-particles`.
 This force field also requires that you use one of the special integrators that
 supports Drude particles.  The options are DrudeLangevinIntegrator, DrudeNoseHooverIntegrator,
 and DrudeSCFIntegrator.
@@ -802,7 +802,7 @@ Value          Meaning
 :code:`HCT`    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)
 :code:`OBC1`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).
 :code:`OBC2`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ II parameters (corresponds to igb=5 in AMBER).
-               This is the same model used by the GBSA-OBC files described in Section :ref:`force-fields`.
+               This is the same model used by the GBSA-OBC files described in Section :numref:`force-fields`.
 :code:`GBn`    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).
 :code:`GBn2`   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).
 =============  ==================================================================================================================================
@@ -1031,7 +1031,7 @@ Integrators
 OpenMM offers a choice of several different integration methods.  You select
 which one to use by creating an integrator object of the appropriate type.
 Detailed descriptions of all these integrators can be found in Chapter
-:ref:`integrators-theory`.  In addition to these built in integrators, lots of
+:numref:`integrators-theory`.  In addition to these built in integrators, lots of
 others are available as part of the `OpenMMTools <https://openmmtools.readthedocs.io>`_ package.
 
 Langevin Middle Integrator
@@ -1372,7 +1372,7 @@ There are three built-in ways to save the results of your simulation in OpenMM
 (additional methods can be written yourself or imported through other packages
 like mdtraj or parmed). If you are simply interested in saving the structure,
 you can write it out as a PDB file using :code:`PDBFile.writeFile()`.  You can
-see an example of this in the modeller section :ref:`saving-the-results`.
+see an example of this in the modeller section :numref:`saving-the-results`.
 
 If you are hoping to save more information than just positions, you can use
 :code:`simulation.saveState()`. This will save the entire state of the
@@ -1395,7 +1395,7 @@ There is a third way to save your simulation, known as a checkpoint file, which
 will save the entire simulation as a binary file. It will allow you to exactly
 continue a simulation if the need arises (though whether the simulation is
 deterministic depends on platform and methods, see
-:ref:`platform-specific-properties-determinism`). There are important caveats
+:numref:`platform-specific-properties-determinism`). There are important caveats
 to this approach, however. This binary can only be used to restart simulations
 on machines with the same hardware and the same OpenMM version as the one that
 saved it. Therefore, it should only be used when it's clear that won't be an

@@ -31,7 +31,7 @@ C++, C, and Fortran, as indicated in the table below.  The other two
 examples—HelloEthane and HelloWaterBox—follow the same structure as
 HelloSodiumChloride but demonstrate more calls within the OpenMM API.  They are
 only provided in C++ but can be adapted to run in C and Fortran by following the
-mappings described in Chapter :ref:`using-openmm-with-software-written-in-languages-other-than-c++`\ .
+mappings described in Chapter :numref:`using-openmm-with-software-written-in-languages-other-than-c++`\ .
 HelloArgon and HelloSodiumChloride also serve as examples of how to do these mappings.  The
 sections below describe the HelloArgon, HelloSodiumChloride, and HelloEthane programs in more detail.
 
@@ -292,7 +292,7 @@ available.
 Running a simulation using the OpenMM public API
 ================================================
 
-The OpenMM public API was described in Section :ref:`the-openmm-public-api`\ .  Here you will
+The OpenMM public API was described in Section :numref:`the-openmm-public-api`\ .  Here you will
 see how to use those classes to create a simple system of three argon atoms and run a short
 simulation.  The main components of the simulation are within the function
 :code:`simulateArgon()`\ :
@@ -336,19 +336,19 @@ simulation.  The main components of the simulation are within the function
    It is hard to overemphasize the importance of careful units handling—it is very
    easy to make a mistake despite, or perhaps because of, the trivial nature of
    units conversion.  For more information about the units used in OpenMM, see
-   Section :ref:`units`.
+   Section :numref:`units`.
 
    **Adding Particle Information:** Both the system and the non-bonded
    force require information about the particles.  The system just needs to know
    the mass of the particle.  The non-bonded force requires information about the
    charge (in this case, argon is uncharged), and the Lennard-Jones parameters
-   sigma (zero-energy separation distance) and well depth (see Section :ref:`lennard-jones-interaction`
+   sigma (zero-energy separation distance) and well depth (see Section :numref:`lennard-jones-interaction`
    for more details).
 
    Note that the van der Waals radius for argon is 0.188 nm and that it has already
    been converted to sigma (0.335 nm) in the example above where it is added to the
    non-bonded force;  in your code, you should make use of the appropriate
-   conversion factor supplied with OpenMM as discussed in Section :ref:`units`\ .
+   conversion factor supplied with OpenMM as discussed in Section :numref:`units`\ .
 
 #. **Integrator** – We next specify the integrator to use to perform the
    calculations.  In this case, we choose a Verlet integrator to run a constant
@@ -480,7 +480,7 @@ HelloArgon output
 =================
 
 The output of the HelloArgon program can be saved to a *.pdb* file and
-visualized using programs like VMD or PyMol (see Section :ref:`running-example-files`).
+visualized using programs like VMD or PyMol (see Section :numref:`running-example-files`).
 You should see three atoms moving linearly away and towards one another:
 
 
@@ -510,7 +510,7 @@ integrating OpenMM into an existing molecular dynamics (MD) code:
    code.  These routines could be written in any language that is callable from the
    existing MD code.  We recommend writing them in C++ since that is what OpenMM is
    written in, but you can also write them in C or Fortran; see Chapter
-   :ref:`using-openmm-with-software-written-in-languages-other-than-c++`\ .
+   :numref:`using-openmm-with-software-written-in-languages-other-than-c++`\ .
 
 
 #. **Call only these high-level interface routines from your existing MD
@@ -523,7 +523,7 @@ integrating OpenMM into an existing molecular dynamics (MD) code:
 
 
 In the example described below, you will see how this strategy can be
-implemented for a very simple MD code.  Chapter :ref:`examples-of-openmm-integration`
+implemented for a very simple MD code.  Chapter :numref:`examples-of-openmm-integration`
 describes the strategies used in integrating OpenMM into real MD codes.
 
 .. _simple-molecular-dynamics-system:
@@ -688,9 +688,9 @@ the opaque data structure (handle) in the sections below.
 Units
 -----
 
-The simple molecular dynamics system described in Section :ref:`simple-molecular-dynamics-system`
+The simple molecular dynamics system described in Section :numref:`simple-molecular-dynamics-system`
 employs the commonly used units of angstroms and kcals.  These differ from the units and
-parameters used within OpenMM (see Section :ref:`units`\ ): nanometers and kilojoules.
+parameters used within OpenMM (see Section :numref:`units`\ ): nanometers and kilojoules.
 These differences may be small but they are critical and must be carefully
 accounted for in the interface routines.
 
@@ -708,7 +708,7 @@ distance between the two atoms d\ :sub:`min` (also called r\ :sub:`min`\ ),
 which is twice the van der Waals radius r\ :sub:`vdw`\ .  A third way to
 describe the potential is through sigma :math:`\sigma`, which identifies the distance at
 which the energy function crosses zero as the atoms move closer together than
-d\ :sub:`min`\ .  (See Section :ref:`lennard-jones-interaction` for more details about the
+d\ :sub:`min`\ .  (See Section :numref:`lennard-jones-interaction` for more details about the
 relationship between these).
 
 :math:`\sigma` turns out to be about 0.89*d\ :sub:`min`\ , which is close enough to
@@ -737,7 +737,7 @@ der Waals energy well depth parameter, for the dissimilar pair of atoms *i*
 and *j*\ .
 
 OpenMM only implements Lorentz-Berthelot directly, but others can be implemented
-using the CustomNonbondedForce class.  (See Section :ref:`customnonbondedforce` for details.)
+using the CustomNonbondedForce class.  (See Section :numref:`customnonbondedforce` for details.)
 
 Opaque handle MyOpenMMData
 --------------------------

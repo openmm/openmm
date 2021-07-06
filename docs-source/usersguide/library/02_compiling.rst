@@ -84,11 +84,11 @@ CMake.
 
 * For compiling the CUDA Platform, you need:
 
-   * CUDA (See Chapter :ref:`installing-openmm` for installation instructions.)
+   * CUDA (See Chapter :numref:`installing-openmm` for installation instructions.)
 
 * For compiling the OpenCL Platform, you need:
 
-   * OpenCL (See Chapter :ref:`installing-openmm` for installation instructions.)
+   * OpenCL (See Chapter :numref:`installing-openmm` for installation instructions.)
 
 * For compiling C and Fortran API wrappers, you need:
 
@@ -175,7 +175,7 @@ There are several variables that can be adjusted in the CMake interface:
 * If you intend to use CUDA (NVIDIA) or OpenCL acceleration, set the variable
   OPENMM_BUILD_CUDA_LIB or OPENMM_BUILD_OPENCL_LIB, respectively, to ON.  Before
   doing so, be certain that you have installed and tested the drivers for the
-  platform you have selected (see Chapter :ref:`installing-openmm` for information on
+  platform you have selected (see Chapter :numref:`installing-openmm` for information on
   installing GPU software).
 * There are lots of other options starting with OPENMM_BUILD that control
   whether to build particular features of OpenMM, such as plugins, API wrappers,

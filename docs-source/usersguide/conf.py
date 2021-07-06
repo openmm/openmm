@@ -33,12 +33,19 @@ extensions = [
     "autonumber",
     "samepage",
     "caption",
-    "numsec",
 ]
 bibtex_bibfiles = ["references.bib"]
 
 # Autonumber by part and chapter
 autonumber_by_depth = 2
+
+# :numref: role should just use the number
+numfig_format = {
+    "figure": "%s",
+    "table": "%s",
+    "code-block": "%s",
+    "section": "%s",
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

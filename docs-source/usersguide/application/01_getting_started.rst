@@ -19,7 +19,7 @@ Nearly all molecular simulation applications ask you to write some sort of
 script happens to be written in Python.  But it is no harder to write than those
 for most other applications, and this guide will teach you everything you need
 to know.  There is even a graphical interface that can write the script for you
-based on a simple set of options (see Section :ref:`the-script-builder-application`),
+based on a simple set of options (see Section :numref:`the-script-builder-application`),
 so you never need to type a single line of code!
 
 On the other hand, if you don’t mind doing a little programming, this approach
@@ -47,7 +47,7 @@ packages you want.
 
 (A third option is to compile OpenMM from source.  This provides more flexibility,
 but it is much more work, and there is rarely a need for anyone but advanced users
-to compile from source.  Detailed instruction are in Chapter :ref:`compiling-openmm-from-source-code`.)
+to compile from source.  Detailed instruction are in Chapter :numref:`compiling-openmm-from-source-code`.)
 
 \1. Begin by installing the most recent 64 bit, Python 3.x version of either
 Anaconda or Miniconda.

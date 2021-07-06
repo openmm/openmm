@@ -269,7 +269,7 @@ particle (per-DOF).  In addition, you can define as many variables as you want
 for your own use.
 
 The actual computations are defined by mathematical expressions as described in
-section :ref:`writing-custom-expressions`\ .  Several types of computations are supported:
+section :numref:`writing-custom-expressions`\ .  Several types of computations are supported:
 
 * *Global*\ : the expression is evaluated once, and the result is stored into
   a global variable.

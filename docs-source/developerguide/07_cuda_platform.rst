@@ -41,7 +41,7 @@ chapter of the User's Manual for details.
 Accumulating Forces
 *******************
 
-The OpenCL platform, as described in Section :ref:`computing-forces`\ , uses two types of buffers for
+The OpenCL platform, as described in Section :numref:`computing-forces`\ , uses two types of buffers for
 accumulating forces: a set of floating point buffers, and a single fixed point
 buffer.  In contrast, the CUDA platform uses *only* the fixed point buffer
 (represented by the CUDA type :code:`long` :code:`long`\ ).  This means

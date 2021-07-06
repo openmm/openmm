@@ -9,7 +9,7 @@ In the previous chapter, we looked at some basic scripts for running simulations
 and saw lots of ways to customize them.  If that is all you want to do—run
 straightforward molecular simulations—you already know everything you need to
 know.  Just use the example scripts and customize them in the ways described in
-Section :ref:`simulation-parameters`.
+Section :numref:`simulation-parameters`.
 
 OpenMM can do far more than that.  Your script has the full OpenMM API at its
 disposal, along with all the power of the Python language and libraries.  In

@@ -7,7 +7,7 @@ In addition to the standard forces described in the previous chapter, OpenMM
 provides a number of “custom” force classes.   These classes provide detailed
 control over the mathematical form of the force by allowing the user to specify
 one or more arbitrary algebraic expressions.  The details of how to write these
-custom expressions are described in section :ref:`writing-custom-expressions`\ .
+custom expressions are described in section :numref:`writing-custom-expressions`\ .
 
 CustomBondForce
 ***************
@@ -490,7 +490,7 @@ then also be computed at the same time.  You can query it by calling :meth:`getS
 on a :class:`Context`, just as you would query forces or energies.
 
 An important application of this feature is to use it in combination with a
-:class:`CustomIntegrator` (described in section :ref:`custom-integrator`\ ).  The
+:class:`CustomIntegrator` (described in section :numref:`custom-integrator`\ ).  The
 derivative can appear directly in expressions that define the integration
 algorithm.  This can be used to implement algorithms such as lambda-dynamics,
 where a global parameter is integrated as a dynamic variable.

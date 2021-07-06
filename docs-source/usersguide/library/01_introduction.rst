@@ -29,11 +29,11 @@ How to get started
 
 We have provided a number of files that make it easy to get started with OpenMM.
 Pre-compiled binaries are provided for quickly getting OpenMM onto your computer
-(See Chapter :ref:`installing-openmm` for set-up instructions).  We recommend that you then
-compile and run some of the tutorial examples, described in Chapter :ref:`openmm-tutorials`.
+(See Chapter :numref:`installing-openmm` for set-up instructions).  We recommend that you then
+compile and run some of the tutorial examples, described in Chapter :numref:`openmm-tutorials`.
 These highlight key functions within OpenMM and teach you the basic programming concepts for using
 OpenMM.  Once you are ready to begin integrating OpenMM into a specific software package, read
-through Chapter :ref:`examples-of-openmm-integration` to see how other software developers have
+through Chapter :numref:`examples-of-openmm-integration` to see how other software developers have
 done this.
 
 License

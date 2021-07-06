@@ -18,21 +18,21 @@ people who want to contribute to OpenMM itself.
 
 It is organized as follows:
 
-* Chapter :ref:`the-core-library` describes the architecture of the core OpenMM library.  It
+* Chapter :numref:`the-core-library` describes the architecture of the core OpenMM library.  It
   discusses how the high level and low level APIs relate to each other, and the
   flow of execution between them.
-* Chapter :ref:`writing-plugins` describes in detail how to write a plugin.  It focuses on the two
+* Chapter :numref:`writing-plugins` describes in detail how to write a plugin.  It focuses on the two
   most common types of plugins: those which define new Forces, and those which
   implement new Platforms.
-* Chapter :ref:`the-reference-platform` discusses the architecture of the reference Platform, providing
+* Chapter :numref:`the-reference-platform` discusses the architecture of the reference Platform, providing
   information relevant to writing reference implementations of new features.
-* Chapter :ref:`the-cpu-platform` discusses the architecture of the CPU Platform, providing
+* Chapter :numref:`the-cpu-platform` discusses the architecture of the CPU Platform, providing
   information relevant to writing CPU implementations of new features.
-* Chapter :ref:`the-opencl-platform` discusses the architecture of the OpenCL Platform, providing
+* Chapter :numref:`the-opencl-platform` discusses the architecture of the OpenCL Platform, providing
   information relevant to writing OpenCL implementations of new features.
-* Chapter :ref:`the-cuda-platform` discusses the architecture of the CUDA Platform, providing
+* Chapter :numref:`the-cuda-platform` discusses the architecture of the CUDA Platform, providing
   information relevant to writing CUDA implementations of new features.
-* Chapter :ref:`common-compute` describes the Common Compute framework, which lets you
+* Chapter :numref:`common-compute` describes the Common Compute framework, which lets you
   write a single implementation of a feature that can be used for both OpenCL and CUDA.
 
 

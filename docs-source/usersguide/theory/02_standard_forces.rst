@@ -458,7 +458,7 @@ to be 0.14 nm.  The default value for the energy scale :math:`E_{SA}` is 2.25936
 GayBerneForce
 *************
 
-This is similar to the Lennard-Jones interaction described in section :ref:`lennard-jones-interaction`,
+This is similar to the Lennard-Jones interaction described in section :numref:`lennard-jones-interaction`,
 but instead of being based on the distance between two point particles, it is based
 on the distance of closest approach between two ellipsoids.\ :cite:`Everaers2003`
 Let :math:`\mathbf{A}_1` and :math:`\mathbf{A}_2` be rotation matrices that transform
@@ -702,7 +702,7 @@ Before computing this, the reference positions are first translated and rotated
 so as to minimize the RMSD.  The computed value is therefore :math:`argmin(\text{RMSD})`,
 where the :math:`argmin` is taken over all possible translations and rotations.
 
-This force is normally used with a CustomCVForce (see Section :ref:`customcvforce`).
+This force is normally used with a CustomCVForce (see Section :numref:`customcvforce`).
 One rarely wants a force whose energy exactly equals the RMSD, but there are many
 situations where it is useful to have a restraining or biasing force that depends
 on the RMSD in some way.

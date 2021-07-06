@@ -44,7 +44,7 @@ C API
 *****
 
 Before you start writing your own C program that calls OpenMM, be sure you can
-build and run the two C examples that are supplied with OpenMM (see Chapter :ref:`openmm-tutorials`\ ).
+build and run the two C examples that are supplied with OpenMM (see Chapter :numref:`openmm-tutorials`\ ).
 These can be built from the supplied :code:`Makefile` on Linux and Mac, or
 supplied :code:`NMakefile` and Visual Studio solution files on Windows.
 
@@ -78,7 +78,7 @@ That header contains declarations for all the OpenMM C interface functions and
 related types. Note that if you follow our suggested structure, you will not
 need to include this file in your :code:`main()` compilation unit but can
 instead use it only in a local file that you write to provide a simple interface
-to your existing code (see Chapter :ref:`openmm-tutorials`).
+to your existing code (see Chapter :numref:`openmm-tutorials`).
 
 Mapping from the C++ API to the C API
 =====================================
@@ -274,7 +274,7 @@ Fortran 95 API
 
 Before you start writing your own Fortran program that calls OpenMM, be sure you
 can build and run the two Fortran examples that are supplied with OpenMM (see
-Chapter :ref:`openmm-tutorials`). These can be built from the supplied :code:`Makefile` on Linux
+Chapter :numref:`openmm-tutorials`). These can be built from the supplied :code:`Makefile` on Linux
 and Mac, or supplied :code:`NMakefile` and Visual Studio solution files on
 Windows.
 
@@ -326,7 +326,7 @@ OpenMM Fortran interface subroutines, related types, and parameters (constants).
 Note that if you follow our suggested structure, you will not need to
 :code:`use` the :code:`OpenMM` module in your :code:`main()`
 compilation unit but can instead use it only in a local file that you write to
-provide a simple interface to your existing code (see Chapter :ref:`openmm-tutorials`).
+provide a simple interface to your existing code (see Chapter :numref:`openmm-tutorials`).
 
 Mapping from the C++ API to the Fortran API
 ===========================================
@@ -605,7 +605,7 @@ notable differences:
     [particle1, particle2, length, k] = f.getBondParameters(i)
 
 #. Unlike C++, the Python API accepts and returns quantities with units attached
-   to most values (see Section :ref:`units-and-dimensional-analysis` below for
+   to most values (see Section :numref:`units-and-dimensional-analysis` below for
    details).  In short, this means that while values in C++ have *implicit*
    units, the Python API returns objects that have values and *explicit* units.
 
@@ -617,7 +617,7 @@ When using the Python API, be sure to include the GPU support
 libraries in your library path, just as you would for a C++ application.  This
 is set with the :code:`LD_LIBRARY_PATH` environment variable on Linux,
 :code:`DYLD_LIBRARY_PATH` on Mac, or :code:`PATH` on Windows.  See
-Chapter :ref:`installing-openmm` for details.
+Chapter :numref:`installing-openmm` for details.
 
 The Python API is contained in the openmm package, while the units code is
 contained in the openmm.units package.  (The application layer, described in the

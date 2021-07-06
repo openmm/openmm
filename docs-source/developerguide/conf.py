@@ -27,7 +27,15 @@ sys.path.append(os.path.abspath("../sphinx"))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["autonumber", "numsec"]
+extensions = ["autonumber"]
+
+# :numref: role should just use the number
+numfig_format = {
+    "figure": "%s",
+    "table": "%s",
+    "code-block": "%s",
+    "section": "%s",
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

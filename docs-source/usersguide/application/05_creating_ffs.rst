@@ -774,8 +774,8 @@ attribute name must match the name of the parameter.  For instance, if there is
 a per-atom parameter with the name “radius”, then every :code:`<Atom>` tag
 must include an attribute called :code:`radius`\ .
 
-CustomNonbondedForce also allows you to define tabulated functions.  See section
-:ref:`tabulated-functions` for details.
+CustomNonbondedForce also allows you to define tabulated functions.  See Section
+:numref:`tabulated-functions` for details.
 
 <CustomGBForce>
 ===============
@@ -834,8 +834,8 @@ attribute name must match the name of the parameter.  For instance, if there is
 a per-atom parameter with the name “radius”, then every :code:`<Atom>` tag
 must include an attribute called :code:`radius`\ .
 
-CustomGBForce also allows you to define tabulated functions.  See section
-:ref:`tabulated-functions` for details.
+CustomGBForce also allows you to define tabulated functions.  See Section
+:numref:`tabulated-functions` for details.
 
 <CustomHbondForce>
 =========================
@@ -890,8 +890,8 @@ be specified for every tag, and the attribute name must match the name of the
 parameter.  For instance, if there is a per-donor parameter with the name “k”,
 then every :code:`<Donor>` tag must include an attribute called :code:`k`\ .
 
-CustomHbondForce also allows you to define tabulated functions.  See section
-:ref:`tabulated-functions` for details.
+CustomHbondForce also allows you to define tabulated functions.  See Section
+:numref:`tabulated-functions` for details.
 
 <CustomManyParticleForce>
 =========================
@@ -945,8 +945,8 @@ attribute name must match the name of the parameter.  For instance, if there is
 a per-atom parameter with the name “radius”, then every :code:`<Atom>` tag
 must include an attribute called :code:`radius`\ .
 
-CustomManyParticleForce also allows you to define tabulated functions.  See section
-:ref:`tabulated-functions` for details.
+CustomManyParticleForce also allows you to define tabulated functions.  See Section
+:numref:`tabulated-functions` for details.
 
 Writing Custom Expressions
 ==========================
