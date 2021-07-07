@@ -42,6 +42,8 @@ Users Manual and work through some of the example programs.  Pay especially
 close attention to the “Introduction to the OpenMM Library” chapter, since it
 introduces concepts that are important in understanding this guide.
 
+For detailed build instructions, see the `User Guide <http://docs.openmm.org/latest/userguide/library.html#compiling-openmm-from-source-code>`_.
+
 
 .. _the-core-library:
 

@@ -416,15 +416,13 @@ Get the OpenMM source code
 You will also need the OpenMM source code before building OpenMM from source.
 To download and unpack OpenMM source code:
 
-#. Browse to https://simtk.org/home/openmm.
-#. Click the "Downloads" link in the navigation bar on the left side.
-#. Download OpenMM<Version>-Source.zip, choosing the latest version.
-#. Unpack the zip file.  Note the location where you unpacked the OpenMM source
-   code.
+#. Browse to https://github.com/openmm/openmm/releases.
+#. Download the source code for the latest version under the Assets heading. Choose the zip file on Windows or if you're unsure.
+#. Unpack the downloaded file.  Note the location where you unpacked the OpenMM source code.
 
 Alternatively, if you want the most recent development version of the code rather
 than the version corresponding to a particular release, you can get it from
-https://github.com/pandegroup/openmm.  Be aware that the development code is constantly
+https://github.com/openmm/openmm/.  Be aware that the development code is constantly
 changing, may contain bugs, and should never be used for production work.  If
 you want a stable, well tested version of OpenMM, you should download the source
 code for the latest release as described above.
@@ -465,7 +463,7 @@ CMake.
 
    * Doxygen (http://www.doxygen.org)
 
-
+Instructions for installing all of these dependencies with the Conda package manager are included in the CONTRIBUTING.md file in the source distribution.
 
 Step 1: Configure with CMake
 ****************************
@@ -499,7 +497,7 @@ On Mac and Linux machines, type the following two lines:
 ::
 
     cd build_openmm
-    ccmake -i <path to OpenMM src directory>
+    ccmake <path to OpenMM src directory>
 
 That is not a typo.  :code:`ccmake` has two c’s.  CCMake is the visual CMake
 configuration tool.         Press “\ :code:`c`\ ” within the CCMake interface to
@@ -543,7 +541,7 @@ There are several variables that can be adjusted in the CMake interface:
 Configure (press “c”) again.  Adjust any variables that cause an
 error.
 
-Continue to configure (press “c”) until no starred/red CMake
+Continue to adjust and configure (press “c”) until no starred/red CMake
 variables are displayed.  Congratulations, you have completed the configuration
 step.
 
@@ -703,8 +701,7 @@ Generating the user guide and developer guide requires the following dependencie
 
 * sphinxcontrib-bibtex (https://pypi.python.org/pypi/sphinxcontrib-bibtex)
 
-These dependencies may not be available in your system package manager, but should
-be installable through Python's ``pip`` package manager. ::
+These dependencies may not be available in your system package manager, but can be installed through Python's ``pip`` package manager. ::
 
    pip install sphinx sphinxcontrib-bibtex
 
@@ -725,7 +722,7 @@ Python and C++ API Documentation
 
 The following dependencies are required to build the Python and C++ API documentation.
 
-* Sphinx (http://sphinx-doc.org/)
+* Sphinx version (http://sphinx-doc.org/)
 
 * sphinxcontrib-lunrsearch (https://pypi.python.org/pypi/sphinxcontrib-lunrsearch)
 
