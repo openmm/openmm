@@ -1,6 +1,6 @@
-######################
-OpenMM Developer Guide
-######################
+########################
+OpenMM Developer's Guide
+########################
 
 .. only:: latex
 
@@ -10,7 +10,14 @@ OpenMM Developer Guide
    :maxdepth: 3
    :numbered:
    
-   developer
+   01_introduction.rst
+   02_core_library.rst
+   03_writing_plugins.rst
+   04_reference_platform.rst
+   05_cpu_platform.rst
+   06_opencl_platform.rst
+   07_cuda_platform.rst
+   08_common_compute.rst
 
 .. only:: html
 

@@ -1,0 +1,214 @@
+/* Reasonable defaults */
+html {
+    overflow-x: hidden;
+    overflow-y: scroll;
+    text-rendering: optimizeLegibility;
+    text-size-adjust: 100%;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Fix responsiveness */
+body {
+    overflow-x: hidden;
+}
+div.body {
+    min-width: unset;
+}
+
+@media screen and (max-width: 870px) {
+    div.sphinxsidebar p.logo {
+        display: unset;
+    }
+}
+
+@media screen and (max-width: 875px) {
+    ul {
+        margin-left: 30px;
+    }
+    div.sphinxsidebar {
+        width: 100vw;
+        padding: 0;
+    }
+}
+
+@media screen and (min-width: 871px) and (max-width: 940px) {
+    div.document {
+        width: 100vw
+    }
+}
+
+/* When search bar is in nav footer, don't let it stretch too far */
+.searchformwrapper {
+    max-width: 250px;
+}
+
+/* Fix next/prev links in footer */
+/* Don't just float the whole thing right */
+nav#rellinks {
+    float: unset;
+}
+nav#rellinks ul {
+    padding-left: 0;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+nav#rellinks li {
+    line-height: 1.3;
+    padding: 5px 0px;
+}
+nav#rellinks li:first-child {
+    display: block;
+    text-indent: -17px;
+    padding-left: 17px;
+}
+nav#rellinks li + li {
+    margin-left: auto;
+    text-align: right;
+    display: flex;
+}
+nav#rellinks li + li a {
+    display: inline-block;
+    margin-right: 5px;
+}
+nav#rellinks li + li:before {
+    content: "";
+}
+
+/* Put the title and logo side by side*/
+.sphinxsidebarwrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    flex-direction: row-reverse;
+    justify-content: space-between;
+    align-content: flex-start;
+}
+
+.sphinxsidebar .logo-name {
+    flex-basis: 140px;
+    font-size: 20px;
+}
+
+.sphinxsidebar p.logo {
+    flex-basis: 60px;
+    text-align: right;
+    display: block;
+    margin-top: 0 !important;
+}
+
+/* Get control over the image */
+.sphinxsidebar p.logo a {
+    height: auto;
+    display: block;
+}
+
+/* Make sure the remaining items use the width of
+ * the whole navbar and don't get squished together
+ * by flex.
+ */
+.sphinxsidebar .logo-name ~ * {
+    flex-basis: 100%
+}
+/* Emulate a placeholder rather than a heading for search */
+.sphinxsidebar #searchbox form.search input[type="text"] {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' version='1.1' height='50px' width='120px'><text x='10' y='17' fill='gray' font-size='15'>Search...</text></svg>");
+    background-repeat: no-repeat;
+}
+.sphinxsidebar #searchbox form.search input[type="text"]:focus {
+    background-image: none;
+}
+
+/* Hide unwanted elements*/
+.sphinxsidebarwrapper #searchbox h3, /* Search heading */
+.sphinxsidebarwrapper > h3, /* Navigation heading */
+.sphinxsidebarwrapper p:empty, /* Empty elements taking up space */
+.sphinxsidebar .logo-name + a[href], /* Inexplicable but ugly link */
+.sphinxsidebarwrapper hr /* Horizontal rules */
+{
+    display: none;
+}
+
+/* Hide logo on tiny screens */
+@media screen and (max-width: 280px) {
+    div.sphinxsidebar p.logo {
+        display: none;
+    }
+
+    .sphinxsidebar .logo-name {
+        flex-basis: 100%;
+    }
+}
+
+/* Style TOC in sidebar more clearly */
+.sphinxsidebarwrapper li.toctree-l1 {
+    padding: 0.15em 0;
+    line-height: 1.4;
+}
+
+.sphinxsidebarwrapper a.current,
+.sphinxsidebarwrapper a.current:hover {
+    text-decoration: none;
+    border-bottom: none;
+    cursor: text;
+}
+/* Tweak spacing */
+div.sphinxsidebarwrapper #searchbox {
+    margin-bottom: 0;
+}
+div.sphinxsidebarwrapper .nav-toctree > ul {
+    margin: 5px 0;
+}
+/* Enlarge space between toctrees and external links */
+div.sphinxsidebarwrapper .nav-toctree {
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+div.sphinxsidebarwrapper .extra-nav-links {
+    margin-bottom: 0;
+}
+
+/* Custom body styling */
+/* Center captions of figures, examples, etc. */
+.body .caption {
+    text-align: center;
+}
+
+.body .toctree-l1 {
+    font-weight: bold;
+}
+
+.body .toctree-l2 {
+    font-weight: normal;
+}
+
+.body .toctree-l3 {
+    font-size: 0.8em;
+}
+
+/* Fix navbar to top */
+@media screen and (min-width: 875px) {
+    .sphinxsidebar {
+        position: fixed;
+        height: 100vh;
+        overflow-y: hidden;
+        top: 0;
+        float: unset !important;
+        margin-left: 0 !important;
+    }
+
+    .sphinxsidebarwrapper {
+        height: calc(100% - 60px);
+        overflow-y: auto;
+        padding-top: 30px !important;
+        padding-bottom: 30px !important;
+        /* Hide scrollbar */
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    /* Hide scrollbar */
+    .sphinxsidebarwrapper::-webkit-scrollbar {
+        display: none
+    }
+}

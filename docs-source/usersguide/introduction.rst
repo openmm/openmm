@@ -1,5 +1,3 @@
-.. include:: header.rst
-
 Introduction
 ############
 
@@ -13,13 +11,13 @@ OpenMM consists of two parts:
 
 This guide is divided into three sections:
 
-* Part I (Chapters :ref:`the-openmm-application-layer-introduction`\ -\ :ref:`creating-force-fields`\ )
+* :ref:`Part I <the-openmm-application-layer>`
   describes the application layer.  It is relevant to all users, but especially relevant to people
   who want to use OpenMM as a stand-alone application for running simulations.
-* Part II (Chapters :ref:`the-openmm-library-introduction`\ -\ :ref:`drude-plugin`\ )
+* :ref:`Part II <the-openmm-library>`
   describes how to use the OpenMM libraries within your own applications.  It is primarily
   relevant to programmers who want to write simulation applications.
-* Part III (Chapters :ref:`the-theory-behind-openmm-introduction`\ -\ :ref:`other-features`\ )
+* :ref:`Part III <the-theory-behind-openmm>`
   describes the mathematical theory behind the features found in OpenMM.  It is relevant to all users.
 
 
