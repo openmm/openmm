@@ -1,3 +1,13 @@
+/* Reasonable defaults */
+html {
+    overflow-x: hidden;
+    overflow-y: scroll;
+    text-rendering: optimizeLegibility;
+    text-size-adjust: 100%;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+}
+
 /* Fix responsiveness */
 body {
     overflow-x: hidden;
@@ -15,6 +25,10 @@ div.body {
 @media screen and (max-width: 875px) {
     ul {
         margin-left: 30px;
+    }
+    div.sphinxsidebar {
+        width: 100vw;
+        padding: 0;
     }
 }
 
@@ -68,7 +82,6 @@ nav#rellinks li + li:before {
     flex-wrap: wrap;
     align-items: flex-start;
     flex-direction: row-reverse;
-    padding-top: 0 !important;
     justify-content: space-between;
 }
 
@@ -151,6 +164,9 @@ div.sphinxsidebarwrapper .nav-toctree {
     margin-top: 15px;
     margin-bottom: 15px;
 }
+div.sphinxsidebarwrapper .extra-nav-links {
+    margin-bottom: 0;
+}
 
 /* Custom body styling */
 /* Center captions of figures, examples, etc. */
@@ -168,4 +184,30 @@ div.sphinxsidebarwrapper .nav-toctree {
 
 .body .toctree-l3 {
     font-size: 0.8em;
+}
+
+/* Fix navbar to top */
+@media screen and (min-width: 875px) {
+    .sphinxsidebar {
+        position: fixed;
+        height: 100vh;
+        overflow-y: hidden;
+        top: 0;
+        float: unset !important;
+        margin-left: 0 !important;
+    }
+
+    .sphinxsidebarwrapper {
+        height: calc(100% - 60px);
+        overflow-y: auto;
+        padding-top: 30px !important;
+        padding-bottom: 30px !important;
+        /* Hide scrollbar */
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    /* Hide scrollbar */
+    .sphinxsidebarwrapper::-webkit-scrollbar {
+        display: none
+    }
 }
