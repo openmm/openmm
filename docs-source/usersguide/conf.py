@@ -128,17 +128,17 @@ html_theme_options = {
         },
         {
             "title": "Developer Guide",
-            "uri": "../developerguide/",
+            "uri": "../../developerguide/",
             "relative": True,
         },
         {
             "title": "Python API reference",
-            "uri": "../api-python/",
+            "uri": "../../api-python/",
             "relative": True,
         },
         {
             "title": "C++ API reference",
-            "uri": "../api-c++/",
+            "uri": "../../api-c++/",
             "relative": True,
         },
         {
