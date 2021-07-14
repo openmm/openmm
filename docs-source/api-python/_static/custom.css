@@ -83,6 +83,7 @@ nav#rellinks li + li:before {
     align-items: flex-start;
     flex-direction: row-reverse;
     justify-content: space-between;
+    align-content: flex-start;
 }
 
 .sphinxsidebar .logo-name {

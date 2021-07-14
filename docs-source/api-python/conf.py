@@ -52,17 +52,17 @@ html_theme_options = {
         },
         {
             "title": "User's Manual",
-            "uri": "../../userguide/",
+            "uri": "../userguide/",
             "relative": True,
         },
         {
             "title": "Developer Guide",
-            "uri": "../../developerguide/",
+            "uri": "../developerguide/",
             "relative": True,
         },
         {
             "title": "C++ API reference",
-            "uri": "../../api-c++/",
+            "uri": "../api-c++/",
             "relative": True,
         },
         {
