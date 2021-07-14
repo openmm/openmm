@@ -90,8 +90,10 @@ nav#rellinks li + li:before {
     display: block;
 }
 
-/* Make sure the remaining items use the whole navbar
-and don't get squished together by flex.*/
+/* Make sure the remaining items use the width of
+ * the whole navbar and don't get squished together
+ * by flex.
+ */
 .sphinxsidebar .logo-name ~ * {
     flex-basis: 100%
 }
@@ -137,16 +139,17 @@ and don't get squished together by flex.*/
     border-bottom: none;
     cursor: text;
 }
-/* No space between individual toctrees */
+/* Tweak spacing */
 div.sphinxsidebarwrapper #searchbox {
-    margin-bottom: 30px;
+    margin-bottom: 0;
 }
-div.sphinxsidebarwrapper > ul {
+div.sphinxsidebarwrapper .nav-toctree > ul {
     margin: 5px 0;
 }
 /* Enlarge space between toctrees and external links */
-div.sphinxsidebarwrapper > ul:last-child {
-    margin-top: 30px;
+div.sphinxsidebarwrapper .nav-toctree {
+    margin-top: 15px;
+    margin-bottom: 15px;
 }
 
 /* Custom body styling */
