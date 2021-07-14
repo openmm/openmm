@@ -120,13 +120,33 @@ html_theme_options = {
     "github_repo": "openmm",
     "logo_name": True,
     "logo": "logo.png",
-    "extra_nav_links": {
-        "OpenMM.org": "https://openmm.org",
-        "Developer Guide": "http://docs.openmm.org/latest/developerguide/",
-        "Python API reference": "http://docs.openmm.org/latest/api-python/",
-        "C++ API reference": "http://docs.openmm.org/latest/api-c++/",
-        "GitHub": "https://github.com/openmm",
-    },
+    "extra_nav_links": [
+        {
+            "title": "OpenMM.org",
+            "uri": "https://openmm.org",
+            "relative": False,
+        },
+        {
+            "title": "Developer Guide",
+            "uri": "../developerguide/",
+            "relative": True,
+        },
+        {
+            "title": "Python API reference",
+            "uri": "../api-python/",
+            "relative": True,
+        },
+        {
+            "title": "C++ API reference",
+            "uri": "../api-c++/",
+            "relative": True,
+        },
+        {
+            "title": "GitHub",
+            "uri": "https://github.com/openmm",
+            "relative": False,
+        },
+    ],
     "show_relbar_bottom": True,
 }
 # Custom sidebar templates, maps document names to template names.

@@ -44,13 +44,33 @@ html_theme_options = {
     "github_repo": "openmm",
     "logo_name": True,
     "logo": "logo.png",
-    "extra_nav_links": {
-        "OpenMM.org": "https://openmm.org",
-        "Developer's Guide": "http://docs.openmm.org/latest/developerguide/",
-        "User's Guide": "http://docs.openmm.org/latest/userguide/",
-        "C++ API reference": "http://docs.openmm.org/latest/api-c++/",
-        "GitHub": "https://github.com/openmm",
-    },
+    "extra_nav_links": [
+        {
+            "title": "OpenMM.org",
+            "uri": "https://openmm.org",
+            "relative": False,
+        },
+        {
+            "title": "User's Manual",
+            "uri": "../userguide/",
+            "relative": True,
+        },
+        {
+            "title": "Developer Guide",
+            "uri": "../developerguide/",
+            "relative": True,
+        },
+        {
+            "title": "C++ API reference",
+            "uri": "../api-c++/",
+            "relative": True,
+        },
+        {
+            "title": "GitHub",
+            "uri": "https://github.com/openmm",
+            "relative": False,
+        },
+    ],
     "show_relbar_bottom": True,
 }
 html_sidebars = {
