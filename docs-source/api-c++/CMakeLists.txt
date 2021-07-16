@@ -1,7 +1,6 @@
 set(STAGING_OUTPUT_FILES "") # Will contain all required package files
 file(GLOB STAGING_INPUT_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "*.rst"
-    "*.rst.jinja2"
     "*.py"
     "_static/logo.png"
     "_static/custom.css"
@@ -38,22 +37,33 @@ foreach(INIT_FILE ${STAGING_INPUT_FILES})
 endforeach(INIT_FILE ${STAGING_INPUT_FILES})
 
 add_custom_command(
-    OUTPUT  "${CMAKE_CURRENT_BINARY_DIR}/library.rst"
-    COMMAND "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/render.py"
+    OUTPUT  "${CMAKE_CURRENT_BINARY_DIR}/generated/"
+    COMMAND "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/breathe-apidoc.py"
+            "--generate=class"
+            "--members"
+            "--force"
+            "--brief-titles"
+            "--rename-output"
+            "--flat-output"
+            "--quiet"
+            "--output-dir=generated"
             "${WRAPPER_DOXYGEN_DIR}/xml/"
-    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/render.py"
-            "${CMAKE_CURRENT_BINARY_DIR}/breathe-apidoc.py"
-            "${CMAKE_CURRENT_BINARY_DIR}/library.rst.jinja2"
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/breathe-apidoc.py"
             "${WRAPPER_DOXYGEN_DIR}/xml/index.xml"
     )
+
+
 
 add_custom_command(
     OUTPUT "${CMAKE_BINARY_DIR}/api-c++/index.html"
     COMMAND "${PYTHON_EXECUTABLE}" -m sphinx . "${CMAKE_BINARY_DIR}/api-c++"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/conf.py"
-            "${CMAKE_CURRENT_BINARY_DIR}/library.rst"
+            "${CMAKE_CURRENT_BINARY_DIR}/generated/"
             "${CMAKE_CURRENT_BINARY_DIR}/index.rst"
+            "${CMAKE_CURRENT_BINARY_DIR}/forces.rst"
+            "${CMAKE_CURRENT_BINARY_DIR}/integrators.rst"
+            "${CMAKE_CURRENT_BINARY_DIR}/extras.rst"
             "${CMAKE_CURRENT_BINARY_DIR}/_static/logo.png"
             "${CMAKE_CURRENT_BINARY_DIR}/_static/custom.css"
             "${CMAKE_CURRENT_BINARY_DIR}/_templates/lunrsearch.html"

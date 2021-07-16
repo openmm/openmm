@@ -112,7 +112,7 @@ def create_package_file(package, package_type, package_id, args):
         return
     if args.brieftitles:
         _, _, brief = package.rpartition("::")
-        text = format_heading(1, brief)
+        text = format_heading(1, f"``{brief}``")
     else:
         text = format_heading(1, "%s %s" % (TYPEDICT[package_type], package))
     text += format_directive(package_type, package, args)
