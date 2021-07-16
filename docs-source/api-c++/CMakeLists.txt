@@ -4,6 +4,9 @@ file(GLOB STAGING_INPUT_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "*.rst.jinja2"
     "*.py"
     "_static/logo.png"
+    "_static/custom.css"
+    "_templates/lunrsearch.html"
+    "_templates/navigation.html"
 )
 
 set(WRAPPER_DOXYGEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/doxygen")
@@ -51,6 +54,9 @@ add_custom_command(
             "${CMAKE_CURRENT_BINARY_DIR}/library.rst"
             "${CMAKE_CURRENT_BINARY_DIR}/index.rst"
             "${CMAKE_CURRENT_BINARY_DIR}/_static/logo.png"
+            "${CMAKE_CURRENT_BINARY_DIR}/_static/custom.css"
+            "${CMAKE_CURRENT_BINARY_DIR}/_templates/lunrsearch.html"
+            "${CMAKE_CURRENT_BINARY_DIR}/_templates/navigation.html"
             "${WRAPPER_DOXYGEN_DIR}/xml/index.xml"
 )
 

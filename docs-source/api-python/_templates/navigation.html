@@ -1,0 +1,16 @@
+<div class="navigation-scrollbox">
+    <div class="nav-toctree">
+    {{ toctree(includehidden=theme_sidebar_includehidden, collapse=theme_sidebar_collapse) }}
+    </div>
+    {% if theme_extra_nav_links %}
+    <ul class="extra-nav-links">
+        {% for link in theme_extra_nav_links %}
+        <li class="toctree-l1">
+            <a href="{{ pathto(link.uri, 1) if link.relative else link.uri }}">
+                {{ link.title }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</div>
