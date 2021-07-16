@@ -2,11 +2,12 @@
 Core Objects
 ~~~~~~~~~~~~
 
-.. autodoxysummary::
-    :toctree: generated/
+.. list-table::
 
 {% for obj in core %}
-    ~{{obj}}
+    * - .. toctree::
+            generated/{{ obj }}
+      - {{ class_summaries[obj] }}
 {% endfor %}
 
 |
@@ -16,11 +17,12 @@ Core Objects
 Forces
 ~~~~~~
 
-.. autodoxysummary::
-    :toctree: generated/
+.. list-table::
 
-{% for force in forces %}
-    ~{{force}}
+{% for obj in forces %}
+    * - .. toctree::
+            generated/{{ obj }}
+      - {{ class_summaries[obj] }}
 {% endfor %}
 
 |
@@ -33,11 +35,12 @@ Integrators
 These integrators implement an algorithm for advancing the simulation
 through time.
 
-.. autodoxysummary::
-    :toctree: generated/
+.. list-table::
 
-{% for integrator in integrators %}
-    ~{{integrator}}
+{% for obj in integrators %}
+    * - .. toctree::
+            generated/{{ obj }}
+      - {{ class_summaries[obj] }}
 {% endfor %}
 
 |
@@ -47,9 +50,11 @@ through time.
 Extras
 ~~~~~~
 
-.. autodoxysummary::
-    :toctree: generated/
+.. list-table::
 
-{% for extra in extras %}
-    ~{{extra}}
+{% for obj in extras %}
+    * - .. toctree::
+            generated/{{ obj }}
+      - {{ class_summaries[obj] }}
 {% endfor %}
+

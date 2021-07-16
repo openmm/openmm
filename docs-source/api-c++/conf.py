@@ -1,16 +1,21 @@
 import os
 import sys
 
-extensions = [
-    "sphinx.ext.mathjax",
-    "sphinx.ext.autosummary",
-    "sphinx.ext.autodoc",
-    "sphinxcontrib.lunrsearch",
-    "sphinxcontrib.autodoc_doxygen",
-]
+extensions = ["sphinx.ext.mathjax", "sphinxcontrib.lunrsearch", "breathe"]
 
-autosummary_generate = True
+autosummary_generate = False
 autodoc_member_order = "bysource"
+
+breathe_projects = {
+    "api-c++": "doxygen/xml",
+}
+breathe_default_project = "api-c++"
+
+# Tell sphinx what the primary language being documented is.
+primary_domain = "cpp"
+
+# Tell sphinx what the pygments highlight language should be.
+highlight_language = "cpp"
 
 source_suffix = ".rst"
 master_doc = "index"

@@ -42,6 +42,7 @@ add_custom_command(
     COMMAND "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/render.py"
             "${WRAPPER_DOXYGEN_DIR}/xml/"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/render.py"
+            "${CMAKE_CURRENT_BINARY_DIR}/breathe-apidoc.py"
             "${CMAKE_CURRENT_BINARY_DIR}/library.rst.jinja2"
             "${WRAPPER_DOXYGEN_DIR}/xml/index.xml"
     )
