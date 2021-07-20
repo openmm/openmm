@@ -7,7 +7,7 @@ import os
 import sys
 import platform
 import numpy
-from distutils.core import setup
+from setuptools import setup
 from Cython.Build import cythonize
 
 MAJOR_VERSION_NUM='@OPENMM_MAJOR_VERSION@'
@@ -90,7 +90,7 @@ version = '%(version)s'
 full_version = '%(full_version)s'
 git_revision = '%(git_revision)s'
 release = %(isrelease)s
-openmm_library_path = r'%(path)s'
+%(path)s
 
 if not release:
     version = full_version
@@ -114,13 +114,51 @@ if not release:
     if not IS_RELEASED:
         full_version += '.dev-' + git_revision[:7]
 
+    if 'OPENMM_MAKE_WHEEL' in os.environ:
+        path = '''
+import os as _os
+_base_path = _os.path.abspath(_os.path.dirname(__file__))
+openmm_library_path = _os.path.join(_base_path, 'lib')
+openmm_include_path = _os.path.join(_base_path, 'include')
+        '''
+    else:
+        path = '''
+openmm_library_path = '{}'
+openmm_include_path = '{}'
+'''.format(os.getenv('OPENMM_LIB_PATH'),os.getenv('OPENMM_INCLUDE_PATH'))
+
     with open(filename, 'w') as a:
         a.write(cnt % {'version': version,
                        'full_version' : full_version,
                        'git_revision' : git_revision,
                        'isrelease': str(IS_RELEASED),
-                       'path': os.getenv('OPENMM_LIB_PATH')})
+                       'path': path})
 
+def lib_and_include_files(base_dir):
+    plat = platform.system()
+    if plat == 'Darwin':
+        lib_ext = '*.dylib'
+    elif plat == 'Linux':
+        lib_ext = "*.so"
+    else:
+        lib_ext = "*.dll"
+    lib_dir = os.path.join(base_dir, 'lib')
+    inc_dir = os.path.join(base_dir, 'include')
+    paths = []
+    for (path, directories, filenames) in os.walk(lib_dir):
+        unique_bases = set(f.split('.')[0] for f in filenames)
+        for file_base in unique_bases:
+            matching = [f for f in filenames if f.split('.')[0] == file_base]
+            if len(matching)==1:
+                keep = matching[0]
+            else:
+                # Find the most fully versioned file and keep that
+                matching = list(sorted(matching, key=lambda f:len(f.split('.'))))
+                keep = matching[-1]
+            paths.append(os.path.join(os.path.relpath(path, base_dir), keep))
+    for (path, directories, _) in os.walk(inc_dir):
+        paths.append(os.path.join(os.path.relpath(path, base_dir), '*.h'))
+    return paths
 
 def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                            minor_version_num=MINOR_VERSION_NUM,
@@ -154,6 +192,8 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     setupKeywords["package_data"]      = {"openmm" : [],
                                           "openmm.app" : ['data/*.xml', 'data/*.pdb', 'data/amber14/*.xml', 'data/charmm36/*.xml'],
                                           "openmm.app.internal" : []}
+    if 'OPENMM_MAKE_WHEEL' in os.environ:
+        setupKeywords['package_data']['openmm'].extend(lib_and_include_files(os.path.join(os.curdir,'openmm')))
     setupKeywords["platforms"]         = ["Linux", "Mac OS X", "Windows"]
     setupKeywords["description"]       = \
     "Python wrapper for OpenMM (a C++ MD package)"
@@ -188,6 +228,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     openmm_lib_path = os.getenv('OPENMM_LIB_PATH')
     if not openmm_lib_path:
         reportError("Set OPENMM_LIB_PATH to point to the lib directory for OpenMM")
+    
 
     extra_compile_args=['-std=c++11']
     extra_link_args=[]
@@ -199,18 +240,25 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     else:
         if platform.system() == 'Darwin':
             extra_compile_args += ['-stdlib=libc++']
-            extra_link_args += ['-stdlib=libc++', '-Wl', '-rpath', openmm_lib_path]
+            if 'OPENMM_MAKE_WHEEL' in os.environ:
+                rpath = os.path.join('@loader_path','lib')
+            else:
+                rpath = openmm_lib_path
+            extra_link_args += ['-stdlib=libc++', '-Wl', '-rpath', rpath]
             if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ and platform.processor() != 'arm':
                 extra_compile_args += ['-mmacosx-version-min=10.7']
                 extra_link_args += ['-mmacosx-version-min=10.7']
-            # Hard-code CC and CXX to clang, since gcc/g++ will *not* work with
-            # Anaconda, despite the fact that distutils will try to use them.
-            # System Python, homebrew, and MacPorts on Macs will always use
-            # clang, so this hack should always work and fix issues with users
-            # that have GCC installed from MacPorts or homebrew *and* Anaconda
-            if 'CC' not in os.environ:
-                os.environ['CC'] = 'clang'
-                os.environ['CXX'] = 'clang++'
+            if 'OPENMM_MAKE_WHEEL' not in os.environ:
+                # Hard-code CC and CXX to clang, since gcc/g++ will *not* work with
+                # Anaconda, despite the fact that distutils will try to use them.
+                # System Python, homebrew, and MacPorts on Macs will always use
+                # clang, so this hack should always work and fix issues with users
+                # that have GCC installed from MacPorts or homebrew *and* Anaconda
+                if 'CC' not in os.environ:
+                    os.environ['CC'] = 'clang'
+                    os.environ['CXX'] = 'clang++'
+        elif 'OPENMM_MAKE_WHEEL' in os.environ:
+            extra_link_args += ['-Wl,-rpath,'+os.path.join('$ORIGIN','lib')]
 
     library_dirs=[openmm_lib_path]
     include_dirs=openmm_include_path.split(';')
@@ -224,7 +272,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                     "libraries": libraries,
                     "extra_compile_args": extra_compile_args,
                     "extra_link_args": extra_link_args}
-    if platform.system() != "Windows":
+    if platform.system() != "Windows" and 'OPENMM_MAKE_WHEEL' not in os.environ:
         extensionArgs["runtime_library_dirs"] = library_dirs
     setupKeywords["ext_modules"] = [Extension(**extensionArgs)]
     setupKeywords["ext_modules"] += cythonize('openmm/app/internal/*.pyx')
@@ -248,10 +296,12 @@ def main():
         macVersion = [int(x) for x in platform.mac_ver()[0].split('.')]
         if tuple(macVersion) < (10, 5):
             reportError("OpenMM requires Mac OS X Leopard (10.5) or better.")
-    try:
-        uninstall()
-    except:
-        pass
+    import os
+    if 'OPENMM_MAKE_WHEEL' not in os.environ:
+        try:
+            uninstall()
+        except:
+            pass
     setupKeywords=buildKeywordDictionary()
     writeVersionPy()
     setup(**setupKeywords)
