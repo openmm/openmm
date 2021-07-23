@@ -163,13 +163,15 @@ You should see a series of test results like this:
       ... <many other tests> ...
 
 :code:`Passed` is good.  :code:`FAILED` is bad.  If any tests fail, you
-can run them individually to get more detailed error information.  Note that
-some tests are stochastic, and therefore are expected to fail a small fraction
-of the time.  These tests will say so in the error message:
-
-.. code-block:: none
+can run them individually to get more detailed error information.  For example,
+::
 
     ./TestReferenceLangevinIntegrator
+
+Note that some tests are stochastic, and therefore are expected to fail a small
+fraction of the time.  These tests will say so in the error message:
+
+.. code-block:: none
 
     exception: Assertion failure at TestReferenceLangevinIntegrator.cpp:129.  Expected 9.97741,
         found 10.7884 (This test is stochastic and may occasionally fail)
@@ -294,7 +296,9 @@ press "Generate" to create the Visual Studio project files for building OpenMM.
 Step 2: Build and Install
 =========================
 
-#. Open the file OpenMM.sln in your build directory in Visual Studio.
+#. Open the file :file:`OpenMM.sln` in your build directory in Visual Studio.
+   Note that this file will appear as just :file:`OpenMM` if you have configured
+   Explorer to hide file name extensions.
 #. Set the configuration type to "Release" (not "Debug") in the toolbar.
 #. From the Build menu, select "Build Solution".  This takes some time.
 #. In the Solution Explorer, right-click on "INSTALL" and select "Build".
@@ -322,9 +326,11 @@ You should see a series of test results like this:
       ... <many other tests> ...
 
 :code:`Passed` is good.  :code:`FAILED` is bad.  If any tests fail, you
-can run them individually to get more detailed error information.  Note that
-some tests are stochastic, and therefore are expected to fail a small fraction
-of the time.  These tests will say so in the error message:
+can run them individually to get more detailed error information.  Right-click
+on a test in the Solution Explorer and select "Debug > Start New Instance".
+
+Note that some tests are stochastic, and therefore are expected to fail a small
+fraction of the time.  These tests will say so in the error message:
 
 .. code-block:: none
 
@@ -360,7 +366,9 @@ To build the documentation, use the following build targets.
 
 * :code:`C++ApiDocs`: Build the C++ API documentation.
 
-* :code:`PythonApiDocs`: Build the Python API documentation.
+* :code:`PythonApiDocs`: Build the Python API documentation.  This target
+  requires that you have already built the :code:`install` target, such as with
+  :code:`make install`.
 
 On Linux or Mac, build a target using the :code:`make` command.  For example,
 ::
