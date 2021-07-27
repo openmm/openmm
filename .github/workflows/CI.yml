@@ -613,7 +613,7 @@ jobs:
           set +e
           for d in api-c++ api-python developerguide userguide; do
             echo "::group:: Check ${d}"
-            npx linkinator ${d}/ --recurse --timeout=5000 --skip "$SKIP_URL" --server-root ./build/api-docs/
+            npx linkinator ./${d}/ --recurse --timeout=5000 --skip "$SKIP_URL" --server-root ./build/api-docs
             ((exitcode+=$?))
             echo "::endgroup::"
           done
