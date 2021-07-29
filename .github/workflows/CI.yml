@@ -615,7 +615,7 @@ jobs:
           SKIP_REGEX=$(python -c "print(
             '^(https?://)?([a-zA-Z0-9\-_.]+\.)?', # Optionally match protocol and subdomains
             '(',                                  # Open sub-pattern for domain names
-              '$SKIP_URL'.replace('.', '\.'),     # Escape out periods
+              '$SKIP_DOMAIN'.replace('.', '\.'),     # Escape out periods
             ')',                                  # Close sub-pattern of domains
             '(/.*)?$',                            # only match if this is the end of the domain name
             sep='',                               # Concatenate the above strings exactly
