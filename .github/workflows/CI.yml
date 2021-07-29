@@ -617,7 +617,7 @@ jobs:
             '(',                                  # Open sub-pattern for domain names
               '$SKIP_URL'.replace('.', '\.'),     # Escape out periods
             ')',                                  # Close sub-pattern of domains
-            '(/.*)?$'                             # only match if this is the end of the domain name
+            '(/.*)?$',                            # only match if this is the end of the domain name
             sep='',                               # Concatenate the above strings exactly
             end=''                                # No newline at end of print()
           )")
