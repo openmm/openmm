@@ -607,7 +607,7 @@ jobs:
         shell: bash -l {0}
         env:
           # Pipe-seperated list of domains to skip
-          SKIP_DOMAIN: support.amd.com|ks.uiuc.edu
+          SKIP_DOMAIN: support.amd.com
         run: |
           set +e
           # Linkinator accepts regex for its --skip argument, so we
@@ -623,7 +623,7 @@ jobs:
           )")
           for d in api-c++ api-python developerguide userguide; do
             echo "::group:: Check ${d}"
-            npx linkinator ./${d}/ --recurse --timeout=5000 --skip "$SKIP_REGEX" --server-root ./build/api-docs --verbosity error
+            npx linkinator ./${d}/ --recurse --timeout=20000 --skip "$SKIP_REGEX" --server-root ./build/api-docs --verbosity error
             ((exitcode+=$?))
             echo "::endgroup::"
           done
