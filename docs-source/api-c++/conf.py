@@ -1,7 +1,7 @@
 import os
 import sys
 
-extensions = ["sphinx.ext.mathjax", "sphinxcontrib.lunrsearch", "breathe"]
+extensions = ["sphinx.ext.mathjax", "breathe"]
 
 autosummary_generate = False
 autodoc_member_order = "bysource"
@@ -71,7 +71,7 @@ html_theme_options = {
 html_sidebars = {
     "**": [
         "about.html",
-        "lunrsearch.html",
+        "searchbox.html",
         "navigation.html",
     ]
 }

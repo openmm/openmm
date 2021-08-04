@@ -15,5 +15,4 @@ dependencies:
 - pip:
   - sphinx==4.0.2
   - sphinxcontrib-bibtex
-  - sphinxcontrib-lunrsearch
-  - sphinxcontrib-autodoc_doxygen
+  
