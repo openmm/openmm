@@ -997,8 +997,7 @@ class GromacsTopFile(object):
                 for fields in moleculeType.exclusions:
                     atoms = [int(x)-1 for x in fields]
                     for atom in atoms[1:]:
-                        if atom > atoms[0]:
-                            exclusions.append((baseAtomIndex+atoms[0], baseAtomIndex+atom))
+                        exclusions.append((baseAtomIndex+atoms[0], baseAtomIndex+atom))
 
                 # Record virtual sites
 
