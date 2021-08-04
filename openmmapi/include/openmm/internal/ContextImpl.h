@@ -57,6 +57,8 @@ public:
      */
     ContextImpl(Context& owner, const System& system, Integrator& integrator, Platform* platform, const std::map<std::string, std::string>& properties,
             ContextImpl* originalContext=NULL);
+    ContextImpl(const ContextImpl&) = delete;
+    ContextImpl& operator=(const ContextImpl&) = delete;
     ~ContextImpl();
     /**
      * Get the Context for which this is the implementation.

@@ -543,7 +543,7 @@ void testPerDofVariables() {
     integrator.addComputePerDof("v", "v+dt*f/m");
     integrator.addComputePerDof("x", "x+dt*v");
     integrator.addComputePerDof("pos", "x");
-    integrator.addComputePerDof("computed", "step(v)*log(x^2)");
+    integrator.addComputePerDof("computed", "step(v)*log(x^4)");
     Context context(system, integrator, platform);
     context.setPositions(positions);
     vector<Vec3> initialValues(numParticles);
@@ -571,7 +571,7 @@ void testPerDofVariables() {
                 }
                 else {
                     double v = state.getPositions()[j][k];
-                    ASSERT_EQUAL_TOL(log(v*v), values[j][k], 1e-5);
+                    ASSERT_EQUAL_TOL(log(v*v*v*v), values[j][k], 1e-5);
                 }
             }
     }
