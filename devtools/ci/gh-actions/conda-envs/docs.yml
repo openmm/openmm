@@ -12,7 +12,5 @@ dependencies:
 - cython
 - swig
 - doxygen 1.8.14
-- pip:
-  - sphinx==4.0.2
-  - sphinxcontrib-bibtex
-  
+- sphinx==4.0.2
+- sphinxcontrib-bibtex
