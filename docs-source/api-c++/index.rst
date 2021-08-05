@@ -3,6 +3,8 @@ OpenMM C++ API
 
 The C++ API provides information about the classes and methods available in OpenMM for C++ developers. OpenMM uses an object-oriented API that makes all its functionality available through a small number of classes.
 
+Core classes
+------------
 
 .. toctree::
     :maxdepth: 2
@@ -13,24 +15,8 @@ A ``System`` specifies generic properties of the molecular system to be
 simulated: the number of particles it contains, the mass of each one, the size
 of the periodic box, and so on.  The interactions between the particles are
 specified through a set of :doc:`Force <forces>` objects that are added to the
-``System``.  Force field specific parameters, such as particle charges, are not
-direct properties of the ``System``. They are properties of the ``Force``
-objects contained within the ``System``.
-
-.. toctree::
-    :maxdepth: 2
-
-    forces
-
-The ``Force`` objects added to a ``System`` define the behavior of the
-particles. The ``Force`` class is actually slightly more general than its name
-suggests.  A ``Force`` can, indeed, apply forces to particles, but it can also
-directly modify particle positions and velocities in arbitrary ways.  Some
-thermostats and barostats, for example, can be implemented as ``Force``
-classes.  Examples of Force subclasses include :cpp:class:`HarmonicBondForce
-<OpenMM::HarmonicBondForce>`, :cpp:class:`NonbondedForce
-<OpenMM::NonbondedForce>`, and :cpp:class:`MonteCarloBarostat
-<OpenMM::MonteCarloBarostat>`.
+``System``.  Force field specific parameters, such as particle charges, are
+stored in these ``Force`` objects, not as direct properties of the ``System``.
 
 .. toctree::
     :maxdepth: 2
@@ -43,17 +29,6 @@ positions and velocities, as well as arbitrary parameters defined by the
 single ``System``, and thus have multiple simulations of that ``System`` in
 progress at the same time. ``Context`` does not provide methods
 for accessing state variables directly; they must be read via a ``State`` object.
-
-.. toctree::
-    :maxdepth: 2
-
-    integrators
-
-An ``Integrator`` implements an algorithm for advancing the simulation through
-time.  They provide a ``Context`` a means of stepping the simulation forward,
-and must be coupled to a ``Context`` to function. Examples of Integrator
-subclasses include :cpp:class:`LangevinIntegrator <OpenMM::LangevinIntegrator>`,
-:cpp:class:`VerletIntegrator <OpenMM::VerletIntegrator>`, and :cpp:class:`BrownianIntegrator <OpenMM::BrownianIntegrator>`.
 
 .. toctree::
     :maxdepth: 2
@@ -73,9 +48,44 @@ particular time.
 
 A ``Platform`` is a single implementation of OpenMM at a low level. This allows the same high level API documented here to be used on all sorts of compute hardware, from GPUs to supercomputers. A ``Platform`` implements some set of kernels, which define which operations it supports. Writing a new ``Platform`` allows OpenMM to be ported to new hardware or to be implemented in a new way without rewriting the entire application.
 
+Forces
+------
+
+The ``Force`` objects added to a ``System`` define the behavior of the
+particles. The ``Force`` class is actually slightly more general than its name
+suggests.  A ``Force`` can, indeed, apply forces to particles, but it can also
+directly modify particle positions and velocities in arbitrary ways.  Some
+thermostats and barostats, for example, can be implemented as ``Force``
+classes.  Examples of Force subclasses include :cpp:class:`HarmonicBondForce
+<OpenMM::HarmonicBondForce>`, :cpp:class:`NonbondedForce
+<OpenMM::NonbondedForce>`, and :cpp:class:`MonteCarloBarostat
+<OpenMM::MonteCarloBarostat>`.
+
+.. toctree::
+    :maxdepth: 2
+
+    forces
+
+Integrators
+-----------
+
+An ``Integrator`` implements an algorithm for advancing the simulation through
+time.  They provide a ``Context`` a means of stepping the simulation forward,
+and must be coupled to a ``Context`` to function. Examples of Integrator
+subclasses include :cpp:class:`LangevinIntegrator <OpenMM::LangevinIntegrator>`,
+:cpp:class:`VerletIntegrator <OpenMM::VerletIntegrator>`, and :cpp:class:`BrownianIntegrator <OpenMM::BrownianIntegrator>`.
+
+.. toctree::
+    :maxdepth: 2
+
+    integrators
+
+Extras
+------
+
+OpenMM's public API includes a few more classes that support the above.
+
 .. toctree::
     :maxdepth: 2
 
     extras
-
-OpenMM's public API includes a few more classes that support the above.

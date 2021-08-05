@@ -5,22 +5,27 @@ Forces
 The ``Force`` abstract class
 ============================
 
+The ``Force`` objects added to a ``System`` define the behavior of the
+particles. ``Force`` is an abstract class; subclasses implement specific behaviors. Classes that extend ``Force`` may implement actual physical forces, or any number of processes that either actually apply forces to particles or directly modify their positions or momenta.
+
 .. toctree::
     :maxdepth: 2
 
     generated/OpenMM::Force
-
-The ``Force`` objects added to a ``System`` define the behavior of the
-particles. ``Force`` is an abstract class; subclasses implement specific behaviors. Classes that extend ``Force`` may implement actual physical forces, or any number of processes that either actually apply forces to particles or directly modify their positions or momenta.
 
 .. _custom-forces:
 
 The ``Custom`` force classes
 ============================
 
+OpenMM provides a number of classes that make it easier to implement custom
+forces for common scenarios. These classes implement constructors that take an
+algebraic expression as a string. The class is instantiated (not extended) to
+provide a ``Force`` object that efficiently implements the provided
+expression.
+
 .. toctree::
     :maxdepth: 2
-    :glob:
 
     generated/OpenMM::CustomAngleForce
     generated/OpenMM::CustomBondForce
@@ -33,12 +38,6 @@ The ``Custom`` force classes
     generated/OpenMM::CustomManyParticleForce
     generated/OpenMM::CustomNonbondedForce
     generated/OpenMM::CustomTorsionForce
-
-OpenMM provides a number of classes that make it easier to implement custom
-forces for common scenarios. These classes implement constructors that take an
-algebraic expression as a string. The class is instantiated (not extended) to
-provide a ``Force`` object that efficiently implements the provided
-expression.
 
 Common bonded and non-bonded forces
 ===================================

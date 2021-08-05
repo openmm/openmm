@@ -5,18 +5,18 @@ Integrators
 The ``Integrator`` abstract class
 =================================
 
+An ``Integrator`` implements an algorithm for advancing the simulation through
+time.  ``Integrator`` is an abstract class; subclasses implement specific
+algorithms.
+
 .. toctree::
     :maxdepth: 2
 
     generated/OpenMM::Integrator
 
-An ``Integrator`` implements an algorithm for advancing the simulation
-through time.  It is an abstract class; subclasses implement specific
-algorithms.
 
-
-Meta ``Integrator`` classes
-===========================
+Customizing ``Integrator``
+==========================
 
 These classes facilitate customisation of the integrator. ``CustomIntegrator``
 allows a wide variety of integration algorithms to be implemented efficiently
@@ -33,6 +33,8 @@ integrator in the middle of a simulation.
 
 General purpose integrators
 ===========================
+
+These are integrators appropriate for traditional MD and BD simulations.
 
 .. toctree::
     :maxdepth: 2
