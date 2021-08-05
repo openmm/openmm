@@ -51,12 +51,12 @@ A ``Platform`` is a single implementation of OpenMM at a low level. This allows 
 Forces
 ------
 
-The ``Force`` objects added to a ``System`` define the behavior of the
-particles. The ``Force`` class is actually slightly more general than its name
-suggests.  A ``Force`` can, indeed, apply forces to particles, but it can also
-directly modify particle positions and velocities in arbitrary ways.  Some
-thermostats and barostats, for example, can be implemented as ``Force``
-classes.  Examples of Force subclasses include :cpp:class:`HarmonicBondForce
+``Force`` objects define the behavior of the particles in a ``System``. The
+``Force`` class is actually slightly more general than its name suggests.  A
+``Force`` can, indeed, apply forces to particles, but it can also directly
+modify particle positions and velocities in arbitrary ways.  Some thermostats
+and barostats, for example, can be implemented as ``Force`` classes.  Examples
+of Force subclasses include :cpp:class:`HarmonicBondForce
 <OpenMM::HarmonicBondForce>`, :cpp:class:`NonbondedForce
 <OpenMM::NonbondedForce>`, and :cpp:class:`MonteCarloBarostat
 <OpenMM::MonteCarloBarostat>`.

@@ -42,6 +42,8 @@ expression.
 Common bonded and non-bonded forces
 ===================================
 
+These classes implement forces that are widely used in biomolecular simulation.
+
 .. toctree::
     :maxdepth: 2
 

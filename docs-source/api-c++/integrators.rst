@@ -63,6 +63,8 @@ These integrators permit modelling polarization with a Drude particle.
 Ring Polymer Molecular Dynamics integrators
 ===========================================
 
+The RPMD integrator implements Ring Polymer MD.
+
 .. toctree::
     :maxdepth: 2
 
