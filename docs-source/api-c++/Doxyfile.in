@@ -633,7 +633,82 @@ EXCLUDE_PATTERNS       = */tests/* \
 
 EXCLUDE_SYMBOLS        = StandardMMForceField::*Info \
                          GBSAOBCForceField::AtomInfo \
-                         System::ConstraintInfo
+                         System::ConstraintInfo \
+                         AmoebaGeneralizedKirkwoodForce::ParticleInfo \
+                         AmoebaMultipoleForce::MultipoleInfo \
+                         AmoebaTorsionTorsionForce::TorsionTorsionGridInfo \
+                         AmoebaTorsionTorsionForce::TorsionTorsionInfo \
+                         AmoebaVdwForce::ParticleTypeInfo \
+                         AmoebaVdwForce::TypePairInfo \
+                         AmoebaVdwForce::VdwInfo \
+                         AmoebaWcaDispersionForce::WcaDispersionInfo \
+                         CMAPTorsionForce::CMAPTorsionInfo \
+                         CMAPTorsionForce::MapInfo \
+                         CustomAngleForce::AngleInfo \
+                         CustomAngleForce::AngleParameterInfo \
+                         CustomAngleForce::GlobalParameterInfo \
+                         CustomBondForce::BondInfo \
+                         CustomBondForce::BondParameterInfo \
+                         CustomBondForce::GlobalParameterInfo \
+                         CustomCVForce::FunctionInfo \
+                         CustomCVForce::GlobalParameterInfo \
+                         CustomCVForce::VariableInfo \
+                         CustomCentroidBondForce::BondInfo \
+                         CustomCentroidBondForce::BondParameterInfo \
+                         CustomCentroidBondForce::FunctionInfo \
+                         CustomCentroidBondForce::GlobalParameterInfo \
+                         CustomCentroidBondForce::GroupInfo \
+                         CustomCompoundBondForce::BondInfo \
+                         CustomCompoundBondForce::BondParameterInfo \
+                         CustomCompoundBondForce::FunctionInfo \
+                         CustomCompoundBondForce::GlobalParameterInfo \
+                         CustomExternalForce::GlobalParameterInfo \
+                         CustomExternalForce::ParticleInfo \
+                         CustomExternalForce::ParticleParameterInfo \
+                         CustomGBForce::ComputationInfo \
+                         CustomGBForce::ExclusionInfo \
+                         CustomGBForce::FunctionInfo \
+                         CustomGBForce::GlobalParameterInfo \
+                         CustomGBForce::ParticleInfo \
+                         CustomGBForce::PerParticleParameterInfo \
+                         CustomHbondForce::ExclusionInfo \
+                         CustomHbondForce::FunctionInfo \
+                         CustomHbondForce::GlobalParameterInfo \
+                         CustomHbondForce::GroupInfo \
+                         CustomHbondForce::PerPairParameterInfo \
+                         CustomIntegrator::ComputationInfo \
+                         CustomIntegrator::FunctionInfo \
+                         CustomManyParticleForce::ExclusionInfo \
+                         CustomManyParticleForce::FunctionInfo \
+                         CustomManyParticleForce::GlobalParameterInfo \
+                         CustomManyParticleForce::ParticleInfo \
+                         CustomManyParticleForce::ParticleParameterInfo \
+                         CustomNonbondedForce::ExclusionInfo \
+                         CustomNonbondedForce::FunctionInfo \
+                         CustomNonbondedForce::GlobalParameterInfo \
+                         CustomNonbondedForce::InteractionGroupInfo \
+                         CustomNonbondedForce::ParticleInfo \
+                         CustomNonbondedForce::PerParticleParameterInfo \
+                         CustomTorsionForce::GlobalParameterInfo \
+                         CustomTorsionForce::TorsionInfo \
+                         CustomTorsionForce::TorsionParameterInfo \
+                         DrudeForce::ParticleInfo \
+                         DrudeForce::ScreenedPairInfo \
+                         GBSAOBCForce::ParticleInfo \
+                         GayBerneForce::ExceptionInfo \
+                         GayBerneForce::ParticleInfo \
+                         HarmonicAngleForce::AngleInfo \
+                         HarmonicBondForce::BondInfo \
+                         HippoNonbondedForce::ExceptionInfo \
+                         HippoNonbondedForce::ParticleInfo \
+                         NonbondedForce::ExceptionInfo \
+                         NonbondedForce::ExceptionOffsetInfo \
+                         NonbondedForce::GlobalParameterInfo \
+                         NonbondedForce::ParticleInfo \
+                         NonbondedForce::ParticleOffsetInfo \
+                         PeriodicTorsionForce::PeriodicTorsionInfo \
+                         RBTorsionForce::RBTorsionInfo \
+
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or
 # directories that contain example code fragments that are included (see
