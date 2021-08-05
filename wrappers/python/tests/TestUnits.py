@@ -6,6 +6,7 @@ from __future__ import division
 from openmm import unit as u
 import copy
 import math
+import json
 import unittest
 try:
     import numpy as np
@@ -32,6 +33,26 @@ class QuantityTestCase(unittest.TestCase):
                 self.assertAlmostEqual(x, y, places=places)
         except TypeError:
             self.assertAlmostEqual(val1, val2, places=places)
+
+    def assertSerializationCycle(self, quantity, places=6):
+        serialized = json.dumps(quantity,
+                                cls=u.serialization.UnitJSONEncoder)
+        class_deser = json.loads(serialized,
+                                 cls=u.serialization.UnitJSONDecoder)
+        hook_deser = json.loads(serialized,
+                                object_hook=u.serialization.object_hook)
+        self.assertAlmostEqualQuantities(quantity, class_deser, places)
+        self.assertAlmostEqualQuantities(quantity, hook_deser, places)
+
+    def assertSerializationCycleBytes(self, quantity, places=6):
+        serialized = json.dumps(quantity,
+                                cls=u.serialization.UnitBytesJSONEncoder)
+        class_deser = json.loads(serialized,
+                                 cls=u.serialization.UnitJSONDecoder)
+        hook_deser = json.loads(serialized,
+                                object_hook=u.serialization.object_hook)
+        self.assertAlmostEqualQuantities(quantity, class_deser, places)
+        self.assertAlmostEqualQuantities(quantity, hook_deser, places)
 
 class TestUnits(QuantityTestCase):
 
@@ -626,6 +647,16 @@ class TestUnits(QuantityTestCase):
         s = u.Quantity("string")
         self.assertEqual(s.value_in_unit_system(u.md_unit_system), "string")
 
+    def testJsonSerializationCycleFloat(self):
+        q = 2.0 * u.meters
+        self.assertSerializationCycle(q)
+        self.assertSerializationCycleBytes(q)
+
+    def testJsonSerializationCycleInt(self):
+        q = 2 * u.meters
+        self.assertSerializationCycle(q)
+        self.assertSerializationCycleBytes(q)
+
     def testMisc(self):
         """ Miscellaneous tests for the unit package """
         self.assertTrue(u.meter is not None)
@@ -702,3 +733,19 @@ class TestNumpyUnits(QuantityTestCase):
             x = np.array([1]) * u.liters
             self.assertIsInstance(x, u.Quantity)
             self.assertIsInstance(np.arange(10) * x, u.Quantity)
+
+    def testJsonSerializationCycleNumpy(self):
+        q = np.array([[1.0, 2.0], [3.0, 4.0]]) * u.meters
+        for serializer in [u.serialization.UnitJSONEncoder,
+                           u.serialization.UnitBytesJSONEncoder]:
+            serialized = json.dumps(q, cls=serializer)
+            class_deser = json.loads(serialized,
+                                     cls=u.serialization.UnitJSONDecoder)
+            hook_deser = json.loads(serialized,
+                                    object_hook=u.serialization.object_hook)
+            self.assertEqual(class_deser.unit, q.unit)
+            self.assertTrue(np.all(class_deser == q))
+            self.assertEqual(hook_deser.unit, q.unit)
+            self.assertTrue(np.all(hook_deser == q))
+
+
