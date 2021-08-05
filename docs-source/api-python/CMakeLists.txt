@@ -9,7 +9,6 @@ file(GLOB STAGING_INPUT_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "_static/logo.png"
     "_static/custom.css"
     "_templates/class.rst"
-    "_templates/lunrsearch.html"
     "_templates/navigation.html"
 )
 
@@ -46,7 +45,6 @@ add_custom_command(
             "${CMAKE_CURRENT_BINARY_DIR}/_static/logo.png"
             "${CMAKE_CURRENT_BINARY_DIR}/_static/custom.css"
             "${CMAKE_CURRENT_BINARY_DIR}/_templates/class.rst"
-            "${CMAKE_CURRENT_BINARY_DIR}/_templates/lunrsearch.html"
             "${CMAKE_CURRENT_BINARY_DIR}/_templates/navigation.html"
             PythonInstall
 )

@@ -4,7 +4,6 @@ file(GLOB STAGING_INPUT_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "*.py"
     "_static/logo.png"
     "_static/custom.css"
-    "_templates/lunrsearch.html"
     "_templates/navigation.html"
 )
 
@@ -66,7 +65,6 @@ add_custom_command(
             "${CMAKE_CURRENT_BINARY_DIR}/extras.rst"
             "${CMAKE_CURRENT_BINARY_DIR}/_static/logo.png"
             "${CMAKE_CURRENT_BINARY_DIR}/_static/custom.css"
-            "${CMAKE_CURRENT_BINARY_DIR}/_templates/lunrsearch.html"
             "${CMAKE_CURRENT_BINARY_DIR}/_templates/navigation.html"
             "${WRAPPER_DOXYGEN_DIR}/xml/index.xml"
 )
