@@ -43,28 +43,37 @@ namespace OpenMM {
  * switching back and forth between them.  To use it, create whatever other Integrators
  * you need, then add all of them to a CustomIntegrator:
  * 
- * <tt><pre>
- * CompoundIntegrator compoundIntegrator;
- * compoundIntegrator.addIntegrator(new VerletIntegrator(0.001));
- * compoundIntegrator.addIntegrator(new LangevinIntegrator(300.0, 1.0, 0.001));
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CompoundIntegrator compoundIntegrator;
+ *    compoundIntegrator.addIntegrator(new VerletIntegrator(0.001));
+ *    compoundIntegrator.addIntegrator(new LangevinIntegrator(300.0, 1.0, 0.001));
+ *
+ * \endverbatim
  * 
  * Next create a Context, specifying the CompoundIntegrator as the Integrator to use for
  * the Context:
  * 
- * <tt><pre>
- * Context context(system, compoundIntegrator);
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *     Context context(system, compoundIntegrator);
+ *
+ * \endverbatim
  * 
  * Finally, call setCurrentIntegrator() to set which Integrator is active.  That one will
  * be used for all calls to step() until the next time you change it.
  * 
- * <tt><pre>
- * compoundIntegrator.setCurrentIntegrator(0);
- * compoundIntegrator.step(1000); // Take 1000 steps of Verlet dynamics
- * compoundIntegrator.setCurrentIntegrator(1);
- * compoundIntegrator.step(1000); // Take 1000 steps of Langevin dynamics
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *     compoundIntegrator.setCurrentIntegrator(0);
+ *     compoundIntegrator.step(1000); // Take 1000 steps of Verlet dynamics
+ *     compoundIntegrator.setCurrentIntegrator(1);
+ *     compoundIntegrator.step(1000); // Take 1000 steps of Langevin dynamics
+ *
+ * \endverbatim
  * 
  * When switching between integrators, it is important to make sure they are compatible with
  * each other, and that they will interpret the positions and velocities in the same way.

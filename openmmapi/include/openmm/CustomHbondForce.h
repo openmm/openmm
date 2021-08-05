@@ -78,15 +78,23 @@ namespace OpenMM {
  * As an example, the following code creates a CustomHbondForce that implements a simple harmonic potential
  * to keep the distance between a1 and d1, and the angle formed by a1-d1-d2, near ideal values:
  *
- * <tt>CustomHbondForce* force = new CustomHbondForce("k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2");</tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomHbondForce* force = new CustomHbondForce("k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2");
+ *
+ * \endverbatim
  *
  * This force depends on three parameters: k, r0, and theta0.  The following code defines these as per-donor parameters:
  *
- * <tt><pre>
- * force->addPerDonorParameter("k");
- * force->addPerDonorParameter("r0");
- * force->addPerDonorParameter("theta0");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    force->addPerDonorParameter("k");
+ *    force->addPerDonorParameter("r0");
+ *    force->addPerDonorParameter("theta0");
+ *
+ * \endverbatim
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions

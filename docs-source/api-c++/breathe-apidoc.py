@@ -265,7 +265,7 @@ Note: By default this script will not overwrite already created files.""",
     parser.add_argument(
         "--version",
         action="version",
-        version="Breathe (breathe-apidoc) %s" % __version__,
+        version="Breathe (breathe-apidoc) %s, modified for OpenMM" % __version__,
     )
     parser.add_argument("rootpath", type=str, help="The directory contains index.xml")
     args = parser.parse_args()

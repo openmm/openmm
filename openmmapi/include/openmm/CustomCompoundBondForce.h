@@ -77,16 +77,24 @@ namespace OpenMM {
  * is an interaction between three particles that depends on the angle formed by p1-p2-p3, and on the distance between
  * p1 and p3.
  *
- * <tt>CustomCompoundBondForce* force = new CustomCompoundBondForce(3, "0.5*(kangle*(angle(p1,p2,p3)-theta0)^2+kbond*(distance(p1,p3)-r0)^2)");</tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomCompoundBondForce* force = new CustomCompoundBondForce(3, "0.5*(kangle*(angle(p1,p2,p3)-theta0)^2+kbond*(distance(p1,p3)-r0)^2)");
+ *
+ * \endverbatim
  *
  * This force depends on four parameters: kangle, kbond, theta0, and r0.  The following code defines these as per-bond parameters:
  *
- * <tt><pre>
- * force->addPerBondParameter("kangle");
- * force->addPerBondParameter("kbond");
- * force->addPerBondParameter("theta0");
- * force->addPerBondParameter("r0");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    force->addPerBondParameter("kangle");
+ *    force->addPerBondParameter("kbond");
+ *    force->addPerBondParameter("theta0");
+ *    force->addPerBondParameter("r0");
+ *
+ * \endverbatim
  *
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
@@ -104,7 +112,12 @@ namespace OpenMM {
  * This enables more flexible geometric calculations.  For example, the following computes the distance
  * from particle p1 to the midpoint between particles p2 and p3.
  * 
- * <tt>CustomCompoundBondForce* force = new CustomCompoundBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");</tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomCompoundBondForce* force = new CustomCompoundBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");
+ *
+ * \endverbatim
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
  * creating a TabulatedFunction object.  That function can then appear in the expression.

@@ -93,11 +93,14 @@ namespace OpenMM {
  * 
  * The "effective" parameters for a particle (those used to compute forces) are given by
  * 
- * <tt><pre>
- * charge = baseCharge + param*chargeScale
- * sigma = baseSigma + param*sigmaScale
- * epsilon = baseEpsilon + param*epsilonScale
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    charge = baseCharge + param*chargeScale
+ *    sigma = baseSigma + param*sigmaScale
+ *    epsilon = baseEpsilon + param*epsilonScale
+ *
+ * \endverbatim
  * 
  * where the "base" values are the ones specified by addParticle() and "oaram" is the current value
  * of the Context parameter.  A single Context parameter can apply offsets to multiple particles,
