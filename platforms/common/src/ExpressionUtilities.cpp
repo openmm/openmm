@@ -698,10 +698,17 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
         case Operation::POWER_CONSTANT:
         {
             double exponent = dynamic_cast<const Operation::PowerConstant*>(&node.getOperation())->getValue();
-            if (exponent == 0.0)
-                out << "1.0f";
+            if (exponent == 0.0) {
+                if (isVecType)
+                    out << "make_" << tempType << "(1.0f)";
+                else
+                    out << "1.0f";
+            }
             else if (exponent == (int) exponent) {
-                out << "0.0f;\n";
+                if (isVecType)
+                    out << "make_" << tempType << "(0.0f);\n";
+                else
+                    out << "0.0f;\n";
                 temps.push_back(make_pair(node, name));
                 hasRecordedNode = true;
 
@@ -727,7 +734,7 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                     }
                 }
                 out << "{\n";
-                out << "real multiplier = " << (exponent < 0.0 ? "RECIP(" : "(") << getTempName(node.getChildren()[0], temps) << ");\n";
+                out << tempType << " multiplier = " << (exponent < 0.0 ? "RECIP(" : "(") << getTempName(node.getChildren()[0], temps) << ");\n";
                 bool done = false;
                 while (!done) {
                     done = true;

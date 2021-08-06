@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -49,7 +49,7 @@ using std::vector;
 
 NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), switchingDistance(-1.0), rfDielectric(78.3),
         ewaldErrorTol(5e-4), alpha(0.0), dalpha(0.0), useSwitchingFunction(false), useDispersionCorrection(true), exceptionsUsePeriodic(false), recipForceGroup(-1),
-        nx(0), ny(0), nz(0), dnx(0), dny(0), dnz(0) {
+        includeDirectSpace(true), nx(0), ny(0), nz(0), dnx(0), dny(0), dnz(0) {
 }
 
 NonbondedForce::NonbondedMethod NonbondedForce::getNonbondedMethod() const {
@@ -342,6 +342,14 @@ void NonbondedForce::setReciprocalSpaceForceGroup(int group) {
     if (group < -1 || group > 31)
         throw OpenMMException("Force group must be between -1 and 31");
     recipForceGroup = group;
+}
+
+bool NonbondedForce::getIncludeDirectSpace() const {
+    return includeDirectSpace;
+}
+
+void NonbondedForce::setIncludeDirectSpace(bool include) {
+    includeDirectSpace = include;
 }
 
 void NonbondedForce::updateParametersInContext(Context& context) {

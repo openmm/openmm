@@ -264,7 +264,7 @@ class Metadynamics(object):
         # If we loaded any files, recompute the total bias from all processes.
 
         if fileLoaded:
-            self._totalBias = self._selfBias
+            self._totalBias = np.copy(self._selfBias)
             for bias in self._loadedBiases.values():
                 self._totalBias += bias.bias
 

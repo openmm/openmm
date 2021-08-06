@@ -391,6 +391,64 @@ class TestForceField(unittest.TestCase):
                 self.assertEqual(params[1], 1.0*nanometers)
                 self.assertEqual(params[2], 0.0*kilojoule_per_mole)
 
+    def test_residueMatcher(self):
+        """Test using a custom template matcher to select templates."""
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="tip3p-O" class="OW" element="O" mass="15.99943"/>
+  <Type name="tip3p-H" class="HW" element="H" mass="1.007947"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="HOH">
+   <Atom name="O" type="tip3p-O" charge="-0.834"/>
+   <Atom name="H1" type="tip3p-H" charge="0.417"/>
+   <Atom name="H2" type="tip3p-H" charge="0.417"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="2"/>
+   <Bond from="1" to="2"/>
+  </Residue>
+  <Residue name="HOH2">
+   <Atom name="O" type="tip3p-O" charge="0.834"/>
+   <Atom name="H1" type="tip3p-H" charge="-0.417"/>
+   <Atom name="H2" type="tip3p-H" charge="-0.417"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="2"/>
+   <Bond from="1" to="2"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="tip3p-O" sigma="0.315" epsilon="0.635"/>
+  <Atom type="tip3p-H" sigma="1" epsilon="0"/>
+ </NonbondedForce>
+</ForceField>"""
+        ff = ForceField(StringIO(xml))
+
+        # Load a water box.
+        prmtop = AmberPrmtopFile('systems/water-box-216.prmtop')
+        top = prmtop.topology
+        
+        # Building a System should fail, because two templates match each residue.
+        self.assertRaises(Exception, lambda: ff.createSystem(top))
+        
+        # Register a template matcher that selects a particular one.
+        def matcher(ff, res):
+            return ff._templates['HOH2']
+        ff.registerTemplateMatcher(matcher)
+        
+        # It should now succeed in building a System.
+        system = ff.createSystem(top)
+        
+        # Make sure it used the correct parameters.
+        nb = [f for f in system.getForces() if isinstance(f, NonbondedForce)][0]
+        for atom in top.atoms():
+            charge, sigma, epsilon = nb.getParticleParameters(atom.index)
+            if atom.name == 'O':
+                self.assertEqual(0.834*elementary_charge, charge)
+            else:
+                self.assertEqual(-0.417*elementary_charge, charge)
+
     def test_residueTemplateGenerator(self):
         """Test the ability to add residue template generators to parameterize unmatched residues."""
         def simpleTemplateGenerator(forcefield, residue):
@@ -1090,6 +1148,19 @@ END"""))
         self.assertAlmostEqual(40.21459, angles, delta=angles*1e-3) # ANGLes
         self.assertAlmostEqual(26.10373, propers, delta=propers*1e-3) # DIHEdrals
         self.assertAlmostEqual(0.14113, impropers, delta=impropers*1e-3) # IMPRopers
+
+    def test_InitializationScript(self):
+        """Test that <InitializationScript> tags get executed."""
+        xml = """
+<ForceField>
+  <InitializationScript>
+self.scriptExecuted = True
+  </InitializationScript>
+</ForceField>
+"""
+        ff = ForceField(StringIO(xml))
+        self.assertTrue(ff.scriptExecuted)
+        
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""

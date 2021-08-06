@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -933,6 +933,50 @@ void testEwaldExceptions() {
     ASSERT_EQUAL_TOL(expectedChange, e2-e1, 1e-5);
 }
 
+void testDirectAndReciprocal() {
+    // Create a minimal system with direct space and reciprocal space in different force groups.
+
+    System system;
+    for (int i = 0; i < 4; i++)
+        system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 2, 0), Vec3(0, 0, 2));
+    NonbondedForce* force = new NonbondedForce();
+    system.addForce(force);
+    force->setNonbondedMethod(NonbondedForce::PME);
+    force->setCutoffDistance(1.0);
+    force->setReciprocalSpaceForceGroup(1);
+    force->addParticle(1.0, 0.5, 1.0);
+    force->addParticle(1.0, 0.5, 1.0);
+    force->addParticle(-1.0, 0.5, 1.0);
+    force->addParticle(-1.0, 0.5, 1.0);
+    force->addException(0, 2, -2.0, 0.5, 3.0);
+    vector<Vec3> positions = {
+        Vec3(0, 0, 0),
+        Vec3(1.5, 0, 0),
+        Vec3(0, 0.5, 0.5),
+        Vec3(0.2, 1.3, 0)
+    };
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    
+    // Compute the direct and reciprocal space energies together and separately.
+    
+    double e1 = context.getState(State::Energy).getPotentialEnergy();
+    double e2 = context.getState(State::Energy, true, 1<<0).getPotentialEnergy();
+    double e3 = context.getState(State::Energy, true, 1<<1).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(e1, e2+e3, 1e-5);
+    ASSERT(e2 != 0);
+    ASSERT(e3 != 0);
+    
+    // Completely disable the direct space calculation.
+    
+    force->setIncludeDirectSpace(false);
+    context.reinitialize(true);
+    double e4 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(e3, e4, 1e-5);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -954,6 +998,7 @@ int main(int argc, char* argv[]) {
         testTwoForces();
         testParameterOffsets();
         testEwaldExceptions();
+        testDirectAndReciprocal();
         runPlatformTests();
     }
     catch(const exception& e) {
