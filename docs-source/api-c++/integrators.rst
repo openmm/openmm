@@ -15,22 +15,6 @@ algorithms.
     generated/OpenMM::Integrator
 
 
-Customizing ``Integrator``
-==========================
-
-These classes facilitate customisation of the integrator. ``CustomIntegrator``
-allows a wide variety of integration algorithms to be implemented efficiently
-without writing any low-level code. The integrator is built up as a series of
-steps, each defined as an algebraic expression. ``CompoundIntegrator`` allows
-different integrators to be combined by making it possible to switch the active
-integrator in the middle of a simulation.
-
-.. toctree::
-    :maxdepth: 2
-
-    generated/OpenMM::CustomIntegrator
-    generated/OpenMM::CompoundIntegrator
-
 General purpose integrators
 ===========================
 
@@ -47,6 +31,7 @@ These are integrators appropriate for traditional MD and BD simulations.
     generated/OpenMM::VariableVerletIntegrator
     generated/OpenMM::VerletIntegrator
 
+
 Drude integrators
 =================
 
@@ -60,6 +45,7 @@ These integrators permit modelling polarization with a Drude particle.
     generated/OpenMM::DrudeNoseHooverIntegrator
     generated/OpenMM::DrudeSCFIntegrator
 
+
 Ring Polymer Molecular Dynamics integrators
 ===========================================
 
@@ -71,3 +57,18 @@ The RPMD integrator implements Ring Polymer MD.
     generated/OpenMM::RPMDIntegrator
 
 
+Customizing ``Integrator``
+==========================
+
+These classes facilitate customisation of the integrator. ``CustomIntegrator``
+allows a wide variety of integration algorithms to be implemented efficiently
+without writing any low-level code. The integrator is built up as a series of
+steps, each defined as an algebraic expression. ``CompoundIntegrator`` allows
+different integrators to be combined by making it possible to switch the active
+integrator in the middle of a simulation.
+
+.. toctree::
+    :maxdepth: 2
+
+    generated/OpenMM::CustomIntegrator
+    generated/OpenMM::CompoundIntegrator
