@@ -1,3 +1,5 @@
+.. _forces:
+
 ======
 Forces
 ======
@@ -11,7 +13,7 @@ particles. ``Force`` is an abstract class; subclasses implement specific behavio
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::Force
+    generated/Force
 
 
 Common bonded and non-bonded forces
@@ -22,16 +24,16 @@ These classes implement forces that are widely used in biomolecular simulation.
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::CMAPTorsionForce
-    generated/OpenMM::DrudeForce
-    generated/OpenMM::GBSAOBCForce
-    generated/OpenMM::GayBerneForce
-    generated/OpenMM::HarmonicAngleForce
-    generated/OpenMM::HarmonicBondForce
-    generated/OpenMM::HippoNonbondedForce
-    generated/OpenMM::NonbondedForce
-    generated/OpenMM::PeriodicTorsionForce
-    generated/OpenMM::RBTorsionForce
+    generated/CMAPTorsionForce
+    generated/DrudeForce
+    generated/GBSAOBCForce
+    generated/GayBerneForce
+    generated/HarmonicAngleForce
+    generated/HarmonicBondForce
+    generated/HippoNonbondedForce
+    generated/NonbondedForce
+    generated/PeriodicTorsionForce
+    generated/RBTorsionForce
 
 
 AMOEBA forces
@@ -42,11 +44,11 @@ These forces are used to implement the polarizable AMOEBA force fields.
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::AmoebaGeneralizedKirkwoodForce
-    generated/OpenMM::AmoebaMultipoleForce
-    generated/OpenMM::AmoebaTorsionTorsionForce
-    generated/OpenMM::AmoebaVdwForce
-    generated/OpenMM::AmoebaWcaDispersionForce
+    generated/AmoebaGeneralizedKirkwoodForce
+    generated/AmoebaMultipoleForce
+    generated/AmoebaTorsionTorsionForce
+    generated/AmoebaVdwForce
+    generated/AmoebaWcaDispersionForce
 
 
 Pseudo-forces
@@ -61,13 +63,13 @@ be combined in arbitrary ways.
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::AndersenThermostat
-    generated/OpenMM::CMMotionRemover
-    generated/OpenMM::MonteCarloAnisotropicBarostat
-    generated/OpenMM::MonteCarloBarostat
-    generated/OpenMM::MonteCarloMembraneBarostat
-    generated/OpenMM::RMSDForce
-    generated/OpenMM::RPMDMonteCarloBarostat
+    generated/AndersenThermostat
+    generated/CMMotionRemover
+    generated/MonteCarloAnisotropicBarostat
+    generated/MonteCarloBarostat
+    generated/MonteCarloMembraneBarostat
+    generated/RMSDForce
+    generated/RPMDMonteCarloBarostat
 
 
 .. _custom-forces:
@@ -84,14 +86,14 @@ expression.
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::CustomAngleForce
-    generated/OpenMM::CustomBondForce
-    generated/OpenMM::CustomCVForce
-    generated/OpenMM::CustomCentroidBondForce
-    generated/OpenMM::CustomCompoundBondForce
-    generated/OpenMM::CustomExternalForce
-    generated/OpenMM::CustomGBForce
-    generated/OpenMM::CustomHbondForce
-    generated/OpenMM::CustomManyParticleForce
-    generated/OpenMM::CustomNonbondedForce
-    generated/OpenMM::CustomTorsionForce
+    generated/CustomAngleForce
+    generated/CustomBondForce
+    generated/CustomCVForce
+    generated/CustomCentroidBondForce
+    generated/CustomCompoundBondForce
+    generated/CustomExternalForce
+    generated/CustomGBForce
+    generated/CustomHbondForce
+    generated/CustomManyParticleForce
+    generated/CustomNonbondedForce
+    generated/CustomTorsionForce

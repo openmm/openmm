@@ -7,37 +7,37 @@ Tabulated functions
 
 These classes use table of values to define a mathematical function and can be
 used by various :ref:`custom forces <custom-forces>`.
-The :doc:`generated/OpenMM::TabulatedFunction` class is an abstract class that the other classes
+The :ref:`OpenMM::TabulatedFunction` class is an abstract class that the other classes
 extend.
 
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::TabulatedFunction
+    generated/TabulatedFunction
 
-    generated/OpenMM::Continuous1DFunction
-    generated/OpenMM::Continuous2DFunction
-    generated/OpenMM::Continuous3DFunction
-    generated/OpenMM::Discrete1DFunction
-    generated/OpenMM::Discrete2DFunction
-    generated/OpenMM::Discrete3DFunction
+    generated/Continuous1DFunction
+    generated/Continuous2DFunction
+    generated/Continuous3DFunction
+    generated/Discrete1DFunction
+    generated/Discrete2DFunction
+    generated/Discrete3DFunction
 
 Virtual Sites
 =============
 
 A virtual site is a particle whose position is computed directly from the
-positions of other particles. The :doc:`generated/OpenMM::VirtualSite` class is an abstract
+positions of other particles. The :ref:`OpenMM::VirtualSite` class is an abstract
 class that the other classes extend.
 
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::VirtualSite
+    generated/VirtualSite
 
-    generated/OpenMM::LocalCoordinatesSite
-    generated/OpenMM::OutOfPlaneSite
-    generated/OpenMM::ThreeParticleAverageSite
-    generated/OpenMM::TwoParticleAverageSite
+    generated/LocalCoordinatesSite
+    generated/OutOfPlaneSite
+    generated/ThreeParticleAverageSite
+    generated/TwoParticleAverageSite
 
 Serialization
 =============
@@ -48,9 +48,9 @@ disk.
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::SerializationNode
-    generated/OpenMM::SerializationProxy
-    generated/OpenMM::XmlSerializer
+    generated/SerializationNode
+    generated/SerializationProxy
+    generated/XmlSerializer
 
 Other classes
 =============
@@ -61,7 +61,7 @@ that they aren't important!
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::LocalEnergyMinimizer
-    generated/OpenMM::NoseHooverChain
-    generated/OpenMM::OpenMMException
-    generated/OpenMM::Vec3
+    generated/LocalEnergyMinimizer
+    generated/NoseHooverChain
+    generated/OpenMMException
+    generated/Vec3

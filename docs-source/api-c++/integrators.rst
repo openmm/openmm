@@ -12,7 +12,7 @@ algorithms.
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::Integrator
+    generated/Integrator
 
 
 General purpose integrators
@@ -23,13 +23,13 @@ These are integrators appropriate for traditional MD and BD simulations.
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::BrownianIntegrator
-    generated/OpenMM::LangevinIntegrator
-    generated/OpenMM::LangevinMiddleIntegrator
-    generated/OpenMM::NoseHooverIntegrator
-    generated/OpenMM::VariableLangevinIntegrator
-    generated/OpenMM::VariableVerletIntegrator
-    generated/OpenMM::VerletIntegrator
+    generated/BrownianIntegrator
+    generated/LangevinIntegrator
+    generated/LangevinMiddleIntegrator
+    generated/NoseHooverIntegrator
+    generated/VariableLangevinIntegrator
+    generated/VariableVerletIntegrator
+    generated/VerletIntegrator
 
 
 Drude integrators
@@ -40,10 +40,10 @@ These integrators permit modelling polarization with a Drude particle.
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::DrudeIntegrator
-    generated/OpenMM::DrudeLangevinIntegrator
-    generated/OpenMM::DrudeNoseHooverIntegrator
-    generated/OpenMM::DrudeSCFIntegrator
+    generated/DrudeIntegrator
+    generated/DrudeLangevinIntegrator
+    generated/DrudeNoseHooverIntegrator
+    generated/DrudeSCFIntegrator
 
 
 Ring Polymer Molecular Dynamics integrators
@@ -54,7 +54,7 @@ The RPMD integrator implements Ring Polymer MD.
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::RPMDIntegrator
+    generated/RPMDIntegrator
 
 
 Customizing ``Integrator``
@@ -70,5 +70,5 @@ integrator in the middle of a simulation.
 .. toctree::
     :maxdepth: 2
 
-    generated/OpenMM::CustomIntegrator
-    generated/OpenMM::CompoundIntegrator
+    generated/CustomIntegrator
+    generated/CompoundIntegrator

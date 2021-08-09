@@ -43,6 +43,7 @@ add_custom_command(
             "--force"
             "--brief-titles"
             "--rename-output"
+            "--remove-prefix='OpenMM::'"
             "--flat-output"
             "--public-only"
             "--quiet"

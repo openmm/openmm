@@ -107,17 +107,22 @@ def format_directive(package_type, package, args):
 
 def create_package_file(package, package_type, package_id, args):
     """Build the text of the file and write the file."""
+    text = f".. _{package}:\n\n"
+
     if args.brieftitles:
         _, _, brief = package.rpartition("::")
-        text = format_heading(1, f"``{brief}``")
+        text += format_heading(1, f"``{brief}``")
     else:
-        text = format_heading(1, "%s %s" % (TYPEDICT[package_type], package))
+        text += format_heading(1, "%s %s" % (TYPEDICT[package_type], package))
     text += format_directive(package_type, package, args)
 
     if args.packagenames:
         outname = package
     else:
         outname = package_id
+
+    if outname.startswith(args.removeprefix):
+        outname = outname[len(args.removeprefix) :]
 
     write_file(os.path.join(package_type, outname), text, args)
 
@@ -262,6 +267,12 @@ Note: By default this script will not overwrite already created files.""",
         action="store_true",
         dest="packagenames",
         help="Rename output RST files to match input package names",
+    )
+    parser.add_argument(
+        "--remove-prefix",
+        action="store",
+        dest="removeprefix",
+        help="Remove a prefix from output file names",
     )
     parser.add_argument(
         "-F",
