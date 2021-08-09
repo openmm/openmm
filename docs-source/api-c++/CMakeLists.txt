@@ -44,6 +44,7 @@ add_custom_command(
             "--brief-titles"
             "--rename-output"
             "--flat-output"
+            "--public-only"
             "--quiet"
             "--output-dir=generated"
             "${WRAPPER_DOXYGEN_DIR}/xml/"

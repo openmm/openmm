@@ -107,9 +107,6 @@ def format_directive(package_type, package, args):
 
 def create_package_file(package, package_type, package_id, args):
     """Build the text of the file and write the file."""
-    # Skip over types that weren't requested
-    if package_type not in args.outtypes:
-        return
     if args.brieftitles:
         _, _, brief = package.rpartition("::")
         text = format_heading(1, f"``{brief}``")
@@ -137,6 +134,21 @@ def create_modules_toc_file(key, value, args):
     write_file("%slist" % key, text, args)
 
 
+def filter_package(refid, kind, args) -> bool:
+    # Skip over types that weren't requested
+    if kind not in args.outtypes:
+        return False
+
+    if args.publiconly:
+        package = xml.etree.ElementTree.parse(
+            os.path.join(args.rootpath, refid + ".xml")
+        )
+        if not package.findall(f'.//compounddef[@prot="public"]'):
+            return False
+
+    return True
+
+
 def recurse_tree(args):
     """
     Look for every file in the directory tree and create the corresponding
@@ -146,9 +158,12 @@ def recurse_tree(args):
 
     # Assuming this is a valid Doxygen XML
     for compound in index.getroot():
-        create_package_file(
-            compound.findtext("name"), compound.get("kind"), compound.get("refid"), args
-        )
+        name = compound.findtext("name")
+        kind = compound.get("kind")
+        refid = compound.get("refid")
+
+        if filter_package(refid, kind, args):
+            create_package_file(name, kind, refid, args)
 
 
 class TypeAction(argparse.Action):
@@ -254,6 +269,13 @@ Note: By default this script will not overwrite already created files.""",
         action="store_true",
         dest="outflat",
         help="Place all output directly in output directory, no subdirectories",
+    )
+    parser.add_argument(
+        "-P",
+        "--public-only",
+        action="store_true",
+        dest="publiconly",
+        help="Only process objects that are marked as @public",
     )
     parser.add_argument(
         "-q",
