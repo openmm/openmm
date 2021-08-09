@@ -1,9 +1,9 @@
 #if defined F1
-DEVICE void computeOneEDiffInteractionF1(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real* outputEnergy, real3* outputForce) {
+DEVICE void computeOneEDiffInteractionF1(const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, real* outputEnergy, real3* outputForce) {
 #elif defined T1
-DEVICE void computeOneEDiffInteractionT1(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real3* outputForce) {
+DEVICE void computeOneEDiffInteractionT1(const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, real3* outputForce) {
 #elif defined T3
-DEVICE void computeOneEDiffInteractionT3(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real3* outputForce) {
+DEVICE void computeOneEDiffInteractionT3(const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, real3* outputForce) {
 #endif
     const float uscale = 1;
 

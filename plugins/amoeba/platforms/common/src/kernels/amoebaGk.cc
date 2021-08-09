@@ -190,11 +190,17 @@ typedef struct {
     real q, bornRadius, bornForce;
 } AtomData2;
 
-DEVICE void computeOneInteractionF1(AtomData2 atom1, volatile AtomData2 atom2, real* outputEnergy, real3* force);
-DEVICE void computeOneInteractionF2(AtomData2 atom1, volatile AtomData2 atom2, real* outputEnergy, real3* force);
-DEVICE void computeOneInteractionT1(AtomData2 atom1, volatile AtomData2 atom2, real3* torque);
-DEVICE void computeOneInteractionT2(AtomData2 atom1, volatile AtomData2 atom2, real3* torque);
-DEVICE void computeOneInteractionB1B2(AtomData2 atom1, volatile AtomData2 atom2, real* bornForce1, real* bornForce2);
+#if defined(USE_HIP)
+#define ATOM2_ARG_SPEC
+#else
+#define ATOM2_ARG_SPEC volatile
+#endif
+
+DEVICE void computeOneInteractionF1(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real* outputEnergy, real3* force);
+DEVICE void computeOneInteractionF2(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real* outputEnergy, real3* force);
+DEVICE void computeOneInteractionT1(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real3* torque);
+DEVICE void computeOneInteractionT2(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real3* torque);
+DEVICE void computeOneInteractionB1B2(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real* bornForce1, real* bornForce2);
 
 inline DEVICE AtomData2 loadAtomData2(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
         GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar, GLOBAL const real* RESTRICT bornRadius) {
@@ -592,9 +598,15 @@ typedef struct {
     float thole, damp;
 } AtomData4;
 
-DEVICE void computeOneEDiffInteractionF1(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real* outputEnergy, real3* outputForce);
-DEVICE void computeOneEDiffInteractionT1(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real3* outputForce);
-DEVICE void computeOneEDiffInteractionT3(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real3* outputForce);
+#if defined(USE_HIP)
+#define ATOM2_PTR_ARG_SPEC const
+#else
+#define ATOM2_PTR_ARG_SPEC volatile
+#endif
+
+DEVICE void computeOneEDiffInteractionF1(const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, real* outputEnergy, real3* outputForce);
+DEVICE void computeOneEDiffInteractionT1(const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, real3* outputForce);
+DEVICE void computeOneEDiffInteractionT3(const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, real3* outputForce);
 
 inline DEVICE AtomData4 loadAtomData4(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
         GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar,
