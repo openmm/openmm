@@ -54,10 +54,9 @@ add_custom_command(
     )
 
 
-
 add_custom_command(
     OUTPUT "${CMAKE_BINARY_DIR}/api-c++/index.html"
-    COMMAND "${PYTHON_EXECUTABLE}" -m sphinx . "${CMAKE_BINARY_DIR}/api-c++" -W --keep-going
+    COMMAND "${PYTHON_EXECUTABLE}" -m sphinx . "${CMAKE_BINARY_DIR}/api-c++" -W --keep-going # Promote warnings to errors to catch undocumented classes
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/conf.py"
             "${CMAKE_CURRENT_BINARY_DIR}/generated/"
