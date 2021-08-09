@@ -354,7 +354,7 @@ class Topology(object):
             names = [atom.name for atom in res._atoms]
             return 'SG' in names and 'HG' not in names
         # This function is used to prevent multiple di-sulfide bonds from being
-        # assigned to a given atom. This is a DeepMind modification.
+        # assigned to a given atom.
         def isDisulfideBonded(atom):
           for b in self._bonds:
               if (atom in b and b[0].name == 'SG' and
