@@ -6,7 +6,7 @@ Tabulated functions
 ===================
 
 These classes use table of values to define a mathematical function and can be
-used by various `custom forces <my-reference-label>`_.
+used by various :ref:`custom forces <custom-forces>`.
 The :doc:`generated/OpenMM::TabulatedFunction` class is an abstract class that the other classes
 extend.
 
