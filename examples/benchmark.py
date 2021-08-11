@@ -106,7 +106,6 @@ def runOneTest(testName, options):
             else:
                 method = app.CutoffPeriodic
                 cutoff = 1*unit.nanometers
-            hydrogenMass = 1.5*unit.amu
         elif explicit:
             ff = app.ForceField('amber99sb.xml', 'tip3p.xml')
             pdb = app.PDBFile('5dfr_solv-cube_equil.pdb')
@@ -132,6 +131,7 @@ def runOneTest(testName, options):
         else:
             dt = 0.004*unit.picoseconds
             constraints = app.HBonds
+            hydrogenMass = 1.5*unit.amu
             if options.ensemble == 'NVE':
                 integ = mm.VerletIntegrator(dt)
             else:
