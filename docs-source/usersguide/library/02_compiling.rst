@@ -345,12 +345,12 @@ Building the Documentation (Optional)
 
 The documentation that you're currently reading, as well as the Developer Guide and API
 documentation, can be built through CMake.  To do that, you need to install a few
-additional tools.  The easiest way is to use :code:`pip` to install them into
+additional tools.  The easiest way is to use :code:`conda` to install them into
 your Python environment.  The following command installs everything needed to
 build documentation in HTML format.
 ::
 
-    pip install sphinx sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen jinja2
+    conda install -c conda-forge sphinx sphinxcontrib-bibtex breathe jinja2
 
 To build documentation in PDF format, you also must have a functional LaTeX
 installation.  It can be obtained from https://www.latex-project.org/get.

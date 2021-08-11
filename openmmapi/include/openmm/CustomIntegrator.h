@@ -128,12 +128,15 @@ namespace OpenMM {
  * The following example uses a CustomIntegrator to implement a velocity Verlet
  * integrator:
  *
- * <tt><pre>
- * CustomIntegrator integrator(0.001);
- * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
- * integrator.addComputePerDof("x", "x+dt*v");
- * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomIntegrator integrator(0.001);
+ *    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+ *    integrator.addComputePerDof("x", "x+dt*v");
+ *    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+ *
+ * \endverbatim
  *
  * The first step updates the velocities based on the current forces.
  * The second step updates the positions based on the new velocities, and the
@@ -151,33 +154,39 @@ namespace OpenMM {
  * step to tell the integrator when to do this.  The following example corrects
  * both these problems, using the RATTLE algorithm to apply constraints:
  *
- * <tt><pre>
- * CustomIntegrator integrator(0.001);
- * integrator.addPerDofVariable("x1", 0);
- * integrator.addUpdateContextState();
- * integrator.addComputePerDof("v", "v+0.5*dt*f/m");
- * integrator.addComputePerDof("x", "x+dt*v");
- * integrator.addComputePerDof("x1", "x");
- * integrator.addConstrainPositions();
- * integrator.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt");
- * integrator.addConstrainVelocities();
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomIntegrator integrator(0.001);
+ *    integrator.addPerDofVariable("x1", 0);
+ *    integrator.addUpdateContextState();
+ *    integrator.addComputePerDof("v", "v+0.5*dt*f/m");
+ *    integrator.addComputePerDof("x", "x+dt*v");
+ *    integrator.addComputePerDof("x1", "x");
+ *    integrator.addConstrainPositions();
+ *    integrator.addComputePerDof("v", "v+0.5*dt*f/m+(x-x1)/dt");
+ *    integrator.addConstrainVelocities();
+ *
+ * \endverbatim
  *
  * CustomIntegrator can be used to implement multiple time step integrators.  The
  * following example shows an r-RESPA integrator.  It assumes the quickly changing
  * forces are in force group 0 and the slowly changing ones are in force group 1.
  * It evaluates the "fast" forces four times as often as the "slow" forces.
  *
- * <tt><pre>
- * CustomIntegrator integrator(0.004);
- * integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
- * for (int i = 0; i &lt; 4; i++) {
- *     integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m");
- *     integrator.addComputePerDof("x", "x+(dt/4)*v");
- *     integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m");
- * }
- * integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomIntegrator integrator(0.004);
+ *    integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
+ *    for (int i = 0; i &lt; 4; i++) {
+ *        integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m");
+ *        integrator.addComputePerDof("x", "x+(dt/4)*v");
+ *        integrator.addComputePerDof("v", "v+0.5*(dt/4)*f0/m");
+ *    }
+ *    integrator.addComputePerDof("v", "v+0.5*dt*f1/m");
+ *
+ * \endverbatim
  *
  * The sequence of computations in a CustomIntegrator can include flow control in
  * the form of "if" and "while" blocks.  The computations inside an "if" block
@@ -192,11 +201,15 @@ namespace OpenMM {
  * to decide whether to accept the step, and if it is accepted, store the new
  * positions into "x".
  *
- * <tt><pre>
- * integrator.beginIfBlock("uniform < acceptanceProbability");
- * integrator.addComputePerDof("x", "xnew");
- * integrator.endBlock();
- * </pre></tt>
+ *
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    integrator.beginIfBlock("uniform < acceptanceProbability");
+ *    integrator.addComputePerDof("x", "xnew");
+ *    integrator.endBlock();
+ *
+ * \endverbatim
  *
  * The condition in an "if" or "while" block is evaluated globally, so it may
  * only involve global variables, not per-DOF ones.  It may use any of the
@@ -214,9 +227,12 @@ namespace OpenMM {
  * following line uses a cross product to compute the angular momentum of each
  * particle and stores it into a per-DOF variable.
  * 
- * <tt><pre>
- * integrator.addComputePerDof("angularMomentum", "m*cross(x, v)");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    integrator.addComputePerDof("angularMomentum", "m*cross(x, v)");
+ *
+ * \endverbatim
  * 
  * Here are two more examples that may be useful as starting points for writing
  * your own integrators.  The first one implements the algorithm used by the
@@ -224,36 +240,42 @@ namespace OpenMM {
  * to the velocity Verlet algorithm shown above, so it only requires applying
  * constraints once in each time step.
  * 
- * <tt><pre>
- * CustomIntegrator integrator(dt);
- * integrator.addPerDofVariable("x0", 0);
- * integrator.addUpdateContextState();
- * integrator.addComputePerDof("x0", "x");
- * integrator.addComputePerDof("v", "v+dt*f/m");
- * integrator.addComputePerDof("x", "x+dt*v");
- * integrator.addConstrainPositions();
- * integrator.addComputePerDof("v", "(x-x0)/dt");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomIntegrator integrator(dt);
+ *    integrator.addPerDofVariable("x0", 0);
+ *    integrator.addUpdateContextState();
+ *    integrator.addComputePerDof("x0", "x");
+ *    integrator.addComputePerDof("v", "v+dt*f/m");
+ *    integrator.addComputePerDof("x", "x+dt*v");
+ *    integrator.addConstrainPositions();
+ *    integrator.addComputePerDof("v", "(x-x0)/dt");
+ *
+ * \endverbatim
  * 
  * The second one implements the algorithm used by the standard
  * LangevinMiddleIntegrator class.  kB is Boltzmann's constant.
  * 
- * <tt><pre>
- * CustomIntegrator integrator(dt);
- * integrator.addGlobalVariable("a", exp(-friction*dt));
- * integrator.addGlobalVariable("b", sqrt(1-exp(-2*friction*dt)));
- * integrator.addGlobalVariable("kT", kB*temperature);
- * integrator.addPerDofVariable("x1", 0);
- * integrator.addUpdateContextState();
- * integrator.addComputePerDof("v", "v + dt*f/m");
- * integrator.addConstrainVelocities();
- * integrator.addComputePerDof("x", "x + 0.5*dt*v");
- * integrator.addComputePerDof("v", "a*v + b*sqrt(kT/m)*gaussian");
- * integrator.addComputePerDof("x", "x + 0.5*dt*v");
- * integrator.addComputePerDof("x1", "x");
- * integrator.addConstrainPositions();
- * integrator.addComputePerDof("v", "v + (x-x1)/dt");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomIntegrator integrator(dt);
+ *    integrator.addGlobalVariable("a", exp(-friction*dt));
+ *    integrator.addGlobalVariable("b", sqrt(1-exp(-2*friction*dt)));
+ *    integrator.addGlobalVariable("kT", kB*temperature);
+ *    integrator.addPerDofVariable("x1", 0);
+ *    integrator.addUpdateContextState();
+ *    integrator.addComputePerDof("v", "v + dt*f/m");
+ *    integrator.addConstrainVelocities();
+ *    integrator.addComputePerDof("x", "x + 0.5*dt*v");
+ *    integrator.addComputePerDof("v", "a*v + b*sqrt(kT/m)*gaussian");
+ *    integrator.addComputePerDof("x", "x + 0.5*dt*v");
+ *    integrator.addComputePerDof("x1", "x");
+ *    integrator.addConstrainPositions();
+ *    integrator.addComputePerDof("v", "v + (x-x1)/dt");
+ *
+ * \endverbatim
  * 
  * Another feature of CustomIntegrator is that it can use derivatives of the
  * potential energy with respect to context parameters.  These derivatives are
@@ -280,9 +302,12 @@ namespace OpenMM {
  * As example, the following line defines the correct way to compute kinetic energy
  * when using a leapfrog algorithm:
  *
- * <tt><pre>
- * integrator.setKineticEnergyExpression("m*v1*v1/2; v1=v+0.5*dt*f/m");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    integrator.setKineticEnergyExpression("m*v1*v1/2; v1=v+0.5*dt*f/m");
+ *
+ * \endverbatim
  *
  * The kinetic energy expression may depend on the following pre-defined variables:
  * x, v, f, m, dt.  It also may depend on user-defined global and per-DOF variables,

@@ -85,18 +85,25 @@ namespace OpenMM {
  * As an example, the following code creates a CustomManyParticleForce that implements an Axilrod-Teller potential.  This
  * is an interaction between three particles that depends on all three distances and angles formed by the particles.
  *
- * <tt><pre>CustomManyParticleForce* force = new CustomManyParticleForce(3,
- *     "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
- *     "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
- *     "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
- * force->setPermutationMode(CustomManyParticleForce::SinglePermutation);
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomManyParticleForce* force = new CustomManyParticleForce(3,
+ *        "C*(1+3*cos(theta1)*cos(theta2)*cos(theta3))/(r12*r13*r23)^3;"
+ *        "theta1=angle(p1,p2,p3); theta2=angle(p2,p3,p1); theta3=angle(p3,p1,p2);"
+ *        "r12=distance(p1,p2); r13=distance(p1,p3); r23=distance(p2,p3)");
+ *    force->setPermutationMode(CustomManyParticleForce::SinglePermutation);
+ *
+ * \endverbatim
  *
  * This force depends on one parameter, C.  The following code defines it as a global parameter:
  *
- * <tt><pre>
- * force->addGlobalParameter("C", 1.0);
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    force->addGlobalParameter("C", 1.0);
+ *
+ * \endverbatim
  *
  * Notice that the expression is symmetric with respect to the particles.  It only depends on the products
  * cos(theta1)*cos(theta2)*cos(theta3) and r12*r13*r23, both of which are unchanged if the labels p1, p2, and p3 are permuted.
@@ -110,11 +117,15 @@ namespace OpenMM {
  * between one central particle and other nearby particles.  An example of this is the 3-particle piece of the Stillinger-Weber
  * potential:
  *
- * <tt><pre>CustomManyParticleForce* force = new CustomManyParticleForce(3,
- *     "L*eps*(cos(theta1)+1/3)^2*exp(sigma*gamma/(r12-a*sigma))*exp(sigma*gamma/(r13-a*sigma));"
-       "r12 = distance(p1,p2); r13 = distance(p1,p3); theta1 = angle(p3,p1,p2)");
- * force->setPermutationMode(CustomManyParticleForce::UniqueCentralParticle);
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomManyParticleForce* force = new CustomManyParticleForce(3,
+ *        "L*eps*(cos(theta1)+1/3)^2*exp(sigma*gamma/(r12-a*sigma))*exp(sigma*gamma/(r13-a*sigma));"
+ *        "r12 = distance(p1,p2); r13 = distance(p1,p3); theta1 = angle(p3,p1,p2)");
+ *    force->setPermutationMode(CustomManyParticleForce::UniqueCentralParticle);
+ *
+ * \endverbatim
  *
  * When the permutation mode is set to UniqueCentralParticle, particle p1 is treated as the central particle.  For a set of
  * N particles, the expression is evaluated N times, once with each particle as p1.  The expression can therefore treat
@@ -135,14 +146,17 @@ namespace OpenMM {
  * to 0.)  For the water model, you could specify 0 for all oxygen atoms and 1 for all hydrogen atoms.  You can then
  * call setTypeFilter() to specify the list of allowed types for each of the N particles involved in an interaction:
  *
- * <tt><pre>
- * set&lt;int&gt; oxygenTypes, hydrogenTypes;
- * oxygenTypes.insert(0);
- * hydrogenTypes.insert(1);
- * force->setTypeFilter(0, oxygenTypes);
- * force->setTypeFilter(1, hydrogenTypes);
- * force->setTypeFilter(2, hydrogenTypes);
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    set&lt;int&gt; oxygenTypes, hydrogenTypes;
+ *    oxygenTypes.insert(0);
+ *    hydrogenTypes.insert(1);
+ *    force->setTypeFilter(0, oxygenTypes);
+ *    force->setTypeFilter(1, hydrogenTypes);
+ *    force->setTypeFilter(2, hydrogenTypes);
+ *
+ * \endverbatim
  *
  * This specifies that of the three particles in an interaction, p1 must be oxygen while p2 and p3 must be hydrogen.
  * The energy expression will only be evaluated for triplets of particles that satisfy those requirements.  It will
@@ -162,7 +176,12 @@ namespace OpenMM {
  * This enables more flexible geometric calculations.  For example, the following computes the distance
  * from particle p1 to the midpoint between particles p2 and p3.
  * 
- * <tt>CustomManyParticleForce* force = new CustomManyParticleForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");</tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomManyParticleForce* force = new CustomManyParticleForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");
+ *
+ * \endverbatim
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
  * creating a TabulatedFunction object.  That function can then appear in the expression.

@@ -66,14 +66,22 @@ namespace OpenMM {
  *
  * As an example, the following code creates a CustomNonbondedForce that implements a 12-6 Lennard-Jones potential:
  *
- * <tt>CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)");</tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)");
+ *
+ * \endverbatim
  *
  * This force depends on two parameters: sigma and epsilon.  The following code defines these as per-particle parameters:
  *
- * <tt><pre>
- * force->addPerParticleParameter("sigma");
- * force->addPerParticleParameter("epsilon");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    force->addPerParticleParameter("sigma");
+ *    force->addPerParticleParameter("epsilon");
+ *
+ * \endverbatim
  *
  * The expression <i>must</i> be symmetric with respect to the two particles.  It typically will only be evaluated once
  * for each pair of particles, and no guarantee is made about which particle will be identified as "particle 1".  In the

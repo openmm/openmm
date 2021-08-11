@@ -86,18 +86,21 @@ namespace OpenMM {
  * As an example, the following code creates a CustomCentroidBondForce that implements a harmonic force between the
  * centers of mass of two groups of particles.
  *
- * <tt><pre>
- * CustomCentroidBondForce* force = new CustomCentroidBondForce(2, "0.5*k*distance(g1,g2)^2");
- * force->addPerBondParameter("k");
- * force->addGroup(particles1);
- * force->addGroup(particles2);
- * vector<int> bondGroups;
- * bondGroups.push_back(0);
- * bondGroups.push_back(1);
- * vector<double> bondParameters;
- * bondParameters.push_back(k);
- * force->addBond(bondGroups, bondParameters);
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomCentroidBondForce* force = new CustomCentroidBondForce(2, "0.5*k*distance(g1,g2)^2");
+ *    force->addPerBondParameter("k");
+ *    force->addGroup(particles1);
+ *    force->addGroup(particles2);
+ *    vector<int> bondGroups;
+ *    bondGroups.push_back(0);
+ *    bondGroups.push_back(1);
+ *    vector<double> bondParameters;
+ *    bondParameters.push_back(k);
+ *    force->addBond(bondGroups, bondParameters);
+ *
+ * \endverbatim
  * 
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
@@ -115,7 +118,12 @@ namespace OpenMM {
  * This enables more flexible geometric calculations.  For example, the following computes the distance
  * from group g1 to the midpoint between groups g2 and g3.
  * 
- * <tt>CustomCentroidBondForce* force = new CustomCentroidBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");</tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomCentroidBondForce* force = new CustomCentroidBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");
+ *
+ * \endverbatim
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
  * creating a TabulatedFunction object.  That function can then appear in the expression.
