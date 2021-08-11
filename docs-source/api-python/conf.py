@@ -12,7 +12,6 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "process-docstring",
-    "sphinxcontrib.lunrsearch",
 ]
 
 autosummary_generate = True
@@ -76,7 +75,7 @@ html_theme_options = {
 html_sidebars = {
     "**": [
         "about.html",
-        "lunrsearch.html",
+        "searchbox.html",
         "navigation.html",
     ]
 }

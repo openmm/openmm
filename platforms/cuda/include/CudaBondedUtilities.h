@@ -68,12 +68,15 @@ class CudaContext;
  * As a simple example, the following source code would be used to implement a pairwise interaction of
  * the form E=r^2:
  * 
- * <tt><pre>
- * real4 delta = pos2-pos1;
- * energy += delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
- * real3 force1 = 2.0f*delta;
- * real3 force2 = -2.0f*delta;
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    real4 delta = pos2-pos1;
+ *    energy += delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+ *    real3 force1 = 2.0f*delta;
+ *    real3 force2 = -2.0f*delta;
+ *
+ * \endverbatim
  * 
  * Interactions will often depend on parameters or other data.  Call addArgument() to provide the data
  * to this class.  It will be passed to the interaction kernel as an argument, and you can refer to it
