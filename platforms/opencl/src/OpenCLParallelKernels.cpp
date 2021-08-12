@@ -179,7 +179,7 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
         int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
         cl.getQueue().enqueueWriteBuffer(contextForces.getDeviceBuffer(), CL_FALSE, numAtoms*elementSize,
                 numAtoms*(data.contexts.size()-1)*elementSize, pinnedForceMemory);
-        cl.reduceBuffer(contextForces, data.contexts.size());
+        cl.reduceBuffer(contextForces, cl.getLongForceBuffer(), data.contexts.size());
         
         // Balance work between the contexts by transferring a little nonbonded work from the context that
         // finished last to the one that finished first.
