@@ -88,6 +88,7 @@ def runOneTest(testName, options):
         method = app.PME
         cutoff = options.cutoff
         constraints = app.HBonds
+        hydrogenMass = 1.5*unit.amu
         system = prmtop.createSystem(nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints)
         if options.ensemble == 'NVE':
             integ = mm.VerletIntegrator(dt)
