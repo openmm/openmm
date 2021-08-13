@@ -782,11 +782,12 @@ void OpenCLContext::reduceForces() {
     executeKernel(reduceForcesKernel, paddedNumAtoms, 128);
 }
 
-void OpenCLContext::reduceBuffer(OpenCLArray& array, int numBuffers) {
+void OpenCLContext::reduceBuffer(OpenCLArray& array, OpenCLArray& longBuffer, int numBuffers) {
     int bufferSize = array.getSize()/numBuffers;
     reduceReal4Kernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
-    reduceReal4Kernel.setArg<cl_int>(1, bufferSize);
-    reduceReal4Kernel.setArg<cl_int>(2, numBuffers);
+    reduceReal4Kernel.setArg<cl::Buffer>(1, longBuffer.getDeviceBuffer());
+    reduceReal4Kernel.setArg<cl_int>(2, bufferSize);
+    reduceReal4Kernel.setArg<cl_int>(3, numBuffers);
     executeKernel(reduceReal4Kernel, bufferSize, 128);
 }
 
