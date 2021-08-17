@@ -300,6 +300,26 @@ class TestForceField(unittest.TestCase):
                 numDifferences += 1
         self.assertTrue(numDifferences < system.getNumParticles()/20) # Tolerate occasional differences from numerical error
 
+    def test_ImplicitSolventForces(self):
+        """Compute forces for different implicit solvent types, and compare them to ones generated with AmberPrmtopFile."""
+
+        solventType = ['hct', 'obc1', 'obc2', 'gbn', 'gbn2']
+        nonbondedMethod = [NoCutoff, CutoffNonPeriodic, CutoffNonPeriodic, NoCutoff, NoCutoff]
+        kappa = [0.0, 0.0, 1.698295227342757, 1.698295227342757, 0.0]
+        file = ['HCT_NoCutoff', 'OBC1_NonPeriodic', 'OBC2_NonPeriodic_Salt', 'GBn_NoCutoff_Salt', 'GBn2_NoCutoff']
+        for i in [2]:#range(5):
+            forcefield = ForceField('amber96.xml', f'implicit/{solventType[i]}.xml')
+            system = forcefield.createSystem(self.pdb2.topology, nonbondedMethod=nonbondedMethod[i], implicitSolventKappa=kappa[i])
+            integrator = VerletIntegrator(0.001)
+            context = Context(system, integrator, Platform.getPlatformByName("Reference"))
+            context.setPositions(self.pdb2.positions)
+            state1 = context.getState(getForces=True)
+            with open('systems/alanine-dipeptide-implicit-forces/'+file[i]+'.xml') as infile:
+                state2 = XmlSerializer.deserialize(infile.read())
+            for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
+                diff = norm(f1-f2)
+                self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-4)
+
     def test_ProgrammaticForceField(self):
         """Test building a ForceField programmatically."""
 

@@ -152,7 +152,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                                           "openmm.app.internal.pdbx.writer"]
     setupKeywords["data_files"]        = []
     setupKeywords["package_data"]      = {"openmm" : [],
-                                          "openmm.app" : ['data/*.xml', 'data/*.pdb', 'data/amber14/*.xml', 'data/charmm36/*.xml'],
+                                          "openmm.app" : ['data/*.xml', 'data/*.pdb', 'data/amber14/*.xml', 'data/charmm36/*.xml', 'data/implicit/*.xml'],
                                           "openmm.app.internal" : []}
     setupKeywords["platforms"]         = ["Linux", "Mac OS X", "Windows"]
     setupKeywords["description"]       = \
