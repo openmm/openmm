@@ -303,11 +303,11 @@ class TestForceField(unittest.TestCase):
     def test_ImplicitSolventForces(self):
         """Compute forces for different implicit solvent types, and compare them to ones generated with AmberPrmtopFile."""
 
-        solventType = ['hct', 'obc1', 'obc2', 'gbn', 'gbn2']
-        nonbondedMethod = [NoCutoff, CutoffNonPeriodic, CutoffNonPeriodic, NoCutoff, NoCutoff]
-        kappa = [0.0, 0.0, 1.698295227342757, 1.698295227342757, 0.0]
-        file = ['HCT_NoCutoff', 'OBC1_NonPeriodic', 'OBC2_NonPeriodic_Salt', 'GBn_NoCutoff_Salt', 'GBn2_NoCutoff']
-        for i in [2]:#range(5):
+        solventType = ['obc1', 'obc2', 'gbn2']
+        nonbondedMethod = [CutoffNonPeriodic, CutoffNonPeriodic, NoCutoff]
+        kappa = [0.0, 1.698295227342757, 0.0]
+        file = ['OBC1_NonPeriodic', 'OBC2_NonPeriodic_Salt', 'GBn2_NoCutoff']
+        for i in range(len(file)):
             forcefield = ForceField('amber96.xml', f'implicit/{solventType[i]}.xml')
             system = forcefield.createSystem(self.pdb2.topology, nonbondedMethod=nonbondedMethod[i], implicitSolventKappa=kappa[i])
             integrator = VerletIntegrator(0.001)
