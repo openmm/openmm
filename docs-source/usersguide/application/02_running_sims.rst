@@ -593,6 +593,40 @@ such as :file:`charmm36/water.xml`, which specifies the default CHARMM water mod
 The converted parameter sets come from the `CHARMM36 July 2017 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_
 and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `parmed <https://github.com/parmed/parmed>`_.
 
+Implicit Solvent
+----------------
+
+The Amber and CHARMM force fields described above can be used with any of the Generalized
+Born implicit solvent models from AMBER.  To use them, include an extra file when
+creating the ForceField.
+
+.. tabularcolumns:: |l|L|
+
+======================  ==================================================================================================================================
+File                    Implicit Solvent Model
+======================  ==================================================================================================================================
+:file:`implicit/hct`    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)
+:file:`implicit/obc1`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).
+:file:`implicit/obc2`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ II parameters (corresponds to igb=5 in AMBER).
+:file:`implicit/gbn`    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).
+:file:`implicit/gbn2`   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).
+======================  ==================================================================================================================================
+
+You can further control the solvation model in a few ways.  First, you can
+specify the dielectric constants to use for the solute and solvent:
+::
+
+    system = forcefield.createSystem(topology, soluteDielectric=1.0, solventDielectric=80.0)
+
+If they are not specified, the solute and solvent dielectrics default to 1.0 and
+78.5, respectively.
+
+You also can model the effect of a non-zero salt concentration by specifying the
+Debye-Huckel screening parameter\ :cite:`Srinivasan1999`:
+::
+
+    system = forcefield.createSystem(topology, implicitSolventKappa=1.0/nanometer)
+
 AMOEBA
 ------
 
