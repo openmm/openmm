@@ -598,19 +598,30 @@ Implicit Solvent
 
 The Amber and CHARMM force fields described above can be used with any of the Generalized
 Born implicit solvent models from AMBER.  To use them, include an extra file when
-creating the ForceField.
+creating the ForceField.  For example,
+::
+
+    forcefield = ForceField('amber14-all.xml', 'implicit/gbn2.xml')
 
 .. tabularcolumns:: |l|L|
 
-======================  ==================================================================================================================================
-File                    Implicit Solvent Model
-======================  ==================================================================================================================================
-:file:`implicit/hct`    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)
-:file:`implicit/obc1`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).
-:file:`implicit/obc2`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ II parameters (corresponds to igb=5 in AMBER).
-:file:`implicit/gbn`    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).
-:file:`implicit/gbn2`   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).
-======================  ==================================================================================================================================
+==========================  ==================================================================================================================================
+File                        Implicit Solvent Model
+==========================  ==================================================================================================================================
+:file:`implicit/hct.xml`    Hawkins-Cramer-Truhlar GBSA model\ :cite:`Hawkins1995` (corresponds to igb=1 in AMBER)
+:file:`implicit/obc1.xml`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ I parameters (corresponds to igb=2 in AMBER).
+:file:`implicit/obc2.xml`   Onufriev-Bashford-Case GBSA model\ :cite:`Onufriev2004` using the GB\ :sup:`OBC`\ II parameters (corresponds to igb=5 in AMBER).
+:file:`implicit/gbn.xml`    GBn solvation model\ :cite:`Mongan2007` (corresponds to igb=7 in AMBER).
+:file:`implicit/gbn2.xml`   GBn2 solvation model\ :cite:`Nguyen2013` (corresponds to igb=8 in AMBER).
+==========================  ==================================================================================================================================
+
+The only nonbonded methods that are supported with implicit solvent are :code:`NoCutoff` (the default),
+:code:`CutoffNonPeriodic`, and :code:`CutoffPeriodic.`  If you choose to use a nonbonded cutoff with
+implicit solvent, it is usually best to set the cutoff distance larger than is typical with explicit solvent.
+A cutoff of 2 nm gives good results in most cases.  Periodic boundary conditions are not usually used
+with implicit solvent.  In fact, the lack of need for periodicity and the artifacts it creates is one
+of the advantages of implicit solvent.  The option is still offered, since it could be useful in some
+unusual situations.
 
 You can further control the solvation model in a few ways.  First, you can
 specify the dielectric constants to use for the solute and solvent:
@@ -618,7 +629,7 @@ specify the dielectric constants to use for the solute and solvent:
 
     system = forcefield.createSystem(topology, soluteDielectric=1.0, solventDielectric=80.0)
 
-If they are not specified, the solute and solvent dielectrics default to 1.0 and
+If they are not specified, the solute and solvent dielectric constants default to 1.0 and
 78.5, respectively.
 
 You also can model the effect of a non-zero salt concentration by specifying the
