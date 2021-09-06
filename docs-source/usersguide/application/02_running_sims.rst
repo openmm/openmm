@@ -638,6 +638,14 @@ Debye-Huckel screening parameter\ :cite:`Srinivasan1999`:
 
     system = forcefield.createSystem(topology, implicitSolventKappa=1.0/nanometer)
 
+The screening parameter can be calculated as
+
+.. math::
+  \kappa = 367.434915 \sqrt{\frac{I}{\epsilon T}}
+
+where :math:`I` is the ionic strength in moles/liter, :math:`\epsilon` is the solvent
+dielectric constant, and :math:`T` is the temperature in Kelvin.
+
 AMOEBA
 ------
 
