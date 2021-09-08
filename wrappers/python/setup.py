@@ -6,9 +6,8 @@ import re
 import os
 import sys
 import platform
-import numpy
-from distutils.core import setup
-from Cython.Build import cythonize
+from setuptools import Extension, setup
+from setuptools.command.build_ext import build_ext
 
 MAJOR_VERSION_NUM='@OPENMM_MAJOR_VERSION@'
 MINOR_VERSION_NUM='@OPENMM_MINOR_VERSION@'
@@ -122,10 +121,91 @@ if not release:
                        'path': os.getenv('OPENMM_LIB_PATH')})
 
 
+class CustomBuildExtCommand(build_ext):
+    """build_ext command for use when numpy headers are needed."""
+
+    def run(self):
+        # Import numpy here, only when headers are needed
+        import numpy
+
+        # Add numpy headers to include_dirs
+        self.include_dirs.append(numpy.get_include())
+
+        super().run()
+
+    def finalize_options(self):
+        # Import Cython here, only when we need to cythonize extensions
+        if self.distribution.ext_modules:
+            from Cython.Build.Dependencies import cythonize
+
+            define_macros = [('MAJOR_VERSION', MAJOR_VERSION_NUM),
+                             ('MINOR_VERSION', MINOR_VERSION_NUM)]
+
+            libraries = ['OpenMM',
+                         'OpenMMAmoeba',
+                         'OpenMMRPMD',
+                         'OpenMMDrude',
+                         ]
+            if 'OPENMM_USE_DEBUG_LIBS' in os.environ:
+                if platform.system() == "Windows":
+                    raise Exception("use of OpenMM debug libs not supported on Win OS")
+                else:
+                    sys.stdout.write("WARNING: using debug libs:\n")
+                    for ii in range(len(libraries)):
+                        libraries[ii] = "%s_d" % libraries[ii]
+                        sys.stdout.write("%s\n" % libraries[ii])
+
+            openmm_include_path = os.getenv('OPENMM_INCLUDE_PATH')
+            if not openmm_include_path:
+                reportError("Set OPENMM_INCLUDE_PATH to point to the include directory for OpenMM")
+            openmm_lib_path = os.getenv('OPENMM_LIB_PATH')
+            if not openmm_lib_path:
+                reportError("Set OPENMM_LIB_PATH to point to the lib directory for OpenMM")
+
+            extra_compile_args = ['-std=c++11']
+            extra_link_args = []
+            if platform.system() == "Windows":
+                define_macros.append(('WIN32', None))
+                define_macros.append(('_WINDOWS', None))
+                define_macros.append((' _MSC_VER', None))
+                extra_compile_args.append('/EHsc')
+            else:
+                if platform.system() == 'Darwin':
+                    extra_compile_args += ['-stdlib=libc++']
+                    extra_link_args += ['-stdlib=libc++', '-Wl', '-rpath', openmm_lib_path]
+                    if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ and platform.processor() != 'arm':
+                        extra_compile_args += ['-mmacosx-version-min=10.7']
+                        extra_link_args += ['-mmacosx-version-min=10.7']
+                    # Hard-code CC and CXX to clang, since gcc/g++ will *not* work with
+                    # Anaconda, despite the fact that distutils will try to use them.
+                    # System Python, homebrew, and MacPorts on Macs will always use
+                    # clang, so this hack should always work and fix issues with users
+                    # that have GCC installed from MacPorts or homebrew *and* Anaconda
+                    if 'CC' not in os.environ:
+                        os.environ['CC'] = 'clang'
+                        os.environ['CXX'] = 'clang++'
+
+            library_dirs = [openmm_lib_path]
+            include_dirs = openmm_include_path.split(';')
+
+            extensionArgs = {"name": self.distribution.ext_modules[0],
+                             "sources": ["src/swig_doxygen/OpenMMSwig.cxx"],
+                             "include_dirs": include_dirs,
+                             "define_macros": define_macros,
+                             "library_dirs": library_dirs,
+                             "libraries": libraries,
+                             "extra_compile_args": extra_compile_args,
+                             "extra_link_args": extra_link_args}
+            if platform.system() != "Windows":
+                extensionArgs["runtime_library_dirs"] = library_dirs
+            self.distribution.ext_modules[0] = Extension(**extensionArgs)
+            self.distribution.ext_modules = cythonize(self.distribution.ext_modules, force=self.force)
+        super().finalize_options()
+
+
 def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                            minor_version_num=MINOR_VERSION_NUM,
                            build_info=BUILD_INFO):
-    from distutils.core import Extension
     setupKeywords = {}
     setupKeywords["name"]              = "OpenMM"
     setupKeywords["version"]           = "%s.%s.%s" % (major_version_num,
@@ -165,69 +245,9 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     (especially on recent GPUs) that make it truly unique among simulation codes.
     """
 
-    define_macros = [('MAJOR_VERSION', major_version_num),
-                     ('MINOR_VERSION', minor_version_num)]
-
-    libraries=['OpenMM',
-               'OpenMMAmoeba',
-               'OpenMMRPMD',
-               'OpenMMDrude',
-              ]
-    if 'OPENMM_USE_DEBUG_LIBS' in os.environ:
-        if platform.system() == "Windows":
-            raise Exception("use of OpenMM debug libs not supported on Win OS")
-        else:
-            sys.stdout.write("WARNING: using debug libs:\n")
-            for ii in range(len(libraries)):
-                libraries[ii]="%s_d" % libraries[ii]
-                sys.stdout.write("%s\n" % libraries[ii])
-
-    openmm_include_path = os.getenv('OPENMM_INCLUDE_PATH')
-    if not openmm_include_path:
-        reportError("Set OPENMM_INCLUDE_PATH to point to the include directory for OpenMM")
-    openmm_lib_path = os.getenv('OPENMM_LIB_PATH')
-    if not openmm_lib_path:
-        reportError("Set OPENMM_LIB_PATH to point to the lib directory for OpenMM")
-
-    extra_compile_args=['-std=c++11']
-    extra_link_args=[]
-    if platform.system() == "Windows":
-        define_macros.append( ('WIN32', None) )
-        define_macros.append( ('_WINDOWS', None) )
-        define_macros.append( (' _MSC_VER', None) )
-        extra_compile_args.append('/EHsc')
-    else:
-        if platform.system() == 'Darwin':
-            extra_compile_args += ['-stdlib=libc++']
-            extra_link_args += ['-stdlib=libc++', '-Wl', '-rpath', openmm_lib_path]
-            if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ and platform.processor() != 'arm':
-                extra_compile_args += ['-mmacosx-version-min=10.7']
-                extra_link_args += ['-mmacosx-version-min=10.7']
-            # Hard-code CC and CXX to clang, since gcc/g++ will *not* work with
-            # Anaconda, despite the fact that distutils will try to use them.
-            # System Python, homebrew, and MacPorts on Macs will always use
-            # clang, so this hack should always work and fix issues with users
-            # that have GCC installed from MacPorts or homebrew *and* Anaconda
-            if 'CC' not in os.environ:
-                os.environ['CC'] = 'clang'
-                os.environ['CXX'] = 'clang++'
-
-    library_dirs=[openmm_lib_path]
-    include_dirs=openmm_include_path.split(';')
-    include_dirs.append(numpy.get_include())
-
-    extensionArgs = {"name": "openmm._openmm",
-                    "sources": ["src/swig_doxygen/OpenMMSwig.cxx"],
-                    "include_dirs": include_dirs,
-                    "define_macros": define_macros,
-                    "library_dirs": library_dirs,
-                    "libraries": libraries,
-                    "extra_compile_args": extra_compile_args,
-                    "extra_link_args": extra_link_args}
-    if platform.system() != "Windows":
-        extensionArgs["runtime_library_dirs"] = library_dirs
-    setupKeywords["ext_modules"] = [Extension(**extensionArgs)]
-    setupKeywords["ext_modules"] += cythonize('openmm/app/internal/*.pyx')
+    setupKeywords["setup_requires"] = ["Cython>=0.23", "numpy"]
+    setupKeywords["cmdclass"] = {'build_ext': CustomBuildExtCommand}
+    setupKeywords["ext_modules"] = ['openmm._openmm', 'openmm/app/internal/*.pyx']
 
     outputString = ''
     firstTab     = 40
@@ -239,7 +259,6 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     sys.stdout.write("%s" % outputString)
 
     return setupKeywords
-
 
 def main():
     if sys.version_info < (2, 7):
