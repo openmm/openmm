@@ -606,19 +606,29 @@ jobs:
       - name: Check 404s
         shell: bash -l {0}
         env:
-          # From --help: "List of (comma-separated) urls in regexy form to not include in the check"
-          # Multi-skip syntax example: https://github.com/volkamerlab/volkamerlab_org/blob/fd4be6a/.github/workflows/ci.yaml#L33-L41
-          SKIP_URL: support.amd.com
+          # Pipe-seperated list of domains to skip
+          SKIP_DOMAIN: support.amd.com
         run: |
           set +e
+          # Linkinator accepts regex for its --skip argument, so we
+          # should pre-process the domains into the relevant pattern
+          SKIP_REGEX=$(python -c "print(
+            '^(https?://)?([a-zA-Z0-9\-_.]+\.)?', # Optionally match protocol and subdomains
+            '(',                                  # Open sub-pattern for domain names
+              '$SKIP_DOMAIN'.replace('.', '\.'),     # Escape out periods
+            ')',                                  # Close sub-pattern of domains
+            '(/.*)?$',                            # only match if this is the end of the domain name
+            sep='',                               # Concatenate the above strings exactly
+            end=''                                # No newline at end of print()
+          )")
           for d in api-c++ api-python developerguide userguide; do
             echo "::group:: Check ${d}"
-            npx linkinator ./build/api-docs/${d}/ --recurse --timeout=5000 --skip "$SKIP_URL"
+            npx linkinator ./${d}/ --recurse --timeout=20000 --skip "$SKIP_REGEX" --server-root ./build/api-docs --verbosity error
             ((exitcode+=$?))
             echo "::endgroup::"
           done
           echo "::group:: Check README"
-          npx linkinator ./README.md --markdown --skip "$SKIP_URL"
+          npx linkinator ./README.md --markdown --skip "$SKIP_REGEX"
           ((exitcode+=$?))
           echo "::endgroup::"
           exit $exitcode

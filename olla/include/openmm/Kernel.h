@@ -41,18 +41,24 @@ namespace OpenMM {
  * A Kernel encapsulates a particular implementation of a calculation that can be performed on the data
  * in a Context.  Kernel objects are created by Platforms:
  *
- * <pre>
- * Kernel kernel = platform.createKernel(kernelName);
- * </pre>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    Kernel kernel = platform.createKernel(kernelName);
+ *
+ * \endverbatim
  *
  * The Kernel class itself does not specify any details of what calculation is to be performed or the API
  * for calling it.  Instead, subclasses of KernelImpl will define APIs which are appropriate to particular
  * calculations.  To execute a Kernel, you therefore request its implementation object and cast it to the
  * correct type:
  *
- * <pre>
- * dynamic_cast<AddStreamsImpl&>(kernel.getImpl()).execute(stream1, stream2);
- * </pre>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    dynamic_cast<AddStreamsImpl&>(kernel.getImpl()).execute(stream1, stream2);
+ *
+ * \endverbatim
  */
 
 class OPENMM_EXPORT Kernel {

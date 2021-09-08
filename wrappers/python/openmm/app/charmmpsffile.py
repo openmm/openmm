@@ -1248,7 +1248,7 @@ class CharmmPsfFile(object):
                     if lj_idx_list[j] > 0: continue # already assigned
                     if atom2 is atom:
                         lj_idx_list[j] = num_lj_types
-                    elif not atom.nbfix and not atom.nbthole:
+                    elif not atom.nbfix and not atom.nbthole and not atom2.nbfix and not atom2.nbthole:
                         # Only non-NBFIXed and non-NBTholed atom types can be compressed
                         ljtype2 = (atom2.rmin, atom2.epsilon)
                         if ljtype == ljtype2:

@@ -364,11 +364,13 @@ public:
     /**
      * Given a collection of floating point buffers packed into an array, sum them and store
      * the sum in the first buffer.
+     * Also, write the result into a 64-bit fixed point buffer (overwriting its contents).
      *
      * @param array       the array containing the buffers to reduce
+     * @param longBuffer  the 64-bit fixed point buffer to write the result into
      * @param numBuffers  the number of buffers packed into the array
      */
-    void reduceBuffer(OpenCLArray& array, int numBuffers);
+    void reduceBuffer(OpenCLArray& array, OpenCLArray& longBuffer, int numBuffers);
     /**
      * Sum the buffers containing forces.
      */

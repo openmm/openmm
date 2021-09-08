@@ -212,3 +212,12 @@ div.sphinxsidebarwrapper .extra-nav-links {
         display: none
     }
 }
+
+/* Space out Breathe a bit more */
+.body dl.cpp {
+    margin-bottom: 20px;
+}
+
+.cpp .sig-name {
+    font-size: 1em;
+}

@@ -52,9 +52,12 @@ class KernelFactory;
  *
  * To get a Platform object, call
  *
- * <pre>
- * Platform& platform = Platform::findPlatform(kernelNames);
- * </pre>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    Platform& platform = Platform::findPlatform(kernelNames);
+ *
+ * \endverbatim
  *
  * passing in the names of all kernels that will be required for the calculation you plan to perform.  It
  * will return the fastest available Platform which provides implementations of all the specified kernels.
