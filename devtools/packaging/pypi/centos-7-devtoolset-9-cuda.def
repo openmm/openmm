@@ -64,7 +64,7 @@ From: nvidia/cuda:11.2.1-devel-centos7
   #Useful when you want the container to run as an executable
 
  
-  scl enable devtoolset-9 /host/build.sh
+  scl enable devtoolset-9 /host/build_wheel.sh
 
 
 %test
