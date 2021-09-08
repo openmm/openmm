@@ -1,0 +1,73 @@
+Bootstrap: docker
+From: nvidia/cuda:11.2.1-devel-centos7
+
+%setup
+  # Runs on host. The path to the image is $SINGULARITY_ROOTFS
+
+%post
+  # Post setup, runs inside the image
+
+  #Host directory mount point
+  mkdir /host
+
+  #Add CUDA paths
+  echo "\n #Cuda paths \n" >> /environment
+  echo 'export CPATH="/usr/local/cuda/include:$CPATH"' >> /environment
+  echo 'export PATH="/usr/local/cuda/bin:$PATH"' >> /environment
+  echo 'export LD_LIBRARY_PATH="/usr/local/cuda/lib64:$LD_LIBRARY_PATH"' >> /environment
+  echo 'export CUDA_HOME="/usr/local/cuda"' >> /environment
+
+  # for Python source install - for some reason /usr/local/lib isn't on the library path by default
+  echo 'export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"' >> /environment
+  export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
+  # install dependencies
+  
+  yum install -y centos-release-scl epel-release
+  yum groupinstall -y "Development Tools"
+  # OpenMM requires swig3 and cmake3. Remove the old versions installed by the group install
+  yum remove -y swig cmake
+  yum install -y \
+    devtoolset-9 \
+    swig3 \
+    cmake3 \
+    wget \
+    bzip2 bzip2-devel\
+    chrpath \
+    git \
+    doxygen \
+    fftw-devel
+#    rh-python39 rh-python39-python-devel rh-python39-python-pip \
+#    rh-python39-python-numpy rh-python39-python-Cython rh-python39-python-wheel \
+# Python 3.9 not yet available as rh package. Need to build from source
+
+#  scl enable rh-python39 "pip install sphinx sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen lxml cmake"  
+  
+  yum -y install gcc openssl-devel libffi-devel
+
+  wget https://github.com/python/cpython/archive/refs/tags/v3.9.6.tar.gz
+  tar xvf v3.9.6.tar.gz
+  cd cpython-3.9.6
+  ./configure --enable-shared --with-ensurepip=install
+  make -j20
+  make install
+
+  cd ..
+  
+  pip3 install lxml numpy Cython
+    
+
+    
+  
+
+%runscript
+  #Executes when the "singularity run" command is used
+  #Useful when you want the container to run as an executable
+
+ 
+  scl enable devtoolset-9 /host/build.sh
+
+
+%test
+  #Test script to verify that the image is built and running correctly
+
+
