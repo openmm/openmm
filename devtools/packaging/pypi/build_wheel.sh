@@ -1,4 +1,5 @@
 #!/bin/bash
+# Run from the base directory of the OpenMM source tree.
 set -e
 mkdir build
 cd build
