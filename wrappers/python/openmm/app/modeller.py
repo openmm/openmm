@@ -520,7 +520,7 @@ class Modeller(object):
         if len(self.positions) == 0:
             positions = []
         else:
-            positions = self.positions.value_in_unit(nanometer)[:]
+            positions = deepcopy(self.positions.value_in_unit(nanometer))
         cells = _CellList(positions, maxCutoff, vectors, True)
 
         # Create a function to compute the distance between two points, taking periodic boundary conditions into account.
@@ -1540,7 +1540,7 @@ class _CellList(object):
     """This class organizes atom positions into cells, so the neighbors of a point can be quickly retrieved"""
 
     def __init__(self, positions, maxCutoff, vectors, periodic):
-        self.positions = positions[:]
+        self.positions = deepcopy(positions)
         self.cells = {}
         self.numCells = tuple((max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)))
         self.cellSize = tuple((vectors[i][i]/self.numCells[i] for i in range(3)))
