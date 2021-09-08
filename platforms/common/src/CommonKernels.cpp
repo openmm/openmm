@@ -3280,7 +3280,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
                     gradientExpressions["dV"+is+"dR.y += "] = valueGradientExpressions[i][1];
                 if (!isZeroExpression(valueGradientExpressions[i][2]))
                     gradientExpressions["dV"+is+"dR.z += "] = valueGradientExpressions[i][2];
-                compute << cc.getExpressionUtilities().createExpressions(gradientExpressions, variables, functionList, functionDefinitions, "temp");
+                compute << cc.getExpressionUtilities().createExpressions(gradientExpressions, variables, functionList, functionDefinitions, "gradtemp_"+is);
             }
             for (int i = 1; i < numComputedValues; i++)
                 compute << "force -= deriv"<<energyDerivs->getParameterSuffix(i)<<"*dV"<<i<<"dR;\n";
