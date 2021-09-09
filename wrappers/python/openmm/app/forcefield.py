@@ -46,6 +46,7 @@ import openmm.unit as unit
 from . import element as elem
 from openmm.app.internal.singleton import Singleton
 from openmm.app.internal import compiled
+from openmm.app.internal.argtracker import ArgTracker
 
 # Directories from which to load built in force fields.
 
@@ -1198,6 +1199,7 @@ class ForceField(object):
         args['switchDistance'] = switchDistance
         args['flexibleConstraints'] = flexibleConstraints
         args['drudeMass'] = drudeMass
+        args = ArgTracker(args)
         data = ForceField._SystemData(topology)
         rigidResidue = [False]*topology.getNumResidues()
 
@@ -1368,6 +1370,7 @@ class ForceField(object):
 
         for script in self._scripts:
             exec(script, locals())
+        args.checkArgs(self.createSystem)
         return sys
 
 

@@ -282,6 +282,18 @@ class TestForceField(unittest.TestCase):
             else:
                 self.assertEqual(trueMass[i], adjustedMass[i])
 
+    def test_UnusedArgs(self):
+        """Test that specifying an argument that is never used throws an exception."""
+        topology = self.pdb1.topology
+        # Using the default value should not raise an exception.
+        self.forcefield1.createSystem(topology, drudeMass=0.4*amu)
+        # Specifying a non-default value should.
+        with self.assertRaises(ValueError):
+            self.forcefield1.createSystem(topology, drudeMass=0.5*amu)
+        # Specifying a nonexistant argument should raise an exception.
+        with self.assertRaises(ValueError):
+            self.forcefield1.createSystem(topology, nonbndedCutoff=1.0*nanometer)
+
     def test_Forces(self):
         """Compute forces and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
 
