@@ -429,10 +429,10 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
 
 
 void ComputeContext::setAtomIndex(const int index, const int order){
-  if(index < 0 || index >= numAtoms){
+  if(index < 0 || index >= paddedNumAtoms){
     throw OpenMMException("Particle index is out of range");
   }
-  if(order < 0 || order >= numAtoms){
+  if(order < 0 || order >= paddedNumAtoms){
     throw OpenMMException("Particle reordered index is out of range");
   }
   atomIndex[index] = order;
