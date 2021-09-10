@@ -357,6 +357,16 @@ public:
         return atomIndex;
     }
     /**
+     * Set the reordered index of an atom.
+     *
+     * It is used only in special circumstances to sync the ordering
+     * of particles of the same system across two contexts.
+     *
+     * @param index  The index of the atom in the system
+     * @param order  The index of the same atom in the context
+     */
+    void setAtomIndex(const int index, const int order);
+    /**
      * Get the array which contains the index of each atom.
      */
     virtual ArrayInterface& getAtomIndexArray() = 0;
