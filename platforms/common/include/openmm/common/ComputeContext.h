@@ -440,6 +440,10 @@ public:
      */
     virtual NonbondedUtilities* createNonbondedUtilities() = 0;
     /**
+     * Get the smallest legal size for a dimension of the grid.
+     */
+    virtual int findLegalFFTDimension(int minimum);
+    /**
      * This should be called by the Integrator from its own initialize() method.
      * It ensures all contexts are fully initialized.
      */

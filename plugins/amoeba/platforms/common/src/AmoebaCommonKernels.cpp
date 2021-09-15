@@ -50,23 +50,6 @@
 using namespace OpenMM;
 using namespace std;
 
-static int findLegalFFTDimension(int minimum) {
-    if (minimum < 1)
-        return 1;
-    while (true) {
-        // Attempt to factor the current value.
-
-        int unfactored = minimum;
-        for (int factor = 2; factor < 8; factor++) {
-            while (unfactored > 1 && unfactored%factor == 0)
-                unfactored /= factor;
-        }
-        if (unfactored == 1)
-            return minimum;
-        minimum++;
-    }
-}
-
 static void setPeriodicBoxArgs(ComputeContext& cc, ComputeKernel kernel, int index) {
     Vec3 a, b, c;
     cc.getPeriodicBoxVectors(a, b, c);
@@ -456,13 +439,13 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
             nb.setCutoffDistance(force.getCutoffDistance());
             NonbondedForceImpl::calcPMEParameters(system, nb, pmeAlpha, gridSizeX, gridSizeY, gridSizeZ, false);
-            gridSizeX = findLegalFFTDimension(gridSizeX);
-            gridSizeY = findLegalFFTDimension(gridSizeY);
-            gridSizeZ = findLegalFFTDimension(gridSizeZ);
+            gridSizeX = cc.findLegalFFTDimension(gridSizeX);
+            gridSizeY = cc.findLegalFFTDimension(gridSizeY);
+            gridSizeZ = cc.findLegalFFTDimension(gridSizeZ);
         } else {
-            gridSizeX = findLegalFFTDimension(nx);
-            gridSizeY = findLegalFFTDimension(ny);
-            gridSizeZ = findLegalFFTDimension(nz);
+            gridSizeX = cc.findLegalFFTDimension(nx);
+            gridSizeY = cc.findLegalFFTDimension(ny);
+            gridSizeZ = cc.findLegalFFTDimension(nz);
         }
         defines["EWALD_ALPHA"] = cc.doubleToString(pmeAlpha);
         defines["SQRT_PI"] = cc.doubleToString(sqrt(M_PI));
@@ -2550,13 +2533,13 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
             nb.setCutoffDistance(force.getCutoffDistance());
             NonbondedForceImpl::calcPMEParameters(system, nb, pmeAlpha, gridSizeX, gridSizeY, gridSizeZ, false);
-            gridSizeX = findLegalFFTDimension(gridSizeX);
-            gridSizeY = findLegalFFTDimension(gridSizeY);
-            gridSizeZ = findLegalFFTDimension(gridSizeZ);
+            gridSizeX = cc.findLegalFFTDimension(gridSizeX);
+            gridSizeY = cc.findLegalFFTDimension(gridSizeY);
+            gridSizeZ = cc.findLegalFFTDimension(gridSizeZ);
         } else {
-            gridSizeX = findLegalFFTDimension(nx);
-            gridSizeY = findLegalFFTDimension(ny);
-            gridSizeZ = findLegalFFTDimension(nz);
+            gridSizeX = cc.findLegalFFTDimension(nx);
+            gridSizeY = cc.findLegalFFTDimension(ny);
+            gridSizeZ = cc.findLegalFFTDimension(nz);
         }
         force.getDPMEParameters(dpmeAlpha, nx, ny, nz);
         if (nx == 0 || dpmeAlpha == 0) {
@@ -2564,13 +2547,13 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
             nb.setCutoffDistance(force.getCutoffDistance());
             NonbondedForceImpl::calcPMEParameters(system, nb, dpmeAlpha, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
-            dispersionGridSizeX = findLegalFFTDimension(dispersionGridSizeX);
-            dispersionGridSizeY = findLegalFFTDimension(dispersionGridSizeY);
-            dispersionGridSizeZ = findLegalFFTDimension(dispersionGridSizeZ);
+            dispersionGridSizeX = cc.findLegalFFTDimension(dispersionGridSizeX);
+            dispersionGridSizeY = cc.findLegalFFTDimension(dispersionGridSizeY);
+            dispersionGridSizeZ = cc.findLegalFFTDimension(dispersionGridSizeZ);
         } else {
-            dispersionGridSizeX = findLegalFFTDimension(nx);
-            dispersionGridSizeY = findLegalFFTDimension(ny);
-            dispersionGridSizeZ = findLegalFFTDimension(nz);
+            dispersionGridSizeX = cc.findLegalFFTDimension(nx);
+            dispersionGridSizeY = cc.findLegalFFTDimension(ny);
+            dispersionGridSizeZ = cc.findLegalFFTDimension(nz);
         }
         defines["EWALD_ALPHA"] = cc.doubleToString(pmeAlpha);
         defines["SQRT_PI"] = cc.doubleToString(sqrt(M_PI));

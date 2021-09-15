@@ -640,6 +640,23 @@ void ComputeContext::addPostComputation(ForcePostComputation* computation) {
     postComputations.push_back(computation);
 }
 
+int ComputeContext::findLegalFFTDimension(int minimum) {
+    if (minimum < 1)
+        return 1;
+    while (true) {
+        // Attempt to factor the current value.
+
+        int unfactored = minimum;
+        for (int factor = 2; factor < 8; factor++) {
+            while (unfactored > 1 && unfactored%factor == 0)
+                unfactored /= factor;
+        }
+        if (unfactored == 1)
+            return minimum;
+        minimum++;
+    }
+}
+
 struct ComputeContext::WorkThread::ThreadData {
     ThreadData(std::queue<ComputeContext::WorkTask*>& tasks, bool& waiting,  bool& finished, bool& threwException, OpenMMException& stashedException,
             pthread_mutex_t& queueLock, pthread_cond_t& waitForTaskCondition, pthread_cond_t& queueEmptyCondition) :
