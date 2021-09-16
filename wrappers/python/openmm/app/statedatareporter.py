@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2020 Stanford University and the Authors.
+Portions copyright (c) 2012-2021 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Robert McGibbon
 
@@ -57,7 +57,7 @@ class StateDataReporter(object):
     """
 
     def __init__(self, file, reportInterval, step=False, time=False, potentialEnergy=False, kineticEnergy=False, totalEnergy=False, temperature=False, volume=False, density=False,
-                 progress=False, remainingTime=False, speed=False, elapsedTime=False, separator=',', systemMass=None, totalSteps=None):
+                 progress=False, remainingTime=False, speed=False, elapsedTime=False, separator=',', systemMass=None, totalSteps=None, append=False):
         """Create a StateDataReporter.
 
         Parameters
@@ -108,6 +108,11 @@ class StateDataReporter(object):
             The total number of steps that will be included in the simulation.
             This is required if either progress or remainingTime is set to True,
             and defines how many steps will indicate 100% completion.
+        append : bool=False
+            If true, append to an existing file.  This has two effects.  First,
+            the file is opened in append mode.  Second, the header line is not
+            written, since there is assumed to already be a header line at the
+            start of the file.
         """
         self._reportInterval = reportInterval
         self._openedFile = isinstance(file, str)
@@ -119,13 +124,17 @@ class StateDataReporter(object):
             if file.endswith('.gz'):
                 if not have_gzip:
                     raise RuntimeError("Cannot write .gz file because Python could not import gzip library")
+                if append:
+                    raise ValueError("Appending is not supported when writing to a compressed file")
                 self._out = gzip.GzipFile(fileobj=open(file, 'wb', 0))
             elif file.endswith('.bz2'):
                 if not have_bz2:
                     raise RuntimeError("Cannot write .bz2 file because Python could not import bz2 library")
+                if append:
+                    raise ValueError("Appending is not supported when writing to a compressed file")
                 self._out = bz2.BZ2File(file, 'w', 0)
             else:
-                self._out = open(file, 'w')
+                self._out = open(file, 'a' if append else 'w')
         else:
             self._out = file
         self._step = step
@@ -143,6 +152,7 @@ class StateDataReporter(object):
         self._separator = separator
         self._totalMass = systemMass
         self._totalSteps = totalSteps
+        self._append = append
         self._hasInitialized = False
         self._needsPositions = False
         self._needsVelocities = False
@@ -181,7 +191,8 @@ class StateDataReporter(object):
         if not self._hasInitialized:
             self._initializeConstants(simulation)
             headers = self._constructHeaders()
-            print('#"%s"' % ('"'+self._separator+'"').join(headers), file=self._out)
+            if not self._append:
+                print('#"%s"' % ('"'+self._separator+'"').join(headers), file=self._out)
             try:
                 self._out.flush()
             except AttributeError:
