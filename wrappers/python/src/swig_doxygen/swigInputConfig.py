@@ -234,6 +234,7 @@ UNITS = {
 ("SerializationNode", "getProperties") : (None, ()),
 ("SerializationNode", "getStringProperty") : (None, ()),
 ("SerializationNode", "getIntProperty") : (None, ()),
+("SerializationNode", "getLongProperty") : (None, ()),
 ("SerializationNode", "getDoubleProperty") : (None, ()),
 ("SerializationProxy", "getProxy") : (None, ()),
 ("SerializationProxy", "getTypeName") : (None, ()),
