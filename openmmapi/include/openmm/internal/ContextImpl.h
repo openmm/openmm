@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -92,6 +92,14 @@ public:
      * Set the current time (in picoseconds).
      */
     void setTime(double t);
+    /**
+     * Get the current step count.
+     */
+    long long getStepCount() const;
+    /**
+     * Set the current step count.
+     */
+    void setStepCount(long long count);
     /**
      * Get the positions of all particles.
      *

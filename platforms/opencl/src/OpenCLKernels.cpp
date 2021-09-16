@@ -114,6 +114,16 @@ void OpenCLUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
         ctx->setTime(time);
 }
 
+long long OpenCLUpdateStateDataKernel::getStepCount(const ContextImpl& context) const {
+    return cl.getStepCount();
+}
+
+void OpenCLUpdateStateDataKernel::setStepCount(const ContextImpl& context, long long count) {
+    vector<OpenCLContext*>& contexts = cl.getPlatformData().contexts;
+    for (auto ctx : contexts)
+        ctx->setStepCount(count);
+}
+
 void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
@@ -363,8 +373,8 @@ void OpenCLUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream
     stream.write((char*) &precision, sizeof(int));
     double time = cl.getTime();
     stream.write((char*) &time, sizeof(double));
-    int stepCount = cl.getStepCount();
-    stream.write((char*) &stepCount, sizeof(int));
+    long long stepCount = cl.getStepCount();
+    stream.write((char*) &stepCount, sizeof(long long));
     int stepsSinceReorder = cl.getStepsSinceReorder();
     stream.write((char*) &stepsSinceReorder, sizeof(int));
     char* buffer = (char*) cl.getPinnedBuffer();
@@ -397,8 +407,9 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
         throw OpenMMException("Checkpoint was created with a different numeric precision");
     double time;
     stream.read((char*) &time, sizeof(double));
-    int stepCount, stepsSinceReorder;
-    stream.read((char*) &stepCount, sizeof(int));
+    long long stepCount;
+    stream.read((char*) &stepCount, sizeof(long long));
+    int stepsSinceReorder;
     stream.read((char*) &stepsSinceReorder, sizeof(int));
     vector<OpenCLContext*>& contexts = cl.getPlatformData().contexts;
     for (auto ctx : contexts) {

@@ -117,8 +117,8 @@ public:
     std::vector<OpenCLContext*> contexts;
     std::vector<double> contextEnergy;
     bool hasInitializedContexts, removeCM, useCpuPme, disablePmeStream;
-    int cmMotionFrequency;
-    int stepCount, computeForceCount;
+    int cmMotionFrequency, computeForceCount;
+    long long stepCount;
     double time;
     std::map<std::string, std::string> propertyValues;
     ThreadPool threads;

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors       *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -152,6 +152,28 @@ public:
      * @param value  the value to set for the property
      */
     SerializationNode& setIntProperty(const std::string& name, int value);
+    /**
+     * Get the property with a particular name, specified as a long long.  If there is no property with
+     * the specified name, an exception is thrown.
+     *
+     * @param name   the name of the property to get
+     */
+    long long getLongProperty(const std::string& name) const;
+    /**
+     * Get the property with a particular name, specified as a long long.  If there is no property with
+     * the specified name, a default value is returned instead.
+     *
+     * @param name          the name of the property to get
+     * @param defaultValue  the value to return if the specified property does not exist
+     */
+    long long getLongProperty(const std::string& name, long long defaultValue) const;
+    /**
+     * Set the value of a property, specified as a long long.
+     *
+     * @param name   the name of the property to set
+     * @param value  the value to set for the property
+     */
+    SerializationNode& setLongProperty(const std::string& name, long long value);
     /**
      * Get the property with a particular name, specified as an bool.  If there is no property with
      * the specified name, an exception is thrown.

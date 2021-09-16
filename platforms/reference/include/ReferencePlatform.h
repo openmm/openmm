@@ -63,7 +63,8 @@ class OPENMM_EXPORT ReferencePlatform::PlatformData {
 public:
     PlatformData(const System& system);
     ~PlatformData();
-    int numParticles, stepCount;
+    int numParticles;
+    long long stepCount;
     double time;
     std::vector<Vec3>* positions;
     std::vector<Vec3>* velocities;

@@ -213,6 +213,14 @@ void ReferenceUpdateStateDataKernel::setTime(ContextImpl& context, double time) 
     data.time = time;
 }
 
+long long ReferenceUpdateStateDataKernel::getStepCount(const ContextImpl& context) const {
+    return data.stepCount;
+}
+
+void ReferenceUpdateStateDataKernel::setStepCount(const ContextImpl& context, long long count) {
+    data.stepCount = count;
+}
+
 void ReferenceUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions) {
     int numParticles = context.getSystem().getNumParticles();
     vector<Vec3>& posData = extractPositions(context);
@@ -283,6 +291,7 @@ void ReferenceUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostr
     int version = 3;
     stream.write((char*) &version, sizeof(int));
     stream.write((char*) &data.time, sizeof(data.time));
+    stream.write((char*) &data.stepCount, sizeof(long long));
     vector<Vec3>& posData = extractPositions(context);
     stream.write((char*) &posData[0], sizeof(Vec3)*posData.size());
     vector<Vec3>& velData = extractVelocities(context);
@@ -298,6 +307,7 @@ void ReferenceUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istrea
     if (version != 3)
         throw OpenMMException("Checkpoint was created with a different version of OpenMM");
     stream.read((char*) &data.time, sizeof(data.time));
+    stream.read((char*) &data.stepCount, sizeof(long long));
     vector<Vec3>& posData = extractPositions(context);
     stream.read((char*) &posData[0], sizeof(Vec3)*posData.size());
     vector<Vec3>& velData = extractVelocities(context);

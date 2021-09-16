@@ -135,6 +135,18 @@ public:
      */
     void setTime(ContextImpl& context, double time);
     /**
+     * Get the current step count
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    long long getStepCount(const ContextImpl& context) const;
+    /**
+     * Set the current step count
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void setStepCount(const ContextImpl& context, long long count);
+    /**
      * Get the positions of all particles.
      *
      * @param positions  on exit, this contains the particle positions

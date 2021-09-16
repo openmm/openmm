@@ -179,13 +179,13 @@ public:
     /**
      * Get the number of integration steps that have been taken.
      */
-    int getStepCount() {
+    long long getStepCount() {
         return stepCount;
     }
     /**
      * Set the number of integration steps that have been taken.
      */
-    void setStepCount(int steps) {
+    void setStepCount(long long steps) {
         stepCount = steps;
     }
     /**
@@ -480,7 +480,8 @@ protected:
     void reorderAtomsImpl();
     const System& system;
     double time;
-    int numAtoms, paddedNumAtoms, stepCount, computeForceCount, stepsSinceReorder;
+    int numAtoms, paddedNumAtoms, computeForceCount, stepsSinceReorder;
+    long long stepCount;
     bool atomsWereReordered, forcesValid;
     std::vector<ComputeForceInfo*> forces;
     std::vector<Molecule> molecules;

@@ -69,6 +69,10 @@ public:
      */
     double getTime() const;
     /**
+     * Get the number of integration steps that had been performed when this State was created.
+     */
+    long long getStepCount() const;
+    /**
      * Get the position of each particle.  If this State does not contain positions, this will throw an exception.
      */
     const std::vector<Vec3>& getPositions() const;
@@ -127,7 +131,7 @@ public:
 private:
     friend class Context;
     friend class StateProxy;
-    State(double time);
+    State(double time, long long stepCount);
     void setPositions(const std::vector<Vec3>& pos);
     void setVelocities(const std::vector<Vec3>& vel);
     void setForces(const std::vector<Vec3>& force);
@@ -139,6 +143,7 @@ private:
     const SerializationNode& getIntegratorParameters() const;
     int types;
     double time, ke, pe;
+    long long stepCount;
     std::vector<Vec3> positions;
     std::vector<Vec3> velocities;
     std::vector<Vec3> forces;
@@ -154,7 +159,7 @@ private:
 
 class OPENMM_EXPORT State::StateBuilder {
 public:
-    StateBuilder(double time);
+    StateBuilder(double time, long long stepCount);
     State getState();
     void setPositions(const std::vector<Vec3>& pos);
     void setVelocities(const std::vector<Vec3>& vel);

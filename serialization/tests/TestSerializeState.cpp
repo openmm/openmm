@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -82,6 +82,8 @@ void testSerialization() {
 
     context.setPositions(positions);
     context.setVelocities(velocities);
+    context.setTime(2.5);
+    context.setStepCount(100);
 
     // Serialize and then deserialize it.
     State s1 = context.getState(State::Positions | State::Velocities | State::Forces | State::Energy | State::Parameters);
@@ -121,6 +123,7 @@ void testSerialization() {
     ASSERT_EQUAL(s1.getPotentialEnergy(), s2.getPotentialEnergy());
     ASSERT_EQUAL(s1.getKineticEnergy(), s2.getKineticEnergy());
     ASSERT_EQUAL(s1.getTime(), s2.getTime());
+    ASSERT_EQUAL(s1.getStepCount(), s2.getStepCount());
 
     map<string, double> p1 = s1.getParameters();
     map<string, double> p2 = s2.getParameters();

@@ -394,13 +394,13 @@ public:
     /**
      * Get the number of integration steps that have been taken.
      */
-    int getStepCount() {
+    long long getStepCount() {
         return stepCount;
     }
     /**
      * Set the number of integration steps that have been taken.
      */
-    void setStepCount(int steps) {
+    void setStepCount(long long steps) {
         stepCount = steps;
     }
     /**
