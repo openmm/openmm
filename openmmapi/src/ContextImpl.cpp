@@ -216,6 +216,14 @@ void ContextImpl::setTime(double t) {
     updateStateDataKernel.getAs<UpdateStateDataKernel>().setTime(*this, t);
 }
 
+long long ContextImpl::getStepCount() const {
+    return updateStateDataKernel.getAs<const UpdateStateDataKernel>().getStepCount(*this);
+}
+
+void ContextImpl::setStepCount(long long count) {
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().setStepCount(*this, count);
+}
+
 void ContextImpl::getPositions(std::vector<Vec3>& positions) {
     updateStateDataKernel.getAs<UpdateStateDataKernel>().getPositions(*this, positions);
 }

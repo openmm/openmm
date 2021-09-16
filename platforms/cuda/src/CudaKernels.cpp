@@ -98,6 +98,16 @@ void CudaUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
         ctx->setTime(time);
 }
 
+long long CudaUpdateStateDataKernel::getStepCount(const ContextImpl& context) const {
+    return cu.getStepCount();
+}
+
+void CudaUpdateStateDataKernel::setStepCount(const ContextImpl& context, long long count) {
+    vector<CudaContext*>& contexts = cu.getPlatformData().contexts;
+    for (auto ctx : contexts)
+        ctx->setStepCount(count);
+}
+
 void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
     cu.setAsCurrent();
     int numParticles = context.getSystem().getNumParticles();
@@ -343,8 +353,8 @@ void CudaUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& 
     stream.write((char*) &precision, sizeof(int));
     double time = cu.getTime();
     stream.write((char*) &time, sizeof(double));
-    int stepCount = cu.getStepCount();
-    stream.write((char*) &stepCount, sizeof(int));
+    long long stepCount = cu.getStepCount();
+    stream.write((char*) &stepCount, sizeof(long long));
     int stepsSinceReorder = cu.getStepsSinceReorder();
     stream.write((char*) &stepsSinceReorder, sizeof(int));
     char* buffer = (char*) cu.getPinnedBuffer();
@@ -378,8 +388,9 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
         throw OpenMMException("Checkpoint was created with a different numeric precision");
     double time;
     stream.read((char*) &time, sizeof(double));
-    int stepCount, stepsSinceReorder;
-    stream.read((char*) &stepCount, sizeof(int));
+    long long stepCount;
+    stream.read((char*) &stepCount, sizeof(long long));
+    int stepsSinceReorder;
     stream.read((char*) &stepsSinceReorder, sizeof(int));
     vector<CudaContext*>& contexts = cu.getPlatformData().contexts;
     for (auto ctx : contexts) {

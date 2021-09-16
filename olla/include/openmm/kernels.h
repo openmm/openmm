@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -148,6 +148,18 @@ public:
      * @param time       the time
      */
     virtual void setTime(ContextImpl& context, double time) = 0;
+    /**
+     * Get the current step count
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    virtual long long getStepCount(const ContextImpl& context) const = 0;
+    /**
+     * Set the current step count
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void setStepCount(const ContextImpl& context, long long count) = 0;
     /**
      * Get the positions of all particles.
      *

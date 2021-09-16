@@ -139,8 +139,8 @@ public:
     std::vector<CudaContext*> contexts;
     std::vector<double> contextEnergy;
     bool hasInitializedContexts, removeCM, peerAccessSupported, useCpuPme, disablePmeStream, deterministicForces, allowRuntimeCompiler;
-    int cmMotionFrequency;
-    int stepCount, computeForceCount;
+    int cmMotionFrequency, computeForceCount;
+    long long stepCount;
     double time;
     std::map<std::string, std::string> propertyValues;
     ThreadPool threads;

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -142,7 +142,7 @@ State RPMDIntegrator::getState(int copy, int types, bool enforcePeriodicBox, int
 
         // Construct the new State.
 
-        State::StateBuilder builder(state.getTime());
+        State::StateBuilder builder(state.getTime(), state.getStepCount());
         builder.setPositions(positions);
         builder.setPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
         if (types&State::Velocities)

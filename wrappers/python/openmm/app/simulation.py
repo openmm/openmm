@@ -92,8 +92,6 @@ class Simulation(object):
                 self.integrator = mm.XmlSerializer.deserialize(f.read())
         else:
             self.integrator = integrator
-        ## The index of the current time step
-        self.currentStep = 0
         ## A list of reporters to invoke during the simulation
         self.reporters = []
         if platform is None:
@@ -112,6 +110,15 @@ class Simulation(object):
             self._usesPBC = self.system.usesPeriodicBoundaryConditions()
         except Exception: # OpenMM just raises Exception if it's not implemented everywhere
             self._usesPBC = topology.getUnitCellDimensions() is not None
+
+    @property
+    def currentStep(self):
+        """The index of the current time step."""
+        return self.context.getStepCount()
+
+    @currentStep.setter
+    def currentStep(self, step):
+        self.context.setStepCount(step)
 
     def minimizeEnergy(self, tolerance=10*unit.kilojoules_per_mole/unit.nanometer, maxIterations=0):
         """Perform a local energy minimization on the system.
@@ -198,11 +205,9 @@ class Simulation(object):
             while stepsToGo > 10:
                 self.integrator.step(10) # Only take 10 steps at a time, to give Python more chances to respond to a control-c.
                 stepsToGo -= 10
-                self.currentStep += 10
                 if endTime is not None and datetime.now() >= endTime:
                     return
             self.integrator.step(stepsToGo)
-            self.currentStep += stepsToGo
             if anyReport:
                 # One or more reporters are ready to generate reports.  Organize them into three
                 # groups: ones that want wrapped positions, ones that want unwrapped positions,
