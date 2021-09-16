@@ -182,13 +182,15 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
             int trialDeviceIndex = devicePrecedence[i];
             CHECK_RESULT(cuDeviceGet(&device, trialDeviceIndex));
             defaultOptimizationOptions = "--use_fast_math";
-            unsigned int flags = CU_CTX_MAP_HOST;
+            unsigned int flags = NULL;
             if (useBlockingSync)
                 flags += CU_CTX_SCHED_BLOCKING_SYNC;
             else
                 flags += CU_CTX_SCHED_SPIN;
 
-            if (cuCtxCreate(&context, flags, device) == CUDA_SUCCESS) {
+            if (cuDevicePrimaryCtxRetain(&context, device) == CUDA_SUCCESS) {
+                CHECK_RESULT(cuDevicePrimaryCtxSetFlags(device, flags));
+                CHECK_RESULT(cuCtxPushCurrent(context));
                 this->deviceIndex = trialDeviceIndex;
                 break;
             }
@@ -419,13 +421,14 @@ CudaContext::~CudaContext() {
     string errorMessage = "Error deleting Context";
     if (contextIsValid && !isLinkedContext) {
         cuProfilerStop();
-        cuCtxDestroy(context);
+        CUcontext context_;
+        CHECK_RESULT(cuCtxPopCurrent(&context_));
+        CHECK_RESULT(cuDevicePrimaryCtxRelease(device));
     }
     contextIsValid = false;
 }
 
 void CudaContext::initialize() {
-    cuCtxSetCurrent(context);
     string errorMessage = "Error initializing Context";
     int numEnergyBuffers = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
@@ -474,8 +477,13 @@ void CudaContext::initializeContexts() {
 }
 
 void CudaContext::setAsCurrent() {
-    if (contextIsValid)
-        cuCtxSetCurrent(context);
+    string errorMessage = "Error using Context";
+    if (contextIsValid) {
+        CUcontext context_;
+        CHECK_RESULT(cuCtxGetCurrent(&context_));
+        if (context != context_)
+            throw OpenMMException("Error using Context: the current context is wrong!");
+    }
 }
 
 CUmodule CudaContext::createModule(const string source, const char* optimizationFlags) {
