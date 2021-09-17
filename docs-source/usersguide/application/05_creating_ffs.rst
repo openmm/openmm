@@ -453,7 +453,7 @@ impropers are assigned in different simulation packages:
    AmberTools LEaP
  * :code:`ordering="charmm"` produces behavior more consistent with CHARMM
  * :code:`ordering="smirnoff"` allows multiple impropers to be added using
-   exact matching to replicate the beheavior of `SMIRNOFF <https://open-forcefield-toolkit.readthedocs.io/en/latest/smirnoff.html>`_
+   exact matching to replicate the beheavior of `SMIRNOFF <https://open-forcefield-toolkit.readthedocs.io/en/latest/users/smirnoff.html>`_
    impropers
 
 Different :code:`<PeriodicTorsionForce>` tags can specify different :code:`ordering`
