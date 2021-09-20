@@ -34,6 +34,7 @@
 
 #include "ReferencePlatform.h"
 #include "openmm/kernels.h"
+#include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "SimTKOpenMMRealType.h"
 #include "ReferenceNeighborList.h"
 #include "lepton/CompiledExpression.h"
@@ -686,6 +687,7 @@ private:
     double nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
     bool useSwitchingFunction, hasInitializedLongRangeCorrection;
     CustomNonbondedForce* forceCopy;
+    CustomNonbondedForceImpl::LongRangeCorrectionData longRangeCorrectionData;
     std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;
     Lepton::CompiledExpression energyExpression, forceExpression;

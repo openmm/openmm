@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 #include "openmm/kernels.h"
 #include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/CustomIntegratorUtilities.h"
+#include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/ExpressionProgram.h"
 
@@ -616,6 +617,8 @@ public:
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
     class ForceInfo;
+    class LongRangePostComputation;
+    class LongRangeTask;
     void initInteractionGroups(const CustomNonbondedForce& force, const std::string& interactionSource, const std::vector<std::string>& tableTypes);
     ComputeContext& cc;
     ForceInfo* info;
@@ -631,6 +634,7 @@ private:
     bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList;
     int numGroupThreadBlocks;
     CustomNonbondedForce* forceCopy;
+    CustomNonbondedForceImpl::LongRangeCorrectionData longRangeCorrectionData;
     const System& system;
 };
 

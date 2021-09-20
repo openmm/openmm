@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,6 +40,7 @@
 #include "ReferenceTabulatedFunction.h"
 #include "lepton/ParsedExpression.h"
 #include "lepton/Parser.h"
+#include <atomic>
 #include <cmath>
 #include <sstream>
 #include <utility>
@@ -158,16 +159,15 @@ void CustomNonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
     context.systemChanged();
 }
 
-void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForce& force, const Context& context, double& coefficient, vector<double>& derivatives) {
-    if (force.getNonbondedMethod() == CustomNonbondedForce::NoCutoff || force.getNonbondedMethod() == CustomNonbondedForce::CutoffNonPeriodic) {
-        coefficient = 0.0;
-        return;
-    }
+CustomNonbondedForceImpl::LongRangeCorrectionData CustomNonbondedForceImpl::prepareLongRangeCorrection(const CustomNonbondedForce& force) {
+    LongRangeCorrectionData data;
+    data.method = force.getNonbondedMethod();
+    if (data.method == CustomNonbondedForce::NoCutoff || data.method == CustomNonbondedForce::CutoffNonPeriodic)
+        return data;
     
     // Identify all particle classes (defined by parameters), and record the class of each particle.
     
     int numParticles = force.getNumParticles();
-    vector<vector<double> > classes;
     map<vector<double>, int> classIndex;
     vector<int> atomClass(numParticles);
     vector<double> parameters;
@@ -175,18 +175,17 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
         force.getParticleParameters(i, parameters);
         map<vector<double>, int>::iterator entry = classIndex.find(parameters);
         if (entry == classIndex.end()) {
-            classIndex[parameters] = classes.size();
-            atomClass[i] = classes.size();
-            classes.push_back(parameters);
+            classIndex[parameters] = data.classes.size();
+            atomClass[i] = data.classes.size();
+            data.classes.push_back(parameters);
         }
         else
             atomClass[i] = entry->second;
     }
-    int numClasses = classes.size();
+    int numClasses = data.classes.size();
     
     // Count the total number of particle pairs for each pair of classes.
     
-    map<pair<int, int>, long long int> interactionCount;
     if (force.getNumInteractionGroups() == 0) {
         // Count the particles of each class.
         
@@ -194,9 +193,9 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
         for (int i = 0; i < numParticles; i++)
             classCounts[atomClass[i]]++;
         for (int i = 0; i < numClasses; i++) {
-            interactionCount[make_pair(i, i)] = (classCounts[i]*(classCounts[i]+1))/2;
+            data.interactionCount[make_pair(i, i)] = (classCounts[i]*(classCounts[i]+1))/2;
             for (int j = i+1; j < numClasses; j++)
-                interactionCount[make_pair(i, j)] = classCounts[i]*classCounts[j];
+                data.interactionCount[make_pair(i, j)] = classCounts[i]*classCounts[j];
         }
     }
     else {
@@ -204,7 +203,7 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
         
         for (int i = 0; i < numClasses; i++) {
             for (int j = i; j < numClasses; j++)
-                interactionCount[make_pair(i, j)] = 0;
+                data.interactionCount[make_pair(i, j)] = 0;
         }
         
         // Loop over interaction groups and count the interactions in each one.
@@ -218,44 +217,80 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
                         continue;
                     int class1 = atomClass[*a1];
                     int class2 = atomClass[*a2];
-                    interactionCount[make_pair(min(class1, class2), max(class1, class2))]++;
+                    data.interactionCount[make_pair(min(class1, class2), max(class1, class2))]++;
                 }
         }
     }
     
-    // Compute the coefficient.
+    // Prepare for evaluating the expressions.
     
     map<string, Lepton::CustomFunction*> functions;
     for (int i = 0; i < force.getNumFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
-    double nPart = (double) numParticles;
-    double numInteractions = (nPart*(nPart+1))/2;
-    Lepton::CompiledExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).createCompiledExpression();
-    vector<string> paramNames;
+    data.energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), functions).createCompiledExpression();
+    for (int k = 0; k < force.getNumEnergyParameterDerivatives(); k++)
+        data.derivExpressions.push_back(Lepton::Parser::parse(force.getEnergyFunction(), functions).differentiate(force.getEnergyParameterDerivativeName(k)).createCompiledExpression());
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         stringstream name1, name2;
         name1 << force.getPerParticleParameterName(i) << 1;
         name2 << force.getPerParticleParameterName(i) << 2;
-        paramNames.push_back(name1.str());
-        paramNames.push_back(name2.str());
+        data.paramNames.push_back(name1.str());
+        data.paramNames.push_back(name2.str());
     }
+    return data;
+}
+
+void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForce& force, LongRangeCorrectionData& data, const Context& context, double& coefficient, vector<double>& derivatives, ThreadPool& threads) {
+    if (data.method == CustomNonbondedForce::NoCutoff || data.method == CustomNonbondedForce::CutoffNonPeriodic) {
+        coefficient = 0.0;
+        return;
+    }
+
+    // Compute the coefficient.  Use multiple threads to compute the integrals in parallel.
+
+    int numClasses = data.classes.size();
+    double nPart = (double) context.getSystem().getNumParticles();
+    double numInteractions = (nPart*(nPart+1))/2;
+    vector<double> threadSum(threads.getNumThreads(), 0.0);
+    atomic<int> atomicCounter(0);
+    threads.execute([&] (ThreadPool& threads, int threadIndex) {
+        Lepton::CompiledExpression expression = data.energyExpression;
+        while (true) {
+            int i = atomicCounter++;
+            if (i >= numClasses)
+                break;
+            for (int j = i; j < numClasses; j++)
+                threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteraction(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
+        }
+    });
+    threads.waitForThreads();
     double sum = 0;
-    for (int i = 0; i < numClasses; i++)
-        for (int j = i; j < numClasses; j++)
-            sum += interactionCount[make_pair(i, j)]*integrateInteraction(expression, classes[i], classes[j], force, context, paramNames);
+    for (int i = 0; i < threadSum.size(); i++)
+        sum += threadSum[i];
     sum /= numInteractions;
     coefficient = 2*M_PI*nPart*nPart*sum;
     
     // Now do the same for parameter derivatives.
     
-    int numDerivs = force.getNumEnergyParameterDerivatives();
+    int numDerivs = data.derivExpressions.size();
     derivatives.resize(numDerivs);
     for (int k = 0; k < numDerivs; k++) {
-        expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).differentiate(force.getEnergyParameterDerivativeName(k)).createCompiledExpression();
+        atomicCounter = 0;
+        threads.execute([&] (ThreadPool& threads, int threadIndex) {
+            threadSum[threadIndex] = 0;
+            Lepton::CompiledExpression expression = data.derivExpressions[k];
+            while (true) {
+                int i = atomicCounter++;
+                if (i >= numClasses)
+                    break;
+                for (int j = i; j < numClasses; j++)
+                    threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteraction(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
+            }
+        });
+        threads.waitForThreads();
         sum = 0;
-        for (int i = 0; i < numClasses; i++)
-            for (int j = i; j < numClasses; j++)
-                sum += interactionCount[make_pair(i, j)]*integrateInteraction(expression, classes[i], classes[j], force, context, paramNames);
+        for (int i = 0; i < threadSum.size(); i++)
+            sum += threadSum[i];
         sum /= numInteractions;
         derivatives[k] = 2*M_PI*nPart*nPart*sum;
     }

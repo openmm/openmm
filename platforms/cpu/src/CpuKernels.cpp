@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -43,7 +43,6 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/Vec3.h"
 #include "openmm/internal/ContextImpl.h"
-#include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/internal/vectorize.h"
 #include "lepton/CompiledExpression.h"
@@ -975,10 +974,13 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
     
     // Add in the long range correction.
     
-    if (!hasInitializedLongRangeCorrection || (globalParamsChanged && forceCopy != NULL)) {
-        CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
+    if (!hasInitializedLongRangeCorrection) {
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy);
+        CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
         hasInitializedLongRangeCorrection = true;
     }
+    else if (globalParamsChanged && forceCopy != NULL)
+        CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
     double volume = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
     energy += longRangeCoefficient/volume;
     for (int i = 0; i < longRangeCoefficientDerivs.size(); i++)
@@ -1004,7 +1006,8 @@ void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& con
     // If necessary, recompute the long range correction.
     
     if (forceCopy != NULL) {
-        CustomNonbondedForceImpl::calcLongRangeCorrection(force, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force);
+        CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
         hasInitializedLongRangeCorrection = true;
         *forceCopy = force;
     }
