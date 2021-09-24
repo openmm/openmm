@@ -240,9 +240,10 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
         int canAccess;
         cuDeviceCanAccessPeer(&canAccess, getDevice(), platformData.contexts[0]->getDevice());
         if (canAccess) {
-            platformData.contexts[0]->setAsCurrent();
-            CHECK_RESULT(cuCtxEnablePeerAccess(getContext(), 0));
-            setAsCurrent();
+            {
+                ContextSelector selector2(*platformData.contexts[0]);
+                CHECK_RESULT(cuCtxEnablePeerAccess(getContext(), 0));
+            }
             CHECK_RESULT(cuCtxEnablePeerAccess(platformData.contexts[0]->getContext(), 0));
         }
     }

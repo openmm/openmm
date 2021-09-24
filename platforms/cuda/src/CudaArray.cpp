@@ -26,6 +26,7 @@
 
 #include "CudaArray.h"
 #include "CudaContext.h"
+#include "openmm/common/ContextSelector.h"
 #include <iostream>
 #include <sstream>
 #include <vector>
@@ -41,7 +42,7 @@ CudaArray::CudaArray(CudaContext& context, int size, int elementSize, const std:
 
 CudaArray::~CudaArray() {
     if (pointer != 0 && ownsMemory && context->getContextIsValid()) {
-        context->setAsCurrent();
+        ContextSelector selector(*context);
         CUresult result = cuMemFree(pointer);
         if (result != CUDA_SUCCESS) {
             std::stringstream str;
@@ -59,6 +60,7 @@ void CudaArray::initialize(ComputeContext& context, int size, int elementSize, c
     this->elementSize = elementSize;
     this->name = name;
     ownsMemory = true;
+    ContextSelector selector(*this->context);
     CUresult result = cuMemAlloc(&pointer, size*elementSize);
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
@@ -72,6 +74,7 @@ void CudaArray::resize(int size) {
         throw OpenMMException("CudaArray has not been initialized");
     if (!ownsMemory)
         throw OpenMMException("Cannot resize an array that does not own its storage");
+    ContextSelector selector(*context);
     CUresult result = cuMemFree(pointer);
     if (result != CUDA_SUCCESS) {
         std::stringstream str;
