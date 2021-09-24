@@ -35,7 +35,6 @@
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
-#include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "CommonKernelSources.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
@@ -1779,6 +1778,47 @@ private:
     vector<set<int> > groupsForParticle;
 };
 
+class CommonCalcCustomNonbondedForceKernel::LongRangePostComputation : public ComputeContext::ForcePostComputation {
+public:
+    LongRangePostComputation(ComputeContext& cc, double& longRangeCoefficient, vector<double>& longRangeCoefficientDerivs, CustomNonbondedForce* force) :
+            cc(cc), longRangeCoefficient(longRangeCoefficient), longRangeCoefficientDerivs(longRangeCoefficientDerivs), force(force) {
+    }
+    double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        cc.getWorkThread().flush();
+        Vec3 a, b, c;
+        cc.getPeriodicBoxVectors(a, b, c);
+        double volume = a[0]*b[1]*c[2];
+        map<string, double>& derivs = cc.getEnergyParamDerivWorkspace();
+        for (int i = 0; i < longRangeCoefficientDerivs.size(); i++)
+            derivs[force->getEnergyParameterDerivativeName(i)] += longRangeCoefficientDerivs[i]/volume;
+        return longRangeCoefficient/volume;
+    }
+private:
+    ComputeContext& cc;
+    double& longRangeCoefficient;
+    vector<double>& longRangeCoefficientDerivs;
+    CustomNonbondedForce* force;
+};
+
+class CommonCalcCustomNonbondedForceKernel::LongRangeTask : public ComputeContext::WorkTask {
+public:
+    LongRangeTask(ComputeContext& cc, Context& context, CustomNonbondedForceImpl::LongRangeCorrectionData& data,
+                  double& longRangeCoefficient, vector<double>& longRangeCoefficientDerivs, CustomNonbondedForce* force) :
+                        cc(cc), context(context), data(data), longRangeCoefficient(longRangeCoefficient),
+                        longRangeCoefficientDerivs(longRangeCoefficientDerivs), force(force) {
+    }
+    void execute() {
+        CustomNonbondedForceImpl::calcLongRangeCorrection(*force, data, context, longRangeCoefficient, longRangeCoefficientDerivs, cc.getThreadPool());
+    }
+private:
+    ComputeContext& cc;
+    Context& context;
+    CustomNonbondedForceImpl::LongRangeCorrectionData& data;
+    double& longRangeCoefficient;
+    vector<double>& longRangeCoefficientDerivs;
+    CustomNonbondedForce* force;
+};
+
 CommonCalcCustomNonbondedForceKernel::~CommonCalcCustomNonbondedForceKernel() {
     ContextSelector selector(cc);
     if (params != NULL)
@@ -1920,6 +1960,8 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     
     if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection() && cc.getContextIndex() == 0) {
         forceCopy = new CustomNonbondedForce(force);
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force);
+        cc.addPostComputation(new LongRangePostComputation(cc, longRangeCoefficient, longRangeCoefficientDerivs, forceCopy));
         hasInitializedLongRangeCorrection = false;
     }
     else {
@@ -2208,6 +2250,7 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
         return 0.0;
     }
     ContextSelector selector(cc);
+    bool recomputeLongRangeCorrection = !hasInitializedLongRangeCorrection;
     if (globals.isInitialized()) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -2218,14 +2261,12 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
         }
         if (changed) {
             globals.upload(globalParamValues);
-            if (forceCopy != NULL) {
-                CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
-                hasInitializedLongRangeCorrection = true;
-            }
+            if (forceCopy != NULL)
+                recomputeLongRangeCorrection = true;
         }
     }
-    if (!hasInitializedLongRangeCorrection) {
-        CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
+    if (recomputeLongRangeCorrection) {
+        cc.getWorkThread().addTask(new LongRangeTask(cc, context.getOwner(), longRangeCorrectionData, longRangeCoefficient, longRangeCoefficientDerivs, forceCopy));
         hasInitializedLongRangeCorrection = true;
     }
     if (interactionGroupData.isInitialized()) {
@@ -2273,13 +2314,7 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
         setPeriodicBoxArgs(cc, interactionGroupKernel, 6);
         interactionGroupKernel->execute(numGroupThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
-    Vec3 a, b, c;
-    cc.getPeriodicBoxVectors(a, b, c);
-    double volume = a[0]*b[1]*c[2];
-    map<string, double>& derivs = cc.getEnergyParamDerivWorkspace();
-    for (int i = 0; i < longRangeCoefficientDerivs.size(); i++)
-        derivs[forceCopy->getEnergyParameterDerivativeName(i)] += longRangeCoefficientDerivs[i]/volume;
-    return longRangeCoefficient/volume;
+    return 0;
 }
 
 void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
@@ -2305,8 +2340,9 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
     // If necessary, recompute the long range correction.
     
     if (forceCopy != NULL) {
-        CustomNonbondedForceImpl::calcLongRangeCorrection(force, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs);
-        hasInitializedLongRangeCorrection = true;
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force);
+        CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, cc.getThreadPool());
+        hasInitializedLongRangeCorrection = false;
         *forceCopy = force;
     }
     
