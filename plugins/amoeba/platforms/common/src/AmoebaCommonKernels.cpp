@@ -1413,6 +1413,7 @@ void CommonCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& co
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     int numParticles = cc.getNumAtoms();
     dipoles.resize(numParticles);
@@ -1433,6 +1434,7 @@ void CommonCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextIm
 
 
 void CommonCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     int numParticles = cc.getNumAtoms();
     dipoles.resize(numParticles);
@@ -1453,6 +1455,7 @@ void CommonCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& contex
 
 
 void CommonCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     int numParticles = cc.getNumAtoms();
     dipoles.resize(numParticles);
@@ -1494,6 +1497,7 @@ void CommonCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context,
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context, const vector<Vec3>& inputGrid, vector<double>& outputElectrostaticPotential) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     int numPoints = inputGrid.size();
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
@@ -1648,6 +1652,7 @@ void CommonCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(Context
 
 
 void CommonCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     if (cc.getUseDoublePrecision())
         computeSystemMultipoleMoments<double, mm_double4, mm_double4>(context, outputMultipoleMoments);
@@ -3174,6 +3179,7 @@ void CommonCalcHippoNonbondedForceKernel::createFieldKernel(const string& intera
 }
 
 double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    ContextSelector selector(cc);
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
@@ -3389,6 +3395,7 @@ void CommonCalcHippoNonbondedForceKernel::addTorquesToForces() {
 }
 
 void CommonCalcHippoNonbondedForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     int numParticles = cc.getNumAtoms();
     dipoles.resize(numParticles);
@@ -3436,6 +3443,7 @@ void CommonCalcHippoNonbondedForceKernel::ensureMultipolesValid(ContextImpl& con
 }
 
 void CommonCalcHippoNonbondedForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     int numParticles = cc.getNumAtoms();
     dipoles.resize(numParticles);

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,6 +29,7 @@
 #endif
 #include "AmoebaCudaKernels.h"
 #include "CudaAmoebaKernelSources.h"
+#include "openmm/common/ContextSelector.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/AmoebaGeneralizedKirkwoodForceImpl.h"
 #include "openmm/internal/AmoebaMultipoleForceImpl.h"
@@ -83,7 +84,7 @@ static void setPeriodicBoxArgs(ComputeContext& cc, ComputeKernel kernel, int ind
  * -------------------------------------------------------------------------- */
 
 CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     if (hasInitializedFFT)
         cufftDestroy(fft);
 }
@@ -91,6 +92,7 @@ CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
 void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
     CommonCalcAmoebaMultipoleForceKernel::initialize(system, force);
     if (usePME) {
+        ContextSelector selector(cc);
         cufftResult result = cufftPlan3d(&fft, gridSizeX, gridSizeY, gridSizeZ, cc.getUseDoublePrecision() ? CUFFT_Z2Z : CUFFT_C2C);
         if (result != CUFFT_SUCCESS)
             throw OpenMMException("Error initializing FFT: "+cc.intToString(result));
@@ -120,7 +122,7 @@ void CudaCalcAmoebaMultipoleForceKernel::computeFFT(bool forward) {
  * -------------------------------------------------------------------------- */
 
 CudaCalcHippoNonbondedForceKernel::~CudaCalcHippoNonbondedForceKernel() {
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     if (sort != NULL)
         delete sort;
     if (hasInitializedFFT) {
@@ -134,6 +136,7 @@ CudaCalcHippoNonbondedForceKernel::~CudaCalcHippoNonbondedForceKernel() {
 void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
     CommonCalcHippoNonbondedForceKernel::initialize(system, force);
     if (usePME) {
+        ContextSelector selector(cc);
         CudaContext& cu = dynamic_cast<CudaContext&>(cc);
         sort = new CudaSort(cu, new SortTrait(), cc.getNumAtoms());
         cufftResult result = cufftPlan3d(&fftForward, gridSizeX, gridSizeY, gridSizeZ, cc.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
