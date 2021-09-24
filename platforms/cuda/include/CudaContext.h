@@ -101,6 +101,16 @@ public:
      */
     void setAsCurrent();
     /**
+     * Push the CUcontext associated with this object to be the current context.  If the context is not
+     * valid, this returns without doing anything.
+     */
+    void pushAsCurrent();
+    /**
+     * Pop the CUcontext associated with this object off the stack of contexts.  If the context is not
+     * valid, this returns without doing anything.
+     */
+    void popAsCurrent();
+    /**
      * Get the CUdevice associated with this object.
      */
     CUdevice getDevice() {

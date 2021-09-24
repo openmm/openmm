@@ -172,7 +172,7 @@ bool canRunHugeTest() {
 
     // Only run the huge test if the device has at least 4 GB of memory.
 
-    return (memory >= 4*(1<<30));
+    return (memory >= 4L*(1<<30));
 }
 
 void runPlatformTests() {

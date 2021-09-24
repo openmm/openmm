@@ -69,6 +69,7 @@ void verifySorting(vector<float> array) {
             platform.getPropertyDefaultValue(CudaPlatform::CudaHostCompiler()), platform.getPropertyDefaultValue(CudaPlatform::CudaDisablePmeStream()), "false", true, 1, NULL);
     CudaContext& context = *platformData.contexts[0];
     context.initialize();
+    context.setAsCurrent();
     CudaArray data(context, array.size(), 4, "sortData");
     data.upload(array);
     CudaSort sort(context, new SortTrait(), array.size());

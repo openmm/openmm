@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -25,6 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/common/ComputeContext.h"
+#include "openmm/common/ContextSelector.h"
 #include "openmm/System.h"
 #include "openmm/VirtualSite.h"
 #include "openmm/internal/ContextImpl.h"
@@ -362,6 +363,7 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
     // atoms to their original order, rebuild the list of identical molecules, and sort them
     // again.
 
+    ContextSelector selector(*this);
     vector<mm_int4> newCellOffsets(numAtoms);
     if (getUseDoublePrecision()) {
         vector<mm_double4> oldPosq(paddedNumAtoms);
@@ -598,6 +600,7 @@ void ComputeContext::reorderAtomsImpl() {
 
     // Update the arrays.
 
+    ContextSelector selector(*this);
     for (int i = 0; i < numAtoms; i++) {
         atomIndex[i] = originalIndex[i];
         posCellOffsets[i] = newCellOffsets[i];
