@@ -53,6 +53,8 @@ CustomNonbondedForce::CustomNonbondedForce(const string& energy) : energyExpress
 
 CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
     // Copy everything and deep copy the tabulated functions
+    setForceGroup(rhs.getForceGroup());
+    setName(rhs.getName());
     energyExpression = rhs.energyExpression;
     nonbondedMethod = rhs.nonbondedMethod;
     cutoffDistance = rhs.cutoffDistance;
