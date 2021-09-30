@@ -24,17 +24,12 @@ KERNEL void scalePositions(float scaleX, float scaleY, float scaleZ, int numMole
         center.y *= invNumAtoms;
         center.z *= invNumAtoms;
 
-        // Move it into the first periodic box.
-
-        real3 oldCenter = center;
-        APPLY_PERIODIC_TO_POS(center)
-        real3 delta = make_real3(oldCenter.x-center.x, oldCenter.y-center.y, oldCenter.z-center.z);
-
         // Now scale the position of the molecule center.
 
-        delta.x = center.x*(scaleX-1)-delta.x;
-        delta.y = center.y*(scaleY-1)-delta.y;
-        delta.z = center.z*(scaleZ-1)-delta.z;
+        real3 delta;
+        delta.x = center.x*(scaleX-1);
+        delta.y = center.y*(scaleY-1);
+        delta.z = center.z*(scaleZ-1);
         for (int atom = first; atom < last; atom++) {
             real4 pos = posq[moleculeAtoms[atom]];
             pos.x += delta.x;
