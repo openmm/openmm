@@ -909,6 +909,9 @@ class FortranHeaderGenerator(WrapperGenerator):
                 iDef = getText("initializer", memberNode)
                 if iDef.startswith("="):
                     iDef = iDef[1:]
+                # Append _8 to constants so they will be interpreted as double precision.  Some constants
+                # are defined as ratios, so we need to append it to both numerator and denominator.
+                iDef = '/'.join(f'{x}_8' for x in iDef.split('/'))
                 self.out.write("    real*8, parameter :: OpenMM_%s = %s\n" % (vDef, iDef))
 
     def writeTypeDeclarations(self):
