@@ -274,6 +274,11 @@ Parameters:
       return OpenMM::XmlSerializer::deserialize<OpenMM::System>(ss);
   }
 
+  %newobject _cloneSystem;
+  static OpenMM::System* _cloneSystem(const OpenMM::System* object) {
+      return OpenMM::XmlSerializer::clone<OpenMM::System>(*object);
+  }
+
   static std::string _serializeForce(const OpenMM::Force* object) {
       std::stringstream ss;
       OpenMM::XmlSerializer::serialize<OpenMM::Force>(object, "Force", ss);
@@ -285,6 +290,11 @@ Parameters:
       std::stringstream ss;
       ss << inputString;
       return OpenMM::XmlSerializer::deserialize<OpenMM::Force>(ss);
+  }
+
+  %newobject _cloneForce;
+  static OpenMM::Force* _cloneForce(const OpenMM::Force* object) {
+      return OpenMM::XmlSerializer::clone<OpenMM::Force>(*object);
   }
 
   static std::string _serializeIntegrator(const OpenMM::Integrator* object) {
@@ -300,6 +310,11 @@ Parameters:
       return OpenMM::XmlSerializer::deserialize<OpenMM::Integrator>(ss);
   }
 
+  %newobject _cloneIntegrator;
+  static OpenMM::Integrator* _cloneIntegrator(const OpenMM::Integrator* object) {
+      return OpenMM::XmlSerializer::clone<OpenMM::Integrator>(*object);
+  }
+
   static std::string _serializeTabulatedFunction(const OpenMM::TabulatedFunction* object) {
       std::stringstream ss;
       OpenMM::XmlSerializer::serialize<OpenMM::TabulatedFunction>(object, "TabulatedFunction", ss);
@@ -313,6 +328,11 @@ Parameters:
       return OpenMM::XmlSerializer::deserialize<OpenMM::TabulatedFunction>(ss);
   }
 
+  %newobject _cloneTabulatedFunction;
+  static OpenMM::TabulatedFunction* _cloneTabulatedFunction(const OpenMM::TabulatedFunction* object) {
+      return OpenMM::XmlSerializer::clone<OpenMM::TabulatedFunction>(*object);
+  }
+
   static std::string _serializeState(const OpenMM::State* object) {
       std::stringstream ss;
       OpenMM::XmlSerializer::serialize<OpenMM::State>(object, "State", ss);
@@ -324,6 +344,11 @@ Parameters:
       std::stringstream ss;
       ss << inputString;
       return OpenMM::XmlSerializer::deserialize<OpenMM::State>(ss);
+  }
+
+  %newobject _cloneState;
+  static OpenMM::State* _cloneState(const OpenMM::State* object) {
+      return OpenMM::XmlSerializer::clone<OpenMM::State>(*object);
   }
 
   %pythoncode %{
@@ -361,6 +386,23 @@ Parameters:
       if type == "TabulatedFunction":
         return XmlSerializer._deserializeTabulatedFunction(inputString)
       raise ValueError("Unsupported object type")
+
+    @staticmethod
+    def clone(object):
+      """Clone an object by first serializing it, then deserializing it again.  This method constructs the
+         new object directly from the SerializationNodes without first converting them to XML.  This means
+         it is faster and uses less memory than making separate calls to serialize() and deserialize()."""
+      if isinstance(object, System):
+        return XmlSerializer._cloneSystem(object)
+      elif isinstance(object, Force):
+        return XmlSerializer._cloneForce(object)
+      elif isinstance(object, Integrator):
+        return XmlSerializer._cloneIntegrator(object)
+      elif isinstance(object, State):
+        return XmlSerializer._cloneState(object)
+      elif isinstance(object, TabulatedFunction):
+        return XmlSerializer._cloneTabulatedFunction(object)
+      raise ValueError("Unsupported object type")
   %}
 }
 
@@ -384,11 +426,15 @@ Parameters:
 
     def __deepcopy__(self, memo):
         return self.__copy__()
+
+    def __copy__(self):
+      duplicate = XmlSerializer.clone(self)
+      duplicate.__class__ = self.__class__
+      attributes = {key: value for key, value in self.__dict__.items() if key != 'this'}
+      from copy import deepcopy
+      duplicate.__dict__.update(deepcopy(attributes))
+      return duplicate
   %}
-  %newobject __copy__;
-  OpenMM::Force* __copy__() {
-      return OpenMM::XmlSerializer::clone<OpenMM::Force>(*self);
-  }
 }
 
 %extend OpenMM::Integrator {
@@ -403,11 +449,15 @@ Parameters:
 
     def __deepcopy__(self, memo):
         return self.__copy__()
+
+    def __copy__(self):
+      duplicate = XmlSerializer.clone(self)
+      duplicate.__class__ = self.__class__
+      attributes = {key: value for key, value in self.__dict__.items() if key != 'this'}
+      from copy import deepcopy
+      duplicate.__dict__.update(deepcopy(attributes))
+      return duplicate
   %}
-  %newobject __copy__;
-  OpenMM::Integrator* __copy__() {
-      return OpenMM::XmlSerializer::clone<OpenMM::Integrator>(*self);
-  }
 }
 
 %extend OpenMM::TabulatedFunction {
@@ -422,11 +472,10 @@ Parameters:
 
     def __deepcopy__(self, memo):
         return self.__copy__()
+
+    def __copy__(self):
+        return XmlSerializer.clone(self)
   %}
-  %newobject __copy__;
-  OpenMM::TabulatedFunction* __copy__() {
-      return OpenMM::XmlSerializer::clone<OpenMM::TabulatedFunction>(*self);
-  }
 }
 
 %extend OpenMM::State {
