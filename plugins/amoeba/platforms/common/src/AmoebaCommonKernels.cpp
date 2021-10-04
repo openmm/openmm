@@ -29,6 +29,7 @@
 #endif
 #include "AmoebaCommonKernels.h"
 #include "CommonAmoebaKernelSources.h"
+#include "openmm/common/ContextSelector.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/AmoebaGeneralizedKirkwoodForceImpl.h"
 #include "openmm/internal/AmoebaMultipoleForceImpl.h"
@@ -122,7 +123,7 @@ CommonCalcAmoebaTorsionTorsionForceKernel::CommonCalcAmoebaTorsionTorsionForceKe
 }
 
 void CommonCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, const AmoebaTorsionTorsionForce& force) {
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     int numContexts = cc.getNumContexts();
     int startIndex = cc.getContextIndex()*force.getNumTorsionTorsions()/numContexts;
     int endIndex = (cc.getContextIndex()+1)*force.getNumTorsionTorsions()/numContexts;
@@ -230,11 +231,10 @@ CommonCalcAmoebaMultipoleForceKernel::CommonCalcAmoebaMultipoleForceKernel(const
 }
 
 CommonCalcAmoebaMultipoleForceKernel::~CommonCalcAmoebaMultipoleForceKernel() {
-    cc.setAsCurrent();
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     if (!cc.getSupports64BitGlobalAtomics())
         throw OpenMMException("AmoebaMultipoleForce requires a device that supports 64 bit atomic operations");
 
@@ -1045,6 +1045,7 @@ void CommonCalcAmoebaMultipoleForceKernel::initializeScaleFactors() {
 }
 
 double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    ContextSelector selector(cc);
     if (!hasInitializedScaleFactors) {
         initializeScaleFactors();
         for (auto impl : context.getForceImpls()) {
@@ -1412,6 +1413,7 @@ void CommonCalcAmoebaMultipoleForceKernel::ensureMultipolesValid(ContextImpl& co
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     int numParticles = cc.getNumAtoms();
     dipoles.resize(numParticles);
@@ -1432,6 +1434,7 @@ void CommonCalcAmoebaMultipoleForceKernel::getLabFramePermanentDipoles(ContextIm
 
 
 void CommonCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     int numParticles = cc.getNumAtoms();
     dipoles.resize(numParticles);
@@ -1452,6 +1455,7 @@ void CommonCalcAmoebaMultipoleForceKernel::getInducedDipoles(ContextImpl& contex
 
 
 void CommonCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     int numParticles = cc.getNumAtoms();
     dipoles.resize(numParticles);
@@ -1493,6 +1497,7 @@ void CommonCalcAmoebaMultipoleForceKernel::getTotalDipoles(ContextImpl& context,
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::getElectrostaticPotential(ContextImpl& context, const vector<Vec3>& inputGrid, vector<double>& outputElectrostaticPotential) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     int numPoints = inputGrid.size();
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
@@ -1647,6 +1652,7 @@ void CommonCalcAmoebaMultipoleForceKernel::computeSystemMultipoleMoments(Context
 
 
 void CommonCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl& context, vector<double>& outputMultipoleMoments) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     if (cc.getUseDoublePrecision())
         computeSystemMultipoleMoments<double, mm_double4, mm_double4>(context, outputMultipoleMoments);
@@ -1659,7 +1665,7 @@ void CommonCalcAmoebaMultipoleForceKernel::getSystemMultipoleMoments(ContextImpl
 void CommonCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaMultipoleForce& force) {
     // Make sure the new parameters are acceptable.
     
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     if (force.getNumMultipoles() != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of multipoles has changed");
     
@@ -1749,7 +1755,7 @@ CommonCalcAmoebaGeneralizedKirkwoodForceKernel::CommonCalcAmoebaGeneralizedKirkw
 }
 
 void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force) {
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     if (cc.getNumContexts() > 1)
         throw OpenMMException("AmoebaGeneralizedKirkwoodForce does not support using multiple devices");
     const AmoebaMultipoleForce* multipoles = NULL;
@@ -1976,7 +1982,7 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation() {
 void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaGeneralizedKirkwoodForce& force) {
     // Make sure the new parameters are acceptable.
     
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     if (force.getNumParticles() != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     
@@ -2017,13 +2023,13 @@ CommonCalcAmoebaVdwForceKernel::CommonCalcAmoebaVdwForceKernel(const std::string
 }
 
 CommonCalcAmoebaVdwForceKernel::~CommonCalcAmoebaVdwForceKernel() {
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     if (nonbonded != NULL)
         delete nonbonded;
 }
 
 void CommonCalcAmoebaVdwForceKernel::initialize(const System& system, const AmoebaVdwForce& force) {
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     bondReductionAtoms.initialize<int>(cc, paddedNumAtoms, "bondReductionAtoms");
     bondReductionFactors.initialize<float>(cc, paddedNumAtoms, "bondReductionFactors");
@@ -2131,6 +2137,7 @@ void CommonCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoe
 }
 
 double CommonCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    ContextSelector selector(cc);
     if (!hasInitializedNonbonded) {
         hasInitializedNonbonded = true;
         nonbonded->initialize(system);
@@ -2160,7 +2167,7 @@ double CommonCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includ
 void CommonCalcAmoebaVdwForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaVdwForce& force) {
     // Make sure the new parameters are acceptable.
     
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     if (force.getNumParticles() != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     
@@ -2229,6 +2236,7 @@ void CommonCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, 
     
     // Record parameters.
     
+    ContextSelector selector(cc);
     vector<mm_float2> radiusEpsilonVec(paddedNumAtoms, mm_float2(0, 0));
     for (int i = 0; i < numParticles; i++) {
         double radius, epsilon;
@@ -2272,6 +2280,7 @@ void CommonCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, 
 }
 
 double CommonCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    ContextSelector selector(cc);
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
     int startTileIndex = nb.getStartTileIndex();
     int numTileIndices = nb.getNumTiles();
@@ -2285,7 +2294,7 @@ double CommonCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, b
 void CommonCalcAmoebaWcaDispersionForceKernel::copyParametersToContext(ContextImpl& context, const AmoebaWcaDispersionForce& force) {
     // Make sure the new parameters are acceptable.
     
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     if (force.getNumParticles() != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     
@@ -2374,7 +2383,7 @@ CommonCalcHippoNonbondedForceKernel::CommonCalcHippoNonbondedForceKernel(const s
 }
 
 void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     if (!cc.getSupports64BitGlobalAtomics())
         throw OpenMMException("HippoNonbondedForce requires a device that supports 64 bit atomic operations");
     extrapolationCoefficients = force.getExtrapolationCoefficients();
@@ -3170,6 +3179,7 @@ void CommonCalcHippoNonbondedForceKernel::createFieldKernel(const string& intera
 }
 
 double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    ContextSelector selector(cc);
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
@@ -3385,6 +3395,7 @@ void CommonCalcHippoNonbondedForceKernel::addTorquesToForces() {
 }
 
 void CommonCalcHippoNonbondedForceKernel::getInducedDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     int numParticles = cc.getNumAtoms();
     dipoles.resize(numParticles);
@@ -3432,6 +3443,7 @@ void CommonCalcHippoNonbondedForceKernel::ensureMultipolesValid(ContextImpl& con
 }
 
 void CommonCalcHippoNonbondedForceKernel::getLabFramePermanentDipoles(ContextImpl& context, vector<Vec3>& dipoles) {
+    ContextSelector selector(cc);
     ensureMultipolesValid(context);
     int numParticles = cc.getNumAtoms();
     dipoles.resize(numParticles);
@@ -3453,7 +3465,7 @@ void CommonCalcHippoNonbondedForceKernel::getLabFramePermanentDipoles(ContextImp
 void CommonCalcHippoNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const HippoNonbondedForce& force) {
     // Make sure the new parameters are acceptable.
     
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     if (force.getNumParticles() != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     

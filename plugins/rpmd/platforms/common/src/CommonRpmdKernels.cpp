@@ -32,6 +32,7 @@
 #include "CommonRpmdKernels.h"
 #include "CommonRpmdKernelSources.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/common/ContextSelector.h"
 #include "openmm/common/IntegrationUtilities.h"
 #include "openmm/common/ExpressionUtilities.h"
 #include "openmm/common/NonbondedUtilities.h"
@@ -63,6 +64,7 @@ static int findFFTDimension(int minimum) {
 
 void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDIntegrator& integrator) {
     cc.initializeContexts();
+    ContextSelector selector(cc);
     numCopies = integrator.getNumCopies();
     numParticles = system.getNumParticles();
     workgroupSize = numCopies;
@@ -213,7 +215,7 @@ void CommonIntegrateRPMDStepKernel::initializeKernels(ContextImpl& context) {
 }
 
 void CommonIntegrateRPMDStepKernel::execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) {
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     if (!hasInitializedKernels)
         initializeKernels(context);
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
@@ -364,6 +366,7 @@ void CommonIntegrateRPMDStepKernel::setPositions(int copy, const vector<Vec3>& p
 
     // Record the positions.
 
+    ContextSelector selector(cc);
     if (cc.getUseDoublePrecision()) {
         vector<mm_double4> posq(cc.getPaddedNumAtoms());
         cc.getPosq().download(posq);
@@ -393,6 +396,7 @@ void CommonIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& 
         throw OpenMMException("RPMDIntegrator: Cannot set velocities before the integrator is added to a Context");
     if (vel.size() != numParticles)
         throw OpenMMException("RPMDIntegrator: wrong number of values passed to setVelocities()");
+    ContextSelector selector(cc);
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
         vector<mm_double4> velm(cc.getPaddedNumAtoms());
         cc.getVelm().download(velm);
@@ -410,6 +414,7 @@ void CommonIntegrateRPMDStepKernel::setVelocities(int copy, const vector<Vec3>& 
 }
 
 void CommonIntegrateRPMDStepKernel::copyToContext(int copy, ContextImpl& context) {
+    ContextSelector selector(cc);
     if (!hasInitializedKernels)
         initializeKernels(context);
     copyToContextKernel->setArg(2, positions);

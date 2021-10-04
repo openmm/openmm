@@ -93,8 +93,29 @@ public:
      * doing any computation when you do not know what other code has just been executing on
      * the thread.  Platforms that rely on binding contexts to threads (such as CUDA) need to
      * implement this.
+     * 
+     * @deprecated It is recommended to use pushAsCurrent() and popAsCurrent() instead, or even better to create a ContextSelector.
+     * This provides better interoperability with other libraries that use CUDA and create
+     * their own contexts.
      */
     virtual void setAsCurrent() {
+    }
+    /**
+     * Set this as the current context for the calling thread, maintaining any previous context
+     * on a stack.  This should be called before doing any computation when you do not know what
+     * other code has just been executing on the thread.  It must be paired with popAsCurrent()
+     * when you are done to restore the previous context.  Alternatively, you can create a
+     * ContextSelector object to automate this for a block of code.
+     * 
+     * Platforms that rely on binding contexts to threads (such as CUDA) need to implement this.
+     */
+    virtual void pushAsCurrent() {
+    }
+    /**
+     * Restore a previous context that was replaced by pushAsCurrent().  Platforms that rely on binding
+     * contexts to threads (such as CUDA) need to implement this.
+     */
+    virtual void popAsCurrent() {
     }
     /**
      * Get the number of contexts being used for the current simulation.

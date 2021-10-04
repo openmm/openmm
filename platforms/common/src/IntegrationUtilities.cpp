@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -26,6 +26,7 @@
 
 #include "openmm/common/IntegrationUtilities.h"
 #include "openmm/common/ComputeContext.h"
+#include "openmm/common/ContextSelector.h"
 #include "CommonKernelSources.h"
 #include "openmm/internal/OSRngSeed.h"
 #include "openmm/HarmonicAngleForce.h"
@@ -736,6 +737,7 @@ void IntegrationUtilities::applyVelocityConstraints(double tol) {
 }
 
 void IntegrationUtilities::computeVirtualSites() {
+    ContextSelector selector(context);
     if (numVsites > 0)
         vsitePositionKernel->execute(numVsites);
 }
@@ -812,6 +814,7 @@ void IntegrationUtilities::loadCheckpoint(istream& stream) {
 }
 
 double IntegrationUtilities::computeKineticEnergy(double timeShift) {
+    ContextSelector selector(context);
     int numParticles = context.getNumAtoms();
     if (timeShift != 0) {
         // Copy the velocities into the posDelta array while we temporarily modify them.

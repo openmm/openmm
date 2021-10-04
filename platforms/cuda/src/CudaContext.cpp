@@ -38,6 +38,7 @@
 #include "CudaNonbondedUtilities.h"
 #include "CudaProgram.h"
 #include "openmm/common/ComputeArray.h"
+#include "openmm/common/ContextSelector.h"
 #include "SHA1.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
@@ -190,6 +191,8 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
 
             if (cuCtxCreate(&context, flags, device) == CUDA_SUCCESS) {
                 this->deviceIndex = trialDeviceIndex;
+                CUcontext popped;
+                cuCtxPopCurrent(&popped);
                 break;
             }
         }
@@ -231,14 +234,16 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     computeCapability = major+0.1*minor;
 
     contextIsValid = true;
+    ContextSelector selector(*this);
     CHECK_RESULT(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED));
     if (contextIndex > 0) {
         int canAccess;
         cuDeviceCanAccessPeer(&canAccess, getDevice(), platformData.contexts[0]->getDevice());
         if (canAccess) {
-            platformData.contexts[0]->setAsCurrent();
-            CHECK_RESULT(cuCtxEnablePeerAccess(getContext(), 0));
-            setAsCurrent();
+            {
+                ContextSelector selector2(*platformData.contexts[0]);
+                CHECK_RESULT(cuCtxEnablePeerAccess(getContext(), 0));
+            }
             CHECK_RESULT(cuCtxEnablePeerAccess(platformData.contexts[0]->getContext(), 0));
         }
     }
@@ -397,7 +402,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
 }
 
 CudaContext::~CudaContext() {
-    setAsCurrent();
+    pushAsCurrent();
     for (auto force : forces)
         delete force;
     for (auto listener : reorderListeners)
@@ -416,6 +421,7 @@ CudaContext::~CudaContext() {
         delete bonded;
     if (nonbonded != NULL)
         delete nonbonded;
+    popAsCurrent();
     string errorMessage = "Error deleting Context";
     if (contextIsValid && !isLinkedContext) {
         cuProfilerStop();
@@ -425,7 +431,7 @@ CudaContext::~CudaContext() {
 }
 
 void CudaContext::initialize() {
-    cuCtxSetCurrent(context);
+    ContextSelector selector(*this);
     string errorMessage = "Error initializing Context";
     int numEnergyBuffers = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
@@ -476,6 +482,17 @@ void CudaContext::initializeContexts() {
 void CudaContext::setAsCurrent() {
     if (contextIsValid)
         cuCtxSetCurrent(context);
+}
+
+void CudaContext::pushAsCurrent() {
+    if (contextIsValid)
+        cuCtxPushCurrent(context);
+}
+
+void CudaContext::popAsCurrent() {
+    CUcontext popped;
+    if (contextIsValid)
+        cuCtxPopCurrent(&popped);
 }
 
 CUmodule CudaContext::createModule(const string source, const char* optimizationFlags) {

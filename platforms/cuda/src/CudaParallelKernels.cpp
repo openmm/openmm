@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -26,6 +26,7 @@
 
 #include "CudaParallelKernels.h"
 #include "CudaKernelSources.h"
+#include "openmm/common/ContextSelector.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -69,7 +70,7 @@ public:
     void execute() {
         // Copy coordinates over to this device and execute the kernel.
 
-        cu.setAsCurrent();
+        ContextSelector selector(cu);
         if (cu.getContextIndex() > 0) {
             cuStreamWaitEvent(cu.getCurrentStream(), event, 0);
             if (!cu.getPlatformData().peerAccessSupported)
@@ -100,6 +101,7 @@ public:
     void execute() {
         // Execute the kernel, then download forces.
         
+        ContextSelector selector(cu);
         energy += kernel.finishComputation(context, includeForce, includeEnergy, groups, valid);
         if (cu.getComputeForceCount() < 200) {
             // Record timing information for load balancing.  Since this takes time, only do it at the start of the simulation.
@@ -148,7 +150,7 @@ CudaParallelCalcForcesAndEnergyKernel::CudaParallelCalcForcesAndEnergyKernel(str
 }
 
 CudaParallelCalcForcesAndEnergyKernel::~CudaParallelCalcForcesAndEnergyKernel() {
-    data.contexts[0]->setAsCurrent();
+    ContextSelector selector(*data.contexts[0]);
     if (pinnedPositionBuffer != NULL)
         cuMemFreeHost(pinnedPositionBuffer);
     if (pinnedForceBuffer != NULL)
@@ -161,7 +163,7 @@ CudaParallelCalcForcesAndEnergyKernel::~CudaParallelCalcForcesAndEnergyKernel() 
 
 void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
     CudaContext& cu = *data.contexts[0];
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     CUmodule module = cu.createModule(CudaKernelSources::parallel);
     sumKernel = cu.getKernel(module, "sumForces");
     int numContexts = data.contexts.size();
@@ -176,7 +178,7 @@ void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
 
 void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
     CudaContext& cu = *data.contexts[0];
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     if (!contextForces.isInitialized()) {
         contextForces.initialize<long long>(cu, 3*(data.contexts.size()-1)*cu.getPaddedNumAtoms(), "contextForces");
         CHECK_RESULT(cuMemHostAlloc((void**) &pinnedForceBuffer, 3*(data.contexts.size()-1)*cu.getPaddedNumAtoms()*sizeof(long long), CU_MEMHOSTALLOC_PORTABLE), "Error allocating pinned memory");
@@ -219,6 +221,7 @@ double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& con
         // Sum the forces from all devices.
         
         CudaContext& cu = *data.contexts[0];
+        ContextSelector selector(cu);
         if (!cu.getPlatformData().peerAccessSupported)
             contextForces.upload(pinnedForceBuffer, false);
         int bufferSize = 3*cu.getPaddedNumAtoms();
