@@ -902,6 +902,7 @@ class FortranHeaderGenerator(WrapperGenerator):
     
     def writeGlobalConstants(self):
         self.out.write("    ! Global Constants\n\n")
+        self.out.write("    integer, parameter :: dp = kind(1.d0)\n")
         node = next((x for x in findNodes(self.doc.getroot(), "compounddef", kind="namespace") if x.findtext("compoundname") == "OpenMM"))
         for section in findNodes(node, "sectiondef", kind="var"):
             for memberNode in findNodes(section, "memberdef", kind="variable", mutable="no", prot="public", static="yes"):
@@ -909,6 +910,9 @@ class FortranHeaderGenerator(WrapperGenerator):
                 iDef = getText("initializer", memberNode)
                 if iDef.startswith("="):
                     iDef = iDef[1:]
+                # Append _dp to constants so they will be interpreted as double precision.  Some constants
+                # are defined as ratios, so we need to append it to both numerator and denominator.
+                iDef = '/'.join(f'{x}_dp' for x in iDef.split('/'))
                 self.out.write("    real*8, parameter :: OpenMM_%s = %s\n" % (vDef, iDef))
 
     def writeTypeDeclarations(self):
