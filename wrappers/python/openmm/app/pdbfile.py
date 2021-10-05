@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2020 Stanford University and the Authors.
+Portions copyright (c) 2012-2021 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -111,8 +111,12 @@ class PDBFile(object):
                     atomReplacements = PDBFile._atomNameReplacements[resName]
                 else:
                     atomReplacements = {}
-                for atom in residue.iter_atoms():
+                processedAtomNames = set()
+                for atom in residue.atoms_by_name.values():
                     atomName = atom.get_name()
+                    if atomName in processedAtomNames or atom.residue_name != residue.get_name():
+                        continue
+                    processedAtomNames.add(atomName)
                     if atomName in atomReplacements:
                         atomName = atomReplacements[atomName]
                     atomName = atomName.strip()
@@ -155,7 +159,11 @@ class PDBFile(object):
             coords = []
             for chain in model.iter_chains():
                 for residue in chain.iter_residues():
-                    for atom in residue.iter_atoms():
+                    processedAtomNames = set()
+                    for atom in residue.atoms_by_name.values():
+                        if atom.get_name() in processedAtomNames or atom.residue_name != residue.get_name():
+                            continue
+                        processedAtomNames.add(atom.get_name())
                         pos = atom.get_position().value_in_unit(nanometers)
                         coords.append(Vec3(pos[0], pos[1], pos[2]))
             self._positions.append(coords*nanometers)

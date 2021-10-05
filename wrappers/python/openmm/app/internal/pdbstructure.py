@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2018 Stanford University and the Authors.
+Portions copyright (c) 2012-2021 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
@@ -41,6 +41,7 @@ from .unitcell import computePeriodicBoxVectors
 import warnings
 import sys
 import math
+from collections import OrderedDict
 
 class PdbStructure(object):
     """
@@ -516,7 +517,7 @@ class Residue(object):
         self.number = number
         self.insertion_code = insertion_code
         self.atoms = []
-        self.atoms_by_name = {}
+        self.atoms_by_name = OrderedDict()
         self.is_first_in_chain = False
         self.is_final_in_chain = False
         self._current_atom = None
