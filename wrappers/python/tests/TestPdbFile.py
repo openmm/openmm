@@ -87,11 +87,12 @@ class TestPdbFile(unittest.TestCase):
 
     def test_AltLocs(self):
         """Test reading a file that includes AltLocs"""
-        pdb = PDBFile('systems/altlocs.pdb')
-        self.assertEqual(1, pdb.topology.getNumResidues())
-        self.assertEqual(19, pdb.topology.getNumAtoms())
-        self.assertEqual(19, len(pdb.positions))
-        self.assertEqual('ILE', list(pdb.topology.residues())[0].name)
+        for filename in ['altlocs.pdb', 'altlocs2.pdb']:
+            pdb = PDBFile(f'systems/{filename}')
+            self.assertEqual(1, pdb.topology.getNumResidues())
+            self.assertEqual(19, pdb.topology.getNumAtoms())
+            self.assertEqual(19, len(pdb.positions))
+            self.assertEqual('ILE', list(pdb.topology.residues())[0].name)
 
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         unit = p1.unit
