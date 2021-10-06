@@ -2268,8 +2268,10 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
         }
     }
     if (recomputeLongRangeCorrection) {
-        cc.getWorkThread().addTask(new LongRangeTask(cc, context.getOwner(), longRangeCorrectionData, longRangeCoefficient, longRangeCoefficientDerivs, forceCopy));
-        hasInitializedLongRangeCorrection = true;
+        if (includeEnergy || forceCopy->getNumEnergyParameterDerivatives() > 0) {
+            cc.getWorkThread().addTask(new LongRangeTask(cc, context.getOwner(), longRangeCorrectionData, longRangeCoefficient, longRangeCoefficientDerivs, forceCopy));
+            hasInitializedLongRangeCorrection = true;
+        }
     }
     if (interactionGroupData.isInitialized()) {
         if (!hasInitializedKernel) {
