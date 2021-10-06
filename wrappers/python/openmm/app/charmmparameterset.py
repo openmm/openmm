@@ -232,6 +232,7 @@ class CharmmParameterSet(object):
         previous = ''
         for line in f:
             line = previous+line.strip()
+            line = line.upper()
             previous = ''
             if line.endswith('-'):
                 # This will be continued on the next line.
