@@ -2272,6 +2272,8 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             cc.getWorkThread().addTask(new LongRangeTask(cc, context.getOwner(), longRangeCorrectionData, longRangeCoefficient, longRangeCoefficientDerivs, forceCopy));
             hasInitializedLongRangeCorrection = true;
         }
+        else
+            hasInitializedLongRangeCorrection = false;
     }
     if (interactionGroupData.isInitialized()) {
         if (!hasInitializedKernel) {
