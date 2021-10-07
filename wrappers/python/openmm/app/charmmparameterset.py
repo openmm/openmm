@@ -599,7 +599,7 @@ class CharmmParameterSet(object):
             own_handle = False
             f = tfile
         for line in f:
-            line = line.strip()
+            line = line.strip().upper()
             if line[:4] != 'MASS': continue
             words = line.split()
             try:
