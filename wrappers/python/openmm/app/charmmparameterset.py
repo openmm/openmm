@@ -232,6 +232,7 @@ class CharmmParameterSet(object):
         previous = ''
         for line in f:
             line = previous+line.strip()
+            line = line.upper()
             previous = ''
             if line.endswith('-'):
                 # This will be continued on the next line.
@@ -598,7 +599,7 @@ class CharmmParameterSet(object):
             own_handle = False
             f = tfile
         for line in f:
-            line = line.strip()
+            line = line.strip().upper()
             if line[:4] != 'MASS': continue
             words = line.split()
             try:

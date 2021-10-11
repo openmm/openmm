@@ -569,6 +569,7 @@ class CharmmPsfFile(object):
         else:
             pointers = tuple([conv(w, int, 'pointer') for w in words])
         line = psf.readline().strip()
+        if title == 'NATOM': line = line.upper()
         if not line and title.startswith('NNB'):
             # This will correctly handle the NNB section (which has a spurious
             # blank line) as well as any sections that have 0 members.
@@ -580,6 +581,7 @@ class CharmmPsfFile(object):
             while line:
                 data.append(line)
                 line = psf.readline().strip()
+                if title == 'NATOM': line = line.upper()
         else:
             while line:
                 words = line.split()
