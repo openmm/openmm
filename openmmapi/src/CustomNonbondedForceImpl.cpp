@@ -338,9 +338,10 @@ double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledExpression
             newSum += expression.evaluate()*r2*r2;
         }
         sum = newSum/numPoints + oldSum/3;
-        if (iteration > 2 && (fabs((sum-oldSum)/sum) < 1e-5 || sum == 0))
+        double relativeChange = fabs((sum-oldSum)/sum);
+        if (iteration > 2 && (relativeChange < 1e-5 || sum == 0))
             break;
-        if (iteration == 8)
+        if (iteration == 10 || (iteration > 7 && relativeChange > 1e-3))
             throw OpenMMException("CustomNonbondedForce: Long range correction did not converge.  Does the energy go to 0 faster than 1/r^2?");
         numPoints *= 3;
     }
@@ -365,9 +366,10 @@ double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledExpression
                 newSum += switchValue*expression.evaluate()*r*r;
             }
             sum2 = newSum/numPoints + oldSum/3;
-            if (iteration > 2 && (fabs((sum2-oldSum)/sum2) < 1e-5 || sum2 == 0))
+            double relativeChange = fabs((sum2-oldSum)/sum2);
+            if (iteration > 2 && (relativeChange < 1e-5 || sum2 == 0))
                 break;
-            if (iteration == 8)
+            if (iteration == 10 || (iteration > 7 && relativeChange > 1e-3))
                 throw OpenMMException("CustomNonbondedForce: Long range correction did not converge.  Is the energy finite everywhere in the switching interval?");
             numPoints *= 3;
         }
