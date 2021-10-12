@@ -1533,8 +1533,9 @@ public:
      *
      * @param system     the System this kernel will be applied to
      * @param barostat   the MonteCarloBarostat this kernel will be used for
+     * @param rigidMolecules  whether molecules should be kept rigid while scaling coordinates
      */
-    void initialize(const System& system, const Force& barostat);
+    void initialize(const System& system, const Force& barostat, bool rigidMolecules=true);
     /**
      * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
      * This version scales the x, y, and z positions independently.
@@ -1557,7 +1558,7 @@ public:
     void restoreCoordinates(ContextImpl& context);
 private:
     ComputeContext& cc;
-    bool hasInitializedKernels;
+    bool hasInitializedKernels, rigidMolecules;
     int numMolecules;
     ComputeArray savedPositions, savedFloatForces, savedLongForces;
     ComputeArray moleculeAtoms;

@@ -7680,7 +7680,8 @@ void CommonApplyAndersenThermostatKernel::execute(ContextImpl& context) {
     kernel->execute(cc.getNumAtoms());
 }
 
-void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat) {
+void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat, bool rigidMolecules) {
+    this->rigidMolecules = rigidMolecules;
     ContextSelector selector(cc);
     savedPositions.initialize(cc, cc.getPaddedNumAtoms(), cc.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedPositions");
     savedLongForces.initialize<long long>(cc, cc.getPaddedNumAtoms()*3, "savedLongForces");
@@ -7702,7 +7703,14 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
 
         // Create the arrays with the molecule definitions.
 
-        vector<vector<int> > molecules = context.getMolecules();
+        vector<vector<int> > molecules;
+        if (rigidMolecules)
+            molecules = context.getMolecules();
+        else {
+            molecules.resize(cc.getNumAtoms());
+            for (int i = 0; i < molecules.size(); i++)
+                molecules[i].push_back(i);
+        }
         numMolecules = molecules.size();
         moleculeAtoms.initialize<int>(cc, cc.getNumAtoms(), "moleculeAtoms");
         moleculeStartIndex.initialize<int>(cc, numMolecules+1, "moleculeStartIndex");
