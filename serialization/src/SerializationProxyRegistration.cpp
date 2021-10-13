@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -54,6 +54,7 @@
 #include "openmm/LangevinMiddleIntegrator.h"
 #include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/MonteCarloBarostat.h"
+#include "openmm/MonteCarloFlexibleBarostat.h"
 #include "openmm/MonteCarloMembraneBarostat.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/NoseHooverIntegrator.h"
@@ -92,6 +93,7 @@
 #include "openmm/serialization/LangevinMiddleIntegratorProxy.h"
 #include "openmm/serialization/MonteCarloAnisotropicBarostatProxy.h"
 #include "openmm/serialization/MonteCarloBarostatProxy.h"
+#include "openmm/serialization/MonteCarloFlexibleBarostatProxy.h"
 #include "openmm/serialization/MonteCarloMembraneBarostatProxy.h"
 #include "openmm/serialization/NonbondedForceProxy.h"
 #include "openmm/serialization/NoseHooverIntegratorProxy.h"
@@ -151,6 +153,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(LangevinMiddleIntegrator), new LangevinMiddleIntegratorProxy());
     SerializationProxy::registerProxy(typeid(MonteCarloAnisotropicBarostat), new MonteCarloAnisotropicBarostatProxy());
     SerializationProxy::registerProxy(typeid(MonteCarloBarostat), new MonteCarloBarostatProxy());
+    SerializationProxy::registerProxy(typeid(MonteCarloFlexibleBarostat), new MonteCarloFlexibleBarostatProxy());
     SerializationProxy::registerProxy(typeid(MonteCarloMembraneBarostat), new MonteCarloMembraneBarostatProxy());
     SerializationProxy::registerProxy(typeid(NonbondedForce), new NonbondedForceProxy());
     SerializationProxy::registerProxy(typeid(NoseHooverIntegrator), new NoseHooverIntegratorProxy());
