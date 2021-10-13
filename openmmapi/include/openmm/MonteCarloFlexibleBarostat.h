@@ -44,7 +44,14 @@ namespace OpenMM {
  *
  * This class is similar to MonteCarloBarostat, but it simulates a fully flexible periodic box
  * in which all three lengths and all three angles are free to change independently.  It is primarily
- * useful for material science simulations.
+ * useful for simulations of bulk materials where the shape of a crystal's unit cell may not
+ * be known in advance, or could even change with time as it transitions between phases.
+ * 
+ * Like MonteCarloBarostat, the default behavior of this class is to scale the centroid position
+ * of each molecule while holding it rigid.  In simulations of materials where all atoms are
+ * covalently bonded to each other, this behavior will not work well since the entire system
+ * then consists of a single molecule.  You can use setScaleMoleculesAsRigid() to disable this
+ * behavior and instead have it scale the position of every atom independently.
  * 
  * This class assumes the simulation is also being run at constant temperature, and requires you
  * to specify the system temperature (since it affects the acceptance probability for Monte Carlo
