@@ -30,7 +30,6 @@ These classes implement forces that are widely used in biomolecular simulation.
     generated/GayBerneForce
     generated/HarmonicAngleForce
     generated/HarmonicBondForce
-    generated/HippoNonbondedForce
     generated/NonbondedForce
     generated/PeriodicTorsionForce
     generated/RBTorsionForce
@@ -49,6 +48,7 @@ These forces are used to implement the polarizable AMOEBA force fields.
     generated/AmoebaTorsionTorsionForce
     generated/AmoebaVdwForce
     generated/AmoebaWcaDispersionForce
+    generated/HippoNonbondedForce
 
 
 Pseudo-forces
@@ -67,6 +67,7 @@ be combined in arbitrary ways.
     generated/CMMotionRemover
     generated/MonteCarloAnisotropicBarostat
     generated/MonteCarloBarostat
+    generated/MonteCarloFlexibleBarostat
     generated/MonteCarloMembraneBarostat
     generated/RMSDForce
     generated/RPMDMonteCarloBarostat
