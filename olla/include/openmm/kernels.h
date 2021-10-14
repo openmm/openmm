@@ -1444,10 +1444,11 @@ public:
     /**
      * Initialize the kernel.
      *
-     * @param system     the System this kernel will be applied to
-     * @param barostat   the MonteCarloBarostat this kernel will be used for
+     * @param system          the System this kernel will be applied to
+     * @param barostat        the MonteCarloBarostat this kernel will be used for
+     * @param rigidMolecules  whether molecules should be kept rigid while scaling coordinates
      */
-    virtual void initialize(const System& system, const Force& barostat) = 0;
+    virtual void initialize(const System& system, const Force& barostat, bool rigidMolecules=true) = 0;
     /**
      * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
      * This version scales the x, y, and z positions independently.

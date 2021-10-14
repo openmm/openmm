@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,54 +29,45 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CompoundIntegrator.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomCentroidBondForce.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomCVForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomManyParticleForce.h"
-#include "openmm/CustomNonbondedForce.h"
+#include "openmm/serialization/MonteCarloFlexibleBarostatProxy.h"
+#include "openmm/serialization/SerializationNode.h"
 #include "openmm/Force.h"
-#include "openmm/GayBerneForce.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LangevinMiddleIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/MonteCarloBarostat.h"
 #include "openmm/MonteCarloFlexibleBarostat.h"
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Context.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/RMSDForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/TabulatedFunction.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/NoseHooverIntegrator.h"
-#include "openmm/NoseHooverChain.h"
-#include "openmm/VirtualSite.h"
-#include "openmm/Platform.h"
-#include "openmm/serialization/XmlSerializer.h"
+#include <sstream>
 
-#endif /*OPENMM_H_*/
+using namespace OpenMM;
+using namespace std;
+
+MonteCarloFlexibleBarostatProxy::MonteCarloFlexibleBarostatProxy() : SerializationProxy("MonteCarloFlexibleBarostat") {
+}
+
+void MonteCarloFlexibleBarostatProxy::serialize(const void* object, SerializationNode& node) const {
+    node.setIntProperty("version", 1);
+    const MonteCarloFlexibleBarostat& force = *reinterpret_cast<const MonteCarloFlexibleBarostat*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
+    node.setDoubleProperty("pressure", force.getDefaultPressure());
+    node.setDoubleProperty("temperature", force.getDefaultTemperature());
+    node.setIntProperty("frequency", force.getFrequency());
+    node.setIntProperty("randomSeed", force.getRandomNumberSeed());
+    node.setBoolProperty("rigidScaling", force.getScaleMoleculesAsRigid());
+}
+
+void* MonteCarloFlexibleBarostatProxy::deserialize(const SerializationNode& node) const {
+    if (node.getIntProperty("version") != 1)
+        throw OpenMMException("Unsupported version number");
+    MonteCarloFlexibleBarostat* force = NULL;
+    try {
+        force = new MonteCarloFlexibleBarostat(node.getDoubleProperty("pressure"), node.getDoubleProperty("temperature"),
+                                               node.getIntProperty("frequency"), node.getBoolProperty("rigidScaling"));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
+        force->setRandomNumberSeed(node.getIntProperty("randomSeed"));
+        return force;
+    }
+    catch (...) {
+        if (force != NULL)
+            delete force;
+        throw;
+    }
+}

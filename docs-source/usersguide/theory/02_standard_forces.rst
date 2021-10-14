@@ -671,6 +671,16 @@ behavior of the periodic box:
   * inversely varying with the X and Y axes (so the total box volume does not
     change)
 
+MonteCarloFlexibleBarostat
+**************************
+
+MonteCarloFlexibleBarostat is very similar to MonteCarloBarostat, but it allows
+the periodic box to be fully flexible.\ :cite:`Vandenhaute2021`  Monte Carlo
+steps can change not just the lengths of the box sides, but also the angles.  It
+is especially useful for simulations of bulk materials where the shape of a
+crystal's unit cell may not be known in advance, or could even change with time
+as it transitions between phases.
+
 CMMotionRemover
 ***************
 
