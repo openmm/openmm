@@ -73,8 +73,8 @@ void GayBerneForceImpl::initialize(ContextImpl& context) {
             msg << yparticle;
             throw OpenMMException(msg.str());
         }
-        if (sigma <= 0)
-            throw OpenMMException("GayBerneForce: sigma for a particle must be positive");
+        if (sigma < 0)
+            throw OpenMMException("GayBerneForce: sigma for a particle cannot be negative");
         if (epsilon < 0)
             throw OpenMMException("GayBerneForce: epsilon for a particle cannot be negative");
         if (rx <= 0 || ry <= 0 || rz <= 0)
@@ -103,8 +103,8 @@ void GayBerneForceImpl::initialize(ContextImpl& context) {
             msg << particle[1];
             throw OpenMMException(msg.str());
         }
-        if (sigma <= 0)
-            throw OpenMMException("GayBerneForce: sigma for an exception must be positive");
+        if (sigma < 0)
+            throw OpenMMException("GayBerneForce: sigma for an exception cannot be negative");
         if (epsilon < 0)
             throw OpenMMException("GayBerneForce: epsilon for an exception cannot be negative");
         exceptions[particle[0]].insert(particle[1]);

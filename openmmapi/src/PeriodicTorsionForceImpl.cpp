@@ -29,14 +29,10 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#ifdef WIN32
-  #define _USE_MATH_DEFINES // Needed to get M_PI
-#endif
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/PeriodicTorsionForceImpl.h"
 #include "openmm/kernels.h"
-#include <cmath>
 #include <sstream>
 
 using namespace OpenMM;
@@ -64,8 +60,6 @@ void PeriodicTorsionForceImpl::initialize(ContextImpl& context) {
         }
         if (periodicity < 1)
             throw OpenMMException("PeriodicTorsionForce: periodicity must be positive");
-        if (phase < 0 || phase > M_PI*1.000001)
-            throw OpenMMException("PeriodicTorsionForce: phase must be between 0 and pi");
     }
     kernel = context.getPlatform().createKernel(CalcPeriodicTorsionForceKernel::Name(), context);
     kernel.getAs<CalcPeriodicTorsionForceKernel>().initialize(context.getSystem(), owner);

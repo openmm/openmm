@@ -62,8 +62,8 @@ void VariableVerletIntegrator::setErrorTolerance(double tol) {
 }
 
 void VariableVerletIntegrator::setMaximumStepSize(double size) {
-    if (size <= 0)
-        throw OpenMMException("Maximum step size must be positive");
+    if (size < 0)
+        throw OpenMMException("Maximum step size cannot be negative");
     maxStepSize = size;
 }
 

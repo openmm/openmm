@@ -65,8 +65,8 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
     for (int i = 0; i < owner.getNumParticles(); i++) {
         double charge, sigma, epsilon;
         owner.getParticleParameters(i, charge, sigma, epsilon);
-        if (sigma <= 0)
-            throw OpenMMException("NonbondedForce: sigma for a particle must be positive");
+        if (sigma < 0)
+            throw OpenMMException("NonbondedForce: sigma for a particle cannot be negative");
         if (epsilon < 0)
             throw OpenMMException("NonbondedForce: epsilon for a particle cannot be negative");
     }
