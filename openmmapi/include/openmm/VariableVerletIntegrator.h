@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -79,9 +79,7 @@ public:
     /**
      * Set the error tolerance.
      */
-    void setErrorTolerance(double tol) {
-        errorTol = tol;
-    }
+    void setErrorTolerance(double tol);
     /**
      * Get the maximum step size the integrator will ever use, in ps.  If this
      * is 0 (the default), no limit will be applied to step sizes.
@@ -93,9 +91,7 @@ public:
      * Set the maximum step size the integrator will ever use, in ps.  If this
      * is 0 (the default), no limit will be applied to step sizes.
      */
-    void setMaximumStepSize(double size) {
-        maxStepSize = size;
-    }
+    void setMaximumStepSize(double size);
     /**
      * Advance a simulation through time by taking a series of time steps.
      *

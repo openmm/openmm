@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -65,9 +65,7 @@ public:
      *
      * @param temp    the temperature of the heat bath, measured in Kelvin
      */
-    void setTemperature(double temp) {
-        temperature = temp;
-    }
+    void setTemperature(double temp);
     /**
      * Get the friction coefficient which determines how strongly the system is coupled to
      * the heat bath (in inverse ps).
@@ -83,9 +81,7 @@ public:
      *
      * @param coeff    the friction coefficient, measured in 1/ps
      */
-    void setFriction(double coeff) {
-        friction = coeff;
-    }
+    void setFriction(double coeff);
     /**
      * Get the random number seed.  See setRandomNumberSeed() for details.
      */

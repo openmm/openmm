@@ -58,31 +58,15 @@ void CustomTorsionForceImpl::initialize(ContextImpl& context) {
     vector<double> parameters;
     int numParameters = owner.getNumPerTorsionParameters();
     for (int i = 0; i < owner.getNumTorsions(); i++) {
-        int particle1, particle2, particle3, particle4;
-        owner.getTorsionParameters(i, particle1, particle2, particle3, particle4, parameters);
-        if (particle1 < 0 || particle1 >= system.getNumParticles()) {
-            stringstream msg;
-            msg << "CustomTorsionForce: Illegal particle index for an torsion: ";
-            msg << particle1;
-            throw OpenMMException(msg.str());
-        }
-        if (particle2 < 0 || particle2 >= system.getNumParticles()) {
-            stringstream msg;
-            msg << "CustomTorsionForce: Illegal particle index for an torsion: ";
-            msg << particle2;
-            throw OpenMMException(msg.str());
-        }
-        if (particle3 < 0 || particle3 >= system.getNumParticles()) {
-            stringstream msg;
-            msg << "CustomTorsionForce: Illegal particle index for an torsion: ";
-            msg << particle3;
-            throw OpenMMException(msg.str());
-        }
-        if (particle4 < 0 || particle4 >= system.getNumParticles()) {
-            stringstream msg;
-            msg << "CustomTorsionForce: Illegal particle index for an torsion: ";
-            msg << particle4;
-            throw OpenMMException(msg.str());
+        int particle[4];
+        owner.getTorsionParameters(i, particle[0], particle[1], particle[2], particle[3], parameters);
+        for (int j = 0; j < 4; j++) {
+            if (particle[j] < 0 || particle[j] >= system.getNumParticles()) {
+                stringstream msg;
+                msg << "CustomTorsionForce: Illegal particle index for a torsion: ";
+                msg << particle[j];
+                throw OpenMMException(msg.str());
+            }
         }
         if (parameters.size() != numParameters) {
             stringstream msg;
