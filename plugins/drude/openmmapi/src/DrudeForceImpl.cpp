@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -58,84 +58,59 @@ void DrudeForceImpl::initialize(ContextImpl& context) {
 
     set<int> usedParticles;
     for (int i = 0; i < owner.getNumParticles(); i++) {
-        int particle, particle1, particle2, particle3, particle4;
+        int particle[5];
         double charge, k, k2, k3;
-        owner.getParticleParameters(i, particle, particle1, particle2, particle3, particle4, charge, k, k2, k3);
-        if (particle < 0 || particle >= system.getNumParticles()) {
-            stringstream msg;
-            msg << "DrudeForce: Illegal particle index: ";
-            msg << particle;
-            throw OpenMMException(msg.str());
+        owner.getParticleParameters(i, particle[0], particle[1], particle[2], particle[3], particle[4], charge, k, k2, k3);
+        for (int i = 0; i < 2; i++) {
+            if (particle[i] < 0 || particle[i] >= system.getNumParticles()) {
+                stringstream msg;
+                msg << "DrudeForce: Illegal particle index: ";
+                msg << particle[i];
+                throw OpenMMException(msg.str());
+            }
+            if (usedParticles.find(particle[i]) != usedParticles.end()) {
+                stringstream msg;
+                msg << "DrudeForce: Particle index is used by two different Drude particles: ";
+                msg << particle[i];
+                throw OpenMMException(msg.str());
+            }
+            usedParticles.insert(particle[i]);
         }
-        if (particle1 < 0 || particle1 >= system.getNumParticles()) {
-            stringstream msg;
-            msg << "DrudeForce: Illegal particle index: ";
-            msg << particle1;
-            throw OpenMMException(msg.str());
+        for (int i = 2; i < 5; i++) {
+            if (particle[i] < -1 || particle[i] >= system.getNumParticles()) {
+                stringstream msg;
+                msg << "DrudeForce: Illegal particle index: ";
+                msg << particle[i];
+                throw OpenMMException(msg.str());
+            }
         }
-        if (particle2 < -1 || particle2 >= system.getNumParticles()) {
-            stringstream msg;
-            msg << "DrudeForce: Illegal particle index: ";
-            msg << particle2;
-            throw OpenMMException(msg.str());
-        }
-        if (particle3 < -1 || particle3 >= system.getNumParticles()) {
-            stringstream msg;
-            msg << "DrudeForce: Illegal particle index: ";
-            msg << particle3;
-            throw OpenMMException(msg.str());
-        }
-        if (particle4 < -1 || particle4 >= system.getNumParticles()) {
-            stringstream msg;
-            msg << "DrudeForce: Illegal particle index: ";
-            msg << particle4;
-            throw OpenMMException(msg.str());
-        }
-        if (usedParticles.find(particle) != usedParticles.end()) {
-            stringstream msg;
-            msg << "DrudeForce: Particle index is used by two different Drude particles: ";
-            msg << particle;
-            throw OpenMMException(msg.str());
-        }
-        usedParticles.insert(particle);
-        if (usedParticles.find(particle1) != usedParticles.end()) {
-            stringstream msg;
-            msg << "DrudeForce: Particle index is used by two different Drude particles: ";
-            msg << particle1;
-            throw OpenMMException(msg.str());
-        }
-        usedParticles.insert(particle1);
     }
 
     // Check for errors in the specification of screened pairs.
 
     vector<set<int> > screenedPairs(owner.getNumParticles());
     for (int i = 0; i < owner.getNumScreenedPairs(); i++) {
-        int particle1, particle2;
+        int particle[2];
         double thole;
-        owner.getScreenedPairParameters(i, particle1, particle2, thole);
-        if (particle1 < 0 || particle1 >= owner.getNumParticles()) {
-            stringstream msg;
-            msg << "DrudeForce: Illegal particle index for a screened pair: ";
-            msg << particle1;
-            throw OpenMMException(msg.str());
+        owner.getScreenedPairParameters(i, particle[0], particle[1], thole);
+        for (int i = 0; i < 2; i++) {
+            if (particle[i] < 0 || particle[i] >= owner.getNumParticles()) {
+                stringstream msg;
+                msg << "DrudeForce: Illegal particle index for a screened pair: ";
+                msg << particle[i];
+                throw OpenMMException(msg.str());
+            }
         }
-        if (particle2 < 0 || particle2 >= owner.getNumParticles()) {
-            stringstream msg;
-            msg << "DrudeForce: Illegal particle index for a screened pair: ";
-            msg << particle2;
-            throw OpenMMException(msg.str());
-        }
-        if (screenedPairs[particle1].count(particle2) > 0 || screenedPairs[particle2].count(particle1) > 0) {
+        if (screenedPairs[particle[0]].count(particle[1]) > 0 || screenedPairs[particle[1]].count(particle[0]) > 0) {
             stringstream msg;
             msg << "DrudeForce: Multiple screened pairs are specified for particles ";
-            msg << particle1;
+            msg << particle[0];
             msg << " and ";
-            msg << particle2;
+            msg << particle[1];
             throw OpenMMException(msg.str());
         }
-        screenedPairs[particle1].insert(particle2);
-        screenedPairs[particle2].insert(particle1);
+        screenedPairs[particle[0]].insert(particle[1]);
+        screenedPairs[particle[1]].insert(particle[0]);
     }
     kernel.getAs<CalcDrudeForceKernel>().initialize(context.getSystem(), owner);
 }

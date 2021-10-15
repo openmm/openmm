@@ -70,6 +70,12 @@ void DrudeSCFIntegrator::initialize(ContextImpl& contextRef) {
     kernel.getAs<IntegrateDrudeSCFStepKernel>().initialize(contextRef.getSystem(), *this, *force);
 }
 
+void DrudeSCFIntegrator::setMinimizationErrorTolerance(double tol) {
+    if (tol <= 0)
+        throw OpenMMException("Minimization error tolerance must be positive");
+    tolerance = tol;
+}
+
 void DrudeSCFIntegrator::cleanup() {
     kernel = Kernel();
 }
