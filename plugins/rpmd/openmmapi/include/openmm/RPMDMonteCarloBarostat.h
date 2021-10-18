@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -76,9 +76,7 @@ public:
      *
      * @param pressure   the default pressure acting on the system, measured in bar.
      */
-    void setDefaultPressure(double pressure) {
-        defaultPressure = pressure;
-    }
+    void setDefaultPressure(double pressure);
     /**
      * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
      * 0, the barostat is disabled.
@@ -90,9 +88,7 @@ public:
      * Set the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
      * 0, the barostat is disabled.
      */
-    void setFrequency(int freq) {
-        frequency = freq;
-    }
+    void setFrequency(int freq);
     /**
      * Get the random number seed.  See setRandomNumberSeed() for details.
      */

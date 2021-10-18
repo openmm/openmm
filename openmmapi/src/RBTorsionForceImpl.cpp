@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,14 +29,14 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/RBTorsionForceImpl.h"
 #include "openmm/kernels.h"
+#include <sstream>
 
 using namespace OpenMM;
-using std::pair;
-using std::vector;
-using std::set;
+using namespace std;
 
 RBTorsionForceImpl::RBTorsionForceImpl(const RBTorsionForce& owner) : owner(owner) {
 }
@@ -45,6 +45,20 @@ RBTorsionForceImpl::~RBTorsionForceImpl() {
 }
 
 void RBTorsionForceImpl::initialize(ContextImpl& context) {
+    const System& system = context.getSystem();
+    for (int i = 0; i < owner.getNumTorsions(); i++) {
+        int particle[4];
+        double c0, c1, c2, c3, c4, c5;
+        owner.getTorsionParameters(i, particle[0], particle[1], particle[2], particle[3], c0, c1, c2, c3, c4, c5);
+        for (int j = 0; j < 4; j++) {
+            if (particle[j] < 0 || particle[j] >= system.getNumParticles()) {
+                stringstream msg;
+                msg << "RBTorsionForce: Illegal particle index for a torsion: ";
+                msg << particle[j];
+                throw OpenMMException(msg.str());
+            }
+        }
+    }
     kernel = context.getPlatform().createKernel(CalcRBTorsionForceKernel::Name(), context);
     kernel.getAs<CalcRBTorsionForceKernel>().initialize(context.getSystem(), owner);
 }

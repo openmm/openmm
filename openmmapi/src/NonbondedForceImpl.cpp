@@ -62,33 +62,73 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
         if (owner.getSwitchingDistance() < 0 || owner.getSwitchingDistance() >= owner.getCutoffDistance())
             throw OpenMMException("NonbondedForce: Switching distance must satisfy 0 <= r_switch < r_cutoff");
     }
+    for (int i = 0; i < owner.getNumParticles(); i++) {
+        double charge, sigma, epsilon;
+        owner.getParticleParameters(i, charge, sigma, epsilon);
+        if (sigma < 0)
+            throw OpenMMException("NonbondedForce: sigma for a particle cannot be negative");
+        if (epsilon < 0)
+            throw OpenMMException("NonbondedForce: epsilon for a particle cannot be negative");
+    }
     vector<set<int> > exceptions(owner.getNumParticles());
     for (int i = 0; i < owner.getNumExceptions(); i++) {
-        int particle1, particle2;
+        int particle[2];
         double chargeProd, sigma, epsilon;
-        owner.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-        if (particle1 < 0 || particle1 >= owner.getNumParticles()) {
-            stringstream msg;
-            msg << "NonbondedForce: Illegal particle index for an exception: ";
-            msg << particle1;
-            throw OpenMMException(msg.str());
+        owner.getExceptionParameters(i, particle[0], particle[1], chargeProd, sigma, epsilon);
+        for (int j = 0; j < 2; j++) {
+            if (particle[j] < 0 || particle[j] >= owner.getNumParticles()) {
+                stringstream msg;
+                msg << "NonbondedForce: Illegal particle index for an exception: ";
+                msg << particle[j];
+                throw OpenMMException(msg.str());
+            }
         }
-        if (particle2 < 0 || particle2 >= owner.getNumParticles()) {
-            stringstream msg;
-            msg << "NonbondedForce: Illegal particle index for an exception: ";
-            msg << particle2;
-            throw OpenMMException(msg.str());
-        }
-        if (exceptions[particle1].count(particle2) > 0 || exceptions[particle2].count(particle1) > 0) {
+        if (exceptions[particle[0]].count(particle[1]) > 0 || exceptions[particle[1]].count(particle[0]) > 0) {
             stringstream msg;
             msg << "NonbondedForce: Multiple exceptions are specified for particles ";
-            msg << particle1;
+            msg << particle[0];
             msg << " and ";
-            msg << particle2;
+            msg << particle[1];
             throw OpenMMException(msg.str());
         }
-        exceptions[particle1].insert(particle2);
-        exceptions[particle2].insert(particle1);
+        exceptions[particle[0]].insert(particle[1]);
+        exceptions[particle[1]].insert(particle[0]);
+        if (sigma <= 0)
+            throw OpenMMException("NonbondedForce: sigma for an exception must be positive");
+        if (epsilon < 0)
+            throw OpenMMException("NonbondedForce: epsilon for an exception cannot be negative");
+    }
+    for (int i = 0; i < owner.getNumParticleParameterOffsets(); i++) {
+        string parameter;
+        int particleIndex;
+        double chargeScale, sigmaScale, epsilonScale;
+        owner.getParticleParameterOffset(i, parameter, particleIndex, chargeScale, sigmaScale, epsilonScale);
+        if (particleIndex < 0 || particleIndex >= owner.getNumParticles()) {
+            stringstream msg;
+            msg << "NonbondedForce: Illegal particle index for a particle parameter offset: ";
+            msg << particleIndex;
+            throw OpenMMException(msg.str());
+        }
+        if (sigmaScale < 0)
+            throw OpenMMException("NonbondedForce: sigma scale for a particle parameter offset cannot be negative");
+        if (epsilonScale < 0)
+            throw OpenMMException("NonbondedForce: epsilon scale for a particle parameter offset cannot be negative");
+    }
+    for (int i = 0; i < owner.getNumExceptionParameterOffsets(); i++) {
+        string parameter;
+        int exceptionIndex;
+        double chargeScale, sigmaScale, epsilonScale;
+        owner.getExceptionParameterOffset(i, parameter, exceptionIndex, chargeScale, sigmaScale, epsilonScale);
+        if (exceptionIndex < 0 || exceptionIndex >= owner.getNumExceptions()) {
+            stringstream msg;
+            msg << "NonbondedForce: Illegal exception index for an exception parameter offset: ";
+            msg << exceptionIndex;
+            throw OpenMMException(msg.str());
+        }
+        if (sigmaScale < 0)
+            throw OpenMMException("NonbondedForce: sigma scale for a particle parameter offset cannot be negative");
+        if (epsilonScale < 0)
+            throw OpenMMException("NonbondedForce: epsilon scale for a particle parameter offset cannot be negative");
     }
     if (owner.getNonbondedMethod() != NonbondedForce::NoCutoff && owner.getNonbondedMethod() != NonbondedForce::CutoffNonPeriodic) {
         Vec3 boxVectors[3];

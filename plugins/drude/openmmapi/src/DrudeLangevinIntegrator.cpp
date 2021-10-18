@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -72,6 +72,24 @@ void DrudeLangevinIntegrator::initialize(ContextImpl& contextRef) {
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateDrudeLangevinStepKernel::Name(), contextRef);
     kernel.getAs<IntegrateDrudeLangevinStepKernel>().initialize(contextRef.getSystem(), *this, *force);
+}
+
+void DrudeLangevinIntegrator::setTemperature(double temp) {
+    if (temp < 0)
+        throw OpenMMException("Temperature cannot be negative");
+    temperature = temp;
+}
+
+void DrudeLangevinIntegrator::setFriction(double coeff) {
+    if (coeff < 0)
+        throw OpenMMException("Friction cannot be negative");
+    friction = coeff;
+}
+
+void DrudeLangevinIntegrator::setDrudeFriction(double coeff) {
+    if (coeff < 0)
+        throw OpenMMException("Friction cannot be negative");
+    drudeFriction = coeff;
 }
 
 void DrudeLangevinIntegrator::cleanup() {

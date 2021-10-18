@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -53,6 +53,18 @@ void VariableVerletIntegrator::initialize(ContextImpl& contextRef) {
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateVariableVerletStepKernel::Name(), contextRef);
     kernel.getAs<IntegrateVariableVerletStepKernel>().initialize(contextRef.getSystem(), *this);
+}
+
+void VariableVerletIntegrator::setErrorTolerance(double tol) {
+    if (tol <= 0)
+        throw OpenMMException("Error tolerance must be positive");
+    errorTol = tol;
+}
+
+void VariableVerletIntegrator::setMaximumStepSize(double size) {
+    if (size < 0)
+        throw OpenMMException("Maximum step size cannot be negative");
+    maxStepSize = size;
 }
 
 void VariableVerletIntegrator::cleanup() {

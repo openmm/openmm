@@ -101,9 +101,7 @@ public:
      *
      * @param pressure   the default pressure acting on the system, measured in bar.
      */
-    void setDefaultPressure(double pressure) {
-        defaultPressure = pressure;
-    }
+    void setDefaultPressure(double pressure);
     /**
      * Get the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
      * 0, the barostat is disabled.
@@ -115,9 +113,7 @@ public:
      * Set the frequency (in time steps) at which Monte Carlo pressure changes should be attempted.  If this is set to
      * 0, the barostat is disabled.
      */
-    void setFrequency(int freq) {
-        frequency = freq;
-    }
+    void setFrequency(int freq);
     /**
      * Get the default temperature at which the system is being maintained, measured in Kelvin.
      */
@@ -130,9 +126,7 @@ public:
      *
      * @param temp     the system temperature, measured in Kelvin.
      */
-    void setDefaultTemperature(double temp) {
-        defaultTemperature = temp;
-    }
+    void setDefaultTemperature(double temp);
     /**
      * Get the random number seed.  See setRandomNumberSeed() for details.
      */

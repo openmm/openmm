@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -55,6 +55,18 @@ void BrownianIntegrator::initialize(ContextImpl& contextRef) {
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateBrownianStepKernel::Name(), contextRef);
     kernel.getAs<IntegrateBrownianStepKernel>().initialize(contextRef.getSystem(), *this);
+}
+
+void BrownianIntegrator::setTemperature(double temp) {
+    if (temp < 0)
+        throw OpenMMException("Temperature cannot be negative");
+    temperature = temp;
+}
+
+void BrownianIntegrator::setFriction(double coeff) {
+    if (coeff <= 0)
+        throw OpenMMException("Friction must be positive");
+    friction = coeff;
 }
 
 void BrownianIntegrator::cleanup() {

@@ -34,9 +34,30 @@
 
 using namespace OpenMM;
 
-MonteCarloFlexibleBarostat::MonteCarloFlexibleBarostat(double defaultPressure, double defaultTemperature, int frequency, bool scaleMoleculesAsRigid) :
-        defaultPressure(defaultPressure), defaultTemperature(defaultTemperature), frequency(frequency), scaleMoleculesAsRigid(scaleMoleculesAsRigid) {
+MonteCarloFlexibleBarostat::MonteCarloFlexibleBarostat(double defaultPressure, double defaultTemperature,
+                                                       int frequency, bool scaleMoleculesAsRigid) : scaleMoleculesAsRigid(scaleMoleculesAsRigid) {
+    setDefaultPressure(defaultPressure);
+    setDefaultTemperature(defaultTemperature);
+    setFrequency(frequency);
     setRandomNumberSeed(0);
+}
+
+void MonteCarloFlexibleBarostat::setDefaultPressure(double pressure) {
+    if (pressure < 0)
+        throw OpenMMException("Pressure cannot be negative");
+    defaultPressure = pressure;
+}
+
+void MonteCarloFlexibleBarostat::setFrequency(int freq) {
+    if (freq <= 0)
+        throw OpenMMException("Frequency must be positive");
+    frequency = freq;
+}
+
+void MonteCarloFlexibleBarostat::setDefaultTemperature(double temp) {
+    if (temp < 0)
+        throw OpenMMException("Temperature cannot be negative");
+    defaultTemperature = temp;
 }
 
 ForceImpl* MonteCarloFlexibleBarostat::createImpl() const {

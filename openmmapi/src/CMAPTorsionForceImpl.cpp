@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,6 +37,7 @@
 #include "openmm/internal/SplineFitter.h"
 #include "openmm/kernels.h"
 #include <cmath>
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
@@ -48,6 +49,25 @@ CMAPTorsionForceImpl::~CMAPTorsionForceImpl() {
 }
 
 void CMAPTorsionForceImpl::initialize(ContextImpl& context) {
+    const System& system = context.getSystem();
+    for (int i = 0; i < owner.getNumTorsions(); i++) {
+        int particle[8], map;
+        owner.getTorsionParameters(i, map, particle[0], particle[1], particle[2], particle[3], particle[4], particle[5], particle[6], particle[7]);
+        if (map < 0 || map >= owner.getNumMaps()) {
+            stringstream msg;
+            msg << "CMAPTorsionForce: Illegal map index for a torsion: ";
+            msg << map;
+            throw OpenMMException(msg.str());
+        }
+        for (int j = 0; j < 8; j++) {
+            if (particle[j] < 0 || particle[j] >= system.getNumParticles()) {
+                stringstream msg;
+                msg << "CMAPTorsionForce: Illegal particle index for a torsion: ";
+                msg << particle[j];
+                throw OpenMMException(msg.str());
+            }
+        }
+    }
     kernel = context.getPlatform().createKernel(CalcCMAPTorsionForceKernel::Name(), context);
     kernel.getAs<CalcCMAPTorsionForceKernel>().initialize(context.getSystem(), owner);
 }
