@@ -35,16 +35,19 @@ import os.path
 # biotype    2006    CA      "Calcium Ion"                     256
 # biotype    2007    CL      "Chloride Ion"                    258
 
-ions    = { 'Li+' :  ['LI', 249],
-            'Na+' :  ['NA', 250],
-            'K+'  :  ['K',  251],
-            'Rb+' :  ['RB', 252],  
-            'Cs+' :  ['CS', 253], 
-            'Be+' :  ['BE', 254],
-            'Mg+' :  ['MG', 255],
-            'Ca+' :  ['CA', 256],
-            'Zn+' :  ['ZN', 257],
-            'Cl-' :  ['Cl', 258]
+ions    = { 'Li+' :  ['LI', 351],
+            'Na+' :  ['NA', 352],
+            'K+'  :  ['K',  353],
+            'Rb+' :  ['RB', 354],  
+            'Cs+' :  ['CS', 355], 
+            'Be2' :  ['BE', 356],
+            'Mg2' :  ['MG', 357],
+            'Ca2' :  ['CA', 358],
+            'Zn2' :  ['ZN', 359],
+            'F-'  :  ['F',  360],
+            'Cl-' :  ['Cl', 361],
+            'Br-' :  ['Br', 362],
+            'I-'  :  ['I',  363]
            }
 
 atomTypes                    = {}
@@ -149,9 +152,9 @@ def buildProteinResidue( residueDict, atoms, bondInfo, abbr, loc, tinkerLookupNa
                     residueDict[abbr]['atoms'][bondedAtom]['bonds'][atom] = 1
                     residueDict[abbr]['atoms'][atom]['bonds'][bondedAtom] = 1
                 else:
-                    print "Error: bonded atom=%s not in residue=%s" % ( atom, abbr )
+                    print("Error: bonded atom=%s not in residue=%s" % ( atom, abbr ))
         else:
-            print "Error: bonded atom=%s nt in residue=%s" % ( atom, abbr )
+            print("Error: bonded atom=%s nt in residue=%s" % ( atom, abbr ))
 
     return
 
@@ -204,7 +207,7 @@ def copyProteinResidue( residue ):
 def buildResidueDict( residueXmlFileName ):
 
     residueTree = etree.parse(residueXmlFileName)
-    print "Read %s" % (residueXmlFileName)
+    print("Read %s" % (residueXmlFileName))
     root        = residueTree.getroot()
     residueDict = dict()
 
@@ -262,7 +265,7 @@ def buildResidueDict( residueXmlFileName ):
                     residueDict[cResidueName]['tinkerLookupName']                 = 'C-Terminal ' + 'HIS ' + sub
                 else:
                     residueDict[cResidueName]['tinkerLookupName']                 = 'C-Terminal ' + abbr + ' ' + sub
-                print "tinkerLookupName %s %s" % ( abbr, residueDict[cResidueName]['tinkerLookupName'])
+                print("tinkerLookupName %s %s" % ( abbr, residueDict[cResidueName]['tinkerLookupName']))
             else:
                 residueDict[cResidueName]['tinkerLookupName']                 = 'C-Terminal ' + abbr
             residueDict[cResidueName]['atoms']['OXT']                         = copyAtom( residueDict[abbr]['atoms']['O'] )
@@ -296,10 +299,10 @@ def buildResidueDict( residueXmlFileName ):
 
             buildProteinResidue( residueDict, atoms, bondInfo, abbr, loc, tinkerName, 1, residueName, type )
 
-    print "Start Lookup XML FFFFinal\n\n"
+    print("Start Lookup XML FFFFinal\n\n")
     printXml = 1
     if( printXml ):
-        print "<Residues>"
+        print("<Residues>")
         for resName in sorted( residueDict.keys() ):
             if( 'include' in residueDict[resName] and residueDict[resName]['include'] ):
                 type         = residueDict[resName]['type']
@@ -307,13 +310,13 @@ def buildResidueDict( residueXmlFileName ):
                 tinkerLookupName   = residueDict[resName]['tinkerLookupName']
                 fullName     = residueDict[resName]['residueName']
                 outputString = """  <Residue abbreviation="%s" loc="%s" type="%s" tinkerLookupName="%s" fullName="%s">""" % (resName, loc, type, tinkerLookupName, fullName )
-                print "%s" % outputString
+                print("%s" % outputString)
 
                 atomsInfo    = residueDict[resName]['atoms']
                 for atomName in sorted( atomsInfo.keys() ):
                     tinkerLookupName = atomsInfo[atomName]['tinkerLookupName']
                     outputString = """  <Atom name="%s" tinkerLookupName="%s" />""" % (atomName, tinkerLookupName)
-                    print "%s" % outputString
+                    print("%s" % outputString)
 
                 includedBonds = dict()
                 for atomName in sorted( atomsInfo.keys() ):
@@ -327,9 +330,9 @@ def buildResidueDict( residueXmlFileName ):
                                 includedBonds[bondedAtom] = dict()
                             includedBonds[atomName][bondedAtom] = 1
                             includedBonds[bondedAtom][atomName] = 1
-                            print "%s" % outputString
-                print "</Residue>"
-        print "</Residues>"
+                            print("%s" % outputString)
+                print("</Residue>")
+        print("</Residues>")
 
     return residueDict
 
@@ -363,13 +366,13 @@ def setBioTypes( bioTypes, residueDict ):
             if lookupName in bioTypes:
                 res['atoms'][atom]['type'] = bioTypes[lookupName][3]
             else:
-                print "For %s lookupName=%s not in biotype" % (atom,lookupName)
+                print("For %s lookupName=%s not in biotype" % (atom,lookupName))
                 if( 'parent' in res ):
                     lookupName =  res['atoms'][atom]['tinkerLookupName']  + '_' +  res['parent']['tinkerLookupName']
                     if( lookupName in bioTypes ):
                         res['atoms'][atom]['type'] = bioTypes[lookupName][3]
                     else:
-                        print "Missing lookupName=%s from biotype" % (lookupName)
+                        print("Missing lookupName=%s from biotype" % (lookupName))
     return 0
 
 #=============================================================================================
@@ -460,12 +463,14 @@ forces                                   = {}
 recognizedForces                         = {}
 recognizedForces['bond']                 = 1
 recognizedForces['angle']                = 1
+recognizedForces['anglep']               = 1
 recognizedForces['strbnd']               = 1
 recognizedForces['ureybrad']             = 1
 recognizedForces['opbend']               = 1
 recognizedForces['torsion']              = 1
 recognizedForces['pitors']               = 1
 recognizedForces['vdw']                  = 1
+recognizedForces['vdwpr']                = 1
 recognizedForces['polarize']             = 1
 recognizedForces['tortors']              = addTorTor
 recognizedForces['multipole']            = addMultipole
@@ -573,7 +578,7 @@ while lineIndex < len( allLines ):
         scalars[fields[0]] = fields[1]
         lineIndex += 1
     else:
-        print "Field %s not recognized: line=<%s>" % ( fields[0], allLines[lineIndex] )
+        print("Field %s not recognized: line=<%s>" % ( fields[0], allLines[lineIndex] ))
         lineIndex += 1
 
 #=============================================================================================
@@ -589,12 +594,12 @@ setBioTypes( bioTypes, residueDict )
 tinkerXmlFileName           = scalars['forcefield']
 tinkerXmlFileName          += '.xml'
 tinkerXmlFile               = open( tinkerXmlFileName, 'w' )
-print "Opened %s." % (tinkerXmlFileName)
+print("Opened %s." % (tinkerXmlFileName))
 
 gkXmlFileName              = scalars['forcefield']
 gkXmlFileName             += '_gk.xml'
 gkXmlFile                  = open( gkXmlFileName, 'w' )
-print "Opened %s." % (gkXmlFileName)
+print("Opened %s." % (gkXmlFileName))
 
 today = datetime.date.today().isoformat()
 sourceFile = os.path.basename(sys.argv[1])
@@ -680,7 +685,7 @@ for resname, res in sorted(residueDict.items()):
             type  = res['atoms'][atom]['type']
             typeI = int( type )
             if( typeI < 0 ):
-                print "Error: type=%s for atom=%s of residue=%s" % (type, atom, resname)
+                print("Error: type=%s for atom=%s of residue=%s" % (type, atom, resname))
             tag  = "   <Atom name=\"%s\" type=\"%s\" />" % (atom, type)
             atomIndex[atom]  = atomCount
             atomCount       += 1
@@ -755,7 +760,7 @@ tinkerXmlFile.write('  </Residue>\n')
 
 # ions
  
-for ion,ionInfo in ions.iteritems():
+for ion,ionInfo in ions.items():
     outputString  = """  <Residue name="%s">\n""" % (ionInfo[0])
     outputString += """   <Atom name="%s" type="%s"/>\n""" % (ionInfo[0], str(ionInfo[1]))
     outputString += """  </Residue>\n""" 
@@ -792,20 +797,20 @@ if( isAmoeba ):
     sextic          = float(scalars['angle-sextic']) 
     outputString    = """ <AmoebaAngleForce angle-cubic="%s" angle-quartic="%s" angle-pentic="%s" angle-sextic="%s">""" %( str(cubic), str(quartic), str(pentic), str(sextic) )
     tinkerXmlFile.write( "%s\n" % (outputString ) )
-    angles          = forces['angle']
     radian          = 57.2957795130
     radian2         = 4.184/(radian*radian)
-    for angle in angles:
-       k            = float(angle[3])*radian2
-       outputString = """  <Angle class1="%s" class2="%s" class3="%s" k="%s" angle1="%s" """ % (angle[0], angle[1], angle[2], str(k), angle[4] ) 
-       if( len(angle) > 5 ):
-           outputString += """  angle2="%s" """ % (angle[5])
-
-       if( len(angle) > 6 ):
-           outputString += """  angle3="%s" """ % (angle[6])
-       outputString += " /> "
-
-       tinkerXmlFile.write( "%s\n" % (outputString ) )
+    for set in ['angle', 'anglep']:
+        for angle in forces[set]:
+           k            = float(angle[3])*radian2
+           outputString = '  <Angle class1="%s" class2="%s" class3="%s" k="%s" angle1="%s"' % (angle[0], angle[1], angle[2], str(k), angle[4] ) 
+           if( len(angle) > 5 ):
+               outputString += ' angle2="%s"' % (angle[5])
+    
+           if( len(angle) > 6 ):
+               outputString += ' angle3="%s"' % (angle[6])
+           outputString += ' inPlane="%s"/>' % (set == 'anglep')
+    
+           tinkerXmlFile.write( "%s\n" % (outputString ) )
     tinkerXmlFile.write( " </AmoebaAngleForce>\n" )
 
 #=============================================================================================
@@ -906,7 +911,7 @@ if( isAmoeba ):
        outputString  = """  <TorsionTorsionGrid grid="%s" nx="%s" ny="%s" >""" % (str(index), torInfo[5], torInfo[6] )
        tinkerXmlFile.write( "%s\n" % (outputString ) )
        for (gridIndex, gridEntry) in enumerate(grid):
-           print "Gxx %d  %s" % ( gridIndex, str(gridEntry) )
+           print("Gxx %d  %s" % ( gridIndex, str(gridEntry) ))
            if( len( gridEntry ) > 5 ):
                f   = float( gridEntry[2] )*4.184
                fx  = float( gridEntry[3] )*4.184
@@ -930,15 +935,19 @@ if( isAmoeba ):
     outputString         = """ <AmoebaVdwForce type="%s" radiusrule="%s" radiustype="%s" radiussize="%s" epsilonrule="%s" vdw-13-scale="%s" vdw-14-scale="%s" vdw-15-scale="%s" >""" % (
          scalars['vdwtype'], scalars['radiusrule'], scalars['radiustype'], scalars['radiussize'], scalars['epsilonrule'], scalars['vdw-13-scale'], scalars['vdw-14-scale'], scalars['vdw-15-scale'] )
     tinkerXmlFile.write( "%s\n" % (outputString ) )
-    vdws                 = forces['vdw']
-    for vdw in vdws:
+    for vdw in forces['vdw']:
        sigma             = float(vdw[1])*0.1
        epsilon           = float(vdw[2])*4.184
        if( len(vdw) > 3 ): 
            reduction = vdw[3]
        else:
            reduction = 1.0
-       outputString      = """  <Vdw class="%s" sigma="%s" epsilon="%s" reduction="%s" /> """ % (vdw[0], str(sigma), str(epsilon), str(reduction) )
+       outputString      = """  <Vdw class="%s" sigma="%s" epsilon="%s" reduction="%s"/>""" % (vdw[0], str(sigma), str(epsilon), str(reduction))
+       tinkerXmlFile.write( "%s\n" % (outputString ) )
+    for pair in forces['vdwpr']:
+       sigma             = float(pair[2])*0.1
+       epsilon           = float(pair[3])*4.184
+       outputString      = """  <Pair class1="%s" class2="%s" sigma="%s" epsilon="%s"/>""" % (pair[0], pair[1], str(sigma), str(epsilon))
        tinkerXmlFile.write( "%s\n" % (outputString ) )
     tinkerXmlFile.write( " </AmoebaVdwForce>\n" )
 
@@ -1013,11 +1022,11 @@ if( isAmoeba ):
           
        outputString     += "/>"
        tinkerXmlFile.write( "%s\n" % (outputString ) )
-       print m[polarize[0]]
+       print(m[polarize[0]])
     for t in sorted(m):
         for k in m[t]:
             if t not in m[k]:
-                print t, k
+                print(t, k)
 
     tinkerXmlFile.write( " </AmoebaMultipoleForce>\n" )
 
@@ -1037,10 +1046,10 @@ if( isAmoeba ):
     # radii are set in forcefield.py
 
     for type in sorted( atomTypes ):
-        print "atom type=%s  %s" % ( str(type), str(atomTypes[type]) )
+        print("atom type=%s  %s" % ( str(type), str(atomTypes[type]) ))
 
     for type in sorted( bioTypes ):
-        print "bio type=%s  %s" % ( str(type), str(bioTypes[type]) )
+        print("bio type=%s  %s" % ( str(type), str(bioTypes[type]) ))
 
     multipoleArray       = forces['multipole']
     for multipoleInfo in multipoleArray:
@@ -1067,9 +1076,9 @@ if( isAmoeba ):
            elif( element == 'Fe' ):
                shct = 0.88
            else:
-               print "Warning no overlap scale factor for type=%d element=%s" % (type, element)
+               print("Warning no overlap scale factor for type=%d element=%s" % (type, element))
        else:
-           print "Warning no overlap scale factor for type=%d " % (type)
+           print("Warning no overlap scale factor for type=%d " % (type))
 
        outputString      = """  <GeneralizedKirkwood type="%s" charge="%s" shct="%s"  /> """ % ( axisInfo[0], multipoles[0],  str(shct) )
        gkXmlFile.write( "%s\n" % (outputString ) )

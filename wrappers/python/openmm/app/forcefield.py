@@ -3446,6 +3446,7 @@ class AmoebaAngleGenerator(object):
 
         self.angle = []
         self.k = []
+        self.inPlane = []
 
     #=============================================================================================
 
@@ -3478,6 +3479,10 @@ class AmoebaAngleGenerator(object):
                     pass
                 generator.angle.append(angleList)
                 generator.k.append(float(angle.attrib['k']))
+                if 'inPlane' in angle.attrib:
+                    generator.inPlane.append(angle.attrib['inPlane'].lower() == 'true')
+                else:
+                    generator.inPlane.append(None) # for backward compatibility with older versions of AMOEBA
             else:
                 outputString = "AmoebaAngleGenerator: error getting types: %s %s %s" % (
                                     angle.attrib['class1'],
@@ -3524,6 +3529,8 @@ class AmoebaAngleGenerator(object):
             type2 = data.atomType[data.atoms[angle[1]]]
             type3 = data.atomType[data.atoms[angle[2]]]
             for i in range(len(self.types1)):
+                if self.inPlane[i]:
+                    continue
                 types1 = self.types1[i]
                 types2 = self.types2[i]
                 types3 = self.types3[i]
@@ -3595,6 +3602,8 @@ class AmoebaAngleGenerator(object):
 
             for i in range(len(self.types1)):
 
+                if self.inPlane[i] == False: # It could be either True, False, or None
+                    continue
                 types1 = self.types1[i]
                 types2 = self.types2[i]
                 types3 = self.types3[i]
@@ -4542,7 +4551,8 @@ class AmoebaVdwGenerator(object):
             generator = AmoebaVdwGenerator(element.attrib['type'], element.attrib['radiusrule'], element.attrib['radiustype'], element.attrib['radiussize'], element.attrib['epsilonrule'],
                                         float(element.attrib['vdw-13-scale']), float(element.attrib['vdw-14-scale']), float(element.attrib['vdw-15-scale']))
             forceField.registerGenerator(generator)
-            generator.params = ForceField._AtomTypeParameters(forceField, 'AmoebaVdwForce', 'Vdw', ('sigma', 'epsilon', 'reduction'))
+            generator.params = {}
+            generator.pairs = []
         else:
             # Multiple <AmoebaVdwForce> tags were found, probably in different files.  Simply add more types to the existing one.
             generator = existing[0]
@@ -4553,7 +4563,11 @@ class AmoebaVdwGenerator(object):
             if generator.radiusrule != element.attrib['radiusrule'] or generator.epsilonrule != element.attrib['epsilonrule'] or \
                     generator.radiustype != element.attrib['radiustype'] or generator.radiussize != element.attrib['radiussize']:
                 raise ValueError('Found multiple AmoebaVdwForce tags with different combining rules')
-        generator.params.parseDefinitions(element)
+        for vdw in element.findall('Vdw'):
+            generator.params[vdw.attrib['class']] = tuple(float(vdw.attrib[name]) for name in ('sigma', 'epsilon', 'reduction'))
+        for pair in element.findall('Pair'):
+            generator.pairs.append((pair.attrib['class1'], pair.attrib['class2'], float(pair.attrib['sigma']), float(pair.attrib['epsilon'])))
+        generator.classNameForType = dict((t.name, t.atomClass) for t in forceField._atomTypes.values())
 
     #=============================================================================================
 
@@ -4623,15 +4637,23 @@ class AmoebaVdwGenerator(object):
         if (nonbondedMethod == PME):
             force.setNonbondedMethod(mm.AmoebaVdwForce.CutoffPeriodic)
 
-        # add particles to force
+        # Define types
 
         sigmaScale = 1
         if self.radiustype == 'SIGMA':
             sigmaScale = 1.122462048309372
         if self.radiussize == 'DIAMETER':
             sigmaScale = 0.5
+        classToTypeMap = {}
+        for className in self.params:
+            sigma, epsilon, _ = self.params[className]
+            classToTypeMap[className] = force.addParticleType(sigma*sigmaScale, epsilon)
+
+        # add particles to force
+
         for (i, atom) in enumerate(data.atoms):
-            values = self.params.getAtomParameters(atom, data)
+            className = self.classNameForType[data.atomType[atom]]
+            _, _, reduction = self.params[className]
             # ivIndex = index of bonded partner for hydrogens; otherwise ivIndex = particle index
 
             ivIndex = i
@@ -4642,7 +4664,12 @@ class AmoebaVdwGenerator(object):
                 else:
                     ivIndex = data.bonds[bondIndex].atom1
 
-            force.addParticle(ivIndex, values[0]*sigmaScale, values[1], values[2])
+            force.addParticle(ivIndex, classToTypeMap[className], reduction)
+
+        # Add pairs
+        
+        for c1, c2, sigma, epsilon in self.pairs:
+            force.addTypePair(classToTypeMap[c1], classToTypeMap[c2], sigma, epsilon)
 
         # set combining rules
 
