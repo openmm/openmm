@@ -3524,12 +3524,14 @@ class AmoebaAngleGenerator(object):
         for angleDict in angleList:
             angle = angleDict['angle']
             isConstrained = angleDict['isConstrained']
+            inPlane = angleDict['inPlane']
 
             type1 = data.atomType[data.atoms[angle[0]]]
             type2 = data.atomType[data.atoms[angle[1]]]
             type3 = data.atomType[data.atoms[angle[2]]]
             for i in range(len(self.types1)):
-                if self.inPlane[i]:
+                # self.inPlane is used for modern force fields.  inPlane is used for legacy ones that don't specify it.
+                if self.inPlane[i] or (self.inPlane is None and inPlane):
                     continue
                 types1 = self.types1[i]
                 types2 = self.types2[i]
@@ -3595,14 +3597,15 @@ class AmoebaAngleGenerator(object):
 
             angle = angleDict['angle']
             isConstrained = angleDict['isConstrained']
+            inPlane = angleDict['inPlane']
 
             type1 = data.atomType[data.atoms[angle[0]]]
             type2 = data.atomType[data.atoms[angle[1]]]
             type3 = data.atomType[data.atoms[angle[2]]]
 
             for i in range(len(self.types1)):
-
-                if self.inPlane[i] == False: # It could be either True, False, or None
+                # self.inPlane is used for modern force fields.  inPlane is used for legacy ones that don't specify it.
+                if self.inPlane[i] == False or (self.inPlane is None and not inPlane):
                     continue
                 types1 = self.types1[i]
                 types2 = self.types2[i]
@@ -3707,33 +3710,6 @@ class AmoebaOutOfPlaneBendGenerator(object):
                 raise ValueError(outputString)
 
     #=============================================================================================
-    # Get middle atom in a angle
-    # return index of middle atom or -1 if no middle is found
-    # This method appears not to be needed since the angle[1] entry appears to always
-    # be the middle atom. However, was unsure if this is guaranteed
-    #=============================================================================================
-
-    def getMiddleAtom(self, angle, data):
-
-        # find atom shared by both bonds making up the angle
-
-        for atomIndex in angle:
-            isMiddle = 0
-            for bond in data.atomBonds[atomIndex]:
-                atom1 = data.bonds[bond].atom1
-                atom2 = data.bonds[bond].atom2
-                if (atom1 != atomIndex):
-                    partner = atom1
-                else:
-                    partner = atom2
-                if (partner == angle[0] or partner == angle[1] or partner == angle[2]):
-                    isMiddle += 1
-
-            if (isMiddle == 2):
-                return atomIndex
-        return -1
-
-    #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
@@ -3757,26 +3733,17 @@ class AmoebaOutOfPlaneBendGenerator(object):
         else:
             force = existing[0]
 
-        # this hash is used to insure the out-of-plane-bend bonds
+        # this hash is used to ensure the out-of-plane-bend bonds
         # are only added once
 
         skipAtoms = dict()
-
-        # these lists are used in the partitioning of the angles into
-        # angle and inPlane angles
-
-        inPlaneAngles = []
-        nonInPlaneAngles = []
+        angles = []
 
         for (angle, isConstrained) in zip(data.angles, data.isAngleConstrained):
 
-            middleAtom = self.getMiddleAtom(angle, data)
-            if (middleAtom > -1):
-                middleType = data.atomType[data.atoms[middleAtom]]
-                middleCovalency = len(data.atomBonds[middleAtom])
-            else:
-                middleType = -1
-                middleCovalency = -1
+            middleAtom = angle[1]
+            middleType = data.atomType[data.atoms[middleAtom]]
+            middleCovalency = len(data.atomBonds[middleAtom])
 
             # if middle atom has covalency of 3 and
             # the types of the middle atom and the partner atom (atom bonded to
@@ -3784,7 +3751,7 @@ class AmoebaOutOfPlaneBendGenerator(object):
             # three out-of-plane bend angles are generated. Three in-plane angle
             # are also generated. If the conditions are not satisfied, the angle is marked as 'generic' angle (not a in-plane angle)
 
-            if (middleAtom > -1 and middleCovalency == 3 and middleAtom not in skipAtoms):
+            if middleCovalency == 3 and middleAtom not in skipAtoms:
 
                 partners = []
                 partnerSet = set()
@@ -3794,7 +3761,7 @@ class AmoebaOutOfPlaneBendGenerator(object):
                 for bond in data.atomBonds[middleAtom]:
                     atom1 = data.bonds[bond].atom1
                     atom2 = data.bonds[bond].atom2
-                    if (atom1 != middleAtom):
+                    if atom1 != middleAtom:
                         partner = atom1
                     else:
                         partner = atom2
@@ -3803,96 +3770,74 @@ class AmoebaOutOfPlaneBendGenerator(object):
                     for i in range(len(self.types1)):
                         types1 = self.types1[i]
                         types2 = self.types2[i]
-                        if (middleType in types2 and partnerType in types1):
+                        if middleType in types2 and partnerType in types1:
                             partners.append(partner)
                             partnerSet.add(partner)
                             partnerTypes.append(partnerType)
                             partnerK.append(self.ks[i])
 
-                if (len(partners) == 3):
+                if len(partners) == 3:
 
                     force.addBond([partners[0], middleAtom, partners[1], partners[2]], [partnerK[2]])
                     force.addBond([partners[0], middleAtom, partners[2], partners[1]], [partnerK[1]])
                     force.addBond([partners[1], middleAtom, partners[2], partners[0]], [partnerK[0]])
 
-                    # skipAtoms is used to insure angles are only included once
+                    # skipAtoms is used to ensure angles are only included once
 
-                    skipAtoms[middleAtom] = set()
-                    skipAtoms[middleAtom].add(partners[0])
-                    skipAtoms[middleAtom].add(partners[1])
-                    skipAtoms[middleAtom].add(partners[2])
+                    skipAtoms[middleAtom] = set(partners[:3])
 
                     # in-plane angle
 
                     angleDict = {}
-                    angleList = []
-                    angleList.append(angle[0])
-                    angleList.append(angle[1])
-                    angleList.append(angle[2])
+                    angleList = list(angle[:3])
+                    for atomIndex in partnerSet:
+                        if atomIndex not in angleList:
+                            angleList.append(atomIndex)
                     angleDict['angle'] = angleList
-
                     angleDict['isConstrained'] = 0
-
-                    angleSet = set()
-                    angleSet.add(angle[0])
-                    angleSet.add(angle[1])
-                    angleSet.add(angle[2])
-
-                    for atomIndex in partnerSet:
-                        if (atomIndex not in angleSet):
-                            angleList.append(atomIndex)
-
-                    inPlaneAngles.append(angleDict)
+                    angleDict['inPlane'] = True
+                    angles.append(angleDict)
 
                 else:
                     angleDict = {}
-                    angleDict['angle'] = angle
-                    angleDict['isConstrained'] = isConstrained
-                    nonInPlaneAngles.append(angleDict)
-            else:
-                if (middleAtom > -1 and middleCovalency == 3 and middleAtom in skipAtoms):
-
-                    partnerSet = skipAtoms[middleAtom]
-
-                    angleDict = {}
-
-                    angleList = []
-                    angleList.append(angle[0])
-                    angleList.append(angle[1])
-                    angleList.append(angle[2])
+                    angleList = list(angle[:3])
+                    for atomIndex in partnerSet:
+                        if atomIndex not in angleList:
+                            angleList.append(atomIndex)
                     angleDict['angle'] = angleList
-
                     angleDict['isConstrained'] = isConstrained
+                    angleDict['inPlane'] = False
+                    angles.append(angleDict)
+            elif middleCovalency == 3 and middleAtom in skipAtoms:
 
-                    angleSet = set()
-                    angleSet.add(angle[0])
-                    angleSet.add(angle[1])
-                    angleSet.add(angle[2])
+                partnerSet = skipAtoms[middleAtom]
+                angleDict = {}
+                angleList = list(angle[:3])
+                for atomIndex in partnerSet:
+                    if atomIndex not in angleList:
+                        angleList.append(atomIndex)
+                angleDict['angle'] = angleList
+                angleDict['isConstrained'] = isConstrained
+                angleDict['inPlane'] = True
+                angles.append(angleDict)
 
-                    for atomIndex in partnerSet:
-                        if (atomIndex not in angleSet):
-                            angleList.append(atomIndex)
-
-                    inPlaneAngles.append(angleDict)
-
-                else:
-                    angleDict = {}
-                    angleDict['angle'] = angle
-                    angleDict['isConstrained'] = isConstrained
-                    nonInPlaneAngles.append(angleDict)
+            else:
+                angleDict = {}
+                angleDict['angle'] = angle
+                angleDict['isConstrained'] = isConstrained
+                angleDict['inPlane'] = False
+                angles.append(angleDict)
 
         # get AmoebaAngleGenerator and add AmoebaAngle and AmoebaInPlaneAngle forces
 
         for force in self.forceField._forces:
             if (force.__class__.__name__ == 'AmoebaAngleGenerator'):
-                force.createForcePostOpBendAngle(sys, data, nonbondedMethod, nonbondedCutoff, nonInPlaneAngles, args)
-                force.createForcePostOpBendInPlaneAngle(sys, data, nonbondedMethod, nonbondedCutoff, inPlaneAngles, args)
+                force.createForcePostOpBendAngle(sys, data, nonbondedMethod, nonbondedCutoff, angles, args)
+                force.createForcePostOpBendInPlaneAngle(sys, data, nonbondedMethod, nonbondedCutoff, angles, args)
 
         for force in self.forceField._forces:
             if (force.__class__.__name__ == 'AmoebaStretchBendGenerator'):
-                for angleDict in inPlaneAngles:
-                    nonInPlaneAngles.append(angleDict)
-                force.createForcePostAmoebaBondForce(sys, data, nonbondedMethod, nonbondedCutoff, nonInPlaneAngles, args)
+                force.createForcePostAmoebaBondForce(sys, data, nonbondedMethod, nonbondedCutoff, angles, args)
 
 parsers["AmoebaOutOfPlaneBendForce"] = AmoebaOutOfPlaneBendGenerator.parseElement
 
