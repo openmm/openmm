@@ -469,6 +469,8 @@ recognizedForces['ureybrad']             = 1
 recognizedForces['opbend']               = 1
 recognizedForces['torsion']              = 1
 recognizedForces['pitors']               = 1
+recognizedForces['strtors']              = 1
+recognizedForces['angtors']              = 1
 recognizedForces['vdw']                  = 1
 recognizedForces['vdwpr']                = 1
 recognizedForces['polarize']             = 1
@@ -873,6 +875,16 @@ if( isAmoeba ):
        outputString  = """  <PiTorsion class1="%s" class2="%s" k="%s" />""" % (piTorsion[0], piTorsion[1], str(k) )
        tinkerXmlFile.write( "%s\n" % (outputString ) )
     tinkerXmlFile.write( " </AmoebaPiTorsionForce>\n" )
+
+#=============================================================================================
+
+    # Stretch torsion
+
+    tinkerXmlFile.write(' <AmoebaStretchTorsionForce>\n')
+    for torsion in forces['strtors']:
+        v = [float(x)*10*4.184 for x in torsion[4:]]
+        tinkerXmlFile.write(f'  <Torsion class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" v11="{v[0]}" v12="{v[1]}" v13="{v[2]}" v21="{v[3]}" v22="{v[4]}" v23="{v[5]}" v31="{v[6]}" v32="{v[7]}" v33="{v[8]}"/>\n')
+    tinkerXmlFile.write(' </AmoebaStretchTorsionForce>\n')
 
 #=============================================================================================
 
