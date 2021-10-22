@@ -888,6 +888,16 @@ if( isAmoeba ):
 
 #=============================================================================================
 
+    # Angle torsion
+
+    tinkerXmlFile.write(' <AmoebaAngleTorsionForce>\n')
+    for torsion in forces['angtors']:
+        v = [float(x)*4.184 for x in torsion[4:]]
+        tinkerXmlFile.write(f'  <Torsion class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" v11="{v[0]}" v12="{v[1]}" v13="{v[2]}" v21="{v[3]}" v22="{v[4]}" v23="{v[5]}"/>\n')
+    tinkerXmlFile.write(' </AmoebaAngleTorsionForce>\n')
+
+#=============================================================================================
+
     # AmoebaStretchBendForce
 
     stretchBendUnit      = 1.0

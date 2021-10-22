@@ -4166,6 +4166,99 @@ parsers["AmoebaStretchTorsionForce"] = AmoebaStretchTorsionGenerator.parseElemen
 #=============================================================================================
 
 ## @private
+class AmoebaAngleTorsionGenerator(object):
+    """An AmoebaAngleTorsionGenerator constructs a AmoebaAngleTorsionForce."""
+
+    def __init__(self):
+        self.torsions = []
+
+    @staticmethod
+    def parseElement(element, forceField):
+        generator = AmoebaAngleTorsionGenerator()
+        forceField._forces.append(generator)
+        params = ('v11', 'v12', 'v13', 'v21', 'v22', 'v23')
+        for torsion in element.findall('Torsion'):
+            types = forceField._findAtomTypes(torsion.attrib, 4)
+            if None not in types:
+                v = [float(torsion.attrib[param]) for param in params]
+                generator.torsions.append((types, v))
+
+    def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+        energy = """v11*(angle(p1,p2,p3)-angle1)*phi1 +
+                    v12*(angle(p1,p2,p3)-angle1)*phi2 +
+                    v13*(angle(p1,p2,p3)-angle1)*phi3 +
+                    v21*(angle(p2,p3,p4)-angle2)*phi1 +
+                    v22*(angle(p2,p3,p4)-angle2)*phi2 +
+                    v23*(angle(p2,p3,p4)-angle2)*phi3;
+                    phi1=1+cos(phi+phase1); phi2=1+cos(2*phi+phase2); phi3=1+cos(3*phi+phase3);
+                    phi=dihedral(p1,p2,p3,p4)"""
+        existing = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getEnergyFunction() == energy]
+        if len(existing) == 0:
+            force = mm.CustomCompoundBondForce(4, energy)
+            for param in ('v11', 'v12', 'v13', 'v21', 'v22', 'v23'):
+                force.addPerBondParameter(param)
+            for i in range(2):
+                force.addPerBondParameter(f'angle{i+1}')
+            for i in range(3):
+                force.addPerBondParameter(f'phase{i+1}')
+            force.setName('AmoebaAngleTorsion')
+            sys.addForce(force)
+        else:
+            force = existing[0]
+
+    def postprocessSystem(self, sys, data, args):
+        # We need to wait until after all angles and torsions have been added before adding the angle-torsions,
+        # since it needs parameters from them.
+
+        force = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getName() == 'AmoebaAngleTorsion'][0]
+        angleForce = [f for f in sys.getForces() if type(f) == mm.CustomAngleForce and f.getName() == 'AmoebaAngle'][0]
+        inPlaneAngleForce = [f for f in sys.getForces() if type(f) == mm.CustomCompoundBondForce and f.getName() == 'AmoebaInPlaneAngle'][0]
+        torsionForce = [f for f in sys.getForces() if type(f) == mm.PeriodicTorsionForce][0]
+
+        # Record parameters for angles and torsions so we can look them up quickly.
+
+        equilAngle = {}
+        torsionPhase = defaultdict(lambda: [0.0, math.pi, 0.0])
+        angleScale = math.pi/180
+        for i in range(angleForce.getNumAngles()):
+            p1, p2, p3, params = angleForce.getAngleParameters(i)
+            equilAngle[(p1, p2, p3)] = params[0]*angleScale
+            equilAngle[(p3, p2, p1)] = params[0]*angleScale
+        for i in range(inPlaneAngleForce.getNumBonds()):
+            particles, params = inPlaneAngleForce.getBondParameters(i)
+            equilAngle[tuple(particles[:3])] = params[0]*angleScale
+            equilAngle[tuple(reversed(particles[:3]))] = params[0]*angleScale
+        for i in range(torsionForce.getNumTorsions()):
+            p1, p2, p3, p4, periodicity, phase, k = torsionForce.getTorsionParameters(i)
+            if periodicity < 4:
+                phase = phase.value_in_unit(unit.radian)
+                torsionPhase[(p1, p2, p3, p4)][periodicity-1] = phase
+                torsionPhase[(p4, p3, p2, p1)][periodicity-1] = phase
+
+        # Add stretch-torsions.
+
+        for torsion in data.propers:
+            type1 = data.atomType[data.atoms[torsion[0]]]
+            type2 = data.atomType[data.atoms[torsion[1]]]
+            type3 = data.atomType[data.atoms[torsion[2]]]
+            type4 = data.atomType[data.atoms[torsion[3]]]
+            for types, v in self.torsions:
+                if (type1 in types[3] and type2 in types[2] and type3 in types[1] and type4 in types[0]):
+                    type1, type2, type3, type4 = type4, type3, type2, type1
+                    torsion = tuple(reversed(torsion))
+                if (type1 in types[0] and type2 in types[1] and type3 in types[2] and type4 in types[3]):
+                    params = list(v)
+                    params.append(equilAngle[(torsion[0], torsion[1], torsion[2])])
+                    params.append(equilAngle[(torsion[1], torsion[2], torsion[3])])
+                    params += torsionPhase[torsion]
+                    force.addBond(torsion, params)
+                    break
+
+parsers["AmoebaAngleTorsionForce"] = AmoebaAngleTorsionGenerator.parseElement
+
+#=============================================================================================
+
+## @private
 class AmoebaTorsionTorsionGenerator(object):
 
     #=============================================================================================
