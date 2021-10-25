@@ -3694,6 +3694,10 @@ class AmoebaOutOfPlaneBendGenerator(object):
         forceField._forces.append(generator)
 
         for angle in element.findall('Angle'):
+            if 'class3' in angle.attrib and 'class4' in angle.attrib and angle.attrib['class3'] == '0' and angle.attrib['class4'] == '0':
+                # This is needed for backward compatibility with old AMOEBA force fields that specified wildcards in a nonstandard way.
+                angle.attrib['class3'] = ''
+                angle.attrib['class4'] = ''
             types = generator.findAtomTypes(forceField, angle, 4)
             if types is not None:
 
