@@ -830,9 +830,12 @@ if( isAmoeba ):
     opbends         = forces['opbend']
     radian2         = 4.184/(radian*radian)
     for opbend in opbends:
-       k            = float(opbend[4])*radian2
-       outputString = """  <Angle class1="%s" class2="%s" class3="%s" class4="%s" k="%s"/>""" % (opbend[0], opbend[1], opbend[2],  opbend[3], str(k))
-       tinkerXmlFile.write( "%s\n" % (outputString ) )
+        k            = float(opbend[4])*radian2
+        for i in range(4):
+            if opbend[i] == '0':
+                opbend[i] = ''
+        outputString = """  <Angle class1="%s" class2="%s" class3="%s" class4="%s" k="%s"/>""" % (opbend[0], opbend[1], opbend[2],  opbend[3], str(k))
+        tinkerXmlFile.write( "%s\n" % (outputString ) )
     tinkerXmlFile.write( " </AmoebaOutOfPlaneBendForce>\n" )
 
 #=============================================================================================
