@@ -3531,7 +3531,7 @@ class AmoebaAngleGenerator(object):
             type3 = data.atomType[data.atoms[angle[2]]]
             for i in range(len(self.types1)):
                 # self.inPlane is used for modern force fields.  inPlane is used for legacy ones that don't specify it.
-                if self.inPlane[i] or (self.inPlane is None and inPlane):
+                if self.inPlane[i] or (self.inPlane[i] is None and inPlane):
                     continue
                 types1 = self.types1[i]
                 types2 = self.types2[i]
