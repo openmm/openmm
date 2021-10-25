@@ -649,25 +649,28 @@ dielectric constant, and :math:`T` is the temperature in Kelvin.
 AMOEBA
 ------
 
-The AMOEBA polarizable force field provides parameters for proteins, water, and ions.
+The AMOEBA polarizable force field provides parameters for proteins, nucleic acids, water, and ions.
 
 .. tabularcolumns:: |l|L|
 
 =============================  ================================================================================
 File                           Parameters
 =============================  ================================================================================
-:file:`amoeba2013.xml`         AMOEBA 2013\ :cite:`Shi2013`
-:file:`amoeba2013_gk.xml`      Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA 2013 force field
+:file:`amoeba2018.xml`         AMOEBA 2018\ :cite:`Shi2013`
+:file:`amoeba2018_gk.xml`      Generalized Kirkwood solvation model\ :cite:`Schnieders2007` for use with AMOEBA 2018 force field
+:file:`amoeba2013.xml`         AMOEBA 2013.  This force field is deprecated.  It is
+                               recommended to use AMOEBA 2018 instead.
+:file:`amoeba2013_gk.xml`      Generalized Kirkwood solvation model for use with AMOEBA 2013 force field
 :file:`amoeba2009.xml`         AMOEBA 2009\ :cite:`Ren2002`.  This force field is deprecated.  It is
-                               recommended to use AMOEBA 2013 instead.
+                               recommended to use AMOEBA 2018 instead.
 :file:`amoeba2009_gk.xml`      Generalized Kirkwood solvation model for use with AMOEBA 2009 force field
 =============================  ================================================================================
 
-For explicit solvent simulations, just include the single file :file:`amoeba2013.xml`.
+For explicit solvent simulations, just include the single file :file:`amoeba2018.xml`.
 AMOEBA also supports implicit solvent using a Generalized Kirkwood model.  To enable
-it, also include :file:`amoeba2013_gk.xml`.
+it, also include :file:`amoeba2018_gk.xml`.
 
-The older AMOEBA 2009 force field is provided only for backward compatibility, and is not
+The older AMOEBA 2009 and 2013 force fields are provided only for backward compatibility, and are not
 recommended for most simulations.
 
 CHARMM Polarizable Force Field
