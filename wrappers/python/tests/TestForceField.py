@@ -1282,7 +1282,7 @@ class AmoebaTestForceField(unittest.TestCase):
         forcefield = ForceField('amoeba2013.xml', 'amoeba2013_gk.xml')
         system = forcefield.createSystem(pdb.topology, polarization='direct')
         integrator = VerletIntegrator(0.001)
-        context = Context(system, integrator)
+        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
         context.setPositions(pdb.positions)
         state1 = context.getState(getForces=True)
         with open('systems/alanine-dipeptide-amoeba-forces.xml') as input:
@@ -1291,6 +1291,55 @@ class AmoebaTestForceField(unittest.TestCase):
             diff = norm(f1-f2)
             self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-3)
 
+    def computeAmoeba18Energies(self, filename):
+        pdb = PDBFile(filename)
+        forcefield = ForceField('amoeba2018.xml')
+        system = forcefield.createSystem(pdb.topology, polarization='mutual', mutualInducedTargetEpsilon=1e-5)
+        for i, f in enumerate(system.getForces()):
+            f.setForceGroup(i)
+        integrator = VerletIntegrator(0.001)
+        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energies = {}
+        for i, f in enumerate(system.getForces()):
+            state = context.getState(getEnergy=True, groups={i})
+            energies[f.getName()] = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        return energies
+
+    def test_Amoeba18BPTI(self):
+        """Test that AMOEBA18 computes energies correctly for BPTI."""
+        energies = self.computeAmoeba18Energies('systems/bpti.pdb')
+
+        # Compare to values computed with Tinker.
+
+        self.assertAlmostEqual(290.2445, energies['AmoebaBond'], 4)
+        self.assertAlmostEqual(496.4300, energies['AmoebaAngle']+energies['AmoebaInPlaneAngle'], 4)
+        self.assertAlmostEqual(51.2913, energies['AmoebaOutOfPlaneBend'], 4)
+        self.assertAlmostEqual(5.7695, energies['AmoebaStretchBend'], 4)
+        self.assertAlmostEqual(75.6890, energies['PeriodicTorsionForce'], 4)
+        self.assertAlmostEqual(19.3364, energies['AmoebaPiTorsion'], 4)
+        self.assertAlmostEqual(-32.6689, energies['AmoebaTorsionTorsionForce'], 4)
+        self.assertAlmostEqual(383.8705, energies['AmoebaVdwForce'], 4)
+        self.assertAlmostEqual(-1323.5640-225.3660, energies['AmoebaMultipoleForce'], 2)
+        self.assertAlmostEqual(-258.9676, sum(list(energies.values())), 2)
+
+    def test_Amoeba18DNA(self):
+        """Test that AMOEBA18 computes energies correctly for DNA."""
+        energies = self.computeAmoeba18Energies('systems/dna.pdb')
+
+        # Compare to values computed with Tinker.
+
+        self.assertAlmostEqual(688.7794, energies['AmoebaBond'], 4)
+        self.assertAlmostEqual(430.5887, energies['AmoebaAngle']+energies['AmoebaInPlaneAngle'], 4)
+        self.assertAlmostEqual(10.5715, energies['AmoebaOutOfPlaneBend'], 4)
+        self.assertAlmostEqual(0.7773, energies['AmoebaStretchBend'], 4)
+        self.assertAlmostEqual(77.0482, energies['PeriodicTorsionForce'], 4)
+        self.assertAlmostEqual(56.5654, energies['AmoebaPiTorsion'], 4)
+        self.assertAlmostEqual(-0.5457, energies['AmoebaStretchTorsion'], 4)
+        self.assertAlmostEqual(-1.6044, energies['AmoebaAngleTorsion'], 4)
+        self.assertAlmostEqual(106.4062, energies['AmoebaVdwForce'], 4)
+        self.assertAlmostEqual(90.5715-73.6051, energies['AmoebaMultipoleForce'], 4)
+        self.assertAlmostEqual(1385.5529, sum(list(energies.values())), 4)
 
 if __name__ == '__main__':
     unittest.main()
