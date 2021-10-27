@@ -981,11 +981,11 @@ class ForceField(object):
         template = None
         matches = None
         for matcher in self._templateMatchers:
-            template = matcher(self, res)
+            template = matcher(self, res, bondedToAtom, ignoreExternalBonds, ignoreExtraParticles)
             if template is not None:
                 match = compiled.matchResidueToTemplate(res, template, bondedToAtom, ignoreExternalBonds, ignoreExtraParticles)
                 if match is None:
-                    raise ValueError('A custom template matcher returned a template for residue %s, but it does not match the residue.' % res.name)
+                    raise ValueError('A custom template matcher returned a template for residue %d (%s), but it does not match the residue.' % (res.index, res.name))
                 return [template, match]
         if templateSignatures is None:
             templateSignatures = self._templateSignatures

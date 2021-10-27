@@ -952,6 +952,20 @@ class TestModeller(unittest.TestCase):
 
         validate_equivalence(self, topology_LYN, topology_after)
 
+    def test_addHydrogensGlycam(self):
+        """Test adding hydrogens for GLYCAM."""
+        pdb = PDBFile('systems/glycopeptide.pdb')
+        Modeller.loadHydrogenDefinitions('glycam-hydrogens.xml')
+        modeller = Modeller(pdb.topology, pdb.positions)
+        hydrogens = [a for a in modeller.topology.atoms() if a.element == element.hydrogen]
+        modeller.delete(hydrogens)
+        self.assertTrue(modeller.topology.getNumAtoms() < pdb.topology.getNumAtoms())
+        modeller.addHydrogens()
+        self.assertEqual(modeller.topology.getNumAtoms(), pdb.topology.getNumAtoms())
+        for res1, res2 in zip(pdb.topology.residues(), modeller.topology.residues()):
+            names1 = sorted([a.name for a in res1.atoms()])
+            names2 = sorted([a.name for a in res2.atoms()])
+            self.assertEqual(names1, names2)
 
     def test_removeExtraHydrogens(self):
         """Test that addHydrogens() can remove hydrogens that shouldn't be there. """

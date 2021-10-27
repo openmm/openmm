@@ -1193,6 +1193,16 @@ self.scriptExecuted = True
 """
         ff = ForceField(StringIO(xml))
         self.assertTrue(ff.scriptExecuted)
+
+    def test_Glycam(self):
+        """Test computing energy with GLYCAM."""
+        ff = ForceField('amber14/protein.ff14SB.xml', 'amber14/GLYCAM_06j-1.xml')
+        pdb = PDBFile('systems/glycopeptide.pdb')
+        system = ff.createSystem(pdb.topology)
+        integrator = VerletIntegrator(0.001)
+        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energy = context.getState(getEnergy=True).getPotentialEnergy()
         
 
 class AmoebaTestForceField(unittest.TestCase):
