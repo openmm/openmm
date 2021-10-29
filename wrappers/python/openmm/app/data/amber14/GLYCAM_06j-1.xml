@@ -1,6 +1,6 @@
 <ForceField>
   <Info>
-    <DateGenerated>2021-07-13</DateGenerated>
+    <DateGenerated>2021-10-29</DateGenerated>
     <Source Source="glycam/leaprc.GLYCAM_06j-1" md5hash="a7359f8d717f92dba02d57d6e0c8f3f7" sourcePackage="AmberTools" sourcePackageVersion="20.15">glycam/leaprc.GLYCAM_06j-1</Source>
     <Reference>R. Kadirvelraj; O. C. Grant; I. J. Goldstein; H. C. Winter; H. Tateno; E. Fadda; R. J. Woods. Structure and binding analysis of Polyporus squamosus lectin in complex with the Neu5Ac&#945;2-6Gal&#946;1-4GlcNAc human- type influenza receptor. Glycobiology, 2011, 21, 973&#8211;984. M. L. DeMarco; R. J. Woods. From agonist to antagonist: Structure and dynamics of innate immune glycoprotein MD-2 upon recognition of variably acylated bacterial endotoxins. Mol. Immunol., 2011, 49, 124&#8211;133. B. L. Foley; M. B. Tessier; R. J. Woods. Carbohydrate force fields. WIREs Comput. Mol. Sci., 2012, 2, 652&#8211;697. E. Ficko-Blean; C. P. Stuart; M. D. Suits; M. Cid; M. Tessier; R. J. Woods; A. B. Boraston. Carbohy- drate Recognition by an Architecturally Complex &#945;-N-Acetylglucosaminidase from Clostridium perfrin- gens. PLoS ONE, 2012, 7, e33524.</Reference>
   </Info>
@@ -40829,9 +40829,7 @@
       <Bond atomName1="CH3" atomName2="H2" />
       <Bond atomName1="CH3" atomName2="H3" />
       <Bond atomName1="CH3" atomName2="O" />
-      <ExternalBond atomName="H1" />
       <ExternalBond atomName="O" />
-      <ExternalBond atomName="CH3" />
     </Residue>
     <Residue name="PEA" override="1">
       <Atom name="C1" type="glycam-Cg" charge="0.48" />
@@ -45177,7 +45175,6 @@
       <Atom name="HO1" type="glycam-Ho" charge="0.445" />
       <Atom name="O1" type="glycam-Oh" charge="-0.639" />
       <Bond atomName1="HO1" atomName2="O1" />
-      <ExternalBond atomName="HO1" />
       <ExternalBond atomName="O1" />
     </Residue>
     <Residue name="RTA" override="1">
@@ -46421,9 +46418,6 @@
       <Bond atomName1="S1" atomName2="O2" />
       <Bond atomName1="S1" atomName2="O3" />
       <ExternalBond atomName="S1" />
-      <ExternalBond atomName="O1" />
-      <ExternalBond atomName="O2" />
-      <ExternalBond atomName="O3" />
     </Residue>
     <Residue name="STA" override="1">
       <Atom name="C1" type="glycam-Cg" charge="0.456" />
@@ -47229,7 +47223,6 @@
       <Bond atomName1="C4" atomName2="H7" />
       <Bond atomName1="C4" atomName2="H8" />
       <Bond atomName1="C4" atomName2="H9" />
-      <ExternalBond atomName="C2" />
       <ExternalBond atomName="O1" />
     </Residue>
     <Residue name="TDA" override="1">
@@ -66389,9 +66382,6 @@
       <Bond atomName1="C" atomName2="O" />
       <ExternalBond atomName="N" />
       <ExternalBond atomName="C" />
-      <ExternalBond atomName="CG" />
-      <ExternalBond atomName="OD1" />
-      <ExternalBond atomName="HOD" />
     </Residue>
     <Residue name="OLP" override="1">
       <Atom name="N" type="protein-N" charge="-0.2548" />
@@ -66424,7 +66414,7 @@
       <Bond atomName1="C" atomName2="O" />
       <ExternalBond atomName="N" />
       <ExternalBond atomName="C" />
-      <ExternalBond atomName="CG" />
+      <ExternalBond atomName="OD1" />
     </Residue>
     <Residue name="CHYP" override="1">
       <Atom name="N" type="protein-N" charge="-0.28" />
@@ -66460,9 +66450,6 @@
       <Bond atomName1="C" atomName2="O" />
       <Bond atomName1="C" atomName2="OXT" />
       <ExternalBond atomName="N" />
-      <ExternalBond atomName="CG" />
-      <ExternalBond atomName="OD1" />
-      <ExternalBond atomName="HD1" />
     </Residue>
     <Residue name="CNLN" override="1">
       <Atom name="N" type="protein-N" charge="-0.3821" />
@@ -66527,7 +66514,7 @@
       <Bond atomName1="C" atomName2="O" />
       <Bond atomName1="C" atomName2="OXT" />
       <ExternalBond atomName="N" />
-      <ExternalBond atomName="CG" />
+      <ExternalBond atomName="OD1" />
     </Residue>
     <Residue name="COLS" override="1">
       <Atom name="N" type="protein-N" charge="-0.3821" />
@@ -66621,9 +66608,6 @@
       <Bond atomName1="CA" atomName2="C" />
       <Bond atomName1="C" atomName2="O" />
       <ExternalBond atomName="C" />
-      <ExternalBond atomName="CG" />
-      <ExternalBond atomName="OD1" />
-      <ExternalBond atomName="HD1" />
     </Residue>
     <Residue name="NNLN" override="1">
       <Atom name="N" type="protein-N3" charge="0.1801" />
@@ -66655,8 +66639,8 @@
       <Bond atomName1="CG" atomName2="ND2" />
       <Bond atomName1="ND2" atomName2="HD21" />
       <Bond atomName1="C" atomName2="O" />
-      <ExternalBond atomName="C" />
       <ExternalBond atomName="ND2" />
+      <ExternalBond atomName="C" />
     </Residue>
     <Residue name="NOLP" override="1">
       <Atom name="N" type="protein-N3" charge="-0.202" />
@@ -66691,8 +66675,8 @@
       <Bond atomName1="CA" atomName2="HA" />
       <Bond atomName1="CA" atomName2="C" />
       <Bond atomName1="C" atomName2="O" />
+      <ExternalBond atomName="OD1" />
       <ExternalBond atomName="C" />
-      <ExternalBond atomName="CG" />
     </Residue>
     <Residue name="NOLS" override="1">
       <Atom name="N" type="protein-N3" charge="0.1849" />
@@ -66718,8 +66702,8 @@
       <Bond atomName1="CB" atomName2="HB3" />
       <Bond atomName1="CB" atomName2="OG" />
       <Bond atomName1="C" atomName2="O" />
-      <ExternalBond atomName="C" />
       <ExternalBond atomName="OG" />
+      <ExternalBond atomName="C" />
     </Residue>
     <Residue name="NOLT" override="1">
       <Atom name="N" type="protein-N3" charge="0.1812" />
@@ -66751,8 +66735,8 @@
       <Bond atomName1="CG2" atomName2="HG22" />
       <Bond atomName1="CG2" atomName2="HG23" />
       <Bond atomName1="C" atomName2="O" />
-      <ExternalBond atomName="C" />
       <ExternalBond atomName="OG1" />
+      <ExternalBond atomName="C" />
     </Residue>
   </Residues>
   <HarmonicBondForce>
@@ -67907,7 +67891,7 @@ for force in sys.getForces():
         if (p1, p2) in unscaled_pairs or (p2, p1) in unscaled_pairs:
           force.setExceptionParameters(i, p1, p2, atom_charges[p1]*atom_charges[p2], (atom_sigmas[p1]+atom_sigmas[p2])/2, unit.sqrt(atom_epsilons[p1]*atom_epsilons[p2]))
 </Script>
-<InitializationScript> 
+<InitializationScript>
 from openmm.app.internal import compiled
 
 class GlycamTemplateMatcher(object):
