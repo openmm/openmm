@@ -212,6 +212,31 @@ void testContinuous2DFunction() {
             ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.05);
         }
     }
+
+    // Try updating the tabulated function.
+
+    for (int i = 0; i < table.size(); i++)
+        table[i] *= 0.5;
+    Continuous2DFunction& fn = dynamic_cast<Continuous2DFunction&>(forceField->getTabulatedFunction(0));
+    fn.setFunctionParameters(xsize, ysize, table, xmin, xmax, ymin, ymax);
+    forceField->updateParametersInContext(context);
+    for (double x = xmin-0.15; x < xmax+0.2; x += 0.1) {
+        for (double y = ymin-0.15; y < ymax+0.2; y += 0.1) {
+            positions[0] = Vec3(x, y, 1.5);
+            context.setPositions(positions);
+            State state = context.getState(State::Forces | State::Energy);
+            const vector<Vec3>& forces = state.getForces();
+            double energy = 1;
+            Vec3 force(0, 0, 0);
+            if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
+                energy = 0.5*sin(0.25*x)*cos(0.33*y)+1;
+                force[0] = 0.5*(-0.25*cos(0.25*x)*cos(0.33*y));
+                force[1] = 0.5*0.3*sin(0.25*x)*sin(0.33*y);
+            }
+            ASSERT_EQUAL_VEC(force, forces[0], 0.1);
+            ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.05);
+        }
+    }
 }
 
 void testContinuous3DFunction() {

@@ -942,10 +942,13 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force);
 private:
+    void createInteraction(const CustomCompoundBondForce& force);
     int numBonds;
+    std::vector<std::vector<int> > bondParticles;
     std::vector<std::vector<double> > bondParamArray;
     ReferenceCustomCompoundBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     bool usePeriodic;
     Vec3* boxVectors;
 };

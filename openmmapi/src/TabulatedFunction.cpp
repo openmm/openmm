@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014 Stanford University and the Authors.           *
+ * Portions copyright (c) 2014-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -75,6 +75,15 @@ Continuous1DFunction* Continuous1DFunction::Copy() const {
     return new Continuous1DFunction(new_vec, min, max);
 }
 
+bool Continuous1DFunction::operator==(const TabulatedFunction& other) const {
+    const Continuous1DFunction* fn = dynamic_cast<const Continuous1DFunction*>(&other);
+    if (fn == NULL)
+        return false;
+    if (fn->min != min || fn->max != max)
+        return false;
+    return (fn->values == values);
+}
+
 Continuous2DFunction::Continuous2DFunction(int xsize, int ysize, const vector<double>& values, double xmin, double xmax, double ymin, double ymax, bool periodic) {
     this->periodic = periodic;
     setFunctionParameters(xsize, ysize, values, xmin, xmax, ymin, ymax);
@@ -118,6 +127,19 @@ Continuous2DFunction* Continuous2DFunction::Copy() const {
     for (size_t i = 0; i < values.size(); i++)
         new_vec[i] = values[i];
     return new Continuous2DFunction(xsize, ysize, new_vec, xmin, xmax, ymin, ymax);
+}
+
+bool Continuous2DFunction::operator==(const TabulatedFunction& other) const {
+    const Continuous2DFunction* fn = dynamic_cast<const Continuous2DFunction*>(&other);
+    if (fn == NULL)
+        return false;
+    if (fn->xsize != xsize || fn->ysize != ysize)
+        return false;
+    if (fn->xmin != xmin || fn->xmax != xmax)
+        return false;
+    if (fn->ymin != ymin || fn->ymax != ymax)
+        return false;
+    return (fn->values == values);
 }
 
 Continuous3DFunction::Continuous3DFunction(int xsize, int ysize, int zsize, const vector<double>& values, double xmin, double xmax, double ymin, double ymax, double zmin, double zmax, bool periodic) {
@@ -173,6 +195,20 @@ Continuous3DFunction* Continuous3DFunction::Copy() const {
     return new Continuous3DFunction(xsize, ysize, zsize, new_vec, xmin, xmax, ymin, ymax, zmin, zmax);
 }
 
+bool Continuous3DFunction::operator==(const TabulatedFunction& other) const {
+    const Continuous3DFunction* fn = dynamic_cast<const Continuous3DFunction*>(&other);
+    if (fn == NULL)
+        return false;
+    if (fn->xsize != xsize || fn->ysize != ysize || fn->zsize != zsize)
+        return false;
+    if (fn->xmin != xmin || fn->xmax != xmax)
+        return false;
+    if (fn->ymin != ymin || fn->ymax != ymax)
+        return false;
+    if (fn->zmin != zmin || fn->zmax != zmax)
+        return false;
+    return (fn->values == values);
+}
 
 Discrete1DFunction::Discrete1DFunction(const vector<double>& values) {
     this->values = values;
@@ -191,6 +227,13 @@ Discrete1DFunction* Discrete1DFunction::Copy() const {
     for (size_t i = 0; i < values.size(); i++)
         new_vec[i] = values[i];
     return new Discrete1DFunction(new_vec);
+}
+
+bool Discrete1DFunction::operator==(const TabulatedFunction& other) const {
+    const Discrete1DFunction* fn = dynamic_cast<const Discrete1DFunction*>(&other);
+    if (fn == NULL)
+        return false;
+    return (fn->values == values);
 }
 
 Discrete2DFunction::Discrete2DFunction(int xsize, int ysize, const vector<double>& values) {
@@ -220,6 +263,15 @@ Discrete2DFunction* Discrete2DFunction::Copy() const {
     for (size_t i = 0; i < values.size(); i++)
         new_vec[i] = values[i];
     return new Discrete2DFunction(xsize, ysize, new_vec);
+}
+
+bool Discrete2DFunction::operator==(const TabulatedFunction& other) const {
+    const Discrete2DFunction* fn = dynamic_cast<const Discrete2DFunction*>(&other);
+    if (fn == NULL)
+        return false;
+    if (fn->xsize != xsize || fn->ysize != ysize)
+        return false;
+    return (fn->values == values);
 }
 
 Discrete3DFunction::Discrete3DFunction(int xsize, int ysize, int zsize, const vector<double>& values) {
@@ -252,4 +304,13 @@ Discrete3DFunction* Discrete3DFunction::Copy() const {
     for (size_t i = 0; i < values.size(); i++)
         new_vec[i] = values[i];
     return new Discrete3DFunction(xsize, ysize, zsize, new_vec);
+}
+
+bool Discrete3DFunction::operator==(const TabulatedFunction& other) const {
+    const Discrete3DFunction* fn = dynamic_cast<const Discrete3DFunction*>(&other);
+    if (fn == NULL)
+        return false;
+    if (fn->xsize != xsize || fn->ysize != ysize || fn->zsize != zsize)
+        return false;
+    return (fn->values == values);
 }
