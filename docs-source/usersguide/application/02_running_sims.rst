@@ -499,6 +499,7 @@ File                                 Parameters
 :file:`amber14/DNA.bsc1.xml`         DNA (alternative)
 :file:`amber14/RNA.OL3.xml`          RNA
 :file:`amber14/lipid17.xml`          Lipid
+:file:`amber14/GLYCAM_06j-1.xml`     Carbohydrates and glycosylated proteins\ :cite:`Kirschner2007`
 :file:`amber14/tip3p.xml`            TIP3P water model\ :cite:`Jorgensen1983` and ions
 :file:`amber14/tip3pfb.xml`          TIP3P-FB water model\ :cite:`Wang2014` and ions
 :file:`amber14/tip4pew.xml`          TIP4P-Ew water model\ :cite:`Horn2004` and ions
@@ -514,6 +515,18 @@ water model and ions\ :cite:`Wang2014`:
 ::
 
     forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+
+GLYCAM is not included by default, since it is quite large.  If your system contains
+carbohydrates, include that file as well:
+::
+
+    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml', 'amber14/GLYCAM_06j-1.xml')
+
+Be aware that GLYCAM works somewhat differently from most force fields.  It uses
+its own nonstandard `naming convention <http://legacy.glycam.org/docs/forcefield/glycam-naming-2/index.html>`_
+for carbohydrates, and requires your input file to follow it.  If any residues have
+names different from what it expects, GLYCAM will be unable to assign parameters
+to them.
 
 .. tip:: The solvent model XML files included under the :file:`amber14/` directory
          include both water *and* ions compatible with that water model, so if you

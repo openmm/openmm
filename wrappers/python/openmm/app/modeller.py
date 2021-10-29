@@ -35,7 +35,7 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from openmm.app import Topology, PDBFile, ForceField
-from openmm.app.forcefield import AllBonds, CutoffNonPeriodic, CutoffPeriodic, DrudeGenerator
+from openmm.app.forcefield import AllBonds, CutoffNonPeriodic, CutoffPeriodic, DrudeGenerator, _getDataDirectories
 from openmm.app.internal import compiled
 from openmm.vec3 import Vec3
 from openmm import System, Context, NonbondedForce, CustomNonbondedForce, HarmonicBondForce, HarmonicAngleForce, VerletIntegrator, LangevinIntegrator, LocalEnergyMinimizer
@@ -653,8 +653,28 @@ class Modeller(object):
         The built in hydrogens.xml file containing definitions for standard amino acids and nucleotides is loaded automatically.
         This method can be used to load additional definitions for other residue types.  They will then be used in subsequent
         calls to addHydrogens().
+
+        Parameters
+        ----------
+        file : string or file
+            An XML file containing hydrogen definitions.  It may be either an
+            absolute file path, a path relative to the current working
+            directory, a path relative to this module's data subdirectory (for
+            built in sets of definitions), or an open file-like object with a read()
+            method from which the data can be loaded.
         """
-        tree = etree.parse(file)
+        tree = None
+        try:
+            # this handles either filenames or open file-like objects
+            tree = etree.parse(file)
+        except IOError:
+            for dataDir in _getDataDirectories():
+                f = os.path.join(dataDir, file)
+                if os.path.isfile(f):
+                    tree = etree.parse(f)
+                    break
+        if tree is None:
+            raise ValueError('Could not locate file')
         infinity = float('Inf')
         for residue in tree.getroot().findall('Residue'):
             resName = residue.attrib['name']
@@ -869,7 +889,8 @@ class Modeller(object):
                     parents = [atom for atom in residue.atoms() if atom.element != elem.hydrogen]
                     parentNames = [atom.name for atom in parents]
                     hydrogens = [h for h in spec.hydrogens if (variant is None and pH <= h.maxph) or (h.variants is None and pH <= h.maxph) or (h.variants is not None and variant in h.variants)]
-                    hydrogens = [h for h in hydrogens if h.terminal is None or (isNTerminal and h.terminal == 'N') or (isCTerminal and h.terminal == 'C')]
+                    hydrogens = [h for h in hydrogens if h.terminal is None or (isNTerminal and 'N' in h.terminal) or (isCTerminal and 'C' in h.terminal) or
+                                 ((not isNTerminal) and (not isCTerminal) and '-' in h.terminal)]
                     hydrogens = [h for h in hydrogens if h.parent in parentNames]
 
                     # Loop over atoms in the residue, adding them to the new topology along with required hydrogens.

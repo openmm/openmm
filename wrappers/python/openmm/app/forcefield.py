@@ -492,9 +492,13 @@ class ForceField(object):
 
         A template matcher is a callable object that can be invoked as::
         
-            template = f(forcefield, residue)
+            template = f(forcefield, residue, bondedToAtom, ignoreExternalBonds, ignoreExtraParticles)
         
-        where ``forcefield`` is the ForceField invoking it and ``residue`` is a openmm.app.Residue object.
+        where ``forcefield`` is the ForceField invoking it, ``residue`` is an openmm.app.Residue object,
+        ``bondedToAtom[i]`` is the set of atoms bonded to atom index i, and ``ignoreExternalBonds`` and
+        ``ignoreExtraParticles`` indicate whether external bonds and extra particules should be considered
+        in matching templates.
+
         It should return a _TemplateData object that matches the residue.  Alternatively it may return
         None, in which case the standard logic will be used to find a template for the residue.
 
@@ -981,11 +985,11 @@ class ForceField(object):
         template = None
         matches = None
         for matcher in self._templateMatchers:
-            template = matcher(self, res)
+            template = matcher(self, res, bondedToAtom, ignoreExternalBonds, ignoreExtraParticles)
             if template is not None:
                 match = compiled.matchResidueToTemplate(res, template, bondedToAtom, ignoreExternalBonds, ignoreExtraParticles)
                 if match is None:
-                    raise ValueError('A custom template matcher returned a template for residue %s, but it does not match the residue.' % res.name)
+                    raise ValueError('A custom template matcher returned a template for residue %d (%s), but it does not match the residue.' % (res.index, res.name))
                 return [template, match]
         if templateSignatures is None:
             templateSignatures = self._templateSignatures

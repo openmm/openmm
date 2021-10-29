@@ -67,6 +67,17 @@ If you want more control, it is possible to specify exactly which protonation
 state to use for particular residues.  For details, consult the API
 documentation for the Modeller class.
 
+By default, :class:`Modeller` loads information about hydrogens in standard
+amino acids and nucleic acids.  You can call :meth:`loadHydrogenDefinitions` to
+load definitions for other types of molecules.  In particular, if your system
+contains carbohydrates that you plan to simulate with the GLYCAM force field, call
+::
+
+    Modeller.loadHydrogenDefinitions('glycam-hydrogens.xml')
+
+All subsequent calls to :meth:`addHydrogens` will make use of the newly loaded
+definitions.
+
 Adding Solvent
 **************
 

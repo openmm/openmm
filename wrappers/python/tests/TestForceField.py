@@ -466,7 +466,7 @@ class TestForceField(unittest.TestCase):
         self.assertRaises(Exception, lambda: ff.createSystem(top))
         
         # Register a template matcher that selects a particular one.
-        def matcher(ff, res):
+        def matcher(ff, res, bondedToAtom, ignoreExternalBonds, ignoreExtraParticles):
             return ff._templates['HOH2']
         ff.registerTemplateMatcher(matcher)
         
@@ -1193,7 +1193,29 @@ self.scriptExecuted = True
 """
         ff = ForceField(StringIO(xml))
         self.assertTrue(ff.scriptExecuted)
-        
+
+    def test_Glycam(self):
+        """Test computing energy with GLYCAM."""
+        ff = ForceField('amber14/protein.ff14SB.xml', 'amber14/GLYCAM_06j-1.xml')
+        pdb = PDBFile('systems/glycopeptide.pdb')
+        system = ff.createSystem(pdb.topology)
+        for i, f in enumerate(system.getForces()):
+            f.setForceGroup(i)
+        integrator = VerletIntegrator(0.001)
+        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energies = {}
+        for i, f in enumerate(system.getForces()):
+            energy = context.getState(getEnergy=True, groups={i}).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+            energies[f.getName()] = energy
+
+        # Compare to values computed with ParmEd.
+
+        self.assertAlmostEqual(32.14082401103625, energies['HarmonicBondForce'], 4)
+        self.assertAlmostEqual(48.92017455984504, energies['HarmonicAngleForce'], 3)
+        self.assertAlmostEqual(291.61241586209286, energies['PeriodicTorsionForce'], 4)
+        self.assertAlmostEqual(1547.011267801862, energies['NonbondedForce'], 4)
+        self.assertAlmostEqual(1919.6846822348361, sum(list(energies.values())), 3)
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
