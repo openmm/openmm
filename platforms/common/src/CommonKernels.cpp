@@ -1415,7 +1415,7 @@ void CommonCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImp
 
     // See if any tabulated functions have changed.
 
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
         if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
             tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
@@ -1745,7 +1745,7 @@ void CommonCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImp
 
     // See if any tabulated functions have changed.
 
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
         if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
             tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
@@ -2382,7 +2382,7 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
 
     // See if any tabulated functions have changed.
 
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
         if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
             tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
@@ -3708,7 +3708,7 @@ void CommonCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context
 
     // See if any tabulated functions have changed.
 
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
         if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
             tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
@@ -4333,17 +4333,18 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
-    tabulatedFunctions.resize(force.getNumTabulatedFunctions());
+    tabulatedFunctionArrays.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
+        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
         string arrayName = "table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-        tabulatedFunctions[i].initialize<float>(cc, f.size(), "TabulatedFunction");
-        tabulatedFunctions[i].upload(f);
+        tabulatedFunctionArrays[i].initialize<float>(cc, f.size(), "TabulatedFunction");
+        tabulatedFunctionArrays[i].upload(f);
         tableArgs << ", GLOBAL const float";
         if (width > 1)
             tableArgs << width;
@@ -4646,7 +4647,7 @@ double CommonCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
             forceKernel->addArg(globals);
         for (auto& parameter : params->getParameterInfos())
             forceKernel->addArg(parameter.getArray());
-        for (auto& function : tabulatedFunctions)
+        for (auto& function : tabulatedFunctionArrays)
             forceKernel->addArg(function);
         
         if (nonbondedMethod != NoCutoff) {
@@ -4748,9 +4749,9 @@ void CommonCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImp
     int numParticles = force.getNumParticles();
     if (numParticles != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
-    
+
     // Record the per-particle parameters.
-    
+
     vector<vector<float> > paramVector(numParticles);
     vector<double> parameters;
     int type;
@@ -4761,9 +4762,21 @@ void CommonCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImp
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    
+
+    // See if any tabulated functions have changed.
+
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            int width;
+            vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
+            tabulatedFunctionArrays[i].upload(f);
+        }
+    }
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info);
 }
 

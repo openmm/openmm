@@ -884,7 +884,7 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
 
     // Record the tabulated functions for future reference.
 
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
 
     // Record information for the long range correction.
@@ -916,7 +916,7 @@ void CpuCalcCustomNonbondedForceKernel::createInteraction(const CustomNonbondedF
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the various expressions used to calculate the force.
@@ -1029,7 +1029,7 @@ void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& con
     // See if any tabulated functions have changed.
 
     bool changed = false;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
         if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
             tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
@@ -1146,7 +1146,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     // Record the tabulated functions for future reference.
 
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
 
     // Create the interaction.
@@ -1158,7 +1158,7 @@ void CpuCalcCustomGBForceKernel::createInteraction(const CustomGBForce& force) {
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the expressions for computed values.
@@ -1295,7 +1295,7 @@ void CpuCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context, c
     // See if any tabulated functions have changed.
 
     bool changed = false;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
         if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
             tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
@@ -1326,6 +1326,14 @@ void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, cons
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
+
+    // Record the tabulated functions for future reference.
+
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
+        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+
+    // Create the interaction.
+
     ixn = new CpuCustomManyParticleForce(force, data.threads);
     nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
     cutoffDistance = force.getCutoffDistance();
@@ -1362,6 +1370,22 @@ void CpuCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImpl& 
         force.getParticleParameters(i, parameters, type);
         for (int j = 0; j < numParameters; j++)
             particleParamArray[i][j] = static_cast<double>(parameters[j]);
+    }
+
+    // See if any tabulated functions have changed.
+
+    bool changed = false;
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            changed = true;
+        }
+    }
+    if (changed) {
+        delete ixn;
+        ixn = NULL;
+        ixn = new CpuCustomManyParticleForce(force, data.threads);
     }
 }
 

@@ -999,6 +999,7 @@ private:
     std::vector<std::vector<double> > particleParamArray;
     ReferenceCustomManyParticleIxn* ixn;
     std::vector<std::string> globalParameterNames;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     NonbondedMethod nonbondedMethod;
 };
 

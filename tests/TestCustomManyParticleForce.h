@@ -516,6 +516,15 @@ void testTabulatedFunctions() {
                 expectedEnergy += 0.5*(r12+r13+r23)*(c[i]+c[j]+c[k]);
             }
     ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
+
+    // Try updating the tabulated function.
+
+    for (int i = 0; i < values.size(); i++)
+        values[i] *= 0.5;
+    dynamic_cast<Discrete3DFunction&>(force->getTabulatedFunction(1)).setFunctionParameters(numParticles, numParticles, numParticles, values);
+    force->updateParametersInContext(context);
+    state = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(0.5*expectedEnergy, state.getPotentialEnergy(), 1e-5);
 }
 
 void testTypeFilters() {

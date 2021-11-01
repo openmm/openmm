@@ -1169,7 +1169,7 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
 
     // Record the tabulated functions for future reference.
 
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
 
     // Create the expressions.
@@ -1200,7 +1200,7 @@ void ReferenceCalcCustomNonbondedForceKernel::createExpressions(const CustomNonb
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the various expressions used to calculate the force.
@@ -1320,7 +1320,7 @@ void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImp
     // See if any tabulated functions have changed.
 
     bool changed = false;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
         if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
             tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
@@ -1440,7 +1440,7 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
 
     // Record the tabulated functions for future reference.
 
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
 
     // Create the expressions.
@@ -1452,7 +1452,7 @@ void ReferenceCalcCustomGBForceKernel::createExpressions(const CustomGBForce& fo
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the expressions for computed values.
@@ -1595,7 +1595,7 @@ void ReferenceCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& cont
     // See if any tabulated functions have changed.
 
     bool changed = false;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
         if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
             tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
@@ -1727,7 +1727,7 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the expression and create the object used to calculate the interaction.
@@ -1823,7 +1823,7 @@ void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system
 
     // Record the tabulated functions for future reference.
 
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
 
     // Create the interaction.
@@ -1835,7 +1835,7 @@ void ReferenceCalcCustomCentroidBondForceKernel::createInteraction(const CustomC
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Create implementations of point functions.
@@ -1908,7 +1908,7 @@ void ReferenceCalcCustomCentroidBondForceKernel::copyParametersToContext(Context
     // See if any tabulated functions have changed.
 
     bool changed = false;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
         if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
             tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
@@ -1940,7 +1940,7 @@ void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system
 
     // Record the tabulated functions for future reference.
 
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
 
     // Create the interaction.
@@ -1952,7 +1952,7 @@ void ReferenceCalcCustomCompoundBondForceKernel::createInteraction(const CustomC
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Create implementations of point functions.
@@ -2024,7 +2024,7 @@ void ReferenceCalcCustomCompoundBondForceKernel::copyParametersToContext(Context
     // See if any tabulated functions have changed.
 
     bool changed = false;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
         if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
             tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
@@ -2044,7 +2044,6 @@ ReferenceCalcCustomManyParticleForceKernel::~ReferenceCalcCustomManyParticleForc
 }
 
 void ReferenceCalcCustomManyParticleForceKernel::initialize(const System& system, const CustomManyParticleForce& force) {
-
     // Build the arrays.
 
     numParticles = system.getNumParticles();
@@ -2055,6 +2054,14 @@ void ReferenceCalcCustomManyParticleForceKernel::initialize(const System& system
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
+
+    // Record the tabulated functions for future reference.
+
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
+        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+
+    // Create the interaction.
+
     ixn = new ReferenceCustomManyParticleIxn(force);
     nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
     cutoffDistance = force.getCutoffDistance();
@@ -2092,6 +2099,22 @@ void ReferenceCalcCustomManyParticleForceKernel::copyParametersToContext(Context
         force.getParticleParameters(i, parameters, type);
         for (int j = 0; j < numParameters; j++)
             particleParamArray[i][j] = parameters[j];
+    }
+
+    // See if any tabulated functions have changed.
+
+    bool changed = false;
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            changed = true;
+        }
+    }
+    if (changed) {
+        delete ixn;
+        ixn = NULL;
+        ixn = new ReferenceCustomManyParticleIxn(force);
     }
 }
 
