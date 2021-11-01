@@ -78,7 +78,21 @@ class WrapperGenerator:
                             'std::vector<double> OpenMM::NoseHooverChain::getYoshidaSuzukiWeights',
                             'const std::vector<int>& OpenMM::NoseHooverIntegrator::getAllThermostatedIndividualParticles',
                             'const std::vector<std::tuple<int, int, double> >& OpenMM::NoseHooverIntegrator::getAllThermostatedPairs',
-                            'virtual void OpenMM::NoseHooverIntegrator::stateChanged'
+                            'virtual void OpenMM::NoseHooverIntegrator::stateChanged',
+                            'virtual bool OpenMM::TabulatedFunction::operator==',
+                            'bool OpenMM::Continuous1DFunction::operator==',
+                            'bool OpenMM::Continuous2DFunction::operator==',
+                            'bool OpenMM::Continuous3DFunction::operator==',
+                            'bool OpenMM::Discrete1DFunction::operator==',
+                            'bool OpenMM::Discrete2DFunction::operator==',
+                            'bool OpenMM::Discrete3DFunction::operator==',
+                            'virtual bool OpenMM::TabulatedFunction::operator!=',
+                            'bool OpenMM::Continuous1DFunction::operator!=',
+                            'bool OpenMM::Continuous2DFunction::operator!=',
+                            'bool OpenMM::Continuous3DFunction::operator!=',
+                            'bool OpenMM::Discrete1DFunction::operator!=',
+                            'bool OpenMM::Discrete2DFunction::operator!=',
+                            'bool OpenMM::Discrete3DFunction::operator!='
                            ] 
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']
         self.nodeByID={}
