@@ -578,7 +578,8 @@ private:
     ComputeArray groupForces, bondGroups, centerPositions;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
-    std::vector<ComputeArray> tabulatedFunctions;
+    std::vector<ComputeArray> tabulatedFunctionArrays;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     std::vector<void*> groupForcesArgs;
     ComputeKernel computeCentersKernel, groupForcesKernel, applyForcesKernel;
     const System& system;

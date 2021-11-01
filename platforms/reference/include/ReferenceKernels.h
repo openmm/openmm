@@ -902,10 +902,15 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomCentroidBondForce& force);
 private:
+    void createInteraction(const CustomCentroidBondForce& force);
     int numBonds, numParticles;
+    std::vector<std::vector<int> > bondGroups;
+    std::vector<std::vector<int> > groupAtoms;
+    std::vector<std::vector<double> > normalizedWeights;
     std::vector<std::vector<double> > bondParamArray;
     ReferenceCustomCentroidBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     bool usePeriodic;
     Vec3* boxVectors;
 };

@@ -346,8 +346,7 @@ public:
      * This method has several limitations.  The only information it updates is the values of per-bond parameters and tabulated
      * functions.  All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
      * the Context.  The set of particles involved in a bond cannot be changed, nor can new bonds be added.  Also, while the
-     * tabulated values of a function can change, everything else about it (the type of function, its dimensions, the data range)
-     * must not be changed.
+     * tabulated values of a function can change, everything else about it (its dimensions, the data range) must not be changed.
      */
     void updateParametersInContext(Context& context);
     /**

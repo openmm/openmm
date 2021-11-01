@@ -1747,19 +1747,28 @@ void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system
     // Build the arrays.
 
     int numGroups = force.getNumGroups();
-    vector<vector<int> > groupAtoms(numGroups);
+    groupAtoms.resize(numGroups);
     vector<double> ignored;
     for (int i = 0; i < numGroups; i++)
         force.getGroupParameters(i, groupAtoms[i], ignored);
-    vector<vector<double> > normalizedWeights;
     CustomCentroidBondForceImpl::computeNormalizedWeights(force, system, normalizedWeights);
     numBonds = force.getNumBonds();
-    vector<vector<int> > bondGroups(numBonds);
-    int numBondParameters = force.getNumPerBondParameters();
+    bondGroups.resize(numBonds);
     bondParamArray.resize(numBonds);
     for (int i = 0; i < numBonds; ++i)
         force.getBondParameters(i, bondGroups[i], bondParamArray[i]);
 
+    // Record the tabulated functions for future reference.
+
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+
+    // Create the interaction.
+    
+    createInteraction(force);
+}
+
+void ReferenceCalcCustomCentroidBondForceKernel::createInteraction(const CustomCentroidBondForce& force) {
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
@@ -1774,9 +1783,10 @@ void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system
 
     // Parse the expression and create the object used to calculate the interaction.
 
+    int numGroups = force.getNumGroups();
     Lepton::ParsedExpression energyExpression = CustomCentroidBondForceImpl::prepareExpression(force, functions);
     vector<string> bondParameterNames;
-    for (int i = 0; i < numBondParameters; i++)
+    for (int i = 0; i < force.getNumPerBondParameters(); i++)
         bondParameterNames.push_back(force.getPerBondParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
@@ -1830,6 +1840,22 @@ void ReferenceCalcCustomCentroidBondForceKernel::copyParametersToContext(Context
                 throw OpenMMException("updateParametersInContext: The set of groups in a bond has changed");
         for (int j = 0; j < numParameters; j++)
             bondParamArray[i][j] = params[j];
+    }
+
+    // See if any tabulated functions have changed.
+
+    bool changed = false;
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            changed = true;
+        }
+    }
+    if (changed) {
+        delete ixn;
+        ixn = NULL;
+        createInteraction(force);
     }
 }
 

@@ -358,15 +358,16 @@ public:
      */
     const std::string& getTabulatedFunctionName(int index) const;
     /**
-     * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
+     * Update the per-bond parameters and tabulated functions in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setBondParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
      *
-     * This method has several limitations.  The only information it updates is the values of per-bond parameters.
-     * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
+     * This method has several limitations.  The only information it updates is the values of per-bond parameters and tabulated
+     * functions.  All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
      * the Context.  Neither the definitions of groups nor the set of groups involved in a bond can be changed, nor can new
-     * bonds be added.
+     * bonds be added.  Also, while the tabulated values of a function can change, everything else about it (its dimensions,
+     * the data range) must not be changed.
      */
     void updateParametersInContext(Context& context);
     /**

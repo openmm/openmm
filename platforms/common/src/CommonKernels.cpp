@@ -1549,17 +1549,18 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     stringstream extraArgs;
-    tabulatedFunctions.resize(force.getNumTabulatedFunctions());
+    tabulatedFunctionArrays.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
+        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
         string arrayName = "table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-        tabulatedFunctions[i].initialize<float>(cc, f.size(), "TabulatedFunction");
-        tabulatedFunctions[i].upload(f);
+        tabulatedFunctionArrays[i].initialize<float>(cc, f.size(), "TabulatedFunction");
+        tabulatedFunctionArrays[i].upload(f);
         extraArgs << ", GLOBAL const float";
         if (width > 1)
             extraArgs << width;
@@ -1681,7 +1682,7 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
         groupForcesKernel->addArg(); // Periodic box information will be set just before it is executed.
     if (needEnergyParamDerivs)
         groupForcesKernel->addArg(); // Deriv buffer hasn't been created yet.
-    for (auto& function : tabulatedFunctions)
+    for (auto& function : tabulatedFunctionArrays)
         groupForcesKernel->addArg(function);
     if (globals.isInitialized())
         groupForcesKernel->addArg(globals);
@@ -1728,9 +1729,9 @@ void CommonCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImp
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
     if (numBonds == 0)
         return;
-    
+
     // Record the per-bond parameters.
-    
+
     vector<vector<float> > paramVector(numBonds);
     vector<int> particles;
     vector<double> parameters;
@@ -1741,9 +1742,21 @@ void CommonCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImp
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    
+
+    // See if any tabulated functions have changed.
+
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            int width;
+            vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
+            tabulatedFunctionArrays[i].upload(f);
+        }
+    }
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info);
 }
 
