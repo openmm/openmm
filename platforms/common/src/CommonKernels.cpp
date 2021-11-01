@@ -3933,17 +3933,18 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
-    tabulatedFunctions.resize(force.getNumTabulatedFunctions());
+    tabulatedFunctionArrays.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
+        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
         string arrayName = "table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-        tabulatedFunctions[i].initialize<float>(cc, f.size(), "TabulatedFunction");
-        tabulatedFunctions[i].upload(f);
+        tabulatedFunctionArrays[i].initialize<float>(cc, f.size(), "TabulatedFunction");
+        tabulatedFunctionArrays[i].upload(f);
         tableArgs << ", GLOBAL const float";
         if (width > 1)
             tableArgs << width;
@@ -4185,7 +4186,7 @@ double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
             donorKernel->addArg(parameter.getArray());
         for (auto& parameter : acceptorParams->getParameterInfos())
             donorKernel->addArg(parameter.getArray());
-        for (auto& function : tabulatedFunctions)
+        for (auto& function : tabulatedFunctionArrays)
             donorKernel->addArg(function);
         if (cc.getSupports64BitGlobalAtomics())
             acceptorKernel->addArg(cc.getLongForceBuffer());
@@ -4206,7 +4207,7 @@ double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
             acceptorKernel->addArg(parameter.getArray());
         for (auto& parameter : acceptorParams->getParameterInfos())
             acceptorKernel->addArg(parameter.getArray());
-        for (auto& function : tabulatedFunctions)
+        for (auto& function : tabulatedFunctionArrays)
             acceptorKernel->addArg(function);
     }
     setPeriodicBoxArgs(cc, donorKernel, cc.getSupports64BitGlobalAtomics() ? 6 : 7);
@@ -4225,9 +4226,9 @@ void CommonCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& cont
         throw OpenMMException("updateParametersInContext: The number of donors has changed");
     if (numAcceptors != force.getNumAcceptors())
         throw OpenMMException("updateParametersInContext: The number of acceptors has changed");
-    
+
     // Record the per-donor parameters.
-    
+
     if (numDonors > 0) {
         vector<vector<float> > donorParamVector(numDonors);
         vector<double> parameters;
@@ -4240,9 +4241,9 @@ void CommonCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& cont
         }
         donorParams->setParameterValues(donorParamVector);
     }
-    
+
     // Record the per-acceptor parameters.
-    
+
     if (numAcceptors > 0) {
         vector<vector<float> > acceptorParamVector(numAcceptors);
         vector<double> parameters;
@@ -4255,9 +4256,21 @@ void CommonCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& cont
         }
         acceptorParams->setParameterValues(acceptorParamVector);
     }
-    
+
+    // See if any tabulated functions have changed.
+
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            int width;
+            vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
+            tabulatedFunctionArrays[i].upload(f);
+        }
+    }
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info);
 }
 

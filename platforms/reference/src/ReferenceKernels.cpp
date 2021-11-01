@@ -1701,8 +1701,7 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
 
     // Build the arrays.
 
-    vector<vector<int> > donorParticles(numDonors);
-    int numDonorParameters = force.getNumPerDonorParameters();
+    donorParticles.resize(numDonors);
     donorParamArray.resize(numDonors);
     for (int i = 0; i < numDonors; ++i) {
         int d1, d2, d3;
@@ -1711,8 +1710,7 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
         donorParticles[i].push_back(d2);
         donorParticles[i].push_back(d3);
     }
-    vector<vector<int> > acceptorParticles(numAcceptors);
-    int numAcceptorParameters = force.getNumPerAcceptorParameters();
+    acceptorParticles.resize(numAcceptors);
     acceptorParamArray.resize(numAcceptors);
     for (int i = 0; i < numAcceptors; ++i) {
         int a1, a2, a3;
@@ -1721,9 +1719,21 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
         acceptorParticles[i].push_back(a2);
         acceptorParticles[i].push_back(a3);
     }
-    NonbondedMethod nonbondedMethod = CalcCustomHbondForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
     nonbondedCutoff = force.getCutoffDistance();
 
+    // Record the tabulated functions for future reference.
+
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
+        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+
+    // Create the interaction.
+    
+    createInteraction(force);
+}
+
+void ReferenceCalcCustomHbondForceKernel::createInteraction(const CustomHbondForce& force) {
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
@@ -1738,13 +1748,12 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
     Lepton::ParsedExpression energyExpression = CustomHbondForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
     vector<string> donorParameterNames;
     vector<string> acceptorParameterNames;
-    for (int i = 0; i < numDonorParameters; i++)
+    for (int i = 0; i < force.getNumPerDonorParameters(); i++)
         donorParameterNames.push_back(force.getPerDonorParameterName(i));
-    for (int i = 0; i < numAcceptorParameters; i++)
+    for (int i = 0; i < force.getNumPerAcceptorParameters(); i++)
         acceptorParameterNames.push_back(force.getPerAcceptorParameterName(i));
-    for (int i = 0; i < force.getNumGlobalParameters(); i++)
-        globalParameterNames.push_back(force.getGlobalParameterName(i));
     ixn = new ReferenceCustomHbondIxn(donorParticles, acceptorParticles, energyExpression, donorParameterNames, acceptorParameterNames, distances, angles, dihedrals);
+    NonbondedMethod nonbondedMethod = CalcCustomHbondForceKernel::NonbondedMethod(force.getNonbondedMethod());
     isPeriodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff)
         ixn->setUseCutoff(nonbondedCutoff);
@@ -1796,6 +1805,22 @@ void ReferenceCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& c
             throw OpenMMException("updateParametersInContext: The set of particles in an acceptor group has changed");
         for (int j = 0; j < numAcceptorParameters; j++)
             acceptorParamArray[i][j] = parameters[j];
+    }
+
+    // See if any tabulated functions have changed.
+
+    bool changed = false;
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            changed = true;
+        }
+    }
+    if (changed) {
+        delete ixn;
+        ixn = NULL;
+        createInteraction(force);
     }
 }
 

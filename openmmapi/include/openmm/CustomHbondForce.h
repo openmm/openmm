@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -443,15 +443,16 @@ public:
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
     /**
-     * Update the per-donor and per-acceptor parameters in a Context to match those stored in this Force object.  This method
+     * Update the per-donor and per-acceptor parameters and tabulated functions in a Context to match those stored in this Force object.  This method
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setDonorParameters() and setAcceptorParameters() to modify this object's parameters, then call
      * updateParametersInContext() to copy them over to the Context.
      *
-     * This method has several limitations.  The only information it updates is the values of per-donor and per-acceptor parameters.
-     * All other aspects of the Force (the energy function, nonbonded method, cutoff distance, etc.) are unaffected and can only
+     * This method has several limitations.  The only information it updates is the values of per-donor and per-acceptor parameters and tabulated
+     * functions.  All other aspects of the Force (the energy function, nonbonded method, cutoff distance, etc.) are unaffected and can only
      * be changed by reinitializing the Context.  The set of particles involved in a donor or acceptor cannot be changed, nor can
-     * new donors or acceptors be added.
+     * new donors or acceptors be added.  While the tabulated values of a function can change, everything else about it (its dimensions,
+     * the data range) must not be changed.
      */
     void updateParametersInContext(Context& context);
     /**

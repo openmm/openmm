@@ -865,13 +865,16 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force);
 private:
+    void createInteraction(const CustomHbondForce& force);
     int numDonors, numAcceptors, numParticles;
     bool isPeriodic;
+    std::vector<std::vector<int> > donorParticles, acceptorParticles;
     std::vector<std::vector<double> > donorParamArray, acceptorParamArray;
     double nonbondedCutoff;
     ReferenceCustomHbondIxn* ixn;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> globalParameterNames;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
 };
 
 /**

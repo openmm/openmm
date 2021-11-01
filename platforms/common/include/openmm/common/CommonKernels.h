@@ -789,7 +789,8 @@ private:
     ComputeArray acceptorExclusions;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
-    std::vector<ComputeArray> tabulatedFunctions;
+    std::vector<ComputeArray> tabulatedFunctionArrays;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     const System& system;
     ComputeKernel donorKernel, acceptorKernel;
 };
