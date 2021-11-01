@@ -682,6 +682,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
+    void createExpressions(const CustomNonbondedForce& force);
     int numParticles;
     std::vector<std::vector<double> > particleParamArray;
     double nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
@@ -695,6 +696,7 @@ private:
     std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     std::vector<double> longRangeCoefficientDerivs;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
 };

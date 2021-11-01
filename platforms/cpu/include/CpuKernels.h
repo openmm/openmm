@@ -320,7 +320,8 @@ public:
      * @param force      the CustomNonbondedForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
-private:   
+private:
+    void createInteraction(const CustomNonbondedForce& force);
     CpuPlatform::PlatformData& data;
     int numParticles;
     std::vector<std::vector<double> > particleParamArray;
@@ -333,6 +334,7 @@ private:
     std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     std::vector<double> longRangeCoefficientDerivs;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     NonbondedMethod nonbondedMethod;
     CpuCustomNonbondedForce* nonbonded;
 };

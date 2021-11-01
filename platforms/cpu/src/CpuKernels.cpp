@@ -45,6 +45,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/internal/vectorize.h"
+#include "openmm/serialization/XmlSerializer.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/Operation.h"
@@ -868,7 +869,6 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
 
     // Build the arrays.
 
-    int numParameters = force.getNumPerParticleParameters();
     particleParamArray.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         force.getParticleParameters(i, particleParamArray[i]);
@@ -882,6 +882,37 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         switchingDistance = force.getSwitchingDistance();
     }
 
+    // Record the tabulated functions for future reference.
+
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+
+    // Record information for the long range correction.
+
+    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection()) {
+        forceCopy = new CustomNonbondedForce(force);
+        hasInitializedLongRangeCorrection = false;
+    }
+    else {
+        longRangeCoefficient = 0.0;
+        hasInitializedLongRangeCorrection = true;
+    }
+
+    // Record the interaction groups.
+
+    for (int i = 0; i < force.getNumInteractionGroups(); i++) {
+        set<int> set1, set2;
+        force.getInteractionGroupParameters(i, set1, set2);
+        interactionGroups.push_back(make_pair(set1, set2));
+    }
+    data.isPeriodic |= (nonbondedMethod == CutoffPeriodic);
+
+    // Create the interaction.
+
+    createInteraction(force);
+}
+
+void CpuCalcCustomNonbondedForceKernel::createInteraction(const CustomNonbondedForce& force) {
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
@@ -893,7 +924,7 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
     Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
     Lepton::CompiledExpression energyExpression = expression.createCompiledExpression();
     Lepton::CompiledExpression forceExpression = expression.differentiate("r").createCompiledExpression();
-    for (int i = 0; i < numParameters; i++)
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++)
         parameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParameterNames.push_back(force.getGlobalParameterName(i));
@@ -907,7 +938,7 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
     }
     set<string> variables;
     variables.insert("r");
-    for (int i = 0; i < numParameters; i++) {
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         variables.insert(parameterNames[i]+"1");
         variables.insert(parameterNames[i]+"2");
     }
@@ -918,26 +949,9 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
 
     for (auto& function : functions)
         delete function.second;
-    
-    // Record information for the long range correction.
-    
-    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection()) {
-        forceCopy = new CustomNonbondedForce(force);
-        hasInitializedLongRangeCorrection = false;
-    }
-    else {
-        longRangeCoefficient = 0.0;
-        hasInitializedLongRangeCorrection = true;
-    }
-    
-    // Record the interaction groups.
-    
-    for (int i = 0; i < force.getNumInteractionGroups(); i++) {
-        set<int> set1, set2;
-        force.getInteractionGroupParameters(i, set1, set2);
-        interactionGroups.push_back(make_pair(set1, set2));
-    }
-    data.isPeriodic |= (nonbondedMethod == CutoffPeriodic);
+
+    // Create the object that computes the interaction.
+
     nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions, data.threads);
     if (interactionGroups.size() > 0)
         nonbonded->setInteractionGroups(interactionGroups);
@@ -1010,6 +1024,22 @@ void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& con
         CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
         hasInitializedLongRangeCorrection = true;
         *forceCopy = force;
+    }
+
+    // See if any tabulated functions have changed.
+
+    bool changed = false;
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            changed = true;
+        }
+    }
+    if (changed) {
+        delete nonbonded;
+        nonbonded = NULL;
+        createInteraction(force);
     }
 }
 

@@ -630,7 +630,8 @@ private:
     std::vector<void*> interactionGroupArgs;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
-    std::vector<ComputeArray> tabulatedFunctions;
+    std::vector<ComputeArray> tabulatedFunctionArrays;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     double longRangeCoefficient;
     std::vector<double> longRangeCoefficientDerivs;
     bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList;

@@ -1895,18 +1895,19 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     vector<string> tableTypes;
-    tabulatedFunctions.resize(force.getNumTabulatedFunctions());
+    tabulatedFunctionArrays.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
+        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
         string arrayName = prefix+"table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-        tabulatedFunctions[i].initialize<float>(cc, f.size(), "TabulatedFunction");
-        tabulatedFunctions[i].upload(f);
-        cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(tabulatedFunctions[i], arrayName, "float", width));
+        tabulatedFunctionArrays[i].initialize<float>(cc, f.size(), "TabulatedFunction");
+        tabulatedFunctionArrays[i].upload(f);
+        cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(tabulatedFunctionArrays[i], arrayName, "float", width));
         if (width == 1)
             tableTypes.push_back("float");
         else
@@ -2193,7 +2194,7 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     stringstream args;
     for (int i = 0; i < (int) buffers.size(); i++)
         args<<", GLOBAL const "<<buffers[i].getType()<<"* RESTRICT global_params"<<(i+1);
-    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+    for (int i = 0; i < (int) tabulatedFunctionArrays.size(); i++)
         args << ", GLOBAL const " << tableTypes[i]<< "* RESTRICT table" << i;
     if (globals.isInitialized())
         args<<", GLOBAL const float* RESTRICT globals";
@@ -2316,7 +2317,7 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
                 interactionGroupKernel->addArg(); // Periodic box information will be set just before it is executed.
             for (auto& parameter : params->getParameterInfos())
                 interactionGroupKernel->addArg(parameter.getArray());
-            for (auto& function : tabulatedFunctions)
+            for (auto& function : tabulatedFunctionArrays)
                 interactionGroupKernel->addArg(function);
             if (globals.isInitialized())
                 interactionGroupKernel->addArg(globals);
@@ -2369,18 +2370,30 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    
+
     // If necessary, recompute the long range correction.
-    
+
     if (forceCopy != NULL) {
         longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force);
         CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, cc.getThreadPool());
         hasInitializedLongRangeCorrection = false;
         *forceCopy = force;
     }
-    
+
+    // See if any tabulated functions have changed.
+
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            int width;
+            vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
+            tabulatedFunctionArrays[i].upload(f);
+        }
+    }
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info);
 }
 
