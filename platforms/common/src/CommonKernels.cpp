@@ -2719,18 +2719,19 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     stringstream tableArgs;
-    tabulatedFunctions.resize(force.getNumTabulatedFunctions());
+    tabulatedFunctionArrays.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
+        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
         string arrayName = prefix+"table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-        tabulatedFunctions[i].initialize<float>(cc, f.size(), "TabulatedFunction");
-        tabulatedFunctions[i].upload(f);
-        nb.addArgument(ComputeParameterInfo(tabulatedFunctions[i], arrayName, "float", width));
+        tabulatedFunctionArrays[i].initialize<float>(cc, f.size(), "TabulatedFunction");
+        tabulatedFunctionArrays[i].upload(f);
+        nb.addArgument(ComputeParameterInfo(tabulatedFunctionArrays[i], arrayName, "float", width));
         tableArgs << ", GLOBAL const float";
         if (width > 1)
             tableArgs << width;
@@ -3550,7 +3551,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         }
         for (auto& d : dValue0dParam)
             pairValueKernel->addArg(d);
-        for (auto& function : tabulatedFunctions)
+        for (auto& function : tabulatedFunctionArrays)
             pairValueKernel->addArg(function);
         perParticleValueKernel->addArg(cc.getPosq());
         perParticleValueKernel->addArg(valueBuffers);
@@ -3569,7 +3570,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             for (int j = 0; j < dValuedParam[i]->getParameterInfos().size(); j++)
                 perParticleValueKernel->addArg(dValuedParam[i]->getParameterInfos()[j].getArray());
         }
-        for (auto& function : tabulatedFunctions)
+        for (auto& function : tabulatedFunctionArrays)
             perParticleValueKernel->addArg(function);
         pairEnergyKernel->addArg(useLong ? cc.getLongForceBuffer() : cc.getForceBuffers());
         pairEnergyKernel->addArg(cc.getEnergyBuffer());
@@ -3610,7 +3611,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
                 pairEnergyKernel->addArg(buffer.getArray());
         if (needEnergyParamDerivs)
             pairEnergyKernel->addArg(cc.getEnergyParamDerivBuffer());
-        for (auto& function : tabulatedFunctions)
+        for (auto& function : tabulatedFunctionArrays)
             pairEnergyKernel->addArg(function);
         perParticleEnergyKernel->addArg(cc.getEnergyBuffer());
         perParticleEnergyKernel->addArg(cc.getPosq());
@@ -3635,7 +3636,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             perParticleEnergyKernel->addArg(longEnergyDerivs);
         if (needEnergyParamDerivs)
             perParticleEnergyKernel->addArg(cc.getEnergyParamDerivBuffer());
-        for (auto& function : tabulatedFunctions)
+        for (auto& function : tabulatedFunctionArrays)
             perParticleEnergyKernel->addArg(function);
         if (needParameterGradient || needEnergyParamDerivs) {
             gradientChainRuleKernel->addArg(cc.getPosq());
@@ -3654,7 +3655,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
                     for (auto& buffer : d->getParameterInfos())
                         gradientChainRuleKernel->addArg(buffer.getArray());
             }
-            for (auto& function : tabulatedFunctions)
+            for (auto& function : tabulatedFunctionArrays)
                 gradientChainRuleKernel->addArg(function);
         }
     }
@@ -3693,9 +3694,9 @@ void CommonCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context
     int numParticles = force.getNumParticles();
     if (numParticles != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
-    
+
     // Record the per-particle parameters.
-    
+
     vector<vector<float> > paramVector(cc.getPaddedNumAtoms(), vector<float>(force.getNumPerParticleParameters(), 0));
     vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
@@ -3704,9 +3705,21 @@ void CommonCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context
             paramVector[i][j] = (float) parameters[j];
     }
     params->setParameterValues(paramVector);
-    
+
+    // See if any tabulated functions have changed.
+
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            int width;
+            vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
+            tabulatedFunctionArrays[i].upload(f);
+        }
+    }
+
     // Mark that the current reordering may be invalid.
-    
+
     cc.invalidateMolecules(info);
 }
 

@@ -770,6 +770,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
+    void createExpressions(const CustomGBForce& force);
     int numParticles;
     bool isPeriodic;
     std::vector<std::vector<double> > particleParamArray;
@@ -786,6 +787,7 @@ private:
     std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > energyParamDerivExpressions;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
 };

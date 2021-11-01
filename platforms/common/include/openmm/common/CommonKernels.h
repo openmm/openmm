@@ -731,7 +731,8 @@ private:
     ComputeArray longEnergyDerivs, globals, valueBuffers;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
-    std::vector<ComputeArray> tabulatedFunctions;
+    std::vector<ComputeArray> tabulatedFunctionArrays;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
     const System& system;
     ComputeKernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;

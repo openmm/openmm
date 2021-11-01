@@ -1424,11 +1424,10 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
 
     // Build the arrays.
 
-    int numPerParticleParameters = force.getNumPerParticleParameters();
     particleParamArray.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         force.getParticleParameters(i, particleParamArray[i]);
-    for (int i = 0; i < numPerParticleParameters; i++)
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++)
         particleParameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
@@ -1439,6 +1438,17 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
     else
         neighborList = new NeighborList();
 
+    // Record the tabulated functions for future reference.
+
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+
+    // Create the expressions.
+    
+    createExpressions(force);
+}
+
+void ReferenceCalcCustomGBForceKernel::createExpressions(const CustomGBForce& force) {
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
@@ -1447,6 +1457,13 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
 
     // Parse the expressions for computed values.
 
+    valueExpressions.clear();
+    valueTypes.clear();
+    valueNames.clear();
+    energyParamDerivNames.clear();
+    valueDerivExpressions.clear();
+    valueGradientExpressions.clear();
+    valueParamDerivExpressions.clear();
     valueDerivExpressions.resize(force.getNumComputedValues());
     valueGradientExpressions.resize(force.getNumComputedValues());
     valueParamDerivExpressions.resize(force.getNumComputedValues());
@@ -1455,7 +1472,7 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
     particleVariables.insert("x");
     particleVariables.insert("y");
     particleVariables.insert("z");
-    for (int i = 0; i < numPerParticleParameters; i++) {
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         particleVariables.insert(particleParameterNames[i]);
         pairVariables.insert(particleParameterNames[i]+"1");
         pairVariables.insert(particleParameterNames[i]+"2");
@@ -1494,6 +1511,11 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
 
     // Parse the expressions for energy terms.
 
+    energyExpressions.clear();
+    energyTypes.clear();
+    energyDerivExpressions.clear();
+    energyGradientExpressions.clear();
+    energyParamDerivExpressions.clear();
     energyDerivExpressions.resize(force.getNumEnergyTerms());
     energyGradientExpressions.resize(force.getNumEnergyTerms());
     energyParamDerivExpressions.resize(force.getNumEnergyTerms());
@@ -1569,6 +1591,19 @@ void ReferenceCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& cont
         for (int j = 0; j < numParameters; j++)
             particleParamArray[i][j] = parameters[j];
     }
+
+    // See if any tabulated functions have changed.
+
+    bool changed = false;
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            changed = true;
+        }
+    }
+    if (changed)
+        createExpressions(force);
 }
 
 ReferenceCalcCustomExternalForceKernel::~ReferenceCalcCustomExternalForceKernel() {

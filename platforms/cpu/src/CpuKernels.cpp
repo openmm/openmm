@@ -1131,11 +1131,10 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     // Build the arrays.
 
-    int numPerParticleParameters = force.getNumPerParticleParameters();
     particleParamArray.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         force.getParticleParameters(i, particleParamArray[i]);
-    for (int i = 0; i < numPerParticleParameters; i++)
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++)
         particleParameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
@@ -1143,7 +1142,19 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     nonbondedCutoff = force.getCutoffDistance();
     if (nonbondedMethod != NoCutoff)
         neighborList = new CpuNeighborList(4);
+    data.isPeriodic |= (force.getNonbondedMethod() == CustomGBForce::CutoffPeriodic);
 
+    // Record the tabulated functions for future reference.
+
+    for (int i = 0; i < force.getNumFunctions(); i++)
+        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+
+    // Create the interaction.
+
+    createInteraction(force);
+}
+
+void CpuCalcCustomGBForceKernel::createInteraction(const CustomGBForce& force) {
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
@@ -1152,6 +1163,9 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     // Parse the expressions for computed values.
 
+    valueTypes.clear();
+    valueNames.clear();
+    energyParamDerivNames.clear();
     vector<vector<Lepton::CompiledExpression> > valueDerivExpressions(force.getNumComputedValues());
     vector<vector<Lepton::CompiledExpression> > valueGradientExpressions(force.getNumComputedValues());
     vector<vector<Lepton::CompiledExpression> > valueParamDerivExpressions(force.getNumComputedValues());
@@ -1162,7 +1176,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     particleVariables.insert("x");
     particleVariables.insert("y");
     particleVariables.insert("z");
-    for (int i = 0; i < numPerParticleParameters; i++) {
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         particleVariables.insert(particleParameterNames[i]);
         pairVariables.insert(particleParameterNames[i]+"1");
         pairVariables.insert(particleParameterNames[i]+"2");
@@ -1201,6 +1215,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     // Parse the expressions for energy terms.
 
+    energyTypes.clear();
     vector<vector<Lepton::CompiledExpression> > energyDerivExpressions(force.getNumEnergyTerms());
     vector<vector<Lepton::CompiledExpression> > energyGradientExpressions(force.getNumEnergyTerms());
     vector<vector<Lepton::CompiledExpression> > energyParamDerivExpressions(force.getNumEnergyTerms());
@@ -1238,7 +1253,6 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     ixn = new CpuCustomGBForce(numParticles, exclusions, valueExpressions, valueDerivExpressions, valueGradientExpressions, valueParamDerivExpressions,
         valueNames, valueTypes, energyExpressions, energyDerivExpressions, energyGradientExpressions, energyParamDerivExpressions, energyTypes,
         particleParameterNames, data.threads);
-    data.isPeriodic |= (force.getNonbondedMethod() == CustomGBForce::CutoffPeriodic);
 }
 
 double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1276,6 +1290,22 @@ void CpuCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context, c
         force.getParticleParameters(i, parameters);
         for (int j = 0; j < numParameters; j++)
             particleParamArray[i][j] = static_cast<double>(parameters[j]);
+    }
+
+    // See if any tabulated functions have changed.
+
+    bool changed = false;
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            changed = true;
+        }
+    }
+    if (changed) {
+        delete ixn;
+        ixn = NULL;
+        createInteraction(force);
     }
 }
 
