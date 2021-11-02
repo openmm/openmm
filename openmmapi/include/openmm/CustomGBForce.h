@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -544,14 +544,15 @@ public:
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
     /**
-     * Update the per-particle parameters in a Context to match those stored in this Force object.  This method provides
+     * Update the per-particle parameters and tabulated functions in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
      *
-     * This method has several limitations.  The only information it updates is the values of per-particle parameters.
-     * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
-     * the Context.  Also, this method cannot be used to add new particles, only to change the parameters of existing ones.
+     * This method has several limitations.  The only information it updates is the values of per-particle parameters and tabulated
+     * functions.  All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
+     * the Context.  Also, this method cannot be used to add new particles, only to change the parameters of existing ones.  While
+     * the tabulated values of a function can change, everything else about it (its dimensions, the data range) must not be changed.
      */
     void updateParametersInContext(Context& context);
     /**

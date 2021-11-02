@@ -205,6 +205,18 @@ void testComplexFunction(bool byGroups) {
         for (int i = 0; i < numParticles; i++)
             ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], TOL);
     }
+
+    // Try updating the tabulated function.
+
+    for (int i = 0; i < table.size(); i++)
+        table[i] *= 0.5;
+    dynamic_cast<Continuous1DFunction&>(compound->getTabulatedFunction(0)).setFunctionParameters(table, -1, 10);
+    dynamic_cast<Continuous1DFunction&>(centroid->getTabulatedFunction(0)).setFunctionParameters(table, -1, 10);
+    compound->updateParametersInContext(context);
+    centroid->updateParametersInContext(context);
+    State state1 = context.getState(State::Energy, false, 1<<0);
+    State state2 = context.getState(State::Energy, false, 1<<1);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), TOL);
 }
 
 void testCustomWeights() {

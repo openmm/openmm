@@ -65,9 +65,12 @@ public:
     virtual TabulatedFunction* Copy() const = 0;
     /**
      * Get the periodicity status of the tabulated function.
-     *
      */
     bool getPeriodic() const;
+    virtual bool operator==(const TabulatedFunction& other) const = 0;
+    virtual bool operator!=(const TabulatedFunction& other) const {
+        return !(*this == other);
+    }
 protected:
     bool periodic;
 };
@@ -114,6 +117,7 @@ public:
      * @deprecated This will be removed in a future release.
      */
     Continuous1DFunction* Copy() const;
+    bool operator==(const TabulatedFunction& other) const;
 private:
     std::vector<double> values;
     double min, max;
@@ -176,6 +180,7 @@ public:
      * @deprecated This will be removed in a future release.
      */
     Continuous2DFunction* Copy() const;
+    bool operator==(const TabulatedFunction& other) const;
 private:
     std::vector<double> values;
     int xsize, ysize;
@@ -254,6 +259,7 @@ public:
      * @deprecated This will be removed in a future release.
      */
     Continuous3DFunction* Copy() const;
+    bool operator==(const TabulatedFunction& other) const;
 private:
     std::vector<double> values;
     int xsize, ysize, zsize;
@@ -291,6 +297,7 @@ public:
      * @deprecated This will be removed in a future release.
      */
     Discrete1DFunction* Copy() const;
+    bool operator==(const TabulatedFunction& other) const;
 private:
     std::vector<double> values;
 };
@@ -335,6 +342,7 @@ public:
      * @deprecated This will be removed in a future release.
      */
     Discrete2DFunction* Copy() const;
+    bool operator==(const TabulatedFunction& other) const;
 private:
     int xsize, ysize;
     std::vector<double> values;
@@ -383,6 +391,7 @@ public:
      * @deprecated This will be removed in a future release.
      */
     Discrete3DFunction* Copy() const;
+    bool operator==(const TabulatedFunction& other) const;
 private:
     int xsize, ysize, zsize;
     std::vector<double> values;

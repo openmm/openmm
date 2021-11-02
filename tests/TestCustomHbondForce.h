@@ -223,6 +223,15 @@ void testCustomFunctions() {
     ASSERT_EQUAL_VEC(Vec3(0, -0.1, 0), forces[1], TOL);
     ASSERT_EQUAL_VEC(Vec3(-0.1, 0, 0), forces[2], TOL);
     ASSERT_EQUAL_TOL(0.1*2+0.1*2, state.getPotentialEnergy(), TOL);
+
+    // Try updating the tabulated function.
+
+    for (int i = 0; i < function.size(); i++)
+        function[i] *= 0.5;
+    dynamic_cast<Continuous1DFunction&>(custom->getTabulatedFunction(0)).setFunctionParameters(function, 0, 10);
+    custom->updateParametersInContext(context);
+    state = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(0.5*(0.1*2+0.1*2), state.getPotentialEnergy(), TOL);
 }
 
 void test2DFunction() {

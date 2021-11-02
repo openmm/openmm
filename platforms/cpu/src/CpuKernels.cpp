@@ -45,6 +45,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/internal/vectorize.h"
+#include "openmm/serialization/XmlSerializer.h"
 #include "lepton/CompiledExpression.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/Operation.h"
@@ -868,7 +869,6 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
 
     // Build the arrays.
 
-    int numParameters = force.getNumPerParticleParameters();
     particleParamArray.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         force.getParticleParameters(i, particleParamArray[i]);
@@ -882,10 +882,41 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         switchingDistance = force.getSwitchingDistance();
     }
 
+    // Record the tabulated functions for future reference.
+
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
+        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+
+    // Record information for the long range correction.
+
+    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection()) {
+        forceCopy = new CustomNonbondedForce(force);
+        hasInitializedLongRangeCorrection = false;
+    }
+    else {
+        longRangeCoefficient = 0.0;
+        hasInitializedLongRangeCorrection = true;
+    }
+
+    // Record the interaction groups.
+
+    for (int i = 0; i < force.getNumInteractionGroups(); i++) {
+        set<int> set1, set2;
+        force.getInteractionGroupParameters(i, set1, set2);
+        interactionGroups.push_back(make_pair(set1, set2));
+    }
+    data.isPeriodic |= (nonbondedMethod == CutoffPeriodic);
+
+    // Create the interaction.
+
+    createInteraction(force);
+}
+
+void CpuCalcCustomNonbondedForceKernel::createInteraction(const CustomNonbondedForce& force) {
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the various expressions used to calculate the force.
@@ -893,7 +924,7 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
     Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
     Lepton::CompiledExpression energyExpression = expression.createCompiledExpression();
     Lepton::CompiledExpression forceExpression = expression.differentiate("r").createCompiledExpression();
-    for (int i = 0; i < numParameters; i++)
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++)
         parameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParameterNames.push_back(force.getGlobalParameterName(i));
@@ -907,7 +938,7 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
     }
     set<string> variables;
     variables.insert("r");
-    for (int i = 0; i < numParameters; i++) {
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         variables.insert(parameterNames[i]+"1");
         variables.insert(parameterNames[i]+"2");
     }
@@ -918,26 +949,9 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
 
     for (auto& function : functions)
         delete function.second;
-    
-    // Record information for the long range correction.
-    
-    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection()) {
-        forceCopy = new CustomNonbondedForce(force);
-        hasInitializedLongRangeCorrection = false;
-    }
-    else {
-        longRangeCoefficient = 0.0;
-        hasInitializedLongRangeCorrection = true;
-    }
-    
-    // Record the interaction groups.
-    
-    for (int i = 0; i < force.getNumInteractionGroups(); i++) {
-        set<int> set1, set2;
-        force.getInteractionGroupParameters(i, set1, set2);
-        interactionGroups.push_back(make_pair(set1, set2));
-    }
-    data.isPeriodic |= (nonbondedMethod == CutoffPeriodic);
+
+    // Create the object that computes the interaction.
+
     nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions, data.threads);
     if (interactionGroups.size() > 0)
         nonbonded->setInteractionGroups(interactionGroups);
@@ -1010,6 +1024,22 @@ void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& con
         CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
         hasInitializedLongRangeCorrection = true;
         *forceCopy = force;
+    }
+
+    // See if any tabulated functions have changed.
+
+    bool changed = false;
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            changed = true;
+        }
+    }
+    if (changed) {
+        delete nonbonded;
+        nonbonded = NULL;
+        createInteraction(force);
     }
 }
 
@@ -1101,11 +1131,10 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     // Build the arrays.
 
-    int numPerParticleParameters = force.getNumPerParticleParameters();
     particleParamArray.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         force.getParticleParameters(i, particleParamArray[i]);
-    for (int i = 0; i < numPerParticleParameters; i++)
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++)
         particleParameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
@@ -1113,15 +1142,30 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     nonbondedCutoff = force.getCutoffDistance();
     if (nonbondedMethod != NoCutoff)
         neighborList = new CpuNeighborList(4);
+    data.isPeriodic |= (force.getNonbondedMethod() == CustomGBForce::CutoffPeriodic);
 
+    // Record the tabulated functions for future reference.
+
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
+        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+
+    // Create the interaction.
+
+    createInteraction(force);
+}
+
+void CpuCalcCustomGBForceKernel::createInteraction(const CustomGBForce& force) {
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < force.getNumFunctions(); i++)
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
 
     // Parse the expressions for computed values.
 
+    valueTypes.clear();
+    valueNames.clear();
+    energyParamDerivNames.clear();
     vector<vector<Lepton::CompiledExpression> > valueDerivExpressions(force.getNumComputedValues());
     vector<vector<Lepton::CompiledExpression> > valueGradientExpressions(force.getNumComputedValues());
     vector<vector<Lepton::CompiledExpression> > valueParamDerivExpressions(force.getNumComputedValues());
@@ -1132,7 +1176,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     particleVariables.insert("x");
     particleVariables.insert("y");
     particleVariables.insert("z");
-    for (int i = 0; i < numPerParticleParameters; i++) {
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         particleVariables.insert(particleParameterNames[i]);
         pairVariables.insert(particleParameterNames[i]+"1");
         pairVariables.insert(particleParameterNames[i]+"2");
@@ -1171,6 +1215,7 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
 
     // Parse the expressions for energy terms.
 
+    energyTypes.clear();
     vector<vector<Lepton::CompiledExpression> > energyDerivExpressions(force.getNumEnergyTerms());
     vector<vector<Lepton::CompiledExpression> > energyGradientExpressions(force.getNumEnergyTerms());
     vector<vector<Lepton::CompiledExpression> > energyParamDerivExpressions(force.getNumEnergyTerms());
@@ -1208,7 +1253,6 @@ void CpuCalcCustomGBForceKernel::initialize(const System& system, const CustomGB
     ixn = new CpuCustomGBForce(numParticles, exclusions, valueExpressions, valueDerivExpressions, valueGradientExpressions, valueParamDerivExpressions,
         valueNames, valueTypes, energyExpressions, energyDerivExpressions, energyGradientExpressions, energyParamDerivExpressions, energyTypes,
         particleParameterNames, data.threads);
-    data.isPeriodic |= (force.getNonbondedMethod() == CustomGBForce::CutoffPeriodic);
 }
 
 double CpuCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -1247,6 +1291,22 @@ void CpuCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context, c
         for (int j = 0; j < numParameters; j++)
             particleParamArray[i][j] = static_cast<double>(parameters[j]);
     }
+
+    // See if any tabulated functions have changed.
+
+    bool changed = false;
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            changed = true;
+        }
+    }
+    if (changed) {
+        delete ixn;
+        ixn = NULL;
+        createInteraction(force);
+    }
 }
 
 CpuCalcCustomManyParticleForceKernel::~CpuCalcCustomManyParticleForceKernel() {
@@ -1266,6 +1326,14 @@ void CpuCalcCustomManyParticleForceKernel::initialize(const System& system, cons
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
+
+    // Record the tabulated functions for future reference.
+
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
+        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+
+    // Create the interaction.
+
     ixn = new CpuCustomManyParticleForce(force, data.threads);
     nonbondedMethod = CalcCustomManyParticleForceKernel::NonbondedMethod(force.getNonbondedMethod());
     cutoffDistance = force.getCutoffDistance();
@@ -1302,6 +1370,22 @@ void CpuCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImpl& 
         force.getParticleParameters(i, parameters, type);
         for (int j = 0; j < numParameters; j++)
             particleParamArray[i][j] = static_cast<double>(parameters[j]);
+    }
+
+    // See if any tabulated functions have changed.
+
+    bool changed = false;
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
+            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+            changed = true;
+        }
+    }
+    if (changed) {
+        delete ixn;
+        ixn = NULL;
+        ixn = new CpuCustomManyParticleForce(force, data.threads);
     }
 }
 

@@ -682,6 +682,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
 private:
+    void createExpressions(const CustomNonbondedForce& force);
     int numParticles;
     std::vector<std::vector<double> > particleParamArray;
     double nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
@@ -695,6 +696,7 @@ private:
     std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     std::vector<double> longRangeCoefficientDerivs;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
 };
@@ -768,6 +770,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
+    void createExpressions(const CustomGBForce& force);
     int numParticles;
     bool isPeriodic;
     std::vector<std::vector<double> > particleParamArray;
@@ -784,6 +787,7 @@ private:
     std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > energyParamDerivExpressions;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
 };
@@ -861,13 +865,16 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomHbondForce& force);
 private:
+    void createInteraction(const CustomHbondForce& force);
     int numDonors, numAcceptors, numParticles;
     bool isPeriodic;
+    std::vector<std::vector<int> > donorParticles, acceptorParticles;
     std::vector<std::vector<double> > donorParamArray, acceptorParamArray;
     double nonbondedCutoff;
     ReferenceCustomHbondIxn* ixn;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> globalParameterNames;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
 };
 
 /**
@@ -902,10 +909,15 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomCentroidBondForce& force);
 private:
+    void createInteraction(const CustomCentroidBondForce& force);
     int numBonds, numParticles;
+    std::vector<std::vector<int> > bondGroups;
+    std::vector<std::vector<int> > groupAtoms;
+    std::vector<std::vector<double> > normalizedWeights;
     std::vector<std::vector<double> > bondParamArray;
     ReferenceCustomCentroidBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     bool usePeriodic;
     Vec3* boxVectors;
 };
@@ -942,10 +954,13 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomCompoundBondForce& force);
 private:
+    void createInteraction(const CustomCompoundBondForce& force);
     int numBonds;
+    std::vector<std::vector<int> > bondParticles;
     std::vector<std::vector<double> > bondParamArray;
     ReferenceCustomCompoundBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     bool usePeriodic;
     Vec3* boxVectors;
 };
@@ -987,6 +1002,7 @@ private:
     std::vector<std::vector<double> > particleParamArray;
     ReferenceCustomManyParticleIxn* ixn;
     std::vector<std::string> globalParameterNames;
+    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
     NonbondedMethod nonbondedMethod;
 };
 
