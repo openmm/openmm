@@ -679,8 +679,10 @@ tinkerXmlFile.write( " </AtomTypes>\n")
 tinkerXmlFile.write( " <Residues>\n" )
 for resname, res in sorted(residueDict.items()):
     if res['include']:
-        outputString = """  <Residue name="%s">""" % (resname)
-        tinkerXmlFile.write( "%s\n" % (outputString) )
+        if resname == 'HOH':
+            tinkerXmlFile.write(f'  <Residue name="{resname}" rigidWater="false">\n')
+        else:
+            tinkerXmlFile.write(f'  <Residue name="{resname}">\n')
         atomIndex    = dict()
         atomCount    = 0
         for atom in sorted( res['atoms'].keys() ):
@@ -726,7 +728,7 @@ for resname, res in sorted(residueDict.items()):
         for outputString in outputStrings:
             tinkerXmlFile.write( "%s\n" % (outputString) )
 
-        tinkerXmlFile.write( " </Residue>\n" )
+        tinkerXmlFile.write( "  </Residue>\n" )
 
 # End caps
 

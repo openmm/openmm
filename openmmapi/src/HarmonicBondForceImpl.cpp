@@ -60,8 +60,6 @@ void HarmonicBondForceImpl::initialize(ContextImpl& context) {
         }
         if (length < 0)
             throw OpenMMException("HarmonicBondForce: bond length cannot be negative");
-        if (k < 0)
-            throw OpenMMException("HarmonicBondForce: force constant cannot be negative");
     }
     kernel = context.getPlatform().createKernel(CalcHarmonicBondForceKernel::Name(), context);
     kernel.getAs<CalcHarmonicBondForceKernel>().initialize(context.getSystem(), owner);

@@ -1,7 +1,7 @@
 <ForceField>
  <Info>
   <Source>amoebabio18.prm</Source>
-  <DateGenerated>2021-10-24</DateGenerated>
+  <DateGenerated>2021-11-02</DateGenerated>
   <Reference>Yue Shi, Zhen Xia, Jiajing Zhang, Robert Best, Chuanjie Wu, Jay W. Ponder, and Pengyu Ren. Polarizable Atomic Multipole-Based AMOEBA Force Field for Proteins. Journal of Chemical Theory and Computation, 9(9):4046–4063, 2013.</Reference>
   <Reference>Changsheng Zhang, Chao Lu, Zhifeng Jing, Chuanjie Wu, Jean-Philip Piquemal, Jay W Ponder, and Pengyu Ren. AMOEBA Polarizable Atomic Multipole Force Field for Nucleic Acids. Journal of Chemical Theory and Computation, 14(4):2084-2108, 2018.</Reference>
  </Info>
@@ -393,7 +393,7 @@
    <Bond from="3" to="8" />
    <ExternalBond from="8" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="ARG">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -444,7 +444,7 @@
    <Bond from="18" to="22" />
    <ExternalBond from="19" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="ASH">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -473,7 +473,7 @@
    <Bond from="8" to="12" />
    <ExternalBond from="9" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="ASN">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -504,7 +504,7 @@
    <Bond from="9" to="11" />
    <ExternalBond from="10" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="ASP">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -531,7 +531,7 @@
    <Bond from="4" to="8" />
    <ExternalBond from="8" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="CALA">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -555,7 +555,7 @@
    <Bond from="3" to="8" />
    <Bond from="10" to="0" />
    <ExternalBond from="8" />
- </Residue>
+  </Residue>
   <Residue name="CARG">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -607,7 +607,7 @@
    <Bond from="18" to="22" />
    <Bond from="24" to="0" />
    <ExternalBond from="19" />
- </Residue>
+  </Residue>
   <Residue name="CASH">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -637,7 +637,7 @@
    <Bond from="8" to="12" />
    <Bond from="13" to="0" />
    <ExternalBond from="9" />
- </Residue>
+  </Residue>
   <Residue name="CASN">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -669,7 +669,7 @@
    <Bond from="9" to="11" />
    <Bond from="14" to="0" />
    <ExternalBond from="10" />
- </Residue>
+  </Residue>
   <Residue name="CASP">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -697,7 +697,7 @@
    <Bond from="4" to="8" />
    <Bond from="12" to="0" />
    <ExternalBond from="8" />
- </Residue>
+  </Residue>
   <Residue name="CCYD">
    <Atom name="C" type="233" />
    <Atom name="CA" type="48" />
@@ -721,7 +721,7 @@
    <Bond from="3" to="7" />
    <Bond from="9" to="0" />
    <ExternalBond from="7" />
- </Residue>
+  </Residue>
   <Residue name="CCYS">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -747,7 +747,7 @@
    <Bond from="7" to="11" />
    <Bond from="10" to="0" />
    <ExternalBond from="8" />
- </Residue>
+  </Residue>
   <Residue name="CCYX">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -772,7 +772,7 @@
    <Bond from="9" to="0" />
    <ExternalBond from="7" />
    <ExternalBond from="10" />
- </Residue>
+  </Residue>
   <Residue name="CGLH">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -808,7 +808,7 @@
    <Bond from="9" to="15" />
    <Bond from="16" to="0" />
    <ExternalBond from="12" />
- </Residue>
+  </Residue>
   <Residue name="CGLN">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -846,7 +846,7 @@
    <Bond from="10" to="14" />
    <Bond from="17" to="0" />
    <ExternalBond from="13" />
- </Residue>
+  </Residue>
   <Residue name="CGLU">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -880,7 +880,7 @@
    <Bond from="5" to="11" />
    <Bond from="15" to="0" />
    <ExternalBond from="11" />
- </Residue>
+  </Residue>
   <Residue name="CGLY">
    <Atom name="C" type="233" />
    <Atom name="CA" type="2" />
@@ -898,7 +898,7 @@
    <Bond from="2" to="5" />
    <Bond from="7" to="0" />
    <ExternalBond from="5" />
- </Residue>
+  </Residue>
   <Residue name="CHID">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -937,7 +937,7 @@
    <Bond from="10" to="14" />
    <Bond from="17" to="0" />
    <ExternalBond from="13" />
- </Residue>
+  </Residue>
   <Residue name="CHIE">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -976,7 +976,7 @@
    <Bond from="12" to="15" />
    <Bond from="17" to="0" />
    <ExternalBond from="13" />
- </Residue>
+  </Residue>
   <Residue name="CHIS">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1017,7 +1017,7 @@
    <Bond from="13" to="16" />
    <Bond from="18" to="0" />
    <ExternalBond from="14" />
- </Residue>
+  </Residue>
   <Residue name="CILE">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1059,7 +1059,7 @@
    <Bond from="6" to="17" />
    <Bond from="19" to="0" />
    <ExternalBond from="17" />
- </Residue>
+  </Residue>
   <Residue name="CLEU">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1101,7 +1101,7 @@
    <Bond from="6" to="17" />
    <Bond from="19" to="0" />
    <ExternalBond from="17" />
- </Residue>
+  </Residue>
   <Residue name="CLYD">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1147,7 +1147,7 @@
    <Bond from="17" to="19" />
    <Bond from="21" to="0" />
    <ExternalBond from="18" />
- </Residue>
+  </Residue>
   <Residue name="CLYS">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1195,7 +1195,7 @@
    <Bond from="18" to="20" />
    <Bond from="22" to="0" />
    <ExternalBond from="19" />
- </Residue>
+  </Residue>
   <Residue name="CMET">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1233,7 +1233,7 @@
    <Bond from="5" to="14" />
    <Bond from="16" to="0" />
    <ExternalBond from="14" />
- </Residue>
+  </Residue>
   <Residue name="CPHE">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1278,7 +1278,7 @@
    <Bond from="9" to="18" />
    <Bond from="20" to="0" />
    <ExternalBond from="18" />
- </Residue>
+  </Residue>
   <Residue name="CPRO">
    <Atom name="C" type="233" />
    <Atom name="CA" type="51" />
@@ -1311,7 +1311,7 @@
    <Bond from="4" to="11" />
    <Bond from="14" to="0" />
    <ExternalBond from="12" />
- </Residue>
+  </Residue>
   <Residue name="CSER">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1337,7 +1337,7 @@
    <Bond from="7" to="10" />
    <Bond from="11" to="0" />
    <ExternalBond from="8" />
- </Residue>
+  </Residue>
   <Residue name="CTHR">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1369,7 +1369,7 @@
    <Bond from="7" to="13" />
    <Bond from="14" to="0" />
    <ExternalBond from="11" />
- </Residue>
+  </Residue>
   <Residue name="CTRP">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1423,7 +1423,7 @@
    <Bond from="16" to="22" />
    <Bond from="24" to="0" />
    <ExternalBond from="21" />
- </Residue>
+  </Residue>
   <Residue name="CTYD">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1468,7 +1468,7 @@
    <Bond from="9" to="17" />
    <Bond from="20" to="0" />
    <ExternalBond from="17" />
- </Residue>
+  </Residue>
   <Residue name="CTYR">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1515,7 +1515,7 @@
    <Bond from="17" to="20" />
    <Bond from="21" to="0" />
    <ExternalBond from="18" />
- </Residue>
+  </Residue>
   <Residue name="CVAL">
    <Atom name="C" type="233" />
    <Atom name="CA" type="8" />
@@ -1551,7 +1551,7 @@
    <Bond from="5" to="14" />
    <Bond from="16" to="0" />
    <ExternalBond from="14" />
- </Residue>
+  </Residue>
   <Residue name="CYD">
    <Atom name="C" type="9" />
    <Atom name="CA" type="48" />
@@ -1574,7 +1574,7 @@
    <Bond from="3" to="7" />
    <ExternalBond from="7" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="CYS">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -1599,7 +1599,7 @@
    <Bond from="7" to="10" />
    <ExternalBond from="8" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="CYX">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -1623,7 +1623,7 @@
    <ExternalBond from="7" />
    <ExternalBond from="0" />
    <ExternalBond from="9" />
- </Residue>
+  </Residue>
   <Residue name="DA">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="254" />
@@ -1693,7 +1693,7 @@
    <Bond from="30" to="31" />
    <ExternalBond from="31" />
    <ExternalBond from="28" />
- </Residue>
+  </Residue>
   <Residue name="DA3">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="254" />
@@ -1764,7 +1764,7 @@
    <Bond from="28" to="32" />
    <Bond from="31" to="32" />
    <ExternalBond from="32" />
- </Residue>
+  </Residue>
   <Residue name="DA5">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="254" />
@@ -1829,7 +1829,7 @@
    <Bond from="19" to="24" />
    <Bond from="20" to="24" />
    <ExternalBond from="27" />
- </Residue>
+  </Residue>
   <Residue name="DAN">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="254" />
@@ -1895,7 +1895,7 @@
    <Bond from="19" to="30" />
    <Bond from="20" to="25" />
    <Bond from="21" to="25" />
- </Residue>
+  </Residue>
   <Residue name="DC">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="266" />
@@ -1960,7 +1960,7 @@
    <Bond from="28" to="29" />
    <ExternalBond from="29" />
    <ExternalBond from="26" />
- </Residue>
+  </Residue>
   <Residue name="DC3">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="266" />
@@ -2026,7 +2026,7 @@
    <Bond from="26" to="30" />
    <Bond from="29" to="30" />
    <ExternalBond from="30" />
- </Residue>
+  </Residue>
   <Residue name="DC5">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="266" />
@@ -2086,7 +2086,7 @@
    <Bond from="15" to="23" />
    <Bond from="19" to="27" />
    <ExternalBond from="25" />
- </Residue>
+  </Residue>
   <Residue name="DCN">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="266" />
@@ -2147,7 +2147,7 @@
    <Bond from="15" to="24" />
    <Bond from="16" to="24" />
    <Bond from="20" to="28" />
- </Residue>
+  </Residue>
   <Residue name="DG">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="273" />
@@ -2219,7 +2219,7 @@
    <Bond from="30" to="32" />
    <ExternalBond from="32" />
    <ExternalBond from="28" />
- </Residue>
+  </Residue>
   <Residue name="DG3">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="273" />
@@ -2292,7 +2292,7 @@
    <Bond from="28" to="33" />
    <Bond from="31" to="33" />
    <ExternalBond from="33" />
- </Residue>
+  </Residue>
   <Residue name="DG5">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="273" />
@@ -2359,7 +2359,7 @@
    <Bond from="15" to="23" />
    <Bond from="20" to="29" />
    <ExternalBond from="27" />
- </Residue>
+  </Residue>
   <Residue name="DGN">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="273" />
@@ -2427,7 +2427,7 @@
    <Bond from="15" to="24" />
    <Bond from="17" to="28" />
    <Bond from="21" to="30" />
- </Residue>
+  </Residue>
   <Residue name="DT">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="294" />
@@ -2496,7 +2496,7 @@
    <Bond from="30" to="31" />
    <ExternalBond from="31" />
    <ExternalBond from="27" />
- </Residue>
+  </Residue>
   <Residue name="DT3">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="294" />
@@ -2566,7 +2566,7 @@
    <Bond from="27" to="32" />
    <Bond from="31" to="32" />
    <ExternalBond from="32" />
- </Residue>
+  </Residue>
   <Residue name="DT5">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="294" />
@@ -2630,7 +2630,7 @@
    <Bond from="13" to="24" />
    <Bond from="18" to="29" />
    <ExternalBond from="26" />
- </Residue>
+  </Residue>
   <Residue name="DTN">
    <Atom name="C1'" type="331" />
    <Atom name="C2" type="294" />
@@ -2695,7 +2695,7 @@
    <Bond from="13" to="25" />
    <Bond from="15" to="27" />
    <Bond from="19" to="30" />
- </Residue>
+  </Residue>
   <Residue name="GLH">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -2730,7 +2730,7 @@
    <Bond from="9" to="15" />
    <ExternalBond from="12" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="GLN">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -2767,7 +2767,7 @@
    <Bond from="10" to="14" />
    <ExternalBond from="13" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="GLU">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -2800,7 +2800,7 @@
    <Bond from="5" to="11" />
    <ExternalBond from="11" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="GLY">
    <Atom name="C" type="3" />
    <Atom name="CA" type="2" />
@@ -2817,7 +2817,7 @@
    <Bond from="2" to="5" />
    <ExternalBond from="5" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="HID">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -2855,7 +2855,7 @@
    <Bond from="10" to="14" />
    <ExternalBond from="13" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="HIE">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -2893,7 +2893,7 @@
    <Bond from="12" to="15" />
    <ExternalBond from="13" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="HIS">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -2933,14 +2933,14 @@
    <Bond from="13" to="16" />
    <ExternalBond from="14" />
    <ExternalBond from="0" />
- </Residue>
-  <Residue name="HOH">
+  </Residue>
+  <Residue name="HOH" rigidWater="false">
    <Atom name="H1" type="350" />
    <Atom name="H2" type="350" />
    <Atom name="O" type="349" />
    <Bond from="0" to="2" />
    <Bond from="1" to="2" />
- </Residue>
+  </Residue>
   <Residue name="ILE">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -2981,7 +2981,7 @@
    <Bond from="6" to="17" />
    <ExternalBond from="17" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="LEU">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3022,7 +3022,7 @@
    <Bond from="6" to="17" />
    <ExternalBond from="17" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="LYD">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3067,7 +3067,7 @@
    <Bond from="17" to="19" />
    <ExternalBond from="18" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="LYS">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3114,7 +3114,7 @@
    <Bond from="18" to="20" />
    <ExternalBond from="19" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="MET">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3151,7 +3151,7 @@
    <Bond from="5" to="14" />
    <ExternalBond from="14" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NALA">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3177,7 +3177,7 @@
    <Bond from="4" to="10" />
    <Bond from="5" to="10" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NARG">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3231,7 +3231,7 @@
    <Bond from="19" to="24" />
    <Bond from="20" to="24" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NASH">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3263,7 +3263,7 @@
    <Bond from="6" to="11" />
    <Bond from="10" to="14" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NASN">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3297,7 +3297,7 @@
    <Bond from="10" to="13" />
    <Bond from="11" to="13" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NASP">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3327,7 +3327,7 @@
    <Bond from="5" to="10" />
    <Bond from="6" to="10" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NCYD">
    <Atom name="C" type="9" />
    <Atom name="CA" type="48" />
@@ -3353,7 +3353,7 @@
    <Bond from="4" to="9" />
    <Bond from="5" to="9" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NCYS">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3381,7 +3381,7 @@
    <Bond from="5" to="10" />
    <Bond from="9" to="12" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NCYX">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3408,7 +3408,7 @@
    <Bond from="5" to="9" />
    <ExternalBond from="0" />
    <ExternalBond from="11" />
- </Residue>
+  </Residue>
   <Residue name="NGLH">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3446,7 +3446,7 @@
    <Bond from="7" to="14" />
    <Bond from="11" to="17" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NGLN">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3486,7 +3486,7 @@
    <Bond from="11" to="16" />
    <Bond from="12" to="16" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NGLU">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3522,7 +3522,7 @@
    <Bond from="6" to="13" />
    <Bond from="7" to="13" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NGLY">
    <Atom name="C" type="3" />
    <Atom name="CA" type="2" />
@@ -3542,7 +3542,7 @@
    <Bond from="3" to="7" />
    <Bond from="4" to="7" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NHID">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3583,7 +3583,7 @@
    <Bond from="8" to="15" />
    <Bond from="12" to="16" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NHIE">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3624,7 +3624,7 @@
    <Bond from="8" to="15" />
    <Bond from="14" to="17" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NHIS">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3667,7 +3667,7 @@
    <Bond from="12" to="17" />
    <Bond from="15" to="18" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NILE">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3711,7 +3711,7 @@
    <Bond from="7" to="19" />
    <Bond from="8" to="19" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NLEU">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3755,7 +3755,7 @@
    <Bond from="7" to="19" />
    <Bond from="8" to="19" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NLYD">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3803,7 +3803,7 @@
    <Bond from="18" to="21" />
    <Bond from="19" to="21" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NLYS">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3853,7 +3853,7 @@
    <Bond from="19" to="22" />
    <Bond from="20" to="22" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NMET">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3893,7 +3893,7 @@
    <Bond from="6" to="16" />
    <Bond from="7" to="16" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NPHE">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -3940,7 +3940,7 @@
    <Bond from="10" to="20" />
    <Bond from="11" to="20" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NPRO">
    <Atom name="C" type="242" />
    <Atom name="CA" type="241" />
@@ -3975,7 +3975,7 @@
    <Bond from="5" to="14" />
    <Bond from="6" to="14" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NSER">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -4003,7 +4003,7 @@
    <Bond from="5" to="10" />
    <Bond from="9" to="12" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NTHR">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -4037,7 +4037,7 @@
    <Bond from="6" to="13" />
    <Bond from="9" to="15" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NTRP">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -4093,7 +4093,7 @@
    <Bond from="13" to="23" />
    <Bond from="18" to="24" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NTYD">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -4140,7 +4140,7 @@
    <Bond from="10" to="19" />
    <Bond from="11" to="19" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NTYR">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -4189,7 +4189,7 @@
    <Bond from="11" to="20" />
    <Bond from="19" to="22" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="NVAL">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -4227,7 +4227,7 @@
    <Bond from="6" to="16" />
    <Bond from="7" to="16" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="PHE">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -4271,7 +4271,7 @@
    <Bond from="9" to="18" />
    <ExternalBond from="18" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="PRO">
    <Atom name="C" type="52" />
    <Atom name="CA" type="51" />
@@ -4303,7 +4303,7 @@
    <Bond from="4" to="11" />
    <ExternalBond from="12" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="RA">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="254" />
@@ -4375,7 +4375,7 @@
    <Bond from="31" to="32" />
    <ExternalBond from="32" />
    <ExternalBond from="29" />
- </Residue>
+  </Residue>
   <Residue name="RA3">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="254" />
@@ -4448,7 +4448,7 @@
    <Bond from="29" to="33" />
    <Bond from="32" to="33" />
    <ExternalBond from="33" />
- </Residue>
+  </Residue>
   <Residue name="RA5">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="254" />
@@ -4515,7 +4515,7 @@
    <Bond from="19" to="24" />
    <Bond from="21" to="27" />
    <ExternalBond from="28" />
- </Residue>
+  </Residue>
   <Residue name="RAN">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="254" />
@@ -4583,7 +4583,7 @@
    <Bond from="19" to="25" />
    <Bond from="20" to="25" />
    <Bond from="22" to="28" />
- </Residue>
+  </Residue>
   <Residue name="RC">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="266" />
@@ -4650,7 +4650,7 @@
    <Bond from="29" to="30" />
    <ExternalBond from="30" />
    <ExternalBond from="27" />
- </Residue>
+  </Residue>
   <Residue name="RC3">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="266" />
@@ -4718,7 +4718,7 @@
    <Bond from="27" to="31" />
    <Bond from="30" to="31" />
    <ExternalBond from="31" />
- </Residue>
+  </Residue>
   <Residue name="RC5">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="266" />
@@ -4780,7 +4780,7 @@
    <Bond from="18" to="28" />
    <Bond from="20" to="25" />
    <ExternalBond from="26" />
- </Residue>
+  </Residue>
   <Residue name="RCN">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="266" />
@@ -4843,7 +4843,7 @@
    <Bond from="15" to="24" />
    <Bond from="19" to="29" />
    <Bond from="21" to="26" />
- </Residue>
+  </Residue>
   <Residue name="RG">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="273" />
@@ -4917,7 +4917,7 @@
    <Bond from="31" to="33" />
    <ExternalBond from="33" />
    <ExternalBond from="29" />
- </Residue>
+  </Residue>
   <Residue name="RG3">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="273" />
@@ -4992,7 +4992,7 @@
    <Bond from="29" to="34" />
    <Bond from="32" to="34" />
    <ExternalBond from="34" />
- </Residue>
+  </Residue>
   <Residue name="RG5">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="273" />
@@ -5061,7 +5061,7 @@
    <Bond from="19" to="30" />
    <Bond from="21" to="27" />
    <ExternalBond from="28" />
- </Residue>
+  </Residue>
   <Residue name="RGN">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="273" />
@@ -5131,7 +5131,7 @@
    <Bond from="16" to="29" />
    <Bond from="20" to="31" />
    <Bond from="22" to="28" />
- </Residue>
+  </Residue>
   <Residue name="RU">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="300" />
@@ -5196,7 +5196,7 @@
    <Bond from="28" to="29" />
    <ExternalBond from="29" />
    <ExternalBond from="25" />
- </Residue>
+  </Residue>
   <Residue name="RU3">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="300" />
@@ -5262,7 +5262,7 @@
    <Bond from="25" to="30" />
    <Bond from="29" to="30" />
    <ExternalBond from="30" />
- </Residue>
+  </Residue>
   <Residue name="RU5">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="300" />
@@ -5322,7 +5322,7 @@
    <Bond from="17" to="27" />
    <Bond from="19" to="23" />
    <ExternalBond from="24" />
- </Residue>
+  </Residue>
   <Residue name="RUN">
    <Atom name="C1'" type="314" />
    <Atom name="C2" type="300" />
@@ -5383,7 +5383,7 @@
    <Bond from="13" to="25" />
    <Bond from="18" to="28" />
    <Bond from="20" to="24" />
- </Residue>
+  </Residue>
   <Residue name="SER">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -5408,7 +5408,7 @@
    <Bond from="7" to="10" />
    <ExternalBond from="8" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="THR">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -5439,7 +5439,7 @@
    <Bond from="7" to="13" />
    <ExternalBond from="11" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="TRP">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -5492,7 +5492,7 @@
    <Bond from="16" to="22" />
    <ExternalBond from="21" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="TYD">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -5536,7 +5536,7 @@
    <Bond from="9" to="17" />
    <ExternalBond from="17" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="TYR">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -5582,7 +5582,7 @@
    <Bond from="17" to="20" />
    <ExternalBond from="18" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="VAL">
    <Atom name="C" type="9" />
    <Atom name="CA" type="8" />
@@ -5617,7 +5617,7 @@
    <Bond from="5" to="14" />
    <ExternalBond from="14" />
    <ExternalBond from="0" />
- </Residue>
+  </Residue>
   <Residue name="ACE">
    <Atom name="HH31" type="222"/>
    <Atom name="CH3" type="221"/>
