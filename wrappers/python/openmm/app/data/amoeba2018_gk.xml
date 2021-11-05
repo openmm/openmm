@@ -1,7 +1,7 @@
 <ForceField>
  <Info>
   <Source>amoebabio18.prm</Source>
-  <DateGenerated>2021-11-02</DateGenerated>
+  <DateGenerated>2021-11-04</DateGenerated>
   <Reference>Yue Shi, Zhen Xia, Jiajing Zhang, Robert Best, Chuanjie Wu, Jay W. Ponder, and Pengyu Ren. Polarizable Atomic Multipole-Based AMOEBA Force Field for Proteins. Journal of Chemical Theory and Computation, 9(9):4046–4063, 2013.</Reference>
   <Reference>Rae A. Corrigan, Guowei Qi, Andrew C. Thiel, Jack R. Lynn, Brandon D. Walker, Thomas L. Casavant, Louis Lagardere, Jean-Philip Piquemal, Jay W. Ponder, Pengyu Ren, and Michael J. Schnieders. Implicit Solvents for the Polarizable Atomic Multipole AMOEBA Force Field. Journal of Chemical Theory and Computation, 17(4):2323-2341, 2021.</Reference>
  </Info>
