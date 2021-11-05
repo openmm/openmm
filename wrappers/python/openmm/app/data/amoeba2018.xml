@@ -1,7 +1,7 @@
 <ForceField>
  <Info>
   <Source>amoebabio18.prm</Source>
-  <DateGenerated>2021-11-02</DateGenerated>
+  <DateGenerated>2021-11-04</DateGenerated>
   <Reference>Yue Shi, Zhen Xia, Jiajing Zhang, Robert Best, Chuanjie Wu, Jay W. Ponder, and Pengyu Ren. Polarizable Atomic Multipole-Based AMOEBA Force Field for Proteins. Journal of Chemical Theory and Computation, 9(9):4046–4063, 2013.</Reference>
   <Reference>Changsheng Zhang, Chao Lu, Zhifeng Jing, Chuanjie Wu, Jean-Philip Piquemal, Jay W Ponder, and Pengyu Ren. AMOEBA Polarizable Atomic Multipole Force Field for Nucleic Acids. Journal of Chemical Theory and Computation, 14(4):2084-2108, 2018.</Reference>
  </Info>
@@ -4325,7 +4325,7 @@
    <Atom name="H61" type="260" />
    <Atom name="H62" type="260" />
    <Atom name="H8" type="258" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="257" />
    <Atom name="N3" type="256" />
    <Atom name="N6" type="253" />
@@ -4398,7 +4398,7 @@
    <Atom name="H61" type="260" />
    <Atom name="H62" type="260" />
    <Atom name="H8" type="258" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="257" />
    <Atom name="N3" type="256" />
    <Atom name="N6" type="253" />
@@ -4471,7 +4471,7 @@
    <Atom name="H61" type="260" />
    <Atom name="H62" type="260" />
    <Atom name="H8" type="258" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="257" />
    <Atom name="N3" type="256" />
    <Atom name="N6" type="253" />
@@ -4539,7 +4539,7 @@
    <Atom name="H61" type="260" />
    <Atom name="H62" type="260" />
    <Atom name="H8" type="258" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="257" />
    <Atom name="N3" type="256" />
    <Atom name="N6" type="253" />
@@ -4604,7 +4604,7 @@
    <Atom name="H5'" type="325" />
    <Atom name="H5''" type="325" />
    <Atom name="H6" type="271" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="261" />
    <Atom name="N3" type="268" />
    <Atom name="N4" type="264" />
@@ -4672,7 +4672,7 @@
    <Atom name="H5'" type="325" />
    <Atom name="H5''" type="325" />
    <Atom name="H6" type="271" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="261" />
    <Atom name="N3" type="268" />
    <Atom name="N4" type="264" />
@@ -4740,7 +4740,7 @@
    <Atom name="H5''" type="325" />
    <Atom name="H5T" type="327" />
    <Atom name="H6" type="271" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="261" />
    <Atom name="N3" type="268" />
    <Atom name="N4" type="264" />
@@ -4803,7 +4803,7 @@
    <Atom name="H5''" type="325" />
    <Atom name="H5T" type="327" />
    <Atom name="H6" type="271" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="261" />
    <Atom name="N3" type="268" />
    <Atom name="N4" type="264" />
@@ -4865,7 +4865,7 @@
    <Atom name="H5'" type="325" />
    <Atom name="H5''" type="325" />
    <Atom name="H8" type="286" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="277" />
    <Atom name="N2" type="278" />
    <Atom name="N3" type="283" />
@@ -4940,7 +4940,7 @@
    <Atom name="H5'" type="325" />
    <Atom name="H5''" type="325" />
    <Atom name="H8" type="286" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="277" />
    <Atom name="N2" type="278" />
    <Atom name="N3" type="283" />
@@ -5015,7 +5015,7 @@
    <Atom name="H5''" type="325" />
    <Atom name="H5T" type="327" />
    <Atom name="H8" type="286" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="277" />
    <Atom name="N2" type="278" />
    <Atom name="N3" type="283" />
@@ -5085,7 +5085,7 @@
    <Atom name="H5''" type="325" />
    <Atom name="H5T" type="327" />
    <Atom name="H8" type="286" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="277" />
    <Atom name="N2" type="278" />
    <Atom name="N3" type="283" />
@@ -5151,7 +5151,7 @@
    <Atom name="H5'" type="325" />
    <Atom name="H5''" type="325" />
    <Atom name="H6" type="310" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="304" />
    <Atom name="N3" type="303" />
    <Atom name="O1P" type="344" />
@@ -5217,7 +5217,7 @@
    <Atom name="H5'" type="325" />
    <Atom name="H5''" type="325" />
    <Atom name="H6" type="310" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="304" />
    <Atom name="N3" type="303" />
    <Atom name="O1P" type="344" />
@@ -5283,7 +5283,7 @@
    <Atom name="H5''" type="325" />
    <Atom name="H5T" type="327" />
    <Atom name="H6" type="310" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="304" />
    <Atom name="N3" type="303" />
    <Atom name="O2" type="308" />
@@ -5344,7 +5344,7 @@
    <Atom name="H5''" type="325" />
    <Atom name="H5T" type="327" />
    <Atom name="H6" type="310" />
-   <Atom name="HO2'" type="317" />
+   <Atom name="HO2'" type="321" />
    <Atom name="N1" type="304" />
    <Atom name="N3" type="303" />
    <Atom name="O2" type="308" />

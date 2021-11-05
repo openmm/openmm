@@ -1345,23 +1345,23 @@ class AmoebaTestForceField(unittest.TestCase):
         self.assertAlmostEqual(-1323.5640-225.3660, energies['AmoebaMultipoleForce'], 2)
         self.assertAlmostEqual(-258.9676, sum(list(energies.values())), 2)
 
-    def test_Amoeba18DNA(self):
-        """Test that AMOEBA18 computes energies correctly for DNA."""
-        energies = self.computeAmoeba18Energies('systems/dna.pdb')
+    def test_Amoeba18Nucleic(self):
+        """Test that AMOEBA18 computes energies correctly for DNA and RNA."""
+        energies = self.computeAmoeba18Energies('systems/nucleic.pdb')
 
         # Compare to values computed with Tinker.
 
-        self.assertAlmostEqual(688.7794, energies['AmoebaBond'], 4)
-        self.assertAlmostEqual(430.5887, energies['AmoebaAngle']+energies['AmoebaInPlaneAngle'], 4)
-        self.assertAlmostEqual(10.5715, energies['AmoebaOutOfPlaneBend'], 4)
-        self.assertAlmostEqual(0.7773, energies['AmoebaStretchBend'], 4)
-        self.assertAlmostEqual(77.0482, energies['PeriodicTorsionForce'], 4)
-        self.assertAlmostEqual(56.5654, energies['AmoebaPiTorsion'], 4)
-        self.assertAlmostEqual(-0.5457, energies['AmoebaStretchTorsion'], 4)
-        self.assertAlmostEqual(-1.6044, energies['AmoebaAngleTorsion'], 4)
-        self.assertAlmostEqual(106.4062, energies['AmoebaVdwForce'], 4)
-        self.assertAlmostEqual(90.5715-73.6051, energies['AmoebaMultipoleForce'], 4)
-        self.assertAlmostEqual(1385.5529, sum(list(energies.values())), 4)
+        self.assertAlmostEqual(749.6953, energies['AmoebaBond'], 4)
+        self.assertAlmostEqual(579.9971, energies['AmoebaAngle']+energies['AmoebaInPlaneAngle'], 4)
+        self.assertAlmostEqual(10.6630, energies['AmoebaOutOfPlaneBend'], 4)
+        self.assertAlmostEqual(5.2225, energies['AmoebaStretchBend'], 4)
+        self.assertAlmostEqual(166.7233, energies['PeriodicTorsionForce'], 4)
+        self.assertAlmostEqual(57.2066, energies['AmoebaPiTorsion'], 4)
+        self.assertAlmostEqual(-4.2538, energies['AmoebaStretchTorsion'], 4)
+        self.assertAlmostEqual(-5.0402, energies['AmoebaAngleTorsion'], 4)
+        self.assertAlmostEqual(187.1103, energies['AmoebaVdwForce'], 4)
+        self.assertAlmostEqual(1635.1289-236.1484, energies['AmoebaMultipoleForce'], 3)
+        self.assertAlmostEqual(3146.3046, sum(list(energies.values())), 3)
 
 if __name__ == '__main__':
     unittest.main()
