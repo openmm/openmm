@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -109,10 +109,6 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
             msg << particleIndex;
             throw OpenMMException(msg.str());
         }
-        if (sigmaScale < 0)
-            throw OpenMMException("NonbondedForce: sigma scale for a particle parameter offset cannot be negative");
-        if (epsilonScale < 0)
-            throw OpenMMException("NonbondedForce: epsilon scale for a particle parameter offset cannot be negative");
     }
     for (int i = 0; i < owner.getNumExceptionParameterOffsets(); i++) {
         string parameter;
