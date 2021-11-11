@@ -156,6 +156,8 @@ jobs:
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+            env:
+              CONDA_PREFIX: /Users/lilmac/mambaforge 
 
     steps:
       - uses: actions/checkout@v2
