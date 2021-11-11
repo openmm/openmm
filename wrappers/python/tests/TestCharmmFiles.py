@@ -150,6 +150,30 @@ class TestCharmmFiles(unittest.TestCase):
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, 15559.71602, delta=0.05)
 
+    def test_NBFIX14(self):
+        """Tests CHARMM systems with NBFIX modifications to 1-4 interactions"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/chl1.psf')
+        crd = CharmmCrdFile('systems/chl1.crd')
+        params = CharmmParameterSet('systems/par_all36_lipid.prm', 'systems/par_all36_cgenff.prm', 'systems/toppar_all36_lipid_cholesterol.str')
+
+        # Turn off charges so we only test the Lennard-Jones energies
+        for a in psf.atom_list:
+            a.charge = 0.0
+
+        # Compute the Lennard-Jones energy
+        system = psf.createSystem(params, nonbondedMethod=CutoffNonPeriodic, nonbondedCutoff=12*angstroms)
+        for i, f in enumerate(system.getForces()):
+            if isinstance(f, NonbondedForce) or isinstance(f, CustomNonbondedForce):
+                f.setForceGroup(1)
+            else:
+                f.setForceGroup(0)
+        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatformByName('Reference'))
+        context.setPositions(crd.positions)
+        state = context.getState(getEnergy=True, groups={1})
+        energy = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        self.assertAlmostEqual(energy, 3.1166, delta=1e-4)
+
     def test_NBThole(self):
         """Tests CHARMM system with NBTHole"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
