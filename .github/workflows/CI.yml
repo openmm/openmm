@@ -148,6 +148,15 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
+          - name: MacOS M1 CPU/OpenCL Python 3.9
+            python-version: "3.9"
+            os: M1
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=ON \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
     steps:
       - uses: actions/checkout@v2
 
