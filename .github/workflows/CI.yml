@@ -167,7 +167,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
-          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.10.3-7/Mambaforge-4.10.3-7-MacOSX-arm64.sh
+          installer-url: https://github.com/conda-forge/miniforge/releases/download/4.10.3-7/Mambaforge-4.10.3-7-MacOSX-x86_64.sh
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
           auto-activate-base: false
 
