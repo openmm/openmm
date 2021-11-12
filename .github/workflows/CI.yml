@@ -225,7 +225,7 @@ jobs:
         shell: bash -l {0}
         run: |
           cd build
-          make -j2 install
+          make install
 
       - name: "Build Python wrappers"
         shell: bash -l {0}
