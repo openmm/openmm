@@ -150,7 +150,7 @@ jobs:
 
           - name: MacOS M1 CPU Python 3.9
             python-version: "3.9"
-            os: M1
+            os: M1-x86_64
             OPENCL: false
             cuda-version: ""
             CMAKE_FLAGS: |
