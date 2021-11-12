@@ -148,7 +148,7 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS M1 CPU Python 3.9
+          - name: MacOS M1 CPU x86_64 Python 3.9
             python-version: "3.9"
             os: M1-x86_64
             OPENCL: false
@@ -156,8 +156,16 @@ jobs:
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-            env:
-              CONDA_PREFIX: /Users/lilmac/mambaforge 
+          
+          - name: MacOS M1 CPU arm64 Python 3.9
+            python-version: "3.9"
+            os: M1-arm64
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
 
     steps:
       - uses: actions/checkout@v2
