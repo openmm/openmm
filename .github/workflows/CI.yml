@@ -148,7 +148,7 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS M1 CPU/OpenCL Python 3.9
+          - name: MacOS M1 CPU Python 3.9
             python-version: "3.9"
             os: M1
             OPENCL: false
