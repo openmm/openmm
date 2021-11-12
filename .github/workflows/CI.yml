@@ -167,6 +167,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
+          mamba-version: "*"
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
           auto-activate-base: false
 
