@@ -167,7 +167,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
-          mamba-version: "*"
+          installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
           auto-activate-base: false
 
