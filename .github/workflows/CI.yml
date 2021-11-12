@@ -234,6 +234,9 @@ jobs:
         shell: bash -l {0}
         run: |
           cd build
+          conda info
+          conda list
+          conda list --explicit
           make install
 
       - name: "Build Python wrappers"
