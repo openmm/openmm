@@ -157,8 +157,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
           
-          - name: MacOS M1 CPU arm64 Python 3.9
-            python-version: "3.9"
+          - name: MacOS M1 CPU arm64 Python 3.8
+            python-version: "3.8"
             os: M1-arm64
             OPENCL: false
             cuda-version: ""
