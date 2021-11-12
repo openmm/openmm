@@ -12,9 +12,9 @@ dependencies:
 - swig
 - fftw
 - numpy
-- doxygen 1.8.14
+- doxygen
 # test
 - pytest
 - pytest-xdist
 - pytest-timeout
-- gromacs 2018.*
+#- gromacs 2018.*
