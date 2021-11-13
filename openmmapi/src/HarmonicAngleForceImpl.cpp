@@ -64,8 +64,6 @@ void HarmonicAngleForceImpl::initialize(ContextImpl& context) {
         }
         if (angle < 0 || angle > M_PI*1.000001)
             throw OpenMMException("HarmonicAngleForce: angle must be between 0 and pi");
-        if (k < 0)
-            throw OpenMMException("HarmonicAngleForce: force constant cannot be negative");
     }
     kernel = context.getPlatform().createKernel(CalcHarmonicAngleForceKernel::Name(), context);
     kernel.getAs<CalcHarmonicAngleForceKernel>().initialize(context.getSystem(), owner);
