@@ -238,6 +238,7 @@ jobs:
           conda info
           conda list
           conda list --explicit
+          echo "\n \n $(arch) \n \n"
           arch
           make install
 
