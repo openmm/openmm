@@ -166,8 +166,6 @@ jobs:
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-              -DCMAKE_C_FLAGS=-arch arm64 \
-              -DCMAKE_CXX_FLAGS=-arch arm64 \
 
 
     steps:
