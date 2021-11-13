@@ -162,9 +162,12 @@ jobs:
             os: M1-arm64
             OPENCL: false
             cuda-version: ""
+            compilers: conda-forge
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+              -DCMAKE_C_FLAGS=-arch arm64 \
+              -DCMAKE_CXX_FLAGS=-arch arm64 \
 
 
     steps:
