@@ -238,6 +238,7 @@ jobs:
           conda info
           conda list
           conda list --explicit
+          arch
           make install
 
       - name: "Build Python wrappers"
