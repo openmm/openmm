@@ -219,7 +219,7 @@ jobs:
             ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
 
       - name: "Configure build with CMake"
-        shell: /usr/bin/arch -arch arm64 /bin/bash -l {0}
+        shell: bash -l {0}
         run: |
           mkdir build
           cd build
@@ -232,7 +232,7 @@ jobs:
             ${{ matrix.CMAKE_FLAGS }}
 
       - name: "Build OpenMM"
-        shell: /usr/bin/arch -arch arm64 /bin/bash -l {0}
+        shell: bash -l {0}
         run: |
           cd build
           conda info
