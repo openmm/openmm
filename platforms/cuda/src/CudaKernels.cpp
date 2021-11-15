@@ -1146,7 +1146,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
     }
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     if (recomputeParams || hasOffsets) {
-        bool computeSelfEnergy = (includeEnergy && includeReciprocal);
+        int computeSelfEnergy = (includeEnergy && includeReciprocal);
         int numAtoms = cu.getPaddedNumAtoms();
         vector<void*> paramsArgs = {&cu.getEnergyBuffer().getDevicePointer(), &computeSelfEnergy, &globalParams.getDevicePointer(), &numAtoms,
                 &baseParticleParams.getDevicePointer(), &cu.getPosq().getDevicePointer(), &charges.getDevicePointer(), &sigmaEpsilon.getDevicePointer(),
