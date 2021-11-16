@@ -12,6 +12,8 @@ your environment.
 We first describe how to build on Linux or Mac.  We then describe how to build
 on Windows, where the process is slightly different.
 
+.. _compiling-openmm-from-source-linux:
+
 Compiling on Linux and Mac
 **************************
 
@@ -98,7 +100,8 @@ OpenMM build scripts and begin configuring CMake.
 There are several variables that can be adjusted in the CMake interface:
 
 * Set the variable CMAKE_INSTALL_PREFIX to the location where you want to
-  install OpenMM.
+  install OpenMM. If you are using conda environments this variable should point to
+  the full path of the root directory of your environment.
 * Set the variable PYTHON_EXECUTABLE to the Python interpreter you plan to use
   OpenMM with.  Usually this will be detected automatically.
 * There are lots of options starting with OPENMM_BUILD that control
@@ -115,35 +118,23 @@ Configure (press “c”) again.  Adjust any variables that cause an error.
 Continue to configure (press “c”) until no starred CMake variables are
 displayed, then press “g” to generate the makefiles for building the project.
 
-Step 2: Build and Install
-=========================
+Step 2: Build
+=============
 
-Build and install OpenMM with the command::
+Build OpenMM with the command::
 
-    make install
-
-If you are installing to a system area, such as /usr/local/openmm/, you will
-need to type::
-
-    sudo make install
-
-Step 3: Install the Python API
-==============================
-
-Build and install the Python API with the command::
-
-    make PythonInstall
-
-If you are installing into the system Python, such as /usr/bin/python, you will
-need to type:
-::
-
-    sudo make PythonInstall
+    make
 
 .. _test-your-build:
 
-Step 4: Test your build
+Step 3: Test your build
 =======================
+
+This step is optional but recommended. Tests can take up to several minutes depending on your
+hardware configuration.
+
+It is recommended that you make sure your local build of OpenMM works before trying
+to install.
 
 After OpenMM has been built, you should run the unit tests to make sure it
 works.  Enter the command::
@@ -176,8 +167,40 @@ fraction of the time.  These tests will say so in the error message:
     exception: Assertion failure at TestReferenceLangevinIntegrator.cpp:129.  Expected 9.97741,
         found 10.7884 (This test is stochastic and may occasionally fail)
 
-Congratulations! You have successfully built and installed OpenMM from source.
+If you get an error message such as :code:`exception: Error launching CUDA compiler: 32512` you need
+to specify the path to the CUDA compiler (nvcc) using the :code:`OPENMM_CUDA_COMPILER` environment
+variable, for example using something like the following::
 
+    OPENMM_CUDA_COMPILER=/<path_to_custom_cuda_dir>/nvcc
+
+Step 3: Install
+===============
+Install your local build of OpenMM using the following command::
+
+    make install
+
+If you are installing to a system directory, such as /usr/local/openmm/, you will
+need admin capabilities to install, in this case use::
+
+    sudo make install
+
+Step 3: Install the Python API
+==============================
+
+Build and install the Python API with the command::
+
+    make PythonInstall
+
+If you are installing into the system Python, such as /usr/bin/python, you will
+need to type::
+
+    sudo make PythonInstall
+
+You can test the Python API installation using::
+
+    python -m openmm.testInstallation
+
+Congratulations! You have successfully built and installed OpenMM from source.
 
 Compiling on Windows
 ********************
@@ -380,3 +403,38 @@ On Windows, right-click on the target in the Solution Explorer and select "Build
 After building the documentation, build the :code:`install` target to install
 the documentation into the installation directory (the one you specified with
 CMAKE_INSTALL_PREFIX).
+
+Using local build of OpenMM alongside conda tools that depend on it
+*******************************************************************
+
+A common case is to have a local build of OpenMM in the same environment as other tools
+that depend on it. This can be achieved by forcing a remove of OpenMM when you install
+your tools using conda.
+
+We will use :code:`openmmtools` as an example here, but it can be replaced with any
+other software package that requires OpenMM.
+
+Step 1: Install your tools as usual
+===================================
+
+Install your tools using conda as you commonly do, for example using::
+
+    conda install -c conda-forge  openmmtools
+
+This will pull the conda-forge package of :code:`openmm` which we don't want since we want
+to use our local build.
+
+Step 2: Remove conda openmm package
+===================================
+
+To remove the openmm package that was installed in the previous step, we can use::
+
+    conda remove --force openmm
+
+This will remove the :code:`openmm` package without changing or removing dependencies.
+
+Step 3: Install local build of openmm
+=====================================
+
+Now we just install our local build of :code:`openmm` as instructed in
+:ref:`_compiling-openmm-from-source-linux`
