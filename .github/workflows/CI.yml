@@ -232,13 +232,6 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             ${{ matrix.CMAKE_FLAGS }}
 
-      - name: "Build OpenMM (M1)"
-        shell: bash -l {0}
-        if: matrix.os == 'M1-arm64'
-        run: |
-          cd build
-          make -j2 install
-
       - name: "Configure build with CMake"
         shell: bash -l {0}
         if: matrix.os != 'M1-arm64'
