@@ -173,7 +173,7 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v2
         name: "Prepare base dependencies (M1)"
-        if: matrix.os == "M1-arm64"
+        if: matrix.os == 'M1-arm64'
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
@@ -184,7 +184,7 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v2
         name: "Prepare base dependencies"
-        if: matrix.os != "M1-arm64"
+        if: matrix.os != 'M1-arm64'
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
