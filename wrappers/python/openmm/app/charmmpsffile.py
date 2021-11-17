@@ -1387,8 +1387,13 @@ class CharmmPsfFile(object):
                 atom1 = self.atom_list[ia1]
                 atom4 = self.atom_list[ia4]
                 charge_prod = (atom1.charge * atom4.charge) * params.e14fac
-                epsilon = sqrt(abs(atom1.type.epsilon_14 * atom4.type.epsilon_14)) * ene_conv
-                sigma = (atom1.type.rmin_14 + atom4.type.rmin_14) * (length_conv * sigma_scale)
+                try:
+                    rij, wdij, rij14, wdij14 = atom1.type.nbfix[atom4.type.name]
+                    epsilon = wdij14*ene_conv
+                    sigma = rij14*length_conv*sigma_scale
+                except KeyError:
+                    epsilon = sqrt(abs(atom1.type.epsilon_14 * atom4.type.epsilon_14)) * ene_conv
+                    sigma = (atom1.type.rmin_14 + atom4.type.rmin_14) * (length_conv * sigma_scale)
                 force.addException(ia1, ia4, charge_prod, sigma, epsilon)
 
         # Add excluded atoms

@@ -93,8 +93,8 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
         }
         exceptions[particle[0]].insert(particle[1]);
         exceptions[particle[1]].insert(particle[0]);
-        if (sigma <= 0)
-            throw OpenMMException("NonbondedForce: sigma for an exception must be positive");
+        if (sigma < 0)
+            throw OpenMMException("NonbondedForce: sigma for an exception cannot be negative");
         if (epsilon < 0)
             throw OpenMMException("NonbondedForce: epsilon for an exception cannot be negative");
     }
@@ -121,10 +121,6 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
             msg << exceptionIndex;
             throw OpenMMException(msg.str());
         }
-        if (sigmaScale < 0)
-            throw OpenMMException("NonbondedForce: sigma scale for a particle parameter offset cannot be negative");
-        if (epsilonScale < 0)
-            throw OpenMMException("NonbondedForce: epsilon scale for a particle parameter offset cannot be negative");
     }
     if (owner.getNonbondedMethod() != NonbondedForce::NoCutoff && owner.getNonbondedMethod() != NonbondedForce::CutoffNonPeriodic) {
         Vec3 boxVectors[3];
