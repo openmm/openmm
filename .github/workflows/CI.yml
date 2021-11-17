@@ -247,7 +247,7 @@ jobs:
         if: matrix.os == 'M1-arm64'
         run: |
           cd build
-          /usr/bin/arch -arch arm64 make install
+          make install
 
       - name: "Configure build with CMake"
         shell: bash -l {0}
