@@ -237,7 +237,7 @@ jobs:
         if: matrix.os == 'M1-arm64'
         run: |
           cd build
-          make install
+          make -j2 install
 
       - name: "Configure build with CMake"
         shell: bash -l {0}
@@ -258,7 +258,7 @@ jobs:
         if: matrix.os != 'M1-arm64'
         run: |
           cd build
-          make install
+          make -j2 install
 
       - name: "Build Python wrappers"
         shell: bash -l {0}
