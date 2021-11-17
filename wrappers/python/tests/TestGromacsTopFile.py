@@ -161,10 +161,14 @@ class TestGromacsTopFile(unittest.TestCase):
                     found_matching_solvent_dielectric = True
                 if force.getSoluteDielectric() == 0.9:
                     found_matching_solute_dielectric = True
+                gbcharges = [force.getParticleParameters(i)[0] for i in range(system.getNumParticles())]
             if isinstance(force, NonbondedForce):
                 self.assertEqual(force.getReactionFieldDielectric(), 1.0)
+                nbcharges = [force.getParticleParameters(i)[0] for i in range(system.getNumParticles())]
         self.assertTrue(found_matching_solvent_dielectric and
                         found_matching_solute_dielectric)
+        for q1, q2 in zip(gbcharges, nbcharges):
+            self.assertEqual(q1, q2)
 
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""
