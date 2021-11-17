@@ -93,7 +93,8 @@ class WrapperGenerator:
                             'bool OpenMM::Discrete1DFunction::operator!=',
                             'bool OpenMM::Discrete2DFunction::operator!=',
                             'bool OpenMM::Discrete3DFunction::operator!='
-                           ] 
+                           ]
+        self.skipMethods = [s.replace(' ', '') for s in self.skipMethods]
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']
         self.nodeByID={}
 
@@ -143,7 +144,7 @@ class WrapperGenerator:
         for section in findNodes(classNode, "sectiondef", kind="public-static-func")+findNodes(classNode, "sectiondef", kind="public-func"):
             for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):
                 methodDefinition = getText("definition", memberNode)
-                if methodDefinition in self.skipMethods:
+                if methodDefinition.replace(' ', '') in self.skipMethods:
                     continue
                 methodList.append(memberNode)
         return methodList
