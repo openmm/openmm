@@ -172,12 +172,22 @@ jobs:
       - uses: actions/checkout@v2
 
       - uses: conda-incubator/setup-miniconda@v2
-        name: "Prepare base dependencies"
+        name: "Prepare base dependencies (M1)"
+        if: matrix.os == "M1-arm64"
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
           installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh#${{ github.run_number }}
           #installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-x86_64.sh#${{ github.run_number }}
+          environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
+          auto-activate-base: false
+
+      - uses: conda-incubator/setup-miniconda@v2
+        name: "Prepare base dependencies"
+        if: matrix.os != "M1-arm64"
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: build
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
           auto-activate-base: false
 
