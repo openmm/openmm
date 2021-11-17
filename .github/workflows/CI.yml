@@ -234,7 +234,7 @@ jobs:
           mkdir build
           cd build
 
-          cmake .. \
+          /usr/bin/arch -arch arm64 cmake .. \
             -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
             -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -250,7 +250,7 @@ jobs:
           conda list --explicit
           echo "\n \n $(arch) \n \n"
           arch
-          make install
+          /usr/bin/arch -arch arm64 make install
 
       - name: "Build Python wrappers"
         shell: bash -l {0}
