@@ -228,8 +228,9 @@ jobs:
           restore-keys: |
             ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
 
-      - name: "Configure build with CMake"
+      - name: "Configure build with CMake (M1)"
         shell: bash -l {0}
+        if: matrix.os == 'M1-arm64'
         run: |
           mkdir build
           cd build
@@ -241,16 +242,33 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             ${{ matrix.CMAKE_FLAGS }}
 
-      - name: "Build OpenMM"
+      - name: "Build OpenMM (M1)"
         shell: bash -l {0}
+        if: matrix.os == 'M1-arm64'
         run: |
           cd build
-          conda info
-          conda list
-          conda list --explicit
-          echo "\n \n $(arch) \n \n"
-          arch
           /usr/bin/arch -arch arm64 make install
+
+      - name: "Configure build with CMake"
+        shell: bash -l {0}
+        if: matrix.os != 'M1-arm64'
+        run: |
+          mkdir build
+          cd build
+
+          cmake .. \
+            -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
+            -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            ${{ matrix.CMAKE_FLAGS }}
+
+      - name: "Build OpenMM"
+        shell: bash -l {0}
+        if: matrix.os != 'M1-arm64'
+        run: |
+          cd build
+          make install
 
       - name: "Build Python wrappers"
         shell: bash -l {0}
