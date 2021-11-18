@@ -614,7 +614,9 @@ class GromacsTopFile(object):
             passed for the constraints argument
         implicitSolvent : object=None
             If not None, the implicit solvent model to use.  The only allowed
-            value is OBC2.
+            value is OBC2.  This option is deprecated, since Gromacs 2019 and later
+            no longer support implicit solvent.  It will be removed in a future
+            release.
         soluteDielectric : float=1.0
             The solute dielectric constant to use in the implicit solvent model.
         solventDielectric : float=78.5
@@ -934,7 +936,6 @@ class GromacsTopFile(object):
                             epsilon = float(params[7])
                             lj.addParticle([math.sqrt(4*epsilon*sigma**6), math.sqrt(4*epsilon*sigma**12)])
 
-                for fields in moleculeType.atoms:
                     if implicitSolvent is OBC2:
                         if fields[1] not in self._implicitTypes:
                             raise ValueError('No implicit solvent parameters specified for atom type: '+fields[1])
