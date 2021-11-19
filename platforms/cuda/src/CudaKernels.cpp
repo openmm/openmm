@@ -672,6 +672,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         paramsDefines["HAS_OFFSETS"] = "1";
     if (usePosqCharges)
         paramsDefines["USE_POSQ_CHARGES"] = "1";
+    if (doLJPME)
+        paramsDefines["INCLUDE_LJPME_EXCEPTIONS"] = "1";
     if (nonbondedMethod == Ewald) {
         // Compute the Ewald parameters.
 
@@ -723,8 +725,16 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         defines["TWO_OVER_SQRT_PI"] = cu.doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
         defines["DO_LJPME"] = doLJPME ? "1" : "0";
-        if (doLJPME)
+        if (doLJPME) {
             defines["EWALD_DISPERSION_ALPHA"] = cu.doubleToString(dispersionAlpha);
+            double invRCut6 = pow(force.getCutoffDistance(), -6);
+            double dalphaR = dispersionAlpha * force.getCutoffDistance();
+            double dar2 = dalphaR*dalphaR;
+            double dar4 = dar2*dar2;
+            double multShift6 = -invRCut6*(1.0 - exp(-dar2) * (1.0 + dar2 + 0.5*dar4));
+            defines["INVCUT6"] = cu.doubleToString(invRCut6);
+            defines["MULTSHIFT6"] = cu.doubleToString(multShift6);
+        }
         if (cu.getContextIndex() == 0) {
             paramsDefines["INCLUDE_EWALD"] = "1";
             paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cu.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
@@ -790,13 +800,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     pmeDefines["CHARGE_FROM_SIGEPS"] = "1";
                     if (cu.getUseDoublePrecision() || cu.getPlatformData().deterministicForces)
                         pmeDefines["USE_FIXED_POINT_CHARGE_SPREADING"] = "1";
-                    double invRCut6 = pow(force.getCutoffDistance(), -6);
-                    double dalphaR = dispersionAlpha * force.getCutoffDistance();
-                    double dar2 = dalphaR*dalphaR;
-                    double dar4 = dar2*dar2;
-                    double multShift6 = -invRCut6*(1.0 - exp(-dar2) * (1.0 + dar2 + 0.5*dar4));
-                    defines["INVCUT6"] = cu.doubleToString(invRCut6);
-                    defines["MULTSHIFT6"] = cu.doubleToString(multShift6);
                     module = cu.createModule(CudaKernelSources::vectorOps+CommonKernelSources::pme, pmeDefines);
                     pmeDispersionFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
                     pmeDispersionGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");
@@ -1055,7 +1058,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     // Initialize parameter offsets.
 
     vector<vector<float4> > particleOffsetVec(force.getNumParticles());
-    vector<vector<float4> > exceptionOffsetVec(force.getNumExceptions());
+    vector<vector<float4> > exceptionOffsetVec(numExceptions);
     for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
         string param;
         int particle;
@@ -1076,6 +1079,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         int exception;
         double charge, sigma, epsilon;
         force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        int index = exceptionIndex[exception];
+        if (index < startIndex || index >= endIndex)
+            continue;
         auto paramPos = find(paramNames.begin(), paramNames.end(), param);
         int paramIndex;
         if (paramPos == paramNames.end()) {
@@ -1084,13 +1090,11 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         }
         else
             paramIndex = paramPos-paramNames.begin();
-        exceptionOffsetVec[exceptionIndex[exception]].push_back(make_float4(charge, sigma, epsilon, paramIndex));
+        exceptionOffsetVec[index-startIndex].push_back(make_float4(charge, sigma, epsilon, paramIndex));
     }
     paramValues.resize(paramNames.size(), 0.0);
     particleParamOffsets.initialize<float4>(cu, max(force.getNumParticleParameterOffsets(), 1), "particleParamOffsets");
-    exceptionParamOffsets.initialize<float4>(cu, max(force.getNumExceptionParameterOffsets(), 1), "exceptionParamOffsets");
     particleOffsetIndices.initialize<int>(cu, cu.getPaddedNumAtoms()+1, "particleOffsetIndices");
-    exceptionOffsetIndices.initialize<int>(cu, force.getNumExceptions()+1, "exceptionOffsetIndices");
     vector<int> particleOffsetIndicesVec, exceptionOffsetIndicesVec;
     vector<float4> p, e;
     for (int i = 0; i < particleOffsetVec.size(); i++) {
@@ -1110,7 +1114,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         particleParamOffsets.upload(p);
         particleOffsetIndices.upload(particleOffsetIndicesVec);
     }
-    if (force.getNumExceptionParameterOffsets() > 0) {
+    exceptionParamOffsets.initialize<float4>(cu, max((int) e.size(), 1), "exceptionParamOffsets");
+    exceptionOffsetIndices.initialize<int>(cu, exceptionOffsetIndicesVec.size(), "exceptionOffsetIndices");
+    if (e.size() > 0) {
         exceptionParamOffsets.upload(e);
         exceptionOffsetIndices.upload(exceptionOffsetIndicesVec);
     }
@@ -1380,20 +1386,28 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
                 throw OpenMMException("updateParametersInContext: The nonbonded force kernel does not include Lennard-Jones interactions, because all epsilons were originally 0");
         }
     }
+    set<int> exceptionsWithOffsets;
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        exceptionsWithOffsets.insert(exception);
+    }
     vector<int> exceptions;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-        if (exceptionAtoms.size() > exceptions.size() && make_pair(particle1, particle2) == exceptionAtoms[exceptions.size()])
+        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
             exceptions.push_back(i);
-        else if (chargeProd != 0.0 || epsilon != 0.0)
-            throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
     }
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*exceptions.size()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*exceptions.size()/numContexts;
     int numExceptions = endIndex-startIndex;
+    if (numExceptions != exceptionAtoms.size())
+        throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
     
     // Record the per-particle parameters.
     
@@ -1409,11 +1423,13 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
     // Record the exceptions.
     
     if (numExceptions > 0) {
-        vector<vector<int> > atoms(numExceptions, vector<int>(2));
         vector<float4> baseExceptionParamsVec(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
+            int particle1, particle2;
             double chargeProd, sigma, epsilon;
-            force.getExceptionParameters(exceptions[startIndex+i], atoms[i][0], atoms[i][1], chargeProd, sigma, epsilon);
+            force.getExceptionParameters(exceptions[startIndex+i], particle1, particle2, chargeProd, sigma, epsilon);
+            if (make_pair(particle1, particle2) != exceptionAtoms[i])
+                throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
             baseExceptionParamsVec[i] = make_float4(chargeProd, sigma, epsilon, 0);
         }
         baseExceptionParams.upload(baseExceptionParamsVec);
