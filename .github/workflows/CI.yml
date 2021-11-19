@@ -248,7 +248,6 @@ jobs:
 
       - name: "Build OpenMM"
         shell: bash -l {0}
-        if: matrix.os != 'M1-arm64'
         run: |
           cd build
           make -j2 install
