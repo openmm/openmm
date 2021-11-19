@@ -421,12 +421,12 @@ CudaContext::~CudaContext() {
         delete bonded;
     if (nonbonded != NULL)
         delete nonbonded;
+    if (contextIsValid && !isLinkedContext)
+        cuProfilerStop();
     popAsCurrent();
     string errorMessage = "Error deleting Context";
-    if (contextIsValid && !isLinkedContext) {
-        cuProfilerStop();
+    if (contextIsValid && !isLinkedContext)
         cuCtxDestroy(context);
-    }
     contextIsValid = false;
 }
 
