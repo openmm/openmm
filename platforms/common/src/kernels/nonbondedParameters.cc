@@ -76,7 +76,7 @@ KERNEL void computeExclusionParameters(GLOBAL real4* RESTRICT posq, GLOBAL real*
 #else
         real chargeProd = charge[atoms.x]*charge[atoms.y];
 #endif
-#ifdef INCLUDE_LJPME
+#ifdef INCLUDE_LJPME_EXCEPTIONS
         float2 sigEps1 = sigmaEpsilon[atoms.x];
         float2 sigEps2 = sigmaEpsilon[atoms.y];
         float sigma = sigEps1.x*sigEps2.x;
