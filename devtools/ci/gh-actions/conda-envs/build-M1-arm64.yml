@@ -12,7 +12,7 @@ dependencies:
 - swig
 - fftw
 - numpy
-- doxygen
+- doxygen 1.9.1
 # test
 - pytest
 - pytest-xdist
