@@ -156,7 +156,10 @@ CudaParallelCalcForcesAndEnergyKernel::~CudaParallelCalcForcesAndEnergyKernel() 
     if (pinnedForceBuffer != NULL)
         cuMemFreeHost(pinnedForceBuffer);
     cuEventDestroy(event);
-    cuStreamDestroy(peerCopyStream);
+    for (int i = 0; i < peerCopyEvent.size(); i++)
+        cuEventDestroy(peerCopyEvent[i]);
+    for (int i = 0; i < peerCopyStream.size(); i++)
+        cuStreamDestroy(peerCopyStream[i]);
     if (interactionCounts != NULL)
         cuMemFreeHost(interactionCounts);
 }
@@ -172,7 +175,12 @@ void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
     for (int i = 0; i < numContexts; i++)
         contextNonbondedFractions[i] = 1/(double) numContexts;
     CHECK_RESULT(cuEventCreate(&event, 0), "Error creating event");
-    CHECK_RESULT(cuStreamCreate(&peerCopyStream, CU_STREAM_NON_BLOCKING), "Error creating stream");
+    peerCopyEvent.resize(numContexts);
+    peerCopyStream.resize(numContexts);
+    for (int i = 0; i < numContexts; i++) {
+        CHECK_RESULT(cuEventCreate(&peerCopyEvent[i], 0), "Error creating event");
+        CHECK_RESULT(cuStreamCreate(&peerCopyStream[i], CU_STREAM_NON_BLOCKING), "Error creating stream");
+    }
     CHECK_RESULT(cuMemHostAlloc((void**) &interactionCounts, numContexts*sizeof(int2), 0), "Error creating interaction counts buffer");
 }
 
@@ -194,16 +202,18 @@ void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& contex
     else {
         int numBytes = cu.getPosq().getSize()*cu.getPosq().getElementSize();
         cuEventRecord(event, cu.getCurrentStream());
-        cuStreamWaitEvent(peerCopyStream, event, 0);
-        for (int i = 1; i < (int) data.contexts.size(); i++)
-            CHECK_RESULT(cuMemcpyAsync(data.contexts[i]->getPosq().getDevicePointer(), cu.getPosq().getDevicePointer(), numBytes, peerCopyStream), "Error copying positions");
-        cuEventRecord(event, peerCopyStream);
+        for (int i = 1; i < (int) data.contexts.size(); i++) {
+            cuStreamWaitEvent(peerCopyStream[i], event, 0);
+            CHECK_RESULT(cuMemcpyAsync(data.contexts[i]->getPosq().getDevicePointer(), cu.getPosq().getDevicePointer(), numBytes, peerCopyStream[i]), "Error copying positions");
+            cuEventRecord(peerCopyEvent[i], peerCopyStream[i]);
+        }
     }
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         data.contextEnergy[i] = 0.0;
         CudaContext& cu = *data.contexts[i];
         ComputeContext::WorkThread& thread = cu.getWorkThread();
-        thread.addTask(new BeginComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, pinnedPositionBuffer, event, interactionCounts[i]));
+        CUevent waitEvent = (cu.getPlatformData().peerAccessSupported ? peerCopyEvent[i] : event);
+        thread.addTask(new BeginComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, pinnedPositionBuffer, waitEvent, interactionCounts[i]));
     }
 }
 
