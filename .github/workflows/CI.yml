@@ -155,7 +155,7 @@ jobs:
             cuda-version: ""
             compilers: conda-forge
             CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+              -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
 
