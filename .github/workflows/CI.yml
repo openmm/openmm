@@ -148,11 +148,33 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
+          - name: MacOS M1 CPU arm64 Python 3.10
+            python-version: "3.10"
+            os: M1-arm64
+            OPENCL: false
+            cuda-version: ""
+            compilers: conda-forge
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=ON \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
+
     steps:
       - uses: actions/checkout@v2
 
       - uses: conda-incubator/setup-miniconda@v2
+        name: "Prepare base dependencies (M1)"
+        if: matrix.os == 'M1-arm64'
+        with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: build
+          installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh#${{ github.run_number }}
+          environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
+          auto-activate-base: false
+
+      - uses: conda-incubator/setup-miniconda@v2
         name: "Prepare base dependencies"
+        if: matrix.os != 'M1-arm64'
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
@@ -169,7 +191,7 @@ jobs:
         if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
         run: source devtools/ci/gh-actions/scripts/install_amd_opencl.sh
 
-      - name: "Install conda-forge compilers on Ubuntu (if needed)"
+      - name: "Install conda-forge compilers on Ubuntu or M1 (if needed)"
         if: matrix.compilers == 'conda-forge'
         shell: bash -l {0}
         run: conda install -c conda-forge compilers
@@ -196,8 +218,23 @@ jobs:
           restore-keys: |
             ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
 
+      - name: "Configure build with CMake (M1)"
+        shell: bash -l {0}
+        if: matrix.os == 'M1-arm64'
+        run: |
+          mkdir build
+          cd build
+
+          /usr/bin/arch -arch arm64 cmake .. \
+            -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
+            -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            ${{ matrix.CMAKE_FLAGS }}
+
       - name: "Configure build with CMake"
         shell: bash -l {0}
+        if: matrix.os != 'M1-arm64'
         run: |
           mkdir build
           cd build
