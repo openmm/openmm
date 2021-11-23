@@ -94,9 +94,11 @@ private:
 class CudaParallelCalcForcesAndEnergyKernel::FinishComputationTask : public CudaContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, CudaContext& cu, CudaCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, long long* pinnedMemory, CudaArray& contextForces, bool& valid, int2& interactionCount) :
+            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, long long* pinnedMemory, CudaArray& contextForces,
+            bool& valid, int2& interactionCount, CUstream stream, CUevent event) :
             context(context), cu(cu), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
-            completionTime(completionTime), pinnedMemory(pinnedMemory), contextForces(contextForces), valid(valid), interactionCount(interactionCount) {
+            completionTime(completionTime), pinnedMemory(pinnedMemory), contextForces(contextForces), valid(valid), interactionCount(interactionCount),
+            stream(stream), event(event) {
     }
     void execute() {
         // Execute the kernel, then download forces.
@@ -116,7 +118,8 @@ public:
                     int numBytes = numAtoms*3*sizeof(long long);
                     int offset = (cu.getContextIndex()-1)*numBytes;
                     CudaContext& context0 = *cu.getPlatformData().contexts[0];
-                    CHECK_RESULT(cuMemcpy(contextForces.getDevicePointer()+offset, cu.getForce().getDevicePointer(), numBytes), "Error copying forces");
+                    CHECK_RESULT(cuMemcpyAsync(contextForces.getDevicePointer()+offset, cu.getForce().getDevicePointer(), numBytes, stream), "Error copying forces");
+                    cuEventRecord(event, stream);
                 }
                 else
                     cu.getForce().download(&pinnedMemory[(cu.getContextIndex()-1)*numAtoms*3]);
@@ -140,6 +143,8 @@ private:
     CudaArray& contextForces;
     bool& valid;
     int2& interactionCount;
+    CUstream stream;
+    CUevent event;
 };
 
 CudaParallelCalcForcesAndEnergyKernel::CudaParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, CudaPlatform::PlatformData& data) :
@@ -221,17 +226,21 @@ double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& con
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         CudaContext& cu = *data.contexts[i];
         ComputeContext::WorkThread& thread = cu.getWorkThread();
-        thread.addTask(new FinishComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i], pinnedForceBuffer, contextForces, valid, interactionCounts[i]));
+        thread.addTask(new FinishComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i],
+                pinnedForceBuffer, contextForces, valid, interactionCounts[i], peerCopyStream[i], peerCopyEvent[i]));
     }
     data.syncContexts();
+    CudaContext& cu = *data.contexts[0];
+    ContextSelector selector(cu);
+    if (cu.getPlatformData().peerAccessSupported)
+        for (int i = 1; i < data.contexts.size(); i++)
+            cuStreamWaitEvent(cu.getCurrentStream(), peerCopyEvent[i], 0);
     double energy = 0.0;
     for (int i = 0; i < (int) data.contextEnergy.size(); i++)
         energy += data.contextEnergy[i];
     if (includeForce && valid) {
         // Sum the forces from all devices.
         
-        CudaContext& cu = *data.contexts[0];
-        ContextSelector selector(cu);
         if (!cu.getPlatformData().peerAccessSupported)
             contextForces.upload(pinnedForceBuffer, false);
         int bufferSize = 3*cu.getPaddedNumAtoms();
