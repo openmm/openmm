@@ -91,6 +91,7 @@ private:
     CUfunction sumKernel;
     CUevent event;
     std::vector<CUevent> peerCopyEvent;
+    std::vector<CUevent> peerCopyEventLocal;
     std::vector<CUstream> peerCopyStream;
 };
 
