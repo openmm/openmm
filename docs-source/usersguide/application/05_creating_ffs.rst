@@ -78,6 +78,7 @@ The :code:`<ForceField>` tag contains the following children:
 
 * An :code:`<AtomTypes>` tag containing the atom type definitions
 * A :code:`<Residues>` tag containing the residue template definitions
+* Optionally a :code:`<Patches>` tag containing patch definitions
 * Zero or more tags defining specific forces
 
 
