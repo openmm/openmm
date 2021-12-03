@@ -18,6 +18,7 @@ echo libamdocl64.so > ${OPENCL_VENDOR_PATH}/amdocl64.icd
 export LD_LIBRARY_PATH=${AMDAPPSDK}/lib/x86_64:${LD_LIBRARY_PATH:-}
 chmod +x ${AMDAPPSDK}/bin/x86_64/clinfo
 ${AMDAPPSDK}/bin/x86_64/clinfo
+sudo apt-get update
 sudo apt-get install -y libgl1-mesa-dev
 
 echo "OPENCL_VENDOR_PATH=${OPENCL_VENDOR_PATH}" >> ${GITHUB_ENV}
