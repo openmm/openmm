@@ -203,18 +203,20 @@ Here is an example of a patch definition:
 
 .. code-block:: xml
 
-    <Patch name="NTER">
-     <RemoveAtom name="H"/>
-     <RemoveBond atomName1="N" atomName2="H"/>
-     <AddAtom name="H1" type="H"/>
-     <AddAtom name="H2" type="H"/>
-     <AddAtom name="H3" type="H"/>
-     <AddBond atomName1="N" atomName2="H1"/>
-     <AddBond atomName1="N" atomName2="H2"/>
-     <AddBond atomName1="N" atomName2="H3"/>
-     <RemoveExternalBond atomName="N"/>
-     <ChangeAtom name="N" type="N3"/>
-    </Patch>
+    <Patches>
+     <Patch name="NTER">
+      <RemoveAtom name="H"/>
+      <RemoveBond atomName1="N" atomName2="H"/>
+      <AddAtom name="H1" type="H"/>
+      <AddAtom name="H2" type="H"/>
+      <AddAtom name="H3" type="H"/>
+      <AddBond atomName1="N" atomName2="H1"/>
+      <AddBond atomName1="N" atomName2="H2"/>
+      <AddBond atomName1="N" atomName2="H3"/>
+      <RemoveExternalBond atomName="N"/>
+      <ChangeAtom name="N" type="N3"/>
+     </Patch>
+    </Patches>
 
 There is one :code:`<Patch>` tag for each patch definition.  That in turn may
 contain any of the following tags:
