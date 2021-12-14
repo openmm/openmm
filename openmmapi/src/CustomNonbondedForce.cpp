@@ -48,7 +48,8 @@ using std::stringstream;
 using std::vector;
 
 CustomNonbondedForce::CustomNonbondedForce(const string& energy) : energyExpression(energy), nonbondedMethod(NoCutoff), cutoffDistance(1.0),
-    switchingDistance(-1.0), useSwitchingFunction(false), useLongRangeCorrection(false) {
+    switchingDistance(-1.0), useSwitchingFunction(false), useLongRangeCorrection(false),
+    longRangeCorrectionIntegralExpression("0.0"), useLongRangeCorrectionIntegral(false) {
 }
 
 CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
@@ -61,6 +62,8 @@ CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
     switchingDistance = rhs.switchingDistance;
     useSwitchingFunction = rhs.useSwitchingFunction;
     useLongRangeCorrection = rhs.useLongRangeCorrection;
+    longRangeCorrectionIntegralExpression = rhs.longRangeCorrectionIntegralExpression;
+    useLongRangeCorrectionIntegral = rhs.useLongRangeCorrectionIntegral;
     parameters = rhs.parameters;
     globalParameters = rhs.globalParameters;
     energyParameterDerivatives = rhs.energyParameterDerivatives;
@@ -124,6 +127,22 @@ bool CustomNonbondedForce::getUseLongRangeCorrection() const {
 
 void CustomNonbondedForce::setUseLongRangeCorrection(bool use) {
     useLongRangeCorrection = use;
+}
+
+const string& CustomNonbondedForce::getLongRangeCorrectionIntegral() const {
+    return longRangeCorrectionIntegralExpression;
+}
+
+void CustomNonbondedForce::setLongRangeCorrectionIntegral(const std::string& integral) {
+    longRangeCorrectionIntegralExpression = integral;
+}
+
+bool CustomNonbondedForce::getUseLongRangeCorrectionIntegral() const {
+    return useLongRangeCorrectionIntegral;
+}
+
+void CustomNonbondedForce::setUseLongRangeCorrectionIntegral(bool use) {
+    useLongRangeCorrectionIntegral = use;
 }
 
 int CustomNonbondedForce::addPerParticleParameter(const string& name) {

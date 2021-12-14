@@ -126,7 +126,18 @@ namespace OpenMM {
  * at the start of the simulation.  Furthermore, that precomputation must be repeated every time a global parameter changes
  * (or when you modify per-particle parameters by calling updateParametersInContext()).  This means that if parameters change
  * frequently, the long range correction can be very slow.  For this reason, it is disabled by default.
- * 
+ *
+ * To reduce the cost of (p)recomputing the long-range correction, you can specify an analytical form of its integral
+ * against 4*pi*r^2 from the cutoff (r) to infinity. For example, for Lenndard-Jones 12-6 with no switching function, this is:
+ *
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    force->setLongRangeCorrectionIntegral("(16*pi/3) * epsilon * sigma^3 * ((1/3)*(sigma/r_cutoff)^9 - (sigma/r_cutoff)^3); sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2)");
+ *    force->setUseLongRangeCorrectionIntegral(true);
+ *
+ * \endverbatim
+ *
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
  * computed.  You can then query its value in a Context by calling getState() on it.
@@ -284,6 +295,24 @@ public:
      */
     void setUseLongRangeCorrection(bool use);
     /**
+     * Get the algebraic expression that gives the integral (beyond the cutoff) of the long-range interaction energy between two particles
+     */
+    const std::string& getLongRangeCorrectionIntegral() const;
+    /**
+     * Set the algebraic expression that gives the integral (beyond the cutoff) of the long-range interaction energy between two particles
+     */
+    void setLongRangeCorrectionIntegral(const std::string& integral);
+    /**
+     * Get whether an algebraic expression is used to define how the long-range correction integral is to be computed.
+     * If setUseLongRangeCorrection is set to False, this is ignored.
+     */
+    bool getUseLongRangeCorrectionIntegral() const;
+    /**
+     * Set whether an algebraic expression is used to define how the long-range correction integral is to be computed.
+     * If setUseLongRangeCorrection is set to False, this is ignored.
+     */
+    void setUseLongRangeCorrectionIntegral(bool use);
+    /**
      * Add a new per-particle parameter that the interaction may depend on.
      *
      * @param name     the name of the parameter
@@ -308,7 +337,7 @@ public:
      * Add a new global parameter that the interaction may depend on.  The default value provided to
      * this method is the initial value of the parameter in newly created Contexts.  You can change
      * the value at any time by calling setParameter() on the Context.
-     * 
+     *
      * @param name             the name of the parameter
      * @param defaultValue     the default value of the parameter
      * @return the index of the parameter that was added
@@ -524,7 +553,9 @@ private:
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, switchingDistance;
     bool useSwitchingFunction, useLongRangeCorrection;
+    bool useLongRangeCorrectionIntegral;
     std::string energyExpression;
+    std::string longRangeCorrectionIntegralExpression;
     std::vector<PerParticleParameterInfo> parameters;
     std::vector<GlobalParameterInfo> globalParameters;
     std::vector<ParticleInfo> particles;

@@ -164,9 +164,9 @@ CustomNonbondedForceImpl::LongRangeCorrectionData CustomNonbondedForceImpl::prep
     data.method = force.getNonbondedMethod();
     if (data.method == CustomNonbondedForce::NoCutoff || data.method == CustomNonbondedForce::CutoffNonPeriodic)
         return data;
-    
+
     // Identify all particle classes (defined by parameters), and record the class of each particle.
-    
+
     int numParticles = force.getNumParticles();
     map<vector<double>, int> classIndex;
     vector<int> atomClass(numParticles);
@@ -183,12 +183,12 @@ CustomNonbondedForceImpl::LongRangeCorrectionData CustomNonbondedForceImpl::prep
             atomClass[i] = entry->second;
     }
     int numClasses = data.classes.size();
-    
+
     // Count the total number of particle pairs for each pair of classes.
-    
+
     if (force.getNumInteractionGroups() == 0) {
         // Count the particles of each class.
-        
+
         vector<long long int> classCounts(numClasses, 0);
         for (int i = 0; i < numParticles; i++)
             classCounts[atomClass[i]]++;
@@ -200,14 +200,14 @@ CustomNonbondedForceImpl::LongRangeCorrectionData CustomNonbondedForceImpl::prep
     }
     else {
         // Initialize the counts to 0.
-        
+
         for (int i = 0; i < numClasses; i++) {
             for (int j = i; j < numClasses; j++)
                 data.interactionCount[make_pair(i, j)] = 0;
         }
-        
+
         // Loop over interaction groups and count the interactions in each one.
-        
+
         for (int group = 0; group < force.getNumInteractionGroups(); group++) {
             set<int> set1, set2;
             force.getInteractionGroupParameters(group, set1, set2);
@@ -221,15 +221,17 @@ CustomNonbondedForceImpl::LongRangeCorrectionData CustomNonbondedForceImpl::prep
                 }
         }
     }
-    
+
     // Prepare for evaluating the expressions.
-    
+
     map<string, Lepton::CustomFunction*> functions;
     for (int i = 0; i < force.getNumFunctions(); i++)
         functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
-    data.energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), functions).createCompiledExpression();
+    // We either need the energy function expression (if numerically integrating) or the integral expression (if analytically integrating)
+    const string& expression = force.getUseLongRangeCorrectionIntegral() ? force.getLongRangeCorrectionIntegral() : force.getEnergyFunction();
+    data.energyExpression = Lepton::Parser::parse(expression, functions).createCompiledExpression();
     for (int k = 0; k < force.getNumEnergyParameterDerivatives(); k++)
-        data.derivExpressions.push_back(Lepton::Parser::parse(force.getEnergyFunction(), functions).differentiate(force.getEnergyParameterDerivativeName(k)).createCompiledExpression());
+        data.derivExpressions.push_back(Lepton::Parser::parse(expression, functions).differentiate(force.getEnergyParameterDerivativeName(k)).createCompiledExpression());
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         stringstream name1, name2;
         name1 << force.getPerParticleParameterName(i) << 1;
@@ -259,8 +261,12 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
             int i = atomicCounter++;
             if (i >= numClasses)
                 break;
-            for (int j = i; j < numClasses; j++)
-                threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteraction(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
+            for (int j = i; j < numClasses; j++) {
+                if(force.getUseLongRangeCorrectionIntegral())
+                    threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteractionAnalytical(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
+                else
+                    threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteractionNumerical(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
+              }
         }
     });
     threads.waitForThreads();
@@ -269,9 +275,9 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
         sum += threadSum[i];
     sum /= numInteractions;
     coefficient = 2*M_PI*nPart*nPart*sum;
-    
+
     // Now do the same for parameter derivatives.
-    
+
     int numDerivs = data.derivExpressions.size();
     derivatives.resize(numDerivs);
     for (int k = 0; k < numDerivs; k++) {
@@ -283,8 +289,12 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
                 int i = atomicCounter++;
                 if (i >= numClasses)
                     break;
-                for (int j = i; j < numClasses; j++)
-                    threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteraction(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
+                for (int j = i; j < numClasses; j++) {
+                    if(force.getUseLongRangeCorrectionIntegral())
+                        threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteractionAnalytical(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
+                    else
+                        threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteractionNumerical(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
+                  }
             }
         });
         threads.waitForThreads();
@@ -296,7 +306,7 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
     }
 }
 
-double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledExpression& expression, const vector<double>& params1, const vector<double>& params2,
+double CustomNonbondedForceImpl::integrateInteractionNumerical(Lepton::CompiledExpression& expression, const vector<double>& params1, const vector<double>& params2,
         const CustomNonbondedForce& force, const Context& context, const vector<string>& paramNames) {
     const set<string>& variables = expression.getVariables();
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
@@ -310,7 +320,7 @@ double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledExpression
         if (variables.find(name) != variables.end())
             expression.getVariableReference(name) = context.getParameter(name);
     }
-    
+
     // To integrate from r_cutoff to infinity, make the change of variables x=r_cutoff/r and integrate from 0 to 1.
     // This introduces another r^2 into the integral, which along with the r^2 in the formula for the correction
     // means we multiply the function by r^4.  Use the midpoint method.
@@ -345,9 +355,9 @@ double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledExpression
             throw OpenMMException("CustomNonbondedForce: Long range correction did not converge.  Does the energy go to 0 faster than 1/r^2?");
         numPoints *= 3;
     }
-    
+
     // If a switching function is used, integrate over the switching interval.
-    
+
     double sum2 = 0;
     if (force.getUseSwitchingFunction()) {
         double rswitch = force.getSwitchingDistance();
@@ -376,4 +386,33 @@ double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledExpression
         sum2 *= cutoff-rswitch;
     }
     return sum/cutoff+sum2;
+}
+
+double CustomNonbondedForceImpl::integrateInteractionAnalytical(Lepton::CompiledExpression& expression, const vector<double>& params1, const vector<double>& params2,
+        const CustomNonbondedForce& force, const Context& context, const vector<string>& paramNames) {
+    const set<string>& variables = expression.getVariables();
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
+        if (variables.find(paramNames[2*i]) != variables.end())
+            expression.getVariableReference(paramNames[2*i]) = params1[i];
+        if (variables.find(paramNames[2*i+1]) != variables.end())
+            expression.getVariableReference(paramNames[2*i+1]) = params2[i];
+    }
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        const string& name = force.getGlobalParameterName(i);
+        if (variables.find(name) != variables.end())
+            expression.getVariableReference(name) = context.getParameter(name);
+    }
+
+    // The integral is specified, so we only need to evaluate it once at the cutoff.
+    // Make sure it depends on r (which will be substituted with the cutoff)
+    double* rPointer;
+    try {
+        rPointer = &expression.getVariableReference("r");
+    }
+    catch (exception& ex) {
+        throw OpenMMException("CustomNonbondedForce: Cannot use long range correction with a force that does not depend on r.");
+    }
+    double cutoff = force.getCutoffDistance();
+    *rPointer = cutoff;
+    return expression.evaluate();
 }

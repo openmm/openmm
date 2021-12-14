@@ -42,7 +42,7 @@ CustomNonbondedForceProxy::CustomNonbondedForceProxy() : SerializationProxy("Cus
 }
 
 void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const CustomNonbondedForce& force = *reinterpret_cast<const CustomNonbondedForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("name", force.getName());
@@ -52,6 +52,8 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
     node.setBoolProperty("useSwitchingFunction", force.getUseSwitchingFunction());
     node.setDoubleProperty("switchingDistance", force.getSwitchingDistance());
     node.setBoolProperty("useLongRangeCorrection", force.getUseLongRangeCorrection());
+    node.setBoolProperty("useLongRangeCorrectionIntegral", force.getUseLongRangeCorrection());
+    node.setStringProperty("longRangeCorrectionIntegralExpression", force.getLongRangeCorrectionIntegral());
     SerializationNode& perParticleParams = node.createChildNode("PerParticleParameters");
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         perParticleParams.createChildNode("Parameter").setStringProperty("name", force.getPerParticleParameterName(i));
@@ -115,6 +117,8 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
         force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction", false));
         force->setSwitchingDistance(node.getDoubleProperty("switchingDistance", -1.0));
         force->setUseLongRangeCorrection(node.getBoolProperty("useLongRangeCorrection", false));
+        force->setUseLongRangeCorrectionIntegral(node.getBoolProperty("useLongRangeCorrectionIntegral", false));
+        force->setLongRangeCorrectionIntegral(node.getStringProperty("longRangeCorrectionIntegralExpression"));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");
         for (auto& parameter : perParticleParams.getChildren())
             force->addPerParticleParameter(parameter.getStringProperty("name"));
