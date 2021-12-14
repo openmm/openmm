@@ -265,7 +265,7 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
                 if(force.getUseLongRangeCorrectionIntegral())
                     threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteractionAnalytical(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
                 else
-                    threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteractionNumerical(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
+                    threadSum[threadIndex] += 4*M_PI*data.interactionCount.at(make_pair(i, j))*integrateInteractionNumerical(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
               }
         }
     });
@@ -274,7 +274,7 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
     for (int i = 0; i < threadSum.size(); i++)
         sum += threadSum[i];
     sum /= numInteractions;
-    coefficient = 2*M_PI*nPart*nPart*sum;
+    coefficient = nPart*nPart/2.0*sum;
 
     // Now do the same for parameter derivatives.
 
@@ -293,7 +293,7 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
                     if(force.getUseLongRangeCorrectionIntegral())
                         threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteractionAnalytical(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
                     else
-                        threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteractionNumerical(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
+                        threadSum[threadIndex] += 4*M_PI*data.interactionCount.at(make_pair(i, j))*integrateInteractionNumerical(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
                   }
             }
         });
@@ -302,7 +302,7 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
         for (int i = 0; i < threadSum.size(); i++)
             sum += threadSum[i];
         sum /= numInteractions;
-        derivatives[k] = 2*M_PI*nPart*nPart*sum;
+        derivatives[k] = nPart*nPart/2.0*sum;
     }
 }
 

@@ -935,7 +935,7 @@ void testLongRangeCorrectionAnalytical() {
     customNonbonded->addPerParticleParameter("eps");
     // Specify long-range correction integral
     customNonbonded->setUseLongRangeCorrectionIntegral(true);
-    customNonbonded->setLongRangeCorrectionIntegral("(16*pi/3) * epsilon * sigma^3 * ((1/3)*(sigma/r_cutoff)^9 - (sigma/r_cutoff)^3); sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2)");
+    customNonbonded->setLongRangeCorrectionIntegral("(16*pi/3) * eps * sigma^3 * ((1/3)*(sigma/r)^9 - (sigma/r)^3); sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2); pi=3.1415926535;");
     vector<Vec3> positions(numParticles);
     int index = 0;
     vector<double> params1(2);
@@ -970,8 +970,6 @@ void testLongRangeCorrectionAnalytical() {
     customNonbonded->setUseLongRangeCorrection(true);
     standardNonbonded->setUseSwitchingFunction(false);
     customNonbonded->setUseSwitchingFunction(false);
-    standardNonbonded->setSwitchingDistance(0.8*cutoff);
-    customNonbonded->setSwitchingDistance(0.8*cutoff);
     standardSystem.addForce(standardNonbonded);
     customSystem.addForce(customNonbonded);
 
@@ -1550,6 +1548,7 @@ int main(int argc, char* argv[]) {
         testCoulombLennardJones();
         testSwitchingFunction();
         testLongRangeCorrection();
+        testLongRangeCorrectionAnalytical();
         testInteractionGroups();
         testLargeInteractionGroup();
         testInteractionGroupLongRangeCorrection();
