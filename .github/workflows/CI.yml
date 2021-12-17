@@ -299,6 +299,12 @@ jobs:
           cd build/python/tests
           python -m pytest -v -n 2
 
+      - name: "Cleanup self-hosted runner (M1)"
+        shell: bash -l {0}
+        if: matrix.os == 'M1-arm64'
+        run: |
+          rm -rf /Users/runner/miniconda3/*
+
   windows:
     runs-on: windows-latest
     name: ${{ matrix.name }}
