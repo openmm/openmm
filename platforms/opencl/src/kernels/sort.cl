@@ -178,15 +178,15 @@ __kernel void assignElementsToBuckets2(__global const DATA_TYPE* restrict data, 
     __local float segmentBaseIndex[9];
     __local float segmentIndexScale[9];
     if (get_local_id(0) == 0) {
-        segmentLowerBound[0] = 2*elements[0]-elements[10];
-        segmentLowerBound[1] = elements[0];
+        segmentLowerBound[0] = elements[0]-0.2f*(elements[5]-elements[0]);
+        segmentLowerBound[1] = elements[5];
         segmentLowerBound[2] = elements[10];
-        segmentLowerBound[3] = elements[21];
-        segmentLowerBound[4] = elements[32];
-        segmentLowerBound[5] = elements[43];
-        segmentLowerBound[6] = elements[54];
-        segmentLowerBound[7] = elements[63];
-        segmentLowerBound[8] = 2*elements[63]-elements[54];
+        segmentLowerBound[3] = elements[20];
+        segmentLowerBound[4] = elements[30];
+        segmentLowerBound[5] = elements[40];
+        segmentLowerBound[6] = elements[50];
+        segmentLowerBound[7] = elements[60];
+        segmentLowerBound[8] = elements[63]+0.2f*(elements[63]-elements[58]);
         segmentBaseIndex[0] = numBuckets/16;
         segmentBaseIndex[1] = 3*numBuckets/16;
         segmentBaseIndex[2] = 5*numBuckets/16;
