@@ -184,7 +184,7 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, heavy=False, polarization='mutu
         method = app.PME
         constraints = app.HBonds
         hydrogenMass = 1.5*unit.amu
-        cutoff = cutoff_pme
+        cutoff = pme_cutoff
         system = prmtop.createSystem(nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints)
     else:
         if apoa1:
