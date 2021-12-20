@@ -126,7 +126,7 @@ def downloadAmberSuite():
 
 import functools
 @functools.cache
-def retrieveTestSystem(testName, pme_cutoff=0.9, heavy=False, polarization='mutual', epsilon=1e-5):
+def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', polarization='mutual', epsilon=1e-5):
     """Retrieve a benchmark system
 
     Parameters
@@ -135,8 +135,9 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, heavy=False, polarization='mutu
         The name of the test
     pme_cutoff : float
         PME cutoff, in nm
-    heavy : bool, optional, default=False
-        If True, will constrain all bonds and use hydrogen mass of 4*amu
+    bond_constraints : str, optional, default='hbonds'
+        'hbonds' : use app.HBonds and set H mass to 1.5*amu
+        'allbonds' : use app.AllBonds and set H mass to 4*amu
     polarization : str, optional, default='mutual'
         Polarization scheme for Amoeba
     epsilon : str or float, optional, default=1e-5
@@ -176,7 +177,7 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, heavy=False, polarization='mutu
         positions = pdb.positions
     elif amber:
         dirname = downloadAmberSuite()
-        names = {'amber20-dhfr':'JAC',  'amber20-factorix':'FactorIX', 'amber20-cellulose':'Cellulose', 'amber20-stmv':'STMV'}
+        names = {'amber20-dhfr':'JAC', 'amber20-factorix':'FactorIX', 'amber20-cellulose':'Cellulose', 'amber20-stmv':'STMV'}
         fileName = names[testName]
         prmtop = app.AmberPrmtopFile(os.path.join(dirname, f'PME/Topologies/{fileName}.prmtop'))
         inpcrd = app.AmberInpcrdFile(os.path.join(dirname, f'PME/Coordinates/{fileName}.inpcrd'))
@@ -186,6 +187,8 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, heavy=False, polarization='mutu
         hydrogenMass = 1.5*unit.amu
         cutoff = pme_cutoff
         system = prmtop.createSystem(nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints)
+        if inpcrd.boxVectors is not None:
+            system.setDefaultPeriodicBoxVectors(*inpcrd.boxVectors)
     else:
         if apoa1:
             ff = app.ForceField('amber14/protein.ff14SB.xml', 'amber14/lipid17.xml', 'amber14/tip3p.xml')
@@ -215,12 +218,15 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, heavy=False, polarization='mutu
             pdb = app.PDBFile('5dfr_minimized.pdb')
             method = app.CutoffNonPeriodic # JDC: Shouldn't this be app.NoCutoff?
             cutoff = 2*unit.nanometers
-        if heavy:
+        if bond_constraints == 'hbonds':
+            constraints = app.HBonds
+            hydrogenMass = 1.5*unit.amu
+        elif bond_constraints == 'allbonds':
             constraints = app.AllBonds # JDC: Isn't constraining all bonds problematic?
             hydrogenMass = 4*unit.amu
         else:
-            constraints = app.HBonds
-            hydrogenMass = 1.5*unit.amu
+            raise ValueError(f"bond_constraints must be one of 'hbonds', 'allbonds': found {bond_constraints}")
+
         positions = pdb.positions
         system = ff.createSystem(pdb.topology, nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints, hydrogenMass=hydrogenMass)
 
@@ -234,7 +240,7 @@ def runOneTest(testName, options):
        or ((options.platform == 'CPU') and (options.precision != 'mixed')):
         return
 
-    system, positions = retrieveTestSystem(testName, pme_cutoff=options.pme_cutoff, heavy=options.heavy, polarization=options.polarization, epsilon=options.epsilon)
+    system, positions = retrieveTestSystem(testName, pme_cutoff=options.pme_cutoff, bond_constraints=options.bond_constraints, polarization=options.polarization, epsilon=options.epsilon)
 
     test_result = dict()
     test_result['test'] = testName
@@ -253,12 +259,14 @@ def runOneTest(testName, options):
     if amoeba:
         test_result['constraints'] = 'None'
         test_result['hydrogen_mass'] = '1'
-    elif options.heavy:
+    elif options.bond_constraints == 'hbonds':
+        test_result['constraints'] = 'HBonds'
+        test_result['hydrogen_mass'] = '1.5'
+    elif options.bond_constraints == 'allbonds':
         test_result['constraints'] = 'AllBonds'
         test_result['hydrogen_mass'] = '4'
     else:
-        test_result['constraints'] = 'HBonds'
-        test_result['hydrogen_mass'] = '1.5'
+        raise ValueError(f'Unknown bond_constraints: {bond_constraints}')
 
     test_result['ensemble'] = options.ensemble
     platform = mm.Platform.getPlatformByName(options.platform)
@@ -285,7 +293,13 @@ def runOneTest(testName, options):
         else:
             integ = mm.LangevinMiddleIntegrator(temperature, friction, dt)
     else:
-        if options.heavy:
+        if options.bond_constraints == 'hbonds':
+            dt = 0.004*unit.picoseconds
+            if options.ensemble == 'NVE':
+                integ = mm.VerletIntegrator(dt)
+            else:
+                integ = mm.LangevinMiddleIntegrator(temperature, friction, dt)
+        elif options.bond_constraints == 'allbonds':
             dt = 0.005*unit.picoseconds
             hydrogenMass = 4*unit.amu
             if options.ensemble == 'NVE':
@@ -293,11 +307,8 @@ def runOneTest(testName, options):
             else:
                 integ = mm.LangevinIntegrator(temperature, friction, dt)
         else:
-            dt = 0.004*unit.picoseconds
-            if options.ensemble == 'NVE':
-                integ = mm.VerletIntegrator(dt)
-            else:
-                integ = mm.LangevinMiddleIntegrator(temperature, friction, dt)
+            raise ValueError(f'Unknown bond_constraints {options.bond_constraints}')
+
     test_result['timestep_in_fs'] = dt.value_in_unit(unit.femtoseconds)
     properties = {}
     initialSteps = 5
@@ -321,8 +332,6 @@ def runOneTest(testName, options):
         context = mm.Context(system, integ, platform)
     context.setPositions(positions)
     if amber:
-        if inpcrd.boxVectors is not None:
-            context.setPeriodicBoxVectors(*inpcrd.boxVectors)
         mm.LocalEnergyMinimizer.minimize(context, 100*unit.kilojoules_per_mole/unit.nanometer)
     context.setVelocitiesToTemperature(temperature)
 
@@ -352,23 +361,22 @@ platform_speeds = { mm.Platform.getPlatform(i).getName() : mm.Platform.getPlatfo
 PLATFORMS = [platform for platform, speed in sorted(platform_speeds.items(), key=lambda item: item[1], reverse=True)]
 TESTS = ('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme', 'amber20-dhfr',  'amber20-factorix', 'amber20-cellulose', 'amber20-stmv')
 ENSEMBLES = ('NVE', 'NVT', 'NPT')
-HEAVY_HYDROGENS = (False, True)
+BOND_CONSTRAINTS = ('hbonds', 'allbonds')
 PRECISIONS = ('single', 'mixed', 'double')
 POLARIZATION_MODES = ('direct', 'extrapolated', 'mutual')
 
 parser = ArgumentParser()
-parser.add_argument('--platform', dest='platform', choices=PLATFORMS, help=f'name of the platform to benchmark: {PLATFORMS}')
-parser.add_argument('--test', dest='test', choices=TESTS,
-    help=f'the test to perform: {TESTS} [default: all except amber-*]')
-parser.add_argument('--ensemble', default='NVT', dest='ensemble', choices=ENSEMBLES, help=f'the thermodynamic ensemble to simulate: {ENSEMBLES} [default: NVT]')
+parser.add_argument('--platform', default=None, dest='platform', help=f'name of the platform to benchmark, or comma-separated list (CUDA,OpenCL): {PLATFORMS} [default: all]')
+parser.add_argument('--test', dest='test', help=f'the test to perform, or comma-separated list (pme,rf): {TESTS} [default: all]')
+parser.add_argument('--ensemble', default='NVT', dest='ensemble', help=f'the thermodynamic ensemble to simulate: {ENSEMBLES} [default: all]')
 parser.add_argument('--pme-cutoff', default=0.9, dest='pme_cutoff', type=float, help='direct space cutoff for PME in nm [default: 0.9]')
 parser.add_argument('--seconds', default=60, dest='seconds', type=float, help='target simulation length in seconds [default: 60]')
 parser.add_argument('--polarization', default='mutual', dest='polarization', choices=POLARIZATION_MODES, help='the polarization method for AMOEBA: {POLARIZATION_MODES} [default: mutual]')
 parser.add_argument('--mutual-epsilon', default=1e-5, dest='epsilon', type=float, help='mutual induced epsilon for AMOEBA [default: 1e-5]')
-parser.add_argument('--heavy-hydrogens', action='store_true', default=False, dest='heavy', help='repartition mass to allow a larger time step')
+parser.add_argument('--bond-constraints', default=None, dest='bond_constraints', help='hbonds: constrain bonds to hydrogen, use 1.5*amu H mass; allbonds: constrain all bonds, use 4*amu H mass [default: all]')
 parser.add_argument('--device', default=None, dest='device', help='device index for CUDA or OpenCL')
-parser.add_argument('--precision', default='single', dest='precision', choices=PRECISIONS, help=f'precision mode for CUDA or OpenCL: {PRECISIONS} [default: single]')
-parser.add_argument('--all', action='store_true', default=False, dest='run_all_benchmarks', help='run all benchmark combinations of (platform, test, heavy_hydrogens, ensemble, precision)')
+parser.add_argument('--precision', default='single', dest='precision', help=f'precision mode for CUDA or OpenCL: {PRECISIONS} [default: all]')
+parser.add_argument('--all', action='store_true', default=False, dest='run_all_benchmarks', help='run all benchmark combinations of (platform, test, bond_constraints, ensemble, precision)')
 parser.add_argument('--style', default='simple', dest='style', help='output style [default: simple]')
 parser.add_argument('--outfile', default=None, dest='outfile', help='output filename for benchmark logging (must end with .yaml or .json)')
 args = parser.parse_args()
@@ -382,6 +390,7 @@ system_info['openmm_version'] = mm.version.version
 system_info['cpuinfo'] = cpuinfo()
 system_info['cpuarch'] = platform.processor()
 system_info['system'] = platform.system()
+# TODO: Capture information on how many CPU threads will be used
 
 # Attempt to get GPU info
 try:
@@ -403,63 +412,73 @@ if args.outfile is not None:
     # Write system info
     appendTestResult(args.outfile, system_info=system_info)
 
-if args.run_all_benchmarks:
-    # Combinatorially run all benchmarks, ignoring combinations that cannot be run
-    from openmm import OpenMMException
-    from itertools import product
+if args.platform is not None:
+    # Use specified subset of platforms
+    requested_platforms = args.platform.split(',')
+    if not set(requested_platforms).issubset(PLATFORMS):
+        parser.error(f'Available platforms: {PLATFORMS}')
+    PLATFORMS = requested_platforms
 
-    if args.style == 'simple':
-        for (test, args.heavy, args.ensemble, args.platform, args.precision) in product(TESTS, HEAVY_HYDROGENS, ENSEMBLES, PLATFORMS, PRECISIONS):
+if args.test is not None:
+    # Use specified subset of tests
+    requested_tests = args.test.split(',')
+    if not set(requested_tests).issubset(TESTS):
+        parser.error(f'Available tests: {TESTS}')
+    TESTS = requested_tests
+
+if args.precision is not None:
+    # Use specified subset of precisions
+    requested_precisions = args.precision.split(',')
+    if not set(requested_precisions).issubset(PRECISIONS):
+        parser.error(f'Available precisions: {PRECISIONS}')
+    PRECISIONS = requested_precisions
+
+if args.ensemble is not None:
+    # Use specified subset of ensembles
+    requested_ensembles = args.ensemble.split(',')
+    if not set(requested_ensembles).issubset(ENSEMBLES):
+        parser.error(f'Available ensembles: {ENSEMBLES}')
+    ENSEMBLES = requested_ensembles
+
+if args.bond_constraints is not None:
+    # Use specified subset of constraints
+    requested_bond_constraints = args.bond_constraints.split(',')
+    if not set(requested_bond_constraints).issubset(BOND_CONSTRAINTS):
+        parser.error(f'Available bond constraints: {BOND_CONSTRAINTS}')
+    BOND_CONSTRAINTS = requested_bond_constraints
+
+# Combinatorially run all requested benchmarks, ignoring combinations that cannot be run
+from openmm import OpenMMException
+from itertools import product
+
+if args.style == 'simple':
+    for (test, args.bond_constraints, args.ensemble, args.platform, args.precision) in product(TESTS, BOND_CONSTRAINTS, ENSEMBLES, PLATFORMS, PRECISIONS):
+        try:
+            runOneTest(test, args)
+        except OpenMMException as e:
+            pass
+elif args.style == 'rich':
+    from rich.live import Live
+    from rich.table import Table
+
+    from rich import box
+    table = Table(box=box.SIMPLE)
+    table.add_column("[red]Test", width=24)
+    table.add_column("[blue]Precision")
+    table.add_column("[blue_violet]Constraints")
+    table.add_column("[blue_violet]H mass (amu)")
+    table.add_column("[blue_violet]dt (fs)")
+    table.add_column("[blue]Platform", width=9)
+    table.add_column("[orange1]Ensemble")
+    table.add_column("[green]ns/day", justify='right', width=10)
+    setattr(args, 'rich_table', table)
+
+    with Live(table, auto_refresh=False, vertical_overflow='visible') as live:
+        for (test, args.bond_constraints, args.ensemble, args.platform, args.precision) in product(TESTS, BOND_CONSTRAINTS, ENSEMBLES, PLATFORMS, PRECISIONS):
             try:
+                setattr(args, 'rich_live', live)
                 runOneTest(test, args)
             except OpenMMException as e:
                 pass
-    elif args.style == 'rich':
-        from rich.live import Live
-        from rich.table import Table
-
-        from rich import box
-        table = Table(box=box.SIMPLE)
-        table.add_column("[red]Test", width=24)
-        table.add_column("[blue]Precision")
-        table.add_column("[blue_violet]Constraints")
-        table.add_column("[blue_violet]H mass (amu)")
-        table.add_column("[blue_violet]dt (fs)")
-        table.add_column("[blue]Platform", width=9)
-        table.add_column("[orange1]Ensemble")
-        table.add_column("[green]ns/day", justify='right', width=10)
-        setattr(args, 'rich_table', table)
-
-        with Live(table, auto_refresh=False, vertical_overflow='visible') as live:
-            for (test, args.heavy, args.ensemble, args.platform, args.precision) in product(TESTS, HEAVY_HYDROGENS, ENSEMBLES, PLATFORMS, PRECISIONS):
-                try:
-                    setattr(args, 'rich_live', live)
-                    runOneTest(test, args)
-                except OpenMMException as e:
-                    pass
-    else:
-        raise ValueError(f"style {args.style} unkown; must be one of ['simple', 'rich']")
-
-    # Exit without errors
-    import sys
-    sys.exit(0)
-
-# Otherwise, require a platform to be specified
-if args.platform is None:
-    parser.error('No platform specified')
-print('Platform:', args.platform)
-if args.platform in ('CUDA', 'OpenCL'):
-    print('Precision:', args.precision)
-    if args.device is not None:
-        print('Device:', args.device)
-
-# Run the simulations.
-
-if args.test is None:
-    for test in ('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme'):
-        try:
-            runOneTest(test, args)
-        except Exception as ex:
-            print('Test failed: %s' % ex.message)
 else:
-    runOneTest(args.test, args)
+    raise ValueError(f"style {args.style} unkown; must be one of ['simple', 'rich']")
