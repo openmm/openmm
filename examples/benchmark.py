@@ -376,7 +376,6 @@ parser.add_argument('--mutual-epsilon', default=1e-5, dest='epsilon', type=float
 parser.add_argument('--bond-constraints', default=None, dest='bond_constraints', help='hbonds: constrain bonds to hydrogen, use 1.5*amu H mass; allbonds: constrain all bonds, use 4*amu H mass [default: all]')
 parser.add_argument('--device', default=None, dest='device', help='device index for CUDA or OpenCL')
 parser.add_argument('--precision', default='single', dest='precision', help=f'precision mode for CUDA or OpenCL: {PRECISIONS} [default: all]')
-parser.add_argument('--all', action='store_true', default=False, dest='run_all_benchmarks', help='run all benchmark combinations of (platform, test, bond_constraints, ensemble, precision)')
 parser.add_argument('--style', default='simple', dest='style', help='output style [default: simple]')
 parser.add_argument('--outfile', default=None, dest='outfile', help='output filename for benchmark logging (must end with .yaml or .json)')
 args = parser.parse_args()
