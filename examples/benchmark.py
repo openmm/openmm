@@ -269,9 +269,6 @@ def runOneTest(testName, options):
         raise ValueError(f'Unknown bond_constraints: {bond_constraints}')
 
     test_result['ensemble'] = options.ensemble
-    platform = mm.Platform.getPlatformByName(options.platform)
-    test_result['platform'] = options.platform
-    test_result['precision'] = options.precision
 
     # Create the integrator
 
@@ -312,29 +309,38 @@ def runOneTest(testName, options):
     test_result['timestep_in_fs'] = dt.value_in_unit(unit.femtoseconds)
     properties = {}
     initialSteps = 5
-    if options.device is not None and platform.getName() in ('CUDA', 'OpenCL'):
+    if options.device is not None and options.platform in ('CUDA', 'OpenCL'):
         properties['DeviceIndex'] = options.device
         if ',' in options.device or ' ' in options.device:
             initialSteps = 250
-    if options.precision is not None and platform.getName() in ('CUDA', 'OpenCL'):
+    if options.precision is not None and options.platform in ('CUDA', 'OpenCL'):
         properties['Precision'] = options.precision
 
     # Add barostat if requested
     if options.ensemble == 'NPT':
         system.addForce(mm.MonteCarloBarostat(1*unit.bar, temperature, 100))
 
-    # Run the simulation.
-
+    # Create the Context
+    platform = mm.Platform.getPlatformByName(options.platform)
     integ.setConstraintTolerance(1e-5)
     if len(properties) > 0:
         context = mm.Context(system, integ, platform, properties)
     else:
         context = mm.Context(system, integ, platform)
+
+    # Store information about the Platform used by the Context
+    platform = context.getPlatform()
+    test_result['precision'] = options.precision # requested precision
+    test_result['platform'] = platform.getName()
+    test_result['platform_properties'] = { property_name : platform.getPropertyValue(context, property_name) for property_name in platform.getPropertyNames() }
+
+    # Prepare the simulation
     context.setPositions(positions)
     if amber:
         mm.LocalEnergyMinimizer.minimize(context, 100*unit.kilojoules_per_mole/unit.nanometer)
     context.setVelocitiesToTemperature(temperature)
 
+    # Time integration, ensuring we trigger kernel compilation before we start timing
     steps = 20
     while True:
         time = timeIntegration(context, steps, initialSteps)
