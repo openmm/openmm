@@ -90,7 +90,8 @@ version = '%(version)s'
 full_version = '%(full_version)s'
 git_revision = '%(git_revision)s'
 release = %(isrelease)s
-openmm_library_path = r'%(path)s'
+openmm_library_path = r'%(lib_path)s'
+openmm_dll_path = r'%(bin_path)s'
 
 if not release:
     version = full_version
@@ -119,7 +120,9 @@ if not release:
                        'full_version' : full_version,
                        'git_revision' : git_revision,
                        'isrelease': str(IS_RELEASED),
-                       'path': os.getenv('OPENMM_LIB_PATH')})
+                       'lib_path': os.getenv('OPENMM_LIB_PATH'),
+                       'bin_path': os.getenv('OPENMM_BIN_PATH'),
+                       })
 
 
 def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,

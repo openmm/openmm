@@ -13,11 +13,13 @@ from . import version
 
 if sys.platform == 'win32':
     _path = os.environ['PATH']
-    os.environ['PATH'] = '%(lib)s;%(lib)s\plugins;%(path)s' % {
-        'lib': version.openmm_library_path, 'path': _path}
+    os.environ['PATH'] = '%(dll_path)s;%(lib_path)s\plugins;%(path)s' % {
+        'lib_path': version.openmm_library_path,
+        'dll_path': version.openmm_dll_path,
+        'path': _path}
 
     if sys.version_info[:2] >= (3, 8):
-        os.add_dll_directory(version.openmm_library_path)
+        os.add_dll_directory(version.openmm_dll_path)
         os.add_dll_directory(os.path.join(version.openmm_library_path, plugins))
 
 from openmm.openmm import *
