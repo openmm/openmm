@@ -16,6 +16,10 @@ if sys.platform == 'win32':
     os.environ['PATH'] = '%(lib)s;%(lib)s\plugins;%(path)s' % {
         'lib': version.openmm_library_path, 'path': _path}
 
+    if sys.version_info[:2] >= (3, 8):
+        os.add_dll_directory(version.openmm_library_path)
+        os.add_dll_directory(os.path.join(version.openmm_library_path, plugins))
+
 from openmm.openmm import *
 from openmm.vec3 import Vec3
 from openmm.mtsintegrator import MTSIntegrator, MTSLangevinIntegrator
