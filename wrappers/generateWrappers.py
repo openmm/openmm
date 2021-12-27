@@ -900,6 +900,7 @@ class FortranHeaderGenerator(WrapperGenerator):
         WrapperGenerator.__init__(self, inputDirname, output)
         self.typeTranslations = {'int': 'integer*4',
                                  'bool': 'integer*4',
+				 'long long': 'integer*8',
                                  'double': 'real*8',
                                  'char *': 'character(*)',
                                  'const char *': 'character(*)',
