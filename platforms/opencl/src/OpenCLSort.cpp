@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,7 +37,8 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int length) : context(context), trait(trait), dataLength(length) {
+OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int length, bool uniform) :
+        context(context), trait(trait), dataLength(length), uniform(uniform) {
     // Create kernels.
 
     std::map<std::string, std::string> replacements;
@@ -47,11 +48,13 @@ OpenCLSort::OpenCLSort(OpenCLContext& context, SortTrait* trait, unsigned int le
     replacements["MIN_KEY"] = trait->getMinKey();
     replacements["MAX_KEY"] = trait->getMaxKey();
     replacements["MAX_VALUE"] = trait->getMaxValue();
+    replacements["UNIFORM"] = (uniform ? "1" : "0");
     cl::Program program = context.createProgram(context.replaceStrings(OpenCLKernelSources::sort, replacements));
     shortListKernel = cl::Kernel(program, "sortShortList");
     shortList2Kernel = cl::Kernel(program, "sortShortList2");
     computeRangeKernel = cl::Kernel(program, "computeRange");
     assignElementsKernel = cl::Kernel(program, "assignElementsToBuckets");
+    assignElementsKernel = cl::Kernel(program, uniform ? "assignElementsToBuckets" : "assignElementsToBuckets2");
     computeBucketPositionsKernel = cl::Kernel(program, "computeBucketPositions");
     copyToBucketsKernel = cl::Kernel(program, "copyDataToBuckets");
     sortBucketsKernel = cl::Kernel(program, "sortBuckets");

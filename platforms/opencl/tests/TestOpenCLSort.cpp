@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -59,7 +59,7 @@ class SortTrait : public OpenCLSort::SortTrait {
     const char* getSortKey() const {return "value";}
 };
 
-void verifySorting(vector<float> array) {
+void verifySorting(vector<float> array, bool uniform) {
     // Sort the array.
 
     System system;
@@ -69,7 +69,7 @@ void verifySorting(vector<float> array) {
     context.initialize();
     OpenCLArray data(context, array.size(), sizeof(float), "sortData");
     data.upload(array);
-    OpenCLSort sort(context, new SortTrait(), array.size());
+    OpenCLSort sort(context, new SortTrait(), array.size(), uniform);
     sort.sort(data);
     vector<float> sorted;
     data.download(sorted);
@@ -93,7 +93,8 @@ void testUniformValues() {
     vector<float> array(10000);
     for (int i = 0; i < (int) array.size(); i++)
         array[i] = (float) genrand_real2(sfmt);
-    verifySorting(array);
+    verifySorting(array, true);
+    verifySorting(array, false);
 }
 
 void testLogValues() {
@@ -103,7 +104,8 @@ void testLogValues() {
     vector<float> array(10000);
     for (int i = 0; i < (int) array.size(); i++)
         array[i] = (float) log(genrand_real2(sfmt));
-    verifySorting(array);
+    verifySorting(array, true);
+    verifySorting(array, false);
 }
 
 void testShortList() {
@@ -113,7 +115,8 @@ void testShortList() {
     vector<float> array(500);
     for (int i = 0; i < (int) array.size(); i++)
         array[i] = (float) log(genrand_real2(sfmt));
-    verifySorting(array);
+    verifySorting(array, true);
+    verifySorting(array, false);
 }
 
 int main(int argc, char* argv[]) {

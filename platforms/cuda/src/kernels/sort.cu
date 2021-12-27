@@ -79,6 +79,7 @@ __global__ void sortShortList2(const DATA_TYPE* __restrict__ dataIn, DATA_TYPE* 
  */
 __global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int length, KEY_TYPE* __restrict__ range,
         unsigned int numBuckets, unsigned int* __restrict__ bucketOffset) {
+#if UNIFORM
     extern __shared__ KEY_TYPE minBuffer[];
     KEY_TYPE* maxBuffer = minBuffer+blockDim.x;
     KEY_TYPE minimum = MAX_KEY;
@@ -110,7 +111,8 @@ __global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int le
         range[0] = minimum;
         range[1] = maximum;
     }
-    
+#endif
+
     // Clear the bucket counters in preparation for the next kernel.
 
     for (unsigned int index = threadIdx.x; index < numBuckets; index += blockDim.x)
@@ -118,7 +120,7 @@ __global__ void computeRange(const DATA_TYPE* __restrict__ data, unsigned int le
 }
 
 /**
- * Assign elements to buckets.
+ * Assign elements to buckets.  This version is optimized for uniformly distributed data.
  */
 __global__ void assignElementsToBuckets(const DATA_TYPE* __restrict__ data, unsigned int length, unsigned int numBuckets, const KEY_TYPE* __restrict__ range,
         unsigned int* __restrict__ bucketOffset, unsigned int* __restrict__ bucketOfElement, unsigned int* __restrict__ offsetInBucket) {
@@ -128,6 +130,85 @@ __global__ void assignElementsToBuckets(const DATA_TYPE* __restrict__ data, unsi
     for (unsigned int index = blockDim.x*blockIdx.x+threadIdx.x; index < length; index += blockDim.x*gridDim.x) {
         float key = (float) getValue(data[index]);
         unsigned int bucketIndex = min((unsigned int) ((key-minValue)/bucketWidth), numBuckets-1);
+        offsetInBucket[index] = atomicAdd(&bucketOffset[bucketIndex], 1);
+        bucketOfElement[index] = bucketIndex;
+    }
+}
+
+/**
+ * Assign elements to buckets.  This version is optimized for non-uniformly distributed data.
+ */
+__global__ void assignElementsToBuckets2(const DATA_TYPE* __restrict__ data, unsigned int length, unsigned int numBuckets, const KEY_TYPE* __restrict__ range,
+        unsigned int* __restrict__ bucketOffset, unsigned int* __restrict__ bucketOfElement, unsigned int* __restrict__ offsetInBucket) {
+    // Load 64 datapoints and sort them to get an estimate of the data distribution.
+
+    __shared__ KEY_TYPE elements[64];
+    if (threadIdx.x < 64) {
+        int index = (int) (threadIdx.x*length/64.0);
+        elements[threadIdx.x] = getValue(data[index]);
+    }
+    __syncthreads();
+    for (unsigned int k = 2; k <= 64; k *= 2) {
+        for (unsigned int j = k/2; j > 0; j /= 2) {
+            if (threadIdx.x < 64) {
+                int ixj = threadIdx.x^j;
+                if (ixj > threadIdx.x) {
+                    KEY_TYPE value1 = elements[threadIdx.x];
+                    KEY_TYPE value2 = elements[ixj];
+                    bool ascending = (threadIdx.x&k) == 0;
+                    KEY_TYPE lowKey = (ascending ? value1 : value2);
+                    KEY_TYPE highKey = (ascending ? value2 : value1);
+                    if (lowKey > highKey) {
+                        elements[threadIdx.x] = value2;
+                        elements[ixj] = value1;
+                    }
+                }
+            }
+            __syncthreads();
+        }
+    }
+
+    // Create a function composed of linear segments mapping data values to bucket indices.
+
+    __shared__ float segmentLowerBound[9];
+    __shared__ float segmentBaseIndex[9];
+    __shared__ float segmentIndexScale[9];
+    if (threadIdx.x == 0) {
+        segmentLowerBound[0] = elements[0]-0.2f*(elements[5]-elements[0]);
+        segmentLowerBound[1] = elements[5];
+        segmentLowerBound[2] = elements[10];
+        segmentLowerBound[3] = elements[20];
+        segmentLowerBound[4] = elements[30];
+        segmentLowerBound[5] = elements[40];
+        segmentLowerBound[6] = elements[50];
+        segmentLowerBound[7] = elements[60];
+        segmentLowerBound[8] = elements[63]+0.2f*(elements[63]-elements[58]);
+        segmentBaseIndex[0] = numBuckets/16;
+        segmentBaseIndex[1] = 3*numBuckets/16;
+        segmentBaseIndex[2] = 5*numBuckets/16;
+        segmentBaseIndex[3] = 7*numBuckets/16;
+        segmentBaseIndex[4] = 9*numBuckets/16;
+        segmentBaseIndex[5] = 11*numBuckets/16;
+        segmentBaseIndex[6] = 13*numBuckets/16;
+        segmentBaseIndex[7] = 15*numBuckets/16;
+        segmentBaseIndex[8] = numBuckets;
+        for (int i = 0; i < 8; i++)
+            if (segmentLowerBound[i+1] == segmentLowerBound[i])
+                segmentIndexScale[i] = 0;
+            else
+                segmentIndexScale[i] = (segmentBaseIndex[i+1]-segmentBaseIndex[i])/(segmentLowerBound[i+1]-segmentLowerBound[i]);
+    }
+    __syncthreads();
+
+    // Assign elements to buckets.
+
+    for (unsigned int index = blockDim.x*blockIdx.x+threadIdx.x; index < length; index += blockDim.x*gridDim.x) {
+        float key = (float) getValue(data[index]);
+        int segment;
+        for (segment = 0; segment < 7 && key > segmentLowerBound[segment+1]; segment++)
+            ;
+        unsigned int bucketIndex = segmentBaseIndex[segment]+(key-segmentLowerBound[segment])*segmentIndexScale[segment];
+        bucketIndex = min(max(0, bucketIndex), numBuckets-1);
         offsetInBucket[index] = atomicAdd(&bucketOffset[bucketIndex], 1);
         bucketOfElement[index] = bucketIndex;
     }
