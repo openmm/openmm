@@ -15,7 +15,7 @@ KERNEL void computeParameters(GLOBAL mixed* RESTRICT energyBuffer, int includeSe
     
     for (int i = GLOBAL_ID; i < numAtoms; i += GLOBAL_SIZE) {
         float4 params = baseParticleParams[i];
-#ifdef HAS_OFFSETS
+#ifdef HAS_PARTICLE_OFFSETS
         int start = particleOffsetIndices[i], end = particleOffsetIndices[i+1];
         for (int j = start; j < end; j++) {
             float4 offset = particleParamOffsets[j];
@@ -47,7 +47,7 @@ KERNEL void computeParameters(GLOBAL mixed* RESTRICT energyBuffer, int includeSe
 #ifdef HAS_EXCEPTIONS
     for (int i = GLOBAL_ID; i < numExceptions; i += GLOBAL_SIZE) {
         float4 params = baseExceptionParams[i];
-#ifdef HAS_OFFSETS
+#ifdef HAS_EXCEPTION_OFFSETS
         int start = exceptionOffsetIndices[i], end = exceptionOffsetIndices[i+1];
         for (int j = start; j < end; j++) {
             float4 offset = exceptionParamOffsets[j];

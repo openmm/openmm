@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -675,6 +675,10 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
+    if (force.getNumParticleParameterOffsets() > 0)
+        paramsDefines["HAS_PARTICLE_OFFSETS"] = "1";
+    if (force.getNumExceptionParameterOffsets() > 0)
+        paramsDefines["HAS_EXCEPTION_OFFSETS"] = "1";
     if (usePosqCharges)
         paramsDefines["USE_POSQ_CHARGES"] = "1";
     if (doLJPME)
