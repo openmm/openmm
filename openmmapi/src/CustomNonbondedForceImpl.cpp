@@ -131,6 +131,8 @@ void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
                 throw OpenMMException(msg.str());
             }
     }
+    if (owner.getNumEnergyParameterDerivatives() > 0 && owner.getNumComputedValues() > 0)
+        throw OpenMMException("CustomNonbondedForce: Cannot compute parameter derivatives for a force that uses computed values.");
 
     kernel.getAs<CalcCustomNonbondedForceKernel>().initialize(context.getSystem(), owner);
 }
