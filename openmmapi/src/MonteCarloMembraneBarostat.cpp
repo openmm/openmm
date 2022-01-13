@@ -56,7 +56,7 @@ void MonteCarloMembraneBarostat::setDefaultSurfaceTension(double surfaceTension)
 }
 
 void MonteCarloMembraneBarostat::setFrequency(int freq) {
-    if (freq <= 0)
+    if (freq < 0)
         throw OpenMMException("Frequency must be positive");
     frequency = freq;
 }
