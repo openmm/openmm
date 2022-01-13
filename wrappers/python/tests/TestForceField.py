@@ -1217,6 +1217,53 @@ self.scriptExecuted = True
         self.assertAlmostEqual(1547.011267801862, energies['NonbondedForce'], 4)
         self.assertAlmostEqual(1919.6846822348361, sum(list(energies.values())), 3)
 
+    def test_CustomNonbondedGenerator(self):
+        """ Test the CustomNonbondedForce generator"""
+        pdb = PDBFile('systems/ions.pdb')
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="SOD" class="SOD" element="Na" mass="22.98977"/>
+  <Type name="CLA" class="CLA" element="Cl" mass="35.45"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="CLA">
+   <Atom name="CLA" type="CLA"/>
+  </Residue>
+  <Residue name="SOD">
+   <Atom name="SOD" type="SOD"/>
+  </Residue>
+ </Residues>
+ <CustomNonbondedForce energy="scale*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=halfSig1+halfSig2; epsilon=rootEps1*rootEps2" bondCutoff="3">
+  <GlobalParameter name="scale" defaultValue="4"/>
+  <PerParticleParameter name="sigma"/>
+  <PerParticleParameter name="epsilon"/>
+  <ComputedValue name="halfSig" expression="0.5*sigma"/>
+  <ComputedValue name="rootEps" expression="sqrt(epsilon)"/>
+  <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
+  <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
+ </CustomNonbondedForce>
+</ForceField> """
+        ff = ForceField(StringIO(xml))
+        system = ff.createSystem(pdb.topology)
+        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energy1 = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+
+        # See if it matches an equivalent NonbondedForce.
+        
+        system = System()
+        system.addParticle(1.0)
+        system.addParticle(1.0)
+        f = NonbondedForce()
+        f.addParticle(0, 0.404468018036, 0.6276)
+        f.addParticle(0, 0.251367073323, 0.1962296)
+        system.addForce(f)
+        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energy2 = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        self.assertAlmostEqual(energy1, energy2)
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 
