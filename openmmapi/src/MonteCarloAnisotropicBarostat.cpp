@@ -50,7 +50,7 @@ void MonteCarloAnisotropicBarostat::setDefaultPressure(const Vec3& pressure) {
 
 void MonteCarloAnisotropicBarostat::setFrequency(int freq) {
     if (freq < 0)
-        throw OpenMMException("Frequency must be positive");
+        throw OpenMMException("Frequency cannot be negative");
     frequency = freq;
 }
 
