@@ -517,8 +517,11 @@ class PrmtopLoader(object):
             return self._numCMAP
         except AttributeError:
             pass
-        if "CMAP_COUNT" in self._raw_data.keys():
-            self._numCMAP=int(self._raw_data["CMAP_COUNT"][1])
+        flag = 'CMAP_COUNT'
+        if flag not in self._raw_data and self.chamber:
+            flag = 'CHARMM_CMAP_COUNT'
+        if flag in self._raw_data:
+            self._numCMAP = int(self._raw_data[flag][1])
             return self._numCMAP
         return 0
 
@@ -528,14 +531,19 @@ class PrmtopLoader(object):
             return self._cmapResolution
         except AttributeError:
             pass
-        if "CMAP_RESOLUTION" in self._raw_data.keys():
-            self._cmapResolution=self._raw_data["CMAP_RESOLUTION"]
+        flag = 'CMAP_RESOLUTION'
+        if flag not in self._raw_data and self.chamber:
+            flag = 'CHARMM_CMAP_RESOLUTION'
+        if flag in self._raw_data:
+            self._cmapResolution=self._raw_data[flag]
             return self._cmapResolution
         return 0
 
     def getCMAPParameters(self, index):
         """Return list of CMAP energy values"""
-        flag="CMAP_PARAMETER_{:02d}".format(index)
+        flag = "CMAP_PARAMETER_{:02d}".format(index)
+        if flag not in self._raw_data and self.chamber:
+            flag = "CHARMM_CMAP_PARAMETER_{:02d}".format(index)
         return [float(pointer) for pointer in self._raw_data[flag]]
 
     def getCMAPDihedrals(self):
@@ -544,7 +552,10 @@ class PrmtopLoader(object):
             return self._cmapList
         except AttributeError:
             pass
-        cmapPointers = self._raw_data["CMAP_INDEX"]
+        flag = 'CMAP_INDEX'
+        if flag not in self._raw_data and self.chamber:
+            flag = 'CHARMM_CMAP_INDEX'
+        cmapPointers = self._raw_data[flag]
         self._cmapList=[]
         forceConstConversionFactor = (units.kilocalorie_per_mole).conversion_factor_to(units.kilojoule_per_mole)
         for ii in range(0,len(cmapPointers),6):
