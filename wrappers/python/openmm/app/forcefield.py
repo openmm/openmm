@@ -4653,7 +4653,12 @@ class AmoebaStretchBendGenerator(object):
                        raise ValueError(outputString)
 
                     else:
-                        force.addBond((angle[0], angle[1], angle[2]), (bondAB, bondCB, angleDict['idealAngle']/radian, self.k1[i], self.k2[i]))
+                        if type1 in types1 and type3 in types3:
+                            k1, k2 = self.k1[i], self.k2[i]
+                        else:
+                            k1, k2 = self.k2[i], self.k1[i]
+                            
+                        force.addBond((angle[0], angle[1], angle[2]), (bondAB, bondCB, angleDict['idealAngle']/radian, k1, k2))
 
                     break
 
