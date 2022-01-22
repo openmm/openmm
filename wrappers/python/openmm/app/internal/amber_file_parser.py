@@ -614,18 +614,14 @@ class PrmtopLoader(object):
                 except ZeroDivisionError:
                     rMin = 1
                     epsilon = 0
-                if self.chamber:
-                    iScee = 1.0
-                    iScnb = 1.0
-                else:
-                    try:
-                        iScee = float(self._raw_data['SCEE_SCALE_FACTOR'][iidx])
-                    except KeyError:
-                        iScee = 1.2
-                    try:
-                        iScnb = float(self._raw_data['SCNB_SCALE_FACTOR'][iidx])
-                    except KeyError:
-                        iScnb = 2.0
+                try:
+                    iScee = float(self._raw_data['SCEE_SCALE_FACTOR'][iidx])
+                except KeyError:
+                    iScee = 1.0 if self.chamber else 1.2
+                try:
+                    iScnb = float(self._raw_data['SCNB_SCALE_FACTOR'][iidx])
+                except KeyError:
+                    iScnb = 1.0 if self.chamber else 2.0
                 returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb))
         return returnList
 
