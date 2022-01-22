@@ -12,7 +12,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2014 Stanford University and the Authors.
+Portions copyright (c) 2012-2022 Stanford University and the Authors.
 Authors: Randall J. Radmer, John D. Chodera, Peter Eastman
 Contributors: Christoph Klein, Michael R. Shirts, Jason Swails, Kye Won Wang
 
@@ -42,7 +42,7 @@ from __future__ import absolute_import, print_function
 
 import os
 import re
-from math import ceil, cos, sin, asin, sqrt
+from math import ceil, cos, sin, asin, sqrt, pi
 import warnings
 
 try:
@@ -128,10 +128,6 @@ class PrmtopLoader(object):
                         tag, self._prmtopVersion = line.rstrip().split(None, 1)
                     elif line.startswith('%FLAG'):
                         tag, flag = line.rstrip().split(None, 1)
-                        if flag == 'CTITLE':
-                            raise TypeError('CHAMBER-style topology files are not supported here. '
-                                            'Consider using the CHARMM files directly with CharmmPsfFile '
-                                            'or ParmEd (where CHAMBER topologies are supported)')
                         self._flags.append(flag)
                         self._raw_data[flag] = []
                     elif line.startswith('%FORMAT'):
@@ -139,8 +135,12 @@ class PrmtopLoader(object):
                         index0=format.index('(')
                         index1=format.index(')')
                         format = format[index0+1:index1]
-                        m = FORMAT_RE_PATTERN.search(format)
-                        self._raw_format[self._flags[-1]] = (format, m.group(1), m.group(2), int(m.group(3)), m.group(4))
+                        try:
+                            m = FORMAT_RE_PATTERN.search(format)
+                            self._raw_format[self._flags[-1]] = (format, m.group(1), m.group(2), int(m.group(3)), m.group(4))
+                        except:
+                            # We couldn't parse the format, so just treat the whole line as a single string.
+                            self._raw_format[self._flags[-1]] = (format, 1, 'a', 80, '')
                     elif line.startswith('%COMMENT'):
                         continue
                 elif self._flags \
@@ -429,6 +429,30 @@ class PrmtopLoader(object):
                                 float(angleEquil[iType])))
         return self._angleList
 
+    def getUreyBradleys(self):
+        """Return list of atom pairs, K, and Rmin for each Urey-Bradley term"""
+        try:
+            return self._ureyBradleyList
+        except AttributeError:
+            pass
+        self._ureyBradleyList = []
+        if 'CHARMM_UREY_BRADLEY' in self._raw_data:
+            ureyBradleyPointers = self._raw_data["CHARMM_UREY_BRADLEY"]
+            forceConstant = self._raw_data["CHARMM_UREY_BRADLEY_FORCE_CONSTANT"]
+            equilValue = self._raw_data["CHARMM_UREY_BRADLEY_EQUIL_VALUE"]
+            forceConstConversionFactor = (units.kilocalorie_per_mole/(units.angstrom*units.angstrom)).conversion_factor_to(units.kilojoule_per_mole/(units.nanometer*units.nanometer))
+            lengthConversionFactor = units.angstrom.conversion_factor_to(units.nanometer)
+            for ii in range(0, len(ureyBradleyPointers), 3):
+                 if int(ureyBradleyPointers[ii]) < 0 or int(ureyBradleyPointers[ii+1]) < 0:
+                     raise Exception("Found negative Urey-Bradley atom pointers %s"
+                                     % ((ureyBradleyPointers[ii], ureyBradleyPointers[ii+1])))
+                 iType = int(ureyBradleyPointers[ii+2])-1
+                 self._ureyBradleyList.append((int(ureyBradleyPointers[ii])-1,
+                                    int(ureyBradleyPointers[ii+1])-1,
+                                    float(forceConstant[iType])*forceConstConversionFactor,
+                                    float(equilValue[iType])*lengthConversionFactor))
+        return self._ureyBradleyList
+
     def getDihedrals(self):
         """Return list of atom quads, K, phase and periodicity for each dihedral angle"""
         try:
@@ -459,14 +483,45 @@ class PrmtopLoader(object):
                                 int(0.5+float(periodicity[iType]))))
         return self._dihedralList
 
+    def getImpropers(self):
+        """Return list of atom quads, K, and phase for each improper torsion"""
+        try:
+            return self._improperList
+        except AttributeError:
+            pass
+        self._improperList = []
+        if 'CHARMM_IMPROPERS' in self._raw_data:
+            forceConstant = self._raw_data["CHARMM_IMPROPER_FORCE_CONSTANT"]
+            phase = self._raw_data["CHARMM_IMPROPER_PHASE"]
+            improperPointers = self._raw_data["CHARMM_IMPROPERS"]
+            forceConstConversionFactor = (units.kilocalorie_per_mole).conversion_factor_to(units.kilojoule_per_mole)
+            for ii in range(0,len(improperPointers),5):
+                 if int(improperPointers[ii])<0 or int(improperPointers[ii+1])<0:
+                     raise Exception("Found negative improper atom pointers %s"
+                                     % ((improperPointers[ii],
+                                        improperPointers[ii+1],
+                                        improperPointers[ii+2],
+                                        improperPointers[ii+3]),))
+                 iType = int(improperPointers[ii+4])-1
+                 self._improperList.append((int(improperPointers[ii])-1,
+                                    int(improperPointers[ii+1])-1,
+                                    abs(int(improperPointers[ii+2]))-1,
+                                    abs(int(improperPointers[ii+3]))-1,
+                                    float(forceConstant[iType])*forceConstConversionFactor,
+                                    float(phase[iType])))
+        return self._improperList
+
     def getNumMaps(self):
         """Return number of CMAPs. Return 0 if CMAP does not exist"""
         try:
             return self._numCMAP
         except AttributeError:
             pass
-        if "CMAP_COUNT" in self._raw_data.keys():
-            self._numCMAP=int(self._raw_data["CMAP_COUNT"][1])
+        flag = 'CMAP_COUNT'
+        if flag not in self._raw_data and self.chamber:
+            flag = 'CHARMM_CMAP_COUNT'
+        if flag in self._raw_data:
+            self._numCMAP = int(self._raw_data[flag][1])
             return self._numCMAP
         return 0
 
@@ -476,14 +531,19 @@ class PrmtopLoader(object):
             return self._cmapResolution
         except AttributeError:
             pass
-        if "CMAP_RESOLUTION" in self._raw_data.keys():
-            self._cmapResolution=self._raw_data["CMAP_RESOLUTION"]
+        flag = 'CMAP_RESOLUTION'
+        if flag not in self._raw_data and self.chamber:
+            flag = 'CHARMM_CMAP_RESOLUTION'
+        if flag in self._raw_data:
+            self._cmapResolution=self._raw_data[flag]
             return self._cmapResolution
         return 0
 
     def getCMAPParameters(self, index):
         """Return list of CMAP energy values"""
-        flag="CMAP_PARAMETER_{:02d}".format(index)
+        flag = "CMAP_PARAMETER_{:02d}".format(index)
+        if flag not in self._raw_data and self.chamber:
+            flag = "CHARMM_CMAP_PARAMETER_{:02d}".format(index)
         return [float(pointer) for pointer in self._raw_data[flag]]
 
     def getCMAPDihedrals(self):
@@ -492,7 +552,10 @@ class PrmtopLoader(object):
             return self._cmapList
         except AttributeError:
             pass
-        cmapPointers = self._raw_data["CMAP_INDEX"]
+        flag = 'CMAP_INDEX'
+        if flag not in self._raw_data and self.chamber:
+            flag = 'CHARMM_CMAP_INDEX'
+        cmapPointers = self._raw_data[flag]
         self._cmapList=[]
         forceConstConversionFactor = (units.kilocalorie_per_mole).conversion_factor_to(units.kilojoule_per_mole)
         for ii in range(0,len(cmapPointers),6):
@@ -521,68 +584,45 @@ class PrmtopLoader(object):
                           +self._raw_data["DIHEDRALS_WITHOUT_HYDROGEN"]
         returnList=[]
         charges=self.getCharges()
-        try:
-            nonbondTerms = self.getNonbondTerms()
-        except NbfixPresent:
-            # We need to do the unit conversions here, since getNonbondTerms
-            # never finished and it has unit conversions in there
-            length_conv = units.angstrom.conversion_factor_to(units.nanometers)
-            ene_conv = units.kilocalories_per_mole.conversion_factor_to(
-                                units.kilojoules_per_mole)
+        length_conv = units.angstrom.conversion_factor_to(units.nanometers)
+        ene_conv = units.kilocalories_per_mole.conversion_factor_to(
+                            units.kilojoules_per_mole)
+        if self.chamber:
+            parm_acoef = [float(x) for x in self._raw_data['LENNARD_JONES_14_ACOEF']]
+            parm_bcoef = [float(x) for x in self._raw_data['LENNARD_JONES_14_BCOEF']]
+        else:
             parm_acoef = [float(x) for x in self._raw_data['LENNARD_JONES_ACOEF']]
             parm_bcoef = [float(x) for x in self._raw_data['LENNARD_JONES_BCOEF']]
-            nbidx = [int(x) for x in self._raw_data['NONBONDED_PARM_INDEX']]
-            numTypes = self.getNumTypes()
-            atomTypeIndexes=self._getAtomTypeIndexes()
-            for ii in range(0, len(dihedralPointers), 5):
-                if int(dihedralPointers[ii+2])>0 and int(dihedralPointers[ii+3])>0:
-                    iAtom = int(dihedralPointers[ii])//3
-                    lAtom = int(dihedralPointers[ii+3])//3
-                    iidx = int(dihedralPointers[ii+4]) - 1
-                    chargeProd = charges[iAtom]*charges[lAtom]
-                    typ1 = atomTypeIndexes[iAtom] - 1
-                    typ2 = atomTypeIndexes[lAtom] - 1
-                    idx = nbidx[numTypes*typ1+typ2] - 1
-                    if idx < 0: continue
-                    a = parm_acoef[idx]
-                    b = parm_bcoef[idx]
-                    try:
-                        epsilon = b * b / (4 * a) * ene_conv
-                        rMin = (2 * a / b) ** (1/6.0) * length_conv
-                    except ZeroDivisionError:
-                        rMin = 1
-                        epsilon = 0
-                    try:
-                        iScee = float(self._raw_data['SCEE_SCALE_FACTOR'][iidx])
-                    except KeyError:
-                        iScee = 1.2
-                    try:
-                        iScnb = float(self._raw_data['SCNB_SCALE_FACTOR'][iidx])
-                    except KeyError:
-                        iScnb = 2.0
-                    returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb))
-        else:
-            # This block gets hit if NbfixPresent is _not_ caught
-            for ii in range(0,len(dihedralPointers),5):
-                if int(dihedralPointers[ii+2])>0 and int(dihedralPointers[ii+3])>0:
-                    iAtom = int(dihedralPointers[ii])//3
-                    lAtom = int(dihedralPointers[ii+3])//3
-                    iidx = int(dihedralPointers[ii+4]) - 1
-                    chargeProd = charges[iAtom]*charges[lAtom]
-                    (rVdwI, epsilonI) = nonbondTerms[iAtom]
-                    (rVdwL, epsilonL) = nonbondTerms[lAtom]
-                    rMin = (rVdwI+rVdwL)
-                    epsilon = sqrt(epsilonI*epsilonL)
-                    try:
-                        iScee = float(self._raw_data["SCEE_SCALE_FACTOR"][iidx])
-                    except KeyError:
-                        iScee = 1.2
-                    try:
-                        iScnb = float(self._raw_data["SCNB_SCALE_FACTOR"][iidx])
-                    except KeyError:
-                        iScnb = 2.0
-
-                    returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb))
+        nbidx = [int(x) for x in self._raw_data['NONBONDED_PARM_INDEX']]
+        numTypes = self.getNumTypes()
+        atomTypeIndexes=self._getAtomTypeIndexes()
+        for ii in range(0, len(dihedralPointers), 5):
+            if int(dihedralPointers[ii+2])>0 and int(dihedralPointers[ii+3])>0:
+                iAtom = int(dihedralPointers[ii])//3
+                lAtom = int(dihedralPointers[ii+3])//3
+                iidx = int(dihedralPointers[ii+4]) - 1
+                chargeProd = charges[iAtom]*charges[lAtom]
+                typ1 = atomTypeIndexes[iAtom] - 1
+                typ2 = atomTypeIndexes[lAtom] - 1
+                idx = nbidx[numTypes*typ1+typ2] - 1
+                if idx < 0: continue
+                a = parm_acoef[idx]
+                b = parm_bcoef[idx]
+                try:
+                    epsilon = b * b / (4 * a) * ene_conv
+                    rMin = (2 * a / b) ** (1/6.0) * length_conv
+                except ZeroDivisionError:
+                    rMin = 1
+                    epsilon = 0
+                try:
+                    iScee = float(self._raw_data['SCEE_SCALE_FACTOR'][iidx])
+                except KeyError:
+                    iScee = 1.0 if self.chamber else 1.2
+                try:
+                    iScnb = float(self._raw_data['SCNB_SCALE_FACTOR'][iidx])
+                except KeyError:
+                    iScnb = 1.0 if self.chamber else 2.0
+                returnList.append((iAtom, lAtom, chargeProd, rMin, epsilon, iScee, iScnb))
         return returnList
 
     def getExcludedAtoms(self):
@@ -750,6 +790,15 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsNoH():
             force.addBond(iAtom, jAtom, rMin, 2*k)
     system.addForce(force)
+    
+    # Add Urey-Bradley terms.
+    if len(prmtop.getUreyBradleys()) > 0:
+        if verbose: print("Adding Urey-Bradley terms...")
+        force = mm.HarmonicBondForce()
+        force.setName('UreyBradleyForce')
+        for (iAtom, jAtom, k, rMin) in prmtop.getUreyBradleys():
+            force.addBond(iAtom, jAtom, rMin, 2*k)
+        system.addForce(force)
 
     # Add harmonic angles.
     if verbose: print("Adding angles...")
@@ -795,6 +844,17 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
     for (iAtom, jAtom, kAtom, lAtom, forceConstant, phase, periodicity) in prmtop.getDihedrals():
         force.addTorsion(iAtom, jAtom, kAtom, lAtom, periodicity, phase, forceConstant)
     system.addForce(force)
+
+    # Add impropers.
+    if len(prmtop.getImpropers()) > 0:
+        if verbose: print("Adding impropers...")
+        force = mm.CustomTorsionForce(f'k*min(dtheta, 2*{pi}-dtheta)^2; dtheta = abs(theta-theta0)')
+        force.addPerTorsionParameter('k')
+        force.addPerTorsionParameter('theta0')
+        force.setName('ImproperTorsionForce')
+        for (iAtom, jAtom, kAtom, lAtom, forceConstant, phase) in prmtop.getImpropers():
+            force.addTorsion(iAtom, jAtom, kAtom, lAtom, (forceConstant, phase))
+        system.addForce(force)
 
     # Add CMAP info.
     ## Get mapSize and Resolutions

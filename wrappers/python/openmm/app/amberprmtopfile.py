@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2022 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -220,10 +220,6 @@ class AmberPrmtopFile(object):
         System
             the newly created System
         """
-        if self._prmtop.chamber:
-            raise ValueError("CHAMBER-style topology file detected. CHAMBER "
-                             "topologies are not supported -- use the native "
-                             "CHARMM files directly.")
         methodMap = {ff.NoCutoff:'NoCutoff',
                      ff.CutoffNonPeriodic:'CutoffNonPeriodic',
                      ff.CutoffPeriodic:'CutoffPeriodic',
