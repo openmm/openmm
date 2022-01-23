@@ -446,6 +446,7 @@ jobs:
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success') }}
         run: |
           @echo on
+          dir /conda-envs\build\Lib\site-packages\openmm
           python -m openmm.testInstallation
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build\python\tests
@@ -564,6 +565,7 @@ jobs:
         run: |
           set -x
           echo 'APT::Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update
           sudo apt-get install -y \
             latexmk \
             texlive-latex-recommended \
