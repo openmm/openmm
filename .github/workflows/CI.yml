@@ -446,7 +446,7 @@ jobs:
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success') }}
         run: |
           @echo on
-          dir /conda-envs\build\Lib\site-packages\openmm
+          dir D:\conda-envs\build\lib\site-packages\openmm
           python -m openmm.testInstallation
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build\python\tests
@@ -666,6 +666,7 @@ jobs:
             sep='',                               # Concatenate the above strings exactly
             end=''                                # No newline at end of print()
           )")
+          echo "$SKIP_REGEX"
           for d in api-c++ api-python developerguide userguide; do
             echo "::group:: Check ${d}"
             npx linkinator ./${d}/ --recurse --timeout=20000 --skip "$SKIP_REGEX" --server-root ./build/api-docs --verbosity error
