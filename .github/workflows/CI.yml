@@ -447,6 +447,8 @@ jobs:
         run: |
           @echo on
           dir D:\conda-envs\build\lib\site-packages\openmm
+          dumpbin /dependents D:\conda-envs\build\lib\site-packages\openmm\_openmm.cp39-win_amd64.pyd
+          ldd D:\conda-envs\build\lib\site-packages\openmm\_openmm.cp39-win_amd64.pyd
           python -m openmm.testInstallation
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build\python\tests
@@ -669,12 +671,12 @@ jobs:
           echo "$SKIP_REGEX"
           for d in api-c++ api-python developerguide userguide; do
             echo "::group:: Check ${d}"
-            npx linkinator ./${d}/ --recurse --timeout=20000 --skip "$SKIP_REGEX" --server-root ./build/api-docs --verbosity error
+            npx linkinator@3.0.0 ./${d}/ --recurse --timeout=20000 --skip "$SKIP_REGEX" --server-root ./build/api-docs --verbosity error
             ((exitcode+=$?))
             echo "::endgroup::"
           done
           echo "::group:: Check README"
-          npx linkinator ./README.md --markdown --skip "$SKIP_REGEX"
+          npx linkinator@3.0.0 ./README.md --markdown --skip "$SKIP_REGEX"
           ((exitcode+=$?))
           echo "::endgroup::"
           exit $exitcode
