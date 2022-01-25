@@ -232,6 +232,54 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
 
     return system, positions
 
+def serializeTest(directory=None, system=None, integrator=None, state=None, coredata=None, metadata=None):
+    """Serialize test system for benchmarking on Folding@home.
+
+    Parameters
+    ----------
+    directory : str
+        Directory to write serialized test XML files
+    system : openmm.System
+        The System to serialize
+    integrator : openmm.Integrator
+        The Integrator to serialize
+    state : openmm.State
+        The State to serialize
+    coredata : dict
+        Core parameters to serialize to XML
+    metadata : dict
+        Metadata to dump to YAML
+    """
+    import os
+    os.makedirs(directory, exist_ok=True)
+    import openmm
+    def serialize(obj, filename):
+        if filename.endswith('.bz2'):
+            import bz2
+            with bz2.open(filename, 'wt') as outfile:
+                outfile.write(openmm.XmlSerializer.serialize(obj))
+        elif filename.endswith('.gz'):
+            import gzip
+            with gzip.open(filename, 'wt') as outfile:
+                outfile.write(openmm.XmlSerializer.serialize(obj))
+        else:
+            with open(filename, 'wt') as outfile:
+                outfile.write(openmm.XmlSerializer.serialize(obj))
+
+    serialize(system, os.path.join(directory, 'system.xml.bz2'))
+    serialize(integrator, os.path.join(directory, 'integrator.xml.bz2'))
+    serialize(state, os.path.join(directory, 'state.xml.bz2'))
+
+    with open(os.path.join(directory, 'core.xml'), 'wt') as outfile:
+        outfile.write('<config>\n')
+        for key, value in coredata.items():
+            outfile.write(f'    <{key} v="{value}"/>\n')
+        outfile.write('</config>\n')
+
+    import yaml
+    with open(os.path.join(directory, 'metadata.yaml'), 'wt') as outfile:
+        outfile.write(yaml.dump(metadata))
+
 def runOneTest(testName, options):
     """Perform a single benchmarking simulation."""
 
@@ -340,20 +388,59 @@ def runOneTest(testName, options):
         mm.LocalEnergyMinimizer.minimize(context, 100*unit.kilojoules_per_mole/unit.nanometer)
     context.setVelocitiesToTemperature(temperature)
 
+    # Take one step (to enforce constraints and trigger kernel compulation) and store the initial state
+    integ.step(1)
+    state = context.getState(getPositions=True, getVelocities=True, getEnergy=True, getForces=True, getParameters=True)
+
     # Time integration, ensuring we trigger kernel compilation before we start timing
     steps = 20
     while True:
-        time = timeIntegration(context, steps, initialSteps)
-        if time >= 0.5*options.seconds:
+        elapsed_time = timeIntegration(context, steps, initialSteps)
+        if elapsed_time >= 0.5*options.seconds:
             break
-        if time < 0.5:
-            steps = int(steps*1.0/time) # Integrate enough steps to get a reasonable estimate for how many we'll need.
+        if elapsed_time < 0.5:
+            steps = int(steps*1.0/elapsed_time) # Integrate enough steps to get a reasonable estimate for how many we'll need.
         else:
-            steps = int(steps*options.seconds/time)
+            steps = int(steps*options.seconds/elapsed_time)
     test_result['steps'] = steps
-    test_result['elapsed_time'] = time
-    ns_per_day = (dt*steps*86400/time).value_in_unit(unit.nanoseconds)
+    test_result['elapsed_time'] = elapsed_time
+    time_per_step = elapsed_time * unit.seconds / steps 
+    ns_per_day = (integ.getStepSize() / time_per_step) / (unit.nanoseconds/unit.day)
     test_result['ns_per_day'] = ns_per_day
+
+    # Serialize XML files for Folding@home benchmark if requested
+    if options.serialize:
+        wu_duration = 5*unit.minutes
+        ncheckpoints_per_wu = 2
+        nsteps_per_wu = int(wu_duration / time_per_step)
+
+        coredata = dict()
+        coredata['checkpointFreq'] = int(nsteps_per_wu / ncheckpoints_per_wu)
+        coredata['numSteps'] = ncheckpoints_per_wu * coredata['checkpointFreq']
+        coredata['xtcFreq'] = coredata['numSteps']
+        coredata['precision'] = options.precision
+        coredata['xtcAtoms'] = 'solute'
+        
+        forces = { force.getName() : force for force in system.getForces() }
+        NONBONDED_METHODS = { 0 : 'NoCutoff', 1 : 'CutoffNonPeriodic', 2 : 'CutoffPeriodic', 3 : 'Ewald', 4 : 'PME', 5 : 'LJPME' }
+        if 'NonbondedForce' in forces:
+            nonbonded_method = NONBONDED_METHODS[forces['NonbondedForce'].getNonbondedMethod()]
+        else:
+            nonbonded_method = 'unknown'
+
+        metadata = {
+            'name' : testName,
+            'description' : f'OpenMM Benchmark Suite : {testName}',
+            'precision' : options.precision,
+            'num_atoms' : context.getSystem().getNumParticles(),
+            'nonbonded_method' : f'{nonbonded_method}',
+            'timestep' : integ.getStepSize() / unit.picoseconds,
+            'integrator' : f'{integ.__class__.__name__}',
+            'disableCheckpointStateTests' : 1, # disable checkpoint state tests
+            }
+
+        directory = os.path.join(options.serialize, f'{testName}-{options.precision}')
+        serializeTest(directory=directory, system=context.getSystem(), integrator=context.getIntegrator(), state=state, coredata=coredata, metadata=metadata)
 
     # Clean up
     del context, integ
@@ -384,6 +471,8 @@ parser.add_argument('--device', default=None, dest='device', help='device index 
 parser.add_argument('--precision', default=None, dest='precision', help=f'precision mode for CUDA or OpenCL: {PRECISIONS} [default: all]')
 parser.add_argument('--style', default='simple', dest='style', help='output style [default: simple]')
 parser.add_argument('--outfile', default=None, dest='outfile', help='output filename for benchmark logging (must end with .yaml or .json)')
+parser.add_argument('--serialize', default=None, dest='serialize', help='if specified, output serialized test systems for Folding@home or other uses')
+parser.add_argument('--verbose', default=False, action='store_true', dest='verbose', help='if specified, print verbose output')
 args = parser.parse_args()
 
 # Collect system information
@@ -461,6 +550,8 @@ if args.style == 'simple':
         try:
             runOneTest(test, args)
         except OpenMMException as e:
+            if args.verbose:
+                print(e)
             pass
 elif args.style == 'rich':
     from rich.live import Live
@@ -484,6 +575,8 @@ elif args.style == 'rich':
                 setattr(args, 'rich_live', live)
                 runOneTest(test, args)
             except OpenMMException as e:
+                if args.verbose:
+                    print(e)
                 pass
 else:
     raise ValueError(f"style {args.style} unkown; must be one of ['simple', 'rich']")
