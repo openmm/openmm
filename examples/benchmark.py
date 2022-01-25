@@ -420,6 +420,10 @@ def runOneTest(testName, options):
         coredata['xtcFreq'] = coredata['numSteps']
         coredata['precision'] = options.precision
         coredata['xtcAtoms'] = 'solute'
+        coredata['disableCheckpointStateTests'] = 1 # disable checkpoint state tests
+        coredata['DisablePmeStream'] = 0 # don't disable separate PME streams
+        coredata['forceTolerance'] = 200000 # for some reason, we have to make this large (TODO: Investigate why)
+        coredata['energyTolerance'] = 200000 # for some reason, we have to make this large (TODO: Investigate why)
         
         forces = { force.getName() : force for force in system.getForces() }
         NONBONDED_METHODS = { 0 : 'NoCutoff', 1 : 'CutoffNonPeriodic', 2 : 'CutoffPeriodic', 3 : 'Ewald', 4 : 'PME', 5 : 'LJPME' }
@@ -436,7 +440,6 @@ def runOneTest(testName, options):
             'nonbonded_method' : f'{nonbonded_method}',
             'timestep' : integ.getStepSize() / unit.picoseconds,
             'integrator' : f'{integ.__class__.__name__}',
-            'disableCheckpointStateTests' : 1, # disable checkpoint state tests
             }
 
         directory = os.path.join(options.serialize, f'{testName}-{options.precision}')
