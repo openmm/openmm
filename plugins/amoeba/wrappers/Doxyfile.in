@@ -607,10 +607,10 @@ EXCLUDE_SYMLINKS       = NO
 # against the file with absolute path, so to exclude all test directories 
 # for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       = */tests/* \
-                         */openmmapi/src/* \
-                         */internal/* \
-                         */.svn/* \
+EXCLUDE_PATTERNS       = @CMAKE_SOURCE_DIR@/*/tests/* \
+                         @CMAKE_SOURCE_DIR@/*/openmmapi/src/* \
+                         @CMAKE_SOURCE_DIR@/*/internal/* \
+                         @CMAKE_SOURCE_DIR@/*/.svn/* \
                          *amoebaKernels.h
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names 
