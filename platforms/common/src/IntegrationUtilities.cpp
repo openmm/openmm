@@ -602,7 +602,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     // Set arguments for constraint kernels.
 
     if (settleAtoms.isInitialized()) {
-        settlePosKernel->addArg(settleAtoms.getSize());
+        settlePosKernel->addArg((int) settleAtoms.getSize());
         settlePosKernel->addArg();
         settlePosKernel->addArg(context.getPosq());
         settlePosKernel->addArg(posDelta);
@@ -611,7 +611,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         settlePosKernel->addArg(settleParams);
         if (context.getUseMixedPrecision())
             settlePosKernel->addArg(context.getPosqCorrection());
-        settleVelKernel->addArg(settleAtoms.getSize());
+        settleVelKernel->addArg((int) settleAtoms.getSize());
         settleVelKernel->addArg();
         settleVelKernel->addArg(context.getPosq());
         settleVelKernel->addArg(posDelta);
@@ -622,7 +622,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
             settleVelKernel->addArg(context.getPosqCorrection());
     }
     if (shakeAtoms.isInitialized()) {
-        shakePosKernel->addArg(shakeAtoms.getSize());
+        shakePosKernel->addArg((int) shakeAtoms.getSize());
         shakePosKernel->addArg();
         shakePosKernel->addArg(context.getPosq());
         shakePosKernel->addArg(posDelta);
@@ -630,7 +630,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         shakePosKernel->addArg(shakeParams);
         if (context.getUseMixedPrecision())
             shakePosKernel->addArg(context.getPosqCorrection());
-        shakeVelKernel->addArg(shakeAtoms.getSize());
+        shakeVelKernel->addArg((int) shakeAtoms.getSize());
         shakeVelKernel->addArg();
         shakeVelKernel->addArg(context.getPosq());
         shakeVelKernel->addArg(context.getVelm());
@@ -755,7 +755,7 @@ void IntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumberSe
     random.initialize<mm_float4>(context, 4*context.getPaddedNumAtoms(), "random");
     randomSeed.initialize<mm_int4>(context, context.getNumThreadBlocks()*64, "randomSeed");
     randomPos = random.getSize();
-    randomKernel->addArg(random.getSize());
+    randomKernel->addArg((int) random.getSize());
     randomKernel->addArg(random);
     randomKernel->addArg(randomSeed);
 

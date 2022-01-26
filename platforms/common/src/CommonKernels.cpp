@@ -4734,7 +4734,7 @@ double CommonCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
             startIndicesKernel->execute(256, 256);
             copyPairsKernel->execute(maxNeighborPairs);
         }
-        int maxThreads = min(cc.getNumAtoms()*forceWorkgroupSize, cc.getEnergyBuffer().getSize());
+        int maxThreads = min(cc.getNumAtoms()*forceWorkgroupSize, (int) cc.getEnergyBuffer().getSize());
         forceKernel->execute(maxThreads, forceWorkgroupSize);
         if (nonbondedMethod != NoCutoff) {
             // Make sure there was enough memory for the neighbor list.
@@ -5290,7 +5290,7 @@ void CommonCalcCustomCVForceKernel::initialize(const System& system, const Custo
     copyForcesKernel->addArg(cc.getPaddedNumAtoms());
     addForcesKernel = program->createKernel("addForces");
     addForcesKernel->addArg(cc.getLongForceBuffer());
-    addForcesKernel->addArg(cc.getLongForceBuffer().getSize());
+    addForcesKernel->addArg((int) cc.getLongForceBuffer().getSize());
     for (int i = 0; i < numCVs; i++) {
         addForcesKernel->addArg();
         addForcesKernel->addArg();
@@ -6143,7 +6143,7 @@ std::pair<double, double> CommonIntegrateNoseHooverStepKernel::computeMaskedKine
 
         reduceEnergyKernel->addArg(energyBuffer);
         reduceEnergyKernel->addArg(kineticEnergyBuffer);
-        reduceEnergyKernel->addArg(energyBuffer.getSize());
+        reduceEnergyKernel->addArg((int) energyBuffer.getSize());
     }
 
     cc.clearBuffer(energyBuffer);
@@ -6507,7 +6507,7 @@ void CommonIntegrateVariableLangevinStepKernel::initialize(const System& system,
     selectSizeKernel = program->createKernel("selectLangevinStepSize");
     params.initialize(cc, 3, cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "langevinParams");
     blockSize = min(256, system.getNumParticles());
-    blockSize = max(blockSize, params.getSize());
+    blockSize = max(blockSize, (int) params.getSize());
 }
 
 double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {

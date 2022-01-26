@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -71,7 +71,7 @@ CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(c
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, context.getDevice()));
     CHECK_RESULT(cuEventCreate(&downloadCountEvent, 0));
-    CHECK_RESULT(cuMemHostAlloc((void**) &pinnedCountBuffer, 2*sizeof(int), CU_MEMHOSTALLOC_PORTABLE));
+    CHECK_RESULT(cuMemHostAlloc((void**) &pinnedCountBuffer, 2*sizeof(unsigned int), CU_MEMHOSTALLOC_PORTABLE));
     numForceThreadBlocks = 4*multiprocessors;
     forceThreadBlockSize = (context.getComputeCapability() < 2.0 ? 128 : 256);
     setKernelSource(CudaKernelSources::nonbonded);
@@ -430,12 +430,13 @@ bool CudaNonbondedUtilities::updateNeighborListSize() {
     // this from happening in the future.
 
     if (pinnedCountBuffer[0] > maxTiles) {
-        maxTiles = (int) (1.2*pinnedCountBuffer[0]);
-        int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
+        maxTiles = (unsigned int) (1.2*pinnedCountBuffer[0]);
+        unsigned int numBlocks = context.getNumAtomBlocks();
+        int totalTiles = numBlocks*(numBlocks+1)/2;
         if (maxTiles > totalTiles)
             maxTiles = totalTiles;
         interactingTiles.resize(maxTiles);
-        interactingAtoms.resize(CudaContext::TileSize*maxTiles);
+        interactingAtoms.resize(CudaContext::TileSize*(size_t) maxTiles);
         if (forceArgs.size() > 0)
             forceArgs[7] = &interactingTiles.getDevicePointer();
         findInteractingBlocksArgs[6] = &interactingTiles.getDevicePointer();
@@ -444,7 +445,7 @@ bool CudaNonbondedUtilities::updateNeighborListSize() {
         findInteractingBlocksArgs[7] = &interactingAtoms.getDevicePointer();
     }
     if (pinnedCountBuffer[1] > maxSinglePairs) {
-        maxSinglePairs = (int) (1.2*pinnedCountBuffer[1]);
+        maxSinglePairs = (unsigned int) (1.2*pinnedCountBuffer[1]);
         singlePairs.resize(maxSinglePairs);
         if (forceArgs.size() > 0)
             forceArgs[19] = &singlePairs.getDevicePointer();

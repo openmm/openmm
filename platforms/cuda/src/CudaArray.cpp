@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,7 +36,7 @@ using namespace OpenMM;
 CudaArray::CudaArray() : pointer(0), ownsMemory(false) {
 }
 
-CudaArray::CudaArray(CudaContext& context, int size, int elementSize, const std::string& name) : pointer(0) {
+CudaArray::CudaArray(CudaContext& context, size_t size, int elementSize, const std::string& name) : pointer(0) {
     initialize(context, size, elementSize, name);
 }
 
@@ -52,7 +52,7 @@ CudaArray::~CudaArray() {
     }
 }
 
-void CudaArray::initialize(ComputeContext& context, int size, int elementSize, const std::string& name) {
+void CudaArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name) {
     if (this->pointer != 0)
         throw OpenMMException("CudaArray has already been initialized");
     this->context = &dynamic_cast<CudaContext&>(context);
@@ -69,7 +69,7 @@ void CudaArray::initialize(ComputeContext& context, int size, int elementSize, c
     }
 }
 
-void CudaArray::resize(int size) {
+void CudaArray::resize(size_t size) {
     if (pointer == 0)
         throw OpenMMException("CudaArray has not been initialized");
     if (!ownsMemory)

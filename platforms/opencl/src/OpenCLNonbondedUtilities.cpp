@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -89,8 +89,8 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
             numForceBuffers = numForceThreadBlocks*forceThreadBlockSize/OpenCLContext::TileSize;
         }
     }
-    pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(int));
-    pinnedCountMemory = (int*) context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(int));
+    pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(unsigned int));
+    pinnedCountMemory = (unsigned int*) context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(int));
     setKernelSource(deviceIsCpu ? OpenCLKernelSources::nonbonded_cpu : OpenCLKernelSources::nonbonded);
 }
 
@@ -395,18 +395,19 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
 bool OpenCLNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
-    if (pinnedCountMemory[0] <= (unsigned int) interactingTiles.getSize())
+    if (pinnedCountMemory[0] <= interactingTiles.getSize())
         return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
 
-    int maxTiles = (int) (1.2*pinnedCountMemory[0]);
-    int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
+    unsigned int maxTiles = (unsigned int) (1.2*pinnedCountMemory[0]);
+    unsigned int numBlocks = context.getNumAtomBlocks();
+    int totalTiles = numBlocks*(numBlocks+1)/2;
     if (maxTiles > totalTiles)
         maxTiles = totalTiles;
     interactingTiles.resize(maxTiles);
-    interactingAtoms.resize(OpenCLContext::TileSize*maxTiles);
+    interactingAtoms.resize(OpenCLContext::TileSize*(size_t) maxTiles);
     for (map<int, KernelSet>::iterator iter = groupKernels.begin(); iter != groupKernels.end(); ++iter) {
         KernelSet& kernels = iter->second;
         if (*reinterpret_cast<cl_kernel*>(&kernels.forceKernel) != NULL) {
