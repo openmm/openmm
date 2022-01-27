@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1211,6 +1211,8 @@ void ReferenceCalcCustomNonbondedForceKernel::createExpressions(const CustomNonb
     parameterNames.clear();
     globalParameterNames.clear();
     globalParamValues.clear();
+    computedValueNames.clear();
+    computedValueExpressions.clear();
     energyParamDerivNames.clear();
     energyParamDerivExpressions.clear();
     for (int i = 0; i < force.getNumPerParticleParameters(); i++)
@@ -1219,19 +1221,34 @@ void ReferenceCalcCustomNonbondedForceKernel::createExpressions(const CustomNonb
         globalParameterNames.push_back(force.getGlobalParameterName(i));
         globalParamValues[force.getGlobalParameterName(i)] = force.getGlobalParameterDefaultValue(i);
     }
+    set<string> particleVariables, pairVariables;
+    particleVariables.insert("r");
+    pairVariables.insert("r");
+    for (auto& name : parameterNames) {
+        particleVariables.insert(name);
+        pairVariables.insert(name+"1");
+        pairVariables.insert(name+"2");
+    }
+    particleVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    pairVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        string name, exp;
+        force.getComputedValueParameters(i, name, exp);
+        Lepton::ParsedExpression parsed = Lepton::Parser::parse(exp, functions);
+        validateVariables(parsed.getRootNode(), particleVariables);
+        computedValueNames.push_back(name);
+        computedValueExpressions.push_back(parsed.createCompiledExpression());
+    }
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
         string param = force.getEnergyParameterDerivativeName(i);
         energyParamDerivNames.push_back(param);
         energyParamDerivExpressions.push_back(expression.differentiate(param).createCompiledExpression());
     }
-    set<string> variables;
-    variables.insert("r");
-    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
-        variables.insert(parameterNames[i]+"1");
-        variables.insert(parameterNames[i]+"2");
+    for (auto& name : computedValueNames) {
+        pairVariables.insert(name+"1");
+        pairVariables.insert(name+"2");
     }
-    variables.insert(globalParameterNames.begin(), globalParameterNames.end());
-    validateVariables(expression.getRootNode(), variables);
+    validateVariables(expression.getRootNode(), pairVariables);
 
     // Delete the custom functions.
 
@@ -1244,7 +1261,7 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     vector<Vec3>& forceData = extractForces(context);
     Vec3* boxVectors = extractBoxVectors(context);
     double energy = 0;
-    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames, energyParamDerivExpressions);
+    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames, energyParamDerivExpressions, computedValueNames, computedValueExpressions);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxVectors(context), periodic, nonbondedCutoff, 0.0);

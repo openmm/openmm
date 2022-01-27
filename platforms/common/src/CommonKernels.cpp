@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1852,6 +1852,8 @@ CommonCalcCustomNonbondedForceKernel::~CommonCalcCustomNonbondedForceKernel() {
     ContextSelector selector(cc);
     if (params != NULL)
         delete params;
+    if (computedValues != NULL)
+        delete computedValues;
     if (forceCopy != NULL)
         delete forceCopy;
 }
@@ -1868,7 +1870,7 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     int numParticles = force.getNumParticles();
     int paddedNumParticles = cc.getPaddedNumAtoms();
     int numParams = force.getNumPerParticleParameters();
-    params = new ComputeParameterSet(cc, numParams, paddedNumParticles, "customNonbondedParameters");
+    params = new ComputeParameterSet(cc, numParams, paddedNumParticles, "customNonbondedParameters", true);
     if (force.getNumGlobalParameters() > 0)
         globals.initialize<float>(cc, force.getNumGlobalParameters(), "customNonbondedGlobals");
     vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
@@ -1895,6 +1897,7 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     vector<string> tableTypes;
+    stringstream tableArgs;
     tabulatedFunctionArrays.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
@@ -1912,6 +1915,10 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
             tableTypes.push_back("float");
         else
             tableTypes.push_back("float"+cc.intToString(width));
+        tableArgs << ", GLOBAL const float";
+        if (width > 1)
+            tableArgs << width;
+        tableArgs << "* RESTRICT " << arrayName;
     }
 
     // Record information for the expressions.
@@ -1932,6 +1939,26 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     forceExpressions["real customEnergy = "] = energyExpression;
     forceExpressions["tempForce -= "] = forceExpression;
 
+    // Record which per-particle parameters and computed values appear in the energy expression.
+
+    if (force.getNumComputedValues() > 0)
+        computedValues = new ComputeParameterSet(cc, force.getNumComputedValues(), paddedNumParticles, "customNonbondedComputedValues", true);
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
+        string name = force.getPerParticleParameterName(i);
+        if (usesVariable(energyExpression, name+"1") || usesVariable(energyExpression, name+"2")) {
+            paramNames.push_back(name);
+            paramBuffers.push_back(params->getParameterInfos()[i]);
+        }
+    }
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        string name, expression;
+        force.getComputedValueParameters(i, name, expression);
+        if (usesVariable(energyExpression, name+"1") || usesVariable(energyExpression, name+"2")) {
+            computedValueNames.push_back(name);
+            computedValueBuffers.push_back(computedValues->getParameterInfos()[i]);
+        }
+    }
+
     // Create the kernels.
 
     vector<pair<ExpressionTreeNode, string> > variables;
@@ -1939,10 +1966,13 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     variables.push_back(make_pair(rnode, "r"));
     variables.push_back(make_pair(ExpressionTreeNode(new Operation::Square(), rnode), "r2"));
     variables.push_back(make_pair(ExpressionTreeNode(new Operation::Reciprocal(), rnode), "invR"));
-    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
-        const string& name = force.getPerParticleParameterName(i);
-        variables.push_back(makeVariable(name+"1", prefix+"params"+params->getParameterSuffix(i, "1")));
-        variables.push_back(makeVariable(name+"2", prefix+"params"+params->getParameterSuffix(i, "2")));
+    for (int i = 0; i < paramNames.size(); i++) {
+        variables.push_back(makeVariable(paramNames[i]+"1", prefix+"params"+cc.intToString(i+1)+"1"));
+        variables.push_back(makeVariable(paramNames[i]+"2", prefix+"params"+cc.intToString(i+1)+"2"));
+    }
+    for (int i = 0; i < computedValueNames.size(); i++) {
+        variables.push_back(makeVariable(computedValueNames[i]+"1", prefix+"values"+cc.intToString(i+1)+"1"));
+        variables.push_back(makeVariable(computedValueNames[i]+"2", prefix+"values"+cc.intToString(i+1)+"2"));
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);
@@ -1973,15 +2003,68 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         initInteractionGroups(force, source, tableTypes);
     else {
         cc.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
-        for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
-            ComputeParameterInfo& parameter = params->getParameterInfos()[i];
-            cc.getNonbondedUtilities().addParameter(ComputeParameterInfo(parameter.getArray(), prefix+"params"+cc.intToString(i+1),
-                    parameter.getComponentType(), parameter.getNumComponents()));
-        }
+        for (int i = 0; i < paramBuffers.size(); i++)
+            cc.getNonbondedUtilities().addParameter(ComputeParameterInfo(paramBuffers[i].getArray(), prefix+"params"+cc.intToString(i+1),
+                    paramBuffers[i].getComponentType(), paramBuffers[i].getNumComponents()));
+        for (int i = 0; i < computedValueBuffers.size(); i++)
+            cc.getNonbondedUtilities().addParameter(ComputeParameterInfo(computedValueBuffers[i].getArray(), prefix+"values"+cc.intToString(i+1),
+                    computedValueBuffers[i].getComponentType(), computedValueBuffers[i].getNumComponents()));
         if (globals.isInitialized()) {
             globals.upload(globalParamValues);
             cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(globals, prefix+"globals", "float", 1));
         }
+    }
+    if (force.getNumComputedValues() > 0) {
+        // Create the kernel to calculate computed values.
+
+        stringstream valuesSource, args;
+        for (int i = 0; i < computedValues->getParameterInfos().size(); i++) {
+            ComputeParameterInfo& buffer = computedValues->getParameterInfos()[i];
+            string valueName = "values"+cc.intToString(i+1);
+            if (i > 0)
+                args << ", ";
+            args << "GLOBAL " << buffer.getType() << "* RESTRICT global_" << valueName;
+            valuesSource << buffer.getType() << " local_" << valueName << ";\n";
+        }
+        if (force.getNumGlobalParameters() > 0)
+            args << ", GLOBAL const float* globals";
+        for (int i = 0; i < params->getParameterInfos().size(); i++) {
+            ComputeParameterInfo& buffer = params->getParameterInfos()[i];
+            string paramName = "params"+cc.intToString(i+1);
+            args << ", GLOBAL const " << buffer.getType() << "* RESTRICT " << paramName;
+        }
+        map<string, string> variables;
+        for (int i = 0; i < force.getNumPerParticleParameters(); i++)
+            variables[force.getPerParticleParameterName(i)] = "params"+params->getParameterSuffix(i, "[index]");
+        for (int i = 0; i < force.getNumGlobalParameters(); i++)
+            variables[force.getGlobalParameterName(i)] = "globals["+cc.intToString(i)+"]";
+        for (int i = 0; i < force.getNumComputedValues(); i++) {
+            string name, expression;
+            force.getComputedValueParameters(i, name, expression);
+            variables[name] = "local_values"+computedValues->getParameterSuffix(i);
+            map<string, Lepton::ParsedExpression> valueExpressions;
+            valueExpressions["local_values"+computedValues->getParameterSuffix(i)+" = "] = Lepton::Parser::parse(expression, functions).optimize();
+            valuesSource << cc.getExpressionUtilities().createExpressions(valueExpressions, variables, functionList, functionDefinitions, "value"+cc.intToString(i)+"_temp");
+        }
+        for (int i = 0; i < (int) computedValues->getParameterInfos().size(); i++) {
+            string valueName = "values"+cc.intToString(i+1);
+            valuesSource << "global_" << valueName << "[index] = local_" << valueName << ";\n";
+        }
+        map<string, string> replacements;
+        replacements["PARAMETER_ARGUMENTS"] = args.str()+tableArgs.str();
+        replacements["COMPUTE_VALUES"] = valuesSource.str();
+        map<string, string> defines;
+        defines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
+        ComputeProgram program = cc.compileProgram(cc.replaceStrings(CommonKernelSources::customNonbondedComputedValues, replacements), defines);
+        computedValuesKernel = program->createKernel("computePerParticleValues");
+        for (auto& value : computedValues->getParameterInfos())
+            computedValuesKernel->addArg(value.getArray());
+        if (globals.isInitialized())
+            computedValuesKernel->addArg(globals);
+        for (auto& parameter : params->getParameterInfos())
+            computedValuesKernel->addArg(parameter.getArray());
+        for (auto& function : tabulatedFunctionArrays)
+            computedValuesKernel->addArg(function);
     }
     info = new ForceInfo(force);
     cc.addForce(info);
@@ -2180,21 +2263,21 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     const string suffixes[] = {"x", "y", "z", "w"};
     stringstream localData;
     int localDataSize = 0;
-    vector<ComputeParameterInfo>& buffers = params->getParameterInfos(); 
-    for (int i = 0; i < (int) buffers.size(); i++) {
-        if (buffers[i].getNumComponents() == 1)
-            localData<<buffers[i].getComponentType()<<" params"<<(i+1)<<";\n";
-        else {
-            for (int j = 0; j < buffers[i].getNumComponents(); ++j)
-                localData<<buffers[i].getComponentType()<<" params"<<(i+1)<<"_"<<suffixes[j]<<";\n";
-        }
-        localDataSize += buffers[i].getSize();
+    for (int i = 0; i < paramBuffers.size(); i++) {
+        localData<<paramBuffers[i].getComponentType()<<" params"<<(i+1)<<";\n";
+        localDataSize += paramBuffers[i].getSize();
+    }
+    for (int i = 0; i < computedValueBuffers.size(); i++) {
+        localData<<computedValueBuffers[i].getComponentType()<<" values"<<(i+1)<<";\n";
+        localDataSize += computedValueBuffers[i].getSize();
     }
     replacements["ATOM_PARAMETER_DATA"] = localData.str();
     stringstream args;
-    for (int i = 0; i < (int) buffers.size(); i++)
-        args<<", GLOBAL const "<<buffers[i].getType()<<"* RESTRICT global_params"<<(i+1);
-    for (int i = 0; i < (int) tabulatedFunctionArrays.size(); i++)
+    for (int i = 0; i < paramBuffers.size(); i++)
+        args<<", GLOBAL const "<<paramBuffers[i].getType()<<"* RESTRICT global_params"<<(i+1);
+    for (int i = 0; i < computedValueBuffers.size(); i++)
+        args<<", GLOBAL const "<<computedValueBuffers[i].getType()<<"* RESTRICT global_values"<<(i+1);
+    for (int i = 0; i < tabulatedFunctionArrays.size(); i++)
         args << ", GLOBAL const " << tableTypes[i]<< "* RESTRICT table" << i;
     if (globals.isInitialized())
         args<<", GLOBAL const float* RESTRICT globals";
@@ -2202,34 +2285,22 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         args << ", GLOBAL mixed* RESTRICT energyParamDerivs";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream load1;
-    for (int i = 0; i < (int) buffers.size(); i++)
-        load1<<buffers[i].getType()<<" params"<<(i+1)<<"1 = global_params"<<(i+1)<<"[atom1];\n";
+    for (int i = 0; i < paramBuffers.size(); i++)
+        load1<<paramBuffers[i].getType()<<" params"<<(i+1)<<"1 = global_params"<<(i+1)<<"[atom1];\n";
+    for (int i = 0; i < computedValueBuffers.size(); i++)
+        load1<<computedValueBuffers[i].getType()<<" values"<<(i+1)<<"1 = global_values"<<(i+1)<<"[atom1];\n";
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
     stringstream loadLocal2;
-    for (int i = 0; i < (int) buffers.size(); i++) {
-        if (buffers[i].getNumComponents() == 1)
-            loadLocal2<<"localData[LOCAL_ID].params"<<(i+1)<<" = global_params"<<(i+1)<<"[atom2];\n";
-        else {
-            loadLocal2<<buffers[i].getType()<<" temp_params"<<(i+1)<<" = global_params"<<(i+1)<<"[atom2];\n";
-            for (int j = 0; j < buffers[i].getNumComponents(); ++j)
-                loadLocal2<<"localData[LOCAL_ID].params"<<(i+1)<<"_"<<suffixes[j]<<" = temp_params"<<(i+1)<<"."<<suffixes[j]<<";\n";
-        }
-    }
+    for (int i = 0; i < paramBuffers.size(); i++)
+        loadLocal2<<"localData[LOCAL_ID].params"<<(i+1)<<" = global_params"<<(i+1)<<"[atom2];\n";
+    for (int i = 0; i < computedValueBuffers.size(); i++)
+        loadLocal2<<"localData[LOCAL_ID].values"<<(i+1)<<" = global_values"<<(i+1)<<"[atom2];\n";
     replacements["LOAD_LOCAL_PARAMETERS"] = loadLocal2.str();
     stringstream load2;
-    for (int i = 0; i < (int) buffers.size(); i++) {
-        if (buffers[i].getNumComponents() == 1)
-            load2<<buffers[i].getType()<<" params"<<(i+1)<<"2 = localData[localIndex].params"<<(i+1)<<";\n";
-        else {
-            load2<<buffers[i].getType()<<" params"<<(i+1)<<"2 = make_"<<buffers[i].getType()<<"(";
-            for (int j = 0; j < buffers[i].getNumComponents(); ++j) {
-                if (j > 0)
-                    load2<<", ";
-                load2<<"localData[localIndex].params"<<(i+1)<<"_"<<suffixes[j];
-            }
-            load2<<");\n";
-        }
-    }
+    for (int i = 0; i < paramBuffers.size(); i++)
+        load2<<paramBuffers[i].getType()<<" params"<<(i+1)<<"2 = localData[localIndex].params"<<(i+1)<<";\n";
+    for (int i = 0; i < computedValueBuffers.size(); i++)
+        load2<<computedValueBuffers[i].getType()<<" values"<<(i+1)<<"2 = localData[localIndex].values"<<(i+1)<<";\n";
     replacements["LOAD_ATOM2_PARAMETERS"] = load2.str();
     stringstream initDerivs, saveDerivs;
     const vector<string>& allParamDerivNames = cc.getEnergyParamDerivNames();
@@ -2303,6 +2374,8 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
         else
             hasInitializedLongRangeCorrection = false;
     }
+    if (computedValues != NULL)
+        computedValuesKernel->execute(cc.getNumAtoms());
     if (interactionGroupData.isInitialized()) {
         if (!hasInitializedKernel) {
             hasInitializedKernel = true;
@@ -2315,8 +2388,10 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             interactionGroupKernel->addArg((int) useNeighborList);
             for (int i = 0; i < 5; i++)
                 interactionGroupKernel->addArg(); // Periodic box information will be set just before it is executed.
-            for (auto& parameter : params->getParameterInfos())
-                interactionGroupKernel->addArg(parameter.getArray());
+            for (auto& buffer : paramBuffers)
+                interactionGroupKernel->addArg(buffer.getArray());
+            for (auto& buffer : computedValueBuffers)
+                interactionGroupKernel->addArg(buffer.getArray());
             for (auto& function : tabulatedFunctionArrays)
                 interactionGroupKernel->addArg(function);
             if (globals.isInitialized())

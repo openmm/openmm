@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -53,6 +53,8 @@ void testSerialization() {
     force.addGlobalParameter("y", 2.221);
     force.addPerParticleParameter("z");
     force.addEnergyParameterDerivative("y");
+    force.addComputedValue("c1", "x+y");
+    force.addComputedValue("c2", "x*z+2");
     vector<double> params(1);
     params[0] = 1.0;
     force.addParticle(params);
@@ -96,6 +98,14 @@ void testSerialization() {
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         ASSERT_EQUAL(force.getGlobalParameterName(i), force2.getGlobalParameterName(i));
         ASSERT_EQUAL(force.getGlobalParameterDefaultValue(i), force2.getGlobalParameterDefaultValue(i));
+    }
+    ASSERT_EQUAL(force.getNumComputedValues(), force2.getNumComputedValues());
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        string name1, name2, exp1, exp2;
+        force.getComputedValueParameters(i, name1, exp1);
+        force2.getComputedValueParameters(i, name2, exp2);
+        ASSERT_EQUAL(name1, name2);
+        ASSERT_EQUAL(exp1, exp2)
     }
     ASSERT_EQUAL(force.getNumEnergyParameterDerivatives(), force2.getNumEnergyParameterDerivatives());
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)

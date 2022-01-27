@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -131,6 +131,8 @@ void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
                 throw OpenMMException(msg.str());
             }
     }
+    if (owner.getNumEnergyParameterDerivatives() > 0 && owner.getNumComputedValues() > 0)
+        throw OpenMMException("CustomNonbondedForce: Cannot compute parameter derivatives for a force that uses computed values.");
 
     kernel.getAs<CalcCustomNonbondedForceKernel>().initialize(context.getSystem(), owner);
 }
@@ -231,11 +233,16 @@ CustomNonbondedForceImpl::LongRangeCorrectionData CustomNonbondedForceImpl::prep
     for (int k = 0; k < force.getNumEnergyParameterDerivatives(); k++)
         data.derivExpressions.push_back(Lepton::Parser::parse(force.getEnergyFunction(), functions).differentiate(force.getEnergyParameterDerivativeName(k)).createCompiledExpression());
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
-        stringstream name1, name2;
-        name1 << force.getPerParticleParameterName(i) << 1;
-        name2 << force.getPerParticleParameterName(i) << 2;
-        data.paramNames.push_back(name1.str());
-        data.paramNames.push_back(name2.str());
+        string name = force.getPerParticleParameterName(i);
+        data.paramNames.push_back(name+"1");
+        data.paramNames.push_back(name+"2");
+    }
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        string name, exp;
+        force.getComputedValueParameters(i, name, exp);
+        data.computedValueNames.push_back(name+"1");
+        data.computedValueNames.push_back(name+"2");
+        data.computedValueExpressions.push_back(Lepton::Parser::parse(exp, functions).createCompiledExpression());
     }
     return data;
 }
@@ -245,10 +252,31 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
         coefficient = 0.0;
         return;
     }
+    
+    // Calculate the computed values for all atom classes.
+    
+    int numClasses = data.classes.size();
+    vector<vector<double> > computedValues(numClasses, vector<double>(force.getNumComputedValues()));
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        Lepton::CompiledExpression& expression = data.computedValueExpressions[i];
+        const set<string>& variables = expression.getVariables();
+        for (int j = 0; j < force.getNumGlobalParameters(); j++) {
+            const string& name = force.getGlobalParameterName(j);
+            if (variables.find(name) != variables.end())
+                expression.getVariableReference(name) = context.getParameter(name);
+        }
+        for (int j = 0; j < numClasses; j++) {
+            for (int k = 0; k < force.getNumPerParticleParameters(); k++) {
+                const string& name = force.getPerParticleParameterName(k);
+                if (variables.find(name) != variables.end())
+                    expression.getVariableReference(name) = data.classes[j][k];
+            }
+            computedValues[j][i] = expression.evaluate();
+        }
+    }
 
     // Compute the coefficient.  Use multiple threads to compute the integrals in parallel.
 
-    int numClasses = data.classes.size();
     double nPart = (double) context.getSystem().getNumParticles();
     double numInteractions = (nPart*(nPart+1))/2;
     vector<double> threadSum(threads.getNumThreads(), 0.0);
@@ -260,7 +288,8 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
             if (i >= numClasses)
                 break;
             for (int j = i; j < numClasses; j++)
-                threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteraction(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
+                threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteraction(expression, data.classes[i], data.classes[j],
+                        computedValues[i], computedValues[j], force, context, data.paramNames, data.computedValueNames);
         }
     });
     threads.waitForThreads();
@@ -284,7 +313,8 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
                 if (i >= numClasses)
                     break;
                 for (int j = i; j < numClasses; j++)
-                    threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteraction(expression, data.classes[i], data.classes[j], force, context, data.paramNames);
+                    threadSum[threadIndex] += data.interactionCount.at(make_pair(i, j))*integrateInteraction(expression, data.classes[i], data.classes[j],
+                            computedValues[i], computedValues[j], force, context, data.paramNames, data.computedValueNames);
             }
         });
         threads.waitForThreads();
@@ -297,13 +327,20 @@ void CustomNonbondedForceImpl::calcLongRangeCorrection(const CustomNonbondedForc
 }
 
 double CustomNonbondedForceImpl::integrateInteraction(Lepton::CompiledExpression& expression, const vector<double>& params1, const vector<double>& params2,
-        const CustomNonbondedForce& force, const Context& context, const vector<string>& paramNames) {
+        const vector<double>& computedValues1, const vector<double>& computedValues2, const CustomNonbondedForce& force, const Context& context,
+        const vector<string>& paramNames, const vector<string>& computedValueNames) {
     const set<string>& variables = expression.getVariables();
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         if (variables.find(paramNames[2*i]) != variables.end())
             expression.getVariableReference(paramNames[2*i]) = params1[i];
         if (variables.find(paramNames[2*i+1]) != variables.end())
             expression.getVariableReference(paramNames[2*i+1]) = params2[i];
+    }
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        if (variables.find(computedValueNames[2*i]) != variables.end())
+            expression.getVariableReference(computedValueNames[2*i]) = computedValues1[i];
+        if (variables.find(computedValueNames[2*i+1]) != variables.end())
+            expression.getVariableReference(computedValueNames[2*i+1]) = computedValues2[i];
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);

@@ -761,6 +761,11 @@ also may depend on an arbitrary list of global or per-particle parameters.  Use
 a :code:`<GlobalParameter>` tag to define a global parameter, and a
 :code:`<PerParticleParameter>` tag to define a per-particle parameter.
 
+The expression may also depend on computed values, each defined with a
+:code:`<ComputedValue>` tag.  The tag should have two attributes, :code:`name`
+with the name of the computed value, and :code:`expression` with the expression
+used to compute it.
+
 Exclusions are created automatically based on the :code:`bondCutoff` attribute.
 After setting the nonbonded parameters for all atoms, the force field calls
 :code:`createExclusionsFromBonds()` on the CustomNonbondedForce, passing in this

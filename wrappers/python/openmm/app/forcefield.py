@@ -2925,6 +2925,7 @@ class CustomNonbondedGenerator(object):
         self.bondCutoff = bondCutoff
         self.globalParams = {}
         self.perParticleParams = []
+        self.computedValues = {}
         self.functions = []
 
     @staticmethod
@@ -2935,6 +2936,8 @@ class CustomNonbondedGenerator(object):
             generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
         for param in element.findall('PerParticleParameter'):
             generator.perParticleParams.append(param.attrib['name'])
+        for value in element.findall('ComputedValue'):
+            generator.computedValues[value.attrib['name']] = value.attrib['expression']
         generator.params = ForceField._AtomTypeParameters(ff, 'CustomNonbondedForce', 'Atom', generator.perParticleParams)
         generator.params.parseDefinitions(element)
         generator.functions += _parseFunctions(element)
@@ -2953,6 +2956,8 @@ class CustomNonbondedGenerator(object):
             force.addGlobalParameter(param, self.globalParams[param])
         for param in self.perParticleParams:
             force.addPerParticleParameter(param)
+        for name in self.computedValues:
+            force.addComputedValue(name, self.computedValues[name])
         _createFunctions(force, self.functions)
         for atom in data.atoms:
             values = self.params.getAtomParameters(atom, data)

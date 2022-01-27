@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2022 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -49,7 +49,9 @@ class CpuCustomNonbondedForce {
 
        CpuCustomNonbondedForce(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
                                const std::vector<std::string>& parameterNames, const std::vector<std::set<int> >& exclusions,
-                               const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions, ThreadPool& threads);
+                               const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions,
+                               const std::vector<std::string>& computedValueNames, const std::vector<Lepton::CompiledExpression> computedValueExpressions,
+                               ThreadPool& threads);
 
       /**---------------------------------------------------------------------------------------
 
@@ -137,9 +139,10 @@ private:
     ThreadPool& threads;
     const std::vector<std::set<int> > exclusions;
     std::vector<ThreadData*> threadData;
-    std::vector<std::string> paramNames;
+    std::vector<std::string> paramNames, computedValueNames;
     std::vector<std::pair<int, int> > groupInteractions;
     std::vector<double> threadEnergy;
+    std::vector<std::vector<double> > atomComputedValues;
     // The following variables are used to make information accessible to the individual threads.
     int numberOfAtoms;
     float* posq;
@@ -178,14 +181,16 @@ private:
 class CpuCustomNonbondedForce::ThreadData {
 public:
     ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression, const std::vector<std::string>& parameterNames,
-            const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
+            const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions, const std::vector<std::string>& computedValueNames,
+            const std::vector<Lepton::CompiledExpression> computedValueExpressions, std::vector<std::vector<double> >& atomComputedValues);
     Lepton::CompiledExpression energyExpression;
     Lepton::CompiledExpression forceExpression;
-    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+    std::vector<Lepton::CompiledExpression> computedValueExpressions, energyParamDerivExpressions;
     CompiledExpressionSet expressionSet;
-    std::vector<double> particleParam;
+    std::vector<double> particleParam, computedValues;
     double r;
     std::vector<double> energyParamDerivs; 
+    std::vector<std::vector<double> >& atomComputedValues;
 };
 
 } // namespace OpenMM
