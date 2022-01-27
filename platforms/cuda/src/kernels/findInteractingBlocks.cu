@@ -76,7 +76,7 @@ extern "C" __global__ void sortBoxData(const real2* __restrict__ sortedBlock, co
     }
 }
 
-__device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, unsigned int maxSinglePairs, unsigned int* singlePairCount, int2* singlePairs, int* sumBuffer, volatile int& pairStartIndex) {
+__device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, unsigned int maxSinglePairs, unsigned int* singlePairCount, int2* singlePairs, int* sumBuffer, volatile unsigned int& pairStartIndex) {
     // Record interactions that should be computed as single pairs rather than in blocks.
     
     const int indexInWarp = threadIdx.x%32;
@@ -95,7 +95,7 @@ __device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, unsign
         pairStartIndex = atomicAdd(singlePairCount,(unsigned int) sum);
     __syncwarp();
     int prevSum = __shfl_up_sync(0xffffffff, sum, 1);
-    int pairIndex = pairStartIndex + (indexInWarp > 0 ? prevSum : 0);
+    unsigned int pairIndex = pairStartIndex + (indexInWarp > 0 ? prevSum : 0);
     for (int i = indexInWarp; i < length; i += 32) {
         int count = __popc(flags[i]);
         if (count <= MAX_BITS_FOR_PAIRS && pairIndex+count <= maxSinglePairs) {
@@ -196,14 +196,14 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
     __shared__ int workgroupFlagsBuffer[BUFFER_SIZE*(GROUP_SIZE/32)];
     __shared__ int warpExclusions[MAX_EXCLUSIONS*(GROUP_SIZE/32)];
     __shared__ real4 posBuffer[GROUP_SIZE];
-    __shared__ volatile int workgroupTileIndex[GROUP_SIZE/32];
-    __shared__ int worksgroupPairStartIndex[GROUP_SIZE/32];
+    __shared__ volatile unsigned int workgroupTileIndex[GROUP_SIZE/32];
+    __shared__ unsigned int workgroupPairStartIndex[GROUP_SIZE/32];
     int* sumBuffer = (int*) posBuffer; // Reuse the same buffer to save memory
     int* buffer = workgroupBuffer+BUFFER_SIZE*(warpStart/32);
     int* flagsBuffer = workgroupFlagsBuffer+BUFFER_SIZE*(warpStart/32);
     int* exclusionsForX = warpExclusions+MAX_EXCLUSIONS*(warpStart/32);
-    volatile int& tileStartIndex = workgroupTileIndex[warpStart/32];
-    volatile int& pairStartIndex = worksgroupPairStartIndex[warpStart/32];
+    volatile unsigned int& tileStartIndex = workgroupTileIndex[warpStart/32];
+    volatile unsigned int& pairStartIndex = workgroupPairStartIndex[warpStart/32];
 
     // Loop over blocks.
     
@@ -342,11 +342,11 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
 #if MAX_BITS_FOR_PAIRS > 0
                     neighborsInBuffer = saveSinglePairs(x, buffer, flagsBuffer, neighborsInBuffer, maxSinglePairs, &interactionCount[1], singlePairs, sumBuffer+warpStart, pairStartIndex);
 #endif
-                    int tilesToStore = neighborsInBuffer/TILE_SIZE;
+                    unsigned int tilesToStore = neighborsInBuffer/TILE_SIZE;
                     if (tilesToStore > 0) {
                         if (indexInWarp == 0)
                             tileStartIndex = atomicAdd(&interactionCount[0], tilesToStore);
-                        int newTileStartIndex = tileStartIndex;
+                        unsigned int newTileStartIndex = tileStartIndex;
                         if (newTileStartIndex+tilesToStore <= maxTiles) {
                             if (indexInWarp < tilesToStore)
                                 interactingTiles[newTileStartIndex+indexInWarp] = x;
@@ -369,10 +369,10 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
             neighborsInBuffer = saveSinglePairs(x, buffer, flagsBuffer, neighborsInBuffer, maxSinglePairs, &interactionCount[1], singlePairs, sumBuffer+warpStart, pairStartIndex);
 #endif
         if (neighborsInBuffer > 0) {
-            int tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
+            unsigned int tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
             if (indexInWarp == 0)
                 tileStartIndex = atomicAdd(&interactionCount[0], tilesToStore);
-            int newTileStartIndex = tileStartIndex;
+            unsigned int newTileStartIndex = tileStartIndex;
             if (newTileStartIndex+tilesToStore <= maxTiles) {
                 if (indexInWarp < tilesToStore)
                     interactingTiles[newTileStartIndex+indexInWarp] = x;
