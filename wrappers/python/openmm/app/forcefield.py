@@ -3465,8 +3465,14 @@ class AmoebaAngleGenerator(object):
         # <AmoebaAngleForce angle-cubic="-0.014" angle-quartic="5.6e-05" angle-pentic="-7e-07" angle-sextic="2.2e-08">
         #   <Angle class1="2" class2="1" class3="3" k="0.0637259642196" angle1="122.00"  />
 
-        generator = AmoebaAngleGenerator(forceField, element.attrib['angle-cubic'], element.attrib['angle-quartic'],  element.attrib['angle-pentic'], element.attrib['angle-sextic'])
-        forceField._forces.append(generator)
+        existing = [f for f in forceField._forces if isinstance(f, AmoebaAngleGenerator)]
+        if len(existing) == 0:
+            generator = AmoebaAngleGenerator(forceField, element.attrib['angle-cubic'], element.attrib['angle-quartic'],  element.attrib['angle-pentic'], element.attrib['angle-sextic'])
+            forceField.registerGenerator(generator)
+        else:
+            generator = existing[0]
+            if tuple(element.attrib[x] for x in ('angle-cubic', 'angle-quartic', 'angle-pentic', 'angle-sextic')) != (generator.cubic, generator.quartic, generator.pentic, generator.sextic):
+                raise ValueError('All <AmoebaAngleForce> tags must use identical scale factors')
         for angle in element.findall('Angle'):
             types = forceField._findAtomTypes(angle.attrib, 3)
             if None not in types:
@@ -3694,13 +3700,14 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
         # get global scalar parameters
 
-        generator = AmoebaOutOfPlaneBendGenerator(forceField, element.attrib['type'],
-                                                   float(element.attrib['opbend-cubic']),
-                                                   float(element.attrib['opbend-quartic']),
-                                                   float(element.attrib['opbend-pentic']),
-                                                   float(element.attrib['opbend-sextic']))
-
-        forceField._forces.append(generator)
+        existing = [f for f in forceField._forces if isinstance(f, AmoebaOutOfPlaneBendGenerator)]
+        if len(existing) == 0:
+            generator = AmoebaOutOfPlaneBendGenerator(forceField, element.attrib['type'], element.attrib['opbend-cubic'], element.attrib['opbend-quartic'],  element.attrib['opbend-pentic'], element.attrib['opbend-sextic'])
+            forceField.registerGenerator(generator)
+        else:
+            generator = existing[0]
+            if tuple(element.attrib[x] for x in ('type', 'opbend-cubic', 'opbend-quartic', 'opbend-pentic', 'opbend-sextic')) != (generator.type, generator.cubic, generator.quartic, generator.pentic, generator.sextic):
+                raise ValueError('All <AmoebaOutOfPlaneBendForce> tags must use identical scale factors')
 
         for angle in element.findall('Angle'):
             if 'class3' in angle.attrib and 'class4' in angle.attrib and angle.attrib['class3'] == '0' and angle.attrib['class4'] == '0':
