@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2021 Stanford University and the Authors.
+Portions copyright (c) 2012-2022 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
@@ -3511,7 +3511,8 @@ class AmoebaAngleGenerator(object):
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        pass
+        if not any(isinstance(f, AmoebaOutOfPlaneBendGenerator) for f in self.forceField.getGenerators()):
+            raise ValueError('A ForceField containing an <AmoebaAngleForce> must also contain an <AmoebaOutOfPlaneBendForce>')
 
     #=============================================================================================
     # createForcePostOpBendAngle is called by AmoebaOutOfPlaneBendForce with the list of
@@ -4534,8 +4535,9 @@ class AmoebaStretchBendGenerator(object):
     """An AmoebaStretchBendGenerator constructs a AmoebaStretchBendForce."""
     #=============================================================================================
 
-    def __init__(self):
+    def __init__(self, forcefield):
 
+        self.forcefield = forcefield
         self.types1 = []
         self.types2 = []
         self.types3 = []
@@ -4547,7 +4549,7 @@ class AmoebaStretchBendGenerator(object):
 
     @staticmethod
     def parseElement(element, forceField):
-        generator = AmoebaStretchBendGenerator()
+        generator = AmoebaStretchBendGenerator(forceField)
         forceField._forces.append(generator)
 
         # <AmoebaStretchBendForce stretchBendUnit="1.0">
@@ -4584,7 +4586,8 @@ class AmoebaStretchBendGenerator(object):
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        pass
+        if not any(isinstance(f, AmoebaOutOfPlaneBendGenerator) for f in self.forcefield.getGenerators()):
+            raise ValueError('A ForceField containing an <AmoebaStretchBendForce> must also contain an <AmoebaOutOfPlaneBendForce>')
 
     #=============================================================================================
 
