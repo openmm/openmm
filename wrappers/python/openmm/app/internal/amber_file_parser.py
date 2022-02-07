@@ -790,7 +790,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsNoH():
             force.addBond(iAtom, jAtom, rMin, 2*k)
     system.addForce(force)
-    
+
     # Add Urey-Bradley terms.
     if len(prmtop.getUreyBradleys()) > 0:
         if verbose: print("Adding Urey-Bradley terms...")
@@ -1434,9 +1434,14 @@ class AmberNetcdfRestart(object):
     """
     def __init__(self, filename, asNumpy=False):
         try:
-            from scipy.io.netcdf import NetCDFFile
+            from scipy.io import NetCDFFile
         except ImportError:
-            raise ImportError('scipy is necessary to parse NetCDF restarts')
+            # scipy < 1.8.0
+            try:
+                from scipy.io.netcdf import NetCDFFile
+            except ImportError:
+                raise ImportError('scipy is necessary to parse NetCDF '
+                                  'restarts')
 
         self.filename = filename
         self.velocities = self.boxVectors = self.time = None
