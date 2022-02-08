@@ -646,6 +646,11 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         }
     }
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
+
+    stringstream load2g;
+    for (const ParameterInfo& param : params)
+        load2g<<param.getType()<<" "<<param.getName()<<"2 = global_"<<param.getName()<<"[atom2];\n";
+    replacements["LOAD_ATOM2_PARAMETERS_FROM_GLOBAL"] = load2g.str();
     
     stringstream clearLocal;
     for (const ParameterInfo& param : params) {
