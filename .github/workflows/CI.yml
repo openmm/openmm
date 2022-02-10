@@ -302,6 +302,7 @@ jobs:
       - name: "Cleanup self-hosted runner (M1)"
         shell: bash -l {0}
         if: matrix.os == 'M1-arm64'
+        continue-on-error: true
         run: |
           rm -rf /Users/runner/miniconda3/*
 
