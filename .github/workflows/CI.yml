@@ -666,12 +666,12 @@ jobs:
           )")
           for d in api-c++ api-python developerguide userguide; do
             echo "::group:: Check ${d}"
-            npx linkinator ./${d}/ --recurse --timeout=20000 --skip "$SKIP_REGEX" --server-root ./build/api-docs --verbosity error
+            npx linkinator@3.0.0 ./${d}/ --recurse --timeout=20000 --skip "$SKIP_REGEX" --server-root ./build/api-docs --verbosity error
             ((exitcode+=$?))
             echo "::endgroup::"
           done
           echo "::group:: Check README"
-          npx linkinator ./README.md --markdown --skip "$SKIP_REGEX"
+          npx linkinator@3.0.0 ./README.md --markdown --skip "$SKIP_REGEX"
           ((exitcode+=$?))
           echo "::endgroup::"
           exit $exitcode
