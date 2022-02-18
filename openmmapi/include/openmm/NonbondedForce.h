@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -353,6 +353,10 @@ public:
      * Add an interaction to the list of exceptions that should be calculated differently from other interactions.
      * If chargeProd and epsilon are both equal to 0, this will cause the interaction to be completely omitted from
      * force and energy calculations.
+     * 
+     * Regardless of the NonbondedMethod used by this Force, cutoffs are never applied to exceptions.  That is because
+     * they are primarily used for 1-4 interactions, which are really a type of bonded interaction and are parametrized
+     * together with the other bonded interactions.
      *
      * In many cases, you can use createExceptionsFromBonds() rather than adding each exception explicitly.
      *
@@ -381,6 +385,10 @@ public:
      * Set the force field parameters for an interaction that should be calculated differently from others.
      * If chargeProd and epsilon are both equal to 0, this will cause the interaction to be completely omitted from
      * force and energy calculations.
+     * 
+     * Regardless of the NonbondedMethod used by this Force, cutoffs are never applied to exceptions.  That is because
+     * they are primarily used for 1-4 interactions, which are really a type of bonded interaction and are parametrized
+     * together with the other bonded interactions.
      *
      * @param index      the index of the interaction for which to get parameters
      * @param particle1  the index of the first particle involved in the interaction
