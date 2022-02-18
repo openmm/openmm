@@ -196,7 +196,7 @@ class PdbStructure(object):
                 alpha = float(pdb_line[33:40])*math.pi/180.0
                 beta = float(pdb_line[40:47])*math.pi/180.0
                 gamma = float(pdb_line[47:54])*math.pi/180.0
-                if not (a_length == b_length == c_length == 0):
+                if 0 not in (a_length, b_length, c_length):
                     self._periodic_box_vectors = computePeriodicBoxVectors(a_length, b_length, c_length, alpha, beta, gamma)
             elif command == "SEQRES":
                 chain_id = pdb_line[11]
