@@ -382,7 +382,7 @@ jobs:
         env:
           CMAKE_FLAGS: ${{ matrix.CMAKE_FLAGS }}
         run: |
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           mkdir build
           cd build
           cmake -G "NMake Makefiles JOM" ^
@@ -403,7 +403,7 @@ jobs:
       - name: "Build OpenMM"
         shell: cmd /C call {0}
         run: |
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
           jom -j 2
           if errorlevel 1 exit 1
@@ -414,7 +414,7 @@ jobs:
         shell: cmd /C call {0}
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
         run: |
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
           jom -j 2 PythonInstall
 
