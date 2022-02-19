@@ -383,12 +383,8 @@ jobs:
         env:
           CMAKE_FLAGS: ${{ matrix.CMAKE_FLAGS }}
         run: |
-          dir "C:\Program Files (x86)"
-          dir "C:\Program Files (x86)\Microsoft Visual Studio"
-          dir "C:\Program Files (x86)\Microsoft Visual Studio\2019"
-          dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise"
-          dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary"
-          dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build"
+          dir "C:\Program Files"
+          dir "C:\Program Files\Microsoft Visual Studio"
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           mkdir build
           cd build
