@@ -16,7 +16,8 @@ if sys.platform == 'win32':
     os.environ['PATH'] = '%(lib)s;%(lib)s\plugins;%(path)s' % {
         'lib': version.openmm_library_path, 'path': _path}
     try:
-        os.add_dll_directory(version.openmm_library_path)
+        with os.add_dll_directory(version.openmm_library_path):
+            from . import _openmm
     except:
         pass
 
