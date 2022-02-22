@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2021 Stanford University and the Authors.
+Portions copyright (c) 2012-2022 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -48,7 +48,7 @@ import random
 import sys
 import xml.etree.ElementTree as etree
 from copy import deepcopy
-from math import ceil, floor
+from math import ceil, floor, sqrt
 from collections import defaultdict
 
 class Modeller(object):
@@ -375,8 +375,8 @@ class Modeller(object):
             self.topology = modeller.topology
             self.positions = modeller.positions
 
-    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
-        """Add solvent (both water and ions) to the model to fill a rectangular box.
+    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, boxShape='cube', positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
+        """Add solvent (both water and ions) to the model to fill a periodic box.
 
         The algorithm works as follows:
 
@@ -390,11 +390,17 @@ class Modeller(object):
 
         1. You can explicitly give the vectors defining the periodic box to use.
         2. Alternatively, for a rectangular box you can simply give the dimensions of the unit cell.
-        3. You can give a padding distance.  The largest dimension of the solute (along the x, y, or z axis) is determined, and a cubic
-           box of size (largest dimension)+2*padding is used.
-        4. You can specify the total number of molecules (both waters and ions) to add.  A cubic box is then created whose size is
+        3. You can give a padding distance.  A bounding sphere containing the solute is determined, and the box size is
+           set to (sphere radius)+(padding).  This guarantees no atom in the solute will come closer than the padding
+           distance to any atom of another periodic copy.
+        4. You can specify the total number of molecules (both waters and ions) to add.  A box is then created whose size is
            just large enough hold the specified amount of solvent.
         5. Finally, if none of the above options is specified, the existing Topology's box vectors are used.
+
+        When specifying either a padding distance or a number of molecules, you can specify a shape for the periodic box:
+        cubic, rhombic dodecahedron, or truncated octahedron.  Using a non-rectangular box allows the same distance
+        between periodic copies to be achieved with a smaller box.  The most compact option is a rhombic dodecahedron,
+        for which the box volume is 70.7% the volume of a cubic box with the same amount of padding.
 
         Parameters
         ----------
@@ -410,6 +416,9 @@ class Modeller(object):
             the padding distance to use
         numAdded : int=None
             the total number of molecules (waters and ions) to add
+        boxShape: str='cube'
+            the box shape to use.  Allowed values are 'cube', 'dodecahedron', and 'octahedron'.  If padding and numAdded
+            are both None, this is ignored.
         positiveIon : string='Na+'
             the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
         negativeIon : string='Cl-'
@@ -449,7 +458,7 @@ class Modeller(object):
         if numAdded is not None:
             # Select a padding distance which is guaranteed to give more than the specified number of molecules.
 
-            padding = 1.1*(numAdded/((len(pdbResidues)/pdbBoxSize[0]**3)*8))**(1.0/3.0)
+            padding = 2.2*(numAdded/((len(pdbResidues)/pdbBoxSize[0]**3)*8))**(1.0/3.0)
             if padding < 0.5:
                 padding = 0.5 # Ensure we have enough when adding very small numbers of molecules
         if boxVectors is not None:
@@ -466,12 +475,23 @@ class Modeller(object):
             if is_quantity(padding):
                 padding = padding.value_in_unit(nanometer)
             if len(self.positions) == 0:
-                maxSize = 0
+                radius = 0
             else:
-                maxSize = max(max((pos[i] for pos in self.positions))-min((pos[i] for pos in self.positions)) for i in range(3))
-                maxSize = maxSize.value_in_unit(nanometer)
-            box = (maxSize+2*padding)*Vec3(1, 1, 1)
-            vectors = (Vec3(maxSize+2*padding, 0, 0), Vec3(0, maxSize+2*padding, 0), Vec3(0, 0, maxSize+2*padding))
+                positions = self.positions.value_in_unit(nanometer)
+                minRange = Vec3(*(min((pos[i] for pos in positions)) for i in range(3)))
+                maxRange = Vec3(*(max((pos[i] for pos in positions)) for i in range(3)))
+                center = 0.5*(minRange+maxRange)
+                radius = max(unit.norm(center-pos) for pos in positions)
+            width = 2*radius+padding
+            box = width*Vec3(1, 1, 1)
+            if boxShape == 'cube':
+                vectors = (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0, 0, width))
+            elif boxShape == 'dodecahedron':
+                vectors = (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0.5, 0.5, 0.5*sqrt(2))*width)
+            elif boxShape == 'octahedron':
+                vectors = (Vec3(width, 0, 0), Vec3(1/3, 2*sqrt(2)/3, 0)*width, Vec3(-1/3, sqrt(2)/3, sqrt(6)/3)*width)
+            else:
+                raise ValueError(f'Illegal box shape: {boxShape}')
         else:
             box = self.topology.getUnitCellDimensions().value_in_unit(nanometer)
             vectors = self.topology.getPeriodicBoxVectors().value_in_unit(nanometer)
