@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -104,6 +104,7 @@ OpenCLPlatform::OpenCLPlatform() {
     platformProperties.push_back(OpenCLPrecision());
     platformProperties.push_back(OpenCLUseCpuPme());
     platformProperties.push_back(OpenCLDisablePmeStream());
+    platformProperties.push_back(OpenCLThrottle());
     setPropertyDefaultValue(OpenCLDeviceIndex(), "");
     setPropertyDefaultValue(OpenCLDeviceName(), "");
     setPropertyDefaultValue(OpenCLPlatformIndex(), "");
@@ -111,6 +112,7 @@ OpenCLPlatform::OpenCLPlatform() {
     setPropertyDefaultValue(OpenCLPrecision(), "single");
     setPropertyDefaultValue(OpenCLUseCpuPme(), "false");
     setPropertyDefaultValue(OpenCLDisablePmeStream(), "false");
+    setPropertyDefaultValue(OpenCLThrottle(), "medium");
 }
 
 double OpenCLPlatform::getSpeed() const {
@@ -183,9 +185,12 @@ void OpenCLPlatform::contextCreated(ContextImpl& context, const map<string, stri
             getPropertyDefaultValue(OpenCLUseCpuPme()) : properties.find(OpenCLUseCpuPme())->second);
     string pmeStreamPropValue = (properties.find(OpenCLDisablePmeStream()) == properties.end() ?
             getPropertyDefaultValue(OpenCLDisablePmeStream()) : properties.find(OpenCLDisablePmeStream())->second);
+    string throttlePropValue = (properties.find(OpenCLThrottle()) == properties.end() ?
+            getPropertyDefaultValue(OpenCLThrottle()) : properties.find(OpenCLThrottle())->second);
     transform(precisionPropValue.begin(), precisionPropValue.end(), precisionPropValue.begin(), ::tolower);
     transform(cpuPmePropValue.begin(), cpuPmePropValue.end(), cpuPmePropValue.begin(), ::tolower);
     transform(pmeStreamPropValue.begin(), pmeStreamPropValue.end(), pmeStreamPropValue.begin(), ::tolower);
+    transform(throttlePropValue.begin(), throttlePropValue.end(), throttlePropValue.begin(), ::tolower);
     vector<string> pmeKernelName;
     pmeKernelName.push_back(CalcPmeReciprocalForceKernel::Name());
     if (!supportsKernels(pmeKernelName))
@@ -195,7 +200,7 @@ void OpenCLPlatform::contextCreated(ContextImpl& context, const map<string, stri
     if (threadsEnv != NULL)
         stringstream(threadsEnv) >> threads;
     context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue, precisionPropValue, cpuPmePropValue,
-            pmeStreamPropValue, threads, NULL));
+            pmeStreamPropValue, throttlePropValue, threads, NULL));
 }
 
 void OpenCLPlatform::linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const {
@@ -205,9 +210,10 @@ void OpenCLPlatform::linkedContextCreated(ContextImpl& context, ContextImpl& ori
     string precisionPropValue = platform.getPropertyValue(originalContext.getOwner(), OpenCLPrecision());
     string cpuPmePropValue = platform.getPropertyValue(originalContext.getOwner(), OpenCLUseCpuPme());
     string pmeStreamPropValue = platform.getPropertyValue(originalContext.getOwner(), OpenCLDisablePmeStream());
+    string throttlePropValue = platform.getPropertyValue(originalContext.getOwner(), OpenCLThrottle());
     int threads = reinterpret_cast<PlatformData*>(originalContext.getPlatformData())->threads.getNumThreads();
     context.setPlatformData(new PlatformData(context.getSystem(), platformPropValue, devicePropValue, precisionPropValue, cpuPmePropValue,
-            pmeStreamPropValue, threads, &originalContext));
+            pmeStreamPropValue, throttlePropValue, threads, &originalContext));
 }
 
 void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
@@ -216,7 +222,8 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& platformPropValue, const string& deviceIndexProperty,
-        const string& precisionProperty, const string& cpuPmeProperty, const string& pmeStreamProperty, int numThreads, ContextImpl* originalContext) :
+            const string& precisionProperty, const string& cpuPmeProperty, const string& pmeStreamProperty, const string& throttleProperty,
+            int numThreads, ContextImpl* originalContext) :
             removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false), threads(numThreads)  {
     int platformIndex = -1;
     if (platformPropValue.length() > 0)
@@ -236,11 +243,11 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
             if (devices[i].length() > 0) {
                 int deviceIndex;
                 stringstream(devices[i]) >> deviceIndex;
-                contexts.push_back(new OpenCLContext(system, platformIndex, deviceIndex, precisionProperty, *this, (originalData == NULL ? NULL : originalData->contexts[i])));
+                contexts.push_back(new OpenCLContext(system, platformIndex, deviceIndex, precisionProperty, throttleProperty, *this, (originalData == NULL ? NULL : originalData->contexts[i])));
             }
         }
         if (contexts.size() == 0)
-            contexts.push_back(new OpenCLContext(system, platformIndex, -1, precisionProperty, *this, (originalData == NULL ? NULL : originalData->contexts[0])));
+            contexts.push_back(new OpenCLContext(system, platformIndex, -1, precisionProperty, throttleProperty, *this, (originalData == NULL ? NULL : originalData->contexts[0])));
     }
     catch (...) {
         // If an exception was thrown, do our best to clean up memory.
@@ -271,6 +278,7 @@ OpenCLPlatform::PlatformData::PlatformData(const System& system, const string& p
     propertyValues[OpenCLPlatform::OpenCLPrecision()] = precisionProperty;
     propertyValues[OpenCLPlatform::OpenCLUseCpuPme()] = useCpuPme ? "true" : "false";
     propertyValues[OpenCLPlatform::OpenCLDisablePmeStream()] = disablePmeStream ? "true" : "false";
+    propertyValues[OpenCLPlatform::OpenCLThrottle()] = throttleProperty;
     contextEnergy.resize(contexts.size());
 }
 

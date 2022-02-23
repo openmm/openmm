@@ -47,6 +47,11 @@ The OpenCL Platform recognizes the following Platform-specific properties:
   computer, this is used to select which one to use.  The value is the zero-based
   index of the device to use, in the order they are returned by the OpenCL device
   API.
+* OpenCLThrottle: Some OpenCL implementations allow you to specify a throttle
+  level, which sets a tradeoff between performance and energy consumption.  Allowed
+  options are "high" (run as fast as possible), "medium" (the default), or "low"
+  (try to reduce energy consumption).  The exact meaning of this setting is
+  implementation specific.  On some OpenCL implementations it has no effect.
 
 
 The OpenCL Platform also supports parallelizing a simulation across multiple

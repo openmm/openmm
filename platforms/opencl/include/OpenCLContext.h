@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -130,8 +130,8 @@ public:
     class ForcePostComputation;
     static const int ThreadBlockSize;
     static const int TileSize;
-    OpenCLContext(const System& system, int platformIndex, int deviceIndex, const std::string& precision, OpenCLPlatform::PlatformData& platformData,
-        OpenCLContext* originalContext);
+    OpenCLContext(const System& system, int platformIndex, int deviceIndex, const std::string& precision, const std::string& throttle,
+        OpenCLPlatform::PlatformData& platformData, OpenCLContext* originalContext);
     ~OpenCLContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system

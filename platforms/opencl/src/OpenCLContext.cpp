@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -58,6 +58,12 @@ using namespace std;
 #ifndef CL_DEVICE_COMPUTE_CAPABILITY_MINOR_NV
   #define CL_DEVICE_COMPUTE_CAPABILITY_MINOR_NV 0x4001
 #endif
+#ifndef CL_QUEUE_THROTTLE_KHR
+    #define CL_QUEUE_THROTTLE_KHR 0x1097
+    #define CL_QUEUE_THROTTLE_HIGH_KHR (1<<0)
+    #define CL_QUEUE_THROTTLE_MED_KHR (1<<1)
+    #define CL_QUEUE_THROTTLE_LOW_KHR (1<<2)
+#endif
 
 const int OpenCLContext::ThreadBlockSize = 64;
 const int OpenCLContext::TileSize = 32;
@@ -77,7 +83,8 @@ static bool isSupported(cl::Platform platform) {
             vendor.find("Intel") == 0);
 }
 
-OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData, OpenCLContext* originalContext) :
+OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, const string& throttle,
+        OpenCLPlatform::PlatformData& platformData, OpenCLContext* originalContext) :
         ComputeContext(system), platformData(platformData), numForceBuffers(0), hasAssignedPosqCharges(false),
         integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL) {
     if (precision == "single") {
@@ -286,9 +293,21 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             compilationDefines["SYNC_WARPS"] = "barrier(CLK_LOCAL_MEM_FENCE)";
         vector<cl::Device> contextDevices;
         contextDevices.push_back(device);
-        cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[bestPlatform](), 0};
+        vector<cl_context_properties> cprops = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[bestPlatform]()};
+        if (platforms[bestPlatform].getInfo<CL_PLATFORM_EXTENSIONS>().find("cl_khr_throttle_hints") != string::npos) {
+            cprops.push_back(CL_QUEUE_THROTTLE_KHR);
+            if (throttle == "low")
+                cprops.push_back(CL_QUEUE_THROTTLE_LOW_KHR);
+            else if (throttle == "medium")
+                cprops.push_back(CL_QUEUE_THROTTLE_MED_KHR);
+            else if (throttle == "high")
+                cprops.push_back(CL_QUEUE_THROTTLE_HIGH_KHR);
+            else
+                throw OpenMMException("Illegal value for OpenCLThrottle");
+        }
+        cprops.push_back(0);
         if (originalContext == NULL) {
-            context = cl::Context(contextDevices, cprops, errorCallback);
+            context = cl::Context(contextDevices, cprops.data(), errorCallback);
             defaultQueue = cl::CommandQueue(context, device);
         }
         else {
