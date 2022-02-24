@@ -57,11 +57,11 @@ def _getDataDirectories():
     if _dataDirectories is None:
         _dataDirectories = [os.path.join(os.path.dirname(__file__), 'data')]
         try:
-            from pkg_resources import iter_entry_points
-            for entry in iter_entry_points(group='openmm.forcefielddir'):
+            from importlib_metadata import entry_points
+            for entry in entry_points().select(group='openmm.forcefielddir'):
                 _dataDirectories.append(entry.load()())
         except:
-            pass # pkg_resources is not installed
+            pass # importlib_metadata is not installed
     return _dataDirectories
 
 def _convertParameterToNumber(param):
