@@ -144,30 +144,9 @@ static void validateVariables(const Lepton::ExpressionTreeNode& node, const set<
  * for a leapfrog integrator.
  */
 static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& masses, double timeShift) {
-    vector<Vec3>& posData = extractPositions(context);
-    vector<Vec3>& velData = extractVelocities(context);
-    vector<Vec3>& forceData = extractForces(context);
     int numParticles = context.getSystem().getNumParticles();
-    
-    // Compute the shifted velocities.
-    
     vector<Vec3> shiftedVel(numParticles);
-    for (int i = 0; i < numParticles; ++i) {
-        if (masses[i] > 0)
-            shiftedVel[i] = velData[i]+forceData[i]*(timeShift/masses[i]);
-        else
-            shiftedVel[i] = velData[i];
-    }
-    
-    // Apply constraints to them.
-    
-    vector<double> inverseMasses(numParticles);
-    for (int i = 0; i < numParticles; i++)
-        inverseMasses[i] = (masses[i] == 0 ? 0 : 1/masses[i]);
-    extractConstraints(context).applyToVelocities(posData, shiftedVel, inverseMasses, 1e-4);
-    
-    // Compute the kinetic energy.
-    
+    context.computeShiftedVelocities(timeShift, shiftedVel);
     double energy = 0.0;
     for (int i = 0; i < numParticles; ++i)
         if (masses[i] > 0)
@@ -203,6 +182,10 @@ double ReferenceCalcForcesAndEnergyKernel::finishComputation(ContextImpl& contex
 }
 
 void ReferenceUpdateStateDataKernel::initialize(const System& system) {
+    int numParticles = system.getNumParticles();
+    masses.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
 }
 
 double ReferenceUpdateStateDataKernel::getTime(const ContextImpl& context) const {
@@ -255,6 +238,32 @@ void ReferenceUpdateStateDataKernel::setVelocities(ContextImpl& context, const s
         velData[i][1] = velocities[i][1];
         velData[i][2] = velocities[i][2];
     }
+}
+
+void ReferenceUpdateStateDataKernel::computeShiftedVelocities(ContextImpl& context, double timeShift, std::vector<Vec3>& velocities) {
+    int numParticles = context.getSystem().getNumParticles();
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    vector<Vec3>& forceData = extractForces(context);
+    
+    // Compute the shifted velocities.
+    
+    velocities.resize(numParticles);
+    vector<double> inverseMasses(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        if (masses[i] == 0) {
+            velocities[i] = velData[i];
+            inverseMasses[i] = 0;
+        }
+        else {
+            velocities[i] = velData[i]+forceData[i]*(timeShift/masses[i]);
+            inverseMasses[i] = 1/masses[i];
+        }
+    }
+    
+    // Apply constraints to them.
+    
+    extractConstraints(context).applyToVelocities(posData, velocities, inverseMasses, 1e-4);
 }
 
 void ReferenceUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Vec3>& forces) {

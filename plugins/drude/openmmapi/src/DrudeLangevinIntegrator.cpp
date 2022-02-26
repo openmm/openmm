@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,6 +42,10 @@
 using namespace OpenMM;
 using std::string;
 using std::vector;
+
+namespace OpenMM {
+    double computeSystemTemperatureFromVelocities(const System& system, const vector<Vec3>& velocities);
+}
 
 DrudeLangevinIntegrator::DrudeLangevinIntegrator(double temperature, double frictionCoeff, double drudeTemperature, double drudeFrictionCoeff, double stepSize) : DrudeIntegrator(stepSize) {
     setTemperature(temperature);
@@ -114,4 +118,10 @@ void DrudeLangevinIntegrator::step(int steps) {
         context->calcForcesAndEnergy(true, false);
         kernel.getAs<IntegrateDrudeLangevinStepKernel>().execute(*context, *this);
     }
+}
+
+double DrudeLangevinIntegrator::computeSystemTemperature() {
+    vector<Vec3> velocities;
+    context->computeShiftedVelocities(0.5*getStepSize(), velocities);
+    return computeSystemTemperatureFromVelocities(context->getSystem(), velocities);
 }

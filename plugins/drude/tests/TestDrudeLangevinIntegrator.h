@@ -158,17 +158,21 @@ void testWater() {
     // Compute the internal and center of mass temperatures.
 
     double ke = 0;
+    double systemTemp;
     int numSteps = 8000;
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
         ke += context.getState(State::Energy).getKineticEnergy();
+        systemTemp += integ.computeSystemTemperature();
     }
     ke /= numSteps;
+    systemTemp /= numSteps;
     int numStandardDof = 3*3*numMolecules-system.getNumConstraints();
     int numDrudeDof = 3*numMolecules;
     int numDof = numStandardDof+numDrudeDof;
     double expectedTemp = (numStandardDof*temperature+numDrudeDof*temperatureDrude)/numDof;
     ASSERT_USUALLY_EQUAL_TOL(expectedTemp, ke/(0.5*numDof*BOLTZ), 0.03);
+    ASSERT_USUALLY_EQUAL_TOL(temperature, systemTemp, 0.03);
 }
 
 void testForceEnergyConsistency() {

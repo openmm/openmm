@@ -175,6 +175,15 @@ public:
      */
     void setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities);
     /**
+     * Compute velocities, shifted in time to account for a leapfrog integrator.  The shift
+     * is based on the most recently computed forces.
+     * 
+     * @param context     the context in which to execute this kernel
+     * @param timeShift   the amount by which to shift the velocities in time
+     * @param velocities  the shifted velocities are returned in this
+     */
+    void computeShiftedVelocities(ContextImpl& context, double timeShift, std::vector<Vec3>& velocities);
+    /**
      * Get the current forces on all particles.
      *
      * @param forces  on exit, this contains the forces
@@ -216,6 +225,7 @@ public:
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
     ReferencePlatform::PlatformData& data;
+    std::vector<double> masses;
 };
 
 /**

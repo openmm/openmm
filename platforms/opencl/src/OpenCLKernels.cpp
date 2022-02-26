@@ -291,6 +291,10 @@ void OpenCLUpdateStateDataKernel::setVelocities(ContextImpl& context, const vect
     }
 }
 
+void OpenCLUpdateStateDataKernel::computeShiftedVelocities(ContextImpl& context, double timeShift, vector<Vec3>& velocities) {
+    cl.getIntegrationUtilities().computeShiftedVelocities(timeShift, velocities);
+}
+
 void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& forces) {
     const vector<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
