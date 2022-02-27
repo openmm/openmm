@@ -121,6 +121,8 @@ void DrudeLangevinIntegrator::step(int steps) {
 }
 
 double DrudeLangevinIntegrator::computeSystemTemperature() {
+    if (context == NULL)
+        throw OpenMMException("This Integrator is not bound to a context!");  
     context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
     vector<Vec3> velocities;
     context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
