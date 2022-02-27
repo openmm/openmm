@@ -121,7 +121,8 @@ void DrudeLangevinIntegrator::step(int steps) {
 }
 
 double DrudeLangevinIntegrator::computeSystemTemperature() {
+    context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
     vector<Vec3> velocities;
-    context->computeShiftedVelocities(0.5*getStepSize(), velocities);
+    context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
     return computeSystemTemperatureFromVelocities(context->getSystem(), velocities);
 }

@@ -158,7 +158,7 @@ void testWater() {
     // Compute the internal and center of mass temperatures.
 
     double ke = 0;
-    double systemTemp;
+    double systemTemp = 0;
     int numSteps = 8000;
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);
