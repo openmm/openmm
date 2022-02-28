@@ -290,19 +290,19 @@ class AmberPrmtopFile(object):
         for force in sys.getForces():
             if isinstance(force, mm.NonbondedForce):
                 force.setEwaldErrorTolerance(ewaldErrorTolerance)
+                if switchDistance and nonbondedMethod is not ff.NoCutoff:
+                    # make sure it's legal
+                    if (_strip_optunit(switchDistance, u.nanometer) >=
+                            _strip_optunit(nonbondedCutoff, u.nanometer)):
+                        raise ValueError('switchDistance is too large compared '
+                                         'to the cutoff!')
+                    if _strip_optunit(switchDistance, u.nanometer) < 0:
+                        # Detects negatives for both Quantity and float
+                        raise ValueError('switchDistance must be non-negative!')
+                    force.setUseSwitchingFunction(True)
+                    force.setSwitchingDistance(switchDistance)
+
         if removeCMMotion:
             sys.addForce(mm.CMMotionRemover())
-
-        if switchDistance and nonbondedMethod is not ff.NoCutoff:
-            # make sure it's legal
-            if (_strip_optunit(switchDistance, u.nanometer) >=
-                    _strip_optunit(nonbondedCutoff, u.nanometer)):
-                raise ValueError('switchDistance is too large compared '
-                                 'to the cutoff!')
-            if _strip_optunit(switchDistance, u.nanometer) < 0:
-                # Detects negatives for both Quantity and float
-                raise ValueError('switchDistance must be non-negative!')
-            force.setUseSwitchingFunction(True)
-            force.setSwitchingDistance(switchDistance)
 
         return sys
