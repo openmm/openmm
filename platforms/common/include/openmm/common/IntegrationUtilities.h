@@ -136,7 +136,7 @@ public:
      * @param timeShift   the amount by which to shift the velocities in time
      * @param velocities  the shifted velocities are returned in this
      */
-    double computeShiftedVelocities(double timeShift, std::vector<Vec3>& velocities);
+    void computeShiftedVelocities(double timeShift, std::vector<Vec3>& velocities);
 protected:
     virtual void applyConstraintsImpl(bool constrainVelocities, double tol) = 0;
     ComputeContext& context;

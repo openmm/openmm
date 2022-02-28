@@ -862,7 +862,7 @@ double IntegrationUtilities::computeKineticEnergy(double timeShift) {
     return 0.5*energy;
 }
 
-double IntegrationUtilities::computeShiftedVelocities(double timeShift, vector<Vec3>& velocities) {
+void IntegrationUtilities::computeShiftedVelocities(double timeShift, vector<Vec3>& velocities) {
     ContextSelector selector(context);
     int numParticles = context.getNumAtoms();
     if (timeShift != 0) {
