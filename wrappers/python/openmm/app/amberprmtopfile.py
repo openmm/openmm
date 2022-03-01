@@ -288,7 +288,7 @@ class AmberPrmtopFile(object):
                     sys.setParticleMass(atom2.index, hydrogenMass)
                     sys.setParticleMass(atom1.index, sys.getParticleMass(atom1.index)-transferMass)
         for force in sys.getForces():
-            if isinstance(force, mm.NonbondedForce):
+            if isinstance(force, (mm.NonbondedForce, mm.CustomNonbondedForce)):
                 force.setEwaldErrorTolerance(ewaldErrorTolerance)
                 if switchDistance and nonbondedMethod is not ff.NoCutoff:
                     # make sure it's legal
