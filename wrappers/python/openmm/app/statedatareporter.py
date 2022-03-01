@@ -248,7 +248,11 @@ class StateDataReporter(object):
         if self._totalEnergy:
             values.append((state.getKineticEnergy()+state.getPotentialEnergy()).value_in_unit(unit.kilojoules_per_mole))
         if self._temperature:
-            values.append((2*state.getKineticEnergy()/(self._dof*unit.MOLAR_GAS_CONSTANT_R)).value_in_unit(unit.kelvin))
+            integrator = simulation.context.getIntegrator()
+            if hasattr(integrator, 'computeSystemTemperature'):
+                values.append(integrator.computeSystemTemperature().value_in_unit(unit.kelvin))
+            else:
+                values.append((2*state.getKineticEnergy()/(self._dof*unit.MOLAR_GAS_CONSTANT_R)).value_in_unit(unit.kelvin))
         if self._volume:
             values.append(volume.value_in_unit(unit.nanometer**3))
         if self._density:

@@ -6,9 +6,9 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2022 Stanford University and the Authors.      *
  * Authors: Andreas Krämer and Andrew C. Simmonett                            *
- * Contributors:                                                              *
+ * Contributors: Peter Eastman                                                *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
  * copy of this software and associated documentation files (the "Software"), *
@@ -48,6 +48,7 @@ using std::vector;
 
 namespace OpenMM {
     extern std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed);
+    double computeSystemTemperatureFromVelocities(const System& system, const vector<Vec3>& velocities);
 }
 
 DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double temperature, double collisionFrequency, 
@@ -146,6 +147,14 @@ double DrudeNoseHooverIntegrator::computeTotalKineticEnergy() {
     return kernel.getAs<IntegrateNoseHooverStepKernel>().computeKineticEnergy(*context, *this);
 }
 
+double DrudeNoseHooverIntegrator::computeSystemTemperature() {
+    if (context == NULL)
+        throw OpenMMException("This Integrator is not bound to a context!");  
+    context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
+    vector<Vec3> velocities;
+    context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
+    return computeSystemTemperatureFromVelocities(context->getSystem(), velocities);
+}
 std::vector<Vec3> DrudeNoseHooverIntegrator::getVelocitiesForTemperature(const System &system, double temperature,
                                                                          int randomSeedIn) const {
     return assignDrudeVelocities(system, temperature, drudeTemperature, randomSeedIn);

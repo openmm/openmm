@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -860,4 +860,50 @@ double IntegrationUtilities::computeKineticEnergy(double timeShift) {
     if (timeShift != 0)
         posDelta.copyTo(context.getVelm());
     return 0.5*energy;
+}
+
+void IntegrationUtilities::computeShiftedVelocities(double timeShift, vector<Vec3>& velocities) {
+    ContextSelector selector(context);
+    int numParticles = context.getNumAtoms();
+    if (timeShift != 0) {
+        // Copy the velocities into the posDelta array while we temporarily modify them.
+
+        context.getVelm().copyTo(posDelta);
+
+        // Apply the time shift.
+
+        timeShiftKernel->setArg(0, context.getVelm());
+        timeShiftKernel->setArg(1, context.getLongForceBuffer());
+        if (context.getUseDoublePrecision())
+            timeShiftKernel->setArg(2, timeShift);
+        else
+            timeShiftKernel->setArg(2, (float) timeShift);
+        timeShiftKernel->execute(numParticles);
+        applyConstraintsImpl(true, 1e-4);
+    }
+    
+    // Retrieve the velocities.
+    
+    velocities.resize(numParticles);
+    if (context.getUseDoublePrecision() || context.getUseMixedPrecision()) {
+        auto velm = (mm_double4*)context.getPinnedBuffer();
+        context.getVelm().download(velm);
+        for (int i = 0; i < numParticles; i++) {
+            mm_double4 v = velm[i];
+            velocities[i] = Vec3(v.x, v.y, v.z);
+        }
+    }
+    else {
+        auto velm = (mm_float4*)context.getPinnedBuffer();
+        context.getVelm().download(velm);
+        for (int i = 0; i < numParticles; i++) {
+            mm_float4 v = velm[i];
+            velocities[i] = Vec3(v.x, v.y, v.z);
+        }
+    }
+    
+    // Restore the velocities.
+    
+    if (timeShift != 0)
+        posDelta.copyTo(context.getVelm());
 }
