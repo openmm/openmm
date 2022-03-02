@@ -4680,7 +4680,6 @@ class AmoebaStretchBendGenerator(object):
                             k1, k2 = self.k1[i], self.k2[i]
                         else:
                             k1, k2 = self.k2[i], self.k1[i]
-
                         force.addBond((angle[0], angle[1], angle[2]), (bondAB, bondCB, angleDict['idealAngle']/radian, k1, k2))
 
                     break
