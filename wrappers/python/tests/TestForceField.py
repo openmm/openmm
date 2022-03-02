@@ -1020,7 +1020,7 @@ class TestForceField(unittest.TestCase):
         system1 = ff1.createSystem(pdb.topology)
         system2 = ff2.createSystem(pdb.topology)
 
-        imp1 = system1.getForce(2).getTorsionParameters(158)
+        imp1 = system1.getForce(1).getTorsionParameters(158)
         imp2 = system2.getForce(0).getTorsionParameters(158)
 
         system1_indexes = [imp1[0], imp1[1], imp1[2], imp1[3]]

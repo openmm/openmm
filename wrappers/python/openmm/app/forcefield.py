@@ -2057,6 +2057,11 @@ class HarmonicAngleGenerator(object):
             generator.registerAngle(angle.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+        pass
+
+    def postprocessSystem(self, sys, data, args):
+        # We need to wait until after all bonds have been added so their lengths will be set correctly.
+
         existing = [f for f in sys.getForces() if type(f) == mm.HarmonicAngleForce]
         if len(existing) == 0:
             force = mm.HarmonicAngleForce()
@@ -3733,8 +3738,11 @@ class AmoebaOutOfPlaneBendGenerator(object):
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+        self._nonbondedMethod = nonbondedMethod
+        self._nonbondedCutoff = nonbondedCutoff
 
-        # get force
+    def postprocessSystem(self, sys, data, args):
+        # We need to wait until after all bonds have been added so their lengths will be set correctly.
 
         energy = """k*(theta^2 + %s*theta^3 + %s*theta^4 + %s*theta^5 + %s*theta^6);
                     theta = %.15g*pointangle(x2, y2, z2, x4, y4, z4, projx, projy, projz);
@@ -3857,12 +3865,12 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
         for force in self.forceField._forces:
             if (force.__class__.__name__ == 'AmoebaAngleGenerator'):
-                force.createForcePostOpBendAngle(sys, data, nonbondedMethod, nonbondedCutoff, angles, args)
-                force.createForcePostOpBendInPlaneAngle(sys, data, nonbondedMethod, nonbondedCutoff, angles, args)
+                force.createForcePostOpBendAngle(sys, data, self._nonbondedMethod, self._nonbondedCutoff, angles, args)
+                force.createForcePostOpBendInPlaneAngle(sys, data, self._nonbondedMethod, self._nonbondedCutoff, angles, args)
 
         for force in self.forceField._forces:
             if (force.__class__.__name__ == 'AmoebaStretchBendGenerator'):
-                force.createForcePostAmoebaBondForce(sys, data, nonbondedMethod, nonbondedCutoff, angles, args)
+                force.createForcePostAmoebaBondForce(sys, data, self._nonbondedMethod, self._nonbondedCutoff, angles, args)
 
 parsers["AmoebaOutOfPlaneBendForce"] = AmoebaOutOfPlaneBendGenerator.parseElement
 
@@ -4672,7 +4680,7 @@ class AmoebaStretchBendGenerator(object):
                             k1, k2 = self.k1[i], self.k2[i]
                         else:
                             k1, k2 = self.k2[i], self.k1[i]
-                            
+
                         force.addBond((angle[0], angle[1], angle[2]), (bondAB, bondCB, angleDict['idealAngle']/radian, k1, k2))
 
                     break
