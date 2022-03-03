@@ -56,12 +56,24 @@ def _getDataDirectories():
     global _dataDirectories
     if _dataDirectories is None:
         _dataDirectories = [os.path.join(os.path.dirname(__file__), 'data')]
+        eps = None
         try:
-            from importlib_metadata import entry_points
-            for entry in entry_points().select(group='openmm.forcefielddir'):
-                _dataDirectories.append(entry.load()())
+            from importlib.metadata import entry_points
+            eps = entry_points()
         except:
-            pass # importlib_metadata is not installed
+            try:
+                from importlib_metadata import entry_points
+                eps = entry_points()
+            except:
+                pass  # importlib_metadata is not installed
+        if eps is not None:
+            if hasattr(eps, 'select'):
+                entries = eps.select(group='openmm.forcefielddir')
+            else:
+                entries = eps['openmm.forcefielddir']
+            for entry in entries:
+                _dataDirectories.append(entry.load()())
+        print(_dataDirectories)
     return _dataDirectories
 
 def _convertParameterToNumber(param):
