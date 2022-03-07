@@ -102,9 +102,9 @@ KERNEL void calculateEwaldForces(GLOBAL mm_long* RESTRICT forceBuffers, GLOBAL c
 
         // Record the force on the atom.
 
-        forceBuffers[atom] += (mm_long) (force.x*0x100000000);
-        forceBuffers[atom+PADDED_NUM_ATOMS] += (mm_long) (force.y*0x100000000);
-        forceBuffers[atom+2*PADDED_NUM_ATOMS] += (mm_long) (force.z*0x100000000);
+        forceBuffers[atom] += realToFixedPoint(force.x);
+        forceBuffers[atom+PADDED_NUM_ATOMS] += realToFixedPoint(force.y);
+        forceBuffers[atom+2*PADDED_NUM_ATOMS] += realToFixedPoint(force.z);
         atom += GLOBAL_SIZE;
     }
 }

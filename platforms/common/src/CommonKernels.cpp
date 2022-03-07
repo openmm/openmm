@@ -1651,9 +1651,9 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     // Save the forces to global memory.
     
     for (int i = 0; i < groupsPerBond; i++) {
-        compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"], (mm_ulong) ((mm_long) (force"<<(i+1)<<".x*0x100000000)));\n";
-        compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"+numParticleGroups], (mm_ulong) ((mm_long) (force"<<(i+1)<<".y*0x100000000)));\n";
-        compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"+numParticleGroups*2], (mm_ulong) ((mm_long) (force"<<(i+1)<<".z*0x100000000)));\n";
+        compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".x));\n";
+        compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"+numParticleGroups], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".y));\n";
+        compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"+numParticleGroups*2], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".z));\n";
         compute<<"MEM_FENCE;\n";
     }
     map<string, string> replacements;
@@ -2975,11 +2975,11 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
                 else
                     tempDerivs2 << "local_" << derivName << "[tbx+tj] += temp_" << derivName << "_2;\n";
                 if (useLong) {
-                    storeDeriv1 << "ATOMIC_ADD(&global_" << derivName << "[offset1], (mm_ulong) ((mm_long) (" << derivName << "*0x100000000)));\n";
+                    storeDeriv1 << "ATOMIC_ADD(&global_" << derivName << "[offset1], (mm_ulong) realToFixedPoint(" << derivName << "));\n";
                     if (deviceIsCpu)
-                        storeDeriv2 << "ATOMIC_ADD(&global_" << derivName << "[offset2], (mm_ulong) ((mm_long) (local_" << derivName << "[tgx]*0x100000000)));\n";
+                        storeDeriv2 << "ATOMIC_ADD(&global_" << derivName << "[offset2], (mm_ulong) realToFixedPoint(local_" << derivName << "[tgx]));\n";
                     else
-                        storeDeriv2 << "ATOMIC_ADD(&global_" << derivName << "[offset2], (mm_ulong) ((mm_long) (local_" << derivName << "[LOCAL_ID]*0x100000000)));\n";
+                        storeDeriv2 << "ATOMIC_ADD(&global_" << derivName << "[offset2], (mm_ulong) realToFixedPoint(local_" << derivName << "[LOCAL_ID]));\n";
                 }
                 else {
                     storeDeriv1 << "global_" << derivName << "[offset1] += " << derivName << ";\n";
@@ -3353,9 +3353,9 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             compute << "derivBuffers" << index << "[index] = deriv" << index << ";\n";
         }
         if (useLong) {
-            compute << "forceBuffers[index] += (mm_long) (force.x*0x100000000);\n";
-            compute << "forceBuffers[index+PADDED_NUM_ATOMS] += (mm_long) (force.y*0x100000000);\n";
-            compute << "forceBuffers[index+PADDED_NUM_ATOMS*2] += (mm_long) (force.z*0x100000000);\n";
+            compute << "forceBuffers[index] += realToFixedPoint(force.x);\n";
+            compute << "forceBuffers[index+PADDED_NUM_ATOMS] += realToFixedPoint(force.y);\n";
+            compute << "forceBuffers[index+PADDED_NUM_ATOMS*2] += realToFixedPoint(force.z);\n";
         }
         else
             compute << "forceBuffers[index] = forceBuffers[index]+make_real4(force.x, force.y, force.z, 0);\n";

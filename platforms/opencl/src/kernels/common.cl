@@ -59,3 +59,7 @@ typedef unsigned long mm_ulong;
 #define asinf(x) asin(x)
 #define atanf(x) atan(x)
 #define atan2f(x, y) atan2(x, y)
+
+inline long realToFixedPoint(real x) {
+    return (long) (x * 0x100000000);
+}

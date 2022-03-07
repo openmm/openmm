@@ -116,21 +116,21 @@ KERNEL void computeDonorForces(
         if (donorIndex < NUM_DONORS) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
             if (atoms.x > -1) {
-                ATOMIC_ADD(&force[atoms.x], (mm_ulong) ((mm_long) (f1.x*0x100000000)));
-                ATOMIC_ADD(&force[atoms.x+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (f1.y*0x100000000)));
-                ATOMIC_ADD(&force[atoms.x+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (f1.z*0x100000000)));
+                ATOMIC_ADD(&force[atoms.x], (mm_ulong) realToFixedPoint(f1.x));
+                ATOMIC_ADD(&force[atoms.x+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f1.y));
+                ATOMIC_ADD(&force[atoms.x+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f1.z));
                 MEM_FENCE;
             }
             if (atoms.y > -1) {
-                ATOMIC_ADD(&force[atoms.y], (mm_ulong) ((mm_long) (f2.x*0x100000000)));
-                ATOMIC_ADD(&force[atoms.y+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (f2.y*0x100000000)));
-                ATOMIC_ADD(&force[atoms.y+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (f2.z*0x100000000)));
+                ATOMIC_ADD(&force[atoms.y], (mm_ulong) realToFixedPoint(f2.x));
+                ATOMIC_ADD(&force[atoms.y+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f2.y));
+                ATOMIC_ADD(&force[atoms.y+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f2.z));
                 MEM_FENCE;
             }
             if (atoms.z > -1) {
-                ATOMIC_ADD(&force[atoms.z], (mm_ulong) ((mm_long) (f3.x*0x100000000)));
-                ATOMIC_ADD(&force[atoms.z+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (f3.y*0x100000000)));
-                ATOMIC_ADD(&force[atoms.z+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (f3.z*0x100000000)));
+                ATOMIC_ADD(&force[atoms.z], (mm_ulong) realToFixedPoint(f3.x));
+                ATOMIC_ADD(&force[atoms.z+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f3.y));
+                ATOMIC_ADD(&force[atoms.z+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f3.z));
                 MEM_FENCE;
             }
 #else
@@ -233,21 +233,21 @@ KERNEL void computeAcceptorForces(
         if (acceptorIndex < NUM_ACCEPTORS) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
             if (atoms.x > -1) {
-                ATOMIC_ADD(&force[atoms.x], (mm_ulong) ((mm_long) (f1.x*0x100000000)));
-                ATOMIC_ADD(&force[atoms.x+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (f1.y*0x100000000)));
-                ATOMIC_ADD(&force[atoms.x+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (f1.z*0x100000000)));
+                ATOMIC_ADD(&force[atoms.x], (mm_ulong) realToFixedPoint(f1.x));
+                ATOMIC_ADD(&force[atoms.x+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f1.y));
+                ATOMIC_ADD(&force[atoms.x+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f1.z));
                 MEM_FENCE;
             }
             if (atoms.y > -1) {
-                ATOMIC_ADD(&force[atoms.y], (mm_ulong) ((mm_long) (f2.x*0x100000000)));
-                ATOMIC_ADD(&force[atoms.y+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (f2.y*0x100000000)));
-                ATOMIC_ADD(&force[atoms.y+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (f2.z*0x100000000)));
+                ATOMIC_ADD(&force[atoms.y], (mm_ulong) realToFixedPoint(f2.x));
+                ATOMIC_ADD(&force[atoms.y+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f2.y));
+                ATOMIC_ADD(&force[atoms.y+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f2.z));
                 MEM_FENCE;
             }
             if (atoms.z > -1) {
-                ATOMIC_ADD(&force[atoms.z], (mm_ulong) ((mm_long) (f3.x*0x100000000)));
-                ATOMIC_ADD(&force[atoms.z+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (f3.y*0x100000000)));
-                ATOMIC_ADD(&force[atoms.z+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (f3.z*0x100000000)));
+                ATOMIC_ADD(&force[atoms.z], (mm_ulong) realToFixedPoint(f3.x));
+                ATOMIC_ADD(&force[atoms.z+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f3.y));
+                ATOMIC_ADD(&force[atoms.z+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f3.z));
                 MEM_FENCE;
             }
 #else

@@ -564,29 +564,29 @@ KERNEL void computeFixedField(
         // Write results.
         
         unsigned int offset = x*TILE_SIZE + tgx;
-        ATOMIC_ADD(&fieldBuffers[offset], (mm_ulong) ((mm_long) (data.field.x*0x100000000)));
-        ATOMIC_ADD(&fieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.field.y*0x100000000)));
-        ATOMIC_ADD(&fieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.field.z*0x100000000)));
-        ATOMIC_ADD(&fieldPolarBuffers[offset], (mm_ulong) ((mm_long) (data.fieldPolar.x*0x100000000)));
-        ATOMIC_ADD(&fieldPolarBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.fieldPolar.y*0x100000000)));
-        ATOMIC_ADD(&fieldPolarBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.fieldPolar.z*0x100000000)));
+        ATOMIC_ADD(&fieldBuffers[offset], (mm_ulong) realToFixedPoint(data.field.x));
+        ATOMIC_ADD(&fieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.field.y));
+        ATOMIC_ADD(&fieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.field.z));
+        ATOMIC_ADD(&fieldPolarBuffers[offset], (mm_ulong) realToFixedPoint(data.fieldPolar.x));
+        ATOMIC_ADD(&fieldPolarBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.fieldPolar.y));
+        ATOMIC_ADD(&fieldPolarBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.fieldPolar.z));
 #ifdef USE_GK
-        ATOMIC_ADD(&gkFieldBuffers[offset], (mm_ulong) ((mm_long) (data.gkField.x*0x100000000)));
-        ATOMIC_ADD(&gkFieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.gkField.y*0x100000000)));
-        ATOMIC_ADD(&gkFieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.gkField.z*0x100000000)));
+        ATOMIC_ADD(&gkFieldBuffers[offset], (mm_ulong) realToFixedPoint(data.gkField.x));
+        ATOMIC_ADD(&gkFieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.gkField.y));
+        ATOMIC_ADD(&gkFieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.gkField.z));
 #endif
         if (x != y) {
             offset = y*TILE_SIZE + tgx;
-            ATOMIC_ADD(&fieldBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.x*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.y*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.z*0x100000000)));
-            ATOMIC_ADD(&fieldPolarBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fieldPolar.x*0x100000000)));
-            ATOMIC_ADD(&fieldPolarBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fieldPolar.y*0x100000000)));
-            ATOMIC_ADD(&fieldPolarBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fieldPolar.z*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].field.x));
+            ATOMIC_ADD(&fieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].field.y));
+            ATOMIC_ADD(&fieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].field.z));
+            ATOMIC_ADD(&fieldPolarBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fieldPolar.x));
+            ATOMIC_ADD(&fieldPolarBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fieldPolar.y));
+            ATOMIC_ADD(&fieldPolarBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fieldPolar.z));
 #ifdef USE_GK
-            ATOMIC_ADD(&gkFieldBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].gkField.x*0x100000000)));
-            ATOMIC_ADD(&gkFieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].gkField.y*0x100000000)));
-            ATOMIC_ADD(&gkFieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].gkField.z*0x100000000)));
+            ATOMIC_ADD(&gkFieldBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].gkField.x));
+            ATOMIC_ADD(&gkFieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].gkField.y));
+            ATOMIC_ADD(&gkFieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].gkField.z));
 #endif
         }
     }
@@ -706,32 +706,32 @@ KERNEL void computeFixedField(
             // Write results.
 
             unsigned int offset = x*TILE_SIZE + tgx;
-            ATOMIC_ADD(&fieldBuffers[offset], (mm_ulong) ((mm_long) (data.field.x*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.field.y*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.field.z*0x100000000)));
-            ATOMIC_ADD(&fieldPolarBuffers[offset], (mm_ulong) ((mm_long) (data.fieldPolar.x*0x100000000)));
-            ATOMIC_ADD(&fieldPolarBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.fieldPolar.y*0x100000000)));
-            ATOMIC_ADD(&fieldPolarBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.fieldPolar.z*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[offset], (mm_ulong) realToFixedPoint(data.field.x));
+            ATOMIC_ADD(&fieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.field.y));
+            ATOMIC_ADD(&fieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.field.z));
+            ATOMIC_ADD(&fieldPolarBuffers[offset], (mm_ulong) realToFixedPoint(data.fieldPolar.x));
+            ATOMIC_ADD(&fieldPolarBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.fieldPolar.y));
+            ATOMIC_ADD(&fieldPolarBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.fieldPolar.z));
 #ifdef USE_GK
-            ATOMIC_ADD(&gkFieldBuffers[offset], (mm_ulong) ((mm_long) (data.gkField.x*0x100000000)));
-            ATOMIC_ADD(&gkFieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.gkField.y*0x100000000)));
-            ATOMIC_ADD(&gkFieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.gkField.z*0x100000000)));
+            ATOMIC_ADD(&gkFieldBuffers[offset], (mm_ulong) realToFixedPoint(data.gkField.x));
+            ATOMIC_ADD(&gkFieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.gkField.y));
+            ATOMIC_ADD(&gkFieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.gkField.z));
 #endif
 #ifdef USE_CUTOFF
             offset = atomIndices[LOCAL_ID];
 #else
             offset = y*TILE_SIZE + tgx;
 #endif
-            ATOMIC_ADD(&fieldBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.x*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.y*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].field.z*0x100000000)));
-            ATOMIC_ADD(&fieldPolarBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fieldPolar.x*0x100000000)));
-            ATOMIC_ADD(&fieldPolarBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fieldPolar.y*0x100000000)));
-            ATOMIC_ADD(&fieldPolarBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fieldPolar.z*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].field.x));
+            ATOMIC_ADD(&fieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].field.y));
+            ATOMIC_ADD(&fieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].field.z));
+            ATOMIC_ADD(&fieldPolarBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fieldPolar.x));
+            ATOMIC_ADD(&fieldPolarBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fieldPolar.y));
+            ATOMIC_ADD(&fieldPolarBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fieldPolar.z));
 #ifdef USE_GK
-            ATOMIC_ADD(&gkFieldBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].gkField.x*0x100000000)));
-            ATOMIC_ADD(&gkFieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].gkField.y*0x100000000)));
-            ATOMIC_ADD(&gkFieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].gkField.z*0x100000000)));
+            ATOMIC_ADD(&gkFieldBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].gkField.x));
+            ATOMIC_ADD(&gkFieldBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].gkField.y));
+            ATOMIC_ADD(&gkFieldBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].gkField.z));
 #endif
         }
         pos++;

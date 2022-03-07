@@ -2,9 +2,9 @@
  * Record the force on an atom to global memory.
  */
 inline DEVICE void storeForce(int atom, real3 force, GLOBAL mm_ulong* RESTRICT forceBuffers) {
-    ATOMIC_ADD(&forceBuffers[atom], (mm_ulong) ((mm_long) (force.x*0x100000000)));
-    ATOMIC_ADD(&forceBuffers[atom+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
-    ATOMIC_ADD(&forceBuffers[atom+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
+    ATOMIC_ADD(&forceBuffers[atom], (mm_ulong) realToFixedPoint(force.x));
+    ATOMIC_ADD(&forceBuffers[atom+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
+    ATOMIC_ADD(&forceBuffers[atom+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
 }
 
 /**

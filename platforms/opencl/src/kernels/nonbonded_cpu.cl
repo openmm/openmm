@@ -107,9 +107,9 @@ __kernel void computeNonbonded(
                 // Write results.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                atom_add(&forceBuffers[atom1], (long) (force.x*0x100000000));
-                atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
-                atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
+                atom_add(&forceBuffers[atom1], realToFixedPoint(force.x));
+                atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], realToFixedPoint(force.y));
+                atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], realToFixedPoint(force.z));
 #else
                 unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
                 forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
@@ -183,9 +183,9 @@ __kernel void computeNonbonded(
                // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                atom_add(&forceBuffers[atom1], (long) (force.x*0x100000000));
-                atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
-                atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
+                atom_add(&forceBuffers[atom1], realToFixedPoint(force.x));
+                atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], realToFixedPoint(force.y));
+                atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], realToFixedPoint(force.z));
 #else
                 unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
                 forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
@@ -197,9 +197,9 @@ __kernel void computeNonbonded(
             for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 unsigned int offset = y*TILE_SIZE + tgx;
-                atom_add(&forceBuffers[offset], (long) (localData[tgx].fx*0x100000000));
-                atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], (long) (localData[tgx].fy*0x100000000));
-                atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (long) (localData[tgx].fz*0x100000000));
+                atom_add(&forceBuffers[offset], realToFixedPoint(localData[tgx].fx));
+                atom_add(&forceBuffers[offset+PADDED_NUM_ATOMS], realToFixedPoint(localData[tgx].fy));
+                atom_add(&forceBuffers[offset+2*PADDED_NUM_ATOMS], realToFixedPoint(localData[tgx].fz));
 #else
                 unsigned int offset = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
                 real4 f = forceBuffers[offset];
@@ -342,9 +342,9 @@ __kernel void computeNonbonded(
                    // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&forceBuffers[atom1], (long) (force.x*0x100000000));
-                    atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
-                    atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
+                    atom_add(&forceBuffers[atom1], realToFixedPoint(force.x));
+                    atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], realToFixedPoint(force.y));
+                    atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], realToFixedPoint(force.z));
 #else
                     unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
                     forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
@@ -409,9 +409,9 @@ __kernel void computeNonbonded(
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&forceBuffers[atom1], (long) (force.x*0x100000000));
-                    atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], (long) (force.y*0x100000000));
-                    atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (long) (force.z*0x100000000));
+                    atom_add(&forceBuffers[atom1], realToFixedPoint(force.x));
+                    atom_add(&forceBuffers[atom1+PADDED_NUM_ATOMS], realToFixedPoint(force.y));
+                    atom_add(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], realToFixedPoint(force.z));
 #else
                     unsigned int offset = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
                     forceBuffers[offset].xyz = forceBuffers[offset].xyz+force.xyz;
@@ -429,9 +429,9 @@ __kernel void computeNonbonded(
 #endif
                 if (atom2 < PADDED_NUM_ATOMS) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    atom_add(&forceBuffers[atom2], (long) (localData[tgx].fx*0x100000000));
-                    atom_add(&forceBuffers[atom2+PADDED_NUM_ATOMS], (long) (localData[tgx].fy*0x100000000));
-                    atom_add(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (long) (localData[tgx].fz*0x100000000));
+                    atom_add(&forceBuffers[atom2], realToFixedPoint(localData[tgx].fx));
+                    atom_add(&forceBuffers[atom2+PADDED_NUM_ATOMS], realToFixedPoint(localData[tgx].fy));
+                    atom_add(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], realToFixedPoint(localData[tgx].fz));
 #else
                     unsigned int offset = atom2 + get_group_id(0)*PADDED_NUM_ATOMS;
                     real4 f = forceBuffers[offset];
