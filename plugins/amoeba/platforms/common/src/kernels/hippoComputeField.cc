@@ -174,14 +174,14 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
         // Write results.
 
         unsigned int offset1 = x*TILE_SIZE + tgx;
-        ATOMIC_ADD(&fieldBuffers[offset1], (mm_ulong) ((mm_long) (field.x*0x100000000)));
-        ATOMIC_ADD(&fieldBuffers[offset1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (field.y*0x100000000)));
-        ATOMIC_ADD(&fieldBuffers[offset1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (field.z*0x100000000)));
+        ATOMIC_ADD(&fieldBuffers[offset1], (mm_ulong) realToFixedPoint(field.x));
+        ATOMIC_ADD(&fieldBuffers[offset1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(field.y));
+        ATOMIC_ADD(&fieldBuffers[offset1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(field.z));
         if (x != y) {
             unsigned int offset2 = y*TILE_SIZE + tgx;
-            ATOMIC_ADD(&fieldBuffers[offset2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fx*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[offset2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fy*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[offset2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fz*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[offset2], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fx));
+            ATOMIC_ADD(&fieldBuffers[offset2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fy));
+            ATOMIC_ADD(&fieldBuffers[offset2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fz));
         }
     }
 
@@ -344,18 +344,18 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
         
             // Write results.
 
-            ATOMIC_ADD(&fieldBuffers[atom1], (mm_ulong) ((mm_long) (field.x*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (field.y*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (field.z*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[atom1], (mm_ulong) realToFixedPoint(field.x));
+            ATOMIC_ADD(&fieldBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(field.y));
+            ATOMIC_ADD(&fieldBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(field.z));
 #ifdef USE_CUTOFF
             unsigned int atom2 = atomIndices[LOCAL_ID];
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
             if (atom2 < PADDED_NUM_ATOMS) {
-                ATOMIC_ADD(&fieldBuffers[atom2], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fx*0x100000000)));
-                ATOMIC_ADD(&fieldBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fy*0x100000000)));
-                ATOMIC_ADD(&fieldBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].fz*0x100000000)));
+                ATOMIC_ADD(&fieldBuffers[atom2], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fx));
+                ATOMIC_ADD(&fieldBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fy));
+                ATOMIC_ADD(&fieldBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fz));
             }
         }
         tile++;
@@ -395,12 +395,12 @@ KERNEL void computeFieldExceptions(GLOBAL const real4* RESTRICT posq, GLOBAL mm_
             real3 tempField1 = make_real3(0);
             real3 tempField2 = make_real3(0);
             COMPUTE_FIELD
-            ATOMIC_ADD(&fieldBuffers[atom1], (mm_ulong) ((mm_long) (tempField1.x*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempField1.y*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempField1.z*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[atom2], (mm_ulong) ((mm_long) (tempField2.x*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempField2.y*0x100000000)));
-            ATOMIC_ADD(&fieldBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempField2.z*0x100000000)));
+            ATOMIC_ADD(&fieldBuffers[atom1], (mm_ulong) realToFixedPoint(tempField1.x));
+            ATOMIC_ADD(&fieldBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(tempField1.y));
+            ATOMIC_ADD(&fieldBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(tempField1.z));
+            ATOMIC_ADD(&fieldBuffers[atom2], (mm_ulong) realToFixedPoint(tempField2.x));
+            ATOMIC_ADD(&fieldBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(tempField2.y));
+            ATOMIC_ADD(&fieldBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(tempField2.z));
 #ifdef USE_CUTOFF
         }
 #endif

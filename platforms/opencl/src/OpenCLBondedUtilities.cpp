@@ -256,9 +256,9 @@ string OpenCLBondedUtilities::createForceSource(int forceIndex, int numBonds, in
     for (int i = 0; i < numAtoms; i++) {
         s<<"    {\n";
         if (context.getSupports64BitGlobalAtomics()) {
-            s<<"    atom_add(&forceBuffers[atom"<<(i+1)<<"], (long) (force"<<(i+1)<<".x*0x100000000));\n";
-            s<<"    atom_add(&forceBuffers[atom"<<(i+1)<<"+PADDED_NUM_ATOMS], (long) (force"<<(i+1)<<".y*0x100000000));\n";
-            s<<"    atom_add(&forceBuffers[atom"<<(i+1)<<"+2*PADDED_NUM_ATOMS], (long) (force"<<(i+1)<<".z*0x100000000));\n";
+            s<<"    atom_add(&forceBuffers[atom"<<(i+1)<<"], realToFixedPoint(force"<<(i+1)<<".x));\n";
+            s<<"    atom_add(&forceBuffers[atom"<<(i+1)<<"+PADDED_NUM_ATOMS], realToFixedPoint(force"<<(i+1)<<".y));\n";
+            s<<"    atom_add(&forceBuffers[atom"<<(i+1)<<"+2*PADDED_NUM_ATOMS], realToFixedPoint(force"<<(i+1)<<".z));\n";
         }
         else {
             s<<"    unsigned int offset = atom"<<(i+1)<<"+buffers"<<suffix[i]<<"*PADDED_NUM_ATOMS;\n";

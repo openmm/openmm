@@ -24,3 +24,7 @@ typedef unsigned long long mm_ulong;
 
 #define SUPPORTS_64_BIT_ATOMICS 1
 #define SUPPORTS_DOUBLE_PRECISION 1
+
+__device__ inline long long realToFixedPoint(real x) {
+    return static_cast<long long>(x * 0x100000000);
+}

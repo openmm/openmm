@@ -139,11 +139,11 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
         unsigned int offset1 = x*TILE_SIZE + tgx;
-        ATOMIC_ADD(&global_value[offset1], (mm_ulong) ((mm_long) (value*0x100000000)));
+        ATOMIC_ADD(&global_value[offset1], (mm_ulong) realToFixedPoint(value));
         STORE_PARAM_DERIVS1
         if (x != y) {
             unsigned int offset2 = y*TILE_SIZE + tgx;
-            ATOMIC_ADD(&global_value[offset2], (mm_ulong) ((mm_long) (local_value[LOCAL_ID]*0x100000000)));
+            ATOMIC_ADD(&global_value[offset2], (mm_ulong) realToFixedPoint(local_value[LOCAL_ID]));
             STORE_PARAM_DERIVS2
         }
 #else
@@ -319,11 +319,11 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
 #endif
 #ifdef SUPPORTS_64_BIT_ATOMICS
             unsigned int offset1 = atom1;
-            ATOMIC_ADD(&global_value[offset1], (mm_ulong) ((mm_long) (value*0x100000000)));
+            ATOMIC_ADD(&global_value[offset1], (mm_ulong) realToFixedPoint(value));
             STORE_PARAM_DERIVS1
             if (atom2 < PADDED_NUM_ATOMS) {
                 unsigned int offset2 = atom2;
-                ATOMIC_ADD(&global_value[offset2], (mm_ulong) ((mm_long) (local_value[LOCAL_ID]*0x100000000)));
+                ATOMIC_ADD(&global_value[offset2], (mm_ulong) realToFixedPoint(local_value[LOCAL_ID]));
                 STORE_PARAM_DERIVS2
             }
 #else

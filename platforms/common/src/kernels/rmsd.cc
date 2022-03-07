@@ -90,8 +90,8 @@ KERNEL void computeRMSDForces(int numParticles, int paddedNumAtoms, GLOBAL const
                                       buffer[1]*refPos.x + buffer[4]*refPos.y + buffer[7]*refPos.z,
                                       buffer[2]*refPos.x + buffer[5]*refPos.y + buffer[8]*refPos.z);
         real3 force = (rotatedRef-pos)*scale;
-        forceBuffers[index] += (mm_long) (force.x*0x100000000);
-        forceBuffers[index+paddedNumAtoms] += (mm_long) (force.y*0x100000000);
-        forceBuffers[index+2*paddedNumAtoms] += (mm_long) (force.z*0x100000000);
+        forceBuffers[index] += realToFixedPoint(force.x);
+        forceBuffers[index+paddedNumAtoms] += realToFixedPoint(force.y);
+        forceBuffers[index+2*paddedNumAtoms] += realToFixedPoint(force.z);
     }
 }
