@@ -768,15 +768,18 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
 
     # Add constraints.
     isWater = [prmtop.getResidueLabel(i) in ('WAT', 'HOH', 'TP4', 'TP5', 'T4E') for i in range(prmtop.getNumAtoms())]
+    isEP = [a.element is None for a in topology.atoms()]
     if shake in ('h-bonds', 'all-bonds', 'h-angles'):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
-            system.addConstraint(iAtom, jAtom, rMin)
+            if not (isEP[iAtom] or isEP[jAtom]):
+                system.addConstraint(iAtom, jAtom, rMin)
     if shake in ('all-bonds', 'h-angles'):
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsNoH():
-            system.addConstraint(iAtom, jAtom, rMin)
+            if not (isEP[iAtom] or isEP[jAtom]):
+                system.addConstraint(iAtom, jAtom, rMin)
     if rigidWater and shake is None:
         for (iAtom, jAtom, k, rMin) in prmtop.getBondsWithH():
-            if isWater[iAtom] and isWater[jAtom]:
+            if isWater[iAtom] and isWater[jAtom] and not (isEP[iAtom] or isEP[jAtom]):
                 system.addConstraint(iAtom, jAtom, rMin)
 
     # Add harmonic bonds.
