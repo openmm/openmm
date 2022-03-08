@@ -218,7 +218,7 @@ def _get_bonded_atom_list(topology):
 
 
 def _is_carboxylateO(atom, all_bonds):
-    if atom is not E.oxygen: return False
+    if atom.element is not E.oxygen: return False
     bondeds = all_bonds[atom]
     if len(bondeds) != 1:
         return False
