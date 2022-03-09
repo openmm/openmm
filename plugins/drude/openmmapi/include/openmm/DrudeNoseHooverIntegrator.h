@@ -45,6 +45,10 @@ namespace OpenMM {
  * A second thermostat, typically with a much lower temperature, is applied to the relative internal
  * displacement of each pair.
  *
+ * This integrator can optionally set an upper limit on how far any Drude particle is ever allowed to
+ * get from its parent particle.  This can sometimes help to improve stability.  The limit is enforced
+ * with a hard wall constraint.  By default the limit is set to 0.2 nm.
+ *
  * This Integrator requires the System to include a DrudeForce, which it uses to identify the Drude
  * particles.
  */

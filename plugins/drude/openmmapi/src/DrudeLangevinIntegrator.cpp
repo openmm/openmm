@@ -52,7 +52,7 @@ DrudeLangevinIntegrator::DrudeLangevinIntegrator(double temperature, double fric
     setFriction(frictionCoeff);
     setDrudeTemperature(drudeTemperature);
     setDrudeFriction(drudeFrictionCoeff);
-    setMaxDrudeDistance(0);
+    setMaxDrudeDistance(0.02);
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
     setRandomNumberSeed(0);
