@@ -191,8 +191,8 @@ jobs:
         if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
         run: source devtools/ci/gh-actions/scripts/install_amd_opencl.sh
 
-      - name: "Install conda-forge compilers on Ubuntu"
-        if: matrix.compilers == 'conda-forge' && startsWith(matrix.os, 'ubuntu')
+      - name: "Install conda-forge compilers on Ubuntu or M1 (if needed)"
+        if: matrix.compilers == 'conda-forge'
         shell: bash -l {0}
         run: conda install -c conda-forge compilers
 
