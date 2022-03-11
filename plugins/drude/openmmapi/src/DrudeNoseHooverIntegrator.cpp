@@ -54,10 +54,8 @@ namespace OpenMM {
 DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double temperature, double collisionFrequency, 
                                                      double drudeTemperature, double drudeCollisionFrequency,
                                                      double stepSize, int chainLength, int numMTS, int numYoshidaSuzuki) :
-    NoseHooverIntegrator(stepSize),
-    drudeTemperature(drudeTemperature)
-{
-    setMaxDrudeDistance(0);
+            NoseHooverIntegrator(stepSize), drudeTemperature(drudeTemperature) {
+    setMaxDrudeDistance(0.02);
     hasSubsystemThermostats_ = false;
     addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int, int>>(), temperature,
                            collisionFrequency, drudeTemperature, drudeCollisionFrequency,
