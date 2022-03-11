@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/DrudeNoseHooverIntegrator.h"
+#include "SimTKOpenMMRealType.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
@@ -159,10 +160,12 @@ double DrudeNoseHooverIntegrator::computeSystemTemperature() {
 double DrudeNoseHooverIntegrator::computeDrudeTemperature() {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");  
-    context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
-    vector<Vec3> velocities;
-    context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
-    return computeTemperaturesFromVelocities(context->getSystem(), velocities).second;
+    double kE = computeDrudeKineticEnergy();
+    size_t num_dofs = 0;
+    for (const auto &nhc: noseHooverChains){
+       num_dofs += 3 * nhc.getThermostatedPairs().size();
+    }
+    return kE/(0.5 * num_dofs * BOLTZ);
 }
 
 std::vector<Vec3> DrudeNoseHooverIntegrator::getVelocitiesForTemperature(const System &system, double temperature,
