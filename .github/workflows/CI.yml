@@ -447,10 +447,6 @@ jobs:
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') && (steps.testcore.outcome == 'failure' || steps.testcore.outcome == 'success') }}
         run: |
           @echo on
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
-          dir D:\conda-envs\build\lib\site-packages\openmm
-          dumpbin /dependents D:\conda-envs\build\lib\site-packages\openmm\_openmm.cp39-win_amd64.pyd
-          ldd D:\conda-envs\build\lib\site-packages\openmm\_openmm.cp39-win_amd64.pyd
           python -m openmm.testInstallation
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build\python\tests
@@ -569,7 +565,6 @@ jobs:
         run: |
           set -x
           echo 'APT::Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
-          sudo apt-get update
           sudo apt-get install -y \
             latexmk \
             texlive-latex-recommended \
@@ -670,7 +665,6 @@ jobs:
             sep='',                               # Concatenate the above strings exactly
             end=''                                # No newline at end of print()
           )")
-          echo "$SKIP_REGEX"
           for d in api-c++ api-python developerguide userguide; do
             echo "::group:: Check ${d}"
             npx linkinator@3.0.0 ./${d}/ --recurse --timeout=20000 --skip "$SKIP_REGEX" --server-root ./build/api-docs --verbosity error
