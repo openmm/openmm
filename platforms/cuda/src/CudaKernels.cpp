@@ -280,6 +280,10 @@ void CudaUpdateStateDataKernel::setVelocities(ContextImpl& context, const vector
     }
 }
 
+void CudaUpdateStateDataKernel::computeShiftedVelocities(ContextImpl& context, double timeShift, vector<Vec3>& velocities) {
+    cu.getIntegrationUtilities().computeShiftedVelocities(timeShift, velocities);
+}
+
 void CudaUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& forces) {
     ContextSelector selector(cu);
     long long* force = (long long*) cu.getPinnedBuffer();

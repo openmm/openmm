@@ -154,7 +154,7 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
                     int index = ybase + zindexTable[zindex];
                     real add = dxdy*data[iz].z;
 #ifdef USE_FIXED_POINT_CHARGE_SPREADING
-                    ATOMIC_ADD(&pmeGrid[index], (mm_ulong) ((mm_long) (add*0x100000000)));
+                    ATOMIC_ADD(&pmeGrid[index], (mm_ulong) realToFixedPoint(add));
 #else
                     ATOMIC_ADD(&pmeGrid[index], add);
 #endif
@@ -593,13 +593,13 @@ KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ul
         real forceY = -q*(force.x*GRID_SIZE_X*recipBoxVecY.x+force.y*GRID_SIZE_Y*recipBoxVecY.y);
         real forceZ = -q*(force.x*GRID_SIZE_X*recipBoxVecZ.x+force.y*GRID_SIZE_Y*recipBoxVecZ.y+force.z*GRID_SIZE_Z*recipBoxVecZ.z);
 #ifdef USE_PME_STREAM
-        ATOMIC_ADD(&forceBuffers[atom], (mm_ulong) ((mm_long) (forceX*0x100000000)));
-        ATOMIC_ADD(&forceBuffers[atom+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forceY*0x100000000)));
-        ATOMIC_ADD(&forceBuffers[atom+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (forceZ*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[atom], (mm_ulong) realToFixedPoint(forceX));
+        ATOMIC_ADD(&forceBuffers[atom+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(forceY));
+        ATOMIC_ADD(&forceBuffers[atom+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(forceZ));
 #else
-        forceBuffers[atom] += (mm_ulong) ((mm_long) (forceX*0x100000000));
-        forceBuffers[atom+PADDED_NUM_ATOMS] += (mm_ulong) ((mm_long) (forceY*0x100000000));
-        forceBuffers[atom+2*PADDED_NUM_ATOMS] += (mm_ulong) ((mm_long) (forceZ*0x100000000));
+        forceBuffers[atom] += (mm_ulong) realToFixedPoint(forceX);
+        forceBuffers[atom+PADDED_NUM_ATOMS] += (mm_ulong) realToFixedPoint(forceY);
+        forceBuffers[atom+2*PADDED_NUM_ATOMS] += (mm_ulong) realToFixedPoint(forceZ);
 #endif
     }
 }
@@ -607,9 +607,9 @@ KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ul
 KERNEL void addForces(GLOBAL const real4* RESTRICT forces, GLOBAL mm_long* RESTRICT forceBuffers) {
     for (int atom = GLOBAL_ID; atom < NUM_ATOMS; atom += GLOBAL_SIZE) {
         real4 f = forces[atom];
-        forceBuffers[atom] += (mm_long) (f.x*0x100000000);
-        forceBuffers[atom+PADDED_NUM_ATOMS] += (mm_long) (f.y*0x100000000);
-        forceBuffers[atom+2*PADDED_NUM_ATOMS] += (mm_long) (f.z*0x100000000);
+        forceBuffers[atom] += realToFixedPoint(f.x);
+        forceBuffers[atom+PADDED_NUM_ATOMS] += realToFixedPoint(f.y);
+        forceBuffers[atom+2*PADDED_NUM_ATOMS] += realToFixedPoint(f.z);
     }
 }
 

@@ -389,6 +389,7 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
         vector<mm_double4> oldVelm(paddedNumAtoms);
         vector<mm_double4> newVelm(paddedNumAtoms, mm_double4(0,0,0,0));
         getPosq().download(oldPosq);
+        getPosqCorrection().download(oldPosqCorrection);
         getVelm().download(oldVelm);
         for (int i = 0; i < numAtoms; i++) {
             int index = atomIndex[i];

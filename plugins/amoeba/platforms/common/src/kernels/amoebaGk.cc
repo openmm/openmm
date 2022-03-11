@@ -33,7 +33,7 @@ KERNEL void computeSurfaceAreaForce(GLOBAL mm_long* RESTRICT bornForce, GLOBAL m
         ratio6 = ratio6*ratio6*ratio6;
         ratio6 = ratio6*ratio6;
         real saTerm = SURFACE_AREA_FACTOR * r * r * ratio6;
-        bornForce[index] += (mm_long) (saTerm*0x100000000/bornRadius);
+        bornForce[index] += realToFixedPoint(saTerm/bornRadius);
         energy += saTerm;
     }
     energyBuffer[GLOBAL_ID] -= energy/6;
@@ -169,11 +169,11 @@ KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4
         
         if (pos < end) {
             const unsigned int offset = x*TILE_SIZE + tgx;
-            ATOMIC_ADD(&bornSum[offset], (mm_ulong) ((mm_long) (data.bornSum*0x100000000)));
+            ATOMIC_ADD(&bornSum[offset], (mm_ulong) realToFixedPoint(data.bornSum));
         }
         if (pos < end && x != y) {
             const unsigned int offset = y*TILE_SIZE + tgx;
-            ATOMIC_ADD(&bornSum[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].bornSum*0x100000000)));
+            ATOMIC_ADD(&bornSum[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].bornSum));
         }
         lasty = y;
         pos++;
@@ -283,10 +283,10 @@ KERNEL void computeGKForces(
                 }
                 SYNC_WARPS;
                 data.force *= 0.5f;
-                ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
-                
+                ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) realToFixedPoint(data.force.x));
+                ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.y));
+                ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.z));
+
                 // Compute torques.
                 
                 data.force = make_real3(0);
@@ -301,10 +301,10 @@ KERNEL void computeGKForces(
                     }
                 }
                 SYNC_WARPS;
-                ATOMIC_ADD(&torqueBuffers[atom1], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
-                ATOMIC_ADD(&torqueBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
-                ATOMIC_ADD(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
-                
+                ATOMIC_ADD(&torqueBuffers[atom1], (mm_ulong) realToFixedPoint(data.force.x));
+                ATOMIC_ADD(&torqueBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.y));
+                ATOMIC_ADD(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.z));
+
                 // Compute chain rule terms.
                 
                 data.force = make_real3(0);
@@ -319,7 +319,7 @@ KERNEL void computeGKForces(
                         SYNC_WARPS;
                     }
                 }
-                ATOMIC_ADD(&bornForce[atom1], (mm_ulong) ((mm_long) (data.bornForce*0x100000000)));
+                ATOMIC_ADD(&bornForce[atom1], (mm_ulong) realToFixedPoint(data.bornForce));
             }
             else {
                 // This is an off-diagonal tile.
@@ -348,13 +348,13 @@ KERNEL void computeGKForces(
                 localData[LOCAL_ID].force *= 0.5f;
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(data.force.x));
+                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.y));
+                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.z));
                     offset = y*TILE_SIZE + tgx;
-                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.x));
+                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.y));
+                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.z));
                 }
 
                 // Compute torques.
@@ -380,13 +380,13 @@ KERNEL void computeGKForces(
                 }
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
-                    ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
-                    ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
+                    ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) realToFixedPoint(data.force.x));
+                    ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.y));
+                    ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.z));
                     offset = y*TILE_SIZE + tgx;
-                    ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
-                    ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
-                    ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
+                    ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.x));
+                    ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.y));
+                    ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.z));
                 }
 
                 // Compute chain rule terms.
@@ -409,9 +409,9 @@ KERNEL void computeGKForces(
                 }
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    ATOMIC_ADD(&bornForce[offset], (mm_ulong) ((mm_long) (data.bornForce*0x100000000)));
+                    ATOMIC_ADD(&bornForce[offset], (mm_ulong) realToFixedPoint(data.bornForce));
                     offset = y*TILE_SIZE + tgx;
-                    ATOMIC_ADD(&bornForce[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].bornForce*0x100000000)));
+                    ATOMIC_ADD(&bornForce[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].bornForce));
                 }
             }
         }
@@ -543,9 +543,9 @@ KERNEL void computeChainRuleForce(
                     }
                     SYNC_WARPS;
                 }
-                ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) ((data.force.x+localData[LOCAL_ID].force.x)*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) ((data.force.y+localData[LOCAL_ID].force.y)*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) ((data.force.z+localData[LOCAL_ID].force.z)*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) realToFixedPoint((data.force.x+localData[LOCAL_ID].force.x)));
+                ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint((data.force.y+localData[LOCAL_ID].force.y)));
+                ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint((data.force.z+localData[LOCAL_ID].force.z)));
             }
             else {
                 // This is an off-diagonal tile.
@@ -571,13 +571,13 @@ KERNEL void computeChainRuleForce(
                 }
                 if (pos < end) {
                     unsigned int offset = x*TILE_SIZE + tgx;
-                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(data.force.x));
+                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.y));
+                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.z));
                     offset = y*TILE_SIZE + tgx;
-                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.x));
+                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.y));
+                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.z));
                 }
             }
         }
@@ -700,9 +700,9 @@ KERNEL void computeEDiffForce(
             }
             SYNC_WARPS;
             data.force *= ENERGY_SCALE_FACTOR;
-            ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) realToFixedPoint(data.force.x));
+            ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.y));
+            ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.z));
 
             // Compute torques.
 
@@ -718,9 +718,9 @@ KERNEL void computeEDiffForce(
                 }
             }
             data.force *= ENERGY_SCALE_FACTOR;
-            ATOMIC_ADD(&torqueBuffers[atom1], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[atom1], (mm_ulong) realToFixedPoint(data.force.x));
+            ATOMIC_ADD(&torqueBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.y));
+            ATOMIC_ADD(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.z));
             SYNC_WARPS;
         }
         else {
@@ -753,13 +753,13 @@ KERNEL void computeEDiffForce(
             data.force *= ENERGY_SCALE_FACTOR;
             localData[LOCAL_ID].force *= ENERGY_SCALE_FACTOR;
             unsigned int offset = x*TILE_SIZE + tgx;
-            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(data.force.x));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.y));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.z));
             offset = y*TILE_SIZE + tgx;
-            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.x));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.y));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.z));
 
             // Compute torques.
 
@@ -783,13 +783,13 @@ KERNEL void computeEDiffForce(
             data.force *= ENERGY_SCALE_FACTOR;
             localData[LOCAL_ID].force *= ENERGY_SCALE_FACTOR;
             offset = x*TILE_SIZE + tgx;
-            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) realToFixedPoint(data.force.x));
+            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.y));
+            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.z));
             offset = y*TILE_SIZE + tgx;
-            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.x));
+            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.y));
+            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.z));
             SYNC_WARPS;
         }
     }
@@ -865,13 +865,13 @@ KERNEL void computeEDiffForce(
             data.force *= ENERGY_SCALE_FACTOR;
             localData[LOCAL_ID].force *= ENERGY_SCALE_FACTOR;
             unsigned int offset = x*TILE_SIZE + tgx;
-            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(data.force.x));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.y));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.z));
             offset = y*TILE_SIZE + tgx;
-            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.x));
+            ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.y));
+            ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.z));
 
             // Compute torques.
 
@@ -893,13 +893,13 @@ KERNEL void computeEDiffForce(
             data.force *= ENERGY_SCALE_FACTOR;
             localData[LOCAL_ID].force *= ENERGY_SCALE_FACTOR;
             offset = x*TILE_SIZE + tgx;
-            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (data.force.x*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.y*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.force.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) realToFixedPoint(data.force.x));
+            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.y));
+            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.force.z));
             offset = y*TILE_SIZE + tgx;
-            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.x*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.y*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (localData[LOCAL_ID].force.z*0x100000000)));
+            ATOMIC_ADD(&torqueBuffers[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.x));
+            ATOMIC_ADD(&torqueBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.y));
+            ATOMIC_ADD(&torqueBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].force.z));
         }
         pos++;
     }

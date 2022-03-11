@@ -1,6 +1,6 @@
 #ifdef SUPPORTS_64_BIT_ATOMICS
-#define STORE_DERIVATIVE_1(INDEX) ATOMIC_ADD(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (deriv##INDEX##_1*0x100000000)));
-#define STORE_DERIVATIVE_2(INDEX) ATOMIC_ADD(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (local_deriv##INDEX[tgx]*0x100000000)));
+#define STORE_DERIVATIVE_1(INDEX) ATOMIC_ADD(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(deriv##INDEX##_1));
+#define STORE_DERIVATIVE_2(INDEX) ATOMIC_ADD(&derivBuffers[offset+(INDEX-1)*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(local_deriv##INDEX[tgx]));
 #else
 #define STORE_DERIVATIVE_1(INDEX) derivBuffers##INDEX[offset] += deriv##INDEX##_1;
 #define STORE_DERIVATIVE_2(INDEX) derivBuffers##INDEX[offset] += local_deriv##INDEX[tgx];
@@ -102,9 +102,9 @@ KERNEL void computeN2Energy(
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 unsigned int offset = atom1;
-                ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (force.x*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(force.x));
+                ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
+                ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
                 STORE_DERIVATIVES_1
 #else
                 unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
@@ -176,9 +176,9 @@ KERNEL void computeN2Energy(
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 unsigned int offset = atom1;
-                ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (force.x*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(force.x));
+                ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
+                ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
                 STORE_DERIVATIVES_1
 #else
                 unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
@@ -192,9 +192,9 @@ KERNEL void computeN2Energy(
             for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 unsigned int offset = y*TILE_SIZE+tgx;
-                ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (local_force[tgx].x*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (local_force[tgx].y*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (local_force[tgx].z*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(local_force[tgx].x));
+                ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(local_force[tgx].y));
+                ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(local_force[tgx].z));
                 STORE_DERIVATIVES_2
 #else
                 unsigned int offset = y*TILE_SIZE+tgx + GROUP_ID*PADDED_NUM_ATOMS;
@@ -318,9 +318,9 @@ KERNEL void computeN2Energy(
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
                     unsigned int offset = atom1;
-                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (force.x*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(force.x));
+                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
+                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
                     STORE_DERIVATIVES_1
 #else
                     unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
@@ -377,9 +377,9 @@ KERNEL void computeN2Energy(
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
                     unsigned int offset = atom1;
-                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) ((mm_long) (force.x*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(force.x));
+                    ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
+                    ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
                     STORE_DERIVATIVES_1
 #else
                     unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
@@ -399,9 +399,9 @@ KERNEL void computeN2Energy(
 #endif
                 if (atom2 < PADDED_NUM_ATOMS) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    ATOMIC_ADD(&forceBuffers[atom2], (mm_ulong) ((mm_long) (local_force[tgx].x*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (local_force[tgx].y*0x100000000)));
-                    ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (local_force[tgx].z*0x100000000)));
+                    ATOMIC_ADD(&forceBuffers[atom2], (mm_ulong) realToFixedPoint(local_force[tgx].x));
+                    ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(local_force[tgx].y));
+                    ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(local_force[tgx].z));
                     unsigned int offset = atom2;
                     STORE_DERIVATIVES_2
 #else

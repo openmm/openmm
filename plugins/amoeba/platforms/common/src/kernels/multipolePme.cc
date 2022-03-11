@@ -275,13 +275,13 @@ KERNEL void gridSpreadFixedMultipoles(GLOBAL const real4* RESTRICT posq, GLOBAL 
                     real add = term0*v.x + term1*v.y + term2*v.z;
 #ifdef HIPPO
     #ifdef USE_FIXED_POINT_CHARGE_SPREADING
-                    ATOMIC_ADD(&pmeGrid[index], (mm_ulong) ((mm_long) (add*0x100000000)));
+                    ATOMIC_ADD(&pmeGrid[index], (mm_ulong) realToFixedPoint(add));
     #else
                     ATOMIC_ADD(&pmeGrid[index], add);
     #endif
 #else
     #ifdef USE_FIXED_POINT_CHARGE_SPREADING
-                    ATOMIC_ADD(&pmeGrid[2*index], (mm_ulong) ((mm_long) (add*0x100000000)));
+                    ATOMIC_ADD(&pmeGrid[2*index], (mm_ulong) realToFixedPoint(add));
     #else
                     ATOMIC_ADD(&pmeGrid[index].x, add);
     #endif
@@ -397,15 +397,15 @@ KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL c
                     real add1 = term01*v.x + term11*v.y;
 #ifdef HIPPO
     #ifdef USE_FIXED_POINT_CHARGE_SPREADING
-                    ATOMIC_ADD(&pmeGrid[index], (mm_ulong) ((mm_long) (add1*0x100000000)));
+                    ATOMIC_ADD(&pmeGrid[index], (mm_ulong) realToFixedPoint(add1));
     #else
                     ATOMIC_ADD(&pmeGrid[index], add1);
     #endif
 #else
                     real add2 = term02*v.x + term12*v.y;
     #ifdef USE_FIXED_POINT_CHARGE_SPREADING
-                    ATOMIC_ADD(&pmeGrid[2*index], (mm_ulong) ((mm_long) (add1*0x100000000)));
-                    ATOMIC_ADD(&pmeGrid[2*index+1], (mm_ulong) ((mm_long) (add2*0x100000000)));
+                    ATOMIC_ADD(&pmeGrid[2*index], (mm_ulong) realToFixedPoint(add1));
+                    ATOMIC_ADD(&pmeGrid[2*index+1], (mm_ulong) realToFixedPoint(add2));
     #else
                     ATOMIC_ADD(&pmeGrid[index].x, add1);
                     ATOMIC_ADD(&pmeGrid[index].y, add2);
@@ -648,9 +648,9 @@ KERNEL void computeFixedPotentialFromGrid(
         phi[m+NUM_ATOMS*18] = tuv012;
         phi[m+NUM_ATOMS*19] = tuv111;
         real dipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
-        mm_long fieldx = (mm_long) ((dipoleScale*labDipole[m*3]-tuv100*fracToCart[0][0]-tuv010*fracToCart[0][1]-tuv001*fracToCart[0][2])*0x100000000);
-        mm_long fieldy = (mm_long) ((dipoleScale*labDipole[m*3+1]-tuv100*fracToCart[1][0]-tuv010*fracToCart[1][1]-tuv001*fracToCart[1][2])*0x100000000);
-        mm_long fieldz = (mm_long) ((dipoleScale*labDipole[m*3+2]-tuv100*fracToCart[2][0]-tuv010*fracToCart[2][1]-tuv001*fracToCart[2][2])*0x100000000);
+        mm_long fieldx = realToFixedPoint(dipoleScale*labDipole[m*3]-tuv100*fracToCart[0][0]-tuv010*fracToCart[0][1]-tuv001*fracToCart[0][2]);
+        mm_long fieldy = realToFixedPoint(dipoleScale*labDipole[m*3+1]-tuv100*fracToCart[1][0]-tuv010*fracToCart[1][1]-tuv001*fracToCart[1][2]);
+        mm_long fieldz = realToFixedPoint(dipoleScale*labDipole[m*3+2]-tuv100*fracToCart[2][0]-tuv010*fracToCart[2][1]-tuv001*fracToCart[2][2]);
         fieldBuffers[m] = fieldx;
         fieldBuffers[m+PADDED_NUM_ATOMS] = fieldy;
         fieldBuffers[m+2*PADDED_NUM_ATOMS] = fieldz;
@@ -999,20 +999,20 @@ KERNEL void computeFixedMultipoleForceAndEnergy(GLOBAL real4* RESTRICT posq, GLO
 
         GLOBAL const real* cphi = &cphi_global[10*i];
 
-        torqueBuffers[i] = (mm_long) (EPSILON_FACTOR*(multipole[3]*cphi[2] - multipole[2]*cphi[3]
+        torqueBuffers[i] = realToFixedPoint(EPSILON_FACTOR*(multipole[3]*cphi[2] - multipole[2]*cphi[3]
                       + 2*(multipole[6]-multipole[5])*cphi[9]
                       + multipole[8]*cphi[7] + multipole[9]*cphi[5]
-                      - multipole[7]*cphi[8] - multipole[9]*cphi[6])*0x100000000);
+                      - multipole[7]*cphi[8] - multipole[9]*cphi[6]));
 
-        torqueBuffers[i+PADDED_NUM_ATOMS] = (mm_long) (EPSILON_FACTOR*(multipole[1]*cphi[3] - multipole[3]*cphi[1]
+        torqueBuffers[i+PADDED_NUM_ATOMS] = realToFixedPoint(EPSILON_FACTOR*(multipole[1]*cphi[3] - multipole[3]*cphi[1]
                       + 2*(multipole[4]-multipole[6])*cphi[8]
                       + multipole[7]*cphi[9] + multipole[8]*cphi[6]
-                      - multipole[8]*cphi[4] - multipole[9]*cphi[7])*0x100000000);
+                      - multipole[8]*cphi[4] - multipole[9]*cphi[7]));
 
-        torqueBuffers[i+PADDED_NUM_ATOMS*2] = (mm_long) (EPSILON_FACTOR*(multipole[2]*cphi[1] - multipole[1]*cphi[2]
+        torqueBuffers[i+PADDED_NUM_ATOMS*2] = realToFixedPoint(EPSILON_FACTOR*(multipole[2]*cphi[1] - multipole[1]*cphi[2]
                       + 2*(multipole[5]-multipole[4])*cphi[7]
                       + multipole[7]*cphi[4] + multipole[9]*cphi[8]
-                      - multipole[7]*cphi[5] - multipole[8]*cphi[9])*0x100000000);
+                      - multipole[7]*cphi[5] - multipole[8]*cphi[9]));
 
         // Compute the force and energy.
 
@@ -1036,9 +1036,9 @@ KERNEL void computeFixedMultipoleForceAndEnergy(GLOBAL real4* RESTRICT posq, GLO
         f = make_real3(EPSILON_FACTOR*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
                        EPSILON_FACTOR*(f.x*fracToCart[1][0] + f.y*fracToCart[1][1] + f.z*fracToCart[1][2]),
                        EPSILON_FACTOR*(f.x*fracToCart[2][0] + f.y*fracToCart[2][1] + f.z*fracToCart[2][2]));
-        forceBuffers[i] -= (mm_ulong) ((mm_long) (f.x*0x100000000));
-        forceBuffers[i+PADDED_NUM_ATOMS] -= (mm_ulong) ((mm_long) (f.y*0x100000000));
-        forceBuffers[i+PADDED_NUM_ATOMS*2] -= (mm_ulong) ((mm_long) (f.z*0x100000000));
+        forceBuffers[i] -= (mm_ulong) realToFixedPoint(f.x);
+        forceBuffers[i+PADDED_NUM_ATOMS] -= (mm_ulong) realToFixedPoint(f.y);
+        forceBuffers[i+PADDED_NUM_ATOMS*2] -= (mm_ulong) realToFixedPoint(f.z);
     }
     energyBuffer[GLOBAL_ID] += 0.5f*EPSILON_FACTOR*energy;
 }
@@ -1110,20 +1110,20 @@ KERNEL void computeInducedDipoleForceAndEnergy(GLOBAL real4* RESTRICT posq, GLOB
         multipole[6] = -(multipole[4]+multipole[5]);
         GLOBAL const real* cphi = &cphi_global[10*i];
  
-        torqueBuffers[i] += (mm_long) (scale*(multipole[3]*cphi[2] - multipole[2]*cphi[3]
+        torqueBuffers[i] += realToFixedPoint(scale*(multipole[3]*cphi[2] - multipole[2]*cphi[3]
                       + 2*(multipole[6]-multipole[5])*cphi[9]
                       + multipole[8]*cphi[7] + multipole[9]*cphi[5]
-                      - multipole[7]*cphi[8] - multipole[9]*cphi[6])*0x100000000);
+                      - multipole[7]*cphi[8] - multipole[9]*cphi[6]));
 
-        torqueBuffers[i+PADDED_NUM_ATOMS] += (mm_long) (scale*(multipole[1]*cphi[3] - multipole[3]*cphi[1]
+        torqueBuffers[i+PADDED_NUM_ATOMS] += realToFixedPoint(scale*(multipole[1]*cphi[3] - multipole[3]*cphi[1]
                       + 2*(multipole[4]-multipole[6])*cphi[8]
                       + multipole[7]*cphi[9] + multipole[8]*cphi[6]
-                      - multipole[8]*cphi[4] - multipole[9]*cphi[7])*0x100000000);
+                      - multipole[8]*cphi[4] - multipole[9]*cphi[7]));
 
-        torqueBuffers[i+PADDED_NUM_ATOMS*2] += (mm_long) (scale*(multipole[2]*cphi[1] - multipole[1]*cphi[2]
+        torqueBuffers[i+PADDED_NUM_ATOMS*2] += realToFixedPoint(scale*(multipole[2]*cphi[1] - multipole[1]*cphi[2]
                       + 2*(multipole[5]-multipole[4])*cphi[7]
                       + multipole[7]*cphi[4] + multipole[9]*cphi[8]
-                      - multipole[7]*cphi[5] - multipole[8]*cphi[9])*0x100000000);
+                      - multipole[7]*cphi[5] - multipole[8]*cphi[9]));
 
         // Compute the force and energy.
 
@@ -1206,9 +1206,9 @@ KERNEL void computeInducedDipoleForceAndEnergy(GLOBAL real4* RESTRICT posq, GLOB
         f = make_real3(scale*(f.x*fracToCart[0][0] + f.y*fracToCart[0][1] + f.z*fracToCart[0][2]),
                        scale*(f.x*fracToCart[1][0] + f.y*fracToCart[1][1] + f.z*fracToCart[1][2]),
                        scale*(f.x*fracToCart[2][0] + f.y*fracToCart[2][1] + f.z*fracToCart[2][2]));
-        forceBuffers[i] -= (mm_ulong) ((mm_long) (f.x*0x100000000));
-        forceBuffers[i+PADDED_NUM_ATOMS] -= (mm_ulong) ((mm_long) (f.y*0x100000000));
-        forceBuffers[i+PADDED_NUM_ATOMS*2] -= (mm_ulong) ((mm_long) (f.z*0x100000000));
+        forceBuffers[i] -= (mm_ulong) realToFixedPoint(f.x);
+        forceBuffers[i+PADDED_NUM_ATOMS] -= (mm_ulong) realToFixedPoint(f.y);
+        forceBuffers[i+PADDED_NUM_ATOMS*2] -= (mm_ulong) realToFixedPoint(f.z);
     }
 #ifndef HIPPO
     energyBuffer[GLOBAL_ID] += 0.25f*EPSILON_FACTOR*energy;
@@ -1233,9 +1233,9 @@ KERNEL void recordInducedFieldDipoles(GLOBAL const real* RESTRICT phidp, GLOBAL 
     SYNC_THREADS;
     real selfDipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
     for (int i = GLOBAL_ID; i < NUM_ATOMS; i += GLOBAL_SIZE) {
-        inducedField[i] -= (mm_long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[0][0] + phidp[i+NUM_ATOMS*2]*fracToCart[0][1] + phidp[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[3*i]));
-        inducedField[i+PADDED_NUM_ATOMS] -= (mm_long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[1][0] + phidp[i+NUM_ATOMS*2]*fracToCart[1][1] + phidp[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[3*i+1]));
-        inducedField[i+PADDED_NUM_ATOMS*2] -= (mm_long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[2][0] + phidp[i+NUM_ATOMS*2]*fracToCart[2][1] + phidp[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[3*i+2]));
+        inducedField[i] -= realToFixedPoint(phidp[i+NUM_ATOMS]*fracToCart[0][0] + phidp[i+NUM_ATOMS*2]*fracToCart[0][1] + phidp[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[3*i]);
+        inducedField[i+PADDED_NUM_ATOMS] -= realToFixedPoint(phidp[i+NUM_ATOMS]*fracToCart[1][0] + phidp[i+NUM_ATOMS*2]*fracToCart[1][1] + phidp[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[3*i+1]);
+        inducedField[i+PADDED_NUM_ATOMS*2] -= realToFixedPoint(phidp[i+NUM_ATOMS]*fracToCart[2][0] + phidp[i+NUM_ATOMS*2]*fracToCart[2][1] + phidp[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[3*i+2]);
     }
 }
 
@@ -1264,9 +1264,9 @@ KERNEL void calculateSelfEnergyAndTorque(GLOBAL mm_long* RESTRICT torqueBuffers,
         qii += qXX*qXX + qYY*qYY + qZZ*qZZ + 2*(qXY*qXY + qXZ*qXZ + qYZ*qYZ);
         c6ii += c6i*c6i;
         real3 torque = torqueScale*cross(dipole, induced);
-        torqueBuffers[i] += (mm_long) (torque.x*0x100000000);
-        torqueBuffers[i+PADDED_NUM_ATOMS] += (mm_long) (torque.y*0x100000000);
-        torqueBuffers[i+PADDED_NUM_ATOMS*2] += (mm_long) (torque.z*0x100000000);
+        torqueBuffers[i] += realToFixedPoint(torque.x);
+        torqueBuffers[i+PADDED_NUM_ATOMS] += realToFixedPoint(torque.y);
+        torqueBuffers[i+PADDED_NUM_ATOMS*2] += realToFixedPoint(torque.z);
     }
     real term = 2*EWALD_ALPHA*EWALD_ALPHA;
     real fterm = -EPSILON_FACTOR*EWALD_ALPHA/SQRT_PI;
@@ -1296,12 +1296,12 @@ KERNEL void recordInducedFieldDipoles(GLOBAL const real* RESTRICT phid, GLOBAL r
     SYNC_THREADS;
     real selfDipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
     for (int i = GLOBAL_ID; i < NUM_ATOMS; i += GLOBAL_SIZE) {
-        inducedField[i] -= (mm_long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[0][0] + phid[i+NUM_ATOMS*2]*fracToCart[0][1] + phid[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[3*i]));
-        inducedField[i+PADDED_NUM_ATOMS] -= (mm_long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[1][0] + phid[i+NUM_ATOMS*2]*fracToCart[1][1] + phid[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[3*i+1]));
-        inducedField[i+PADDED_NUM_ATOMS*2] -= (mm_long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[2][0] + phid[i+NUM_ATOMS*2]*fracToCart[2][1] + phid[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[3*i+2]));
-        inducedFieldPolar[i] -= (mm_long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[0][0] + phip[i+NUM_ATOMS*2]*fracToCart[0][1] + phip[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipolePolar[3*i]));
-        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (mm_long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[1][0] + phip[i+NUM_ATOMS*2]*fracToCart[1][1] + phip[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipolePolar[3*i+1]));
-        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (mm_long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[2][0] + phip[i+NUM_ATOMS*2]*fracToCart[2][1] + phip[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipolePolar[3*i+2]));
+        inducedField[i] -= realToFixedPoint(phid[i+NUM_ATOMS]*fracToCart[0][0] + phid[i+NUM_ATOMS*2]*fracToCart[0][1] + phid[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[3*i]);
+        inducedField[i+PADDED_NUM_ATOMS] -= realToFixedPoint(phid[i+NUM_ATOMS]*fracToCart[1][0] + phid[i+NUM_ATOMS*2]*fracToCart[1][1] + phid[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[3*i+1]);
+        inducedField[i+PADDED_NUM_ATOMS*2] -= realToFixedPoint(phid[i+NUM_ATOMS]*fracToCart[2][0] + phid[i+NUM_ATOMS*2]*fracToCart[2][1] + phid[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[3*i+2]);
+        inducedFieldPolar[i] -= realToFixedPoint(phip[i+NUM_ATOMS]*fracToCart[0][0] + phip[i+NUM_ATOMS*2]*fracToCart[0][1] + phip[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipolePolar[3*i]);
+        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= realToFixedPoint(phip[i+NUM_ATOMS]*fracToCart[1][0] + phip[i+NUM_ATOMS*2]*fracToCart[1][1] + phip[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipolePolar[3*i+1]);
+        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= realToFixedPoint(phip[i+NUM_ATOMS]*fracToCart[2][0] + phip[i+NUM_ATOMS*2]*fracToCart[2][1] + phip[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipolePolar[3*i+2]);
 #ifdef EXTRAPOLATED_POLARIZATION
         // Compute and store the field gradients for later use.
 
@@ -1321,12 +1321,12 @@ KERNEL void recordInducedFieldDipoles(GLOBAL const real* RESTRICT phid, GLOBAL r
                 Eyz += fracToCart[1][k] * EmatD[k][l] * fracToCart[2][l];
             }
         }
-        ATOMIC_ADD(&fieldGradient[6*i+0], (mm_ulong) ((mm_long) (-Exx*0x100000000)));
-        ATOMIC_ADD(&fieldGradient[6*i+1], (mm_ulong) ((mm_long) (-Eyy*0x100000000)));
-        ATOMIC_ADD(&fieldGradient[6*i+2], (mm_ulong) ((mm_long) (-Ezz*0x100000000)));
-        ATOMIC_ADD(&fieldGradient[6*i+3], (mm_ulong) ((mm_long) (-Exy*0x100000000)));
-        ATOMIC_ADD(&fieldGradient[6*i+4], (mm_ulong) ((mm_long) (-Exz*0x100000000)));
-        ATOMIC_ADD(&fieldGradient[6*i+5], (mm_ulong) ((mm_long) (-Eyz*0x100000000)));
+        ATOMIC_ADD(&fieldGradient[6*i+0], (mm_ulong) realToFixedPoint(-Exx));
+        ATOMIC_ADD(&fieldGradient[6*i+1], (mm_ulong) realToFixedPoint(-Eyy));
+        ATOMIC_ADD(&fieldGradient[6*i+2], (mm_ulong) realToFixedPoint(-Ezz));
+        ATOMIC_ADD(&fieldGradient[6*i+3], (mm_ulong) realToFixedPoint(-Exy));
+        ATOMIC_ADD(&fieldGradient[6*i+4], (mm_ulong) realToFixedPoint(-Exz));
+        ATOMIC_ADD(&fieldGradient[6*i+5], (mm_ulong) realToFixedPoint(-Eyz));
 
         real EmatP[3][3] = {
             {phip[i+NUM_ATOMS*4], phip[i+NUM_ATOMS*7], phip[i+NUM_ATOMS*8]},
@@ -1344,12 +1344,12 @@ KERNEL void recordInducedFieldDipoles(GLOBAL const real* RESTRICT phid, GLOBAL r
                 Eyz += fracToCart[1][k] * EmatP[k][l] * fracToCart[2][l];
             }
         }
-        ATOMIC_ADD(&fieldGradientPolar[6*i+0], (mm_ulong) ((mm_long) (-Exx*0x100000000)));
-        ATOMIC_ADD(&fieldGradientPolar[6*i+1], (mm_ulong) ((mm_long) (-Eyy*0x100000000)));
-        ATOMIC_ADD(&fieldGradientPolar[6*i+2], (mm_ulong) ((mm_long) (-Ezz*0x100000000)));
-        ATOMIC_ADD(&fieldGradientPolar[6*i+3], (mm_ulong) ((mm_long) (-Exy*0x100000000)));
-        ATOMIC_ADD(&fieldGradientPolar[6*i+4], (mm_ulong) ((mm_long) (-Exz*0x100000000)));
-        ATOMIC_ADD(&fieldGradientPolar[6*i+5], (mm_ulong) ((mm_long) (-Eyz*0x100000000)));
+        ATOMIC_ADD(&fieldGradientPolar[6*i+0], (mm_ulong) realToFixedPoint(-Exx));
+        ATOMIC_ADD(&fieldGradientPolar[6*i+1], (mm_ulong) realToFixedPoint(-Eyy));
+        ATOMIC_ADD(&fieldGradientPolar[6*i+2], (mm_ulong) realToFixedPoint(-Ezz));
+        ATOMIC_ADD(&fieldGradientPolar[6*i+3], (mm_ulong) realToFixedPoint(-Exy));
+        ATOMIC_ADD(&fieldGradientPolar[6*i+4], (mm_ulong) realToFixedPoint(-Exz));
+        ATOMIC_ADD(&fieldGradientPolar[6*i+5], (mm_ulong) realToFixedPoint(-Eyz));
 #endif
     }
 }

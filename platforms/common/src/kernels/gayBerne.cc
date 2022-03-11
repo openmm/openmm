@@ -384,19 +384,19 @@ KERNEL void computeForce(
             real sigma = data1.sig.x+data2.sig.x;
             real epsilon = data1.eps.x*data2.eps.x;
             computeOneInteraction(&data1, &data2, sigma, epsilon, delta, r2, &force1, &force2, &torque1, &torque2, &energy);
-            ATOMIC_ADD(&forceBuffers[index2], (mm_ulong) ((mm_long) (force2.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[index2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force2.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[index2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force2.z*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[index2], (mm_ulong) ((mm_long) (torque2.x*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[index2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque2.y*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque2.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[index2], (mm_ulong) realToFixedPoint(force2.x));
+            ATOMIC_ADD(&forceBuffers[index2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force2.y));
+            ATOMIC_ADD(&forceBuffers[index2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force2.z));
+            ATOMIC_ADD(&torqueBuffers[index2], (mm_ulong) realToFixedPoint(torque2.x));
+            ATOMIC_ADD(&torqueBuffers[index2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(torque2.y));
+            ATOMIC_ADD(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(torque2.z));
         }
-        ATOMIC_ADD(&forceBuffers[index1], (mm_ulong) ((mm_long) (force1.x*0x100000000)));
-        ATOMIC_ADD(&forceBuffers[index1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force1.y*0x100000000)));
-        ATOMIC_ADD(&forceBuffers[index1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force1.z*0x100000000)));
-        ATOMIC_ADD(&torqueBuffers[index1], (mm_ulong) ((mm_long) (torque1.x*0x100000000)));
-        ATOMIC_ADD(&torqueBuffers[index1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque1.y*0x100000000)));
-        ATOMIC_ADD(&torqueBuffers[index1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque1.z*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[index1], (mm_ulong) realToFixedPoint(force1.x));
+        ATOMIC_ADD(&forceBuffers[index1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force1.y));
+        ATOMIC_ADD(&forceBuffers[index1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force1.z));
+        ATOMIC_ADD(&torqueBuffers[index1], (mm_ulong) realToFixedPoint(torque1.x));
+        ATOMIC_ADD(&torqueBuffers[index1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(torque1.y));
+        ATOMIC_ADD(&torqueBuffers[index1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(torque1.z));
     }
 #else
     for (int atom1 = GLOBAL_ID; atom1 < numAtoms; atom1 += GLOBAL_SIZE) {
@@ -432,19 +432,19 @@ KERNEL void computeForce(
             real sigma = data1.sig.x+data2.sig.x;
             real epsilon = data1.eps.x*data2.eps.x;
             computeOneInteraction(&data1, &data2, sigma, epsilon, delta, r2, &force1, &force2, &torque1, &torque2, &energy);
-            ATOMIC_ADD(&forceBuffers[index2], (mm_ulong) ((mm_long) (force2.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[index2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force2.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[index2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force2.z*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[index2], (mm_ulong) ((mm_long) (torque2.x*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[index2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque2.y*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque2.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[index2], (mm_ulong) realToFixedPoint(force2.x));
+            ATOMIC_ADD(&forceBuffers[index2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force2.y));
+            ATOMIC_ADD(&forceBuffers[index2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force2.z));
+            ATOMIC_ADD(&torqueBuffers[index2], (mm_ulong) realToFixedPoint(torque2.x));
+            ATOMIC_ADD(&torqueBuffers[index2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(torque2.y));
+            ATOMIC_ADD(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(torque2.z));
         }
-        ATOMIC_ADD(&forceBuffers[index1], (mm_ulong) ((mm_long) (force1.x*0x100000000)));
-        ATOMIC_ADD(&forceBuffers[index1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force1.y*0x100000000)));
-        ATOMIC_ADD(&forceBuffers[index1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force1.z*0x100000000)));
-        ATOMIC_ADD(&torqueBuffers[index1], (mm_ulong) ((mm_long) (torque1.x*0x100000000)));
-        ATOMIC_ADD(&torqueBuffers[index1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque1.y*0x100000000)));
-        ATOMIC_ADD(&torqueBuffers[index1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque1.z*0x100000000)));
+        ATOMIC_ADD(&forceBuffers[index1], (mm_ulong) realToFixedPoint(force1.x));
+        ATOMIC_ADD(&forceBuffers[index1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force1.y));
+        ATOMIC_ADD(&forceBuffers[index1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force1.z));
+        ATOMIC_ADD(&torqueBuffers[index1], (mm_ulong) realToFixedPoint(torque1.x));
+        ATOMIC_ADD(&torqueBuffers[index1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(torque1.y));
+        ATOMIC_ADD(&torqueBuffers[index1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(torque1.z));
     }
 #endif
     
@@ -466,18 +466,18 @@ KERNEL void computeForce(
         if (r2 < CUTOFF_SQUARED) {
 #endif
             computeOneInteraction(&data1, &data2, params.x, params.y, delta, r2, &force1, &force2, &torque1, &torque2, &energy);
-            ATOMIC_ADD(&forceBuffers[index1], (mm_ulong) ((mm_long) (force1.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[index1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force1.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[index1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force1.z*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[index2], (mm_ulong) ((mm_long) (force2.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[index2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force2.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[index2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force2.z*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[index1], (mm_ulong) ((mm_long) (torque1.x*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[index1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque1.y*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[index1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque1.z*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[index2], (mm_ulong) ((mm_long) (torque2.x*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[index2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque2.y*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (torque2.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[index1], (mm_ulong) realToFixedPoint(force1.x));
+            ATOMIC_ADD(&forceBuffers[index1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force1.y));
+            ATOMIC_ADD(&forceBuffers[index1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force1.z));
+            ATOMIC_ADD(&forceBuffers[index2], (mm_ulong) realToFixedPoint(force2.x));
+            ATOMIC_ADD(&forceBuffers[index2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force2.y));
+            ATOMIC_ADD(&forceBuffers[index2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force2.z));
+            ATOMIC_ADD(&torqueBuffers[index1], (mm_ulong) realToFixedPoint(torque1.x));
+            ATOMIC_ADD(&torqueBuffers[index1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(torque1.y));
+            ATOMIC_ADD(&torqueBuffers[index1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(torque1.z));
+            ATOMIC_ADD(&torqueBuffers[index2], (mm_ulong) realToFixedPoint(torque2.x));
+            ATOMIC_ADD(&torqueBuffers[index2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(torque2.y));
+            ATOMIC_ADD(&torqueBuffers[index2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(torque2.z));
 #ifdef USE_CUTOFF
         }
 #endif
@@ -522,16 +522,16 @@ KERNEL void applyTorques(
                 yforce += f;
                 force -= f;
             }
-            ATOMIC_ADD(&forceBuffers[originalIndex], (mm_ulong) ((mm_long) (force.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[originalIndex+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[originalIndex+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[axisParticles.x], (mm_ulong) ((mm_long) (xforce.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[axisParticles.x+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (xforce.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[axisParticles.x+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (xforce.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[originalIndex], (mm_ulong) realToFixedPoint(force.x));
+            ATOMIC_ADD(&forceBuffers[originalIndex+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
+            ATOMIC_ADD(&forceBuffers[originalIndex+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
+            ATOMIC_ADD(&forceBuffers[axisParticles.x], (mm_ulong) realToFixedPoint(xforce.x));
+            ATOMIC_ADD(&forceBuffers[axisParticles.x+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(xforce.y));
+            ATOMIC_ADD(&forceBuffers[axisParticles.x+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(xforce.z));
             if (axisParticles.y != -1) {
-                ATOMIC_ADD(&forceBuffers[axisParticles.y], (mm_ulong) ((mm_long) (yforce.x*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[axisParticles.y+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (yforce.y*0x100000000)));
-                ATOMIC_ADD(&forceBuffers[axisParticles.y+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (yforce.z*0x100000000)));
+                ATOMIC_ADD(&forceBuffers[axisParticles.y], (mm_ulong) realToFixedPoint(yforce.x));
+                ATOMIC_ADD(&forceBuffers[axisParticles.y+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(yforce.y));
+                ATOMIC_ADD(&forceBuffers[axisParticles.y+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(yforce.z));
             }
         }
     }

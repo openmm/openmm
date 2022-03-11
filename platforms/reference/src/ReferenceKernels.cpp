@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -144,30 +144,9 @@ static void validateVariables(const Lepton::ExpressionTreeNode& node, const set<
  * for a leapfrog integrator.
  */
 static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& masses, double timeShift) {
-    vector<Vec3>& posData = extractPositions(context);
-    vector<Vec3>& velData = extractVelocities(context);
-    vector<Vec3>& forceData = extractForces(context);
     int numParticles = context.getSystem().getNumParticles();
-    
-    // Compute the shifted velocities.
-    
     vector<Vec3> shiftedVel(numParticles);
-    for (int i = 0; i < numParticles; ++i) {
-        if (masses[i] > 0)
-            shiftedVel[i] = velData[i]+forceData[i]*(timeShift/masses[i]);
-        else
-            shiftedVel[i] = velData[i];
-    }
-    
-    // Apply constraints to them.
-    
-    vector<double> inverseMasses(numParticles);
-    for (int i = 0; i < numParticles; i++)
-        inverseMasses[i] = (masses[i] == 0 ? 0 : 1/masses[i]);
-    extractConstraints(context).applyToVelocities(posData, shiftedVel, inverseMasses, 1e-4);
-    
-    // Compute the kinetic energy.
-    
+    context.computeShiftedVelocities(timeShift, shiftedVel);
     double energy = 0.0;
     for (int i = 0; i < numParticles; ++i)
         if (masses[i] > 0)
@@ -203,6 +182,10 @@ double ReferenceCalcForcesAndEnergyKernel::finishComputation(ContextImpl& contex
 }
 
 void ReferenceUpdateStateDataKernel::initialize(const System& system) {
+    int numParticles = system.getNumParticles();
+    masses.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
 }
 
 double ReferenceUpdateStateDataKernel::getTime(const ContextImpl& context) const {
@@ -255,6 +238,32 @@ void ReferenceUpdateStateDataKernel::setVelocities(ContextImpl& context, const s
         velData[i][1] = velocities[i][1];
         velData[i][2] = velocities[i][2];
     }
+}
+
+void ReferenceUpdateStateDataKernel::computeShiftedVelocities(ContextImpl& context, double timeShift, std::vector<Vec3>& velocities) {
+    int numParticles = context.getSystem().getNumParticles();
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    vector<Vec3>& forceData = extractForces(context);
+    
+    // Compute the shifted velocities.
+    
+    velocities.resize(numParticles);
+    vector<double> inverseMasses(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        if (masses[i] == 0) {
+            velocities[i] = velData[i];
+            inverseMasses[i] = 0;
+        }
+        else {
+            velocities[i] = velData[i]+forceData[i]*(timeShift/masses[i]);
+            inverseMasses[i] = 1/masses[i];
+        }
+    }
+    
+    // Apply constraints to them.
+    
+    extractConstraints(context).applyToVelocities(posData, velocities, inverseMasses, 1e-4);
 }
 
 void ReferenceUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Vec3>& forces) {
@@ -1211,6 +1220,8 @@ void ReferenceCalcCustomNonbondedForceKernel::createExpressions(const CustomNonb
     parameterNames.clear();
     globalParameterNames.clear();
     globalParamValues.clear();
+    computedValueNames.clear();
+    computedValueExpressions.clear();
     energyParamDerivNames.clear();
     energyParamDerivExpressions.clear();
     for (int i = 0; i < force.getNumPerParticleParameters(); i++)
@@ -1219,19 +1230,34 @@ void ReferenceCalcCustomNonbondedForceKernel::createExpressions(const CustomNonb
         globalParameterNames.push_back(force.getGlobalParameterName(i));
         globalParamValues[force.getGlobalParameterName(i)] = force.getGlobalParameterDefaultValue(i);
     }
+    set<string> particleVariables, pairVariables;
+    particleVariables.insert("r");
+    pairVariables.insert("r");
+    for (auto& name : parameterNames) {
+        particleVariables.insert(name);
+        pairVariables.insert(name+"1");
+        pairVariables.insert(name+"2");
+    }
+    particleVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    pairVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        string name, exp;
+        force.getComputedValueParameters(i, name, exp);
+        Lepton::ParsedExpression parsed = Lepton::Parser::parse(exp, functions);
+        validateVariables(parsed.getRootNode(), particleVariables);
+        computedValueNames.push_back(name);
+        computedValueExpressions.push_back(parsed.createCompiledExpression());
+    }
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
         string param = force.getEnergyParameterDerivativeName(i);
         energyParamDerivNames.push_back(param);
         energyParamDerivExpressions.push_back(expression.differentiate(param).createCompiledExpression());
     }
-    set<string> variables;
-    variables.insert("r");
-    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
-        variables.insert(parameterNames[i]+"1");
-        variables.insert(parameterNames[i]+"2");
+    for (auto& name : computedValueNames) {
+        pairVariables.insert(name+"1");
+        pairVariables.insert(name+"2");
     }
-    variables.insert(globalParameterNames.begin(), globalParameterNames.end());
-    validateVariables(expression.getRootNode(), variables);
+    validateVariables(expression.getRootNode(), pairVariables);
 
     // Delete the custom functions.
 
@@ -1244,7 +1270,7 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     vector<Vec3>& forceData = extractForces(context);
     Vec3* boxVectors = extractBoxVectors(context);
     double energy = 0;
-    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames, energyParamDerivExpressions);
+    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames, energyParamDerivExpressions, computedValueNames, computedValueExpressions);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, extractBoxVectors(context), periodic, nonbondedCutoff, 0.0);

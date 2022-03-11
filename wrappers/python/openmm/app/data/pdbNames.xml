@@ -106,6 +106,10 @@
  <Residue name="PHE" type="Protein">
   <Atom name="HB2" alt1="2HB"/>
   <Atom name="HB3" alt1="HB1" alt2="1HB" alt3="3HB"/>
+  <Atom name="HD1" alt1="1HD"/>
+  <Atom name="HD2" alt1="2HD"/>
+  <Atom name="HE1" alt1="1HE"/>
+  <Atom name="HE2" alt1="2HE"/>
  </Residue>
  <Residue name="TYR" type="Protein">
   <Atom name="HH" alt1="HOH"/>

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -175,6 +175,15 @@ public:
      */
     void setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities);
     /**
+     * Compute velocities, shifted in time to account for a leapfrog integrator.  The shift
+     * is based on the most recently computed forces.
+     * 
+     * @param context     the context in which to execute this kernel
+     * @param timeShift   the amount by which to shift the velocities in time
+     * @param velocities  the shifted velocities are returned in this
+     */
+    void computeShiftedVelocities(ContextImpl& context, double timeShift, std::vector<Vec3>& velocities);
+    /**
      * Get the current forces on all particles.
      *
      * @param forces  on exit, this contains the forces
@@ -216,6 +225,7 @@ public:
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
     ReferencePlatform::PlatformData& data;
+    std::vector<double> masses;
 };
 
 /**
@@ -692,8 +702,8 @@ private:
     std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;
     Lepton::CompiledExpression energyExpression, forceExpression;
-    std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
-    std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
+    std::vector<Lepton::CompiledExpression> computedValueExpressions, energyParamDerivExpressions;
+    std::vector<std::string> parameterNames, globalParameterNames, computedValueNames, energyParamDerivNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     std::vector<double> longRangeCoefficientDerivs;
     std::map<std::string, const TabulatedFunction*> tabulatedFunctions;

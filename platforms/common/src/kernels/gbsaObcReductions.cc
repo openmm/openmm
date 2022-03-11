@@ -74,7 +74,7 @@ KERNEL void reduceBornForce(
         energy += saTerm;
         force *= bornRadius*bornRadius*obcChain[index];
 #ifdef SUPPORTS_64_BIT_ATOMICS
-        bornForce[index] = (mm_long) (force*0x100000000);
+        bornForce[index] = realToFixedPoint(force);
 #else
         bornForce[index] = force;
 #endif

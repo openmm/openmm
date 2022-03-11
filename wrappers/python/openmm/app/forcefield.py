@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2021 Stanford University and the Authors.
+Portions copyright (c) 2012-2022 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
@@ -57,11 +57,11 @@ def _getDataDirectories():
     if _dataDirectories is None:
         _dataDirectories = [os.path.join(os.path.dirname(__file__), 'data')]
         try:
-            from pkg_resources import iter_entry_points
-            for entry in iter_entry_points(group='openmm.forcefielddir'):
+            from importlib_metadata import entry_points
+            for entry in entry_points().select(group='openmm.forcefielddir'):
                 _dataDirectories.append(entry.load()())
         except:
-            pass # pkg_resources is not installed
+            pass # importlib_metadata is not installed
     return _dataDirectories
 
 def _convertParameterToNumber(param):
@@ -2057,6 +2057,11 @@ class HarmonicAngleGenerator(object):
             generator.registerAngle(angle.attrib)
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+        pass
+
+    def postprocessSystem(self, sys, data, args):
+        # We need to wait until after all bonds have been added so their lengths will be set correctly.
+
         existing = [f for f in sys.getForces() if type(f) == mm.HarmonicAngleForce]
         if len(existing) == 0:
             force = mm.HarmonicAngleForce()
@@ -2925,6 +2930,7 @@ class CustomNonbondedGenerator(object):
         self.bondCutoff = bondCutoff
         self.globalParams = {}
         self.perParticleParams = []
+        self.computedValues = {}
         self.functions = []
 
     @staticmethod
@@ -2935,6 +2941,8 @@ class CustomNonbondedGenerator(object):
             generator.globalParams[param.attrib['name']] = float(param.attrib['defaultValue'])
         for param in element.findall('PerParticleParameter'):
             generator.perParticleParams.append(param.attrib['name'])
+        for value in element.findall('ComputedValue'):
+            generator.computedValues[value.attrib['name']] = value.attrib['expression']
         generator.params = ForceField._AtomTypeParameters(ff, 'CustomNonbondedForce', 'Atom', generator.perParticleParams)
         generator.params.parseDefinitions(element)
         generator.functions += _parseFunctions(element)
@@ -2953,6 +2961,8 @@ class CustomNonbondedGenerator(object):
             force.addGlobalParameter(param, self.globalParams[param])
         for param in self.perParticleParams:
             force.addPerParticleParameter(param)
+        for name in self.computedValues:
+            force.addComputedValue(name, self.computedValues[name])
         _createFunctions(force, self.functions)
         for atom in data.atoms:
             values = self.params.getAtomParameters(atom, data)
@@ -3460,8 +3470,14 @@ class AmoebaAngleGenerator(object):
         # <AmoebaAngleForce angle-cubic="-0.014" angle-quartic="5.6e-05" angle-pentic="-7e-07" angle-sextic="2.2e-08">
         #   <Angle class1="2" class2="1" class3="3" k="0.0637259642196" angle1="122.00"  />
 
-        generator = AmoebaAngleGenerator(forceField, element.attrib['angle-cubic'], element.attrib['angle-quartic'],  element.attrib['angle-pentic'], element.attrib['angle-sextic'])
-        forceField._forces.append(generator)
+        existing = [f for f in forceField._forces if isinstance(f, AmoebaAngleGenerator)]
+        if len(existing) == 0:
+            generator = AmoebaAngleGenerator(forceField, element.attrib['angle-cubic'], element.attrib['angle-quartic'],  element.attrib['angle-pentic'], element.attrib['angle-sextic'])
+            forceField.registerGenerator(generator)
+        else:
+            generator = existing[0]
+            if tuple(element.attrib[x] for x in ('angle-cubic', 'angle-quartic', 'angle-pentic', 'angle-sextic')) != (generator.cubic, generator.quartic, generator.pentic, generator.sextic):
+                raise ValueError('All <AmoebaAngleForce> tags must use identical scale factors')
         for angle in element.findall('Angle'):
             types = forceField._findAtomTypes(angle.attrib, 3)
             if None not in types:
@@ -3500,7 +3516,8 @@ class AmoebaAngleGenerator(object):
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        pass
+        if not any(isinstance(f, AmoebaOutOfPlaneBendGenerator) for f in self.forceField.getGenerators()):
+            raise ValueError('A ForceField containing an <AmoebaAngleForce> must also contain an <AmoebaOutOfPlaneBendForce>')
 
     #=============================================================================================
     # createForcePostOpBendAngle is called by AmoebaOutOfPlaneBendForce with the list of
@@ -3689,13 +3706,14 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
         # get global scalar parameters
 
-        generator = AmoebaOutOfPlaneBendGenerator(forceField, element.attrib['type'],
-                                                   float(element.attrib['opbend-cubic']),
-                                                   float(element.attrib['opbend-quartic']),
-                                                   float(element.attrib['opbend-pentic']),
-                                                   float(element.attrib['opbend-sextic']))
-
-        forceField._forces.append(generator)
+        existing = [f for f in forceField._forces if isinstance(f, AmoebaOutOfPlaneBendGenerator)]
+        if len(existing) == 0:
+            generator = AmoebaOutOfPlaneBendGenerator(forceField, element.attrib['type'], element.attrib['opbend-cubic'], element.attrib['opbend-quartic'],  element.attrib['opbend-pentic'], element.attrib['opbend-sextic'])
+            forceField.registerGenerator(generator)
+        else:
+            generator = existing[0]
+            if tuple(element.attrib[x] for x in ('type', 'opbend-cubic', 'opbend-quartic', 'opbend-pentic', 'opbend-sextic')) != (generator.type, generator.cubic, generator.quartic, generator.pentic, generator.sextic):
+                raise ValueError('All <AmoebaOutOfPlaneBendForce> tags must use identical scale factors')
 
         for angle in element.findall('Angle'):
             if 'class3' in angle.attrib and 'class4' in angle.attrib and angle.attrib['class3'] == '0' and angle.attrib['class4'] == '0':
@@ -3720,8 +3738,11 @@ class AmoebaOutOfPlaneBendGenerator(object):
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+        self._nonbondedMethod = nonbondedMethod
+        self._nonbondedCutoff = nonbondedCutoff
 
-        # get force
+    def postprocessSystem(self, sys, data, args):
+        # We need to wait until after all bonds have been added so their lengths will be set correctly.
 
         energy = """k*(theta^2 + %s*theta^3 + %s*theta^4 + %s*theta^5 + %s*theta^6);
                     theta = %.15g*pointangle(x2, y2, z2, x4, y4, z4, projx, projy, projz);
@@ -3844,12 +3865,12 @@ class AmoebaOutOfPlaneBendGenerator(object):
 
         for force in self.forceField._forces:
             if (force.__class__.__name__ == 'AmoebaAngleGenerator'):
-                force.createForcePostOpBendAngle(sys, data, nonbondedMethod, nonbondedCutoff, angles, args)
-                force.createForcePostOpBendInPlaneAngle(sys, data, nonbondedMethod, nonbondedCutoff, angles, args)
+                force.createForcePostOpBendAngle(sys, data, self._nonbondedMethod, self._nonbondedCutoff, angles, args)
+                force.createForcePostOpBendInPlaneAngle(sys, data, self._nonbondedMethod, self._nonbondedCutoff, angles, args)
 
         for force in self.forceField._forces:
             if (force.__class__.__name__ == 'AmoebaStretchBendGenerator'):
-                force.createForcePostAmoebaBondForce(sys, data, nonbondedMethod, nonbondedCutoff, angles, args)
+                force.createForcePostAmoebaBondForce(sys, data, self._nonbondedMethod, self._nonbondedCutoff, angles, args)
 
 parsers["AmoebaOutOfPlaneBendForce"] = AmoebaOutOfPlaneBendGenerator.parseElement
 
@@ -4522,8 +4543,9 @@ class AmoebaStretchBendGenerator(object):
     """An AmoebaStretchBendGenerator constructs a AmoebaStretchBendForce."""
     #=============================================================================================
 
-    def __init__(self):
+    def __init__(self, forcefield):
 
+        self.forcefield = forcefield
         self.types1 = []
         self.types2 = []
         self.types3 = []
@@ -4535,7 +4557,7 @@ class AmoebaStretchBendGenerator(object):
 
     @staticmethod
     def parseElement(element, forceField):
-        generator = AmoebaStretchBendGenerator()
+        generator = AmoebaStretchBendGenerator(forceField)
         forceField._forces.append(generator)
 
         # <AmoebaStretchBendForce stretchBendUnit="1.0">
@@ -4572,7 +4594,8 @@ class AmoebaStretchBendGenerator(object):
     #=============================================================================================
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-        pass
+        if not any(isinstance(f, AmoebaOutOfPlaneBendGenerator) for f in self.forcefield.getGenerators()):
+            raise ValueError('A ForceField containing an <AmoebaStretchBendForce> must also contain an <AmoebaOutOfPlaneBendForce>')
 
     #=============================================================================================
 
@@ -4657,7 +4680,6 @@ class AmoebaStretchBendGenerator(object):
                             k1, k2 = self.k1[i], self.k2[i]
                         else:
                             k1, k2 = self.k2[i], self.k1[i]
-                            
                         force.addBond((angle[0], angle[1], angle[2]), (bondAB, bondCB, angleDict['idealAngle']/radian, k1, k2))
 
                     break
