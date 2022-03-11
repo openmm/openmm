@@ -300,7 +300,7 @@ jobs:
           python -m pytest -v -n 2
 
       - name: "Cleanup self-hosted runner (M1)"
-        shell: bash -l {0}
+        shell: bash --noprofile --norc -eo pipefail {0}
         if: (matrix.os == 'M1-arm64') && always()
         continue-on-error: true
         run: |
