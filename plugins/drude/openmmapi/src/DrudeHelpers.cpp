@@ -127,12 +127,12 @@ vector<Vec3> assignDrudeVelocities(const System &system, double temperature, dou
     return velocities;
 }
 
-double computeSystemTemperatureFromVelocities(const System& system, const vector<Vec3>& velocities) {
+pair<double, double> computeSystemTemperatureFromVelocities(const System& system, const vector<Vec3>& velocities) {
     vector<int> normalParticles;
     vector<pair<int, int> > pairParticles;
     findParticlesAndPairs(system, normalParticles, pairParticles);
-    double energy = 0.0;
-    int dof = 0;
+    double energy = 0.0, drudeEnergy = 0;
+    int dof = 0, drudeDof = 0;
     
     // Kinetic energy and degrees of freedom from normal particles.
     
@@ -151,10 +151,14 @@ double computeSystemTemperatureFromVelocities(const System& system, const vector
         int p2 = pair.second;
         double mass1 = system.getParticleMass(p1);
         double mass2 = system.getParticleMass(p2);
+	double reducedMass = (mass1*mass2)/(mass1+mass2);
         if (mass1 != 0 || mass2 != 0) {
             Vec3 momentum = mass1*velocities[p1] + mass2*velocities[p2];
             energy += momentum.dot(momentum)/(mass1+mass2);
-            dof += 3;
+	    Vec3 drudeVelocity = velocities[p1] - velocities[p2];
+            drudeEnergy += reducedMass*drudeVelocity.dot(drudeVelocity);
+	    dof += 3;
+	    drudeDof += 3;
         }
     }
     
@@ -176,7 +180,8 @@ double computeSystemTemperatureFromVelocities(const System& system, const vector
             break;
         }
     energy *= 0.5;
-    return 2*energy/(dof*BOLTZ);
+    drudeEnergy *= 0.5;
+    return make_pair<double, double>(2*energy/(dof*BOLTZ), 2*drudeEnergy/(drudeDof*BOLTZ));
 }
 
 }

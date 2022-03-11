@@ -126,6 +126,12 @@ public:
      * getTemperature().
      */
     double computeSystemTemperature();
+    /**
+     * Compute the instantaneous temperature of the Drude system, measured in Kelvin.
+     * This is calculated based on the kinetic energy of the internal motion of Drude pairs
+     * and should remain close to the prescribed Drude temperature.
+     */
+    double computeDrudeTemperature();
 protected:
     /**
      * This will be called by the Context when it is created.  It informs the Integrator

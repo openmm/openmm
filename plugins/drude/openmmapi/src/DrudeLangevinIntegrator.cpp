@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/DrudeLangevinIntegrator.h"
+#include "SimTKOpenMMRealType.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
@@ -44,7 +45,7 @@ using std::string;
 using std::vector;
 
 namespace OpenMM {
-    double computeSystemTemperatureFromVelocities(const System& system, const vector<Vec3>& velocities);
+	std::pair<double, double> computeSystemTemperatureFromVelocities(const System& system, const vector<Vec3>& velocities);
 }
 
 DrudeLangevinIntegrator::DrudeLangevinIntegrator(double temperature, double frictionCoeff, double drudeTemperature, double drudeFrictionCoeff, double stepSize) : DrudeIntegrator(stepSize) {
@@ -126,5 +127,16 @@ double DrudeLangevinIntegrator::computeSystemTemperature() {
     context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
     vector<Vec3> velocities;
     context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
-    return computeSystemTemperatureFromVelocities(context->getSystem(), velocities);
+    return computeSystemTemperatureFromVelocities(context->getSystem(), velocities).first;
 }
+
+double DrudeLangevinIntegrator::computeDrudeTemperature() {
+    if (context == NULL)
+        throw OpenMMException("This Integrator is not bound to a context!");  
+    context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
+    vector<Vec3> velocities;
+    context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
+    std::pair<double, double> temperatures = computeSystemTemperatureFromVelocities(context->getSystem(), velocities);
+    return temperatures.second;
+} 
+
