@@ -127,7 +127,11 @@ vector<Vec3> assignDrudeVelocities(const System &system, double temperature, dou
     return velocities;
 }
 
-pair<double, double> computeSystemTemperatureFromVelocities(const System& system, const vector<Vec3>& velocities) {
+
+/**
+ * Computes the instantaneous temperatures of the system and the internal Drude motion and returns a pair (T_system, T_drude)
+ */
+pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities) {
     vector<int> normalParticles;
     vector<pair<int, int> > pairParticles;
     findParticlesAndPairs(system, normalParticles, pairParticles);
@@ -181,6 +185,8 @@ pair<double, double> computeSystemTemperatureFromVelocities(const System& system
         }
     energy *= 0.5;
     drudeEnergy *= 0.5;
+    if (drudeDof == 0)
+        drudeDof = 1; // so that the drude temperature is reported as 0
     return make_pair<double, double>(2*energy/(dof*BOLTZ), 2*drudeEnergy/(drudeDof*BOLTZ));
 }
 
