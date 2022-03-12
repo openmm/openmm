@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -194,21 +194,21 @@ static double evaluateOperation(Operation* op, double* args) {
 
 void CompiledExpression::generateJitCode() {
     CodeHolder code;
-    code.init(runtime.getCodeInfo());
-    X86Compiler c(&code);
-    c.addFunc(FuncSignature0<double>());
-    vector<X86Xmm> workspaceVar(workspace.size());
+    code.init(runtime.environment());
+    x86::Compiler c(&code);
+    c.addFunc(FuncSignatureT<double>());
+    vector<x86::Xmm> workspaceVar(workspace.size());
     for (int i = 0; i < (int) workspaceVar.size(); i++)
         workspaceVar[i] = c.newXmmSd();
-    X86Gp argsPointer = c.newIntPtr();
-    c.mov(argsPointer, imm_ptr(&argValues[0]));
+    x86::Gp argsPointer = c.newIntPtr();
+    c.mov(argsPointer, imm(&argValues[0]));
     
     // Load the arguments into variables.
     
     for (set<string>::const_iterator iter = variableNames.begin(); iter != variableNames.end(); ++iter) {
         map<string, int>::iterator index = variableIndices.find(*iter);
-        X86Gp variablePointer = c.newIntPtr();
-        c.mov(variablePointer, imm_ptr(&getVariableReference(index->first)));
+        x86::Gp variablePointer = c.newIntPtr();
+        c.mov(variablePointer, imm(&getVariableReference(index->first)));
         c.movsd(workspaceVar[index->second], x86::ptr(variablePointer, 0, 0));
     }
 
@@ -250,10 +250,10 @@ void CompiledExpression::generateJitCode() {
     
     // Load constants into variables.
     
-    vector<X86Xmm> constantVar(constants.size());
+    vector<x86::Xmm> constantVar(constants.size());
     if (constants.size() > 0) {
-        X86Gp constantsPointer = c.newIntPtr();
-        c.mov(constantsPointer, imm_ptr(&constants[0]));
+        x86::Gp constantsPointer = c.newIntPtr();
+        c.mov(constantsPointer, imm(&constants[0]));
         for (int i = 0; i < (int) constants.size(); i++) {
             constantVar[i] = c.newXmmSd();
             c.movsd(constantVar[i], x86::ptr(constantsPointer, 8*i, 0));
@@ -385,12 +385,13 @@ void CompiledExpression::generateJitCode() {
                 
                 for (int i = 0; i < (int) args.size(); i++)
                     c.movsd(x86::ptr(argsPointer, 8*i, 0), workspaceVar[args[i]]);
-                X86Gp fn = c.newIntPtr();
-                c.mov(fn, imm_ptr((void*) evaluateOperation));
-                CCFuncCall* call = c.call(fn, FuncSignature2<double, Operation*, double*>());
-                call->setArg(0, imm_ptr(&op));
-                call->setArg(1, imm_ptr(&argValues[0]));
-                call->setRet(0, workspaceVar[target[step]]);
+                x86::Gp fn = c.newIntPtr();
+                c.mov(fn, imm((void*) evaluateOperation));
+                InvokeNode* invoke;
+                c.invoke(&invoke, fn, FuncSignatureT<double, Operation*, double*>());
+                invoke->setArg(0, imm(&op));
+                invoke->setArg(1, imm(&argValues[0]));
+                invoke->setRet(0, workspaceVar[target[step]]);
         }
     }
     c.ret(workspaceVar[workspace.size()-1]);
@@ -399,20 +400,22 @@ void CompiledExpression::generateJitCode() {
     runtime.add(&jitCode, &code);
 }
 
-void CompiledExpression::generateSingleArgCall(X86Compiler& c, X86Xmm& dest, X86Xmm& arg, double (*function)(double)) {
-    X86Gp fn = c.newIntPtr();
-    c.mov(fn, imm_ptr((void*) function));
-    CCFuncCall* call = c.call(fn, FuncSignature1<double, double>());
-    call->setArg(0, arg);
-    call->setRet(0, dest);
+void CompiledExpression::generateSingleArgCall(x86::Compiler& c, x86::Xmm& dest, x86::Xmm& arg, double (*function)(double)) {
+    x86::Gp fn = c.newIntPtr();
+    c.mov(fn, imm((void*) function));
+    InvokeNode* invoke;
+    c.invoke(&invoke, fn, FuncSignatureT<double, double>());
+    invoke->setArg(0, arg);
+    invoke->setRet(0, dest);
 }
 
-void CompiledExpression::generateTwoArgCall(X86Compiler& c, X86Xmm& dest, X86Xmm& arg1, X86Xmm& arg2, double (*function)(double, double)) {
-    X86Gp fn = c.newIntPtr();
-    c.mov(fn, imm_ptr((void*) function));
-    CCFuncCall* call = c.call(fn, FuncSignature2<double, double, double>());
-    call->setArg(0, arg1);
-    call->setArg(1, arg2);
-    call->setRet(0, dest);
+void CompiledExpression::generateTwoArgCall(x86::Compiler& c, x86::Xmm& dest, x86::Xmm& arg1, x86::Xmm& arg2, double (*function)(double, double)) {
+    x86::Gp fn = c.newIntPtr();
+    c.mov(fn, imm((void*) function));
+    InvokeNode* invoke;
+    c.invoke(&invoke, fn, FuncSignatureT<double, double, double>());
+    invoke->setArg(0, arg1);
+    invoke->setArg(1, arg2);
+    invoke->setRet(0, dest);
 }
 #endif
