@@ -448,5 +448,14 @@ class TestAmberPrmtopFile(unittest.TestCase):
                 OpenMM_CMAP_E = simulation.context.getState(getEnergy=True, groups=1<<i).getPotentialEnergy().value_in_unit(kilojoules_per_mole)/conversion
                 self.assertAlmostEqual(OpenMM_CMAP_E, sander_CMAP_E, places=4)
 
+    def testEPConstraints(self):
+        """Test different types of constraints when using extra particles"""
+        prmtop = AmberPrmtopFile('systems/peptide_with_tip4p.prmtop')
+        for constraints in (HBonds, AllBonds):
+            system = prmtop.createSystem(constraints=constraints)
+            integrator = VerletIntegrator(0.001*picoseconds)
+            # If a constraint was added to a massless particle, this will throw an exception.
+            context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+
 if __name__ == '__main__':
     unittest.main()
