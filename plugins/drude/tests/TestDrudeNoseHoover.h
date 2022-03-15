@@ -167,6 +167,7 @@ void testWaterBox() {
         double drudeKE = integ.computeDrudeKineticEnergy();
         double temp = KE/(0.5*numStandardDof*BOLTZ);
         double drudeTemp = drudeKE/(0.5*numDrudeDof*BOLTZ);
+	ASSERT_EQUAL_TOL(drudeTemp, integ.computeDrudeTemperature(), 1e-6);
         meanTemp = (i*meanTemp + temp)/(i+1);
         meanDrudeTemp = (i*meanDrudeTemp + drudeTemp)/(i+1);
         double heatBathEnergy = integ.computeHeatBathEnergy();

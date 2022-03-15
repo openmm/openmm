@@ -84,7 +84,9 @@ void testSinglePair() {
         Vec3 velCM = vel[0]*(mass1/totalMass) + vel[1]*(mass2/totalMass);
         keCM += 0.5*totalMass*velCM.dot(velCM);
         Vec3 velInternal = vel[0]-vel[1];
-        keInternal += 0.5*reducedMass*velInternal.dot(velInternal);
+        double _keInternal = 0.5*reducedMass*velInternal.dot(velInternal);
+        keInternal += _keInternal;
+	ASSERT_EQUAL_TOL(integ.computeDrudeTemperature(), _keInternal/(3*0.5*BOLTZ), 1e-6);
         Vec3 delta = state.getPositions()[0]-state.getPositions()[1];
         double distance = sqrt(delta.dot(delta));
         ASSERT(distance <= maxDistance*(1+1e-6));

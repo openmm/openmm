@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/DrudeNoseHooverIntegrator.h"
+#include "SimTKOpenMMRealType.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
@@ -45,11 +46,13 @@
 using namespace OpenMM;
 using std::string;
 using std::vector;
+using std::pair;
 
 namespace OpenMM {
     extern std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed);
-    double computeSystemTemperatureFromVelocities(const System& system, const vector<Vec3>& velocities);
+    pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities);
 }
+
 
 DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double temperature, double collisionFrequency, 
                                                      double drudeTemperature, double drudeCollisionFrequency,
@@ -151,8 +154,20 @@ double DrudeNoseHooverIntegrator::computeSystemTemperature() {
     context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
     vector<Vec3> velocities;
     context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
-    return computeSystemTemperatureFromVelocities(context->getSystem(), velocities);
+    return computeTemperaturesFromVelocities(context->getSystem(), velocities).first;
 }
+
+double DrudeNoseHooverIntegrator::computeDrudeTemperature() {
+    if (context == NULL)
+        throw OpenMMException("This Integrator is not bound to a context!");  
+    double kE = computeDrudeKineticEnergy();
+    size_t num_dofs = 0;
+    for (const auto &nhc: noseHooverChains){
+       num_dofs += 3 * nhc.getThermostatedPairs().size();
+    }
+    return kE/(0.5 * num_dofs * BOLTZ);
+}
+
 std::vector<Vec3> DrudeNoseHooverIntegrator::getVelocitiesForTemperature(const System &system, double temperature,
                                                                          int randomSeedIn) const {
     return assignDrudeVelocities(system, temperature, drudeTemperature, randomSeedIn);

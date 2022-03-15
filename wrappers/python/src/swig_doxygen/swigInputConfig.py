@@ -226,6 +226,7 @@ UNITS = {
 ("*", "getGlobalParameterDefaultValue") : (None, ()),
 ("*", "getPermutationMode") : (None, ()),
 ("*", "computeSystemTemperature") : ("unit.kelvin", ()),
+("*", "computeDrudeTemperature") : ("unit.kelvin", ()),
 ("LocalCoordinatesSite", "getOriginWeights") : (None, ()),
 ("LocalCoordinatesSite", "getXWeights") : (None, ()),
 ("LocalCoordinatesSite", "getYWeights") : (None, ()),
