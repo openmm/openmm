@@ -40,7 +40,11 @@
 #include <utility>
 #include <vector>
 #ifdef LEPTON_USE_JIT
-    #include "asmjit/x86.h"
+#if defined(__ARM__) || defined(__ARM64__)
+#include "asmjit/a64.h"
+#else
+#include "asmjit/x86.h"
+#endif
 #endif
 
 namespace Lepton {
@@ -102,8 +106,13 @@ private:
     double (*jitCode)();
 #ifdef LEPTON_USE_JIT
     void generateJitCode();
+#if defined(__ARM__) || defined(__ARM64__)
+    void generateSingleArgCall(asmjit::a64::Compiler& c, asmjit::arm::Vec& dest, asmjit::arm::Vec& arg, double (*function)(double));
+    void generateTwoArgCall(asmjit::a64::Compiler& c, asmjit::arm::Vec& dest, asmjit::arm::Vec& arg1, asmjit::arm::Vec& arg2, double (*function)(double, double));
+#else
     void generateSingleArgCall(asmjit::x86::Compiler& c, asmjit::x86::Xmm& dest, asmjit::x86::Xmm& arg, double (*function)(double));
     void generateTwoArgCall(asmjit::x86::Compiler& c, asmjit::x86::Xmm& dest, asmjit::x86::Xmm& arg1, asmjit::x86::Xmm& arg2, double (*function)(double, double));
+#endif
     std::vector<double> constants;
     asmjit::JitRuntime runtime;
 #endif
