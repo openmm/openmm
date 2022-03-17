@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -192,23 +192,239 @@ static double evaluateOperation(Operation* op, double* args) {
     return op->evaluate(args, dummyVariables);
 }
 
+#if defined(__ARM__) || defined(__ARM64__)
 void CompiledExpression::generateJitCode() {
     CodeHolder code;
-    code.init(runtime.getCodeInfo());
-    X86Compiler c(&code);
-    c.addFunc(FuncSignature0<double>());
-    vector<X86Xmm> workspaceVar(workspace.size());
+    code.init(runtime.environment());
+    a64::Compiler c(&code);
+    c.addFunc(FuncSignatureT<double>());
+    vector<arm::Vec> workspaceVar(workspace.size());
     for (int i = 0; i < (int) workspaceVar.size(); i++)
-        workspaceVar[i] = c.newXmmSd();
-    X86Gp argsPointer = c.newIntPtr();
-    c.mov(argsPointer, imm_ptr(&argValues[0]));
+        workspaceVar[i] = c.newVecD();
+    arm::Gp argsPointer = c.newIntPtr();
+    c.mov(argsPointer, imm(&argValues[0]));
     
     // Load the arguments into variables.
     
     for (set<string>::const_iterator iter = variableNames.begin(); iter != variableNames.end(); ++iter) {
         map<string, int>::iterator index = variableIndices.find(*iter);
-        X86Gp variablePointer = c.newIntPtr();
-        c.mov(variablePointer, imm_ptr(&getVariableReference(index->first)));
+        arm::Gp variablePointer = c.newIntPtr();
+        c.mov(variablePointer, imm(&getVariableReference(index->first)));
+        c.ldr(workspaceVar[index->second], arm::ptr(variablePointer, 0));
+    }
+
+    // Make a list of all constants that will be needed for evaluation.
+    
+    vector<int> operationConstantIndex(operation.size(), -1);
+    for (int step = 0; step < (int) operation.size(); step++) {
+        // Find the constant value (if any) used by this operation.
+        
+        Operation& op = *operation[step];
+        double value;
+        if (op.getId() == Operation::CONSTANT)
+            value = dynamic_cast<Operation::Constant&>(op).getValue();
+        else if (op.getId() == Operation::ADD_CONSTANT)
+            value = dynamic_cast<Operation::AddConstant&>(op).getValue();
+        else if (op.getId() == Operation::MULTIPLY_CONSTANT)
+            value = dynamic_cast<Operation::MultiplyConstant&>(op).getValue();
+        else if (op.getId() == Operation::RECIPROCAL)
+            value = 1.0;
+        else if (op.getId() == Operation::STEP)
+            value = 1.0;
+        else if (op.getId() == Operation::DELTA)
+            value = 1.0;
+        else
+            continue;
+        
+        // See if we already have a variable for this constant.
+        
+        for (int i = 0; i < (int) constants.size(); i++)
+            if (value == constants[i]) {
+                operationConstantIndex[step] = i;
+                break;
+            }
+        if (operationConstantIndex[step] == -1) {
+            operationConstantIndex[step] = constants.size();
+            constants.push_back(value);
+        }
+    }
+    
+    // Load constants into variables.
+    
+    vector<arm::Vec> constantVar(constants.size());
+    if (constants.size() > 0) {
+        arm::Gp constantsPointer = c.newIntPtr();
+        c.mov(constantsPointer, imm(&constants[0]));
+        for (int i = 0; i < (int) constants.size(); i++) {
+            constantVar[i] = c.newVecD();
+            c.ldr(constantVar[i], arm::ptr(constantsPointer, 8*i));
+        }
+    }
+    
+    // Evaluate the operations.
+    
+    for (int step = 0; step < (int) operation.size(); step++) {
+        Operation& op = *operation[step];
+        vector<int> args = arguments[step];
+        if (args.size() == 1) {
+            // One or more sequential arguments.  Fill out the list.
+            
+            for (int i = 1; i < op.getNumArguments(); i++)
+                args.push_back(args[0]+i);
+        }
+        
+        // Generate instructions to execute this operation.
+        
+        switch (op.getId()) {
+            case Operation::CONSTANT:
+                c.fmov(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                break;
+            case Operation::ADD:
+                c.fadd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
+            case Operation::SUBTRACT:
+                c.fsub(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
+            case Operation::MULTIPLY:
+                c.fmul(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
+            case Operation::DIVIDE:
+                c.fdiv(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
+            case Operation::POWER:
+                generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]], pow);
+                break;
+            case Operation::NEGATE:
+                c.fneg(workspaceVar[target[step]], workspaceVar[args[0]]);
+                break;
+            case Operation::SQRT:
+                c.fsqrt(workspaceVar[target[step]], workspaceVar[args[0]]);
+                break;
+            case Operation::EXP:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], exp);
+                break;
+            case Operation::LOG:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], log);
+                break;
+            case Operation::SIN:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], sin);
+                break;
+            case Operation::COS:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], cos);
+                break;
+            case Operation::TAN:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], tan);
+                break;
+            case Operation::ASIN:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], asin);
+                break;
+            case Operation::ACOS:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], acos);
+                break;
+            case Operation::ATAN:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], atan);
+                break;
+            case Operation::ATAN2:
+                generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]], atan2);
+                break;
+            case Operation::SINH:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], sinh);
+                break;
+            case Operation::COSH:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], cosh);
+                break;
+            case Operation::TANH:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], tanh);
+                break;
+            case Operation::STEP:
+                c.cmge(workspaceVar[target[step]], workspaceVar[args[0]], imm(0));
+                c.and_(workspaceVar[target[step]], workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                break;
+            case Operation::DELTA:
+                c.cmeq(workspaceVar[target[step]], workspaceVar[args[0]], imm(0));
+                c.and_(workspaceVar[target[step]], workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                break;
+            case Operation::SQUARE:
+                c.fmul(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[0]]);
+                break;
+            case Operation::CUBE:
+                c.fmul(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[0]]);
+                c.fmul(workspaceVar[target[step]], workspaceVar[target[step]], workspaceVar[args[0]]);
+                break;
+            case Operation::RECIPROCAL:
+                c.fdiv(workspaceVar[target[step]], constantVar[operationConstantIndex[step]], workspaceVar[args[0]]);
+                break;
+            case Operation::ADD_CONSTANT:
+                c.fadd(workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]]);
+                break;
+            case Operation::MULTIPLY_CONSTANT:
+                c.fmul(workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]]);
+                break;
+            case Operation::ABS:
+                c.fabs(workspaceVar[target[step]], workspaceVar[args[0]]);
+                break;
+            case Operation::FLOOR:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], floor);
+                break;
+            case Operation::CEIL:
+                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], ceil);
+                break;
+            default:
+                // Just invoke evaluateOperation().
+                
+                for (int i = 0; i < (int) args.size(); i++)
+                    c.str(workspaceVar[args[i]], arm::ptr(argsPointer, 8*i));
+                arm::Gp fn = c.newIntPtr();
+                c.mov(fn, imm((void*) evaluateOperation));
+                InvokeNode* invoke;
+                c.invoke(&invoke, fn, FuncSignatureT<double, Operation*, double*>());
+                invoke->setArg(0, imm(&op));
+                invoke->setArg(1, imm(&argValues[0]));
+                invoke->setRet(0, workspaceVar[target[step]]);
+        }
+    }
+    c.ret(workspaceVar[workspace.size()-1]);
+    c.endFunc();
+    c.finalize();
+    runtime.add(&jitCode, &code);
+}
+
+void CompiledExpression::generateSingleArgCall(a64::Compiler& c, arm::Vec& dest, arm::Vec& arg, double (*function)(double)) {
+    arm::Gp fn = c.newIntPtr();
+    c.mov(fn, imm((void*) function));
+    InvokeNode* invoke;
+    c.invoke(&invoke, fn, FuncSignatureT<double, double>());
+    invoke->setArg(0, arg);
+    invoke->setRet(0, dest);
+}
+
+void CompiledExpression::generateTwoArgCall(a64::Compiler& c, arm::Vec& dest, arm::Vec& arg1, arm::Vec& arg2, double (*function)(double, double)) {
+    arm::Gp fn = c.newIntPtr();
+    c.mov(fn, imm((void*) function));
+    InvokeNode* invoke;
+    c.invoke(&invoke, fn, FuncSignatureT<double, double, double>());
+    invoke->setArg(0, arg1);
+    invoke->setArg(1, arg2);
+    invoke->setRet(0, dest);
+}
+#else
+void CompiledExpression::generateJitCode() {
+    CodeHolder code;
+    code.init(runtime.environment());
+    x86::Compiler c(&code);
+    c.addFunc(FuncSignatureT<double>());
+    vector<x86::Xmm> workspaceVar(workspace.size());
+    for (int i = 0; i < (int) workspaceVar.size(); i++)
+        workspaceVar[i] = c.newXmmSd();
+    x86::Gp argsPointer = c.newIntPtr();
+    c.mov(argsPointer, imm(&argValues[0]));
+    
+    // Load the arguments into variables.
+    
+    for (set<string>::const_iterator iter = variableNames.begin(); iter != variableNames.end(); ++iter) {
+        map<string, int>::iterator index = variableIndices.find(*iter);
+        x86::Gp variablePointer = c.newIntPtr();
+        c.mov(variablePointer, imm(&getVariableReference(index->first)));
         c.movsd(workspaceVar[index->second], x86::ptr(variablePointer, 0, 0));
     }
 
@@ -250,10 +466,10 @@ void CompiledExpression::generateJitCode() {
     
     // Load constants into variables.
     
-    vector<X86Xmm> constantVar(constants.size());
+    vector<x86::Xmm> constantVar(constants.size());
     if (constants.size() > 0) {
-        X86Gp constantsPointer = c.newIntPtr();
-        c.mov(constantsPointer, imm_ptr(&constants[0]));
+        x86::Gp constantsPointer = c.newIntPtr();
+        c.mov(constantsPointer, imm(&constants[0]));
         for (int i = 0; i < (int) constants.size(); i++) {
             constantVar[i] = c.newXmmSd();
             c.movsd(constantVar[i], x86::ptr(constantsPointer, 8*i, 0));
@@ -385,12 +601,13 @@ void CompiledExpression::generateJitCode() {
                 
                 for (int i = 0; i < (int) args.size(); i++)
                     c.movsd(x86::ptr(argsPointer, 8*i, 0), workspaceVar[args[i]]);
-                X86Gp fn = c.newIntPtr();
-                c.mov(fn, imm_ptr((void*) evaluateOperation));
-                CCFuncCall* call = c.call(fn, FuncSignature2<double, Operation*, double*>());
-                call->setArg(0, imm_ptr(&op));
-                call->setArg(1, imm_ptr(&argValues[0]));
-                call->setRet(0, workspaceVar[target[step]]);
+                x86::Gp fn = c.newIntPtr();
+                c.mov(fn, imm((void*) evaluateOperation));
+                InvokeNode* invoke;
+                c.invoke(&invoke, fn, FuncSignatureT<double, Operation*, double*>());
+                invoke->setArg(0, imm(&op));
+                invoke->setArg(1, imm(&argValues[0]));
+                invoke->setRet(0, workspaceVar[target[step]]);
         }
     }
     c.ret(workspaceVar[workspace.size()-1]);
@@ -399,20 +616,23 @@ void CompiledExpression::generateJitCode() {
     runtime.add(&jitCode, &code);
 }
 
-void CompiledExpression::generateSingleArgCall(X86Compiler& c, X86Xmm& dest, X86Xmm& arg, double (*function)(double)) {
-    X86Gp fn = c.newIntPtr();
-    c.mov(fn, imm_ptr((void*) function));
-    CCFuncCall* call = c.call(fn, FuncSignature1<double, double>());
-    call->setArg(0, arg);
-    call->setRet(0, dest);
+void CompiledExpression::generateSingleArgCall(x86::Compiler& c, x86::Xmm& dest, x86::Xmm& arg, double (*function)(double)) {
+    x86::Gp fn = c.newIntPtr();
+    c.mov(fn, imm((void*) function));
+    InvokeNode* invoke;
+    c.invoke(&invoke, fn, FuncSignatureT<double, double>());
+    invoke->setArg(0, arg);
+    invoke->setRet(0, dest);
 }
 
-void CompiledExpression::generateTwoArgCall(X86Compiler& c, X86Xmm& dest, X86Xmm& arg1, X86Xmm& arg2, double (*function)(double, double)) {
-    X86Gp fn = c.newIntPtr();
-    c.mov(fn, imm_ptr((void*) function));
-    CCFuncCall* call = c.call(fn, FuncSignature2<double, double, double>());
-    call->setArg(0, arg1);
-    call->setArg(1, arg2);
-    call->setRet(0, dest);
+void CompiledExpression::generateTwoArgCall(x86::Compiler& c, x86::Xmm& dest, x86::Xmm& arg1, x86::Xmm& arg2, double (*function)(double, double)) {
+    x86::Gp fn = c.newIntPtr();
+    c.mov(fn, imm((void*) function));
+    InvokeNode* invoke;
+    c.invoke(&invoke, fn, FuncSignatureT<double, double, double>());
+    invoke->setArg(0, arg1);
+    invoke->setArg(1, arg2);
+    invoke->setRet(0, dest);
 }
+#endif
 #endif
