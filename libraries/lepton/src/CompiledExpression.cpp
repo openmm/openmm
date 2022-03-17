@@ -596,7 +596,7 @@ void CompiledExpression::generateJitCode() {
         if (stepGroup[step] != -1) {
             vector<int>& group = groups[stepGroup[step]];
             vector<int>& powers = groupPowers[stepGroup[step]];
-            arm::Vec multiplier = c.newVecD();
+            x86::Xmm multiplier = c.newXmmSd();
             if (powers[0] > 0)
                 c.movsd(multiplier, workspaceVar[arguments[step][0]]);
             else {
