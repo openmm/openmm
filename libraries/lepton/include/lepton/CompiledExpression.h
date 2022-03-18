@@ -105,6 +105,7 @@ private:
     std::map<std::string, double> dummyVariables;
     double (*jitCode)();
 #ifdef LEPTON_USE_JIT
+    void findPowerGroups(std::vector<std::vector<int> >& groups, std::vector<std::vector<int> >& groupPowers, std::vector<int>& stepGroup);
     void generateJitCode();
 #if defined(__ARM__) || defined(__ARM64__)
     void generateSingleArgCall(asmjit::a64::Compiler& c, asmjit::arm::Vec& dest, asmjit::arm::Vec& arg, double (*function)(double));
