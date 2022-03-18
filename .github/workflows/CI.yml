@@ -167,8 +167,8 @@ jobs:
         if: matrix.os == 'M1-arm64'
         with:
           python-version: ${{ matrix.python-version }}
-          installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-MacOSX-arm64.sh#${{ github.run_number }}
-          #installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh#${{ github.run_number }}
+          #installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-MacOSX-arm64.sh#${{ github.run_number }}
+          installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh#${{ github.run_number }}
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
           auto-activate-base: false
 
