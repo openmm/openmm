@@ -350,10 +350,10 @@ __device__ void computeOneInteraction(AtomData& atom1, AtomData& atom2, real3 de
  */
 extern "C" __global__ void computeInducedField(
         unsigned long long* __restrict__ field, unsigned long long* __restrict__ fieldPolar, const real4* __restrict__ posq, const int2* __restrict__ exclusionTiles, 
-        const real3* __restrict__ inducedDipole, const real3* __restrict__ inducedDipolePolar, unsigned int startTileIndex, unsigned int numTileIndices,
+        const real3* __restrict__ inducedDipole, const real3* __restrict__ inducedDipolePolar, long long startTileIndex, long long numTileIndices,
 #ifdef USE_CUTOFF
-        const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
+        const int* __restrict__ tiles, const long long* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, long long maxTiles, const real4* __restrict__ blockCenter, const unsigned int* __restrict__ interactingAtoms,
 #elif defined USE_GK
         unsigned long long* __restrict__ fieldS, unsigned long long* __restrict__ fieldPolarS, const real3* __restrict__ inducedDipoleS,
         const real3* __restrict__ inducedDipolePolarS, const real* __restrict__ bornRadii,
@@ -373,9 +373,9 @@ extern "C" __global__ void computeInducedField(
 
     // First loop: process tiles that contain exclusions.
     
-    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+    const long long firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    const long long lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    for (long long pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
@@ -446,15 +446,15 @@ extern "C" __global__ void computeInducedField(
     // of them (no cutoff).
 
 #ifdef USE_CUTOFF
-    const unsigned int numTiles = interactionCount[0];
+    const long long numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(long long)numTileIndices/totalWarps : warp*(long long)numTiles/totalWarps);
-    int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(long long)numTileIndices/totalWarps : (warp+1)*(long long)numTiles/totalWarps);
+    long long pos = (warp*(long long)numTiles/totalWarps);
+    long long end = ((warp+1)*(long long)numTiles/totalWarps);
 #else
-    const unsigned int numTiles = numTileIndices;
-    int pos = (int) (startTileIndex+warp*(long long)numTiles/totalWarps);
-    int end = (int) (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
+    const long long numTiles = numTileIndices;
+    long long pos = (startTileIndex+warp*(long long)numTiles/totalWarps);
+    long long end = (startTileIndex+(warp+1)*(long long)numTiles/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
@@ -472,10 +472,10 @@ extern "C" __global__ void computeInducedField(
         x = tiles[pos];
 #else
         y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        x = (pos-(long long)y*NUM_BLOCKS+y*((long long)y+1)/2);
         if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            x = (pos-(long long)y*NUM_BLOCKS+y*((long long)y+1)/2);
         }
 
         // Skip over tiles that have exclusions, since they were already processed.
@@ -483,7 +483,7 @@ extern "C" __global__ void computeInducedField(
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
-                skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                skipTiles[threadIdx.x] = tile.x + (mm_long)tile.y*NUM_BLOCKS - tile.y*((mm_long)tile.y+1)/2;
             }
             else
                 skipTiles[threadIdx.x] = end;

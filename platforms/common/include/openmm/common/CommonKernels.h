@@ -679,7 +679,7 @@ private:
     class ForceInfo;
     double prefactor, surfaceAreaFactor, cutoff;
     bool hasCreatedKernels;
-    int maxTiles;
+    long long maxTiles;
     ComputeContext& cc;
     ForceInfo* info;
     ComputeArray params, charges, bornSum, bornRadii, bornForce, obcChain;
@@ -722,7 +722,8 @@ private:
     class ForceInfo;
     double cutoff;
     bool hasInitializedKernels, needParameterGradient, needEnergyParamDerivs;
-    int maxTiles, numComputedValues;
+    long long maxTiles;
+    int numComputedValues;
     ComputeContext& cc;
     ForceInfo* info;
     ComputeParameterSet* params;

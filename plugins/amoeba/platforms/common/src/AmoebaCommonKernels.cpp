@@ -1083,8 +1083,8 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
     // Compute the lab frame moments.
 
     computeMomentsKernel->execute(cc.getNumAtoms());
-    int startTileIndex = nb.getStartTileIndex();
-    int numTileIndices = nb.getNumTiles();
+    long long startTileIndex = nb.getStartTileIndex();
+    long long numTileIndices = nb.getNumTiles();
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
     electrostaticsKernel->setArg(7, startTileIndex);
     electrostaticsKernel->setArg(8, numTileIndices);
@@ -1248,8 +1248,8 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
 
 void CommonCalcAmoebaMultipoleForceKernel::computeInducedField() {
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
-    int startTileIndex = nb.getStartTileIndex();
-    int numTileIndices = nb.getNumTiles();
+    long long startTileIndex = nb.getStartTileIndex();
+    long long numTileIndices = nb.getNumTiles();
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
     computeInducedFieldKernel->setArg(6, startTileIndex);
     computeInducedFieldKernel->setArg(7, numTileIndices);
@@ -1954,8 +1954,8 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::computeBornRadii(ComputeArr
 
 void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation() {
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
-    int startTileIndex = nb.getStartTileIndex();
-    int numTileIndices = nb.getNumTiles();
+    long long startTileIndex = nb.getStartTileIndex();
+    long long numTileIndices = nb.getNumTiles();
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
     
     // Compute the GK force.
@@ -2282,8 +2282,8 @@ void CommonCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, 
 double CommonCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     ContextSelector selector(cc);
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
-    int startTileIndex = nb.getStartTileIndex();
-    int numTileIndices = nb.getNumTiles();
+    long long startTileIndex = nb.getStartTileIndex();
+    long long numTileIndices = nb.getNumTiles();
     int numForceThreadBlocks = nb.getNumForceThreadBlocks();
     forceKernel->setArg(3, startTileIndex);
     forceKernel->setArg(4, numTileIndices);
@@ -3187,7 +3187,7 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
         // These kernels can't be compiled in initialize(), because the nonbonded utilities object
         // has not yet been initialized then.
 
-        maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : cc.getNumAtomBlocks()*(cc.getNumAtomBlocks()+1)/2);
+        maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : cc.getNumAtomBlocks()*((long long)cc.getNumAtomBlocks()+1)/2);
         createFieldKernel(CommonAmoebaKernelSources::hippoFixedField, {&coreCharge, &valenceCharge, &alpha, &labDipoles, &labQuadrupoles[0],
                 &labQuadrupoles[1], &labQuadrupoles[2], &labQuadrupoles[3], &labQuadrupoles[4]}, field, fixedFieldKernel,
                 fixedFieldExceptionKernel, exceptionScales[1]);

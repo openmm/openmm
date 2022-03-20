@@ -403,7 +403,7 @@ public:
     /**
      * Convert a number to a string in a format suitable for including in a kernel.
      */
-    std::string intToString(int value) const;
+    std::string intToString(long long value) const;
     /**
      * Get whether the periodic box is triclinic.
      */

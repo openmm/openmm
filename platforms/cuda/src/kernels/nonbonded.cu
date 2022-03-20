@@ -117,11 +117,11 @@ __device__ void saveSingleForce(int atom, real3 force, unsigned long long* force
  */
 extern "C" __global__ void computeNonbonded(
         unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
-        const int2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned long long numTileIndices
+        const int2* __restrict__ exclusionTiles, long long startTileIndex, unsigned long long numTileIndices
 #ifdef USE_CUTOFF
-        , const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, const real4* __restrict__ blockCenter,
-        const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms, unsigned int maxSinglePairs,
+        , const int* __restrict__ tiles, const long long* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, long long maxTiles, const real4* __restrict__ blockCenter,
+        const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms, long long maxSinglePairs,
         const int2* __restrict__ singlePairs
 #endif
         PARAMETER_ARGUMENTS) {
@@ -138,9 +138,9 @@ extern "C" __global__ void computeNonbonded(
 
     // First loop: process tiles that contain exclusions.
 
-    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+    const long long firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    const long long lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    for (long long pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
@@ -333,17 +333,17 @@ extern "C" __global__ void computeNonbonded(
     // of them (no cutoff).
 
 #ifdef USE_CUTOFF
-    const unsigned int numTiles = interactionCount[0];
+    const long long numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (warp*(long long)numTiles/totalWarps);
-    int end = (int) ((warp+1)*(long long)numTiles/totalWarps);
+    long long pos = (warp*numTiles/totalWarps);
+    long long end = ((warp+1)*numTiles/totalWarps);
 #else
-    int pos = (int) (startTileIndex+warp*numTileIndices/totalWarps);
-    int end = (int) (startTileIndex+(warp+1)*numTileIndices/totalWarps);
+    long long pos = (startTileIndex+warp*numTileIndices/totalWarps);
+    long long end = (startTileIndex+(warp+1)*numTileIndices/totalWarps);
     int skipBase = 0;
     int currentSkipIndex = tbx;
-    __shared__ volatile int skipTiles[THREAD_BLOCK_SIZE];
+    __shared__ volatile long long skipTiles[THREAD_BLOCK_SIZE];
     skipTiles[threadIdx.x] = -1;
 #endif
     // atomIndices can probably be shuffled as well
@@ -365,11 +365,11 @@ extern "C" __global__ void computeNonbonded(
                               0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF &&
                               0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
 #else
-        y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        y = floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        x = (pos-(long long)y*NUM_BLOCKS+y*((long long)y+1)/2);
         if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            x = (pos-(long long)y*NUM_BLOCKS+y*((long long)y+1)/2);
         }
 
         // Skip over tiles that have exclusions, since they were already processed.
@@ -377,7 +377,7 @@ extern "C" __global__ void computeNonbonded(
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
-                skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                skipTiles[threadIdx.x] = tile.x + (long long)tile.y*NUM_BLOCKS - tile.y*((long long)tile.y+1)/2;
             }
             else
                 skipTiles[threadIdx.x] = end;

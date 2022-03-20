@@ -54,7 +54,7 @@ using namespace std;
 class OpenCLParallelCalcForcesAndEnergyKernel::BeginComputationTask : public OpenCLContext::WorkTask {
 public:
     BeginComputationTask(ContextImpl& context, OpenCLContext& cl, OpenCLCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, void* pinnedMemory, int& numTiles) : context(context), cl(cl), kernel(kernel),
+            bool includeForce, bool includeEnergy, int groups, void* pinnedMemory, long long& numTiles) : context(context), cl(cl), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), pinnedMemory(pinnedMemory), numTiles(numTiles) {
     }
     void execute() {
@@ -73,13 +73,13 @@ private:
     bool includeForce, includeEnergy;
     int groups;
     void* pinnedMemory;
-    int& numTiles;
+    long long& numTiles;
 };
 
 class OpenCLParallelCalcForcesAndEnergyKernel::FinishComputationTask : public OpenCLContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, OpenCLContext& cl, OpenCLCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, void* pinnedMemory, bool& valid, int& numTiles) :
+            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, void* pinnedMemory, bool& valid, long long& numTiles) :
             context(context), cl(cl), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
             completionTime(completionTime), pinnedMemory(pinnedMemory), valid(valid), numTiles(numTiles) {
     }
@@ -113,7 +113,7 @@ private:
     long long& completionTime;
     void* pinnedMemory;
     bool& valid;
-    int& numTiles;
+    long long& numTiles;
 };
 
 OpenCLParallelCalcForcesAndEnergyKernel::OpenCLParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, OpenCLPlatform::PlatformData& data) :

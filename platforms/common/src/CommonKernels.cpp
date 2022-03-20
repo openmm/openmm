@@ -2554,7 +2554,7 @@ double CommonCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
 
         hasCreatedKernels = true;
         maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : 0);
-        int numAtomBlocks = cc.getPaddedNumAtoms()/32;
+        long long numAtomBlocks = cc.getPaddedNumAtoms()/32;
         map<string, string> defines;
         if (nb.getUseCutoff())
             defines["USE_CUTOFF"] = "1";
@@ -3567,11 +3567,11 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         // has not yet been initialized then.
 
         {
-            int numExclusionTiles = nb.getExclusionTiles().getSize();
+            long long numExclusionTiles = nb.getExclusionTiles().getSize();
             pairValueDefines["NUM_TILES_WITH_EXCLUSIONS"] = cc.intToString(numExclusionTiles);
             int numContexts = cc.getNumContexts();
-            int startExclusionIndex = cc.getContextIndex()*numExclusionTiles/numContexts;
-            int endExclusionIndex = (cc.getContextIndex()+1)*numExclusionTiles/numContexts;
+            long long startExclusionIndex = cc.getContextIndex()*numExclusionTiles/numContexts;
+            long long endExclusionIndex = (cc.getContextIndex()+1)*numExclusionTiles/numContexts;
             pairValueDefines["FIRST_EXCLUSION_TILE"] = cc.intToString(startExclusionIndex);
             pairValueDefines["LAST_EXCLUSION_TILE"] = cc.intToString(endExclusionIndex);
             pairValueDefines["CUTOFF"] = cc.doubleToString(cutoff);
@@ -3581,11 +3581,11 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             pairValueDefines.clear();
         }
         {
-            int numExclusionTiles = nb.getExclusionTiles().getSize();
+            long long numExclusionTiles = nb.getExclusionTiles().getSize();
             pairEnergyDefines["NUM_TILES_WITH_EXCLUSIONS"] = cc.intToString(numExclusionTiles);
             int numContexts = cc.getNumContexts();
-            int startExclusionIndex = cc.getContextIndex()*numExclusionTiles/numContexts;
-            int endExclusionIndex = (cc.getContextIndex()+1)*numExclusionTiles/numContexts;
+            long long startExclusionIndex = cc.getContextIndex()*numExclusionTiles/numContexts;
+            long long endExclusionIndex = (cc.getContextIndex()+1)*numExclusionTiles/numContexts;
             pairEnergyDefines["FIRST_EXCLUSION_TILE"] = cc.intToString(startExclusionIndex);
             pairEnergyDefines["LAST_EXCLUSION_TILE"] = cc.intToString(endExclusionIndex);
             pairEnergyDefines["CUTOFF"] = cc.doubleToString(cutoff);

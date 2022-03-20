@@ -20,10 +20,10 @@ __kernel void computeNonbonded(
         __global real4* restrict forceBuffers,
 #endif
         __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
-        __global const int2* restrict exclusionTiles, unsigned int startTileIndex, unsigned long numTileIndices
+        __global const int2* restrict exclusionTiles, long startTileIndex, long numTileIndices
 #ifdef USE_CUTOFF
-        , __global const int* restrict tiles, __global const unsigned int* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, __global const real4* restrict blockCenter,
+        , __global const int* restrict tiles, __global const long* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, long maxTiles, __global const real4* restrict blockCenter,
         __global const real4* restrict blockSize, __global const int* restrict interactingAtoms
 #endif
         PARAMETER_ARGUMENTS) {
@@ -33,9 +33,9 @@ __kernel void computeNonbonded(
 
     // First loop: process tiles that contain exclusions.
 
-    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+get_group_id(0)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
-    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(get_group_id(0)+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
-    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+    const long firstExclusionTile = FIRST_EXCLUSION_TILE+get_group_id(0)*((long)LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
+    const long lastExclusionTile = FIRST_EXCLUSION_TILE+(get_group_id(0)+1)*((long)LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
+    for (long pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
@@ -216,15 +216,16 @@ __kernel void computeNonbonded(
     // of them (no cutoff).
 
 #ifdef USE_CUTOFF
-    const unsigned int numTiles = interactionCount[0];
+    const long numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (numTiles > maxTiles ? (unsigned int) (startTileIndex+get_group_id(0)*(long)numTileIndices/get_num_groups(0)) : get_group_id(0)*(long)numTiles/get_num_groups(0));
-    int end = (int) (numTiles > maxTiles ? (unsigned int) (startTileIndex+(get_group_id(0)+1)*(long)numTileIndices/get_num_groups(0)) : (get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
+
+    long pos = get_group_id(0)*(long)numTiles/get_num_groups(0));
+    long end = (get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
 #else
-    const unsigned int numTiles = numTileIndices;
-    int pos = (int) (startTileIndex+get_group_id(0)*(long)numTiles/get_num_groups(0));
-    int end = (int) (startTileIndex+(get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
+    const long numTiles = numTileIndices;
+    long pos = startTileIndex+get_group_id(0)*(long)numTiles/get_num_groups(0);
+    long end = startTileIndex+(get_group_id(0)+1)*(long)numTiles/get_num_groups(0);
 #endif
     int nextToSkip = -1;
     int currentSkipIndex = 0;
@@ -246,10 +247,10 @@ __kernel void computeNonbonded(
                               0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
 #else
         y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        x = (int) (pos-(long)y*NUM_BLOCKS+y*((long)y+1)/2);
         if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            x = (pos-(long)y*NUM_BLOCKS+y*((long)y+1)/2);
         }
 
         // Skip over tiles that have exclusions, since they were already processed.
@@ -257,7 +258,7 @@ __kernel void computeNonbonded(
         while (nextToSkip < pos) {
             if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[currentSkipIndex++];
-                nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                nextToSkip = tile.x + (long)tile.y*NUM_BLOCKS - tile.y*((long)tile.y+1)/2;
             }
             else
                 nextToSkip = end;

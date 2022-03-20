@@ -9,11 +9,11 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
         GLOBAL real* RESTRICT global_value,
 #endif
 #ifdef USE_CUTOFF
-        GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
+        GLOBAL const int* RESTRICT tiles, GLOBAL const mm_long* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, mm_long maxTiles, GLOBAL const real4* RESTRICT blockCenter,
         GLOBAL const real4* RESTRICT blockSize, GLOBAL const int* RESTRICT interactingAtoms
 #else
-        unsigned int numTiles
+        mm_long numTiles
 #endif
         PARAMETER_ARGUMENTS) {
     LOCAL real3 local_pos[LOCAL_BUFFER_SIZE];
@@ -22,9 +22,9 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
 
     // First loop: process tiles that contain exclusions.
     
-    const int firstExclusionTile = FIRST_EXCLUSION_TILE+get_group_id(0)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
-    const int lastExclusionTile = FIRST_EXCLUSION_TILE+(get_group_id(0)+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
-    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+    const mm_long firstExclusionTile = FIRST_EXCLUSION_TILE+get_group_id(0)*((mm_long)LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
+    const mm_long lastExclusionTile = FIRST_EXCLUSION_TILE+(get_group_id(0)+1)*((mm_long)LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/get_num_groups(0);
+    for (mm_long pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
@@ -175,14 +175,14 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
     // of them (no cutoff).
 
 #ifdef USE_CUTOFF
-    const unsigned int numTiles = interactionCount[0];
+    const mm_long numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
-    int end = (int) ((get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0));
+    mm_long pos = (get_group_id(0)*numTiles/get_num_groups(0));
+    mm_long end = ((get_group_id(0)+1)*numTiles/get_num_groups(0));
 #else
-    int pos = (int) (get_group_id(0)*(mm_long)numTiles/get_num_groups(0));
-    int end = (int) ((get_group_id(0)+1)*(mm_long)numTiles/get_num_groups(0));
+    mm_long pos = (get_group_id(0)*(mm_long)numTiles/get_num_groups(0));
+    mm_long end = ((get_group_id(0)+1)*(mm_long)numTiles/get_num_groups(0));
 #endif
     int nextToSkip = -1;
     int currentSkipIndex = 0;
@@ -203,10 +203,10 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
                               0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
 #else
         y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
         if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
         }
 
         // Skip over tiles that have exclusions, since they were already processed.
@@ -214,7 +214,7 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
         while (nextToSkip < pos) {
             if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[currentSkipIndex++];
-                nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                nextToSkip = tile.x + (mm_long)tile.y*NUM_BLOCKS - tile.y*((mm_long)tile.y+1)/2;
             }
             else
                 nextToSkip = end;

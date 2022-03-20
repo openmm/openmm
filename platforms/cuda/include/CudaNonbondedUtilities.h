@@ -268,13 +268,13 @@ public:
     /**
      * Get the index of the first tile this context is responsible for processing.
      */
-    int getStartTileIndex() const {
+    long long getStartTileIndex() const {
         return startTileIndex;
     }
     /**
      * Get the total number of tiles this context is responsible for processing.
      */
-    int getNumTiles() const {
+    long long getNumTiles() const {
         return numTiles;
     }
     /**
@@ -338,7 +338,7 @@ private:
     CudaArray rebuildNeighborList;
     CudaSort* blockSorter;
     CUevent downloadCountEvent;
-    unsigned int* pinnedCountBuffer;
+    long long* pinnedCountBuffer;
     std::vector<void*> forceArgs, findBlockBoundsArgs, sortBoxDataArgs, findInteractingBlocksArgs;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
@@ -348,9 +348,8 @@ private:
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList, canUsePairList;
-    int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
-    unsigned int maxTiles, maxSinglePairs;
-    long long numTiles;
+    int startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
+    long long numTiles, maxTiles, maxSinglePairs, startTileIndex;
     std::string kernelSource;
 };
 

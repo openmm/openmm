@@ -285,8 +285,8 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq, GLOBAL real* RES
  * For each grid point, find the range of sorted atoms associated with that point.
  */
 KERNEL void findAtomRangeForGrid(GLOBAL int2* RESTRICT pmeAtomGridIndex, GLOBAL int* RESTRICT pmeAtomRange, GLOBAL const real4* RESTRICT posq) {
-    int start = (NUM_ATOMS*GLOBAL_ID)/GLOBAL_SIZE;
-    int end = (NUM_ATOMS*(GLOBAL_ID+1))/GLOBAL_SIZE;
+    int start = (NUM_ATOMS*(long long)GLOBAL_ID)/GLOBAL_SIZE;
+    int end = (NUM_ATOMS*(long long)(GLOBAL_ID+1))/GLOBAL_SIZE;
     int last = (start == 0 ? -1 : pmeAtomGridIndex[start-1].y);
     for (int i = start; i < end; ++i) {
         int2 atomData = pmeAtomGridIndex[i];
@@ -312,8 +312,8 @@ KERNEL void findAtomRangeForGrid(GLOBAL int2* RESTRICT pmeAtomGridIndex, GLOBAL 
  * some work in the charge spreading kernel.
  */
 KERNEL void recordZIndex(GLOBAL int2* RESTRICT pmeAtomGridIndex, GLOBAL const real4* RESTRICT posq, real4 periodicBoxSize, real4 recipBoxVecZ) {
-    int start = (NUM_ATOMS*GLOBAL_ID)/GLOBAL_SIZE;
-    int end = (NUM_ATOMS*(GLOBAL_ID+1))/GLOBAL_SIZE;
+    int start = (NUM_ATOMS*(long long)GLOBAL_ID)/GLOBAL_SIZE;
+    int end = (NUM_ATOMS*(long long)(GLOBAL_ID+1))/GLOBAL_SIZE;
     for (int i = start; i < end; ++i) {
         real posz = posq[pmeAtomGridIndex[i].x].z;
         posz -= floor(posz*recipBoxVecZ.z)*periodicBoxSize.z;

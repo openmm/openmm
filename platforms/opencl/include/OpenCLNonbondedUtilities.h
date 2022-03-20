@@ -254,13 +254,13 @@ public:
     /**
      * Get the index of the first tile this context is responsible for processing.
      */
-    int getStartTileIndex() const {
+    long long getStartTileIndex() const {
         return startTileIndex;
     }
     /**
      * Get the total number of tiles this context is responsible for processing.
      */
-    int getNumTiles() const {
+    long long getNumTiles() const {
         return numTiles;
     }
     /**
@@ -331,9 +331,9 @@ private:
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
     bool useCutoff, usePeriodic, deviceIsCpu, anyExclusions, usePadding, forceRebuildNeighborList;
-    int numForceBuffers, startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
+    int numForceBuffers, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
     int forceThreadBlockSize, interactingBlocksThreadBlockSize, groupFlags;
-    long long numTiles;
+    long long numTiles, startTileIndex;
     std::string kernelSource;
 };
 

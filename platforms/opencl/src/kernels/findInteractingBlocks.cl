@@ -54,7 +54,7 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
 __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global const real4* restrict blockCenter,
         __global const real4* restrict blockBoundingBox, __global real4* restrict sortedBlockCenter,
         __global real4* restrict sortedBlockBoundingBox, __global const real4* restrict posq, __global const real4* restrict oldPositions,
-        __global unsigned int* restrict interactionCount, __global int* restrict rebuildNeighborList, int forceRebuild) {
+        __global long* restrict interactionCount, __global int* restrict rebuildNeighborList, int forceRebuild) {
     for (int i = get_global_id(0); i < NUM_BLOCKS; i += get_global_size(0)) {
         int index = (int) sortedBlock[i].y;
         sortedBlockCenter[i] = blockCenter[index];
@@ -80,8 +80,8 @@ __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global c
 #define BUFFER_SIZE 256
 
 __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        __global unsigned int* restrict interactionCount, __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms,
-        __global const real4* restrict posq, unsigned int maxTiles, unsigned int startBlockIndex, unsigned int numBlocks, __global real2* restrict sortedBlocks,
+        __global long* restrict interactionCount, __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms,
+        __global const real4* restrict posq, long maxTiles, long startBlockIndex, long numBlocks, __global real2* restrict sortedBlocks,
         __global const real4* restrict sortedBlockCenter, __global const real4* restrict sortedBlockBoundingBox,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global real4* restrict oldPositions,
         __global const int* restrict rebuildNeighborList) {
@@ -97,12 +97,12 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
     __local int workgroupBuffer[BUFFER_SIZE*(GROUP_SIZE/32)];
     __local int warpExclusions[MAX_EXCLUSIONS*(GROUP_SIZE/32)];
     __local real3 posBuffer[GROUP_SIZE];
-    __local volatile unsigned int workgroupTileIndex[GROUP_SIZE/32];
+    __local volatile long workgroupTileIndex[GROUP_SIZE/32];
     __local bool includeBlockFlags[GROUP_SIZE];
     __local volatile short2 atomCountBuffer[GROUP_SIZE];
     __local int* buffer = workgroupBuffer+BUFFER_SIZE*(warpStart/32);
     __local int* exclusionsForX = warpExclusions+MAX_EXCLUSIONS*(warpStart/32);
-    __local volatile unsigned int* tileStartIndex = workgroupTileIndex+(warpStart/32);
+    __local volatile long* tileStartIndex = workgroupTileIndex+(warpStart/32);
 
     // Loop over blocks.
 
@@ -113,7 +113,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
         int x = (int) sortedKey.y;
         real4 blockCenterX = sortedBlockCenter[block1];
         real4 blockSizeX = sortedBlockBoundingBox[block1];
-        int neighborsInBuffer = 0;
+        long neighborsInBuffer = 0;
         real3 pos1 = posq[x*TILE_SIZE+indexInWarp].xyz;
 #ifdef USE_PERIODIC
         const bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= PADDED_CUTOFF &&
@@ -233,11 +233,11 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                     if (neighborsInBuffer > BUFFER_SIZE-TILE_SIZE) {
                         // Store the new tiles to memory.
 
-                        unsigned int tilesToStore = neighborsInBuffer/TILE_SIZE;
+                        long tilesToStore = neighborsInBuffer/TILE_SIZE;
                         if (indexInWarp == 0)
                             *tileStartIndex = atom_add(interactionCount, tilesToStore);
                         SYNC_WARPS;
-                        unsigned int newTileStartIndex = *tileStartIndex;
+                        long newTileStartIndex = *tileStartIndex;
                         if (newTileStartIndex+tilesToStore <= maxTiles) {
                             if (indexInWarp < tilesToStore)
                                 interactingTiles[newTileStartIndex+indexInWarp] = x;
@@ -255,11 +255,11 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
         // If we have a partially filled buffer,  store it to memory.
         
         if (neighborsInBuffer > 0) {
-            unsigned int tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
+            long tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
             if (indexInWarp == 0)
                 *tileStartIndex = atom_add(interactionCount, tilesToStore);
             SYNC_WARPS;
-            unsigned int newTileStartIndex = *tileStartIndex;
+            long newTileStartIndex = *tileStartIndex;
             if (newTileStartIndex+tilesToStore <= maxTiles) {
                 if (indexInWarp < tilesToStore)
                     interactingTiles[newTileStartIndex+indexInWarp] = x;
@@ -315,9 +315,9 @@ void prefixSum(__local int* sum, __local int2* temp) {
  * in them, and writes the result to global memory.
  */
 void storeInteractionData(int x, __local int* buffer, __local int* sum, __local int2* temp, __local int* atoms, __local int* numAtoms,
-            __local int* baseIndex, __global unsigned int* interactionCount, __global int* interactingTiles, __global unsigned int* interactingAtoms, real4 periodicBoxSize,
+            __local long* baseIndex, __global long* interactionCount, __global int* interactingTiles, __global unsigned int* interactingAtoms, real4 periodicBoxSize,
             real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, __global const real4* posq, __local real4* posBuffer,
-            real4 blockCenterX, real4 blockSizeX, unsigned int maxTiles, bool finish) {
+            real4 blockCenterX, real4 blockSizeX, long maxTiles, bool finish) {
     const bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= PADDED_CUTOFF &&
                                      0.5f*periodicBoxSize.y-blockSizeX.y >= PADDED_CUTOFF &&
                                      0.5f*periodicBoxSize.z-blockSizeX.z >= PADDED_CUTOFF);
@@ -400,7 +400,7 @@ void storeInteractionData(int x, __local int* buffer, __local int* sum, __local 
 
         int atomsToStore = *numAtoms+sum[BUFFER_SIZE-1];
         bool storePartialTile = (finish && base >= numValid-BUFFER_SIZE/WARP_SIZE);
-        int tilesToStore = (storePartialTile ? (atomsToStore+TILE_SIZE-1)/TILE_SIZE : atomsToStore/TILE_SIZE);
+        long tilesToStore = (storePartialTile ? (atomsToStore+TILE_SIZE-1)/TILE_SIZE : atomsToStore/TILE_SIZE);
         if (tilesToStore > 0) {
             if (get_local_id(0) == 0)
                 *baseIndex = atom_add(interactionCount, tilesToStore);
@@ -463,7 +463,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
     __local real4 posBuffer[TILE_SIZE];
     __local int exclusionsForX[MAX_EXCLUSIONS];
     __local int bufferFull;
-    __local int globalIndex;
+    __local long globalIndex;
     __local int numAtoms;
 #ifdef AMD_ATOMIC_WORK_AROUND
     // Do a byte write to force all memory accesses to interactionCount to use the complete path.

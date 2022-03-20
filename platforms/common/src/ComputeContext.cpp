@@ -98,7 +98,7 @@ string ComputeContext::doubleToString(double value) const {
     return s.str();
 }
 
-string ComputeContext::intToString(int value) const {
+string ComputeContext::intToString(long long value) const {
     stringstream s;
     s << value;
     return s.str();

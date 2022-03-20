@@ -64,7 +64,7 @@ if (result != CUDA_SUCCESS) { \
 class CudaParallelCalcForcesAndEnergyKernel::BeginComputationTask : public CudaContext::WorkTask {
 public:
     BeginComputationTask(ContextImpl& context, CudaContext& cu, CudaCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, void* pinnedMemory, CUevent event, int2& interactionCount) : context(context), cu(cu), kernel(kernel),
+            bool includeForce, bool includeEnergy, int groups, void* pinnedMemory, CUevent event, long2& interactionCount) : context(context), cu(cu), kernel(kernel),
             includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), pinnedMemory(pinnedMemory), event(event), interactionCount(interactionCount) {
     }
     void execute() {
@@ -88,14 +88,14 @@ private:
     int groups;
     void* pinnedMemory;
     CUevent event;
-    int2& interactionCount;
+    long2& interactionCount;
 };
 
 class CudaParallelCalcForcesAndEnergyKernel::FinishComputationTask : public CudaContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, CudaContext& cu, CudaCalcForcesAndEnergyKernel& kernel,
             bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, long long* pinnedMemory, CudaArray& contextForces,
-            bool& valid, int2& interactionCount, CUstream stream, CUevent event, CUevent localEvent) :
+            bool& valid, long2& interactionCount, CUstream stream, CUevent event, CUevent localEvent) :
             context(context), cu(cu), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
             completionTime(completionTime), pinnedMemory(pinnedMemory), contextForces(contextForces), valid(valid), interactionCount(interactionCount),
             stream(stream), event(event), localEvent(localEvent) {
@@ -144,7 +144,7 @@ private:
     long long* pinnedMemory;
     CudaArray& contextForces;
     bool& valid;
-    int2& interactionCount;
+    long2& interactionCount;
     CUstream stream;
     CUevent event;
     CUevent localEvent;
@@ -197,7 +197,7 @@ void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
         ContextSelector selectorLocal(cuLocal);
         CHECK_RESULT(cuEventCreate(&peerCopyEventLocal[i], 0), "Error creating event");
     }
-    CHECK_RESULT(cuMemHostAlloc((void**) &interactionCounts, numContexts*sizeof(int2), 0), "Error creating interaction counts buffer");
+    CHECK_RESULT(cuMemHostAlloc((void**) &interactionCounts, numContexts*sizeof(long2), 0), "Error creating interaction counts buffer");
 }
 
 void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {

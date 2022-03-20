@@ -45,13 +45,13 @@ static __inline__ __device__ mm_long real_shfl(mm_long var, int srcLane) {
 
 KERNEL void computeNonbonded(
         GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const unsigned int* RESTRICT exclusions,
-        GLOBAL const int2* RESTRICT exclusionTiles, unsigned int startTileIndex, mm_ulong numTileIndices
+        GLOBAL const int2* RESTRICT exclusionTiles, mm_long startTileIndex, mm_long numTileIndices
 #ifdef USE_CUTOFF
-        , GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
+        , GLOBAL const int* RESTRICT tiles, GLOBAL const mm_long* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, mm_long maxTiles, GLOBAL const real4* RESTRICT blockCenter,
         GLOBAL const real4* RESTRICT blockSize, GLOBAL const unsigned int* RESTRICT interactingAtoms
 #ifdef __CUDA_ARCH__
-        , unsigned int maxSinglePairs, GLOBAL const int2* RESTRICT singlePairs
+        , mm_long maxSinglePairs, GLOBAL const int2* RESTRICT singlePairs
 #endif
 #endif
         PARAMETER_ARGUMENTS) {
@@ -68,9 +68,9 @@ KERNEL void computeNonbonded(
 
     // First loop: process tiles that contain exclusions.
 
-    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+    const mm_long firstExclusionTile = FIRST_EXCLUSION_TILE+warp*((mm_long)LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    const mm_long lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*((mm_long)LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    for (mm_long pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
@@ -231,15 +231,15 @@ KERNEL void computeNonbonded(
     // of them (no cutoff).
 
 #ifdef USE_CUTOFF
-    const unsigned int numTiles = interactionCount[0];
+    const mm_long numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (numTiles > maxTiles ? startTileIndex+warp*(mm_long)numTileIndices/totalWarps : warp*(mm_long)numTiles/totalWarps);
-    int end = (int) (numTiles > maxTiles ? startTileIndex+(warp+1)*(mm_long)numTileIndices/totalWarps : (warp+1)*(mm_long)numTiles/totalWarps);
+    mm_long pos = warp*(mm_long)numTiles/totalWarps;
+    mm_long end = (warp+1)*(mm_long)numTiles/totalWarps;
 #else
-    const unsigned int numTiles = numTileIndices;
-    int pos = (int) (startTileIndex+warp*(mm_long)numTiles/totalWarps);
-    int end = (int) (startTileIndex+(warp+1)*(mm_long)numTiles/totalWarps);
+    const mm_long numTiles = numTileIndices;
+    mm_long pos = (startTileIndex+warp*(mm_long)numTiles/totalWarps);
+    mm_long end = (startTileIndex+(warp+1)*(mm_long)numTiles/totalWarps);
 #endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
@@ -266,10 +266,10 @@ KERNEL void computeNonbonded(
                               0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
 #else
         y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
         if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
         }
 
         // Skip over tiles that have exclusions, since they were already processed.
@@ -279,7 +279,7 @@ KERNEL void computeNonbonded(
             SYNC_WARPS;
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
-                skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                skipTiles[LOCAL_ID] = tile.x + (mm_long)tile.y*NUM_BLOCKS - tile.y*((mm_long)tile.y+1)/2;
             }
             else
                 skipTiles[LOCAL_ID] = end;

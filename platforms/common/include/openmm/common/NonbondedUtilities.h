@@ -161,11 +161,11 @@ public:
     /**
      * Get the index of the first tile this context is responsible for processing.
      */
-    virtual int getStartTileIndex() const = 0;
+    virtual long long getStartTileIndex() const = 0;
     /**
      * Get the total number of tiles this context is responsible for processing.
      */
-    virtual int getNumTiles() const = 0;
+    virtual long long getNumTiles() const = 0;
     /**
      * Set whether to add padding to the cutoff distance when building the neighbor list.
      * This increases the size of the neighbor list (and thus the cost of computing interactions),
