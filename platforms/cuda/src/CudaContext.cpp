@@ -856,6 +856,10 @@ void CudaContext::addEnergyParameterDerivative(const string& param) {
 void CudaContext::flushQueue() {
     cuStreamSynchronize(getCurrentStream());
 }
+void CudaContext::synchronize() {
+    string errorMessage = "Error on synchronization";
+    CHECK_RESULT(cuCtxSynchronize());
+}
 
 vector<int> CudaContext::getDevicePrecedence() {
     int numDevices;

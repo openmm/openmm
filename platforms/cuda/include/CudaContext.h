@@ -541,6 +541,11 @@ public:
      * expense of reduced simulation performance.
      */
     void flushQueue();
+    /**
+     * Wait until all work has been completed.
+     * This is useful for debugging.
+     */
+    void synchronize();
 private:
     /**
      * Compute a sorted list of device indices in decreasing order of desirability

@@ -664,6 +664,11 @@ public:
      * expense of reduced simulation performance.
      */
     void flushQueue();
+    /**
+     * Wait until all work has been completed.
+     * This is useful for debugging.
+     */
+    void synchronize();
 private:
     OpenCLPlatform::PlatformData& platformData;
     int deviceIndex;

@@ -489,6 +489,11 @@ public:
      * expense of reduced simulation performance.
      */
     virtual void flushQueue() = 0;
+    /**
+     * Wait until all work has been completed.
+     * This is useful for debugging.
+     */
+    virtual void synchronize() = 0;
 protected:
     struct Molecule;
     struct MoleculeGroup;

@@ -845,3 +845,7 @@ void OpenCLContext::addEnergyParameterDerivative(const string& param) {
 void OpenCLContext::flushQueue() {
     getQueue().flush();
 }
+
+void OpenCLContext::synchronize() {
+    getQueue().finish();
+}
