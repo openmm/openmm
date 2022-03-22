@@ -107,8 +107,10 @@ void CompoundIntegrator::initialize(ContextImpl& context) {
 }
 
 void CompoundIntegrator::cleanup() {
-    for (int i = 0; i < integrators.size(); i++)
+    for (int i = 0; i < integrators.size(); i++) {
         integrators[i]->cleanup();
+        integrators[i]->context = nullptr;
+    }
 }
 
 vector<string> CompoundIntegrator::getKernelNames() {
