@@ -45,7 +45,7 @@ using namespace std;
 void CustomIntegratorUtilities::parseCondition(const string& expression, string& lhs, string& rhs, Comparison& comparison) {
     string operators[] = {"=", "<", ">", "!=", "<=", ">="};
     for (int i = 5; i >= 0; i--) {
-        int index = expression.find(operators[i]);
+        size_t index = expression.find(operators[i]);
         if (index != string::npos) {
             lhs = expression.substr(0, index);
             rhs = expression.substr(index+operators[i].size());

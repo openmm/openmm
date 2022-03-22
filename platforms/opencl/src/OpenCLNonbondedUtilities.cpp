@@ -444,7 +444,7 @@ void OpenCLNonbondedUtilities::setAtomBlockRange(double startFraction, double en
     startBlockIndex = (int) (startFraction*numAtomBlocks);
     numBlocks = (int) (endFraction*numAtomBlocks)-startBlockIndex;
     long long totalTiles = context.getNumAtomBlocks()*((long long)context.getNumAtomBlocks()+1)/2;
-    startTileIndex = (int) (startFraction*totalTiles);;
+    startTileIndex = (startFraction*totalTiles);
     numTiles = (long long) (endFraction*totalTiles)-startTileIndex;
     if (useCutoff) {
         // We are using a cutoff, and the kernels have already been created.
