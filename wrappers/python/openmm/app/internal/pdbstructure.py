@@ -164,10 +164,10 @@ class PdbStructure(object):
             if command == "ATOM  " or command == "HETATM":
                 self._add_atom(Atom(pdb_line, self, self.extraParticleIdentifier))
             elif command == "CONECT":
-                atoms = [int(pdb_line[6:11])]
+                atoms = [_parse_atom_index(pdb_line[6:11])]
                 for pos in (11,16,21,26):
                     try:
-                        atoms.append(int(pdb_line[pos:pos+5]))
+                        atoms.append(_parse_atom_index(pdb_line[pos:pos+5]))
                     except:
                         pass
                 self._current_model.connects.append(atoms)
@@ -208,11 +208,9 @@ class PdbStructure(object):
         self._finalize()
 
     def _reset_atom_numbers(self):
-        self._atom_numbers_are_hex = False
         self._next_atom_number = 1
 
     def _reset_residue_numbers(self):
-        self._residue_numbers_are_hex = False
         self._next_residue_number = 1
 
     def write(self, output_stream=sys.stdout):
@@ -726,18 +724,11 @@ class Atom(object):
         self.is_final_residue_in_chain = False
         # Start parsing fields from pdb line
         self.record_name = pdb_line[0:6].strip()
-        if pdbstructure is not None and pdbstructure._atom_numbers_are_hex:
-            self.serial_number = int(pdb_line[6:11], 16)
-        else:
-            try:
-                self.serial_number = int(pdb_line[6:11])
-            except:
-                try:
-                    self.serial_number = int(pdb_line[6:11], 16)
-                    pdbstructure._atom_numbers_are_hex = True
-                except:
-                    # Just give it the next number in sequence.
-                    self.serial_number = pdbstructure._next_atom_number
+        try:
+            self.serial_number = _parse_atom_index(pdb_line[6:11])
+        except:
+            # Just give it the next number in sequence.
+            self.serial_number = pdbstructure._next_atom_number
         self.name_with_spaces = pdb_line[12:16]
         alternate_location_indicator = pdb_line[16]
 
@@ -753,31 +744,27 @@ class Atom(object):
         self.residue_name = self.residue_name_with_spaces.strip()
 
         self.chain_id = pdb_line[21]
-        if pdbstructure is not None and pdbstructure._residue_numbers_are_hex:
-            self.residue_number = int(pdb_line[22:26], 16)
-        else:
+        try:
+            self.residue_number = int(pdb_line[22:26])
+        except:
             try:
-                self.residue_number = int(pdb_line[22:26])
+                self.residue_number = int(pdb_line[22:26], 16) - 0xA000 + 10000
             except:
-                try:
-                    self.residue_number = int(pdb_line[22:26], 16)
-                    pdbstructure._residue_numbers_are_hex = True
-                except:
-                    # When VMD runs out of hex values it starts filling the residue ID field with ****.
-                    # Look at the most recent atoms to figure out whether this is a new residue or not.
-                    if pdbstructure._current_model is None or pdbstructure._current_model._current_chain is None or pdbstructure._current_model._current_chain._current_residue is None:
-                        # This is the first residue in the model.
+                # When VMD runs out of hex values it starts filling the residue ID field with ****.
+                # Look at the most recent atoms to figure out whether this is a new residue or not.
+                if pdbstructure._current_model is None or pdbstructure._current_model._current_chain is None or pdbstructure._current_model._current_chain._current_residue is None:
+                    # This is the first residue in the model.
+                    self.residue_number = pdbstructure._next_residue_number
+                else:
+                    currentRes = pdbstructure._current_model._current_chain._current_residue
+                    if currentRes.name_with_spaces != self.residue_name_with_spaces:
+                        # The residue name has changed.
+                        self.residue_number = pdbstructure._next_residue_number
+                    elif self.name_with_spaces in currentRes.atoms_by_name:
+                        # There is already an atom with this name.
                         self.residue_number = pdbstructure._next_residue_number
                     else:
-                        currentRes = pdbstructure._current_model._current_chain._current_residue
-                        if currentRes.name_with_spaces != self.residue_name_with_spaces:
-                            # The residue name has changed.
-                            self.residue_number = pdbstructure._next_residue_number
-                        elif self.name_with_spaces in currentRes.atoms_by_name:
-                            # There is already an atom with this name.
-                            self.residue_number = pdbstructure._next_residue_number
-                        else:
-                            self.residue_number = currentRes.number
+                        self.residue_number = currentRes.number
         self.insertion_code = pdb_line[26]
         # coordinates, occupancy, and temperature factor belong in Atom.Location object
         x = float(pdb_line[30:38])
@@ -985,6 +972,13 @@ class Atom(object):
         def __str__(self):
             return str(self.position)
 
+
+def _parse_atom_index(index):
+    """Parse the string containing an atom index, which might be either decimal or hex."""
+    try:
+        return int(index)
+    except:
+        return int(index, 16) - 0xA0000 + 100000
 
 # run module directly for testing
 if __name__=='__main__':
