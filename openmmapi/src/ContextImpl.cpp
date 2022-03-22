@@ -91,6 +91,30 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
         constraintAtoms.insert(atoms);
     }
     
+    // Validate the list of properties.
+
+    map<string, string> validatedProperties;
+    if(platform) {
+        const vector<string>& platformProperties = platform->getPropertyNames();
+        for (auto& prop : properties) {
+            string property = prop.first;
+            if (platform->deprecatedPropertyReplacements.find(property) != platform->deprecatedPropertyReplacements.end())
+                property = platform->deprecatedPropertyReplacements[property];
+            bool valid = false;
+            for (auto& p : platformProperties)
+                if (p == property) {
+                    valid = true;
+                    break;
+                }
+            if (!valid)
+                throw OpenMMException("Illegal property name: "+prop.first);
+            validatedProperties[property] = prop.second;
+        }
+    }
+    else {
+        // There can't be any platform-specific properties if there's no platform
+    }
+
     // Find the list of kernels required.
     
     vector<string> kernelNames;
@@ -133,24 +157,6 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     for (int i = candidatePlatforms.size()-1; i >= 0; i--) {
         try {
             this->platform = platform = candidatePlatforms[i].second;
-
-            // Validate the list of properties.
-            const vector<string>& platformProperties = platform->getPropertyNames();
-            map<string, string> validatedProperties;
-            for (auto& prop : properties) {
-                string property = prop.first;
-                if (platform->deprecatedPropertyReplacements.find(property) != platform->deprecatedPropertyReplacements.end())
-                    property = platform->deprecatedPropertyReplacements[property];
-                bool valid = false;
-                for (auto& p : platformProperties)
-                    if (p == property) {
-                        valid = true;
-                        break;
-                    }
-                if (!valid)
-                    throw OpenMMException("Illegal property name: "+prop.first);
-                validatedProperties[property] = prop.second;
-            }
 
             if (originalContext == NULL)
                 platform->contextCreated(*this, validatedProperties);
