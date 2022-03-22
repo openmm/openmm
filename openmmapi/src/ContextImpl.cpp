@@ -94,7 +94,7 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     // Validate the list of properties.
 
     map<string, string> validatedProperties;
-    if(platform) {
+    if (platform != NULL) {
         const vector<string>& platformProperties = platform->getPropertyNames();
         for (auto& prop : properties) {
             string property = prop.first;
@@ -157,7 +157,6 @@ ContextImpl::ContextImpl(Context& owner, const System& system, Integrator& integ
     for (int i = candidatePlatforms.size()-1; i >= 0; i--) {
         try {
             this->platform = platform = candidatePlatforms[i].second;
-
             if (originalContext == NULL)
                 platform->contextCreated(*this, validatedProperties);
             else
