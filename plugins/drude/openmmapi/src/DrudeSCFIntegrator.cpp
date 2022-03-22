@@ -80,6 +80,7 @@ void DrudeSCFIntegrator::setMinimizationErrorTolerance(double tol) {
 }
 
 void DrudeSCFIntegrator::cleanup() {
+    context = nullptr;
     kernel = Kernel();
 }
 

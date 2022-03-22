@@ -98,6 +98,7 @@ void DrudeLangevinIntegrator::setDrudeFriction(double coeff) {
 }
 
 void DrudeLangevinIntegrator::cleanup() {
+    context = nullptr;
     kernel = Kernel();
 }
 

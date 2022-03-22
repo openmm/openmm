@@ -1175,7 +1175,7 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
 
         // Reciprocal space calculation.
         
-        unsigned int maxTiles = nb.getInteractingTiles().getSize();
+        long long maxTiles = nb.getInteractingTiles().getSize();
         pmeTransformMultipolesKernel->execute(cc.getNumAtoms());
         pmeSpreadFixedMultipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
@@ -1255,7 +1255,7 @@ void CommonCalcAmoebaMultipoleForceKernel::computeInducedField() {
     computeInducedFieldKernel->setArg(7, numTileIndices);
     if (usePME) {
         setPeriodicBoxArgs(cc, computeInducedFieldKernel, 10);
-        computeInducedFieldKernel->setArg(15, (int) nb.getInteractingTiles().getSize());
+        computeInducedFieldKernel->setArg(15, nb.getInteractingTiles().getSize());
     }
     cc.clearBuffer(inducedField);
     cc.clearBuffer(inducedFieldPolar);

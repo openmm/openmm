@@ -2596,7 +2596,7 @@ double CommonCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
             computeBornSumKernel->addArg(nb.getInteractingAtoms());
         }
         else
-            computeBornSumKernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
+            computeBornSumKernel->addArg(numAtomBlocks*((long long)numAtomBlocks+1)/2);
         computeBornSumKernel->addArg(nb.getExclusionTiles());
         force1Kernel = program->createKernel("computeGBSAForce1");
         force1Kernel->addArg(useLong ? cc.getLongForceBuffer() : cc.getForceBuffers());
@@ -2617,7 +2617,7 @@ double CommonCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
             force1Kernel->addArg(nb.getInteractingAtoms());
         }
         else
-            force1Kernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
+            force1Kernel->addArg(numAtomBlocks*((long long)numAtomBlocks+1)/2);
         force1Kernel->addArg(nb.getExclusionTiles());
         program = cc.compileProgram(CommonKernelSources::gbsaObcReductions, defines);
         reduceBornSumKernel = program->createKernel("reduceBornSum");
@@ -3615,7 +3615,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             pairValueKernel->addArg(nb.getInteractingAtoms());
         }
         else
-            pairValueKernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
+            pairValueKernel->addArg(numAtomBlocks*((long long)numAtomBlocks+1)/2);
         if (globals.isInitialized())
             pairValueKernel->addArg(globals);
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
@@ -3664,7 +3664,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             pairEnergyKernel->addArg(nb.getInteractingAtoms());
         }
         else
-            pairEnergyKernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
+            pairEnergyKernel->addArg(numAtomBlocks*((long long)numAtomBlocks+1)/2);
         if (globals.isInitialized())
             pairEnergyKernel->addArg(globals);
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {

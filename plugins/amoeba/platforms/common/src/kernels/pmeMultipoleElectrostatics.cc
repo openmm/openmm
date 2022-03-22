@@ -441,9 +441,9 @@ KERNEL void computeElectrostatics(
         GLOBAL const real4* RESTRICT posq, GLOBAL const uint2* RESTRICT covalentFlags, GLOBAL const unsigned int* RESTRICT polarizationGroupFlags,
         GLOBAL const int2* RESTRICT exclusionTiles, mm_long startTileIndex, mm_long numTileIndices,
 #ifdef USE_CUTOFF
-        GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        GLOBAL const int* RESTRICT tiles, GLOBAL const mm_long* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, mm_long maxTiles, GLOBAL const real4* RESTRICT blockCenter,
-        GLOBAL const mm_long* RESTRICT interactingAtoms,
+        GLOBAL const unsigned int* RESTRICT interactingAtoms,
 #endif
         GLOBAL const real* RESTRICT sphericalDipole, GLOBAL const real* RESTRICT sphericalQuadrupole, GLOBAL const real* RESTRICT inducedDipole,
         GLOBAL const real* RESTRICT inducedDipolePolar, GLOBAL const float2* RESTRICT dampingAndThole) {

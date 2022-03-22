@@ -308,7 +308,8 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         blockSorter = new OpenCLSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks, false);
         vector<cl_long> count(1, 0);
         interactionCount.upload(count);
-        rebuildNeighborList.upload(count);
+        vector<cl_int> zero(1, 0);
+        rebuildNeighborList.upload(zero);
     }
 }
 
@@ -451,19 +452,19 @@ void OpenCLNonbondedUtilities::setAtomBlockRange(double startFraction, double en
         for (map<int, KernelSet>::iterator iter = groupKernels.begin(); iter != groupKernels.end(); ++iter) {
             KernelSet& kernels = iter->second;
             if (*reinterpret_cast<cl_kernel*>(&kernels.forceKernel) != NULL) {
-                kernels.forceKernel.setArg<cl_uint>(5, startTileIndex);
-                kernels.forceKernel.setArg<cl_ulong>(6, numTiles);
+                kernels.forceKernel.setArg<cl_long>(5, startTileIndex);
+                kernels.forceKernel.setArg<cl_long>(6, numTiles);
             }
             if (*reinterpret_cast<cl_kernel*>(&kernels.energyKernel) != NULL) {
-                kernels.energyKernel.setArg<cl_uint>(5, startTileIndex);
-                kernels.energyKernel.setArg<cl_ulong>(6, numTiles);
+                kernels.energyKernel.setArg<cl_long>(5, startTileIndex);
+                kernels.energyKernel.setArg<cl_long>(6, numTiles);
             }
             if (*reinterpret_cast<cl_kernel*>(&kernels.forceEnergyKernel) != NULL) {
-                kernels.forceEnergyKernel.setArg<cl_uint>(5, startTileIndex);
-                kernels.forceEnergyKernel.setArg<cl_ulong>(6, numTiles);
+                kernels.forceEnergyKernel.setArg<cl_long>(5, startTileIndex);
+                kernels.forceEnergyKernel.setArg<cl_long>(6, numTiles);
             }
-            kernels.findInteractingBlocksKernel.setArg<cl_uint>(10, startBlockIndex);
-            kernels.findInteractingBlocksKernel.setArg<cl_uint>(11, numBlocks);
+            kernels.findInteractingBlocksKernel.setArg<cl_long>(10, startBlockIndex);
+            kernels.findInteractingBlocksKernel.setArg<cl_long>(11, numBlocks);
         }
         forceRebuildNeighborList = true;
     }
