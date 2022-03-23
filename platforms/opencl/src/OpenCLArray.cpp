@@ -96,7 +96,7 @@ ComputeContext& OpenCLArray::getContext() {
     return *context;
 }
 
-void OpenCLArray::uploadSubArray(const void* data, int offset, int elements, bool blocking) {
+void OpenCLArray::uploadSubArray(const void* data, size_t offset, size_t elements, bool blocking) {
     if (buffer == NULL)
         throw OpenMMException("OpenCLArray has not been initialized");
     if (offset < 0 || offset+elements > getSize())

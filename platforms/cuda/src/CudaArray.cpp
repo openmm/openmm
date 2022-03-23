@@ -89,7 +89,7 @@ ComputeContext& CudaArray::getContext() {
     return *context;
 }
 
-void CudaArray::uploadSubArray(const void* data, int offset, int elements, bool blocking) {
+void CudaArray::uploadSubArray(const void* data, size_t offset, size_t elements, bool blocking) {
     if (pointer == 0)
         throw OpenMMException("CudaArray has not been initialized");
     if (offset < 0 || offset+elements > getSize())

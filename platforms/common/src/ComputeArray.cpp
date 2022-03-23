@@ -84,7 +84,7 @@ ComputeContext& ComputeArray::getContext() {
     return impl->getContext();
 }
 
-void ComputeArray::uploadSubArray(const void* data, int offset, int elements, bool blocking) {
+void ComputeArray::uploadSubArray(const void* data, size_t offset, size_t elements, bool blocking) {
     if (impl == NULL)
         throw OpenMMException("ComputeArray has not been initialized");
     impl->uploadSubArray(data, offset, elements, blocking);
