@@ -1,18 +1,5 @@
 #define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)
 
-#ifndef ENABLE_SHUFFLE
-typedef struct {
-    real x, y, z;
-    real q;
-    real fx, fy, fz;
-    ATOM_PARAMETER_DATA
-#ifndef PARAMETER_SIZE_IS_EVEN
-    real padding;
-#endif
-} AtomData;
-#endif
-
-#ifdef ENABLE_SHUFFLE
 //support for 64 bit shuffles
 static __inline__ __device__ float real_shfl(float var, int srcLane) {
     return SHFL(var, srcLane);
@@ -39,7 +26,6 @@ static __inline__ __device__ long long real_shfl(long long var, int srcLane) {
     int2 fuse; fuse.x = lo; fuse.y = hi;
     return *reinterpret_cast<long long*>(&fuse);
 }
-#endif
 
 /**
  * Save the force on a single atom.
@@ -131,10 +117,6 @@ extern "C" __global__ void computeNonbonded(
     const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
     mixed energy = 0;
     INIT_DERIVATIVES
-    // used shared memory if the device cannot shuffle
-#ifndef ENABLE_SHUFFLE
-    __shared__ AtomData localData[THREAD_BLOCK_SIZE];
-#endif
 
     // First loop: process tiles that contain exclusions.
 
@@ -154,26 +136,14 @@ extern "C" __global__ void computeNonbonded(
         const bool hasExclusions = true;
         if (x == y) {
             // This tile is on the diagonal.
-#ifdef ENABLE_SHUFFLE
             real4 shflPosq = posq1;
-#else
-            localData[threadIdx.x].x = posq1.x;
-            localData[threadIdx.x].y = posq1.y;
-            localData[threadIdx.x].z = posq1.z;
-            localData[threadIdx.x].q = posq1.w;
-            LOAD_LOCAL_PARAMETERS_FROM_1
-#endif
 
             // we do not need to fetch parameters from global since this is a symmetric tile
             // instead we can broadcast the values using shuffle
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 int atom2 = tbx+j;
                 real4 posq2;
-#ifdef ENABLE_SHUFFLE
                 BROADCAST_WARP_DATA
-#else   
-                posq2 = make_real4(localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
-#endif
                 real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(delta)
@@ -216,20 +186,10 @@ extern "C" __global__ void computeNonbonded(
             // This is an off-diagonal tile.
             unsigned int j = y*TILE_SIZE + tgx;
             real4 shflPosq = posq[j];
-#ifdef ENABLE_SHUFFLE
             real3 shflForce;
             shflForce.x = 0.0f;
             shflForce.y = 0.0f;
             shflForce.z = 0.0f;
-#else
-            localData[threadIdx.x].x = shflPosq.x;
-            localData[threadIdx.x].y = shflPosq.y;
-            localData[threadIdx.x].z = shflPosq.z;
-            localData[threadIdx.x].q = shflPosq.w;
-            localData[threadIdx.x].fx = 0.0f;
-            localData[threadIdx.x].fy = 0.0f;
-            localData[threadIdx.x].fz = 0.0f;
-#endif
             DECLARE_LOCAL_PARAMETERS
             LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
 #ifdef USE_EXCLUSIONS
@@ -238,11 +198,7 @@ extern "C" __global__ void computeNonbonded(
             unsigned int tj = tgx;
             for (j = 0; j < TILE_SIZE; j++) {
                 int atom2 = tbx+tj;
-#ifdef ENABLE_SHUFFLE
                 real4 posq2 = shflPosq;
-#else
-                real4 posq2 = make_real4(localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
-#endif
                 real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(delta)
@@ -271,34 +227,19 @@ extern "C" __global__ void computeNonbonded(
                 force.x -= delta.x;
                 force.y -= delta.y;
                 force.z -= delta.z;
-#ifdef ENABLE_SHUFFLE
                 shflForce.x += delta.x;
                 shflForce.y += delta.y;
                 shflForce.z += delta.z;
-
-#else
-                localData[tbx+tj].fx += delta.x;
-                localData[tbx+tj].fy += delta.y;
-                localData[tbx+tj].fz += delta.z;
-#endif
 #else // !USE_SYMMETRIC
                 force.x -= dEdR1.x;
                 force.y -= dEdR1.y;
                 force.z -= dEdR1.z;
-#ifdef ENABLE_SHUFFLE
                 shflForce.x += dEdR2.x;
                 shflForce.y += dEdR2.y;
                 shflForce.z += dEdR2.z;
-#else
-                localData[tbx+tj].fx += dEdR2.x;
-                localData[tbx+tj].fy += dEdR2.y;
-                localData[tbx+tj].fz += dEdR2.z;
-#endif 
 #endif // end USE_SYMMETRIC
 #endif
-#ifdef ENABLE_SHUFFLE
                 SHUFFLE_WARP_DATA
-#endif
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
 #endif
@@ -309,15 +250,9 @@ extern "C" __global__ void computeNonbonded(
             const unsigned int offset = y*TILE_SIZE + tgx;
             // write results for off diagonal tiles
 #ifdef INCLUDE_FORCES
-#ifdef ENABLE_SHUFFLE
             atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>(realToFixedPoint(shflForce.x)));
             atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.y)));
             atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.z)));
-#else
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>(realToFixedPoint(localData[threadIdx.x].fx)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(localData[threadIdx.x].fy)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(localData[threadIdx.x].fz)));
-#endif
 #endif
         }
         // Write results for on and off diagonal tiles
@@ -399,37 +334,19 @@ extern "C" __global__ void computeNonbonded(
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
             atomIndices[threadIdx.x] = j;
-#ifdef ENABLE_SHUFFLE
             DECLARE_LOCAL_PARAMETERS
             real4 shflPosq;
             real3 shflForce;
             shflForce.x = 0.0f;
             shflForce.y = 0.0f;
             shflForce.z = 0.0f;
-#endif
             if (j < PADDED_NUM_ATOMS) {
                 // Load position of atom j from from global memory
-#ifdef ENABLE_SHUFFLE
                 shflPosq = posq[j];
-#else
-                localData[threadIdx.x].x = posq[j].x;
-                localData[threadIdx.x].y = posq[j].y;
-                localData[threadIdx.x].z = posq[j].z;
-                localData[threadIdx.x].q = posq[j].w;
-                localData[threadIdx.x].fx = 0.0f;
-                localData[threadIdx.x].fy = 0.0f;
-                localData[threadIdx.x].fz = 0.0f;
-#endif                
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
             else {
-#ifdef ENABLE_SHUFFLE
                 shflPosq = make_real4(0, 0, 0, 0);
-#else
-                localData[threadIdx.x].x = 0;
-                localData[threadIdx.x].y = 0;
-                localData[threadIdx.x].z = 0;
-#endif
                 CLEAR_LOCAL_PARAMETERS
             }
 #ifdef USE_PERIODIC
@@ -438,19 +355,11 @@ extern "C" __global__ void computeNonbonded(
                 // box, then skip having to apply periodic boundary conditions later.
                 real4 blockCenterX = blockCenter[x];
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
-#ifdef ENABLE_SHUFFLE
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(shflPosq, blockCenterX)
-#else
-                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[threadIdx.x], blockCenterX)
-#endif
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
-#ifdef ENABLE_SHUFFLE
                     real4 posq2 = shflPosq; 
-#else
-                    real4 posq2 = make_real4(localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
-#endif
                     real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     real invR = RSQRT(r2);
@@ -476,34 +385,19 @@ extern "C" __global__ void computeNonbonded(
                     force.x -= delta.x;
                     force.y -= delta.y;
                     force.z -= delta.z;
-#ifdef ENABLE_SHUFFLE
                     shflForce.x += delta.x;
                     shflForce.y += delta.y;
                     shflForce.z += delta.z;
-
-#else
-                    localData[tbx+tj].fx += delta.x;
-                    localData[tbx+tj].fy += delta.y;
-                    localData[tbx+tj].fz += delta.z;
-#endif
 #else // !USE_SYMMETRIC
                     force.x -= dEdR1.x;
                     force.y -= dEdR1.y;
                     force.z -= dEdR1.z;
-#ifdef ENABLE_SHUFFLE
                     shflForce.x += dEdR2.x;
                     shflForce.y += dEdR2.y;
                     shflForce.z += dEdR2.z;
-#else
-                    localData[tbx+tj].fx += dEdR2.x;
-                    localData[tbx+tj].fy += dEdR2.y;
-                    localData[tbx+tj].fz += dEdR2.z;
-#endif 
 #endif // end USE_SYMMETRIC
 #endif
-#ifdef ENABLE_SHUFFLE
                     SHUFFLE_WARP_DATA
-#endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
             }
@@ -514,11 +408,7 @@ extern "C" __global__ void computeNonbonded(
                 unsigned int tj = tgx;
                 for (j = 0; j < TILE_SIZE; j++) {
                     int atom2 = tbx+tj;
-#ifdef ENABLE_SHUFFLE
                     real4 posq2 = shflPosq;
-#else
-                    real4 posq2 = make_real4(localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
-#endif
                     real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(delta)
@@ -547,34 +437,19 @@ extern "C" __global__ void computeNonbonded(
                     force.x -= delta.x;
                     force.y -= delta.y;
                     force.z -= delta.z;
-#ifdef ENABLE_SHUFFLE
                     shflForce.x += delta.x;
                     shflForce.y += delta.y;
                     shflForce.z += delta.z;
-
-#else
-                    localData[tbx+tj].fx += delta.x;
-                    localData[tbx+tj].fy += delta.y;
-                    localData[tbx+tj].fz += delta.z;
-#endif
 #else // !USE_SYMMETRIC
                     force.x -= dEdR1.x;
                     force.y -= dEdR1.y;
                     force.z -= dEdR1.z;
-#ifdef ENABLE_SHUFFLE
                     shflForce.x += dEdR2.x;
                     shflForce.y += dEdR2.y;
                     shflForce.z += dEdR2.z;
-#else
-                    localData[tbx+tj].fx += dEdR2.x;
-                    localData[tbx+tj].fy += dEdR2.y;
-                    localData[tbx+tj].fz += dEdR2.z;
-#endif 
 #endif // end USE_SYMMETRIC
 #endif
-#ifdef ENABLE_SHUFFLE
                     SHUFFLE_WARP_DATA
-#endif
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
             }
@@ -590,15 +465,9 @@ extern "C" __global__ void computeNonbonded(
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
             if (atom2 < PADDED_NUM_ATOMS) {
-#ifdef ENABLE_SHUFFLE
                 atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>(realToFixedPoint(shflForce.x)));
                 atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.y)));
                 atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.z)));
-#else
-                atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>(realToFixedPoint(localData[threadIdx.x].fx)));
-                atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(localData[threadIdx.x].fy)));
-                atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(localData[threadIdx.x].fz)));
-#endif
             }
 #endif
         }
