@@ -857,8 +857,11 @@ void CudaContext::flushQueue() {
     cuStreamSynchronize(getCurrentStream());
 }
 void CudaContext::synchronize() {
+    CUcontext popped;
     string errorMessage = "Error on synchronization";
+    CHECK_RESULT(cuCtxPushCurrent(context));
     CHECK_RESULT(cuCtxSynchronize());
+    CHECK_RESULT(cuCtxPopCurrent(&popped));
 }
 
 vector<int> CudaContext::getDevicePrecedence() {
