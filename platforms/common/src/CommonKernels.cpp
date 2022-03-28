@@ -5378,7 +5378,6 @@ void CommonCalcCustomCVForceKernel::initialize(const System& system, const Custo
 }
 
 double CommonCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl& innerContext, bool includeForces, bool includeEnergy) {
-    ContextSelector selector(cc);
     copyState(context, innerContext);
     int numCVs = variableNames.size();
     int numAtoms = cc.getNumAtoms();
@@ -5387,13 +5386,15 @@ double CommonCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl&
     vector<map<string, double> > cvDerivs(numCVs);
     for (int i = 0; i < numCVs; i++) {
         cvValues.push_back(innerContext.calcForcesAndEnergy(true, true, 1<<i));
+        ContextSelector selector(cc);
         copyForcesKernel->setArg(0, cvForces[i]);
         copyForcesKernel->execute(numAtoms);
         innerContext.getEnergyParameterDerivatives(cvDerivs[i]);
     }
-    
+
     // Compute the energy and forces.
-    
+
+    ContextSelector selector(cc);
     map<string, double> variables;
     for (auto& name : globalParameterNames)
         variables[name] = context.getParameter(name);
