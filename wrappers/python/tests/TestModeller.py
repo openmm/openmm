@@ -355,13 +355,13 @@ class TestModeller(unittest.TestCase):
         # Fourth way of passing in the periodic box vectors: pass a 'padding' value to addSolvent()
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
-        modeller.addSolvent(self.forcefield, padding = 1.0*nanometers)
+        modeller.addSolvent(self.forcefield, padding = 0.9*nanometers)
         topology_after = modeller.getTopology()
         dim3 = topology_after.getPeriodicBoxVectors()
 
-        self.assertVecAlmostEqual(dim3[0]/nanometers, Vec3(1.924363, 0, 0))
-        self.assertVecAlmostEqual(dim3[1]/nanometers, Vec3(0, 1.924363, 0))
-        self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(0, 0, 1.924363))
+        self.assertVecAlmostEqual(dim3[0]/nanometers, Vec3(1.824363, 0, 0))
+        self.assertVecAlmostEqual(dim3[1]/nanometers, Vec3(0, 1.824363, 0))
+        self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(0, 0, 1.824363))
 
         # Fifth way: specify a number of molecules to add instead of a box size
         modeller = Modeller(topology_start, self.positions)
