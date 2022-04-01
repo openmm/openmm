@@ -1,5 +1,6 @@
 #include "../libraries/lepton/include/Lepton.h"
 #include "openmm/internal/AssertionUtilities.h"
+#include "lepton/CompiledVectorExpression.h"
 
 #include <iostream>
 #include <limits>
@@ -101,7 +102,7 @@ void verifyEvaluation(const string& expression, double x, double y, double expec
         compiled.getVariableReference("y") = y;
     value = compiled.evaluate();
     ASSERT_EQUAL_TOL(expectedValue, value, 1e-10);
-    
+
     // Try specifying memory locations for the compiled expression.
     
     map<string, double*> variablePointers;
@@ -113,6 +114,37 @@ void verifyEvaluation(const string& expression, double x, double y, double expec
     ASSERT_EQUAL_TOL(expectedValue, value, 1e-10);
     ASSERT_EQUAL(&x, &compiled2.getVariableReference("x"));
     ASSERT_EQUAL(&y, &compiled2.getVariableReference("y"));
+
+    // Try evaluating it as a vector.
+
+    CompiledVectorExpression vector = parsed.createCompiledVectorExpression();
+    for (int i = 0; i < 4; i++) {
+        if (vector.getVariables().find("x") != vector.getVariables().end())
+            for (int j = 0; j < 4; j++)
+                vector.getVariablePointer("x")[j] = (i == j ? x : -100.0);
+        if (vector.getVariables().find("y") != vector.getVariables().end())
+            for (int j = 0; j < 4; j++)
+                vector.getVariablePointer("y")[j] = (i == j ? y : -100.0);
+        const float* result = vector.evaluate();
+        ASSERT_EQUAL_TOL(expectedValue, result[i], 1e-6);
+    }
+
+    // Specify memory locations for the vector expression.
+
+    float xvec[4], yvec[4];
+    map<string, float*> vecVariablePointers;
+    vecVariablePointers["x"] = xvec;
+    vecVariablePointers["y"] = yvec;
+    CompiledVectorExpression vector2 = parsed.createCompiledVectorExpression();
+    vector2.setVariableLocations(vecVariablePointers);
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            xvec[j] = (i == j ? x : -100.0);
+            yvec[j] = (i == j ? y : -100.0);
+        }
+        const float* result = vector2.evaluate();
+        ASSERT_EQUAL_TOL(expectedValue, result[i], 1e-6);
+    }
 
     // Make sure that variable renaming works.
 
