@@ -462,10 +462,10 @@ void CompiledExpression::generateJitCode() {
                 c.fabs(workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
             case Operation::FLOOR:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], floor);
+                c.frintm(workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
             case Operation::CEIL:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], ceil);
+                c.frintp(workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
             default:
                 // Just invoke evaluateOperation().
@@ -522,9 +522,9 @@ void CompiledExpression::generateJitCode() {
 
     // Load the arguments into variables.
     
+    x86::Gp variablePointer = c.newIntPtr();
     for (set<string>::const_iterator iter = variableNames.begin(); iter != variableNames.end(); ++iter) {
         map<string, int>::iterator index = variableIndices.find(*iter);
-        x86::Gp variablePointer = c.newIntPtr();
         c.mov(variablePointer, imm(&getVariableReference(index->first)));
         c.movsd(workspaceVar[index->second], x86::ptr(variablePointer, 0, 0));
     }

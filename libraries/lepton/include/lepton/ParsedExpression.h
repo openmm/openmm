@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009=2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -41,6 +41,7 @@ namespace Lepton {
 
 class CompiledExpression;
 class ExpressionProgram;
+class CompiledVectorExpression;
 
 /**
  * This class represents the result of parsing an expression.  It provides methods for working with the
@@ -102,6 +103,10 @@ public:
      * Create a CompiledExpression that represents the same calculation as this expression.
      */
     CompiledExpression createCompiledExpression() const;
+    /**
+     * Create a CompiledVectorExpression that represents the same calculation as this expression.
+     */
+    CompiledVectorExpression createCompiledVectorExpression() const;
     /**
      * Create a new ParsedExpression which is identical to this one, except that the names of some
      * variables have been changed.
