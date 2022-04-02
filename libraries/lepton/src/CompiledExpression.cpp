@@ -549,6 +549,10 @@ void CompiledExpression::generateJitCode() {
             value = 1.0;
         else if (op.getId() == Operation::DELTA)
             value = 1.0;
+        else if (op.getId() == Operation::ABS) {
+            long long mask = 0x7FFFFFFFFFFFFFFF;
+            value = *reinterpret_cast<double*>(&mask);
+        }
         else if (op.getId() == Operation::POWER_CONSTANT) {
             if (stepGroup[step] == -1)
                 value = dynamic_cast<Operation::PowerConstant&>(op).getValue();
@@ -743,13 +747,14 @@ void CompiledExpression::generateJitCode() {
                 generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]], pow);
                 break;
             case Operation::ABS:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], fabs);
+                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.andpd(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::FLOOR:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], floor);
+                c.roundsd(workspaceVar[target[step]], workspaceVar[args[0]], imm(1));
                 break;
             case Operation::CEIL:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], ceil);
+                c.roundsd(workspaceVar[target[step]], workspaceVar[args[0]], imm(2));
                 break;
             default:
                 // Just invoke evaluateOperation().

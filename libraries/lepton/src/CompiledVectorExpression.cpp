@@ -541,7 +541,7 @@ void CompiledVectorExpression::generateJitCode() {
     c.addFunc(FuncSignatureT<double>());
     vector<x86::Xmm> workspaceVar(workspace.size());
     for (int i = 0; i < (int) workspaceVar.size(); i++)
-        workspaceVar[i] = c.newXmmSd();
+        workspaceVar[i] = c.newXmmPs();
     x86::Gp argsPointer = c.newIntPtr();
     c.mov(argsPointer, imm(&argValues[0]));
     vector<vector<int> > groups, groupPowers;
@@ -553,8 +553,8 @@ void CompiledVectorExpression::generateJitCode() {
     for (set<string>::const_iterator iter = variableNames.begin(); iter != variableNames.end(); ++iter) {
         map<string, int>::iterator index = variableIndices.find(*iter);
         x86::Gp variablePointer = c.newIntPtr();
-        c.mov(variablePointer, imm(&getVariableReference(index->first)));
-        c.movsd(workspaceVar[index->second], x86::ptr(variablePointer, 0, 0));
+        c.mov(variablePointer, imm(getVariablePointer(index->first)));
+        c.movdqu(workspaceVar[index->second], x86::ptr(variablePointer, 0, 0));
     }
 
     // Make a list of all constants that will be needed for evaluation.
@@ -577,6 +577,10 @@ void CompiledVectorExpression::generateJitCode() {
             value = 1.0;
         else if (op.getId() == Operation::DELTA)
             value = 1.0;
+        else if (op.getId() == Operation::ABS) {
+            int mask = 0x7FFFFFFF;
+            value = *reinterpret_cast<float*>(&mask);
+        }
         else if (op.getId() == Operation::POWER_CONSTANT) {
             if (stepGroup[step] == -1)
                 value = dynamic_cast<Operation::PowerConstant&> (op).getValue();
@@ -605,14 +609,17 @@ void CompiledVectorExpression::generateJitCode() {
         x86::Gp constantsPointer = c.newIntPtr();
         c.mov(constantsPointer, imm(&constants[0]));
         for (int i = 0; i < (int) constants.size(); i++) {
-            constantVar[i] = c.newXmmSd();
-            c.movsd(constantVar[i], x86::ptr(constantsPointer, 8 * i, 0));
+            constantVar[i] = c.newXmmPs();
+            c.vbroadcastss(constantVar[i], x86::ptr(constantsPointer, 4*i, 0));
         }
     }
 
     // Evaluate the operations.
 
     vector<bool> hasComputedPower(operation.size(), false);
+    x86::Xmm argReg = c.newXmmSs();
+    x86::Xmm doubleArgReg = c.newXmmSd();
+    x86::Xmm doubleResultReg = c.newXmmSd();
     for (int step = 0; step < (int) operation.size(); step++) {
         if (hasComputedPower[step])
             continue;
@@ -623,12 +630,12 @@ void CompiledVectorExpression::generateJitCode() {
         if (stepGroup[step] != -1) {
             vector<int>& group = groups[stepGroup[step]];
             vector<int>& powers = groupPowers[stepGroup[step]];
-            x86::Xmm multiplier = c.newXmmSd();
+            x86::Xmm multiplier = c.newXmmPs();
             if (powers[0] > 0)
-                c.movsd(multiplier, workspaceVar[arguments[step][0]]);
+                c.movdqu(multiplier, workspaceVar[arguments[step][0]]);
             else {
-                c.movsd(multiplier, constantVar[operationConstantIndex[step]]);
-                c.divsd(multiplier, workspaceVar[arguments[step][0]]);
+                c.movdqu(multiplier, constantVar[operationConstantIndex[step]]);
+                c.divps(multiplier, workspaceVar[arguments[step][0]]);
                 for (int i = 0; i < powers.size(); i++)
                     powers[i] = -powers[i];
             }
@@ -639,9 +646,9 @@ void CompiledVectorExpression::generateJitCode() {
                 for (int i = 0; i < group.size(); i++) {
                     if (powers[i] % 2 == 1) {
                         if (!hasAssigned[i])
-                            c.movsd(workspaceVar[target[group[i]]], multiplier);
+                            c.movdqu(workspaceVar[target[group[i]]], multiplier);
                         else
-                            c.mulsd(workspaceVar[target[group[i]]], multiplier);
+                            c.mulps(workspaceVar[target[group[i]]], multiplier);
                         hasAssigned[i] = true;
                     }
                     powers[i] >>= 1;
@@ -649,7 +656,7 @@ void CompiledVectorExpression::generateJitCode() {
                         done = false;
                 }
                 if (!done)
-                    c.mulsd(multiplier, multiplier);
+                    c.mulps(multiplier, multiplier);
             }
             for (int step : group)
                 hasComputedPower[step] = true;
@@ -671,33 +678,33 @@ void CompiledVectorExpression::generateJitCode() {
 
         switch (op.getId()) {
             case Operation::CONSTANT:
-                c.movsd(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                c.movdqu(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::ADD:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.addsd(workspaceVar[target[step]], workspaceVar[args[1]]);
+                c.movdqu(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.addps(workspaceVar[target[step]], workspaceVar[args[1]]);
                 break;
             case Operation::SUBTRACT:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.subsd(workspaceVar[target[step]], workspaceVar[args[1]]);
+                c.movdqu(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.subps(workspaceVar[target[step]], workspaceVar[args[1]]);
                 break;
             case Operation::MULTIPLY:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.mulsd(workspaceVar[target[step]], workspaceVar[args[1]]);
+                c.movdqu(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.mulps(workspaceVar[target[step]], workspaceVar[args[1]]);
                 break;
             case Operation::DIVIDE:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.divsd(workspaceVar[target[step]], workspaceVar[args[1]]);
+                c.movdqu(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.divps(workspaceVar[target[step]], workspaceVar[args[1]]);
                 break;
             case Operation::POWER:
                 generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]], powf);
                 break;
             case Operation::NEGATE:
                 c.xorps(workspaceVar[target[step]], workspaceVar[target[step]]);
-                c.subsd(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.subps(workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
             case Operation::SQRT:
-                c.sqrtsd(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.sqrtps(workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
             case Operation::EXP:
                 generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], expf);
@@ -737,62 +744,75 @@ void CompiledVectorExpression::generateJitCode() {
                 break;
             case Operation::STEP:
                 c.xorps(workspaceVar[target[step]], workspaceVar[target[step]]);
-                c.cmpsd(workspaceVar[target[step]], workspaceVar[args[0]], imm(18)); // Comparison mode is _CMP_LE_OQ = 18
+                c.cmpps(workspaceVar[target[step]], workspaceVar[args[0]], imm(18)); // Comparison mode is _CMP_LE_OQ = 18
                 c.andps(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::DELTA:
                 c.xorps(workspaceVar[target[step]], workspaceVar[target[step]]);
-                c.cmpsd(workspaceVar[target[step]], workspaceVar[args[0]], imm(16)); // Comparison mode is _CMP_EQ_OS = 16
+                c.cmpps(workspaceVar[target[step]], workspaceVar[args[0]], imm(16)); // Comparison mode is _CMP_EQ_OS = 16
                 c.andps(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::SQUARE:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.mulsd(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.movdqu(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.mulps(workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
             case Operation::CUBE:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.mulsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.mulsd(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.movdqu(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.mulps(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.mulps(workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
             case Operation::RECIPROCAL:
-                c.movsd(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
-                c.divsd(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.movdqu(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                c.divps(workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
             case Operation::ADD_CONSTANT:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.addsd(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                c.movdqu(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.addps(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::MULTIPLY_CONSTANT:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.mulsd(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                c.movdqu(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.mulps(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::POWER_CONSTANT:
                 generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]], powf);
                 break;
             case Operation::ABS:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], fabsf);
+                c.movdqu(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.andps(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::FLOOR:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], floorf);
+                c.roundps(workspaceVar[target[step]], workspaceVar[args[0]], imm(1));
                 break;
             case Operation::CEIL:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], ceilf);
+                c.roundps(workspaceVar[target[step]], workspaceVar[args[0]], imm(2));
                 break;
             default:
                 // Just invoke evaluateOperation().
 
-                for (int i = 0; i < (int) args.size(); i++)
-                    c.movsd(x86::ptr(argsPointer, 8 * i, 0), workspaceVar[args[i]]);
-                x86::Gp fn = c.newIntPtr();
-                c.mov(fn, imm((void*) evaluateOperation));
-                InvokeNode* invoke;
-                c.invoke(&invoke, fn, FuncSignatureT<double, Operation*, double*>());
-                invoke->setArg(0, imm(&op));
-                invoke->setArg(1, imm(&argValues[0]));
-                invoke->setRet(0, workspaceVar[target[step]]);
+                for (int element = 0; element < 4; element++) {
+                    for (int i = 0; i < (int) args.size(); i++) {
+                        c.movdqu(argReg, workspaceVar[args[i]]);
+                        c.shufps(argReg, argReg, imm(element));
+                        c.cvtss2sd(doubleArgReg, argReg);
+                        c.movsd(x86::ptr(argsPointer, 8*i, 0), doubleArgReg);
+                    }
+                    x86::Gp fn = c.newIntPtr();
+                    c.mov(fn, imm((void*) evaluateOperation));
+                    InvokeNode* invoke;
+                    c.invoke(&invoke, fn, FuncSignatureT<double, Operation*, double*>());
+                    invoke->setArg(0, imm(&op));
+                    invoke->setArg(1, imm(&argValues[0]));
+                    invoke->setRet(0, doubleResultReg);
+                    c.cvtsd2ss(argReg, doubleResultReg);
+                    if (element != 0)
+                        c.shufps(argReg, argReg, imm(0));
+                    c.blendps(workspaceVar[target[step]], argReg, 1<<element);
+                }
         }
     }
-    c.ret(workspaceVar[workspace.size() - 1]);
+    x86::Gp resultPointer = c.newIntPtr();
+    c.mov(resultPointer, imm(workspace.back().data()));
+    c.movdqu(x86::ptr(resultPointer, 0, 0), workspaceVar.back());
     c.endFunc();
     c.finalize();
     runtime.add(&jitCode, &code);
@@ -810,11 +830,23 @@ void CompiledVectorExpression::generateSingleArgCall(x86::Compiler& c, x86::Xmm&
 void CompiledVectorExpression::generateTwoArgCall(x86::Compiler& c, x86::Xmm& dest, x86::Xmm& arg1, x86::Xmm& arg2, float (*function)(float, float)) {
     x86::Gp fn = c.newIntPtr();
     c.mov(fn, imm((void*) function));
-    InvokeNode* invoke;
-    c.invoke(&invoke, fn, FuncSignatureT<double, double, double>());
-    invoke->setArg(0, arg1);
-    invoke->setArg(1, arg2);
-    invoke->setRet(0, dest);
+    x86::Xmm a1 = c.newXmm();
+    x86::Xmm a2 = c.newXmm();
+    x86::Xmm d = c.newXmm();
+    for (int element = 0; element < 4; element++) {
+        c.movdqu(a1, arg1);
+        c.movdqu(a2, arg2);
+        c.shufps(a1, a1, imm(element));
+        c.shufps(a2, a2, imm(element));
+        InvokeNode* invoke;
+        c.invoke(&invoke, fn, FuncSignatureT<double, double, double>());
+        invoke->setArg(0, a1);
+        invoke->setArg(1, a2);
+        invoke->setRet(0, d);
+        if (element != 0)
+            c.shufps(d, d, imm(0));
+        c.blendps(dest, d, 1<<element);
+    }
 }
 #endif
 #endif
