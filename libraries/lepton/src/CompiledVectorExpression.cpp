@@ -509,10 +509,16 @@ void CompiledVectorExpression::generateJitCode() {
 void CompiledVectorExpression::generateSingleArgCall(a64::Compiler& c, arm::Vec& dest, arm::Vec& arg, float (*function)(float)) {
     arm::Gp fn = c.newIntPtr();
     c.mov(fn, imm((void*) function));
-    InvokeNode* invoke;
-    c.invoke(&invoke, fn, FuncSignatureT<double, double>());
-    invoke->setArg(0, arg);
-    invoke->setRet(0, dest);
+    arm::Vec a = c.newVecS();
+    arm::Vec d = c.newVecS();
+    for (int element = 0; element < 4; element++) {
+        c.ins(a.s(0), arg.s(element));
+        InvokeNode* invoke;
+        c.invoke(&invoke, fn, FuncSignatureT<float, float>());
+        invoke->setArg(0, a);
+        invoke->setRet(0, d);
+        c.ins(dest.s(element), d.s(0));
+    }
 }
 
 void CompiledVectorExpression::generateTwoArgCall(a64::Compiler& c, arm::Vec& dest, arm::Vec& arg1, arm::Vec& arg2, float (*function)(float, float)) {
@@ -525,7 +531,7 @@ void CompiledVectorExpression::generateTwoArgCall(a64::Compiler& c, arm::Vec& de
         c.ins(a1.s(0), arg1.s(element));
         c.ins(a2.s(0), arg2.s(element));
         InvokeNode* invoke;
-        c.invoke(&invoke, fn, FuncSignatureT<double, double, double>());
+        c.invoke(&invoke, fn, FuncSignatureT<float, float, float>());
         invoke->setArg(0, a1);
         invoke->setArg(1, a2);
         invoke->setRet(0, d);
@@ -821,10 +827,19 @@ void CompiledVectorExpression::generateJitCode() {
 void CompiledVectorExpression::generateSingleArgCall(x86::Compiler& c, x86::Xmm& dest, x86::Xmm& arg, float (*function)(float)) {
     x86::Gp fn = c.newIntPtr();
     c.mov(fn, imm((void*) function));
-    InvokeNode* invoke;
-    c.invoke(&invoke, fn, FuncSignatureT<double, double>());
-    invoke->setArg(0, arg);
-    invoke->setRet(0, dest);
+    x86::Xmm a = c.newXmm();
+    x86::Xmm d = c.newXmm();
+    for (int element = 0; element < 4; element++) {
+        c.movdqu(a, arg);
+        c.shufps(a, a, imm(element));
+        InvokeNode* invoke;
+        c.invoke(&invoke, fn, FuncSignatureT<float, float>());
+        invoke->setArg(0, a);
+        invoke->setRet(0, d);
+        if (element != 0)
+            c.shufps(d, d, imm(0));
+        c.blendps(dest, d, 1<<element);
+    }
 }
 
 void CompiledVectorExpression::generateTwoArgCall(x86::Compiler& c, x86::Xmm& dest, x86::Xmm& arg1, x86::Xmm& arg2, float (*function)(float, float)) {
@@ -839,7 +854,7 @@ void CompiledVectorExpression::generateTwoArgCall(x86::Compiler& c, x86::Xmm& de
         c.shufps(a1, a1, imm(element));
         c.shufps(a2, a2, imm(element));
         InvokeNode* invoke;
-        c.invoke(&invoke, fn, FuncSignatureT<double, double, double>());
+        c.invoke(&invoke, fn, FuncSignatureT<float, float, float>());
         invoke->setArg(0, a1);
         invoke->setArg(1, a2);
         invoke->setRet(0, d);

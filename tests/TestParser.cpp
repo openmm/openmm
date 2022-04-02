@@ -175,12 +175,12 @@ void verifyInvalidExpression(const string& expression) {
  * Verify that two numbers have the same value.
  */
 
-void assertNumbersEqual(double val1, double val2) {
+void assertNumbersEqual(double val1, double val2, double tol=1e-10) {
     const double inf = numeric_limits<double>::infinity();
     if (val1 == val1 || val2 == val2) // If both are NaN, that's fine.
         if (val1 != inf || val2 != inf) // Both infinity is also fine.
             if (val1 != -inf || val2 != -inf) // Same for -infinity.
-                ASSERT_EQUAL_TOL(val1, val2, 1e-10);
+                ASSERT_EQUAL_TOL(val1, val2, tol);
 }
 
 /**
@@ -209,6 +209,29 @@ void verifySameValue(const ParsedExpression& exp1, const ParsedExpression& exp2,
         compiled2.getVariableReference("y") = y;
     assertNumbersEqual(val1, compiled1.evaluate());
     assertNumbersEqual(val2, compiled2.evaluate());
+
+    // Now check CompiledVectorizedExpressions.
+
+    CompiledVectorExpression vector1 = exp1.createCompiledVectorExpression();
+    CompiledVectorExpression vector2 = exp2.createCompiledVectorExpression();
+    for (int i = 0; i < 4; i++) {
+        if (vector1.getVariables().find("x") != vector1.getVariables().end())
+            for (int j = 0; j < 4; j++)
+                vector1.getVariablePointer("x")[j] = (i == j ? x : -100.0);
+        if (vector1.getVariables().find("y") != vector1.getVariables().end())
+            for (int j = 0; j < 4; j++)
+                vector1.getVariablePointer("y")[j] = (i == j ? y : -100.0);
+        if (vector2.getVariables().find("x") != vector2.getVariables().end())
+            for (int j = 0; j < 4; j++)
+                vector2.getVariablePointer("x")[j] = (i == j ? x : -100.0);
+        if (vector2.getVariables().find("y") != vector2.getVariables().end())
+            for (int j = 0; j < 4; j++)
+                vector2.getVariablePointer("y")[j] = (i == j ? y : -100.0);
+        const float* result1 = vector1.evaluate();
+        const float* result2 = vector2.evaluate();
+        assertNumbersEqual(val1, result1[i], 1e-6);
+        assertNumbersEqual(val2, result2[i], 1e-6);
+    }
 }
 
 /**
@@ -267,6 +290,7 @@ int main() {
         verifyEvaluation("2.1e-4*x*(y+1)", 3.0, 1.0, 1.26e-3);
         verifyEvaluation("sin(2.5)", std::sin(2.5));
         verifyEvaluation("cot(x)", 3.0, 1.0, 1.0/std::tan(3.0));
+        verifyEvaluation("log(x)", 3.0, 1.0, std::log(3.0));
         verifyEvaluation("x^2+y^3+x^-1+y^(1/2)", 1.0, 1.0, 4.0);
         verifyEvaluation("(2*x)*3", 4.0, 4.0, 24.0);
         verifyEvaluation("(x*2)*3", 4.0, 4.0, 24.0);
