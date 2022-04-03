@@ -478,6 +478,10 @@ void CompiledVectorExpression::generateJitCode() {
             case Operation::CEIL:
                 c.frintp(workspaceVar[target[step]].s4(), workspaceVar[args[0]].s4());
                 break;
+            case Operation::SELECT:
+                c.fcmeq(workspaceVar[target[step]].s4(), workspaceVar[args[0]].s4(), imm(0));
+                c.bsl(workspaceVar[target[step]], workspaceVar[args[2]], workspaceVar[args[1]]);
+                break;
             default:
                 // Just invoke evaluateOperation().
                 for (int element = 0; element < 4; element++) {

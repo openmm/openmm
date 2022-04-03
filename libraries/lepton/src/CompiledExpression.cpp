@@ -467,6 +467,10 @@ void CompiledExpression::generateJitCode() {
             case Operation::CEIL:
                 c.frintp(workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
+            case Operation::SELECT:
+                c.fcmeq(workspaceVar[target[step]], workspaceVar[args[0]], imm(0));
+                c.bsl(workspaceVar[target[step]], workspaceVar[args[2]], workspaceVar[args[1]]);
+                break;
             default:
                 // Just invoke evaluateOperation().
                 
