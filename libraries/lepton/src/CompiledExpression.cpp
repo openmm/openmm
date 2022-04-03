@@ -760,6 +760,15 @@ void CompiledExpression::generateJitCode() {
             case Operation::CEIL:
                 c.roundsd(workspaceVar[target[step]], workspaceVar[args[0]], imm(2));
                 break;
+            case Operation::SELECT:
+            {
+                x86::Xmm mask = c.newXmmSd();
+                c.xorps(mask, mask);
+                c.cmpsd(mask, workspaceVar[args[0]], imm(0)); // Comparison mode is _CMP_EQ_OQ = 0
+                c.movsd(workspaceVar[target[step]], workspaceVar[args[1]]);
+                c.blendvps(workspaceVar[target[step]], workspaceVar[args[2]], mask);
+                break;
+            }
             default:
                 // Just invoke evaluateOperation().
                 

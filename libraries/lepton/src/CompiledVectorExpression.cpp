@@ -759,7 +759,7 @@ void CompiledVectorExpression::generateJitCode() {
                 break;
             case Operation::DELTA:
                 c.xorps(workspaceVar[target[step]], workspaceVar[target[step]]);
-                c.cmpps(workspaceVar[target[step]], workspaceVar[args[0]], imm(16)); // Comparison mode is _CMP_EQ_OS = 16
+                c.cmpps(workspaceVar[target[step]], workspaceVar[args[0]], imm(16)); // Comparison mode is _CMP_EQ_OQ = 0
                 c.andps(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::SQUARE:
@@ -796,6 +796,15 @@ void CompiledVectorExpression::generateJitCode() {
             case Operation::CEIL:
                 c.roundps(workspaceVar[target[step]], workspaceVar[args[0]], imm(2));
                 break;
+            case Operation::SELECT:
+            {
+                x86::Xmm mask = c.newXmmPs();
+                c.xorps(mask, mask);
+                c.cmpps(mask, workspaceVar[args[0]], imm(0)); // Comparison mode is _CMP_EQ_OQ = 0
+                c.movdqu(workspaceVar[target[step]], workspaceVar[args[1]]);
+                c.blendvps(workspaceVar[target[step]], workspaceVar[args[2]], mask);
+                break;
+            }
             default:
                 // Just invoke evaluateOperation().
 
