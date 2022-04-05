@@ -55,10 +55,15 @@ class ParsedExpression;
 
 /**
  * A CompiledVectorExpression is a highly optimized representation of an expression for cases when you want to evaluate
- * it many times as quickly as possible.  You should treat it as an opaque object; none of the internal representation
- * is visible.
+ * it many times as quickly as possible.  It is similar to CompiledExpression, with the extra feature that it uses the CPU's
+ * vector unit (AVX on x86, NEON on ARM) to evaluate the expression for multiple sets of arguments at once.  It also differs
+ * from CompiledExpression and ParsedExpression in using single precision rather than double precision to evaluate the expression.
+ * You should treat it as an opaque object; none of the internal representation is visible.
  * 
- * A CompiledVectorExpression is created by calling createCompiledVectorExpression() on a ParsedExpression.
+ * A CompiledVectorExpression is created by calling createCompiledVectorExpression() on a ParsedExpression.  When you create
+ * it, you must specify the width of the vectors on which to compute the expression.  The allowed widths depend on the type of
+ * CPU it is running on.  4 is always allowed, and 8 is allowed on x86 processors with AVX.  Call getAllowedWidths() to query
+ * the allowed values.
  * 
  * WARNING: CompiledVectorExpression is NOT thread safe.  You should never access a CompiledVectorExpression from two threads at
  * the same time.
@@ -75,18 +80,24 @@ public:
      */
     const std::set<std::string>& getVariables() const;
     /**
-     * Get a reference to the memory location where the value of a particular variable is stored.  This can be used
+     * Get a pointer to the memory location where the value of a particular variable is stored.  This can be used
      * to set the value of the variable before calling evaluate().
+     * 
+     * @param name    the name of the variable to query
+     * @return a pointer to N floating point values, where N is the vector width
      */
     float* getVariablePointer(const std::string& name);
     /**
      * You can optionally specify the memory locations from which the values of variables should be read.
      * This is useful, for example, when several expressions all use the same variable.  You can then set
-     * the value of that variable in one place, and it will be seen by all of them.
+     * the value of that variable in one place, and it will be seen by all of them.  The location should
+     * be a pointer to N floating point values, where N is the vector width.
      */
     void setVariableLocations(std::map<std::string, float*>& variableLocations);
     /**
      * Evaluate the expression.  The values of all variables should have been set before calling this.
+     * 
+     * @return a pointer to N floating point values, where N is the vector width
      */
     const float* evaluate() const;
     /**
