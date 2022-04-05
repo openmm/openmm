@@ -169,7 +169,7 @@ void CompiledVectorExpression::setVariableLocations(map<string, float*>& variabl
 
     if (workspace.size() > 0)
         generateJitCode();
-#else
+#endif
     // Make a list of all variables we will need to copy before evaluating the expression.
 
     variablesToCopy.clear();
@@ -178,7 +178,6 @@ void CompiledVectorExpression::setVariableLocations(map<string, float*>& variabl
         if (pointer != variablePointers.end())
             variablesToCopy.push_back(make_pair(&workspace[iter->second*width], pointer->second));
     }
-#endif
 }
 
 const float* CompiledVectorExpression::evaluate() const {
