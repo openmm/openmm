@@ -89,11 +89,16 @@ public:
      * Evaluate the expression.  The values of all variables should have been set before calling this.
      */
     const float* evaluate() const;
+    /**
+     * Get the list of vector widths that are supported on the current processor.
+     */
+    static const std::vector<int>& getAllowedWidths();
 private:
     friend class ParsedExpression;
-    CompiledVectorExpression(const ParsedExpression& expression);
-    void compileExpression(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps);
+    CompiledVectorExpression(const ParsedExpression& expression, int width);
+    void compileExpression(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps, int& workspaceSize);
     int findTempIndex(const ExpressionTreeNode& node, std::vector<std::pair<ExpressionTreeNode, int> >& temps);
+    int width;
     std::map<std::string, float*> variablePointers;
     std::vector<std::pair<float*, float*> > variablesToCopy;
     std::vector<std::vector<int> > arguments;
@@ -101,7 +106,7 @@ private:
     std::vector<Operation*> operation;
     std::map<std::string, int> variableIndices;
     std::set<std::string> variableNames;
-    mutable std::vector<std::array<float, 4> > workspace;
+    mutable std::vector<float> workspace;
     mutable std::vector<double> argValues;
     std::map<std::string, double> dummyVariables;
     void (*jitCode)();
@@ -112,8 +117,8 @@ private:
     void generateSingleArgCall(asmjit::a64::Compiler& c, asmjit::arm::Vec& dest, asmjit::arm::Vec& arg, float (*function)(float));
     void generateTwoArgCall(asmjit::a64::Compiler& c, asmjit::arm::Vec& dest, asmjit::arm::Vec& arg1, asmjit::arm::Vec& arg2, float (*function)(float, float));
 #else
-    void generateSingleArgCall(asmjit::x86::Compiler& c, asmjit::x86::Xmm& dest, asmjit::x86::Xmm& arg, float (*function)(float));
-    void generateTwoArgCall(asmjit::x86::Compiler& c, asmjit::x86::Xmm& dest, asmjit::x86::Xmm& arg1, asmjit::x86::Xmm& arg2, float (*function)(float, float));
+    void generateSingleArgCall(asmjit::x86::Compiler& c, asmjit::x86::Ymm& dest, asmjit::x86::Ymm& arg, float (*function)(float));
+    void generateTwoArgCall(asmjit::x86::Compiler& c, asmjit::x86::Ymm& dest, asmjit::x86::Ymm& arg1, asmjit::x86::Ymm& arg2, float (*function)(float, float));
 #endif
     std::vector<float> constants;
     asmjit::JitRuntime runtime;

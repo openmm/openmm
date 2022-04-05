@@ -117,33 +117,37 @@ void verifyEvaluation(const string& expression, double x, double y, double expec
 
     // Try evaluating it as a vector.
 
-    CompiledVectorExpression vector = parsed.createCompiledVectorExpression();
-    for (int i = 0; i < 4; i++) {
-        if (vector.getVariables().find("x") != vector.getVariables().end())
-            for (int j = 0; j < 4; j++)
-                vector.getVariablePointer("x")[j] = (i == j ? x : -100.0);
-        if (vector.getVariables().find("y") != vector.getVariables().end())
-            for (int j = 0; j < 4; j++)
-                vector.getVariablePointer("y")[j] = (i == j ? y : -100.0);
-        const float* result = vector.evaluate();
-        ASSERT_EQUAL_TOL(expectedValue, result[i], 1e-6);
+    for (int width : CompiledVectorExpression::getAllowedWidths()) {
+        CompiledVectorExpression vector = parsed.createCompiledVectorExpression(width);
+        for (int i = 0; i < width; i++) {
+            if (vector.getVariables().find("x") != vector.getVariables().end())
+                for (int j = 0; j < width; j++)
+                    vector.getVariablePointer("x")[j] = (i == j ? x : -100.0);
+            if (vector.getVariables().find("y") != vector.getVariables().end())
+                for (int j = 0; j < width; j++)
+                    vector.getVariablePointer("y")[j] = (i == j ? y : -100.0);
+            const float* result = vector.evaluate();
+            ASSERT_EQUAL_TOL(expectedValue, result[i], 1e-6);
+        }
     }
 
     // Specify memory locations for the vector expression.
 
-    float xvec[4], yvec[4];
+    float xvec[8], yvec[8];
     map<string, float*> vecVariablePointers;
     vecVariablePointers["x"] = xvec;
     vecVariablePointers["y"] = yvec;
-    CompiledVectorExpression vector2 = parsed.createCompiledVectorExpression();
-    vector2.setVariableLocations(vecVariablePointers);
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            xvec[j] = (i == j ? x : -100.0);
-            yvec[j] = (i == j ? y : -100.0);
+    for (int width : CompiledVectorExpression::getAllowedWidths()) {
+        CompiledVectorExpression vector2 = parsed.createCompiledVectorExpression(width);
+        vector2.setVariableLocations(vecVariablePointers);
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < width; j++) {
+                xvec[j] = (i == j ? x : -100.0);
+                yvec[j] = (i == j ? y : -100.0);
+            }
+            const float* result = vector2.evaluate();
+            ASSERT_EQUAL_TOL(expectedValue, result[i], 1e-6);
         }
-        const float* result = vector2.evaluate();
-        ASSERT_EQUAL_TOL(expectedValue, result[i], 1e-6);
     }
 
     // Make sure that variable renaming works.
@@ -212,25 +216,27 @@ void verifySameValue(const ParsedExpression& exp1, const ParsedExpression& exp2,
 
     // Now check CompiledVectorizedExpressions.
 
-    CompiledVectorExpression vector1 = exp1.createCompiledVectorExpression();
-    CompiledVectorExpression vector2 = exp2.createCompiledVectorExpression();
-    for (int i = 0; i < 4; i++) {
-        if (vector1.getVariables().find("x") != vector1.getVariables().end())
-            for (int j = 0; j < 4; j++)
-                vector1.getVariablePointer("x")[j] = (i == j ? x : -100.0);
-        if (vector1.getVariables().find("y") != vector1.getVariables().end())
-            for (int j = 0; j < 4; j++)
-                vector1.getVariablePointer("y")[j] = (i == j ? y : -100.0);
-        if (vector2.getVariables().find("x") != vector2.getVariables().end())
-            for (int j = 0; j < 4; j++)
-                vector2.getVariablePointer("x")[j] = (i == j ? x : -100.0);
-        if (vector2.getVariables().find("y") != vector2.getVariables().end())
-            for (int j = 0; j < 4; j++)
-                vector2.getVariablePointer("y")[j] = (i == j ? y : -100.0);
-        const float* result1 = vector1.evaluate();
-        const float* result2 = vector2.evaluate();
-        assertNumbersEqual(val1, result1[i], 1e-6);
-        assertNumbersEqual(val2, result2[i], 1e-6);
+    for (int width : CompiledVectorExpression::getAllowedWidths()) {
+        CompiledVectorExpression vector1 = exp1.createCompiledVectorExpression(width);
+        CompiledVectorExpression vector2 = exp2.createCompiledVectorExpression(width);
+        for (int i = 0; i < width; i++) {
+            if (vector1.getVariables().find("x") != vector1.getVariables().end())
+                for (int j = 0; j < width; j++)
+                    vector1.getVariablePointer("x")[j] = (i == j ? x : -100.0);
+            if (vector1.getVariables().find("y") != vector1.getVariables().end())
+                for (int j = 0; j < width; j++)
+                    vector1.getVariablePointer("y")[j] = (i == j ? y : -100.0);
+            if (vector2.getVariables().find("x") != vector2.getVariables().end())
+                for (int j = 0; j < width; j++)
+                    vector2.getVariablePointer("x")[j] = (i == j ? x : -100.0);
+            if (vector2.getVariables().find("y") != vector2.getVariables().end())
+                for (int j = 0; j < width; j++)
+                    vector2.getVariablePointer("y")[j] = (i == j ? y : -100.0);
+            const float* result1 = vector1.evaluate();
+            const float* result2 = vector2.evaluate();
+            assertNumbersEqual(val1, result1[i], 1e-6);
+            assertNumbersEqual(val2, result2[i], 1e-6);
+        }
     }
 }
 

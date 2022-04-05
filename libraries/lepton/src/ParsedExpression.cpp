@@ -374,8 +374,8 @@ CompiledExpression ParsedExpression::createCompiledExpression() const {
     return CompiledExpression(*this);
 }
 
-CompiledVectorExpression ParsedExpression::createCompiledVectorExpression() const {
-    return CompiledVectorExpression(*this);
+CompiledVectorExpression ParsedExpression::createCompiledVectorExpression(int width) const {
+    return CompiledVectorExpression(*this, width);
 }
 
 ParsedExpression ParsedExpression::renameVariables(const map<string, string>& replacements) const {

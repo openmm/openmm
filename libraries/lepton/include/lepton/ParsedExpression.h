@@ -104,9 +104,15 @@ public:
      */
     CompiledExpression createCompiledExpression() const;
     /**
-     * Create a CompiledVectorExpression that represents the same calculation as this expression.
+     * Create a CompiledVectorExpression that allows the expression to be evaluated efficiently
+     * using the CPU's vector unit.
+     * 
+     * @param width    the width of the vectors to evaluate it on.  The allowed values
+     *                 depend on the CPU.  4 is always allowed, and 8 is allowed on
+     *                 x86 processors with AVX.  Call CompiledVectorExpression::getAllowedWidths()
+     *                 to query the allowed widths on the current processor.
      */
-    CompiledVectorExpression createCompiledVectorExpression() const;
+    CompiledVectorExpression createCompiledVectorExpression(int width) const;
     /**
      * Create a new ParsedExpression which is identical to this one, except that the names of some
      * variables have been changed.
