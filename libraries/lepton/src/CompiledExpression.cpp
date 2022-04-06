@@ -741,6 +741,12 @@ void CompiledExpression::generateJitCode() {
             case Operation::POWER_CONSTANT:
                 generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]], pow);
                 break;
+            case Operation::MIN:
+                c.vminsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
+            case Operation::MAX:
+                c.vmaxsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
             case Operation::ABS:
                 c.vandpd(workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]]);
                 break;

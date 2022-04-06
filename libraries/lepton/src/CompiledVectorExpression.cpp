@@ -148,6 +148,10 @@ int CompiledVectorExpression::findTempIndex(const ExpressionTreeNode& node, vect
     return -1;
 }
 
+int CompiledVectorExpression::getWidth() const {
+    return width;
+}
+
 const set<string>& CompiledVectorExpression::getVariables() const {
     return variableNames;
 }
@@ -799,6 +803,12 @@ void CompiledVectorExpression::generateJitCode() {
                 break;
             case Operation::POWER_CONSTANT:
                 generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]], powf);
+                break;
+            case Operation::MIN:
+                c.vminps(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
+            case Operation::MAX:
+                c.vmaxps(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
                 break;
             case Operation::ABS:
                 c.vandps(workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]]);

@@ -76,6 +76,10 @@ public:
     ~CompiledVectorExpression();
     CompiledVectorExpression& operator=(const CompiledVectorExpression& expression);
     /**
+     * Get the width of the vectors on which the expression is computed.
+     */
+    int getWidth() const;
+    /**
      * Get the names of all variables used by this expression.
      */
     const std::set<std::string>& getVariables() const;
