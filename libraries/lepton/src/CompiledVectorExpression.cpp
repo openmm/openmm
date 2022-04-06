@@ -92,9 +92,11 @@ const vector<int>& CompiledVectorExpression::getAllowedWidths() {
     static vector<int> widths;
     if (widths.size() == 0) {
         widths.push_back(4);
+#ifdef LEPTON_USE_JIT
         const CpuInfo& cpu = CpuInfo::host();
         if (cpu.hasFeature(CpuFeatures::X86::kAVX))
             widths.push_back(8);
+#endif
     }
     return widths;
 }
