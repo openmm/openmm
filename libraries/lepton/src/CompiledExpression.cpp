@@ -455,6 +455,12 @@ void CompiledExpression::generateJitCode() {
             case Operation::POWER_CONSTANT:
                 generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]], pow);
                 break;
+            case Operation::MIN:
+                c.fmin(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
+            case Operation::MAX:
+                c.fmax(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
             case Operation::ABS:
                 c.fabs(workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;

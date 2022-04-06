@@ -490,6 +490,12 @@ void CompiledVectorExpression::generateJitCode() {
             case Operation::POWER_CONSTANT:
                 generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]], powf);
                 break;
+            case Operation::MIN:
+                c.fmin(workspaceVar[target[step]].s4(), workspaceVar[args[0]].s4(), workspaceVar[args[1]].s4());
+                break;
+            case Operation::MAX:
+                c.fmax(workspaceVar[target[step]].s4(), workspaceVar[args[0]].s4(), workspaceVar[args[1]].s4());
+                break;
             case Operation::ABS:
                 c.fabs(workspaceVar[target[step]].s4(), workspaceVar[args[0]].s4());
                 break;
