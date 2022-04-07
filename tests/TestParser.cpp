@@ -289,49 +289,50 @@ void testCustomFunction(const string& expression, const string& equivalent) {
     verifySameValue(deriv3, deriv4, 2.0, -3.0);
 }
 #include <cstdio>
+#include "openmm/OpenMMException.h"
 int main() {
     try {
         ParsedExpression p;
         try {
-            p = Parser::parse("log(y)*(y^2)-1");
+            p = Parser::parse("sin(y)*(y^x)-1");
             verifySameValue(p, p, 1.0, 2.0);
         }
-        catch (Exception& ex) {
+        catch (OpenMMException& ex) {
             printf("%s\n", ex.what());
         }
         try {
-            p = Parser::parse("log(y)*(x^2)-1");
+            p = Parser::parse("log(y)*atan2(x,y)-1");
             verifySameValue(p, p, 1.0, 2.0);
         }
-        catch (Exception& ex) {
+        catch (OpenMMException& ex) {
             printf("%s\n", ex.what());
         }
         try {
             p = Parser::parse("log(x)*(y^x)-1");
             verifySameValue(p, p, 1.0, 2.0);
         }
-        catch (Exception& ex) {
+        catch (OpenMMException& ex) {
             printf("%s\n", ex.what());
         }
         try {
             p = Parser::parse("log(y)*sin(x)-1");
             verifySameValue(p, p, 1.0, 2.0);
         }
-        catch (Exception& ex) {
+        catch (OpenMMException& ex) {
             printf("%s\n", ex.what());
         }
         try {
             p = Parser::parse("log(x)*sin(x)-1");
             verifySameValue(p, p, 1.0, 2.0);
         }
-        catch (Exception& ex) {
+        catch (OpenMMException& ex) {
             printf("%s\n", ex.what());
         }
         try {
             p = Parser::parse("log(y)*(y^x)-1");
             verifySameValue(p, p, 1.0, 2.0);
         }
-        catch (Exception& ex) {
+        catch (OpenMMException& ex) {
             printf("%s\n", ex.what());
         }
 
