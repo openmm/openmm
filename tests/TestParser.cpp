@@ -291,6 +291,11 @@ void testCustomFunction(const string& expression, const string& equivalent) {
 
 int main() {
     try {
+        ParsedExpression p1 = Parser::parse("(y^x)-1");
+        verifySameValue(p1, p1, 1.0, 2.0);
+        ParsedExpression p2 = Parser::parse("log(y)-1");
+        verifySameValue(p2, p2, 1.0, 2.0);
+
         verifyEvaluation("5", 5.0);
         verifyEvaluation("5*2", 10.0);
         verifyEvaluation("2*3+4*5", 26.0);
