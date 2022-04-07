@@ -288,19 +288,52 @@ void testCustomFunction(const string& expression, const string& equivalent) {
     verifySameValue(deriv3, deriv4, -2.0, 3.0);
     verifySameValue(deriv3, deriv4, 2.0, -3.0);
 }
-
+#include <cstdio>
 int main() {
     try {
-        ParsedExpression p = Parser::parse("y*(y^x)-1");
-        verifySameValue(p, p, 1.0, 2.0);
-        p = Parser::parse("log(y)*(x)-1");
-        verifySameValue(p, p, 1.0, 2.0);
-        p = Parser::parse("log(y)*(y^x)");
-        verifySameValue(p, p, 1.0, 2.0);
-        p = Parser::parse("log(y)*(y)-1");
-        verifySameValue(p, p, 1.0, 2.0);
-        p = Parser::parse("log(y)*(y^x)-1");
-        verifySameValue(p, p, 1.0, 2.0);
+        ParsedExpression p;
+        try {
+            p = Parser::parse("log(y)*(y^2)-1");
+            verifySameValue(p, p, 1.0, 2.0);
+        }
+        catch (Exception& ex) {
+            printf("%s\n", ex.what());
+        }
+        try {
+            p = Parser::parse("log(y)*(x^2)-1");
+            verifySameValue(p, p, 1.0, 2.0);
+        }
+        catch (Exception& ex) {
+            printf("%s\n", ex.what());
+        }
+        try {
+            p = Parser::parse("log(x)*(y^x)-1");
+            verifySameValue(p, p, 1.0, 2.0);
+        }
+        catch (Exception& ex) {
+            printf("%s\n", ex.what());
+        }
+        try {
+            p = Parser::parse("log(y)*sin(x)-1");
+            verifySameValue(p, p, 1.0, 2.0);
+        }
+        catch (Exception& ex) {
+            printf("%s\n", ex.what());
+        }
+        try {
+            p = Parser::parse("log(x)*sin(x)-1");
+            verifySameValue(p, p, 1.0, 2.0);
+        }
+        catch (Exception& ex) {
+            printf("%s\n", ex.what());
+        }
+        try {
+            p = Parser::parse("log(y)*(y^x)-1");
+            verifySameValue(p, p, 1.0, 2.0);
+        }
+        catch (Exception& ex) {
+            printf("%s\n", ex.what());
+        }
 
         verifyEvaluation("5", 5.0);
         verifyEvaluation("5*2", 10.0);
