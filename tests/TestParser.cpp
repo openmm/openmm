@@ -234,6 +234,12 @@ void verifySameValue(const ParsedExpression& exp1, const ParsedExpression& exp2,
                     vector2.getVariablePointer("y")[j] = (i == j ? y : -100.0);
             const float* result1 = vector1.evaluate();
             const float* result2 = vector2.evaluate();
+            for (int j = 0; j < width; j++)
+                printf("%g ", result1[j]);
+            printf("\n");
+            for (int j = 0; j < width; j++)
+                printf("%g ", result2[j]);
+            printf("\n\n");
             assertNumbersEqual(val1, result1[i], 1e-6);
             assertNumbersEqual(val2, result2[i], 1e-6);
         }
