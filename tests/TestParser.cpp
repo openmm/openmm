@@ -294,7 +294,7 @@ int main() {
     try {
         ParsedExpression p;
         try {
-            p = Parser::parse("sin(y)*(y^x)-1");
+            p = Parser::parse("sin(y)*(y^x)-2");
             verifySameValue(p, p, 1.0, 2.0);
         }
         catch (OpenMMException& ex) {
@@ -308,14 +308,14 @@ int main() {
             printf("%s\n", ex.what());
         }
         try {
-            p = Parser::parse("log(x)*(y^x)-1");
+            p = Parser::parse("log(x)*(x^y)-1");
             verifySameValue(p, p, 1.0, 2.0);
         }
         catch (OpenMMException& ex) {
             printf("%s\n", ex.what());
         }
         try {
-            p = Parser::parse("log(y)*sin(x)-1");
+            p = Parser::parse("log(y)*(y^1.5)-1");
             verifySameValue(p, p, 1.0, 2.0);
         }
         catch (OpenMMException& ex) {
@@ -329,7 +329,7 @@ int main() {
             printf("%s\n", ex.what());
         }
         try {
-            p = Parser::parse("log(y)*(y^x)-1");
+            p = Parser::parse("log(y)*(y^x)-x");
             verifySameValue(p, p, 1.0, 2.0);
         }
         catch (OpenMMException& ex) {
