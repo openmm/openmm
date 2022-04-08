@@ -30,7 +30,7 @@
 using namespace OpenMM;
 
 CudaEvent::CudaEvent(CudaContext& context) : context(context), eventCreated(false) {
-    CUresult result = cuEventCreate(&event, CU_EVENT_DISABLE_TIMING);
+    CUresult result = cuEventCreate(&event, context.getEventFlags());
     if (result != CUDA_SUCCESS)
         throw OpenMMException("Error creating CUDA event:"+CudaContext::getErrorString(result));
     eventCreated = true;

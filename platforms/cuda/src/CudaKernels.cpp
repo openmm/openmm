@@ -882,8 +882,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                             cufftSetStream(dispersionFftBackward, pmeStream);
                         }
                     }
-                    CHECK_RESULT(cuEventCreate(&pmeSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
-                    CHECK_RESULT(cuEventCreate(&paramsSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
+                    CHECK_RESULT(cuEventCreate(&pmeSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
+                    CHECK_RESULT(cuEventCreate(&paramsSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
