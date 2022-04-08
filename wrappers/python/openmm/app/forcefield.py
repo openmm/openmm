@@ -486,14 +486,14 @@ class ForceField(object):
     def registerScript(self, script):
         """Register a new script to be executed after building the System."""
         self._scripts.append(script)
-    
+
     def registerTemplateMatcher(self, matcher):
         """Register an object that can override the default logic for matching templates to residues.
 
         A template matcher is a callable object that can be invoked as::
-        
+
             template = f(forcefield, residue, bondedToAtom, ignoreExternalBonds, ignoreExtraParticles)
-        
+
         where ``forcefield`` is the ForceField invoking it, ``residue`` is an openmm.app.Residue object,
         ``bondedToAtom[i]`` is the set of atoms bonded to atom index i, and ``ignoreExternalBonds`` and
         ``ignoreExtraParticles`` indicate whether external bonds and extra particules should be considered
@@ -502,7 +502,7 @@ class ForceField(object):
         It should return a _TemplateData object that matches the residue.  Alternatively it may return
         None, in which case the standard logic will be used to find a template for the residue.
 
-        .. CAUTION:: This method is experimental, and its API is subject to change.        
+        .. CAUTION:: This method is experimental, and its API is subject to change.
         """
         self._templateMatchers.append(matcher)
 
@@ -625,9 +625,9 @@ class ForceField(object):
             self.isAngleConstrained = []
             self.constraints = {}
             self.bondedToAtom = [set() for _ in self.atoms]
-    
+
             # Record which atoms are bonded to each other atom
-    
+
             for i in range(len(self.bonds)):
                 bond = self.bonds[i]
                 self.bondedToAtom[bond.atom1].add(bond.atom2)
@@ -1086,14 +1086,15 @@ class ForceField(object):
         # Find the template matching each residue, compiling a list of residues for which no templates are available.
         bondedToAtom = self._buildBondedToAtomList(topology)
         templates = list() # list of templates matching the corresponding residues
-        for res in topology.residues():
-            # Attempt to match one of the existing templates.
-            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
-            # Raise an exception if we have found no templates that match.
-            if matches is None:
-                raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
-            else:
-                templates.append(template)
+        for chain in topology.chains():
+            for residue in chain.residues():
+                # Attempt to match one of the existing templates.
+                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
+                # Raise an exception if we have found no templates that match.
+                if matches is None:
+                    raise ValueError('No template found for chainid <%s> resid <%s> resname <%s> (residue index within topology %d).\n%s' % (chain.id, res.id, res.name, res.index, _findMatchErrors(self, res)))
+                else:
+                    templates.append(template)
 
         return templates
 
@@ -1213,7 +1214,7 @@ class ForceField(object):
         for res in topology.residues():
             if res.name == 'HOH':
                 # Determine whether this should be a rigid water.
-    
+
                 if rigidWater is None:
                     rigidResidue[res.index] = templateForResidue[res.index].rigidWater
                 elif rigidWater:
@@ -4839,7 +4840,7 @@ class AmoebaVdwGenerator(object):
             force.addParticle(ivIndex, classToTypeMap[className], reduction)
 
         # Add pairs
-        
+
         for c1, c2, sigma, epsilon in self.pairs:
             force.addTypePair(classToTypeMap[c1], classToTypeMap[c2], sigma, epsilon)
 
