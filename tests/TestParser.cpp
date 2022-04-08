@@ -375,16 +375,45 @@ void test() {
     c.vmovdqu(yvar, x86::ptr(yptr, 0, 0));
     c.vmovdqu(zvar, x86::ptr(zptr, 0, 0));
 
+    float a[8];
+    x86::Gp aPointer = c.newIntPtr();
+    c.mov(aPointer, imm(a));
+    c.vmovdqu(x86::ptr(aPointer, 0, 0), zvar);
+    
     // Perform the computation.
 
     x86::Ymm siny = c.newYmmPs();
     generateSingleArgCall(c, siny, yvar, sinf);
+
+    float b[8];
+    x86::Gp bPointer = c.newIntPtr();
+    c.mov(bPointer, imm(b));
+    c.vmovdqu(x86::ptr(bPointer, 0, 0), zvar);
+
     x86::Ymm powyx = c.newYmmPs();
     generateTwoArgCall(c, powyx, yvar, xvar, powf);
+
+    float d[8];
+    x86::Gp dPointer = c.newIntPtr();
+    c.mov(dPointer, imm(d));
+    c.vmovdqu(x86::ptr(dPointer, 0, 0), zvar);
+
     x86::Ymm prod = c.newYmmPs();
     c.vmulps(prod, siny, powyx);
+
+    float e[8];
+    x86::Gp ePointer = c.newIntPtr();
+    c.mov(ePointer, imm(e));
+    c.vmovdqu(x86::ptr(ePointer, 0, 0), zvar);
+
     x86::Ymm sum = c.newYmmPs();
     c.vaddps(sum, prod, zvar);
+
+    float f[8];
+    x86::Gp fPointer = c.newIntPtr();
+    c.mov(fPointer, imm(f));
+    c.vmovdqu(x86::ptr(fPointer, 0, 0), zvar);
+
 
     // Store the result.
 
@@ -392,22 +421,6 @@ void test() {
     x86::Gp resultPointer = c.newIntPtr();
     c.mov(resultPointer, imm(result));
     c.vmovdqu(x86::ptr(resultPointer, 0, 0), sum);
-
-
-    float a[8];
-    x86::Gp aPointer = c.newIntPtr();
-    c.mov(aPointer, imm(a));
-    c.vmovdqu(x86::ptr(aPointer, 0, 0), prod);
-    float b[8];
-    x86::Gp bPointer = c.newIntPtr();
-    c.mov(bPointer, imm(b));
-    c.vmovdqu(x86::ptr(bPointer, 0, 0), powyx);
-    float d[8];
-    x86::Gp dPointer = c.newIntPtr();
-    c.mov(dPointer, imm(d));
-    c.vmovdqu(x86::ptr(dPointer, 0, 0), zvar);
-
-
     c.endFunc();
     c.finalize();
     void (*jitCode)();
@@ -427,6 +440,12 @@ void test() {
     printf("\n");
     for (int i = 0; i < 8; i++)
         printf("%g ", d[i]);
+    printf("\n");
+    for (int i = 0; i < 8; i++)
+        printf("%g ", e[i]);
+    printf("\n");
+    for (int i = 0; i < 8; i++)
+        printf("%g ", f[i]);
     printf("\n");
 }
 
