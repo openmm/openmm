@@ -45,12 +45,12 @@ class OPENMM_EXPORT VirtualSite;
  * This class represents a molecular system.  The definition of a System involves
  * four elements:
  *
- * <ol>
+ * <ul>
  * <li>The set of particles in the system</li>
  * <li>The forces acting on them</li>
  * <li>Pairs of particles whose separation should be constrained to a fixed value</li>
  * <li>For periodic systems, the dimensions of the periodic box</li>
- * </ol>
+ * </ul>
  *
  * The particles and constraints are defined directly by the System object, while
  * forces are defined by objects that extend the Force class.  After creating a
