@@ -291,6 +291,8 @@ void testCustomFunction(const string& expression, const string& equivalent) {
 
 #include "asmjit/x86.h"
 #include <cmath>
+#include <cstdio>
+
 using namespace asmjit;
 
 void generateSingleArgCall(x86::Compiler& c, x86::Ymm& dest, x86::Ymm& arg, float (*function)(float)) {
@@ -347,7 +349,13 @@ void generateTwoArgCall(x86::Compiler& c, x86::Ymm& dest, x86::Ymm& arg1, x86::Y
     }
 }
 
-void test() {
+void storeReg(x86::Compiler& c, x86::Ymm& reg, float* dest) {
+    x86::Gp ptr = c.newIntPtr();
+    c.mov(ptr, imm(dest));
+    c.vmovdqu(x86::ptr(ptr, 0, 0), reg);
+}
+
+int main() {
     // Set up the compiler.
 
     JitRuntime runtime;
@@ -362,65 +370,28 @@ void test() {
     float x[] = {1, 1, 1, 1, 1, 1, 1, 1};
     float y[] = {2, 2, 2, 2, 2, 2, 2, 2};
     float z[] = {3, 3, 3, 3, 3, 3, 3, 3};
-    x86::Ymm xvar = c.newYmmPs();
-    x86::Ymm yvar = c.newYmmPs();
-    x86::Ymm zvar = c.newYmmPs();
+    x86::Ymm xreg = c.newYmmPs();
+    x86::Ymm yreg = c.newYmmPs();
+    x86::Ymm zreg = c.newYmmPs();
     x86::Gp xptr = c.newIntPtr();
     x86::Gp yptr = c.newIntPtr();
     x86::Gp zptr = c.newIntPtr();
     c.mov(xptr, imm(x));
     c.mov(yptr, imm(y));
     c.mov(zptr, imm(z));
-    c.vmovdqu(xvar, x86::ptr(xptr, 0, 0));
-    c.vmovdqu(yvar, x86::ptr(yptr, 0, 0));
-    c.vmovdqu(zvar, x86::ptr(zptr, 0, 0));
+    c.vmovdqu(xreg, x86::ptr(xptr, 0, 0));
+    c.vmovdqu(yreg, x86::ptr(yptr, 0, 0));
+    c.vmovdqu(zreg, x86::ptr(zptr, 0, 0));
 
-    float a[8];
-    x86::Gp aPointer = c.newIntPtr();
-    c.mov(aPointer, imm(a));
-    c.vmovdqu(x86::ptr(aPointer, 0, 0), zvar);
-    
     // Perform the computation.
 
+    float z1[8], z2[8];
     x86::Ymm siny = c.newYmmPs();
-    generateSingleArgCall(c, siny, yvar, sinf);
-
-    float b[8];
-    x86::Gp bPointer = c.newIntPtr();
-    c.mov(bPointer, imm(b));
-    c.vmovdqu(x86::ptr(bPointer, 0, 0), zvar);
-
+    generateSingleArgCall(c, siny, yreg, sinf);
+    storeReg(c, zreg, z1);
     x86::Ymm powyx = c.newYmmPs();
-    generateTwoArgCall(c, powyx, yvar, xvar, powf);
-
-    float d[8];
-    x86::Gp dPointer = c.newIntPtr();
-    c.mov(dPointer, imm(d));
-    c.vmovdqu(x86::ptr(dPointer, 0, 0), zvar);
-
-    x86::Ymm prod = c.newYmmPs();
-    c.vmulps(prod, siny, powyx);
-
-    float e[8];
-    x86::Gp ePointer = c.newIntPtr();
-    c.mov(ePointer, imm(e));
-    c.vmovdqu(x86::ptr(ePointer, 0, 0), zvar);
-
-    x86::Ymm sum = c.newYmmPs();
-    c.vaddps(sum, prod, zvar);
-
-    float f[8];
-    x86::Gp fPointer = c.newIntPtr();
-    c.mov(fPointer, imm(f));
-    c.vmovdqu(x86::ptr(fPointer, 0, 0), zvar);
-
-
-    // Store the result.
-
-    float result[8];
-    x86::Gp resultPointer = c.newIntPtr();
-    c.mov(resultPointer, imm(result));
-    c.vmovdqu(x86::ptr(resultPointer, 0, 0), sum);
+    generateTwoArgCall(c, powyx, yreg, xreg, powf);
+    storeReg(c, zreg, z2);
     c.endFunc();
     c.finalize();
     void (*jitCode)();
@@ -430,172 +401,113 @@ void test() {
 
     jitCode();
     for (int i = 0; i < 8; i++)
-        printf("%g ", result[i]);
+        printf("%g ", z1[i]);
     printf("\n");
     for (int i = 0; i < 8; i++)
-        printf("%g ", a[i]);
+        printf("%g ", z2[i]);
     printf("\n");
-    for (int i = 0; i < 8; i++)
-        printf("%g ", b[i]);
-    printf("\n");
-    for (int i = 0; i < 8; i++)
-        printf("%g ", d[i]);
-    printf("\n");
-    for (int i = 0; i < 8; i++)
-        printf("%g ", e[i]);
-    printf("\n");
-    for (int i = 0; i < 8; i++)
-        printf("%g ", f[i]);
-    printf("\n");
-}
-
-#include <cstdio>
-#include "openmm/OpenMMException.h"
-int main() {
-    test();
-    return 0;
-    try {
-        ParsedExpression p;
-        try {
-            p = Parser::parse("sin(y)*(y^x)-2");//
-            verifySameValue(p, p, 1.0, 2.0);
-        }
-        catch (OpenMMException& ex) {
-            printf("%s\n", ex.what());
-        }
-        try {
-            p = Parser::parse("log(y)*atan2(x,y)-1");
-            verifySameValue(p, p, 1.0, 2.0);
-        }
-        catch (OpenMMException& ex) {
-            printf("%s\n", ex.what());
-        }
-        try {
-            p = Parser::parse("log(x)*(x^y)-1");//
-            verifySameValue(p, p, 1.0, 2.0);
-        }
-        catch (OpenMMException& ex) {
-            printf("%s\n", ex.what());
-        }
-        try {
-            p = Parser::parse("log(y)*(y^1.5)-1");//
-            verifySameValue(p, p, 1.0, 2.0);
-        }
-        catch (OpenMMException& ex) {
-            printf("%s\n", ex.what());
-        }
-        try {
-            p = Parser::parse("log(x)*sin(x)-1");
-            verifySameValue(p, p, 1.0, 2.0);
-        }
-        catch (OpenMMException& ex) {
-            printf("%s\n", ex.what());
-        }
-        try {
-            p = Parser::parse("log(y)*(y^x)-x");
-            verifySameValue(p, p, 1.0, 2.0);
-        }
-        catch (OpenMMException& ex) {
-            printf("%s\n", ex.what());
-        }
-
-        verifyEvaluation("5", 5.0);
-        verifyEvaluation("5*2", 10.0);
-        verifyEvaluation("2*3+4*5", 26.0);
-        verifyEvaluation("2^-3", 0.125);
-        verifyEvaluation("1e+2", 100.0);
-        verifyEvaluation("-x", 2.0, 3.0, -2.0);
-        verifyEvaluation("y^-x", 3.0, 2.0, 0.125);
-        verifyEvaluation("1/-x", 3.0, 2.0, -1.0/3.0);
-        verifyEvaluation("2.1e-4*x*(y+1)", 3.0, 1.0, 1.26e-3);
-        verifyEvaluation("sin(2.5)", std::sin(2.5));
-        verifyEvaluation("cot(x)", 3.0, 1.0, 1.0/std::tan(3.0));
-        verifyEvaluation("log(x)", 3.0, 1.0, std::log(3.0));
-        verifyEvaluation("x^2+y^3+x^-1+y^(1/2)", 1.0, 1.0, 4.0);
-        verifyEvaluation("(2*x)*3", 4.0, 4.0, 24.0);
-        verifyEvaluation("(x*2)*3", 4.0, 4.0, 24.0);
-        verifyEvaluation("2*(x*3)", 4.0, 4.0, 24.0);
-        verifyEvaluation("2*(3*x)", 4.0, 4.0, 24.0);
-        verifyEvaluation("2*x/3", 1.0, 4.0, 2.0/3.0);
-        verifyEvaluation("x*2/3", 1.0, 4.0, 2.0/3.0);
-        verifyEvaluation("5*(-x)*(-y)", 1.0, 4.0, 20.0);
-        verifyEvaluation("5*(-x)*(y)", 1.0, 4.0, -20.0);
-        verifyEvaluation("5*(x)*(-y)", 1.0, 4.0, -20.0);
-        verifyEvaluation("5*(-x)/(-y)", 1.0, 4.0, 1.25);
-        verifyEvaluation("5*(-x)/(y)", 1.0, 4.0, -1.25);
-        verifyEvaluation("5*(x)/(-y)", 1.0, 4.0, -1.25);
-        verifyEvaluation("x+(-y)", 1.0, 4.0, -3.0);
-        verifyEvaluation("(-x)+y", 1.0, 4.0, 3.0);
-        verifyEvaluation("x/(1/y)", 1.0, 4.0, 4.0);
-        verifyEvaluation("x*w; w = 5", 3.0, 1.0, 15.0);
-        verifyEvaluation("a+b^2;a=x-b;b=3*y", 2.0, 3.0, 74.0);
-        verifyEvaluation("erf(x)+erfc(x)", 2.0, 3.0, 1.0);
-        verifyEvaluation("min(3, x)", 2.0, 3.0, 2.0);
-        verifyEvaluation("min(y, 5)", 2.0, 3.0, 3.0);
-        verifyEvaluation("max(x, y)", 2.0, 3.0, 3.0);
-        verifyEvaluation("max(x, -1)", 2.0, 3.0, 2.0);
-        verifyEvaluation("abs(x-y)", 2.0, 3.0, 1.0);
-        verifyEvaluation("delta(x)+3*delta(y-1.5)", 2.0, 1.5, 3.0);
-        verifyEvaluation("step(x-3)+y*step(x)", 2.0, 3.0, 3.0);
-        verifyEvaluation("floor(x)", -2.1, 3.0, -3.0);
-        verifyEvaluation("ceil(x)", -2.1, 3.0, -2.0);
-        verifyEvaluation("select(x, 1.0, y)", 0.3, 2.0, 1.0);
-        verifyEvaluation("select(x, 1.0, y)", 0.0, 2.0, 2.0);
-        verifyEvaluation("atan2(x, y)", 3.0, 1.5, std::atan(2.0));
-        verifyEvaluation("sqrt(x^2)", -2.2, 0.0, 2.2);
-        verifyEvaluation("sqrt(x)^2", 2.2, 0.0, 2.2);
-        verifyEvaluation("x^2+x^4", 2.0, 0.0, 20.0);
-        verifyEvaluation("x^-2+x^-3", 2.0, 0.0, 0.375);
-        verifyEvaluation("x^1.8", 2.2, 0.0, std::pow(2.2, 1.8));
-        verifyInvalidExpression("1..2");
-        verifyInvalidExpression("1*(2+3");
-        verifyInvalidExpression("5++4");
-        verifyInvalidExpression("1+2)");
-        verifyInvalidExpression("cos(2,3)");
-        verifyDerivative("x", "1");
-        verifyDerivative("x^2+x", "2*x+1");
-        verifyDerivative("y^x-x", "log(y)*(y^x)-1");
-        verifyDerivative("sin(x)", "cos(x)");
-        verifyDerivative("cos(x)", "-sin(x)");
-        verifyDerivative("tan(x)", "square(sec(x))");
-        verifyDerivative("cot(x)", "-square(csc(x))");
-        verifyDerivative("sec(x)", "sec(x)*tan(x)");
-        verifyDerivative("csc(x)", "-csc(x)*cot(x)");
-        verifyDerivative("exp(2*x)", "2*exp(2*x)");
-        verifyDerivative("log(x)", "1/x");
-        verifyDerivative("sqrt(x)", "0.5/sqrt(x)");
-        verifyDerivative("asin(x)", "1/sqrt(1-x^2)");
-        verifyDerivative("acos(x)", "-1/sqrt(1-x^2)");
-        verifyDerivative("atan(x)", "1/(1+x^2)");
-        verifyDerivative("atan2(2*x,y)", "2*y/(4*x^2+y^2)");
-        verifyDerivative("sinh(x)", "cosh(x)");
-        verifyDerivative("cosh(x)", "sinh(x)");
-        verifyDerivative("tanh(x)", "1/(cosh(x)^2)");
-        verifyDerivative("erf(x)", "1.12837916709551*exp(-x^2)");
-        verifyDerivative("erfc(x)", "-1.12837916709551*exp(-x^2)");
-        verifyDerivative("step(x)*x+step(1-x)*2*x", "step(x)+step(1-x)*2");
-        verifyDerivative("recip(x)", "-1/x^2");
-        verifyDerivative("square(x)", "2*x");
-        verifyDerivative("cube(x)", "3*x^2");
-        verifyDerivative("min(x, 2*x)", "step(x-2*x)*2+(1-step(x-2*x))*1");
-        verifyDerivative("max(5, x^2)", "(1-step(5-x^2))*2*x");
-        verifyDerivative("abs(3*x)", "step(3*x)*3+(1-step(3*x))*-3");
-        verifyDerivative("floor(x)+0.5*x*ceil(x)", "0.5*ceil(x)");
-        verifyDerivative("select(x, x^2, 3*x)", "select(x, 2*x, 3)");
-        testCustomFunction("custom(x, y)/2", "x*y");
-        testCustomFunction("custom(x^2, 1)+custom(2, y-1)", "2*x^2+4*(y-1)");
-        cout << Parser::parse("x*x").optimize() << endl;
-        cout << Parser::parse("x*(x*x)").optimize() << endl;
-        cout << Parser::parse("(x*x)*x").optimize() << endl;
-        cout << Parser::parse("2*3*x").optimize() << endl;
-        cout << Parser::parse("1/(1+x)").optimize() << endl;
-        cout << Parser::parse("x^(1/2)").optimize() << endl;
-        cout << Parser::parse("log(3*cos(x))^(sqrt(4)-2)").optimize() << endl;
-    }
-    catch(const exception& e) {
-        cout << "exception: " << e.what() << endl;
-        return 1;
-    }
-    cout << "Done" << endl;
     return 0;
 }
+
+//int main() {
+//    try {
+//        verifyEvaluation("5", 5.0);
+//        verifyEvaluation("5*2", 10.0);
+//        verifyEvaluation("2*3+4*5", 26.0);
+//        verifyEvaluation("2^-3", 0.125);
+//        verifyEvaluation("1e+2", 100.0);
+//        verifyEvaluation("-x", 2.0, 3.0, -2.0);
+//        verifyEvaluation("y^-x", 3.0, 2.0, 0.125);
+//        verifyEvaluation("1/-x", 3.0, 2.0, -1.0/3.0);
+//        verifyEvaluation("2.1e-4*x*(y+1)", 3.0, 1.0, 1.26e-3);
+//        verifyEvaluation("sin(2.5)", std::sin(2.5));
+//        verifyEvaluation("cot(x)", 3.0, 1.0, 1.0/std::tan(3.0));
+//        verifyEvaluation("log(x)", 3.0, 1.0, std::log(3.0));
+//        verifyEvaluation("x^2+y^3+x^-1+y^(1/2)", 1.0, 1.0, 4.0);
+//        verifyEvaluation("(2*x)*3", 4.0, 4.0, 24.0);
+//        verifyEvaluation("(x*2)*3", 4.0, 4.0, 24.0);
+//        verifyEvaluation("2*(x*3)", 4.0, 4.0, 24.0);
+//        verifyEvaluation("2*(3*x)", 4.0, 4.0, 24.0);
+//        verifyEvaluation("2*x/3", 1.0, 4.0, 2.0/3.0);
+//        verifyEvaluation("x*2/3", 1.0, 4.0, 2.0/3.0);
+//        verifyEvaluation("5*(-x)*(-y)", 1.0, 4.0, 20.0);
+//        verifyEvaluation("5*(-x)*(y)", 1.0, 4.0, -20.0);
+//        verifyEvaluation("5*(x)*(-y)", 1.0, 4.0, -20.0);
+//        verifyEvaluation("5*(-x)/(-y)", 1.0, 4.0, 1.25);
+//        verifyEvaluation("5*(-x)/(y)", 1.0, 4.0, -1.25);
+//        verifyEvaluation("5*(x)/(-y)", 1.0, 4.0, -1.25);
+//        verifyEvaluation("x+(-y)", 1.0, 4.0, -3.0);
+//        verifyEvaluation("(-x)+y", 1.0, 4.0, 3.0);
+//        verifyEvaluation("x/(1/y)", 1.0, 4.0, 4.0);
+//        verifyEvaluation("x*w; w = 5", 3.0, 1.0, 15.0);
+//        verifyEvaluation("a+b^2;a=x-b;b=3*y", 2.0, 3.0, 74.0);
+//        verifyEvaluation("erf(x)+erfc(x)", 2.0, 3.0, 1.0);
+//        verifyEvaluation("min(3, x)", 2.0, 3.0, 2.0);
+//        verifyEvaluation("min(y, 5)", 2.0, 3.0, 3.0);
+//        verifyEvaluation("max(x, y)", 2.0, 3.0, 3.0);
+//        verifyEvaluation("max(x, -1)", 2.0, 3.0, 2.0);
+//        verifyEvaluation("abs(x-y)", 2.0, 3.0, 1.0);
+//        verifyEvaluation("delta(x)+3*delta(y-1.5)", 2.0, 1.5, 3.0);
+//        verifyEvaluation("step(x-3)+y*step(x)", 2.0, 3.0, 3.0);
+//        verifyEvaluation("floor(x)", -2.1, 3.0, -3.0);
+//        verifyEvaluation("ceil(x)", -2.1, 3.0, -2.0);
+//        verifyEvaluation("select(x, 1.0, y)", 0.3, 2.0, 1.0);
+//        verifyEvaluation("select(x, 1.0, y)", 0.0, 2.0, 2.0);
+//        verifyEvaluation("atan2(x, y)", 3.0, 1.5, std::atan(2.0));
+//        verifyEvaluation("sqrt(x^2)", -2.2, 0.0, 2.2);
+//        verifyEvaluation("sqrt(x)^2", 2.2, 0.0, 2.2);
+//        verifyEvaluation("x^2+x^4", 2.0, 0.0, 20.0);
+//        verifyEvaluation("x^-2+x^-3", 2.0, 0.0, 0.375);
+//        verifyEvaluation("x^1.8", 2.2, 0.0, std::pow(2.2, 1.8));
+//        verifyInvalidExpression("1..2");
+//        verifyInvalidExpression("1*(2+3");
+//        verifyInvalidExpression("5++4");
+//        verifyInvalidExpression("1+2)");
+//        verifyInvalidExpression("cos(2,3)");
+//        verifyDerivative("x", "1");
+//        verifyDerivative("x^2+x", "2*x+1");
+//        verifyDerivative("y^x-x", "log(y)*(y^x)-1");
+//        verifyDerivative("sin(x)", "cos(x)");
+//        verifyDerivative("cos(x)", "-sin(x)");
+//        verifyDerivative("tan(x)", "square(sec(x))");
+//        verifyDerivative("cot(x)", "-square(csc(x))");
+//        verifyDerivative("sec(x)", "sec(x)*tan(x)");
+//        verifyDerivative("csc(x)", "-csc(x)*cot(x)");
+//        verifyDerivative("exp(2*x)", "2*exp(2*x)");
+//        verifyDerivative("log(x)", "1/x");
+//        verifyDerivative("sqrt(x)", "0.5/sqrt(x)");
+//        verifyDerivative("asin(x)", "1/sqrt(1-x^2)");
+//        verifyDerivative("acos(x)", "-1/sqrt(1-x^2)");
+//        verifyDerivative("atan(x)", "1/(1+x^2)");
+//        verifyDerivative("atan2(2*x,y)", "2*y/(4*x^2+y^2)");
+//        verifyDerivative("sinh(x)", "cosh(x)");
+//        verifyDerivative("cosh(x)", "sinh(x)");
+//        verifyDerivative("tanh(x)", "1/(cosh(x)^2)");
+//        verifyDerivative("erf(x)", "1.12837916709551*exp(-x^2)");
+//        verifyDerivative("erfc(x)", "-1.12837916709551*exp(-x^2)");
+//        verifyDerivative("step(x)*x+step(1-x)*2*x", "step(x)+step(1-x)*2");
+//        verifyDerivative("recip(x)", "-1/x^2");
+//        verifyDerivative("square(x)", "2*x");
+//        verifyDerivative("cube(x)", "3*x^2");
+//        verifyDerivative("min(x, 2*x)", "step(x-2*x)*2+(1-step(x-2*x))*1");
+//        verifyDerivative("max(5, x^2)", "(1-step(5-x^2))*2*x");
+//        verifyDerivative("abs(3*x)", "step(3*x)*3+(1-step(3*x))*-3");
+//        verifyDerivative("floor(x)+0.5*x*ceil(x)", "0.5*ceil(x)");
+//        verifyDerivative("select(x, x^2, 3*x)", "select(x, 2*x, 3)");
+//        testCustomFunction("custom(x, y)/2", "x*y");
+//        testCustomFunction("custom(x^2, 1)+custom(2, y-1)", "2*x^2+4*(y-1)");
+//        cout << Parser::parse("x*x").optimize() << endl;
+//        cout << Parser::parse("x*(x*x)").optimize() << endl;
+//        cout << Parser::parse("(x*x)*x").optimize() << endl;
+//        cout << Parser::parse("2*3*x").optimize() << endl;
+//        cout << Parser::parse("1/(1+x)").optimize() << endl;
+//        cout << Parser::parse("x^(1/2)").optimize() << endl;
+//        cout << Parser::parse("log(3*cos(x))^(sqrt(4)-2)").optimize() << endl;
+//    }
+//    catch(const exception& e) {
+//        cout << "exception: " << e.what() << endl;
+//        return 1;
+//    }
+//    cout << "Done" << endl;
+//    return 0;
+//}
