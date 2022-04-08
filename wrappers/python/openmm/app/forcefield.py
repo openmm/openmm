@@ -1086,15 +1086,14 @@ class ForceField(object):
         # Find the template matching each residue, compiling a list of residues for which no templates are available.
         bondedToAtom = self._buildBondedToAtomList(topology)
         templates = list() # list of templates matching the corresponding residues
-        for chain in topology.chains():
-            for residue in chain.residues():
-                # Attempt to match one of the existing templates.
-                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
-                # Raise an exception if we have found no templates that match.
-                if matches is None:
-                    raise ValueError('No template found for chainid <%s> resid <%s> resname <%s> (residue index within topology %d).\n%s' % (chain.id, res.id, res.name, res.index, _findMatchErrors(self, res)))
-                else:
-                    templates.append(template)
+        for residue in topology.residues():
+            # Attempt to match one of the existing templates.
+            [template, matches] = self._getResidueTemplateMatches(residue, bondedToAtom, ignoreExternalBonds=ignoreExternalBonds)
+            # Raise an exception if we have found no templates that match.
+            if matches is None:
+                raise ValueError('No template found for chainid <%s> resid <%s> resname <%s> (residue index within topology %d).\n%s' % (residue.chain.id, residue.id, residue.name, residue.index, _findMatchErrors(self, residue)))
+            else:
+                templates.append(template)
 
         return templates
 
