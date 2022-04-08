@@ -580,7 +580,7 @@ void CompiledVectorExpression::generateJitCode() {
     CodeHolder code;
     code.init(runtime.environment());
     x86::Compiler c(&code);
-    FuncNode* funcNode = c.addFunc(FuncSignatureT<double>());
+    FuncNode* funcNode = c.addFunc(FuncSignatureT<void>());
     funcNode->frame().setAvxEnabled();
     vector<x86::Ymm> workspaceVar(workspace.size()/width);
     for (int i = 0; i < (int) workspaceVar.size(); i++)
@@ -804,8 +804,7 @@ void CompiledVectorExpression::generateJitCode() {
                 c.vdivps(workspaceVar[target[step]], constantVar[operationConstantIndex[step]], workspaceVar[args[0]]);
                 break;
             case Operation::ADD_CONSTANT:
-                c.vmovdqu(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.vaddps(workspaceVar[target[step]], workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                c.vaddps(workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::MULTIPLY_CONSTANT:
                 c.vmulps(workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]]);
