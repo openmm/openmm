@@ -288,13 +288,132 @@ void testCustomFunction(const string& expression, const string& equivalent) {
     verifySameValue(deriv3, deriv4, -2.0, 3.0);
     verifySameValue(deriv3, deriv4, 2.0, -3.0);
 }
+
+#include "asmjit/x86.h"
+#include <cmath>
+using namespace asmjit;
+
+void generateSingleArgCall(x86::Compiler& c, x86::Ymm& dest, x86::Ymm& arg, float (*function)(float)) {
+    x86::Gp fn = c.newIntPtr();
+    c.mov(fn, imm((void*) function));
+    x86::Ymm a = c.newYmm();
+    x86::Ymm d = c.newYmm();
+    for (int element = 0; element < 8; element++) {
+        if (element < 4)
+            c.vshufps(a, arg, arg, imm(element));
+        else {
+            c.vperm2f128(a, arg, arg, imm(1));
+            c.vshufps(a, a, a, imm(element-4));
+        }
+        InvokeNode* invoke;
+        c.invoke(&invoke, fn, FuncSignatureT<float, float>());
+        invoke->setArg(0, a);
+        invoke->setRet(0, d);
+        if (element > 3)
+            c.vperm2f128(d, d, d, imm(0));
+        if (element != 0)
+            c.vshufps(d, d, d, imm(0));
+        c.vblendps(dest, dest, d, 1<<element);
+    }
+}
+
+void generateTwoArgCall(x86::Compiler& c, x86::Ymm& dest, x86::Ymm& arg1, x86::Ymm& arg2, float (*function)(float, float)) {
+    x86::Gp fn = c.newIntPtr();
+    c.mov(fn, imm((void*) function));
+    x86::Ymm a1 = c.newYmm();
+    x86::Ymm a2 = c.newYmm();
+    x86::Ymm d = c.newYmm();
+    for (int element = 0; element < 8; element++) {
+        if (element < 4) {
+            c.vshufps(a1, arg1, arg1, imm(element));
+            c.vshufps(a2, arg2, arg2, imm(element));
+        }
+        else {
+            c.vperm2f128(a1, arg1, arg1, imm(1));
+            c.vperm2f128(a2, arg2, arg2, imm(1));
+            c.vshufps(a1, a1, a1, imm(element-4));
+            c.vshufps(a2, a2, a2, imm(element-4));
+        }
+        InvokeNode* invoke;
+        c.invoke(&invoke, fn, FuncSignatureT<float, float, float>());
+        invoke->setArg(0, a1);
+        invoke->setArg(1, a2);
+        invoke->setRet(0, d);
+        if (element > 3)
+            c.vperm2f128(d, d, d, imm(0));
+        if (element != 0)
+            c.vshufps(d, d, d, imm(0));
+        c.vblendps(dest, dest, d, 1<<element);
+    }
+}
+
+void test() {
+    // Set up the compiler.
+
+    JitRuntime runtime;
+    CodeHolder code;
+    code.init(runtime.environment());
+    x86::Compiler c(&code);
+    FuncNode* funcNode = c.addFunc(FuncSignatureT<void>());
+    funcNode->frame().setAvxEnabled();
+
+    // Load variables.
+
+    float x[] = {1, 1, 1, 1, 1, 1, 1, 1};
+    float y[] = {2, 2, 2, 2, 2, 2, 2, 2};
+    float z[] = {3, 3, 3, 3, 3, 3, 3, 3};
+    x86::Ymm xvar = c.newYmmPs();
+    x86::Ymm yvar = c.newYmmPs();
+    x86::Ymm zvar = c.newYmmPs();
+    x86::Gp xptr = c.newIntPtr();
+    x86::Gp yptr = c.newIntPtr();
+    x86::Gp zptr = c.newIntPtr();
+    c.mov(xptr, imm(x));
+    c.mov(yptr, imm(y));
+    c.mov(zptr, imm(z));
+    c.vmovdqu(xvar, x86::ptr(xptr, 0, 0));
+    c.vmovdqu(yvar, x86::ptr(yptr, 0, 0));
+    c.vmovdqu(zvar, x86::ptr(zptr, 0, 0));
+
+    // Perform the computation.
+
+    x86::Ymm siny = c.newYmmPs();
+    generateSingleArgCall(c, siny, yvar, sinf);
+    x86::Ymm powyx = c.newYmmPs();
+    generateTwoArgCall(c, powyx, yvar, xvar, powf);
+    x86::Ymm prod = c.newYmmPs();
+    c.vmulps(prod, siny, powyx);
+    x86::Ymm sum = c.newYmmPs();
+    c.vaddps(sum, prod, zvar);
+
+    // Store the result.
+
+    float result[8];
+    x86::Gp resultPointer = c.newIntPtr();
+    c.mov(resultPointer, imm(result));
+    c.vmovdqu(x86::ptr(resultPointer, 0, 0), sum);
+    c.endFunc();
+    c.finalize();
+    void (*jitCode)();
+    runtime.add(&jitCode, &code);
+
+    // Execute it.
+
+    jitCode();
+    for (int i = 0; i < 8; i++)
+        printf("%g ", result[i]);
+    printf("\n");
+}
+
 #include <cstdio>
 #include "openmm/OpenMMException.h"
 int main() {
+    test();
+    return 0;
     try {
         ParsedExpression p;
         try {
-            p = Parser::parse("sin(y)*(y^x)-2");
+            p = Parser::parse("sin(y)*(y^x)-2");//
             verifySameValue(p, p, 1.0, 2.0);
         }
         catch (OpenMMException& ex) {
@@ -308,14 +427,14 @@ int main() {
             printf("%s\n", ex.what());
         }
         try {
-            p = Parser::parse("log(x)*(x^y)-1");
+            p = Parser::parse("log(x)*(x^y)-1");//
             verifySameValue(p, p, 1.0, 2.0);
         }
         catch (OpenMMException& ex) {
             printf("%s\n", ex.what());
         }
         try {
-            p = Parser::parse("log(y)*(y^1.5)-1");
+            p = Parser::parse("log(y)*(y^1.5)-1");//
             verifySameValue(p, p, 1.0, 2.0);
         }
         catch (OpenMMException& ex) {
