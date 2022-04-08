@@ -385,13 +385,20 @@ int main() {
 
     // Perform the computation.
 
-    float z1[8], z2[8];
+    float z1[8], z2[8], z3[8], z4[8], z5[8];
+    storeReg(c, zreg, z1);
     x86::Ymm siny = c.newYmmPs();
     generateSingleArgCall(c, siny, yreg, sinf);
-    storeReg(c, zreg, z1);
+    storeReg(c, zreg, z2);
     x86::Ymm powyx = c.newYmmPs();
     generateTwoArgCall(c, powyx, yreg, xreg, powf);
-    storeReg(c, zreg, z2);
+    storeReg(c, zreg, z3);
+    x86::Ymm prod = c.newYmmPs();
+    c.vmulps(prod, siny, powyx);
+    storeReg(c, zreg, z4);
+    x86::Ymm sum = c.newYmmPs();
+    c.vaddps(sum, prod, zreg);
+    storeReg(c, zreg, z5);
     c.endFunc();
     c.finalize();
     void (*jitCode)();
@@ -405,6 +412,15 @@ int main() {
     printf("\n");
     for (int i = 0; i < 8; i++)
         printf("%g ", z2[i]);
+    printf("\n");
+    for (int i = 0; i < 8; i++)
+        printf("%g ", z3[i]);
+    printf("\n");
+    for (int i = 0; i < 8; i++)
+        printf("%g ", z4[i]);
+    printf("\n");
+    for (int i = 0; i < 8; i++)
+        printf("%g ", z5[i]);
     printf("\n");
     return 0;
 }
