@@ -392,6 +392,22 @@ void test() {
     x86::Gp resultPointer = c.newIntPtr();
     c.mov(resultPointer, imm(result));
     c.vmovdqu(x86::ptr(resultPointer, 0, 0), sum);
+
+
+    float a[8];
+    x86::Gp aPointer = c.newIntPtr();
+    c.mov(aPointer, imm(a));
+    c.vmovdqu(x86::ptr(aPointer, 0, 0), prod);
+    float b[8];
+    x86::Gp bPointer = c.newIntPtr();
+    c.mov(bPointer, imm(b));
+    c.vmovdqu(x86::ptr(bPointer, 0, 0), powyx);
+    float d[8];
+    x86::Gp dPointer = c.newIntPtr();
+    c.mov(dPointer, imm(d));
+    c.vmovdqu(x86::ptr(dPointer, 0, 0), zvar);
+
+
     c.endFunc();
     c.finalize();
     void (*jitCode)();
@@ -402,6 +418,15 @@ void test() {
     jitCode();
     for (int i = 0; i < 8; i++)
         printf("%g ", result[i]);
+    printf("\n");
+    for (int i = 0; i < 8; i++)
+        printf("%g ", a[i]);
+    printf("\n");
+    for (int i = 0; i < 8; i++)
+        printf("%g ", b[i]);
+    printf("\n");
+    for (int i = 0; i < 8; i++)
+        printf("%g ", d[i]);
     printf("\n");
 }
 

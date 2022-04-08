@@ -324,17 +324,17 @@ jobs:
         include:
           - name: Windows CUDA 11.2 Python 3.9
             python-version: "3.9"
-            cuda-version: "11.2"
+#            cuda-version: "11.2"
             CMAKE_FLAGS: |
               -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
               -DOPENMM_BUILD_CUDA_TESTS=OFF ^
               -DOPENMM_BUILD_OPENCL_TESTS=OFF ^
               -DOPENMM_BUILD_CPU_LIB=ON ^
-              -DOPENMM_BUILD_PYTHON_WRAPPERS=ON ^
+              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF ^
               -DOPENMM_BUILD_REFERENCE_TESTS=ON ^
               -DOPENMM_BUILD_SERIALIZATION_TESTS=ON ^
-              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=ON ^
-              -DOPENMM_BUILD_EXAMPLES=ON ^
+              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF ^
+              -DOPENMM_BUILD_EXAMPLES=OFF ^
 
     steps:
       - uses: actions/checkout@v2
@@ -410,13 +410,13 @@ jobs:
           jom -j 2 install
           if errorlevel 1 exit 1
 
-      - name: "Build Python wrappers"
-        shell: cmd /C call {0}
-        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
-        run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
-          cd build
-          jom -j 2 PythonInstall
+#      - name: "Build Python wrappers"
+#        shell: cmd /C call {0}
+#        if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
+#        run: |
+#          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+#          cd build
+#          jom -j 2 PythonInstall
 
       - name: "Check ccache performance"
         shell: cmd /C call {0}
