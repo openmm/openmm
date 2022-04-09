@@ -231,6 +231,7 @@ void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& contex
         CUevent waitEvent = (cu.getPlatformData().peerAccessSupported ? peerCopyEvent[i] : event);
         thread.addTask(new BeginComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, pinnedPositionBuffer, waitEvent, interactionCounts[i]));
     }
+    data.syncContexts();
 }
 
 double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid) {
