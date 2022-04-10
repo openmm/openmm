@@ -151,7 +151,7 @@ void CompiledExpression::setVariableLocations(map<string, double*>& variableLoca
     
     if (workspace.size() > 0)
         generateJitCode();
-#else
+#endif
     // Make a list of all variables we will need to copy before evaluating the expression.
     
     variablesToCopy.clear();
@@ -160,13 +160,11 @@ void CompiledExpression::setVariableLocations(map<string, double*>& variableLoca
         if (pointer != variablePointers.end())
             variablesToCopy.push_back(make_pair(&workspace[iter->second], pointer->second));
     }
-#endif
 }
 
 double CompiledExpression::evaluate() const {
-#ifdef LEPTON_USE_JIT
-    return jitCode();
-#else
+    if (jitCode)
+        return jitCode();
     for (int i = 0; i < variablesToCopy.size(); i++)
         *variablesToCopy[i].first = *variablesToCopy[i].second;
 
@@ -183,7 +181,6 @@ double CompiledExpression::evaluate() const {
         }
     }
     return workspace[workspace.size()-1];
-#endif
 }
 
 #ifdef LEPTON_USE_JIT
@@ -458,14 +455,24 @@ void CompiledExpression::generateJitCode() {
             case Operation::POWER_CONSTANT:
                 generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]], pow);
                 break;
+            case Operation::MIN:
+                c.fmin(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
+            case Operation::MAX:
+                c.fmax(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
             case Operation::ABS:
                 c.fabs(workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
             case Operation::FLOOR:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], floor);
+                c.frintm(workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
             case Operation::CEIL:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], ceil);
+                c.frintp(workspaceVar[target[step]], workspaceVar[args[0]]);
+                break;
+            case Operation::SELECT:
+                c.fcmeq(workspaceVar[target[step]], workspaceVar[args[0]], imm(0));
+                c.bsl(workspaceVar[target[step]], workspaceVar[args[2]], workspaceVar[args[1]]);
                 break;
             default:
                 // Just invoke evaluateOperation().
@@ -507,10 +514,14 @@ void CompiledExpression::generateTwoArgCall(a64::Compiler& c, arm::Vec& dest, ar
 }
 #else
 void CompiledExpression::generateJitCode() {
+    const CpuInfo& cpu = CpuInfo::host();
+    if (!cpu.hasFeature(CpuFeatures::X86::kAVX))
+        return;
     CodeHolder code;
     code.init(runtime.environment());
     x86::Compiler c(&code);
-    c.addFunc(FuncSignatureT<double>());
+    FuncNode* funcNode = c.addFunc(FuncSignatureT<double>());
+    funcNode->frame().setAvxEnabled();
     vector<x86::Xmm> workspaceVar(workspace.size());
     for (int i = 0; i < (int) workspaceVar.size(); i++)
         workspaceVar[i] = c.newXmmSd();
@@ -522,11 +533,11 @@ void CompiledExpression::generateJitCode() {
 
     // Load the arguments into variables.
     
+    x86::Gp variablePointer = c.newIntPtr();
     for (set<string>::const_iterator iter = variableNames.begin(); iter != variableNames.end(); ++iter) {
         map<string, int>::iterator index = variableIndices.find(*iter);
-        x86::Gp variablePointer = c.newIntPtr();
         c.mov(variablePointer, imm(&getVariableReference(index->first)));
-        c.movsd(workspaceVar[index->second], x86::ptr(variablePointer, 0, 0));
+        c.vmovsd(workspaceVar[index->second], x86::ptr(variablePointer, 0, 0));
     }
 
     // Make a list of all constants that will be needed for evaluation.
@@ -549,6 +560,10 @@ void CompiledExpression::generateJitCode() {
             value = 1.0;
         else if (op.getId() == Operation::DELTA)
             value = 1.0;
+        else if (op.getId() == Operation::ABS) {
+            long long mask = 0x7FFFFFFFFFFFFFFF;
+            value = *reinterpret_cast<double*>(&mask);
+        }
         else if (op.getId() == Operation::POWER_CONSTANT) {
             if (stepGroup[step] == -1)
                 value = dynamic_cast<Operation::PowerConstant&>(op).getValue();
@@ -579,7 +594,7 @@ void CompiledExpression::generateJitCode() {
         c.mov(constantsPointer, imm(&constants[0]));
         for (int i = 0; i < (int) constants.size(); i++) {
             constantVar[i] = c.newXmmSd();
-            c.movsd(constantVar[i], x86::ptr(constantsPointer, 8*i, 0));
+            c.vmovsd(constantVar[i], x86::ptr(constantsPointer, 8*i, 0));
         }
     }
     
@@ -598,10 +613,9 @@ void CompiledExpression::generateJitCode() {
             vector<int>& powers = groupPowers[stepGroup[step]];
             x86::Xmm multiplier = c.newXmmSd();
             if (powers[0] > 0)
-                c.movsd(multiplier, workspaceVar[arguments[step][0]]);
+                c.vmovsd(multiplier, workspaceVar[arguments[step][0]], workspaceVar[arguments[step][0]]);
             else {
-                c.movsd(multiplier, constantVar[operationConstantIndex[step]]);
-                c.divsd(multiplier, workspaceVar[arguments[step][0]]);
+                c.vdivsd(multiplier, constantVar[operationConstantIndex[step]], workspaceVar[arguments[step][0]]);
                 for (int i = 0; i < powers.size(); i++)
                     powers[i] = -powers[i];
             }
@@ -612,9 +626,9 @@ void CompiledExpression::generateJitCode() {
                 for (int i = 0; i < group.size(); i++) {
                     if (powers[i]%2 == 1) {
                         if (!hasAssigned[i])
-                            c.movsd(workspaceVar[target[group[i]]], multiplier);
+                            c.vmovsd(workspaceVar[target[group[i]]], multiplier, multiplier);
                         else
-                            c.mulsd(workspaceVar[target[group[i]]], multiplier);
+                            c.vmulsd(workspaceVar[target[group[i]]], workspaceVar[target[group[i]]], multiplier);
                         hasAssigned[i] = true;
                     }
                     powers[i] >>= 1;
@@ -622,7 +636,7 @@ void CompiledExpression::generateJitCode() {
                         done = false;
                 }
                 if (!done)
-                    c.mulsd(multiplier, multiplier);
+                    c.vmulsd(multiplier, multiplier, multiplier);
             }
             for (int step : group)
                 hasComputedPower[step] = true;
@@ -644,33 +658,29 @@ void CompiledExpression::generateJitCode() {
         
         switch (op.getId()) {
             case Operation::CONSTANT:
-                c.movsd(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                c.vmovsd(workspaceVar[target[step]], constantVar[operationConstantIndex[step]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::ADD:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.addsd(workspaceVar[target[step]], workspaceVar[args[1]]);
+                c.vaddsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
                 break;
             case Operation::SUBTRACT:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.subsd(workspaceVar[target[step]], workspaceVar[args[1]]);
+                c.vsubsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
                 break;
             case Operation::MULTIPLY:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.mulsd(workspaceVar[target[step]], workspaceVar[args[1]]);
+                c.vmulsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
                 break;
             case Operation::DIVIDE:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.divsd(workspaceVar[target[step]], workspaceVar[args[1]]);
+                c.vdivsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
                 break;
             case Operation::POWER:
                 generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]], pow);
                 break;
             case Operation::NEGATE:
-                c.xorps(workspaceVar[target[step]], workspaceVar[target[step]]);
-                c.subsd(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.vxorps(workspaceVar[target[step]], workspaceVar[target[step]], workspaceVar[target[step]]);
+                c.vsubsd(workspaceVar[target[step]], workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
             case Operation::SQRT:
-                c.sqrtsd(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.vsqrtsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[0]]);
                 break;
             case Operation::EXP:
                 generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], exp);
@@ -709,53 +719,62 @@ void CompiledExpression::generateJitCode() {
                 generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], tanh);
                 break;
             case Operation::STEP:
-                c.xorps(workspaceVar[target[step]], workspaceVar[target[step]]);
-                c.cmpsd(workspaceVar[target[step]], workspaceVar[args[0]], imm(18)); // Comparison mode is _CMP_LE_OQ = 18
-                c.andps(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                c.vxorps(workspaceVar[target[step]], workspaceVar[target[step]], workspaceVar[target[step]]);
+                c.vcmpsd(workspaceVar[target[step]], workspaceVar[target[step]], workspaceVar[args[0]], imm(18)); // Comparison mode is _CMP_LE_OQ = 18
+                c.vandps(workspaceVar[target[step]], workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::DELTA:
-                c.xorps(workspaceVar[target[step]], workspaceVar[target[step]]);
-                c.cmpsd(workspaceVar[target[step]], workspaceVar[args[0]], imm(16)); // Comparison mode is _CMP_EQ_OS = 16
-                c.andps(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                c.vxorps(workspaceVar[target[step]], workspaceVar[target[step]], workspaceVar[target[step]]);
+                c.vcmpsd(workspaceVar[target[step]], workspaceVar[target[step]], workspaceVar[args[0]], imm(16)); // Comparison mode is _CMP_EQ_OS = 16
+                c.vandps(workspaceVar[target[step]], workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::SQUARE:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.mulsd(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.vmulsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[0]]);
                 break;
             case Operation::CUBE:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.mulsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.mulsd(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.vmulsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[0]]);
+                c.vmulsd(workspaceVar[target[step]], workspaceVar[target[step]], workspaceVar[args[0]]);
                 break;
             case Operation::RECIPROCAL:
-                c.movsd(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
-                c.divsd(workspaceVar[target[step]], workspaceVar[args[0]]);
+                c.vdivsd(workspaceVar[target[step]], constantVar[operationConstantIndex[step]], workspaceVar[args[0]]);
                 break;
             case Operation::ADD_CONSTANT:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.addsd(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                c.vaddsd(workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::MULTIPLY_CONSTANT:
-                c.movsd(workspaceVar[target[step]], workspaceVar[args[0]]);
-                c.mulsd(workspaceVar[target[step]], constantVar[operationConstantIndex[step]]);
+                c.vmulsd(workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::POWER_CONSTANT:
                 generateTwoArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]], pow);
                 break;
+            case Operation::MIN:
+                c.vminsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
+            case Operation::MAX:
+                c.vmaxsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[1]]);
+                break;
             case Operation::ABS:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], fabs);
+                c.vandpd(workspaceVar[target[step]], workspaceVar[args[0]], constantVar[operationConstantIndex[step]]);
                 break;
             case Operation::FLOOR:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], floor);
+                c.vroundsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[0]], imm(1));
                 break;
             case Operation::CEIL:
-                generateSingleArgCall(c, workspaceVar[target[step]], workspaceVar[args[0]], ceil);
+                c.vroundsd(workspaceVar[target[step]], workspaceVar[args[0]], workspaceVar[args[0]], imm(2));
                 break;
+            case Operation::SELECT:
+            {
+                x86::Xmm mask = c.newXmmSd();
+                c.vxorps(mask, mask, mask);
+                c.vcmpsd(mask, mask, workspaceVar[args[0]], imm(0)); // Comparison mode is _CMP_EQ_OQ = 0
+                c.vblendvps(workspaceVar[target[step]], workspaceVar[args[1]], workspaceVar[args[2]], mask);
+                break;
+            }
             default:
                 // Just invoke evaluateOperation().
                 
                 for (int i = 0; i < (int) args.size(); i++)
-                    c.movsd(x86::ptr(argsPointer, 8*i, 0), workspaceVar[args[i]]);
+                    c.vmovsd(x86::ptr(argsPointer, 8*i, 0), workspaceVar[args[i]]);
                 x86::Gp fn = c.newIntPtr();
                 c.mov(fn, imm((void*) evaluateOperation));
                 InvokeNode* invoke;
