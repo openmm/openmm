@@ -466,6 +466,7 @@ class TestAPIUnits(unittest.TestCase):
         force.addPerParticleParameter('m')
         force.addParticle([1, 2, 3])
         force.addParticle([1*coulombs, 2*kilocalories_per_mole*angstroms**2, 3*kilocalories_per_mole*angstroms**3])
+        force.addTabulatedFunction('f', Continuous1DFunction([1,2,3,4,5], 0.0, 2.0))
 
         self.assertEqual(force.getNumParticles(), 2)
         charge, sigma, epsilon = force.getParticleParameters(0)
@@ -494,6 +495,8 @@ class TestAPIUnits(unittest.TestCase):
         self.assertFalse(force.usesPeriodicBoundaryConditions())
         force.setNonbondedMethod(CustomNonbondedForce.CutoffPeriodic)
         self.assertTrue(force.usesPeriodicBoundaryConditions())
+
+        self.assertIs(type(force.getTabulatedFunction(0)), Continuous1DFunction)
 
     def testCustomManyParticleForce(self):
         """ Tests the CustomManyParticleForce API features """
