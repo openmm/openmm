@@ -125,6 +125,7 @@ def getClassMethodList(classNode, skipMethods):
         for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):
             methDefinition = getText("definition", memberNode)
             shortMethDefinition=stripOpenmmPrefix(methDefinition)
+            shortMethDefinition = shortMethDefinition.replace(' &', '&')
             methName=shortMethDefinition.split()[-1]
             if (shortClassName, methName) in skipMethods: continue
             numParams=len(findNodes(memberNode, 'param'))
