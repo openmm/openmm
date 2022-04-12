@@ -30,6 +30,8 @@
 #include "openmm/internal/CompiledExpressionSet.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/vectorize.h"
+#include "lepton/CompiledVectorExpression.h"
+#include "lepton/ParsedExpression.h"
 #include <atomic>
 #include <map>
 #include <set>
@@ -37,9 +39,13 @@
 #include <vector>
 
 namespace OpenMM {
-    
+
+enum PeriodicType {NoPeriodic, PeriodicPerAtom, PeriodicPerInteraction, PeriodicTriclinic};
+
 class CpuCustomNonbondedForce {
-   public:
+public:
+//    static constexpr int blockSize = sizeof(FVEC) / sizeof(float);
+    static constexpr int blockSize = 4;
 
       /**---------------------------------------------------------------------------------------
 
@@ -47,10 +53,10 @@ class CpuCustomNonbondedForce {
 
          --------------------------------------------------------------------------------------- */
 
-       CpuCustomNonbondedForce(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
+       CpuCustomNonbondedForce(const Lepton::ParsedExpression& energyExpression, const Lepton::ParsedExpression& forceExpression,
                                const std::vector<std::string>& parameterNames, const std::vector<std::set<int> >& exclusions,
-                               const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions,
-                               const std::vector<std::string>& computedValueNames, const std::vector<Lepton::CompiledExpression> computedValueExpressions,
+                               const std::vector<Lepton::ParsedExpression> energyParamDerivExpressions,
+                               const std::vector<std::string>& computedValueNames, const std::vector<Lepton::ParsedExpression> computedValueExpressions,
                                ThreadPool& threads);
 
       /**---------------------------------------------------------------------------------------
@@ -167,27 +173,52 @@ private:
      * @param forces           force array (forces added)
      * @param totalEnergy      total energy
      * @param boxSize          the size of the periodic box
-     * @param boxSize          the inverse size of the periodic box
+     * @param invBoxSize       the inverse size of the periodic box
      */
     void calculateOneIxn(int atom1, int atom2, ThreadData& data, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+
+
+    /**
+     * Calculate all the interactions for one block of atoms.
+     * 
+     * @param data            workspace for the current thread
+     * @param blockIndex      the index of the atom block
+     * @param forces          force array (forces added)
+     * @param totalEnergy     total energy
+     * @param boxSize         the size of the periodic box
+     * @param invBoxSize       the inverse size of the periodic box
+     */
+    void calculateBlockIxn(ThreadData& data, int blockIndex, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
+
+    template <typename FVEC, int PERIODIC_TYPE>
+    void calculateBlockIxnImpl(ThreadData& data, int blockIndex, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter);
 
     /**
      * Compute the displacement and squared distance between two points, optionally using
      * periodic boundary conditions.
      */
     void getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const;
+
+    /**
+     * Compute the displacement and squared distance between a collection of points, optionally using
+     * periodic boundary conditions.
+     */
+    template <typename FVEC, int PERIODIC_TYPE>
+    void getDeltaR(const fvec4& posI, const FVEC& x, const FVEC& y, const FVEC& z, FVEC& dx, FVEC& dy, FVEC& dz, FVEC& r2, const fvec4& boxSize, const fvec4& invBoxSize) const;
 };
 
 class CpuCustomNonbondedForce::ThreadData {
 public:
-    ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression, const std::vector<std::string>& parameterNames,
+    ThreadData(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledVectorExpression& energyVecExpression,
+            const Lepton::CompiledExpression& forceExpression, const Lepton::CompiledVectorExpression& forceVecExpression, const std::vector<std::string>& parameterNames,
             const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions, const std::vector<std::string>& computedValueNames,
             const std::vector<Lepton::CompiledExpression> computedValueExpressions, std::vector<std::vector<double> >& atomComputedValues);
-    Lepton::CompiledExpression energyExpression;
-    Lepton::CompiledExpression forceExpression;
+    Lepton::CompiledExpression energyExpression, forceExpression;
+    Lepton::CompiledVectorExpression energyVecExpression, forceVecExpression;
     std::vector<Lepton::CompiledExpression> computedValueExpressions, energyParamDerivExpressions;
     CompiledExpressionSet expressionSet;
     std::vector<double> particleParam, computedValues;
+    std::vector<float> rvec, vecParticle1Params, vecParticle2Params, vecParticle1Values, vecParticle2Values;
     double r;
     std::vector<double> energyParamDerivs; 
     std::vector<std::vector<double> >& atomComputedValues;
