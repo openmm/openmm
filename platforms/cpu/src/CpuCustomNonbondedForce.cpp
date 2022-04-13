@@ -23,6 +23,7 @@
  */
 
 #include "CpuCustomNonbondedForce.h"
+#include "openmm/internal/hardware.h"
 #include <cmath>
 
 using namespace OpenMM;

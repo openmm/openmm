@@ -23,6 +23,7 @@
  */
 
 #include "CpuCustomNonbondedForceFvec.h"
+#include "openmm/internal/hardware.h"
 
 OpenMM::CpuCustomNonbondedForce* createCpuCustomNonbondedForceVec4(OpenMM::ThreadPool& threads);
 OpenMM::CpuCustomNonbondedForce* createCpuCustomNonbondedForceAvx(OpenMM::ThreadPool& threads);

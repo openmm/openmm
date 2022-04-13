@@ -1,6 +1,6 @@
 
-/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
- * Contributors: Daniel Towner
+/* Portions copyright (c) 2006-2022 Stanford University and Simbios.
+ * Contributors: Daniel Towner, Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -23,6 +23,7 @@
  */
 
 #include "CpuNonbondedForceFvec.h"
+#include "openmm/internal/hardware.h"
 
 OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec4();
 OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx();
