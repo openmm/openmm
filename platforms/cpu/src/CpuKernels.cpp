@@ -966,8 +966,9 @@ void CpuCalcCustomNonbondedForceKernel::createInteraction(const CustomNonbondedF
 
     // Create the object that computes the interaction.
 
-    nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions,
-            computedValueNames, computedValueExpressions, data.threads);
+    nonbonded = createCpuCustomNonbondedForce(data.threads);
+    nonbonded->initialize(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions,
+            computedValueNames, computedValueExpressions);
     if (interactionGroups.size() > 0)
         nonbonded->setInteractionGroups(interactionGroups);
 }

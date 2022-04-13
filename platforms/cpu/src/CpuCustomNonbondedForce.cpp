@@ -22,8 +22,6 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "SimTKOpenMMUtilities.h"
-#include "ReferenceForce.h"
 #include "CpuCustomNonbondedForce.h"
 
 using namespace OpenMM;
@@ -67,6 +65,7 @@ CpuCustomNonbondedForce::ThreadData::ThreadData(const CompiledExpression& energy
     // Prepare for passing variables to vectorized expressions.
 
     map<string, float*> vecVariableLocations;
+    int blockSize = getVecBlockSize();
     rvec.resize(blockSize);
     vecParticle1Params.resize(blockSize*parameterNames.size());
     vecParticle2Params.resize(blockSize*parameterNames.size());
@@ -95,16 +94,20 @@ CpuCustomNonbondedForce::ThreadData::ThreadData(const CompiledExpression& energy
     }
 }
 
-CpuCustomNonbondedForce::CpuCustomNonbondedForce(const ParsedExpression& energyExpression,
+CpuCustomNonbondedForce::CpuCustomNonbondedForce(ThreadPool& threads) : cutoff(false), useSwitch(false), periodic(false), useInteractionGroups(false), threads(threads) {
+}
+
+void CpuCustomNonbondedForce::initialize(const ParsedExpression& energyExpression,
             const ParsedExpression& forceExpression, const vector<string>& parameterNames, const vector<set<int> >& exclusions,
             const vector<ParsedExpression> energyParamDerivExpressions, const vector<string>& computedValueNames,
-            const vector<ParsedExpression> computedValueExpressions, ThreadPool& threads) :
-            cutoff(false), useSwitch(false), periodic(false), useInteractionGroups(false), paramNames(parameterNames), exclusions(exclusions),
-            computedValueNames(computedValueNames), threads(threads) {
+            const vector<ParsedExpression> computedValueExpressions) {
+    this->paramNames = parameterNames;
+    this->exclusions = exclusions;
+    this->computedValueNames = computedValueNames;
     CompiledExpression compiledEnergyExpression = energyExpression.createCompiledExpression();
     CompiledExpression compiledForceExpression = forceExpression.createCompiledExpression();
-    CompiledVectorExpression energyVecExpression = energyExpression.createCompiledVectorExpression(blockSize);
-    CompiledVectorExpression forceVecExpression = forceExpression.createCompiledVectorExpression(blockSize);
+    CompiledVectorExpression energyVecExpression = energyExpression.createCompiledVectorExpression(getVecBlockSize());
+    CompiledVectorExpression forceVecExpression = forceExpression.createCompiledVectorExpression(getVecBlockSize());
     vector<CompiledExpression> compiledDerivExpressions, compiledValueExpressions;
     for (auto& exp : energyParamDerivExpressions)
         compiledDerivExpressions.push_back(exp.createCompiledExpression());
@@ -212,6 +215,7 @@ void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, v
 
 void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     int numThreads = threads.getNumThreads();
+    int blockSize = getVecBlockSize();
     ThreadData& data = *threadData[threadIndex];
     for (auto& param : *globalParameters) {
         data.expressionSet.setVariable(data.expressionSet.getVariableIndex(param.first), param.second);
@@ -378,153 +382,6 @@ void CpuCustomNonbondedForce::calculateOneIxn(int ii, int jj, ThreadData& data,
         data.energyParamDerivs[i] += switchValue*data.energyParamDerivExpressions[i].evaluate();
 }
 
-void CpuCustomNonbondedForce::calculateBlockIxn(ThreadData& data, int blockIndex, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
-    // Determine whether we need to apply periodic boundary conditions.
-
-    PeriodicType periodicType;
-    fvec4 blockCenter;
-    if (!periodic) {
-        periodicType = NoPeriodic;
-        blockCenter = 0.0f;
-    }
-    else {
-        const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
-        float minx, maxx, miny, maxy, minz, maxz;
-        minx = maxx = posq[4*blockAtom[0]];
-        miny = maxy = posq[4*blockAtom[0]+1];
-        minz = maxz = posq[4*blockAtom[0]+2];
-        for (int i = 1; i < blockSize; i++) {
-            minx = min(minx, posq[4*blockAtom[i]]);
-            maxx = max(maxx, posq[4*blockAtom[i]]);
-            miny = min(miny, posq[4*blockAtom[i]+1]);
-            maxy = max(maxy, posq[4*blockAtom[i]+1]);
-            minz = min(minz, posq[4*blockAtom[i]+2]);
-            maxz = max(maxz, posq[4*blockAtom[i]+2]);
-        }
-        blockCenter = fvec4(0.5f*(minx+maxx), 0.5f*(miny+maxy), 0.5f*(minz+maxz), 0.0f);
-        if (!(minx < cutoffDistance || miny < cutoffDistance || minz < cutoffDistance ||
-                maxx > boxSize[0]-cutoffDistance || maxy > boxSize[1]-cutoffDistance || maxz > boxSize[2]-cutoffDistance))
-            periodicType = NoPeriodic;
-        else if (triclinic)
-            periodicType = PeriodicTriclinic;
-        else if (0.5f*(boxSize[0]-(maxx-minx)) >= cutoffDistance &&
-                 0.5f*(boxSize[1]-(maxy-miny)) >= cutoffDistance &&
-                 0.5f*(boxSize[2]-(maxz-minz)) >= cutoffDistance)
-            periodicType = PeriodicPerAtom;
-        else
-            periodicType = PeriodicPerInteraction;
-    }
-
-    // Call the appropriate version depending on what calculation is required for periodic boundary conditions.
-
-    if (periodicType == NoPeriodic)
-        calculateBlockIxnImpl<fvec4, NoPeriodic>(data, blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
-    else if (periodicType == PeriodicPerAtom)
-        calculateBlockIxnImpl<fvec4, PeriodicPerAtom>(data, blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
-    else if (periodicType == PeriodicPerInteraction)
-        calculateBlockIxnImpl<fvec4, PeriodicPerInteraction>(data, blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
-    else if (periodicType == PeriodicTriclinic)
-        calculateBlockIxnImpl<fvec4, PeriodicTriclinic>(data, blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
-}
-
-template <typename FVEC, int PERIODIC_TYPE>
-void CpuCustomNonbondedForce::calculateBlockIxnImpl(ThreadData& data, int blockIndex, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter) {
-    // Load the positions and parameters of the atoms in the block.
-
-    const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
-    fvec4 blockAtomPosq[blockSize];
-    FVEC blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
-    FVEC blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge;
-    int numParams = paramNames.size();
-    int numComputed = computedValueNames.size();
-    for (int i = 0; i < blockSize; i++) {
-        blockAtomPosq[i] = fvec4(posq+4*blockAtom[i]);
-        if (PERIODIC_TYPE == PeriodicPerAtom)
-            blockAtomPosq[i] -= floor((blockAtomPosq[i]-blockCenter)*invBoxSize+0.5f)*boxSize;
-        for (int j = 0; j < numParams; j++)
-            data.vecParticle1Params[j*blockSize+i] = atomParameters[blockAtom[i]][j];
-        for (int j = 0; j < numComputed; j++)
-            data.vecParticle1Values[j*blockSize+i] = atomComputedValues[j][blockAtom[i]];
-    }
-    transpose(blockAtomPosq, blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge);
-    const bool needPeriodic = (PERIODIC_TYPE == PeriodicPerInteraction || PERIODIC_TYPE == PeriodicTriclinic);
-    const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
-    const FVEC cutoffDistanceSquared = cutoffDistance * cutoffDistance;
-
-    // Loop over neighbors for this block.
-
-    const auto& neighbors = neighborList->getBlockNeighbors(blockIndex);
-    const auto& exclusions = neighborList->getBlockExclusions(blockIndex);
-    FVEC partialEnergy = {};
-    for (int i = 0; i < neighbors.size(); i++) {
-        // Load the next neighbor.
-
-        int atom = neighbors[i];
-        for (int j = 0; j < numParams; j++)
-            for (int k = 0; k < blockSize; k++)
-                data.vecParticle2Params[j*blockSize+k] = atomParameters[atom][j];
-        for (int j = 0; j < numComputed; j++)
-            for (int k = 0; k < blockSize; k++)
-                data.vecParticle2Values[j*blockSize+k] = atomComputedValues[j][atom];
-
-        // Compute the distances to the block atoms.
-
-        FVEC dx, dy, dz, r2;
-        fvec4 atomPos(posq+4*atom);
-        if (PERIODIC_TYPE == PeriodicPerAtom)
-            atomPos -= floor((atomPos-blockCenter)*invBoxSize+0.5f)*boxSize;
-        getDeltaR<FVEC, PERIODIC_TYPE>(atomPos, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, boxSize, invBoxSize);
-        const auto exclNotMask = FVEC::expandBitsToMask(~exclusions[i]);
-        const auto include = blendZero(r2 < cutoffDistanceSquared, exclNotMask);
-        if (!any(include))
-            continue; // No interactions to compute.
-
-        // Compute the interactions.
-
-        const auto inverseR = rsqrt(r2);
-        const auto r = r2*inverseR;
-        r.store(data.rvec.data());
-        FVEC dEdR(data.forceVecExpression.evaluate());
-        FVEC energy;
-        if (includeEnergy)
-            energy = FVEC(data.energyVecExpression.evaluate());
-        if (useSwitch) {
-            const auto t = blendZero((r-switchingDistance)*invSwitchingInterval, r>switchingDistance);
-            const auto switchValue = 1+t*t*t*(-10.0f+t*(15.0f-t*6.0f));
-            const auto switchDeriv = t*t*(-30.0f+t*(60.0f-t*30.0f))*invSwitchingInterval;
-            dEdR = switchValue*dEdR + energy*switchDeriv;
-            energy *= switchValue;
-        }
-        dEdR *= inverseR;
-
-        // Accumulate forces and energies.
-
-        if (includeEnergy) {
-            energy = blendZero(energy, include);
-            partialEnergy += energy;
-        }
-        dEdR = blendZero(dEdR, include);
-        const auto fx = dx*dEdR;
-        const auto fy = dy*dEdR;
-        const auto fz = dz*dEdR;
-        blockAtomForceX -= fx;
-        blockAtomForceY -= fy;
-        blockAtomForceZ -= fz;
-        float* const atomForce = forces+4*atom;
-        const fvec4 newAtomForce = fvec4(atomForce) + reduceToVec3(fx, fy, fz);
-        newAtomForce.store(atomForce);
-    }
-    if (includeEnergy)
-        totalEnergy += reduceAdd(partialEnergy);
-
-    // Record the forces on the block atoms.
-
-    fvec4 f[blockSize];
-    transpose(blockAtomForceX, blockAtomForceY, blockAtomForceZ, 0.0f, f);
-    for (int j = 0; j < blockSize; j++)
-        (fvec4(forces+4*blockAtom[j])+f[j]).store(forces+4*blockAtom[j]);
-}
-
 void CpuCustomNonbondedForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const {
     deltaR = posJ-posI;
     if (periodic) {
@@ -539,28 +396,4 @@ void CpuCustomNonbondedForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fv
         }
     }
     r2 = dot3(deltaR, deltaR);
-}
-
-template <typename FVEC, int PERIODIC_TYPE>
-void CpuCustomNonbondedForce::getDeltaR(const fvec4& posI, const FVEC& x, const FVEC& y, const FVEC& z, FVEC& dx, FVEC& dy, FVEC& dz, FVEC& r2, const fvec4& boxSize, const fvec4& invBoxSize) const {
-    dx = x-posI[0];
-    dy = y-posI[1];
-    dz = z-posI[2];
-    if (PERIODIC_TYPE == PeriodicTriclinic) {
-        const auto scale3 = floor(dz*recipBoxSize[2]+0.5f);
-        dx -= scale3*periodicBoxVectors[2][0];
-        dy -= scale3*periodicBoxVectors[2][1];
-        dz -= scale3*periodicBoxVectors[2][2];
-        const auto scale2 = floor(dy*recipBoxSize[1]+0.5f);
-        dx -= scale2*periodicBoxVectors[1][0];
-        dy -= scale2*periodicBoxVectors[1][1];
-        const auto scale1 = floor(dx*recipBoxSize[0]+0.5f);
-        dx -= scale1*periodicBoxVectors[0][0];
-    }
-    else if (PERIODIC_TYPE == PeriodicPerInteraction) {
-        dx -= round(dx*invBoxSize[0])*boxSize[0];
-        dy -= round(dy*invBoxSize[1])*boxSize[1];
-        dz -= round(dz*invBoxSize[2])*boxSize[2];
-    }
-    r2 = dx*dx + dy*dy + dz*dz;
 }

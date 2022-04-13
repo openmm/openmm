@@ -40,24 +40,20 @@
 
 namespace OpenMM {
 
-enum PeriodicType {NoPeriodic, PeriodicPerAtom, PeriodicPerInteraction, PeriodicTriclinic};
-
 class CpuCustomNonbondedForce {
 public:
-//    static constexpr int blockSize = sizeof(FVEC) / sizeof(float);
-    static constexpr int blockSize = 4;
-
       /**---------------------------------------------------------------------------------------
 
          Constructor
 
          --------------------------------------------------------------------------------------- */
 
-       CpuCustomNonbondedForce(const Lepton::ParsedExpression& energyExpression, const Lepton::ParsedExpression& forceExpression,
-                               const std::vector<std::string>& parameterNames, const std::vector<std::set<int> >& exclusions,
-                               const std::vector<Lepton::ParsedExpression> energyParamDerivExpressions,
-                               const std::vector<std::string>& computedValueNames, const std::vector<Lepton::ParsedExpression> computedValueExpressions,
-                               ThreadPool& threads);
+       CpuCustomNonbondedForce(ThreadPool& threads);
+
+       void initialize(const Lepton::ParsedExpression& energyExpression, const Lepton::ParsedExpression& forceExpression,
+                       const std::vector<std::string>& parameterNames, const std::vector<std::set<int> >& exclusions,
+                       const std::vector<Lepton::ParsedExpression> energyParamDerivExpressions,
+                       const std::vector<std::string>& computedValueNames, const std::vector<Lepton::ParsedExpression> computedValueExpressions);
 
       /**---------------------------------------------------------------------------------------
 
@@ -65,7 +61,7 @@ public:
 
          --------------------------------------------------------------------------------------- */
 
-       ~CpuCustomNonbondedForce();
+       virtual ~CpuCustomNonbondedForce();
 
       /**---------------------------------------------------------------------------------------
 
@@ -129,7 +125,7 @@ public:
     void calculatePairIxn(int numberOfAtoms, float* posq, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<std::vector<double> >& atomParameters,
                           const std::map<std::string, double>& globalParameters, std::vector<AlignedArray<float> >& threadForce,
                           bool includeForce, bool includeEnergy, double& totalEnergy, double* energyParamDerivs);
-private:
+protected:
     class ThreadData;
 
     bool cutoff;
@@ -143,7 +139,7 @@ private:
     AlignedArray<fvec4> periodicBoxVec4;
     double cutoffDistance, switchingDistance;
     ThreadPool& threads;
-    const std::vector<std::set<int> > exclusions;
+    std::vector<std::set<int> > exclusions;
     std::vector<ThreadData*> threadData;
     std::vector<std::string> paramNames, computedValueNames;
     std::vector<std::pair<int, int> > groupInteractions;
@@ -177,7 +173,6 @@ private:
      */
     void calculateOneIxn(int atom1, int atom2, ThreadData& data, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
 
-
     /**
      * Calculate all the interactions for one block of atoms.
      * 
@@ -188,23 +183,13 @@ private:
      * @param boxSize         the size of the periodic box
      * @param invBoxSize       the inverse size of the periodic box
      */
-    void calculateBlockIxn(ThreadData& data, int blockIndex, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize);
-
-    template <typename FVEC, int PERIODIC_TYPE>
-    void calculateBlockIxnImpl(ThreadData& data, int blockIndex, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter);
+    virtual void calculateBlockIxn(ThreadData& data, int blockIndex, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) = 0;
 
     /**
      * Compute the displacement and squared distance between two points, optionally using
      * periodic boundary conditions.
      */
     void getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, const fvec4& boxSize, const fvec4& invBoxSize) const;
-
-    /**
-     * Compute the displacement and squared distance between a collection of points, optionally using
-     * periodic boundary conditions.
-     */
-    template <typename FVEC, int PERIODIC_TYPE>
-    void getDeltaR(const fvec4& posI, const FVEC& x, const FVEC& y, const FVEC& z, FVEC& dx, FVEC& dy, FVEC& dz, FVEC& r2, const fvec4& boxSize, const fvec4& invBoxSize) const;
 };
 
 class CpuCustomNonbondedForce::ThreadData {
@@ -223,6 +208,11 @@ public:
     std::vector<double> energyParamDerivs; 
     std::vector<std::vector<double> >& atomComputedValues;
 };
+
+/**
+ * This function is called to create an instance of an appropriate subclass for the current CPU.
+ */
+CpuCustomNonbondedForce* createCpuCustomNonbondedForce(ThreadPool& threads);
 
 } // namespace OpenMM
 

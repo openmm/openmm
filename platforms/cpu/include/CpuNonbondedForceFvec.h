@@ -207,7 +207,6 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
     // Ewald needs C6 data gathered from a table. Unused variable for non-ewald.
     const FVEC C6s = (BLOCK_TYPE == BlockType::EWALD) ? FVEC(C6params, blockAtom) : FVEC();
 
-    const bool needPeriodic = (PERIODIC_TYPE == PeriodicPerInteraction || PERIODIC_TYPE == PeriodicTriclinic);
     const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
     const FVEC cutoffDistanceSquared = cutoffDistance * cutoffDistance;
 
