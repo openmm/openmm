@@ -1,6 +1,6 @@
 
-/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
- * Contributors: Daniel Towner
+/* Portions copyright (c) 2022 Stanford University and Simbios.
+ * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -22,21 +22,18 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "CpuNonbondedForceFvec.h"
+#include "CpuCustomNonbondedForceFvec.h"
+#include "openmm/OpenMMException.h"
 
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec4();
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx();
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx2();
+#ifdef __AVX__
+#include "openmm/internal/vectorizeAvx.h"
 
-bool isAvx2Supported();
-
-#include <iostream>
-
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec() {
-    if (isAvx2Supported())
-        return createCpuNonbondedForceAvx2();
-    else if (isAvxSupported())
-        return createCpuNonbondedForceAvx();
-    else
-        return createCpuNonbondedForceVec4();
+OpenMM::CpuCustomNonbondedForce* createCpuCustomNonbondedForceAvx(OpenMM::ThreadPool& threads) {
+    return new OpenMM::CpuCustomNonbondedForceFvec<fvec8, 8>(threads);
 }
+
+#else
+OpenMM::CpuCustomNonbondedForce* createCpuCustomNonbondedForceAvx(OpenMM::ThreadPool& threads) {
+   throw OpenMM::OpenMMException("Internal error: OpenMM was compiled without AVX support");
+}
+#endif

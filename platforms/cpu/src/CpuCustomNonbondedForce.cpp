@@ -23,12 +23,11 @@
  */
 
 #include "CpuCustomNonbondedForce.h"
+#include <cmath>
 
 using namespace OpenMM;
 using namespace Lepton;
 using namespace std;
-
-int getVecBlockSize();
 
 CpuCustomNonbondedForce::ThreadData::ThreadData(const CompiledExpression& energyExpression, const CompiledVectorExpression& energyVecExpression,
             const CompiledExpression& forceExpression, const CompiledVectorExpression& forceVecExpression,
@@ -65,7 +64,7 @@ CpuCustomNonbondedForce::ThreadData::ThreadData(const CompiledExpression& energy
     // Prepare for passing variables to vectorized expressions.
 
     map<string, float*> vecVariableLocations;
-    int blockSize = getVecBlockSize();
+    int blockSize = getVectorWidth();
     rvec.resize(blockSize);
     vecParticle1Params.resize(blockSize*parameterNames.size());
     vecParticle2Params.resize(blockSize*parameterNames.size());
@@ -106,8 +105,8 @@ void CpuCustomNonbondedForce::initialize(const ParsedExpression& energyExpressio
     this->computedValueNames = computedValueNames;
     CompiledExpression compiledEnergyExpression = energyExpression.createCompiledExpression();
     CompiledExpression compiledForceExpression = forceExpression.createCompiledExpression();
-    CompiledVectorExpression energyVecExpression = energyExpression.createCompiledVectorExpression(getVecBlockSize());
-    CompiledVectorExpression forceVecExpression = forceExpression.createCompiledVectorExpression(getVecBlockSize());
+    CompiledVectorExpression energyVecExpression = energyExpression.createCompiledVectorExpression(getVectorWidth());
+    CompiledVectorExpression forceVecExpression = forceExpression.createCompiledVectorExpression(getVectorWidth());
     vector<CompiledExpression> compiledDerivExpressions, compiledValueExpressions;
     for (auto& exp : energyParamDerivExpressions)
         compiledDerivExpressions.push_back(exp.createCompiledExpression());
@@ -215,7 +214,7 @@ void CpuCustomNonbondedForce::calculatePairIxn(int numberOfAtoms, float* posq, v
 
 void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     int numThreads = threads.getNumThreads();
-    int blockSize = getVecBlockSize();
+    int blockSize = getVectorWidth();
     ThreadData& data = *threadData[threadIndex];
     for (auto& param : *globalParameters) {
         data.expressionSet.setVariable(data.expressionSet.getVariableIndex(param.first), param.second);
