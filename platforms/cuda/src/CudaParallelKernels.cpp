@@ -184,18 +184,18 @@ void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
         getKernel(i).initialize(system);
     for (int i = 0; i < numContexts; i++)
         contextNonbondedFractions[i] = 1/(double) numContexts;
-    CHECK_RESULT(cuEventCreate(&event, 0), "Error creating event");
+    CHECK_RESULT(cuEventCreate(&event, cu.getEventFlags()), "Error creating event");
     peerCopyEvent.resize(numContexts);
     peerCopyEventLocal.resize(numContexts);
     peerCopyStream.resize(numContexts);
     for (int i = 0; i < numContexts; i++) {
-        CHECK_RESULT(cuEventCreate(&peerCopyEvent[i], 0), "Error creating event");
+        CHECK_RESULT(cuEventCreate(&peerCopyEvent[i], cu.getEventFlags()), "Error creating event");
         CHECK_RESULT(cuStreamCreate(&peerCopyStream[i], CU_STREAM_NON_BLOCKING), "Error creating stream");
     }
     for (int i = 0; i < numContexts; i++) {
         CudaContext& cuLocal = *data.contexts[i];
         ContextSelector selectorLocal(cuLocal);
-        CHECK_RESULT(cuEventCreate(&peerCopyEventLocal[i], 0), "Error creating event");
+        CHECK_RESULT(cuEventCreate(&peerCopyEventLocal[i], cu.getEventFlags()), "Error creating event");
     }
     CHECK_RESULT(cuMemHostAlloc((void**) &interactionCounts, numContexts*sizeof(int2), 0), "Error creating interaction counts buffer");
 }
