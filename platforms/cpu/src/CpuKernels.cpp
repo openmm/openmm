@@ -921,9 +921,8 @@ void CpuCalcCustomNonbondedForceKernel::createInteraction(const CustomNonbondedF
 
     // Parse the various expressions used to calculate the force.
 
-    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
-    Lepton::CompiledExpression energyExpression = expression.createCompiledExpression();
-    Lepton::CompiledExpression forceExpression = expression.differentiate("r").createCompiledExpression();
+    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
+    Lepton::ParsedExpression forceExpression = energyExpression.differentiate("r");
     for (int i = 0; i < force.getNumPerParticleParameters(); i++)
         parameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -940,25 +939,25 @@ void CpuCalcCustomNonbondedForceKernel::createInteraction(const CustomNonbondedF
     }
     particleVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
     pairVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
-    vector<Lepton::CompiledExpression> computedValueExpressions, energyParamDerivExpressions;
+    vector<Lepton::ParsedExpression> computedValueExpressions, energyParamDerivExpressions;
     for (int i = 0; i < force.getNumComputedValues(); i++) {
         string name, exp;
         force.getComputedValueParameters(i, name, exp);
         Lepton::ParsedExpression parsed = Lepton::Parser::parse(exp, functions);
         validateVariables(parsed.getRootNode(), particleVariables);
         computedValueNames.push_back(name);
-        computedValueExpressions.push_back(parsed.createCompiledExpression());
+        computedValueExpressions.push_back(parsed);
     }
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
         string param = force.getEnergyParameterDerivativeName(i);
         energyParamDerivNames.push_back(param);
-        energyParamDerivExpressions.push_back(expression.differentiate(param).createCompiledExpression());
+        energyParamDerivExpressions.push_back(energyExpression.differentiate(param));
     }
     for (auto& name : computedValueNames) {
         pairVariables.insert(name+"1");
         pairVariables.insert(name+"2");
     }
-    validateVariables(expression.getRootNode(), pairVariables);
+    validateVariables(energyExpression.getRootNode(), pairVariables);
 
     // Delete the custom functions.
 
@@ -967,8 +966,9 @@ void CpuCalcCustomNonbondedForceKernel::createInteraction(const CustomNonbondedF
 
     // Create the object that computes the interaction.
 
-    nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions,
-            computedValueNames, computedValueExpressions, data.threads);
+    nonbonded = createCpuCustomNonbondedForce(data.threads);
+    nonbonded->initialize(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions,
+            computedValueNames, computedValueExpressions);
     if (interactionGroups.size() > 0)
         nonbonded->setInteractionGroups(interactionGroups);
 }

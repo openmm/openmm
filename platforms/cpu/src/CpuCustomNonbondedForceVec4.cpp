@@ -1,6 +1,5 @@
-
-/* Portions copyright (c) 2006-2022 Stanford University and Simbios.
- * Contributors: Daniel Towner, Peter Eastman
+/* Portions copyright (c) 2022 Stanford University and Simbios.
+ * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -22,22 +21,8 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "CpuNonbondedForceFvec.h"
-#include "openmm/internal/hardware.h"
+#include "CpuCustomNonbondedForceFvec.h"
 
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec4();
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx();
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx2();
-
-bool isAvx2Supported();
-
-#include <iostream>
-
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec() {
-    if (isAvx2Supported())
-        return createCpuNonbondedForceAvx2();
-    else if (isAvxSupported())
-        return createCpuNonbondedForceAvx();
-    else
-        return createCpuNonbondedForceVec4();
+OpenMM::CpuCustomNonbondedForce* createCpuCustomNonbondedForceVec4(OpenMM::ThreadPool& threads) {
+    return new OpenMM::CpuCustomNonbondedForceFvec<fvec4, 4>(threads);
 }

@@ -580,7 +580,7 @@ void CompiledVectorExpression::generateJitCode() {
     CodeHolder code;
     code.init(runtime.environment());
     x86::Compiler c(&code);
-    FuncNode* funcNode = c.addFunc(FuncSignatureT<double>());
+    FuncNode* funcNode = c.addFunc(FuncSignatureT<void>());
     funcNode->frame().setAvxEnabled();
     vector<x86::Ymm> workspaceVar(workspace.size()/width);
     for (int i = 0; i < (int) workspaceVar.size(); i++)
