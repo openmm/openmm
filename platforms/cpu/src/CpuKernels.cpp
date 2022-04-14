@@ -231,7 +231,7 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
 
     // Determine whether we need to recompute the neighbor list.
         
-    if (data.neighborList != NULL) {
+    if (data.neighborList != NULL && data.cutoff > 0.0) {
         double padding = data.paddedCutoff-data.cutoff;;
         bool needRecompute = false;
         double closeCutoff2 = 0.25*padding*padding;
@@ -472,11 +472,10 @@ private:
     int numParticles;
 };
 
-CpuNonbondedForce* createCpuNonbondedForceVec();
+CpuNonbondedForce* createCpuNonbondedForceVec(const CpuNeighborList& neighbors);
 
 CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
         data(data), hasInitializedPme(false), hasInitializedDispersionPme(false), nonbonded(NULL) {
-    nonbonded = createCpuNonbondedForceVec();
 }
 
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
@@ -579,8 +578,10 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = force.getCutoffDistance();
-    if (nonbondedMethod == NoCutoff)
+    if (nonbondedMethod == NoCutoff) {
+        data.requestNeighborList(0.0, 0.0, true, exclusions);
         useSwitchingFunction = false;
+    }
     else {
         data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, true, exclusions);
         useSwitchingFunction = force.getUseSwitchingFunction();
@@ -614,6 +615,7 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     else
         dispersionCoefficient = 0.0;
     data.isPeriodic |= (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME);
+    nonbonded = createCpuNonbondedForceVec(*data.neighborList);
 }
 
 double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
@@ -659,7 +661,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     bool pme  = (nonbondedMethod == PME);
     bool ljpme = (nonbondedMethod == LJPME);
     if (nonbondedMethod != NoCutoff)
-        nonbonded->setUseCutoff(nonbondedCutoff, *data.neighborList, rfDielectric);
+        nonbonded->setUseCutoff(nonbondedCutoff, rfDielectric);
     if (data.isPeriodic) {
         Vec3* boxVectors = extractBoxVectors(context);
         double minAllowedSize = 1.999999*nonbondedCutoff;
@@ -874,8 +876,10 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         force.getParticleParameters(i, particleParamArray[i]);
     nonbondedMethod = CalcCustomNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = force.getCutoffDistance();
-    if (nonbondedMethod == NoCutoff)
+    if (nonbondedMethod == NoCutoff) {
+        data.requestNeighborList(0.0, 0.0, true, exclusions);
         useSwitchingFunction = false;
+    }
     else {
         data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, true, exclusions);
         useSwitchingFunction = force.getUseSwitchingFunction();

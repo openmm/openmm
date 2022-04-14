@@ -49,6 +49,7 @@ public:
     CpuNeighborList(int blockSize);
     void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
             const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads);
+    void createDenseNeighborList(int numAtoms, const std::vector<std::set<int> >& exclusions);
     int getNumBlocks() const;
     int getBlockSize() const;
     const std::vector<int32_t>& getSortedAtoms() const;

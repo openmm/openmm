@@ -23,17 +23,18 @@
  */
 
 #include "CpuNonbondedForceFvec.h"
+#include "CpuNeighborList.h"
 #include "openmm/OpenMMException.h"
 
 #ifdef __AVX__
 #include "openmm/internal/vectorizeAvx.h"
 
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx() {
-    return new OpenMM::CpuNonbondedForceFvec<fvec8>();
+OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx(const OpenMM::CpuNeighborList& neighbors) {
+    return new OpenMM::CpuNonbondedForceFvec<fvec8>(neighbors);
 }
 
 #else
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx() {
+OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx(const OpenMM::CpuNeighborList& neighbors) {
    throw OpenMM::OpenMMException("Internal error: OpenMM was compiled without AVX support");
 }
 #endif

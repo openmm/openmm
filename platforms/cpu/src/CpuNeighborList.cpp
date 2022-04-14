@@ -497,6 +497,64 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
     }
 }
 
+void CpuNeighborList::createDenseNeighborList(int numAtoms, const vector<set<int> >& exclusions) {
+    int numBlocks = (numAtoms+blockSize-1)/blockSize;
+    blockNeighbors.resize(numBlocks);
+    blockExclusions.resize(numBlocks);
+    sortedAtoms.resize(numAtoms);
+    for (int i = 0; i < numAtoms; i++)
+        sortedAtoms[i] = i;
+    for (int i = 0; i < numBlocks; i++) {
+        // Add all atoms in or after this block as neighbors.
+
+        int firstIndex = blockSize*i;
+        int atomsInBlock = min(blockSize, numAtoms-firstIndex);
+        for (int j = firstIndex; j < numAtoms; j++) {
+            blockNeighbors[i].push_back(j);
+            if (j < blockSize*(i+1)) {
+                int mask = (1<<blockSize)-1;
+                blockExclusions[i].push_back(mask & (mask<<(j-blockSize*i)));
+            }
+            else
+                blockExclusions[i].push_back(0);
+        }
+
+        // Record the exclusions for this block.
+
+        map<int, BlockExclusionMask> atomFlags;
+        for (int j = 0; j < atomsInBlock; j++) {
+            const set<int>& atomExclusions = exclusions[firstIndex+j];
+            const BlockExclusionMask mask = 1<<j;
+            for (int exclusion : atomExclusions) {
+                const auto thisAtomFlags = atomFlags.find(exclusion);
+                if (thisAtomFlags == atomFlags.end())
+                    atomFlags[exclusion] = mask;
+                else
+                    thisAtomFlags->second |= mask;
+            }
+        }
+        int numNeighbors = blockNeighbors[i].size();
+        for (int k = 0; k < numNeighbors; k++) {
+            int atomIndex = blockNeighbors[i][k];
+            auto thisAtomFlags = atomFlags.find(atomIndex);
+            if (thisAtomFlags != atomFlags.end())
+                blockExclusions[i][k] |= thisAtomFlags->second;
+        }
+    }
+
+    // Add padding atoms to fill up the last block.
+
+    int numPadding = numBlocks*blockSize-numAtoms;
+    if (numPadding > 0) {
+        const BlockExclusionMask mask = (~0) << (blockSize - numPadding);
+        for (int i = 0; i < numPadding; i++)
+            sortedAtoms.push_back(0);
+        auto& exc = blockExclusions[blockExclusions.size()-1];
+        for (int i = 0; i < (int) exc.size(); i++)
+            exc[i] |= mask;
+    }
+}
+
 int CpuNeighborList::getNumBlocks() const {
     return sortedAtoms.size()/blockSize;
 }
