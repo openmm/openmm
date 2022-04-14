@@ -113,7 +113,7 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
     int numParticles = context.getSystem().getNumParticles();
     
     // Compute the shifted velocities.
-    
+
     vector<Vec3> shiftedVel(numParticles);
     for (int i = 0; i < numParticles; ++i) {
         if (masses[i] > 0)
@@ -123,11 +123,13 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
     }
     
     // Apply constraints to them.
-    
-    vector<double> inverseMasses(numParticles);
-    for (int i = 0; i < numParticles; i++)
-        inverseMasses[i] = (masses[i] == 0 ? 0 : 1/masses[i]);
-    extractConstraints(context).applyToVelocities(posData, shiftedVel, inverseMasses, 1e-4);
+
+    if (timeShift != 0) {
+        vector<double> inverseMasses(numParticles);
+        for (int i = 0; i < numParticles; i++)
+            inverseMasses[i] = (masses[i] == 0 ? 0 : 1/masses[i]);
+        extractConstraints(context).applyToVelocities(posData, shiftedVel, inverseMasses, 1e-4);
+    }
     
     // Compute the kinetic energy.
     
