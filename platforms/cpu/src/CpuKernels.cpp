@@ -970,7 +970,7 @@ void CpuCalcCustomNonbondedForceKernel::createInteraction(const CustomNonbondedF
 
     // Create the object that computes the interaction.
 
-    nonbonded = createCpuCustomNonbondedForce(data.threads);
+    nonbonded = createCpuCustomNonbondedForce(data.threads, *data.neighborList);
     nonbonded->initialize(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions,
             computedValueNames, computedValueExpressions);
     if (interactionGroups.size() > 0)
@@ -984,7 +984,7 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
     double energy = 0;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff)
-        nonbonded->setUseCutoff(nonbondedCutoff, *data.neighborList);
+        nonbonded->setUseCutoff(nonbondedCutoff);
     if (periodic) {
         double minAllowedSize = 2*nonbondedCutoff;
         if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)

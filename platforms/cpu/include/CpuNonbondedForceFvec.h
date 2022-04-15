@@ -191,7 +191,7 @@ template <int PERIODIC_TYPE, BlockType BLOCK_TYPE>
 void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter) {
     // Load the positions and parameters of the atoms in the block.
 
-    const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize * blockIndex];
+    const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
     fvec4 blockAtomPosq[blockSize];
     FVEC blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
     FVEC blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge;
@@ -220,14 +220,12 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
     const FVEC cutoffDistanceSquared = cutoffDistance * cutoffDistance;
 
     // Loop over neighbors for this block.
-    const auto& neighbors = neighborList->getBlockNeighbors(blockIndex);
-    const auto& exclusions = neighborList->getBlockExclusions(blockIndex);
+    CpuNeighborList::NeighborIterator neighbors = neighborList->getNeighborIterator(blockIndex);
     FVEC partialEnergy = {};
-
-    for (int i = 0; i < (int) neighbors.size(); i++) {
+    while (neighbors.next()) {
         // Load the next neighbor.
 
-        int atom = neighbors[i];
+        int atom = neighbors.getNeighbor();
 
         // Compute the distances to the block atoms.
 
@@ -236,7 +234,7 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
         if (PERIODIC_TYPE == PeriodicPerAtom)
             atomPos -= floor((atomPos-blockCenter)*invBoxSize+0.5f)*boxSize;
         getDeltaR<PERIODIC_TYPE>(atomPos, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, boxSize, invBoxSize);
-        auto include = FVEC::expandBitsToMask(~exclusions[i]);
+        auto include = FVEC::expandBitsToMask(~neighbors.getExclusions());
         if (PERIODIC_TYPE != NoCutoff)
             include = blendZero(r2 < cutoffDistanceSquared, include);
         if (!any(include))
@@ -279,12 +277,10 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
             dEdR = 0.0f;
         }
         const auto chargeProd = blockAtomCharge*posq[4*atom+3];
-        if (BLOCK_TYPE == BlockType::EWALD)
-        {
+        if (BLOCK_TYPE == BlockType::EWALD) {
             dEdR += chargeProd*inverseR*approximateFunctionFromTable(ewaldScaleTable, r, FVEC(ewaldDXInv));
         }
-        else
-        {
+        else {
             if (cutoff)
                 dEdR += chargeProd*(inverseR-2.0f*krf*r2);
             else
@@ -296,8 +292,7 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
         if (totalEnergy) {
             if (BLOCK_TYPE == BlockType::EWALD)
                 energy += chargeProd*inverseR*approximateFunctionFromTable(erfcTable, alphaEwald*r, FVEC(erfcDXInv));
-            else // Non-ewald.
-            {
+            else {  // Non-ewald.
                 if (cutoff)
                     energy += chargeProd*(inverseR+krf*r2-crf);
                 else

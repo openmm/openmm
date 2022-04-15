@@ -46,12 +46,14 @@ namespace OpenMM {
 class OPENMM_EXPORT_CPU CpuNeighborList {
 public:
     class Voxels;
+    class NeighborIterator;
     CpuNeighborList(int blockSize);
     void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
             const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads);
     void createDenseNeighborList(int numAtoms, const std::vector<std::set<int> >& exclusions);
     int getNumBlocks() const;
     int getBlockSize() const;
+    NeighborIterator getNeighborIterator(int blockIndex) const;
     const std::vector<int32_t>& getSortedAtoms() const;
     const std::vector<int>& getBlockNeighbors(int blockIndex) const;
 
@@ -85,6 +87,19 @@ private:
     bool usePeriodic;
     float maxDistance;
     std::atomic<int> atomicCounter;
+};
+
+class OPENMM_EXPORT_CPU CpuNeighborList::NeighborIterator {
+public:
+    NeighborIterator(const std::vector<int>& neighbors, const std::vector<BlockExclusionMask>& exclusions);
+    bool next();
+    int getNeighbor() const;
+    BlockExclusionMask getExclusions() const;
+private:
+    int currentAtom, currentIndex;
+    BlockExclusionMask currentExclusions;
+    const std::vector<int>* neighbors;
+    const std::vector<BlockExclusionMask>* exclusions;
 };
 
 } // namespace OpenMM

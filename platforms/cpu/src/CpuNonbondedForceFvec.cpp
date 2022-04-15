@@ -26,15 +26,17 @@
 #include "CpuNeighborList.h"
 #include "openmm/internal/hardware.h"
 
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec4(const OpenMM::CpuNeighborList& neighbors);
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx(const OpenMM::CpuNeighborList& neighbors);
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx2(const OpenMM::CpuNeighborList& neighbors);
+using namespace OpenMM;
+
+CpuNonbondedForce* createCpuNonbondedForceVec4(const CpuNeighborList& neighbors);
+CpuNonbondedForce* createCpuNonbondedForceAvx(const CpuNeighborList& neighbors);
+CpuNonbondedForce* createCpuNonbondedForceAvx2(const CpuNeighborList& neighbors);
 
 bool isAvx2Supported();
 
 #include <iostream>
 
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec(const OpenMM::CpuNeighborList& neighbors) {
+CpuNonbondedForce* createCpuNonbondedForceVec(const CpuNeighborList& neighbors) {
     if (isAvx2Supported())
         return createCpuNonbondedForceAvx2(neighbors);
     else if (isAvxSupported())

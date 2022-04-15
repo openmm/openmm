@@ -48,7 +48,7 @@ public:
 
          --------------------------------------------------------------------------------------- */
 
-       CpuCustomNonbondedForce(ThreadPool& threads);
+       CpuCustomNonbondedForce(ThreadPool& threads, const CpuNeighborList& neighbors);
 
        void initialize(const Lepton::ParsedExpression& energyExpression, const Lepton::ParsedExpression& forceExpression,
                        const std::vector<std::string>& parameterNames, const std::vector<std::set<int> >& exclusions,
@@ -68,11 +68,10 @@ public:
          Set the force to use a cutoff.
 
          @param distance            the cutoff distance
-         @param neighbors           the neighbor list to use
 
          --------------------------------------------------------------------------------------- */
 
-      void setUseCutoff(double distance, const CpuNeighborList& neighbors);
+      void setUseCutoff(double distance);
 
       /**---------------------------------------------------------------------------------------
 
@@ -212,7 +211,7 @@ public:
 /**
  * This function is called to create an instance of an appropriate subclass for the current CPU.
  */
-CpuCustomNonbondedForce* createCpuCustomNonbondedForce(ThreadPool& threads);
+CpuCustomNonbondedForce* createCpuCustomNonbondedForce(ThreadPool& threads, const CpuNeighborList& neighbors);
 
 } // namespace OpenMM
 

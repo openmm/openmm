@@ -94,7 +94,8 @@ CpuCustomNonbondedForce::ThreadData::ThreadData(const CompiledExpression& energy
     }
 }
 
-CpuCustomNonbondedForce::CpuCustomNonbondedForce(ThreadPool& threads) : cutoff(false), useSwitch(false), periodic(false), useInteractionGroups(false), threads(threads) {
+CpuCustomNonbondedForce::CpuCustomNonbondedForce(ThreadPool& threads, const CpuNeighborList& neighbors) : cutoff(false), useSwitch(false),
+        periodic(false), useInteractionGroups(false), threads(threads), neighborList(&neighbors) {
 }
 
 void CpuCustomNonbondedForce::initialize(const ParsedExpression& energyExpression,
@@ -123,10 +124,9 @@ CpuCustomNonbondedForce::~CpuCustomNonbondedForce() {
         delete data;
 }
 
-void CpuCustomNonbondedForce::setUseCutoff(double distance, const CpuNeighborList& neighbors) {
+void CpuCustomNonbondedForce::setUseCutoff(double distance) {
     cutoff = true;
     cutoffDistance = distance;
-    neighborList = &neighbors;
   }
 
 void CpuCustomNonbondedForce::setInteractionGroups(const vector<pair<set<int>, set<int> > >& groups) {
@@ -280,28 +280,28 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
             calculateOneIxn(atom1, atom2, data, forces, energy, boxSize, invBoxSize);
         }
     }
-    else if (cutoff) {
-        // We are using a cutoff, so get the interactions from the neighbor list.
+    else {
+        // Get the interactions from the neighbor list.
 
         while (true) {
             int blockIndex = atomicCounter++;
             if (blockIndex >= neighborList->getNumBlocks())
                 break;
-            const int blockSize = neighborList->getBlockSize();
-            const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
-            const vector<int>& neighbors = neighborList->getBlockNeighbors(blockIndex);
-            const auto& exclusions = neighborList->getBlockExclusions(blockIndex);
             if (data.energyParamDerivs.size() == 0)
                 calculateBlockIxn(data, blockIndex, forces, energy, boxSize, invBoxSize);
             else {
-                for (int i = 0; i < (int) neighbors.size(); i++) {
-                    int first = neighbors[i];
+                const int blockSize = neighborList->getBlockSize();
+                const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
+                CpuNeighborList::NeighborIterator neighbors = neighborList->getNeighborIterator(blockIndex);
+                while (neighbors.next()) {
+                    int first = neighbors.getNeighbor();
                     for (int j = 0; j < paramNames.size(); j++)
                         data.particleParam[j*2] = atomParameters[first][j];
                     for (int j = 0; j < computedValueNames.size(); j++)
                         data.computedValues[j*2] = atomComputedValues[j][first];
+                    auto exclusions = neighbors.getExclusions();
                     for (int k = 0; k < blockSize; k++) {
-                        if ((exclusions[i] & (1<<k)) == 0) {
+                        if ((exclusions & (1<<k)) == 0) {
                             int second = blockAtom[k];
                             for (int j = 0; j < paramNames.size(); j++)
                                 data.particleParam[j*2+1] = atomParameters[second][j];
@@ -310,28 +310,6 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
                             calculateOneIxn(first, second, data, forces, energy, boxSize, invBoxSize);
                         }
                     }
-                }
-            }
-        }
-    }
-    else {
-        // Every particle interacts with every other one.
-        
-        while (true) {
-            int ii = atomicCounter++;
-            if (ii >= numberOfAtoms)
-                break;
-            for (int jj = ii+1; jj < numberOfAtoms; jj++) {
-                if (exclusions[jj].find(ii) == exclusions[jj].end()) {
-                    for (int j = 0; j < paramNames.size(); j++) {
-                        data.particleParam[j*2] = atomParameters[ii][j];
-                        data.particleParam[j*2+1] = atomParameters[jj][j];
-                    }
-                    for (int j = 0; j < computedValueNames.size(); j++) {
-                        data.computedValues[j*2] = atomComputedValues[j][ii];
-                        data.computedValues[j*2+1] = atomComputedValues[j][jj];
-                    }
-                    calculateOneIxn(ii, jj, data, forces, energy, boxSize, invBoxSize);
                 }
             }
         }

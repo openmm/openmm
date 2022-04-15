@@ -576,6 +576,10 @@ const std::vector<CpuNeighborList::BlockExclusionMask>& CpuNeighborList::getBloc
     
 }
 
+CpuNeighborList::NeighborIterator CpuNeighborList::getNeighborIterator(int blockIndex) const {
+    return NeighborIterator(blockNeighbors[blockIndex], blockExclusions[blockIndex]);
+}
+
 void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadIndex) {
     // Compute the positions of atoms along the Hilbert curve.
 
@@ -655,6 +659,27 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
                 blockExclusions[i][k] |= thisAtomFlags->second;
         }
     }
+}
+
+CpuNeighborList::NeighborIterator::NeighborIterator(const vector<int>& neighbors, const vector<BlockExclusionMask>& exclusions) :
+        neighbors(&neighbors), exclusions(&exclusions), currentIndex(-1) {
+}
+
+bool CpuNeighborList::NeighborIterator::next() {
+    if (++currentIndex < neighbors->size()) {
+        currentAtom = (*neighbors)[currentIndex];
+        currentExclusions = (*exclusions)[currentIndex];
+        return true;
+    }
+    return false;
+}
+
+int CpuNeighborList::NeighborIterator::getNeighbor() const {
+    return currentAtom;
+}
+
+CpuNeighborList::BlockExclusionMask CpuNeighborList::NeighborIterator::getExclusions() const {
+    return currentExclusions;
 }
 
 } // namespace OpenMM

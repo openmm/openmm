@@ -29,12 +29,12 @@
 
 namespace OpenMM {
 
-enum PeriodicType {NoPeriodic, PeriodicPerAtom, PeriodicPerInteraction, PeriodicTriclinic};
+enum PeriodicType {NoCutoff, NoPeriodic, PeriodicPerAtom, PeriodicPerInteraction, PeriodicTriclinic};
 
 template <typename FVEC, int BLOCK_SIZE>
 class CpuCustomNonbondedForceFvec : public CpuCustomNonbondedForce {
 public:
-    CpuCustomNonbondedForceFvec(ThreadPool& threads) : CpuCustomNonbondedForce(threads) {
+    CpuCustomNonbondedForceFvec(ThreadPool& threads, const CpuNeighborList& neighbors) : CpuCustomNonbondedForce(threads, neighbors) {
     }
 
 protected:
@@ -101,7 +101,9 @@ void CpuCustomNonbondedForceFvec<FVEC, BLOCK_SIZE>::calculateBlockIxn(ThreadData
 
     // Call the appropriate version depending on what calculation is required for periodic boundary conditions.
 
-    if (periodicType == NoPeriodic)
+    if (!cutoff)
+        calculateBlockIxnImpl<NoCutoff>(data, blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
+    else if (periodicType == NoPeriodic)
         calculateBlockIxnImpl<NoPeriodic>(data, blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
     else if (periodicType == PeriodicPerAtom)
         calculateBlockIxnImpl<PeriodicPerAtom>(data, blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
@@ -137,13 +139,12 @@ void CpuCustomNonbondedForceFvec<FVEC, BLOCK_SIZE>::calculateBlockIxnImpl(Thread
 
     // Loop over neighbors for this block.
 
-    const auto& neighbors = neighborList->getBlockNeighbors(blockIndex);
-    const auto& exclusions = neighborList->getBlockExclusions(blockIndex);
+    CpuNeighborList::NeighborIterator neighbors = neighborList->getNeighborIterator(blockIndex);
     FVEC partialEnergy = {};
-    for (int i = 0; i < neighbors.size(); i++) {
+    while (neighbors.next()) {
         // Load the next neighbor.
 
-        int atom = neighbors[i];
+        int atom = neighbors.getNeighbor();
         for (int j = 0; j < numParams; j++)
             for (int k = 0; k < BLOCK_SIZE; k++)
                 data.vecParticle2Params[j*BLOCK_SIZE+k] = atomParameters[atom][j];
@@ -158,8 +159,9 @@ void CpuCustomNonbondedForceFvec<FVEC, BLOCK_SIZE>::calculateBlockIxnImpl(Thread
         if (PERIODIC_TYPE == PeriodicPerAtom)
             atomPos -= floor((atomPos-blockCenter)*invBoxSize+0.5f)*boxSize;
         getDeltaR<PERIODIC_TYPE>(atomPos, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, boxSize, invBoxSize);
-        const auto exclNotMask = FVEC::expandBitsToMask(~exclusions[i]);
-        const auto include = blendZero(r2 < cutoffDistanceSquared, exclNotMask);
+        auto include = FVEC::expandBitsToMask(~neighbors.getExclusions());
+        if (PERIODIC_TYPE != NoCutoff)
+            include = blendZero(r2 < cutoffDistanceSquared, include);
         if (!any(include))
             continue; // No interactions to compute.
 
