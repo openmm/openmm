@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -418,6 +418,7 @@ CpuNeighborList::CpuNeighborList(int blockSize) : blockSize(blockSize) {
 
 void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const vector<set<int> >& exclusions,
             const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads) {
+    dense = false;
     int numBlocks = (numAtoms+blockSize-1)/blockSize;
     blockNeighbors.resize(numBlocks);
     blockExclusions.resize(numBlocks);
@@ -498,47 +499,41 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
 }
 
 void CpuNeighborList::createDenseNeighborList(int numAtoms, const vector<set<int> >& exclusions) {
+    dense = true;
+    this->numAtoms = numAtoms;
     int numBlocks = (numAtoms+blockSize-1)/blockSize;
-    blockNeighbors.resize(numBlocks);
+    blockExclusionIndices.resize(numBlocks);
     blockExclusions.resize(numBlocks);
     sortedAtoms.resize(numAtoms);
     for (int i = 0; i < numAtoms; i++)
         sortedAtoms[i] = i;
     for (int i = 0; i < numBlocks; i++) {
-        // Add all atoms in or after this block as neighbors.
+        // Build the list of exclusions for this block.
 
         int firstIndex = blockSize*i;
         int atomsInBlock = min(blockSize, numAtoms-firstIndex);
-        for (int j = firstIndex; j < numAtoms; j++) {
-            blockNeighbors[i].push_back(j);
-            if (j < blockSize*(i+1)) {
-                int mask = (1<<blockSize)-1;
-                blockExclusions[i].push_back(mask & (mask<<(j-blockSize*i)));
-            }
-            else
-                blockExclusions[i].push_back(0);
+        map<int, int> exclusionMap;
+        for (int j = 0; j < atomsInBlock; j++) {
+            exclusionMap[firstIndex+j] = (1<<(j+1))-1;
         }
-
-        // Record the exclusions for this block.
-
-        map<int, BlockExclusionMask> atomFlags;
         for (int j = 0; j < atomsInBlock; j++) {
             const set<int>& atomExclusions = exclusions[firstIndex+j];
             const BlockExclusionMask mask = 1<<j;
             for (int exclusion : atomExclusions) {
-                const auto thisAtomFlags = atomFlags.find(exclusion);
-                if (thisAtomFlags == atomFlags.end())
-                    atomFlags[exclusion] = mask;
-                else
-                    thisAtomFlags->second |= mask;
+                if (firstIndex <= exclusion) {
+                    auto thisAtomFlags = exclusionMap.find(exclusion);
+                    if (thisAtomFlags == exclusionMap.end())
+                        exclusionMap[exclusion] = mask;
+                    else
+                        thisAtomFlags->second |= mask;
+                }
             }
         }
-        int numNeighbors = blockNeighbors[i].size();
-        for (int k = 0; k < numNeighbors; k++) {
-            int atomIndex = blockNeighbors[i][k];
-            auto thisAtomFlags = atomFlags.find(atomIndex);
-            if (thisAtomFlags != atomFlags.end())
-                blockExclusions[i][k] |= thisAtomFlags->second;
+        blockExclusionIndices[i].clear();
+        blockExclusions[i].clear();
+        for (auto flags : exclusionMap) {
+            blockExclusionIndices[i].push_back(flags.first);
+            blockExclusions[i].push_back(flags.second);
         }
     }
 
@@ -549,7 +544,7 @@ void CpuNeighborList::createDenseNeighborList(int numAtoms, const vector<set<int
         const BlockExclusionMask mask = (~0) << (blockSize - numPadding);
         for (int i = 0; i < numPadding; i++)
             sortedAtoms.push_back(0);
-        auto& exc = blockExclusions[blockExclusions.size()-1];
+        auto& exc = blockExclusions.back();
         for (int i = 0; i < (int) exc.size(); i++)
             exc[i] |= mask;
     }
@@ -577,7 +572,10 @@ const std::vector<CpuNeighborList::BlockExclusionMask>& CpuNeighborList::getBloc
 }
 
 CpuNeighborList::NeighborIterator CpuNeighborList::getNeighborIterator(int blockIndex) const {
-    return NeighborIterator(blockNeighbors[blockIndex], blockExclusions[blockIndex]);
+    if (dense)
+        return NeighborIterator(blockIndex*blockSize, numAtoms, blockExclusionIndices[blockIndex], blockExclusions[blockIndex]);
+    else
+        return NeighborIterator(blockNeighbors[blockIndex], blockExclusions[blockIndex]);
 }
 
 void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadIndex) {
@@ -662,16 +660,31 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
 }
 
 CpuNeighborList::NeighborIterator::NeighborIterator(const vector<int>& neighbors, const vector<BlockExclusionMask>& exclusions) :
-        neighbors(&neighbors), exclusions(&exclusions), currentIndex(-1) {
+        dense(false), neighbors(&neighbors), exclusions(&exclusions), currentIndex(-1) {
+}
+
+CpuNeighborList::NeighborIterator::NeighborIterator(int firstAtom, int lastAtom, const vector<int>& exclusionIndices, const vector<BlockExclusionMask>& exclusions) :
+        dense(true), currentAtom(firstAtom-1), lastAtom(lastAtom), exclusionIndices(&exclusionIndices), exclusions(&exclusions), currentIndex(0) {
 }
 
 bool CpuNeighborList::NeighborIterator::next() {
-    if (++currentIndex < neighbors->size()) {
-        currentAtom = (*neighbors)[currentIndex];
-        currentExclusions = (*exclusions)[currentIndex];
+    if (dense) {
+        if (++currentAtom >= lastAtom)
+            return false;
+        if (currentIndex < exclusionIndices->size() && (*exclusionIndices)[currentIndex] == currentAtom)
+            currentExclusions = (*exclusions)[currentIndex++];
+        else
+            currentExclusions = 0;
         return true;
     }
-    return false;
+    else {
+        if (++currentIndex < neighbors->size()) {
+            currentAtom = (*neighbors)[currentIndex];
+            currentExclusions = (*exclusions)[currentIndex];
+            return true;
+        }
+        return false;
+    }
 }
 
 int CpuNeighborList::NeighborIterator::getNeighbor() const {
