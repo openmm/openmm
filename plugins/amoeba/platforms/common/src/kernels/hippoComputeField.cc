@@ -72,8 +72,8 @@ KERNEL void computeField(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigne
 
     // First loop: process tiles that contain exclusions.
     
-    const mm_long firstExclusionTile = warp*NUM_TILES_WITH_EXCLUSIONS/totalWarps;
-    const mm_long lastExclusionTile = (warp+1)*NUM_TILES_WITH_EXCLUSIONS/totalWarps;
+    const mm_long firstExclusionTile = (mm_long)warp*NUM_TILES_WITH_EXCLUSIONS/totalWarps;
+    const mm_long lastExclusionTile = ((mm_long)warp+1)*NUM_TILES_WITH_EXCLUSIONS/totalWarps;
     for (mm_long tile = firstExclusionTile; tile < lastExclusionTile; tile++) {
         const int2 tileIndices = exclusionTiles[tile];
         const unsigned int x = tileIndices.x;

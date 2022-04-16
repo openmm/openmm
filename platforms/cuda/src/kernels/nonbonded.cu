@@ -138,8 +138,8 @@ extern "C" __global__ void computeNonbonded(
 
     // First loop: process tiles that contain exclusions.
 
-    const long long firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    const long long lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    const long long firstExclusionTile = FIRST_EXCLUSION_TILE+(long long)warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    const long long lastExclusionTile = FIRST_EXCLUSION_TILE+((long long)warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     for (long long pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
@@ -608,7 +608,7 @@ extern "C" __global__ void computeNonbonded(
     // Third loop: single pairs that aren't part of a tile.
     
 #if USE_CUTOFF
-    const unsigned int numPairs = interactionCount[1];
+    const long long numPairs = interactionCount[1];
     if (numPairs > maxSinglePairs)
         return; // There wasn't enough memory for the neighbor list.
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < numPairs; i += blockDim.x*gridDim.x) {

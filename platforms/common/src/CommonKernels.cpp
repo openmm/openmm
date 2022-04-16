@@ -2115,7 +2115,6 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         
         // Add the tiles.
         
-        int firstTile = tiles.size();
         for (int i = 0; i < numBlocks1; i++)
             for (int j = 0; j < numBlocks2; j++) {
                 tiles.push_back(make_pair(atomLists.size()+i, atomLists.size()+numBlocks1+j));
@@ -2156,8 +2155,8 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     // where all interactions are excluded, and sort the tiles by size.
 
     vector<vector<int> > exclusionFlags(tiles.size());
-    vector<pair<int, int> > tileOrder;
-    for (int tile = 0; tile < tiles.size(); tile++) {
+    vector<pair<int, long long> > tileOrder;
+    for (long long tile = 0; tile < tiles.size(); tile++) {
         bool swapped = false;
         if (atomLists[tiles[tile].first].size() < atomLists[tiles[tile].second].size()) {
             // For efficiency, we want the first axis to be the larger one.
@@ -2199,9 +2198,9 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     
     vector<int> tileSetStart;
     tileSetStart.push_back(0);
-    int tileSetSize = 0;
-    for (int i = 0; i < tileOrder.size(); i++) {
-        int tile = tileOrder[i].second;
+    long long tileSetSize = 0;
+    for (long long i = 0; i < tileOrder.size(); i++) {
+        long long tile = tileOrder[i].second;
         int size = atomLists[tiles[tile].first].size();
         if (tileSetSize+size > 32) {
             tileSetStart.push_back(i);
@@ -2213,9 +2212,9 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     
     // Build the data structures.
     
-    int numTileSets = tileSetStart.size()-1;
+    long long numTileSets = tileSetStart.size()-1;
     vector<mm_int4> groupData;
-    for (int tileSet = 0; tileSet < numTileSets; tileSet++) {
+    for (long long tileSet = 0; tileSet < numTileSets; tileSet++) {
         int indexInTileSet = 0;
         int minSize = 0;
         if (cc.getSIMDWidth() < 32) {
@@ -2244,14 +2243,14 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     }
     interactionGroupData.initialize<mm_int4>(cc, groupData.size(), "interactionGroupData");
     interactionGroupData.upload(groupData);
-    numGroupTiles.initialize<int>(cc, 1, "numGroupTiles");
+    numGroupTiles.initialize<long long>(cc, 1, "numGroupTiles");
 
     // Allocate space for a neighbor list, if necessary.
 
     if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff && groupData.size() > cc.getNumThreadBlocks()) {
         filteredGroupData.initialize<mm_int4>(cc, groupData.size(), "filteredGroupData");
         interactionGroupData.copyTo(filteredGroupData);
-        int numTiles = groupData.size()/32;
+        long long numTiles = groupData.size()/32;
         numGroupTiles.upload(&numTiles);
     }
     
@@ -2331,8 +2330,8 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     defines["TILE_SIZE"] = "32";
     defines["NUM_TILES"] = cc.intToString(numTileSets);
     int numContexts = cc.getNumContexts();
-    int startIndex = cc.getContextIndex()*numTileSets/numContexts;
-    int endIndex = (cc.getContextIndex()+1)*numTileSets/numContexts;
+    long long startIndex = cc.getContextIndex()*numTileSets/numContexts;
+    long long endIndex = (cc.getContextIndex()+1)*numTileSets/numContexts;
     defines["FIRST_TILE"] = cc.intToString(startIndex);
     defines["LAST_TILE"] = cc.intToString(endIndex);
     if ((localDataSize/4)%2 == 0 && !cc.getUseDoublePrecision())

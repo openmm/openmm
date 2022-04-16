@@ -373,8 +373,8 @@ extern "C" __global__ void computeInducedField(
 
     // First loop: process tiles that contain exclusions.
     
-    const long long firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    const long long lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    const long long firstExclusionTile = FIRST_EXCLUSION_TILE+(long long)warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    const long long lastExclusionTile = FIRST_EXCLUSION_TILE+((long long)warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     for (long long pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
@@ -483,7 +483,7 @@ extern "C" __global__ void computeInducedField(
         while (skipTiles[tbx+TILE_SIZE-1] < pos) {
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
-                skipTiles[threadIdx.x] = tile.x + (mm_long)tile.y*NUM_BLOCKS - tile.y*((mm_long)tile.y+1)/2;
+                skipTiles[threadIdx.x] = tile.x + (long long)tile.y*NUM_BLOCKS - tile.y*((long long)tile.y+1)/2;
             }
             else
                 skipTiles[threadIdx.x] = end;

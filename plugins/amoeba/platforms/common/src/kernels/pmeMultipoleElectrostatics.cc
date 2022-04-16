@@ -456,8 +456,8 @@ KERNEL void computeElectrostatics(
 
     // First loop: process tiles that contain exclusions.
     
-    const mm_long firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    const mm_long lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    const mm_long firstExclusionTile = FIRST_EXCLUSION_TILE+(mm_long)warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    const mm_long lastExclusionTile = FIRST_EXCLUSION_TILE+((mm_long)warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
     for (mm_long pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
