@@ -31,7 +31,7 @@ using namespace OpenMM;
 #include "openmm/internal/vectorizeAvx.h"
 
 CpuCustomNonbondedForce* createCpuCustomNonbondedForceAvx(ThreadPool& threads, const CpuNeighborList& neighbors) {
-    return new CpuCustomNonbondedForceFvec<fvec8, 8>(threads);
+    return new CpuCustomNonbondedForceFvec<fvec8, 8>(threads, neighbors);
 }
 
 #else
