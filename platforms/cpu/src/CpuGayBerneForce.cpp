@@ -76,9 +76,15 @@ CpuGayBerneForce::CpuGayBerneForce(const GayBerneForce& force) {
         particleExclusions[e.particle2].insert(e.particle1);
     }
     nonbondedMethod = force.getNonbondedMethod();
-    cutoffDistance = force.getCutoffDistance();
-    switchingDistance = force.getSwitchingDistance();
-    useSwitchingFunction = force.getUseSwitchingFunction();
+    if (nonbondedMethod == GayBerneForce::NoCutoff) {
+        cutoffDistance = 0.0;
+        useSwitchingFunction = false;
+    }
+    else {
+        cutoffDistance = force.getCutoffDistance();
+        switchingDistance = force.getSwitchingDistance();
+        useSwitchingFunction = force.getUseSwitchingFunction();
+    }
 
     // Allocate workspace for calculations.
 
@@ -157,7 +163,7 @@ void CpuGayBerneForce::threadComputeForce(ThreadPool& threads, int threadIndex, 
 
     // Compute this thread's subset of interactions.
     
-    if (neighborList == NULL) {
+    if (cutoffDistance == 0.0) {
         while (true) {
             int i = atomicCounter++;
             if (i >= numParticles)

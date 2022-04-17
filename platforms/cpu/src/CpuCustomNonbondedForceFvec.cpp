@@ -25,12 +25,14 @@
 #include "CpuCustomNonbondedForceFvec.h"
 #include "openmm/internal/hardware.h"
 
-OpenMM::CpuCustomNonbondedForce* createCpuCustomNonbondedForceVec4(OpenMM::ThreadPool& threads);
-OpenMM::CpuCustomNonbondedForce* createCpuCustomNonbondedForceAvx(OpenMM::ThreadPool& threads);
+using namespace OpenMM;
 
-OpenMM::CpuCustomNonbondedForce* OpenMM::createCpuCustomNonbondedForce(OpenMM::ThreadPool& threads) {
+CpuCustomNonbondedForce* createCpuCustomNonbondedForceVec4(ThreadPool& threads, const CpuNeighborList& neighbors);
+CpuCustomNonbondedForce* createCpuCustomNonbondedForceAvx(ThreadPool& threads, const CpuNeighborList& neighbors);
+
+CpuCustomNonbondedForce* OpenMM::createCpuCustomNonbondedForce(ThreadPool& threads, const CpuNeighborList& neighbors) {
     if (isAvxSupported())
-        return createCpuCustomNonbondedForceAvx(threads);
+        return createCpuCustomNonbondedForceAvx(threads, neighbors);
     else
-        return createCpuCustomNonbondedForceVec4(threads);
+        return createCpuCustomNonbondedForceVec4(threads, neighbors);
 }

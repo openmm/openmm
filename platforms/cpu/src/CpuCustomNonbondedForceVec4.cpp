@@ -23,6 +23,8 @@
 
 #include "CpuCustomNonbondedForceFvec.h"
 
-OpenMM::CpuCustomNonbondedForce* createCpuCustomNonbondedForceVec4(OpenMM::ThreadPool& threads) {
-    return new OpenMM::CpuCustomNonbondedForceFvec<fvec4, 4>(threads);
+using namespace OpenMM;
+
+CpuCustomNonbondedForce* createCpuCustomNonbondedForceVec4(ThreadPool& threads, const CpuNeighborList& neighbors) {
+    return new CpuCustomNonbondedForceFvec<fvec4, 4>(threads, neighbors);
 }

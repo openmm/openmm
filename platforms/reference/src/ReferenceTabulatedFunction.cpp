@@ -252,8 +252,7 @@ int ReferenceDiscrete1DFunction::getNumArguments() const {
 
 double ReferenceDiscrete1DFunction::evaluate(const double* arguments) const {
     int i = (int) round(arguments[0]);
-    if (i < 0 || i >= values.size())
-        throw OpenMMException("ReferenceDiscrete1DFunction: argument out of range");
+    i = max(0, min((int) values.size()-1, i));
     return values[i];
 }
 
@@ -276,8 +275,8 @@ int ReferenceDiscrete2DFunction::getNumArguments() const {
 double ReferenceDiscrete2DFunction::evaluate(const double* arguments) const {
     int i = (int) round(arguments[0]);
     int j = (int) round(arguments[1]);
-    if (i < 0 || i >= xsize || j < 0 || j >= ysize)
-        throw OpenMMException("ReferenceDiscrete2DFunction: argument out of range");
+    i = max(0, min(xsize-1, i));
+    j = max(0, min(ysize-1, j));
     return values[i+j*xsize];
 }
 
@@ -301,8 +300,9 @@ double ReferenceDiscrete3DFunction::evaluate(const double* arguments) const {
     int i = (int) round(arguments[0]);
     int j = (int) round(arguments[1]);
     int k = (int) round(arguments[2]);
-    if (i < 0 || i >= xsize || j < 0 || j >= ysize || k < 0 || k >= zsize)
-        throw OpenMMException("ReferenceDiscrete3DFunction: argument out of range");
+    i = max(0, min(xsize-1, i));
+    j = max(0, min(ysize-1, j));
+    k = max(0, min(zsize-1, k));
     return values[i+(j+k*ysize)*xsize];
 }
 

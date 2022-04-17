@@ -25,15 +25,17 @@
 #include "CpuCustomNonbondedForceFvec.h"
 #include "openmm/OpenMMException.h"
 
+using namespace OpenMM;
+
 #ifdef __AVX__
 #include "openmm/internal/vectorizeAvx.h"
 
-OpenMM::CpuCustomNonbondedForce* createCpuCustomNonbondedForceAvx(OpenMM::ThreadPool& threads) {
-    return new OpenMM::CpuCustomNonbondedForceFvec<fvec8, 8>(threads);
+CpuCustomNonbondedForce* createCpuCustomNonbondedForceAvx(ThreadPool& threads, const CpuNeighborList& neighbors) {
+    return new CpuCustomNonbondedForceFvec<fvec8, 8>(threads, neighbors);
 }
 
 #else
-OpenMM::CpuCustomNonbondedForce* createCpuCustomNonbondedForceAvx(OpenMM::ThreadPool& threads) {
-   throw OpenMM::OpenMMException("Internal error: OpenMM was compiled without AVX support");
+CpuCustomNonbondedForce* createCpuCustomNonbondedForceAvx(ThreadPool& threads, const CpuNeighborList& neighbors) {
+   throw OpenMMException("Internal error: OpenMM was compiled without AVX support");
 }
 #endif
