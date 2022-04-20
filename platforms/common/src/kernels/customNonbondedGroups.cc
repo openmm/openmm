@@ -170,7 +170,7 @@ KERNEL void prepareToBuildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList,
  * Filter the list of tiles to include only ones that have interactions within the
  * padded cutoff.
  */
-KERNEL void buildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList, GLOBAL mm_long* RESTRICT numGroupTiles,
+KERNEL void buildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList, GLOBAL mm_ulong* RESTRICT numGroupTiles,
         GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT groupData, GLOBAL int4* RESTRICT filteredGroupData,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     
@@ -224,7 +224,7 @@ KERNEL void buildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList, GLOBAL m
         if (anyInteraction[local_warp]) {
             SYNC_WARPS;
             if (tgx == 0)
-                tileIndex[local_warp] = ATOMIC_ADD(numGroupTiles, 1);
+                tileIndex[local_warp] = ATOMIC_ADD(numGroupTiles, (mm_ulong)1);
             SYNC_WARPS;
             filteredGroupData[TILE_SIZE*tileIndex[local_warp]+tgx] = atomData;
         }
