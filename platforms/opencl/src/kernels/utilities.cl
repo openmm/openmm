@@ -2,23 +2,23 @@
  * Fill a buffer with 0.
  */
 
-__kernel void clearBuffer(__global int* restrict buffer, mm_ulong size) {
-    mm_ulong index = get_global_id(0);
+__kernel void clearBuffer(__global int* restrict buffer, unsigned long size) {
+    unsigned long index = get_global_id(0);
     __global int4* buffer4 = (__global int4*) buffer;
-    mm_ulong sizeDiv4 = size/4;
+    unsigned long sizeDiv4 = size/4;
     while (index < sizeDiv4) {
         buffer4[index] = (int4) 0;
         index += get_global_size(0);
     }
     if (get_global_id(0) == 0)
-        for (mm_ulong i = sizeDiv4*4; i < size; i++)
+        for (unsigned long i = sizeDiv4*4; i < size; i++)
             buffer[i] = 0;
 }
 
 /**
  * Fill two buffers with 0.
  */
-__kernel void clearTwoBuffers(__global int* restrict buffer1, mm_ulong size1, __global int* restrict buffer2, mm_ulong size2) {
+__kernel void clearTwoBuffers(__global int* restrict buffer1, unsigned long size1, __global int* restrict buffer2, unsigned long size2) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
 }
@@ -26,7 +26,7 @@ __kernel void clearTwoBuffers(__global int* restrict buffer1, mm_ulong size1, __
 /**
  * Fill three buffers with 0.
  */
-__kernel void clearThreeBuffers(__global int* restrict buffer1, mm_ulong size1, __global int* restrict buffer2, mm_ulong size2, __global int* restrict buffer3, mm_ulong size3) {
+__kernel void clearThreeBuffers(__global int* restrict buffer1, unsigned long size1, __global int* restrict buffer2, unsigned long size2, __global int* restrict buffer3, unsigned long size3) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
     clearBuffer(buffer3, size3);
@@ -35,7 +35,7 @@ __kernel void clearThreeBuffers(__global int* restrict buffer1, mm_ulong size1, 
 /**
  * Fill four buffers with 0.
  */
-__kernel void clearFourBuffers(__global int* restrict buffer1, mm_ulong size1, __global int* restrict buffer2, mm_ulong size2, __global int* restrict buffer3, mm_ulong size3, __global int* restrict buffer4, mm_ulong size4) {
+__kernel void clearFourBuffers(__global int* restrict buffer1, unsigned long size1, __global int* restrict buffer2, unsigned long size2, __global int* restrict buffer3, unsigned long size3, __global int* restrict buffer4, unsigned long size4) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
     clearBuffer(buffer3, size3);
@@ -45,7 +45,7 @@ __kernel void clearFourBuffers(__global int* restrict buffer1, mm_ulong size1, _
 /**
  * Fill five buffers with 0.
  */
-__kernel void clearFiveBuffers(__global int* restrict buffer1, mm_ulong size1, __global int* restrict buffer2, mm_ulong size2, __global int* restrict buffer3, mm_ulong size3, __global int* restrict buffer4, mm_ulong size4, __global int* restrict buffer5, mm_ulong size5) {
+__kernel void clearFiveBuffers(__global int* restrict buffer1, unsigned long size1, __global int* restrict buffer2, unsigned long size2, __global int* restrict buffer3, unsigned long size3, __global int* restrict buffer4, unsigned long size4, __global int* restrict buffer5, unsigned long size5) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
     clearBuffer(buffer3, size3);
@@ -56,7 +56,7 @@ __kernel void clearFiveBuffers(__global int* restrict buffer1, mm_ulong size1, _
 /**
  * Fill six buffers with 0.
  */
-__kernel void clearSixBuffers(__global int* restrict buffer1, mm_ulong size1, __global int* restrict buffer2, mm_ulong size2, __global int* restrict buffer3, mm_ulong size3, __global int* restrict buffer4, mm_ulong size4, __global int* restrict buffer5, mm_ulong size5, __global int* restrict buffer6, mm_ulong size6) {
+__kernel void clearSixBuffers(__global int* restrict buffer1, unsigned long size1, __global int* restrict buffer2, unsigned long size2, __global int* restrict buffer3, unsigned long size3, __global int* restrict buffer4, unsigned long size4, __global int* restrict buffer5, unsigned long size5, __global int* restrict buffer6, unsigned long size6) {
     clearBuffer(buffer1, size1);
     clearBuffer(buffer2, size2);
     clearBuffer(buffer3, size3);

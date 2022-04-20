@@ -384,9 +384,6 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
     }
     
     // Record the positions the neighbor list is based on.
-    //if(indexInWarp == 0)
-    //    printf("Finished warp %i/%i\n", warpIndex, totalWarps);
-
     for (int i = threadIdx.x+blockIdx.x*blockDim.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x)
         oldPositions[i] = posq[i];
 }
