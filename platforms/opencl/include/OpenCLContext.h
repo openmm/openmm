@@ -345,7 +345,7 @@ public:
      * @param memory     the Memory to clear
      * @param size       the size of the buffer in bytes
      */
-    void clearBuffer(cl::Memory& memory, int size);
+    void clearBuffer(cl::Memory& memory, size_t size);
     /**
      * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
      */
@@ -356,7 +356,7 @@ public:
      * @param memory     the Memory to clear
      * @param size       the size of the buffer in bytes
      */
-    void addAutoclearBuffer(cl::Memory& memory, int size);
+    void addAutoclearBuffer(cl::Memory& memory, size_t size);
     /**
      * Clear all buffers that have been registered with addAutoclearBuffer().
      */
@@ -712,7 +712,7 @@ private:
     std::vector<std::string> energyParamDerivNames;
     std::map<std::string, double> energyParamDerivWorkspace;
     std::vector<cl::Memory*> autoclearBuffers;
-    std::vector<int> autoclearBufferSizes;
+    std::vector<size_t> autoclearBufferSizes;
     OpenCLIntegrationUtilities* integration;
     OpenCLExpressionUtilities* expression;
     OpenCLBondedUtilities* bonded;

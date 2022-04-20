@@ -698,10 +698,10 @@ void OpenCLContext::clearBuffer(ArrayInterface& array) {
     clearBuffer(unwrap(array).getDeviceBuffer(), array.getSize()*array.getElementSize());
 }
 
-void OpenCLContext::clearBuffer(cl::Memory& memory, int size) {
-    int words = size/4;
+void OpenCLContext::clearBuffer(cl::Memory& memory, size_t size) {
+    size_t words = size/4;
     clearBufferKernel.setArg<cl::Memory>(0, memory);
-    clearBufferKernel.setArg<cl_int>(1, words);
+    clearBufferKernel.setArg<cl_ulong>(1, words);
     executeKernel(clearBufferKernel, words, 128);
 }
 
@@ -709,7 +709,7 @@ void OpenCLContext::addAutoclearBuffer(ArrayInterface& array) {
     addAutoclearBuffer(unwrap(array).getDeviceBuffer(), array.getSize()*array.getElementSize());
 }
 
-void OpenCLContext::addAutoclearBuffer(cl::Memory& memory, int size) {
+void OpenCLContext::addAutoclearBuffer(cl::Memory& memory, size_t size) {
     autoclearBuffers.push_back(&memory);
     autoclearBufferSizes.push_back(size/4);
 }
@@ -719,58 +719,58 @@ void OpenCLContext::clearAutoclearBuffers() {
     int total = autoclearBufferSizes.size();
     while (total-base >= 6) {
         clearSixBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-        clearSixBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
+        clearSixBuffersKernel.setArg<cl_ulong>(1, autoclearBufferSizes[base]);
         clearSixBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-        clearSixBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
+        clearSixBuffersKernel.setArg<cl_ulong>(3, autoclearBufferSizes[base+1]);
         clearSixBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
-        clearSixBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
+        clearSixBuffersKernel.setArg<cl_ulong>(5, autoclearBufferSizes[base+2]);
         clearSixBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
-        clearSixBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
+        clearSixBuffersKernel.setArg<cl_ulong>(7, autoclearBufferSizes[base+3]);
         clearSixBuffersKernel.setArg<cl::Memory>(8, *autoclearBuffers[base+4]);
-        clearSixBuffersKernel.setArg<cl_int>(9, autoclearBufferSizes[base+4]);
+        clearSixBuffersKernel.setArg<cl_ulong>(9, autoclearBufferSizes[base+4]);
         clearSixBuffersKernel.setArg<cl::Memory>(10, *autoclearBuffers[base+5]);
-        clearSixBuffersKernel.setArg<cl_int>(11, autoclearBufferSizes[base+5]);
+        clearSixBuffersKernel.setArg<cl_ulong>(11, autoclearBufferSizes[base+5]);
         executeKernel(clearSixBuffersKernel, max(max(max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), autoclearBufferSizes[base+4]), autoclearBufferSizes[base+5]), 128);
         base += 6;
     }
     if (total-base == 5) {
         clearFiveBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-        clearFiveBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
+        clearFiveBuffersKernel.setArg<cl_ulong>(1, autoclearBufferSizes[base]);
         clearFiveBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-        clearFiveBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
+        clearFiveBuffersKernel.setArg<cl_ulong>(3, autoclearBufferSizes[base+1]);
         clearFiveBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
-        clearFiveBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
+        clearFiveBuffersKernel.setArg<cl_ulong>(5, autoclearBufferSizes[base+2]);
         clearFiveBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
-        clearFiveBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
+        clearFiveBuffersKernel.setArg<cl_ulong>(7, autoclearBufferSizes[base+3]);
         clearFiveBuffersKernel.setArg<cl::Memory>(8, *autoclearBuffers[base+4]);
-        clearFiveBuffersKernel.setArg<cl_int>(9, autoclearBufferSizes[base+4]);
+        clearFiveBuffersKernel.setArg<cl_ulong>(9, autoclearBufferSizes[base+4]);
         executeKernel(clearFiveBuffersKernel, max(max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), autoclearBufferSizes[base+4]), 128);
     }
     else if (total-base == 4) {
         clearFourBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-        clearFourBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
+        clearFourBuffersKernel.setArg<cl_ulong>(1, autoclearBufferSizes[base]);
         clearFourBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-        clearFourBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
+        clearFourBuffersKernel.setArg<cl_ulong>(3, autoclearBufferSizes[base+1]);
         clearFourBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
-        clearFourBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
+        clearFourBuffersKernel.setArg<cl_ulong>(5, autoclearBufferSizes[base+2]);
         clearFourBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
-        clearFourBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
+        clearFourBuffersKernel.setArg<cl_ulong>(7, autoclearBufferSizes[base+3]);
         executeKernel(clearFourBuffersKernel, max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base+3]), 128);
     }
     else if (total-base == 3) {
         clearThreeBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-        clearThreeBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
+        clearThreeBuffersKernel.setArg<cl_ulong>(1, autoclearBufferSizes[base]);
         clearThreeBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-        clearThreeBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
+        clearThreeBuffersKernel.setArg<cl_ulong>(3, autoclearBufferSizes[base+1]);
         clearThreeBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
-        clearThreeBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
+        clearThreeBuffersKernel.setArg<cl_ulong>(5, autoclearBufferSizes[base+2]);
         executeKernel(clearThreeBuffersKernel, max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), 128);
     }
     else if (total-base == 2) {
         clearTwoBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
-        clearTwoBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
+        clearTwoBuffersKernel.setArg<cl_ulong>(1, autoclearBufferSizes[base]);
         clearTwoBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
-        clearTwoBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
+        clearTwoBuffersKernel.setArg<cl_ulong>(3, autoclearBufferSizes[base+1]);
         executeKernel(clearTwoBuffersKernel, max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), 128);
     }
     else if (total-base == 1) {
