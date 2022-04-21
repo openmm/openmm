@@ -237,9 +237,9 @@ KERNEL void computeN2Energy(
                               0.5f*periodicBoxSize.y-blockSizeX.y >= CUTOFF &&
                               0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
 #else
-        y = (int) floor(NUM_BLOCKS+0.5-sqrt((NUM_BLOCKS+0.5)*(NUM_BLOCKS+0.5)-2*pos));
+        y = (int) floor(NUM_BLOCKS+0.5-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
         x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
-        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+        while (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);
             x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
         }

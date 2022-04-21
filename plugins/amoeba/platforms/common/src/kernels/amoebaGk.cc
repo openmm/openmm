@@ -105,9 +105,9 @@ KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4
         AtomData1 data;
         data.bornSum = 0;
         if (pos < end) {
-            y = (int) floor(NUM_BLOCKS+0.5-sqrt((NUM_BLOCKS+0.5)*(NUM_BLOCKS+0.5)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            while (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
                 x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
             }
@@ -239,9 +239,9 @@ KERNEL void computeGKForces(
         const unsigned int tbx = LOCAL_ID - tgx;
         int x, y;
         if (pos < end) {
-            y = (int) floor(NUM_BLOCKS+0.5-sqrt((NUM_BLOCKS+0.5)*(NUM_BLOCKS+0.5)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            while (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
                 x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
             }
@@ -509,9 +509,9 @@ KERNEL void computeChainRuleForce(
         const unsigned int tbx = LOCAL_ID - tgx;
         int x, y;
         if (pos < end) {
-            y = (int) floor(NUM_BLOCKS+0.5-sqrt((NUM_BLOCKS+0.5)*(NUM_BLOCKS+0.5)-2*pos));
+            y = (int) floor(NUM_BLOCKS+0.5-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
             x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            while (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
                 x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
             }
@@ -808,9 +808,9 @@ KERNEL void computeEDiffForce(
         // Extract the coordinates of this tile.
 
         int x, y;
-        y = (int) floor(NUM_BLOCKS+0.5-sqrt((NUM_BLOCKS+0.5)*(NUM_BLOCKS+0.5)-2*pos));
+        y = (int) floor(NUM_BLOCKS+0.5-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
         x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
-        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+        while (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);
             x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
         }
