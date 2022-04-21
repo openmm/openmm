@@ -262,8 +262,9 @@ void ReferenceUpdateStateDataKernel::computeShiftedVelocities(ContextImpl& conte
     }
     
     // Apply constraints to them.
-    
-    extractConstraints(context).applyToVelocities(posData, velocities, inverseMasses, 1e-4);
+
+    if (timeShift != 0)
+        extractConstraints(context).applyToVelocities(posData, velocities, inverseMasses, 1e-4);
 }
 
 void ReferenceUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Vec3>& forces) {

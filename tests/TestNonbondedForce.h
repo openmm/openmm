@@ -464,6 +464,7 @@ void testLargeSystem() {
     System system;
     for (int i = 0; i < numParticles; i++)
         system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     NonbondedForce* nonbonded = new NonbondedForce();
     HarmonicBondForce* bonds = new HarmonicBondForce();
     vector<Vec3> positions(numParticles);
@@ -488,10 +489,9 @@ void testLargeSystem() {
         nonbonded->addException(2*i, 2*i+1, 0.0, 0.15, 0.0);
     }
 
-    // Try with cutoffs but not periodic boundary conditions, and make sure it agrees with the Reference platform.
+    // Try with no cutoffs and make sure it agrees with the Reference platform.
 
-    nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
-    nonbonded->setCutoffDistance(cutoff);
+    nonbonded->setNonbondedMethod(NonbondedForce::NoCutoff);
     system.addForce(nonbonded);
     system.addForce(bonds);
     VerletIntegrator integrator1(0.01);
@@ -511,16 +511,26 @@ void testLargeSystem() {
     }
     ASSERT_EQUAL_TOL(state.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 
+    // Now try cutoffs but not periodic boundary conditions.
+
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    nonbonded->setCutoffDistance(cutoff);
+    context.reinitialize(true);
+    referenceContext.reinitialize(true);
+    state = context.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
+    referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL_VEC(state.getPositions()[i], referenceState.getPositions()[i], tol);
+        ASSERT_EQUAL_VEC(state.getVelocities()[i], referenceState.getVelocities()[i], tol);
+        ASSERT_EQUAL_VEC(state.getForces()[i], referenceState.getForces()[i], tol);
+    }
+    ASSERT_EQUAL_TOL(state.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
+
     // Now do the same thing with periodic boundary conditions.
 
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
-    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-    context.reinitialize();
-    referenceContext.reinitialize();
-    context.setPositions(positions);
-    context.setVelocities(velocities);
-    referenceContext.setPositions(positions);
-    referenceContext.setVelocities(velocities);
+    context.reinitialize(true);
+    referenceContext.reinitialize(true);
     state = context.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     for (int i = 0; i < numParticles; i++) {

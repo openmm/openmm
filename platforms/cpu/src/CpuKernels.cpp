@@ -113,7 +113,7 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
     int numParticles = context.getSystem().getNumParticles();
     
     // Compute the shifted velocities.
-    
+
     vector<Vec3> shiftedVel(numParticles);
     for (int i = 0; i < numParticles; ++i) {
         if (masses[i] > 0)
@@ -123,11 +123,13 @@ static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& 
     }
     
     // Apply constraints to them.
-    
-    vector<double> inverseMasses(numParticles);
-    for (int i = 0; i < numParticles; i++)
-        inverseMasses[i] = (masses[i] == 0 ? 0 : 1/masses[i]);
-    extractConstraints(context).applyToVelocities(posData, shiftedVel, inverseMasses, 1e-4);
+
+    if (timeShift != 0) {
+        vector<double> inverseMasses(numParticles);
+        for (int i = 0; i < numParticles; i++)
+            inverseMasses[i] = (masses[i] == 0 ? 0 : 1/masses[i]);
+        extractConstraints(context).applyToVelocities(posData, shiftedVel, inverseMasses, 1e-4);
+    }
     
     // Compute the kinetic energy.
     
@@ -231,7 +233,7 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
 
     // Determine whether we need to recompute the neighbor list.
         
-    if (data.neighborList != NULL) {
+    if (data.neighborList != NULL && data.cutoff > 0.0) {
         double padding = data.paddedCutoff-data.cutoff;;
         bool needRecompute = false;
         double closeCutoff2 = 0.25*padding*padding;
@@ -472,11 +474,10 @@ private:
     int numParticles;
 };
 
-CpuNonbondedForce* createCpuNonbondedForceVec();
+CpuNonbondedForce* createCpuNonbondedForceVec(const CpuNeighborList& neighbors);
 
 CpuCalcNonbondedForceKernel::CpuCalcNonbondedForceKernel(string name, const Platform& platform, CpuPlatform::PlatformData& data) : CalcNonbondedForceKernel(name, platform),
         data(data), hasInitializedPme(false), hasInitializedDispersionPme(false), nonbonded(NULL) {
-    nonbonded = createCpuNonbondedForceVec();
 }
 
 CpuCalcNonbondedForceKernel::~CpuCalcNonbondedForceKernel() {
@@ -579,8 +580,10 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = force.getCutoffDistance();
-    if (nonbondedMethod == NoCutoff)
+    if (nonbondedMethod == NoCutoff) {
+        data.requestNeighborList(0.0, 0.0, true, exclusions);
         useSwitchingFunction = false;
+    }
     else {
         data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, true, exclusions);
         useSwitchingFunction = force.getUseSwitchingFunction();
@@ -614,6 +617,7 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     else
         dispersionCoefficient = 0.0;
     data.isPeriodic |= (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME);
+    nonbonded = createCpuNonbondedForceVec(*data.neighborList);
 }
 
 double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
@@ -659,7 +663,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     bool pme  = (nonbondedMethod == PME);
     bool ljpme = (nonbondedMethod == LJPME);
     if (nonbondedMethod != NoCutoff)
-        nonbonded->setUseCutoff(nonbondedCutoff, *data.neighborList, rfDielectric);
+        nonbonded->setUseCutoff(nonbondedCutoff, rfDielectric);
     if (data.isPeriodic) {
         Vec3* boxVectors = extractBoxVectors(context);
         double minAllowedSize = 1.999999*nonbondedCutoff;
@@ -874,8 +878,10 @@ void CpuCalcCustomNonbondedForceKernel::initialize(const System& system, const C
         force.getParticleParameters(i, particleParamArray[i]);
     nonbondedMethod = CalcCustomNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = force.getCutoffDistance();
-    if (nonbondedMethod == NoCutoff)
+    if (nonbondedMethod == NoCutoff) {
+        data.requestNeighborList(0.0, 0.0, true, exclusions);
         useSwitchingFunction = false;
+    }
     else {
         data.requestNeighborList(nonbondedCutoff, 0.25*nonbondedCutoff, true, exclusions);
         useSwitchingFunction = force.getUseSwitchingFunction();
@@ -921,9 +927,8 @@ void CpuCalcCustomNonbondedForceKernel::createInteraction(const CustomNonbondedF
 
     // Parse the various expressions used to calculate the force.
 
-    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
-    Lepton::CompiledExpression energyExpression = expression.createCompiledExpression();
-    Lepton::CompiledExpression forceExpression = expression.differentiate("r").createCompiledExpression();
+    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
+    Lepton::ParsedExpression forceExpression = energyExpression.differentiate("r");
     for (int i = 0; i < force.getNumPerParticleParameters(); i++)
         parameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -940,25 +945,25 @@ void CpuCalcCustomNonbondedForceKernel::createInteraction(const CustomNonbondedF
     }
     particleVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
     pairVariables.insert(globalParameterNames.begin(), globalParameterNames.end());
-    vector<Lepton::CompiledExpression> computedValueExpressions, energyParamDerivExpressions;
+    vector<Lepton::ParsedExpression> computedValueExpressions, energyParamDerivExpressions;
     for (int i = 0; i < force.getNumComputedValues(); i++) {
         string name, exp;
         force.getComputedValueParameters(i, name, exp);
         Lepton::ParsedExpression parsed = Lepton::Parser::parse(exp, functions);
         validateVariables(parsed.getRootNode(), particleVariables);
         computedValueNames.push_back(name);
-        computedValueExpressions.push_back(parsed.createCompiledExpression());
+        computedValueExpressions.push_back(parsed);
     }
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
         string param = force.getEnergyParameterDerivativeName(i);
         energyParamDerivNames.push_back(param);
-        energyParamDerivExpressions.push_back(expression.differentiate(param).createCompiledExpression());
+        energyParamDerivExpressions.push_back(energyExpression.differentiate(param));
     }
     for (auto& name : computedValueNames) {
         pairVariables.insert(name+"1");
         pairVariables.insert(name+"2");
     }
-    validateVariables(expression.getRootNode(), pairVariables);
+    validateVariables(energyExpression.getRootNode(), pairVariables);
 
     // Delete the custom functions.
 
@@ -967,8 +972,9 @@ void CpuCalcCustomNonbondedForceKernel::createInteraction(const CustomNonbondedF
 
     // Create the object that computes the interaction.
 
-    nonbonded = new CpuCustomNonbondedForce(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions,
-            computedValueNames, computedValueExpressions, data.threads);
+    nonbonded = createCpuCustomNonbondedForce(data.threads, *data.neighborList);
+    nonbonded->initialize(energyExpression, forceExpression, parameterNames, exclusions, energyParamDerivExpressions,
+            computedValueNames, computedValueExpressions);
     if (interactionGroups.size() > 0)
         nonbonded->setInteractionGroups(interactionGroups);
 }
@@ -980,7 +986,7 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
     double energy = 0;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff)
-        nonbonded->setUseCutoff(nonbondedCutoff, *data.neighborList);
+        nonbonded->setUseCutoff(nonbondedCutoff);
     if (periodic) {
         double minAllowedSize = 2*nonbondedCutoff;
         if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize)

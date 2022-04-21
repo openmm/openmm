@@ -391,8 +391,10 @@ class Modeller(object):
         1. You can explicitly give the vectors defining the periodic box to use.
         2. Alternatively, for a rectangular box you can simply give the dimensions of the unit cell.
         3. You can give a padding distance.  A bounding sphere containing the solute is determined, and the box size is
-           set to (sphere radius)+(padding).  This guarantees no atom in the solute will come closer than the padding
-           distance to any atom of another periodic copy.
+           set to (sphere diameter)+(padding).  This guarantees no atom in the solute will come closer than the padding
+           distance to any atom of another periodic copy.  If the sphere diameter is less than the padding distance,
+           the box size is set to 2*(padding) to ensure no atom is closer than the padding distance to two periodic
+           copies of any other atom.
         4. You can specify the total number of molecules (both waters and ions) to add.  A box is then created whose size is
            just large enough hold the specified amount of solvent.
         5. Finally, if none of the above options is specified, the existing Topology's box vectors are used.
@@ -482,8 +484,7 @@ class Modeller(object):
                 maxRange = Vec3(*(max((pos[i] for pos in positions)) for i in range(3)))
                 center = 0.5*(minRange+maxRange)
                 radius = max(unit.norm(center-pos) for pos in positions)
-            width = 2*radius+padding
-            box = width*Vec3(1, 1, 1)
+            width = max(2*radius+padding, 2*padding)
             if boxShape == 'cube':
                 vectors = (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0, 0, width))
             elif boxShape == 'dodecahedron':
@@ -492,6 +493,7 @@ class Modeller(object):
                 vectors = (Vec3(width, 0, 0), Vec3(1/3, 2*sqrt(2)/3, 0)*width, Vec3(-1/3, sqrt(2)/3, sqrt(6)/3)*width)
             else:
                 raise ValueError(f'Illegal box shape: {boxShape}')
+            box = Vec3(vectors[0][0], vectors[1][1], vectors[2][2])
         else:
             box = self.topology.getUnitCellDimensions().value_in_unit(nanometer)
             vectors = self.topology.getPeriodicBoxVectors().value_in_unit(nanometer)

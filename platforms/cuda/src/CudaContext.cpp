@@ -109,7 +109,8 @@ static int executeInWindows(const string &command) {
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
         const string& tempDir, const std::string& hostCompiler, bool allowRuntimeCompiler, CudaPlatform::PlatformData& platformData,
         CudaContext* originalContext) : ComputeContext(system), currentStream(0), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
-        hasCompilerKernel(false), isNvccAvailable(false), pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL) {
+        hasCompilerKernel(false), isNvccAvailable(false), pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL),
+        useBlockingSync(useBlockingSync) {
     // Determine what compiler to use.
     
     this->compiler = "\""+compiler+"\"";
@@ -900,4 +901,11 @@ vector<int> CudaContext::getDevicePrecedence() {
     }
 
     return precedence;
+}
+
+unsigned int CudaContext::getEventFlags() {
+    unsigned int flags = CU_EVENT_DISABLE_TIMING;
+    if (useBlockingSync)
+        flags += CU_EVENT_BLOCKING_SYNC;
+    return flags;
 }
