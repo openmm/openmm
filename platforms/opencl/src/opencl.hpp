@@ -739,7 +739,7 @@ namespace cl {
     {
     private:
         cl_int err_;
-        const char * errStr_;
+        std::string errStr_;
     public:
         /*! \brief Create a new CL error exception for a given error code
          *  and corresponding message.
@@ -761,11 +761,11 @@ namespace cl {
          */
         virtual const char * what() const throw ()
         {
-            if (errStr_ == NULL) {
+            if (errStr_.empty()) {
                 return "empty";
             }
             else {
-                return errStr_;
+                return errStr_.c_str();
             }
         }
 
@@ -786,10 +786,10 @@ namespace detail
 #if defined(CL_HPP_ENABLE_EXCEPTIONS)
 static inline cl_int errHandler (
     cl_int err,
-    const char * errStr = NULL)
+    std::string errStr = {})
 {
     if (err != CL_SUCCESS) {
-        throw Error(err, errStr);
+        throw Error(err, errStr.c_str());
     }
     return err;
 }
@@ -851,7 +851,7 @@ static inline cl_int errHandler (cl_int err, const char * errStr = NULL)
 #define __WAIT_FOR_EVENTS_ERR               CL_HPP_ERR_STR_(clWaitForEvents)
 
 #define __CREATE_KERNEL_ERR                 CL_HPP_ERR_STR_(clCreateKernel)
-#define __SET_KERNEL_ARGS_ERR               CL_HPP_ERR_STR_(clSetKernelArg)
+#define __SET_KERNEL_ARGS_ERR               (std::string("Unable to set arg ")+std::to_string(index)+" for kernel "+getInfo<CL_KERNEL_FUNCTION_NAME>())
 #define __CREATE_PROGRAM_WITH_SOURCE_ERR    CL_HPP_ERR_STR_(clCreateProgramWithSource)
 #if CL_HPP_TARGET_OPENCL_VERSION >= 200
 #define __CREATE_PROGRAM_WITH_IL_ERR        CL_HPP_ERR_STR_(clCreateProgramWithIL)
