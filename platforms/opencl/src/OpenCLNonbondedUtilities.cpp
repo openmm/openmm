@@ -463,8 +463,8 @@ void OpenCLNonbondedUtilities::setAtomBlockRange(double startFraction, double en
                 kernels.forceEnergyKernel.setArg<cl_long>(5, startTileIndex);
                 kernels.forceEnergyKernel.setArg<cl_long>(6, numTiles);
             }
-            kernels.findInteractingBlocksKernel.setArg<cl_long>(10, startBlockIndex);
-            kernels.findInteractingBlocksKernel.setArg<cl_long>(11, numBlocks);
+            kernels.findInteractingBlocksKernel.setArg<cl_int>(10, startBlockIndex);
+            kernels.findInteractingBlocksKernel.setArg<cl_int>(11, numBlocks);
         }
         forceRebuildNeighborList = true;
     }
@@ -529,8 +529,8 @@ void OpenCLNonbondedUtilities::createKernelsForGroups(int groups) {
             kernels.findInteractingBlocksKernel.setArg<cl::Buffer>(7, interactingAtoms.getDeviceBuffer());
             kernels.findInteractingBlocksKernel.setArg<cl::Buffer>(8, context.getPosq().getDeviceBuffer());
             kernels.findInteractingBlocksKernel.setArg<cl_long>(9, interactingTiles.getSize());
-            kernels.findInteractingBlocksKernel.setArg<cl_long>(10, startBlockIndex);
-            kernels.findInteractingBlocksKernel.setArg<cl_long>(11, numBlocks);
+            kernels.findInteractingBlocksKernel.setArg<cl_int>(10, startBlockIndex);
+            kernels.findInteractingBlocksKernel.setArg<cl_int>(11, numBlocks);
             kernels.findInteractingBlocksKernel.setArg<cl::Buffer>(12, sortedBlocks.getDeviceBuffer());
             kernels.findInteractingBlocksKernel.setArg<cl::Buffer>(13, sortedBlockCenter.getDeviceBuffer());
             kernels.findInteractingBlocksKernel.setArg<cl::Buffer>(14, sortedBlockBoundingBox.getDeviceBuffer());
