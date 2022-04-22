@@ -249,7 +249,7 @@ KERNEL void computeN2Energy(
         while (nextToSkip < pos) {
             if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[currentSkipIndex++];
-                nextToSkip = tile.x + (long long)tile.y*NUM_BLOCKS - tile.y*((long long)tile.y+1)/2;
+                nextToSkip = tile.x + (mm_long)tile.y*NUM_BLOCKS - tile.y*((mm_long)tile.y+1)/2;
             }
             else
                 nextToSkip = end;

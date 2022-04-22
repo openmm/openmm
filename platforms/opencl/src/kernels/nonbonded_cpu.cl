@@ -220,8 +220,8 @@ __kernel void computeNonbonded(
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
 
-    long pos = get_group_id(0)*(long)numTiles/get_num_groups(0));
-    long end = (get_group_id(0)+1)*(long)numTiles/get_num_groups(0));
+    long pos = get_group_id(0)*(long)numTiles/get_num_groups(0);
+    long end = (get_group_id(0)+1)*(long)numTiles/get_num_groups(0);
 #else
     const long numTiles = numTileIndices;
     long pos = startTileIndex+get_group_id(0)*(long)numTiles/get_num_groups(0);
