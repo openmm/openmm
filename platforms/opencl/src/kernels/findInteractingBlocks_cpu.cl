@@ -70,7 +70,7 @@ __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global c
  * to global memory.
  */
 void storeInteractionData(int x, int* buffer, int* atoms, int* numAtoms, int numValid, __global long* interactionCount,
-            __global long* interactingTiles, __global unsigned int* interactingAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX,
+            __global unsigned int* interactingTiles, __global unsigned int* interactingAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX,
             real4 periodicBoxVecY, real4 periodicBoxVecZ, __global const real4* posq, real4 blockCenterX, real4 blockSizeX, long maxTiles, bool finish) {
     real4 posBuffer[TILE_SIZE];
     const bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= PADDED_CUTOFF &&
