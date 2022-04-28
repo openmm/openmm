@@ -64,7 +64,7 @@ KERNEL void computeInteractionGroups(
         GLOBAL real4* RESTRICT forceBuffers,
 #endif
         GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT groupData,
-        GLOBAL const mm_long* RESTRICT numGroupTiles, int useNeighborList,
+        GLOBAL const TileIndex* RESTRICT numGroupTiles, int useNeighborList,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = GLOBAL_SIZE/TILE_SIZE;
@@ -161,7 +161,7 @@ KERNEL void computeInteractionGroups(
  * If the neighbor list needs to be rebuilt, reset the number of tiles to 0.  This is
  * executed by a single thread.
  */
-KERNEL void prepareToBuildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList, GLOBAL mm_long* RESTRICT numGroupTiles) {
+KERNEL void prepareToBuildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList, GLOBAL TileIndex* RESTRICT numGroupTiles) {
     if (rebuildNeighborList[0] == 1)
         numGroupTiles[0] = 0;
 }
@@ -170,7 +170,7 @@ KERNEL void prepareToBuildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList,
  * Filter the list of tiles to include only ones that have interactions within the
  * padded cutoff.
  */
-KERNEL void buildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList, GLOBAL mm_ulong* RESTRICT numGroupTiles,
+KERNEL void buildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList, GLOBAL TileIndex* RESTRICT numGroupTiles,
         GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT groupData, GLOBAL int4* RESTRICT filteredGroupData,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     
@@ -224,7 +224,7 @@ KERNEL void buildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList, GLOBAL m
         if (anyInteraction[local_warp]) {
             SYNC_WARPS;
             if (tgx == 0)
-                tileIndex[local_warp] = ATOMIC_ADD(numGroupTiles, (mm_ulong)1);
+                tileIndex[local_warp] = ATOMIC_ADD(numGroupTiles, (TileIndex)1);
             SYNC_WARPS;
             filteredGroupData[TILE_SIZE*tileIndex[local_warp]+tgx] = atomData;
         }

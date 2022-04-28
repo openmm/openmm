@@ -47,7 +47,7 @@ KERNEL void computeNonbonded(
         GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const unsigned int* RESTRICT exclusions,
         GLOBAL const int2* RESTRICT exclusionTiles, mm_long startTileIndex, mm_long numTileIndices
 #ifdef USE_CUTOFF
-        , GLOBAL const int* RESTRICT tiles, GLOBAL const mm_long* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        , GLOBAL const int* RESTRICT tiles, GLOBAL const TileIndex* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, mm_long maxTiles, GLOBAL const real4* RESTRICT blockCenter,
         GLOBAL const real4* RESTRICT blockSize, GLOBAL const unsigned int* RESTRICT interactingAtoms
 #ifdef __CUDA_ARCH__

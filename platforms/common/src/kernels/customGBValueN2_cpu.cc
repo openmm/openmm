@@ -9,7 +9,7 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
         GLOBAL real* RESTRICT global_value,
 #endif
 #ifdef USE_CUTOFF
-        GLOBAL const int* RESTRICT tiles, GLOBAL const mm_long* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        GLOBAL const int* RESTRICT tiles, GLOBAL const TileIndex* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, mm_long maxTiles, GLOBAL const real4* RESTRICT blockCenter,
         GLOBAL const real4* RESTRICT blockSize, GLOBAL const int* RESTRICT interactingAtoms
 #else

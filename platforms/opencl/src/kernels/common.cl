@@ -6,6 +6,9 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #ifdef SUPPORTS_64_BIT_ATOMICS
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+typedef unsigned long TileIndex;
+#else
+typedef unsigned int TileIndex;
 #endif
 
 #define KERNEL __kernel

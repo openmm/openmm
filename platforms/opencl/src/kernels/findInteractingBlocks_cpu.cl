@@ -44,7 +44,7 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
 __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global const real4* restrict blockCenter,
         __global const real4* restrict blockBoundingBox, __global real4* restrict sortedBlockCenter,
         __global real4* restrict sortedBlockBoundingBox, __global const real4* restrict posq, __global const real4* restrict oldPositions,
-        __global long* restrict interactionCount, __global int* restrict rebuildNeighborList, int forceRebuild) {
+        __global TileIndex* restrict interactionCount, __global int* restrict rebuildNeighborList, int forceRebuild) {
     for (int i = get_global_id(0); i < NUM_BLOCKS; i += get_global_size(0)) {
         int index = (int) sortedBlock[i].y;
         sortedBlockCenter[i] = blockCenter[index];
@@ -69,7 +69,7 @@ __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global c
  * This is called by findBlocksWithInteractions().  It compacts the list of blocks and writes them
  * to global memory.
  */
-void storeInteractionData(int x, int* buffer, int* atoms, int* numAtoms, int numValid, __global long* interactionCount,
+void storeInteractionData(int x, int* buffer, int* atoms, int* numAtoms, int numValid, __global TileIndex* interactionCount,
             __global unsigned int* interactingTiles, __global unsigned int* interactingAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX,
             real4 periodicBoxVecY, real4 periodicBoxVecZ, __global const real4* posq, real4 blockCenterX, real4 blockSizeX, long maxTiles, bool finish) {
     real4 posBuffer[TILE_SIZE];
@@ -125,7 +125,7 @@ void storeInteractionData(int x, int* buffer, int* atoms, int* numAtoms, int num
                 // The atoms buffer is full, so store it to global memory.
                 
                 long tilesToStore = BUFFER_SIZE/TILE_SIZE;
-                long baseIndex = atom_add(interactionCount, tilesToStore);
+                long baseIndex = atom_add(interactionCount, (TileIndex)tilesToStore);
                 if (baseIndex+tilesToStore <= maxTiles) {
                     for (int i = 0; i < tilesToStore; i++) {
                         interactingTiles[baseIndex+i] = x;
@@ -142,7 +142,7 @@ void storeInteractionData(int x, int* buffer, int* atoms, int* numAtoms, int num
         // There are some leftover atoms, so save them now.
         
         long tilesToStore = (*numAtoms+TILE_SIZE-1)/TILE_SIZE;
-        long baseIndex = atom_add(interactionCount, tilesToStore);
+        long baseIndex = atom_add(interactionCount, (TileIndex)tilesToStore);
         if (baseIndex+tilesToStore <= maxTiles) {
             for (int i = 0; i < tilesToStore; i++) {
                 interactingTiles[baseIndex+i] = x;
@@ -160,7 +160,7 @@ void storeInteractionData(int x, int* buffer, int* atoms, int* numAtoms, int num
  * mark them as non-interacting.
  */
 __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        __global long* restrict interactionCount, __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms,
+        __global TileIndex* restrict interactionCount, __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms,
         __global const real4* restrict posq, long maxTiles, unsigned int startBlockIndex, unsigned int numBlocks, __global real2* restrict sortedBlocks,
         __global const real4* restrict sortedBlockCenter, __global const real4* restrict sortedBlockBoundingBox,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global real4* restrict oldPositions,

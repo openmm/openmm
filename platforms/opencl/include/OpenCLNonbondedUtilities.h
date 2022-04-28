@@ -322,7 +322,7 @@ private:
     OpenCLSort* blockSorter;
     cl::Event downloadCountEvent;
     cl::Buffer* pinnedCountBuffer;
-    unsigned int* pinnedCountMemory;
+    void* pinnedCountMemory;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;

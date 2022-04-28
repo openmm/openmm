@@ -54,7 +54,7 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
 __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global const real4* restrict blockCenter,
         __global const real4* restrict blockBoundingBox, __global real4* restrict sortedBlockCenter,
         __global real4* restrict sortedBlockBoundingBox, __global const real4* restrict posq, __global const real4* restrict oldPositions,
-        __global long* restrict interactionCount, __global int* restrict rebuildNeighborList, int forceRebuild) {
+        __global TileIndex* restrict interactionCount, __global int* restrict rebuildNeighborList, int forceRebuild) {
     for (int i = get_global_id(0); i < NUM_BLOCKS; i += get_global_size(0)) {
         int index = (int) sortedBlock[i].y;
         sortedBlockCenter[i] = blockCenter[index];
@@ -80,7 +80,7 @@ __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global c
 #define BUFFER_SIZE 256
 
 __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        __global long* restrict interactionCount, __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms,
+        __global TileIndex* restrict interactionCount, __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms,
         __global const real4* restrict posq, long maxTiles, unsigned int startBlockIndex, unsigned int numBlocks, __global real2* restrict sortedBlocks,
         __global const real4* restrict sortedBlockCenter, __global const real4* restrict sortedBlockBoundingBox,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global real4* restrict oldPositions,
@@ -235,7 +235,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
 
                         long tilesToStore = neighborsInBuffer/TILE_SIZE;
                         if (indexInWarp == 0)
-                            *tileStartIndex = atom_add(interactionCount, tilesToStore);
+                            *tileStartIndex = atom_add(interactionCount, (TileIndex)tilesToStore);
                         SYNC_WARPS;
                         long newTileStartIndex = *tileStartIndex;
                         if (newTileStartIndex+tilesToStore <= maxTiles) {
@@ -257,7 +257,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
         if (neighborsInBuffer > 0) {
             long tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
             if (indexInWarp == 0)
-                *tileStartIndex = atom_add(interactionCount, tilesToStore);
+                *tileStartIndex = atom_add(interactionCount, (TileIndex)tilesToStore);
             SYNC_WARPS;
             long newTileStartIndex = *tileStartIndex;
             if (newTileStartIndex+tilesToStore <= maxTiles) {
@@ -315,7 +315,7 @@ void prefixSum(__local int* sum, __local int2* temp) {
  * in them, and writes the result to global memory.
  */
 void storeInteractionData(int x, __local int* buffer, __local int* sum, __local int2* temp, __local int* atoms, __local int* numAtoms,
-            __local long* baseIndex, __global long* interactionCount, __global int* interactingTiles, __global unsigned int* interactingAtoms, real4 periodicBoxSize,
+            __local long* baseIndex, __global TileIndex* interactionCount, __global int* interactingTiles, __global unsigned int* interactingAtoms, real4 periodicBoxSize,
             real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, __global const real4* posq, __local real4* posBuffer,
             real4 blockCenterX, real4 blockSizeX, long maxTiles, bool finish) {
     const bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= PADDED_CUTOFF &&
@@ -403,7 +403,7 @@ void storeInteractionData(int x, __local int* buffer, __local int* sum, __local 
         long tilesToStore = (storePartialTile ? (atomsToStore+TILE_SIZE-1)/TILE_SIZE : atomsToStore/TILE_SIZE);
         if (tilesToStore > 0) {
             if (get_local_id(0) == 0)
-                *baseIndex = atom_add(interactionCount, tilesToStore);
+                *baseIndex = atom_add(interactionCount, (TileIndex)tilesToStore);
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) == 0)
                 *numAtoms = atomsToStore-tilesToStore*TILE_SIZE;
@@ -429,7 +429,7 @@ void storeInteractionData(int x, __local int* buffer, __local int* sum, __local 
         // previous call to this function.  Save them now.
 
         if (get_local_id(0) == 0)
-            *baseIndex = atom_add(interactionCount, 1);
+            *baseIndex = atom_add(interactionCount, (TileIndex)1);
         barrier(CLK_LOCAL_MEM_FENCE);
         if (*baseIndex < maxTiles) {
             if (get_local_id(0) == 0)
@@ -451,7 +451,7 @@ void storeInteractionData(int x, __local int* buffer, __local int* sum, __local 
  * mark them as non-interacting.
  */
 __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        __global long* restrict interactionCount, __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms,
+        __global TileIndex* restrict interactionCount, __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms,
         __global const real4* restrict posq, long maxTiles, unsigned int startBlockIndex, unsigned int numBlocks, __global real2* restrict sortedBlocks,
         __global const real4* restrict sortedBlockCenter, __global const real4* restrict sortedBlockBoundingBox,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global real4* restrict oldPositions,

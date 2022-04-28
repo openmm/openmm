@@ -441,7 +441,7 @@ KERNEL void computeFixedField(
         GLOBAL const uint2* RESTRICT covalentFlags, GLOBAL const unsigned int* RESTRICT polarizationGroupFlags, GLOBAL const int2* RESTRICT exclusionTiles,
         mm_long startTileIndex, mm_long numTileIndices,
 #ifdef USE_CUTOFF
-        GLOBAL const int* RESTRICT tiles, GLOBAL const mm_long* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        GLOBAL const int* RESTRICT tiles, GLOBAL const TileIndex* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, mm_long maxTiles, GLOBAL const real4* RESTRICT blockCenter,
         GLOBAL const unsigned int* RESTRICT interactingAtoms,
 #elif defined USE_GK

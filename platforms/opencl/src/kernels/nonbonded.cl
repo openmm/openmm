@@ -25,7 +25,7 @@ __kernel void computeNonbonded(
         __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
         __global const int2* restrict exclusionTiles, long startTileIndex, long numTileIndices
 #ifdef USE_CUTOFF
-        , __global const int* restrict tiles, __global const long* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        , __global const int* restrict tiles, __global const TileIndex* restrict interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, long maxTiles, __global const real4* restrict blockCenter,
         __global const real4* restrict blockSize, __global const int* restrict interactingAtoms
 #endif

@@ -89,8 +89,14 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
             numForceBuffers = numForceThreadBlocks*forceThreadBlockSize/OpenCLContext::TileSize;
         }
     }
-    pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(unsigned int));
-    pinnedCountMemory = (unsigned int*) context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(int));
+    if(context.getSupports64BitGlobalAtomics()) {
+        pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(cl_ulong));
+        pinnedCountMemory = context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(cl_ulong));
+    }
+    else {
+        pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(cl_int));
+        pinnedCountMemory = context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(cl_int));
+    }
     setKernelSource(deviceIsCpu ? OpenCLKernelSources::nonbonded_cpu : OpenCLKernelSources::nonbonded);
 }
 
@@ -296,7 +302,10 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         int numAtoms = context.getNumAtoms();
         interactingTiles.initialize<cl_int>(context, maxTiles, "interactingTiles");
         interactingAtoms.initialize<cl_int>(context, OpenCLContext::TileSize*maxTiles, "interactingAtoms");
-        interactionCount.initialize<cl_long>(context, 1, "interactionCount");
+        if(context.getSupports64BitGlobalAtomics())
+            interactionCount.initialize<cl_long>(context, 1, "interactionCount");
+        else
+            interactionCount.initialize<cl_int>(context, 1, "interactionCount");
         int elementSize = (context.getUseDoublePrecision() ? sizeof(cl_double) : sizeof(cl_float));
         blockCenter.initialize(context, numAtomBlocks, 4*elementSize, "blockCenter");
         blockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "blockBoundingBox");
@@ -306,10 +315,13 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
         blockSorter = new OpenCLSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks, false);
-        vector<cl_long> count(1, 0);
-        interactionCount.upload(count);
-        vector<cl_int> zero(1, 0);
-        rebuildNeighborList.upload(zero);
+        vector<cl_long> zero64(1, 0);
+        vector<cl_int> zero32(1, 0);
+        if(context.getSupports64BitGlobalAtomics())
+            interactionCount.upload(zero64);
+        else
+            interactionCount.upload(zero32);
+        rebuildNeighborList.upload(zero32);
     }
 }
 
@@ -372,7 +384,10 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     context.executeKernel(kernels.findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
     forceRebuildNeighborList = false;
     lastCutoff = kernels.cutoffDistance;
-    context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(int), pinnedCountMemory, NULL, &downloadCountEvent); 
+    if(context.getSupports64BitGlobalAtomics())
+        context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(cl_long), pinnedCountMemory, NULL, &downloadCountEvent); 
+    else
+        context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(cl_int), pinnedCountMemory, NULL, &downloadCountEvent); 
 }
 
 void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
@@ -396,13 +411,14 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
 bool OpenCLNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
-    if (pinnedCountMemory[0] <= interactingTiles.getSize())
+    long long numInteractions = context.getSupports64BitGlobalAtomics() ? *(cl_long*)pinnedCountMemory : *(cl_int*)pinnedCountMemory;
+    if (numInteractions <= interactingTiles.getSize())
         return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
 
-    long long maxTiles = (1.2*pinnedCountMemory[0]);
+    long long maxTiles = (1.2*numInteractions);
     unsigned int numBlocks = context.getNumAtomBlocks();
     long long totalTiles = numBlocks*((long long)numBlocks+1)/2;
     if (maxTiles > totalTiles)

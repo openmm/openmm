@@ -2243,15 +2243,24 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     }
     interactionGroupData.initialize<mm_int4>(cc, groupData.size(), "interactionGroupData");
     interactionGroupData.upload(groupData);
-    numGroupTiles.initialize<long long>(cc, 1, "numGroupTiles");
+    if(cc.getSupports64BitGlobalAtomics())
+        numGroupTiles.initialize<long long>(cc, 1, "numGroupTiles");
+    else
+        numGroupTiles.initialize<unsigned int>(cc, 1, "numGroupTiles");
+
 
     // Allocate space for a neighbor list, if necessary.
 
     if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff && groupData.size() > cc.getNumThreadBlocks()) {
         filteredGroupData.initialize<mm_int4>(cc, groupData.size(), "filteredGroupData");
         interactionGroupData.copyTo(filteredGroupData);
-        long long numTiles = groupData.size()/32;
-        numGroupTiles.upload(&numTiles);
+        if(cc.getSupports64BitGlobalAtomics()) {
+            long long numTiles = groupData.size()/32;
+            numGroupTiles.upload(&numTiles);
+        } else {
+            unsigned int numTiles = groupData.size()/32;
+            numGroupTiles.upload(&numTiles);
+        }
     }
     
     // Create the kernel.
