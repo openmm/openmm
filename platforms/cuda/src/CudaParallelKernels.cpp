@@ -117,8 +117,8 @@ public:
                 cuStreamWaitEvent(stream, localEvent, 0);
                 int numAtoms = cu.getPaddedNumAtoms();
                 if (cu.getPlatformData().peerAccessSupported) {
-                    int numBytes = numAtoms*3*sizeof(long long);
-                    int offset = (cu.getContextIndex()-1)*numBytes;
+                    size_t numBytes = numAtoms*3*sizeof(long long);
+                    size_t offset = (cu.getContextIndex()-1)*numBytes;
                     CudaContext& context0 = *cu.getPlatformData().contexts[0];
                     CHECK_RESULT(cuMemcpyAsync(contextForces.getDevicePointer()+offset, cu.getForce().getDevicePointer(), numBytes, stream), "Error copying forces");
                     cuEventRecord(event, stream);
@@ -216,7 +216,7 @@ void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& contex
         cuEventRecord(event, cu.getCurrentStream());
     }
     else {
-        int numBytes = cu.getPosq().getSize()*cu.getPosq().getElementSize();
+        size_t numBytes = cu.getPosq().getSize()*cu.getPosq().getElementSize();
         cuEventRecord(event, cu.getCurrentStream());
         for (int i = 1; i < (int) data.contexts.size(); i++) {
             cuStreamWaitEvent(peerCopyStream[i], event, 0);

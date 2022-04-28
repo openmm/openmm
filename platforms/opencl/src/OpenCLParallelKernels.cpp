@@ -89,7 +89,7 @@ public:
         energy += kernel.finishComputation(context, includeForce, includeEnergy, groups, valid);
         if (includeForce) {
             if (cl.getContextIndex() > 0) {
-                int numAtoms = cl.getPaddedNumAtoms();
+                size_t numAtoms = cl.getPaddedNumAtoms();
                 void* dest = (cl.getUseDoublePrecision() ? (void*) &((mm_double4*) pinnedMemory)[(cl.getContextIndex()-1)*numAtoms] : (void*) &((mm_float4*) pinnedMemory)[(cl.getContextIndex()-1)*numAtoms]);
                 cl.getQueue().enqueueReadBuffer(cl.getForce().getDeviceBuffer(), CL_TRUE, 0,
                         numAtoms*cl.getForce().getElementSize(), dest);
@@ -143,7 +143,7 @@ void OpenCLParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& cont
     if (!contextForces.isInitialized()) {
         contextForces.initialize<mm_float4>(cl0, &cl0.getForceBuffers().getDeviceBuffer(),
                 data.contexts.size()*cl0.getPaddedNumAtoms(), "contextForces");
-        int bufferBytes = (data.contexts.size()-1)*cl0.getPaddedNumAtoms()*elementSize;
+        size_t bufferBytes = (data.contexts.size()-1)*cl0.getPaddedNumAtoms()*elementSize;
         pinnedPositionBuffer = new cl::Buffer(cl0.getContext(), CL_MEM_ALLOC_HOST_PTR, bufferBytes);
         pinnedPositionMemory = cl0.getQueue().enqueueMapBuffer(*pinnedPositionBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
         pinnedForceBuffer = new cl::Buffer(cl0.getContext(), CL_MEM_ALLOC_HOST_PTR, bufferBytes);
@@ -175,7 +175,7 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
         // Sum the forces from all devices.
         
         OpenCLContext& cl = *data.contexts[0];
-        int numAtoms = cl.getPaddedNumAtoms();
+        size_t numAtoms = cl.getPaddedNumAtoms();
         int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
         cl.getQueue().enqueueWriteBuffer(contextForces.getDeviceBuffer(), CL_FALSE, numAtoms*elementSize,
                 numAtoms*(data.contexts.size()-1)*elementSize, pinnedForceMemory);
