@@ -846,6 +846,6 @@ void OpenCLContext::flushQueue() {
     getQueue().flush();
 }
 
-void OpenCLContext::synchronize() {
+void OpenCLContext::finishQueue() {
     getQueue().finish();
 }

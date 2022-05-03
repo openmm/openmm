@@ -665,10 +665,11 @@ public:
      */
     void flushQueue();
     /**
-     * Wait until all work has been completed.
+     * Wait until all work that has been queued has been completed (not simply submitted, as in flushQueue).
+     * No synchronization with the worker thread (getWorkThread) is performed here.
      * This is useful for debugging.
      */
-    void synchronize();
+    void finishQueue();
 private:
     OpenCLPlatform::PlatformData& platformData;
     int deviceIndex;

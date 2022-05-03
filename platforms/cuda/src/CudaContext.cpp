@@ -857,7 +857,7 @@ void CudaContext::addEnergyParameterDerivative(const string& param) {
 void CudaContext::flushQueue() {
     cuStreamSynchronize(getCurrentStream());
 }
-void CudaContext::synchronize() {
+void CudaContext::finishQueue() {
     CUcontext popped;
     string errorMessage = "Error on synchronization";
     CHECK_RESULT(cuCtxPushCurrent(context));
