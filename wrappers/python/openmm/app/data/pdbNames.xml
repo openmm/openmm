@@ -274,7 +274,7 @@
   <Atom name="H72" alt1="2H5M"/>
   <Atom name="H73" alt1="3H5M"/>
  </Residue>
- <Residue name="HOH" alt1="H20" alt2="WAT" alt3="SOL" alt4="TIP3" alt5="TP3">
+ <Residue name="HOH" alt1="H20" alt2="WAT" alt3="SOL" alt4="TIP3" alt5="TP3" alt6="TIP">
   <Atom name="O" alt1="OW" alt2="OH2"/>
   <Atom name="H1" alt1="HW1"/>
   <Atom name="H2" alt1="HW2"/>
