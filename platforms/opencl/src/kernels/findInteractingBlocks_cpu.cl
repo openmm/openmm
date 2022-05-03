@@ -124,7 +124,7 @@ void storeInteractionData(int x, int* buffer, int* atoms, int* numAtoms, int num
             if (*numAtoms == BUFFER_SIZE) {
                 // The atoms buffer is full, so store it to global memory.
                 
-                long tilesToStore = BUFFER_SIZE/TILE_SIZE;
+                int tilesToStore = BUFFER_SIZE/TILE_SIZE;
                 long baseIndex = atom_add(interactionCount, (TileIndex)tilesToStore);
                 if (baseIndex+tilesToStore <= maxTiles) {
                     for (int i = 0; i < tilesToStore; i++) {
@@ -141,7 +141,7 @@ void storeInteractionData(int x, int* buffer, int* atoms, int* numAtoms, int num
     if (*numAtoms > 0 && finish) {
         // There are some leftover atoms, so save them now.
         
-        long tilesToStore = (*numAtoms+TILE_SIZE-1)/TILE_SIZE;
+        int tilesToStore = (*numAtoms+TILE_SIZE-1)/TILE_SIZE;
         long baseIndex = atom_add(interactionCount, (TileIndex)tilesToStore);
         if (baseIndex+tilesToStore <= maxTiles) {
             for (int i = 0; i < tilesToStore; i++) {

@@ -2198,7 +2198,7 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     
     vector<int> tileSetStart;
     tileSetStart.push_back(0);
-    long long tileSetSize = 0;
+    int tileSetSize = 0;
     for (long long i = 0; i < tileOrder.size(); i++) {
         long long tile = tileOrder[i].second;
         int size = atomLists[tiles[tile].first].size();
@@ -2243,10 +2243,7 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     }
     interactionGroupData.initialize<mm_int4>(cc, groupData.size(), "interactionGroupData");
     interactionGroupData.upload(groupData);
-    if(cc.getSupports64BitGlobalAtomics())
-        numGroupTiles.initialize<long long>(cc, 1, "numGroupTiles");
-    else
-        numGroupTiles.initialize<unsigned int>(cc, 1, "numGroupTiles");
+    numGroupTiles.initialize(cc, 1, cc.getSupports64BitGlobalAtomics() ? sizeof(long long) : sizeof(unsigned int), "numGroupTiles");
 
 
     // Allocate space for a neighbor list, if necessary.
@@ -2254,10 +2251,11 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff && groupData.size() > cc.getNumThreadBlocks()) {
         filteredGroupData.initialize<mm_int4>(cc, groupData.size(), "filteredGroupData");
         interactionGroupData.copyTo(filteredGroupData);
-        if(cc.getSupports64BitGlobalAtomics()) {
+        if (cc.getSupports64BitGlobalAtomics()) {
             long long numTiles = groupData.size()/32;
             numGroupTiles.upload(&numTiles);
-        } else {
+        }
+        else {
             unsigned int numTiles = groupData.size()/32;
             numGroupTiles.upload(&numTiles);
         }

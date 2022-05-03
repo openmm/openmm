@@ -205,7 +205,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
     sort(exclusionTilesVec.begin(), exclusionTilesVec.end(), compareInt2);
     exclusionTiles.initialize<int2>(context, exclusionTilesVec.size(), "exclusionTiles");
     exclusionTiles.upload(exclusionTilesVec);
-    map<pair<int, int>, int> exclusionTileMap;
+    map<pair<int, int>, long long> exclusionTileMap;
     for (long long i = 0; i < exclusionTilesVec.size(); i++) {
         int2 tile = exclusionTilesVec[i];
         exclusionTileMap[make_pair(tile.x, tile.y)] = i;
@@ -243,11 +243,11 @@ void CudaNonbondedUtilities::initialize(const System& system) {
             int y = atom2/CudaContext::TileSize;
             int offset2 = atom2-y*CudaContext::TileSize;
             if (x > y) {
-                int index = exclusionTileMap[make_pair(x, y)]*CudaContext::TileSize;
+                long long index = exclusionTileMap[make_pair(x, y)]*CudaContext::TileSize;
                 exclusionVec[index+offset1] &= allFlags-(1<<offset2);
             }
             else {
-                int index = exclusionTileMap[make_pair(y, x)]*CudaContext::TileSize;
+                long long index = exclusionTileMap[make_pair(y, x)]*CudaContext::TileSize;
                 exclusionVec[index+offset2] &= allFlags-(1<<offset1);
             }
         }
@@ -280,10 +280,10 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
         blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks, false);
-        vector<long long> count(2, 0);
-        interactionCount.upload(count);
-        vector<int> zero(1, 0);
-        rebuildNeighborList.upload(zero);
+        long long zero64 = 0;
+        interactionCount.upload(&zero64);
+        int zero32 = 0;
+        rebuildNeighborList.upload(&zero32);
     }
 
     // Record arguments for kernels.

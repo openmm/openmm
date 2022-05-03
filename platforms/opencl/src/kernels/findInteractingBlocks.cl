@@ -113,7 +113,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
         int x = (int) sortedKey.y;
         real4 blockCenterX = sortedBlockCenter[block1];
         real4 blockSizeX = sortedBlockBoundingBox[block1];
-        long neighborsInBuffer = 0;
+        int neighborsInBuffer = 0;
         real3 pos1 = posq[x*TILE_SIZE+indexInWarp].xyz;
 #ifdef USE_PERIODIC
         const bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= PADDED_CUTOFF &&
@@ -233,7 +233,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                     if (neighborsInBuffer > BUFFER_SIZE-TILE_SIZE) {
                         // Store the new tiles to memory.
 
-                        long tilesToStore = neighborsInBuffer/TILE_SIZE;
+                        int tilesToStore = neighborsInBuffer/TILE_SIZE;
                         if (indexInWarp == 0)
                             *tileStartIndex = atom_add(interactionCount, (TileIndex)tilesToStore);
                         SYNC_WARPS;
@@ -255,7 +255,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
         // If we have a partially filled buffer,  store it to memory.
         
         if (neighborsInBuffer > 0) {
-            long tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
+            int tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
             if (indexInWarp == 0)
                 *tileStartIndex = atom_add(interactionCount, (TileIndex)tilesToStore);
             SYNC_WARPS;
@@ -400,7 +400,7 @@ void storeInteractionData(int x, __local int* buffer, __local int* sum, __local 
 
         int atomsToStore = *numAtoms+sum[BUFFER_SIZE-1];
         bool storePartialTile = (finish && base >= numValid-BUFFER_SIZE/WARP_SIZE);
-        long tilesToStore = (storePartialTile ? (atomsToStore+TILE_SIZE-1)/TILE_SIZE : atomsToStore/TILE_SIZE);
+        int tilesToStore = (storePartialTile ? (atomsToStore+TILE_SIZE-1)/TILE_SIZE : atomsToStore/TILE_SIZE);
         if (tilesToStore > 0) {
             if (get_local_id(0) == 0)
                 *baseIndex = atom_add(interactionCount, (TileIndex)tilesToStore);

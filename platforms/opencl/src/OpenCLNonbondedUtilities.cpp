@@ -89,14 +89,9 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
             numForceBuffers = numForceThreadBlocks*forceThreadBlockSize/OpenCLContext::TileSize;
         }
     }
-    if(context.getSupports64BitGlobalAtomics()) {
-        pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(cl_ulong));
-        pinnedCountMemory = context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(cl_ulong));
-    }
-    else {
-        pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(cl_int));
-        pinnedCountMemory = context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(cl_int));
-    }
+    int tileIndexSize = (context.getSupports64BitGlobalAtomics() ? sizeof(cl_ulong) : sizeof(cl_int));
+    pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, tileIndexSize);
+    pinnedCountMemory = context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, tileIndexSize);
     setKernelSource(deviceIsCpu ? OpenCLKernelSources::nonbonded_cpu : OpenCLKernelSources::nonbonded);
 }
 
@@ -266,7 +261,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     exclusions.initialize<cl_uint>(context, tilesWithExclusions.size()*OpenCLContext::TileSize, "exclusions");
     cl_uint allFlags = (cl_uint) -1;
     vector<cl_uint> exclusionVec(exclusions.getSize(), allFlags);
-    for (long i = 0; i < exclusions.getSize(); ++i)
+    for (long long i = 0; i < exclusions.getSize(); ++i)
         exclusionVec[i] = 0xFFFFFFFF;
     for (int atom1 = 0; atom1 < (int) atomExclusions.size(); ++atom1) {
         int x = atom1/OpenCLContext::TileSize;
@@ -302,10 +297,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         int numAtoms = context.getNumAtoms();
         interactingTiles.initialize<cl_int>(context, maxTiles, "interactingTiles");
         interactingAtoms.initialize<cl_int>(context, OpenCLContext::TileSize*maxTiles, "interactingAtoms");
-        if(context.getSupports64BitGlobalAtomics())
-            interactionCount.initialize<cl_long>(context, 1, "interactionCount");
-        else
-            interactionCount.initialize<cl_int>(context, 1, "interactionCount");
+        interactionCount.initialize(context, 1, context.getSupports64BitGlobalAtomics() ? sizeof(cl_ulong) : sizeof(cl_int), "interactionCount");
         int elementSize = (context.getUseDoublePrecision() ? sizeof(cl_double) : sizeof(cl_float));
         blockCenter.initialize(context, numAtomBlocks, 4*elementSize, "blockCenter");
         blockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "blockBoundingBox");
@@ -315,9 +307,9 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
         blockSorter = new OpenCLSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks, false);
-        vector<cl_long> zero64(1, 0);
+        vector<cl_ulong> zero64(1, 0);
         vector<cl_int> zero32(1, 0);
-        if(context.getSupports64BitGlobalAtomics())
+        if (context.getSupports64BitGlobalAtomics())
             interactionCount.upload(zero64);
         else
             interactionCount.upload(zero32);
@@ -384,10 +376,7 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     context.executeKernel(kernels.findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
     forceRebuildNeighborList = false;
     lastCutoff = kernels.cutoffDistance;
-    if(context.getSupports64BitGlobalAtomics())
-        context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(cl_long), pinnedCountMemory, NULL, &downloadCountEvent); 
-    else
-        context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(cl_int), pinnedCountMemory, NULL, &downloadCountEvent); 
+    context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, context.getSupports64BitGlobalAtomics() ? sizeof(cl_long) : sizeof(cl_int), pinnedCountMemory, NULL, &downloadCountEvent);
 }
 
 void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
