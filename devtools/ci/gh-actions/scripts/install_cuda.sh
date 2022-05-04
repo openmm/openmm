@@ -1,4 +1,4 @@
-`# This script install CUDA on Ubuntu-based systemws
+# This script install CUDA on Ubuntu-based systemws
 # It uses the Nvidia repos for Ubuntu 18.04, which as of Dec 2020
 # includes packages for CUDA 10.0, 10.1, 10.2, 11.0, 11.1, 11.2
 # Future versions might require an updated repo (maybe Ubuntu 20)
