@@ -650,7 +650,7 @@ jobs:
         shell: bash -l {0}
         env:
           # Pipe-seperated list of domains to skip
-          SKIP_DOMAIN: support.amd.com|www.pnas.org
+          SKIP_DOMAIN: support.amd.com|www.pnas.org|doi.org
         run: |
           set +e
           # Linkinator accepts regex for its --skip argument, so we
