@@ -148,8 +148,10 @@ void CpuCustomNonbondedForceFvec<FVEC, BLOCK_SIZE>::calculateBlockIxnImpl(Thread
         int atom = neighbors.getNeighbor();
         printf("atoms %d, %d %d %d\n", atom, blockAtom[0], blockAtom[1], blockAtom[2], blockAtom[3]);
         for (int j = 0; j < numParams; j++)
-            for (int k = 0; k < BLOCK_SIZE; k++)
+            for (int k = 0; k < BLOCK_SIZE; k++) {
                 data.vecParticle2Params[j*BLOCK_SIZE+k] = atomParameters[atom][j];
+                printf("  set %p to %g\n", &data.vecParticle2Params[j*BLOCK_SIZE+k], atomParameters[atom][j]);
+            }
         for (int j = 0; j < numComputed; j++)
             for (int k = 0; k < BLOCK_SIZE; k++)
                 data.vecParticle2Values[j*BLOCK_SIZE+k] = atomComputedValues[j][atom];
