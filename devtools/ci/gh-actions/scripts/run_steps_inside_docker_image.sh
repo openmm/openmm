@@ -71,6 +71,7 @@ echo "::endgroup::"
 # Core tests
 
 echo "::group::Run core tests..."
+./TestCpuCustomNonbondedForce
 python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 1500 --job-duration 360 --attempts 3
 test -f ${CONDA_PREFIX}/lib/libOpenMM.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.so
@@ -82,14 +83,14 @@ fi
 echo "::endgroup::"
 
 # Python tests
-echo "::group::Run Python tests..."
-python -m openmm.testInstallation
-python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
-cd python/tests
-# Gromacs is not available on condaforge for PPC/ARM
-# Membrane an MTS Langevin Integrator tests timeout (>6h!), possibly due to the emulation slowdown
-python -m pytest -v -k "not gromacs and not membrane and not MTSLangevinIntegrator" -n 2
-echo "::endgroup::"
+#echo "::group::Run Python tests..."
+#python -m openmm.testInstallation
+#python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
+#cd python/tests
+## Gromacs is not available on condaforge for PPC/ARM
+## Membrane an MTS Langevin Integrator tests timeout (>6h!), possibly due to the emulation slowdown
+#python -m pytest -v -k "not gromacs and not membrane and not MTSLangevinIntegrator" -n 2
+#echo "::endgroup::"
 
 echo "We are done!"
 touch "${WORKSPACE}/docker_steps_run_successfully"

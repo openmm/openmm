@@ -113,6 +113,7 @@ void CpuCustomNonbondedForceFvec<FVEC, BLOCK_SIZE>::calculateBlockIxn(ThreadData
         calculateBlockIxnImpl<PeriodicTriclinic>(data, blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
 }
 
+#include <cstdio>
 template<typename FVEC, int BLOCK_SIZE>
 template <int PERIODIC_TYPE>
 void CpuCustomNonbondedForceFvec<FVEC, BLOCK_SIZE>::calculateBlockIxnImpl(ThreadData& data, int blockIndex, float* forces, double& totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter) {
@@ -171,6 +172,7 @@ void CpuCustomNonbondedForceFvec<FVEC, BLOCK_SIZE>::calculateBlockIxnImpl(Thread
         const auto r = r2*inverseR;
         r.store(data.rvec.data());
         FVEC dEdR(data.forceVecExpression.evaluate());
+        printf("a atoms %d, %d %d %d, dEdR %g %g %g %g\n", atom, blockAtom[0], blockAtom[1], blockAtom[2], blockAtom[3], dEdR[0], dEdR[1], dEdR[2], dEdR[3]);
         FVEC energy;
         if (includeEnergy)
             energy = FVEC(data.energyVecExpression.evaluate());
@@ -189,7 +191,9 @@ void CpuCustomNonbondedForceFvec<FVEC, BLOCK_SIZE>::calculateBlockIxnImpl(Thread
             energy = blendZero(energy, include);
             partialEnergy += energy;
         }
+        printf("b atoms %d, %d %d %d, dEdR %g %g %g %g\n", atom, blockAtom[0], blockAtom[1], blockAtom[2], blockAtom[3], dEdR[0], dEdR[1], dEdR[2], dEdR[3]);
         dEdR = blendZero(dEdR, include);
+        printf("c atoms %d, %d %d %d, dEdR %g %g %g %g\n", atom, blockAtom[0], blockAtom[1], blockAtom[2], blockAtom[3], dEdR[0], dEdR[1], dEdR[2], dEdR[3]);
         const auto fx = dx*dEdR;
         const auto fy = dy*dEdR;
         const auto fz = dz*dEdR;
