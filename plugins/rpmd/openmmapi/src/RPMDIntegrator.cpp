@@ -72,7 +72,6 @@ void RPMDIntegrator::initialize(ContextImpl& contextRef) {
 }
 
 void RPMDIntegrator::cleanup() {
-    context = nullptr;
     kernel = Kernel();
 }
 
