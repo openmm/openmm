@@ -72,7 +72,7 @@ echo "::endgroup::"
 
 echo "::group::Run core tests..."
 ./TestCpuCustomNonbondedForce
-python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 1500 --job-duration 360 --attempts 3
+#python ${WORKSPACE}/devtools/run-ctest.py --parallel 2 --timeout 1500 --job-duration 360 --attempts 3
 test -f ${CONDA_PREFIX}/lib/libOpenMM.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.so
 test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMPME.so

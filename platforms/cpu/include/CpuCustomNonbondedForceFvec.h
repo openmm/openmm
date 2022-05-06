@@ -146,6 +146,7 @@ void CpuCustomNonbondedForceFvec<FVEC, BLOCK_SIZE>::calculateBlockIxnImpl(Thread
         // Load the next neighbor.
 
         int atom = neighbors.getNeighbor();
+        printf("atoms %d, %d %d %d\n", atom, blockAtom[0], blockAtom[1], blockAtom[2], blockAtom[3]);
         for (int j = 0; j < numParams; j++)
             for (int k = 0; k < BLOCK_SIZE; k++)
                 data.vecParticle2Params[j*BLOCK_SIZE+k] = atomParameters[atom][j];
@@ -171,8 +172,15 @@ void CpuCustomNonbondedForceFvec<FVEC, BLOCK_SIZE>::calculateBlockIxnImpl(Thread
         const auto inverseR = rsqrt(r2);
         const auto r = r2*inverseR;
         r.store(data.rvec.data());
-        FVEC dEdR(data.forceVecExpression.evaluate());
-        printf("a atoms %d, %d %d %d, dEdR %g %g %g %g\n", atom, blockAtom[0], blockAtom[1], blockAtom[2], blockAtom[3], dEdR[0], dEdR[1], dEdR[2], dEdR[3]);
+//        FVEC dEdR(data.forceVecExpression.evaluate());
+        for (auto name : data.forceVecExpression.getVariables()) {
+            float* loc = data.forceVecExpression.getVariablePointer(name);
+            printf("%s = %g %g %g %g\n", name.c_str(), loc[0], loc[1], loc[2], loc[3]);
+        }
+        const float* result = data.forceVecExpression.evaluate();
+        FVEC dEdR(result);
+        printf("result %g %g %g %g\n", result[0], result[1], result[2], result[3]);
+        printf("dEdR %g %g %g %g\n", dEdR[0], dEdR[1], dEdR[2], dEdR[3]);
         FVEC energy;
         if (includeEnergy)
             energy = FVEC(data.energyVecExpression.evaluate());
@@ -191,9 +199,7 @@ void CpuCustomNonbondedForceFvec<FVEC, BLOCK_SIZE>::calculateBlockIxnImpl(Thread
             energy = blendZero(energy, include);
             partialEnergy += energy;
         }
-        printf("b atoms %d, %d %d %d, dEdR %g %g %g %g\n", atom, blockAtom[0], blockAtom[1], blockAtom[2], blockAtom[3], dEdR[0], dEdR[1], dEdR[2], dEdR[3]);
         dEdR = blendZero(dEdR, include);
-        printf("c atoms %d, %d %d %d, dEdR %g %g %g %g\n", atom, blockAtom[0], blockAtom[1], blockAtom[2], blockAtom[3], dEdR[0], dEdR[1], dEdR[2], dEdR[3]);
         const auto fx = dx*dEdR;
         const auto fy = dy*dEdR;
         const auto fz = dz*dEdR;
