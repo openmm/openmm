@@ -82,6 +82,12 @@ CpuCustomNonbondedForce::ThreadData::ThreadData(const CompiledExpression& energy
     }
     this->energyVecExpression.setVariableLocations(vecVariableLocations);
     this->forceVecExpression.setVariableLocations(vecVariableLocations);
+    printf("particle 1 params: %p\n", vecParticle1Params.data());
+    printf("particle 2 params: %p\n", vecParticle2Params.data());
+    for (auto name : this->forceVecExpression.getVariables()) {
+        float* loc = this->forceVecExpression.getVariablePointer(name);
+        printf("init %s %p\n", name.c_str(), loc);
+    }
 
     // Prepare for passing variables to the computed value expressions.
 
