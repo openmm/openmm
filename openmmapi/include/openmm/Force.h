@@ -108,7 +108,7 @@ protected:
     /**
      * Get the ForceImpl corresponding to this Force in a Context.
      */
-    ForceImpl& getImplInContext(Context& context);
+    ForceImpl& getImplInContext(Context& context) const;
     /**
      * Get a const reference to the ForceImpl corresponding to this Force in a Context.
      */
@@ -116,7 +116,7 @@ protected:
     /**
      * Get the ContextImpl corresponding to a Context.
      */
-    ContextImpl& getContextImpl(Context& context);
+    ContextImpl& getContextImpl(Context& context) const;
 private:
     int forceGroup;
     std::string name;

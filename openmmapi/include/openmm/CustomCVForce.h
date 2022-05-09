@@ -238,7 +238,7 @@ public:
      * @param[out] values    the values of the collective variables are computed and
      *                       stored into this
      */
-    void getCollectiveVariableValues(Context& context, std::vector<double>& values);
+    void getCollectiveVariableValues(Context& context, std::vector<double>& values) const;
     /**
      * Get the inner Context used for evaluating collective variables.
      * 
