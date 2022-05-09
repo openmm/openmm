@@ -235,8 +235,10 @@ void CpuCustomNonbondedForce::threadComputeForce(ThreadPool& threads, int thread
         }
         try {
             float* p = data.forceVecExpression.getVariablePointer(param.first);
-            for (int i = 0; i < blockSize; i++)
+            for (int i = 0; i < blockSize; i++) {
                 p[i] = param.second;
+                printf("  set global %p to %g\n", &p[i], param.second);
+            }
         }
         catch (...) {
             // The expression doesn't use this parameter.
