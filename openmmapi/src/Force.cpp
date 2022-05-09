@@ -76,7 +76,7 @@ bool Force::usesPeriodicBoundaryConditions() const {
     throw OpenMMException("usesPeriodicBoundaryConditions is not implemented");
 }
 
-ForceImpl& Force::getImplInContext(Context& context) {
+ForceImpl& Force::getImplInContext(Context& context) const {
     for (auto impl : context.getImpl().getForceImpls())
         if (&impl->getOwner() == this)
             return *impl;
@@ -90,6 +90,6 @@ const ForceImpl& Force::getImplInContext(const Context& context) const {
     throw OpenMMException("getImplInContext: This Force is not present in the Context");
 }
 
-ContextImpl& Force::getContextImpl(Context& context) {
+ContextImpl& Force::getContextImpl(Context& context) const {
     return context.getImpl();
 }
