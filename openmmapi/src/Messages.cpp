@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2022 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,54 +29,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/OpenMMException.h"
-#include "openmm/internal/GBSAOBCForceImpl.h"
-#include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/Messages.h"
-#include "openmm/kernels.h"
-#include <vector>
 
 using namespace OpenMM;
-using std::vector;
+using namespace std;
 
-GBSAOBCForceImpl::GBSAOBCForceImpl(const GBSAOBCForce& owner) : owner(owner) {
-}
-
-void GBSAOBCForceImpl::initialize(ContextImpl& context) {
-    kernel = context.getPlatform().createKernel(CalcGBSAOBCForceKernel::Name(), context);
-    if (owner.getNumParticles() != context.getSystem().getNumParticles())
-        throw OpenMMException("GBSAOBCForce must have exactly as many particles as the System it belongs to.");
-    if (owner.getNonbondedMethod() == GBSAOBCForce::CutoffPeriodic) {
-        Vec3 boxVectors[3];
-        context.getSystem().getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        double cutoff = owner.getCutoffDistance();
-        if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
-            throw OpenMMException("GBSAOBCForce: "+Messages::cutoffTooLarge);
-    }
-    for (int i = 0; i < owner.getNumParticles(); i++) {
-        double charge, radius, scalingFactor;
-        owner.getParticleParameters(i, charge, radius, scalingFactor);
-        if (radius <= 0)
-            throw OpenMMException("GBSAOBCForce: particle radius must be positive");
-        if (scalingFactor <= 0)
-            throw OpenMMException("GBSAOBCForce: particle scaling factor must be positive");
-    }
-    kernel.getAs<CalcGBSAOBCForceKernel>().initialize(context.getSystem(), owner);
-}
-
-double GBSAOBCForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
-        return kernel.getAs<CalcGBSAOBCForceKernel>().execute(context, includeForces, includeEnergy);
-    return 0.0;
-}
-
-std::vector<std::string> GBSAOBCForceImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcGBSAOBCForceKernel::Name());
-    return names;
-}
-
-void GBSAOBCForceImpl::updateParametersInContext(ContextImpl& context) {
-    kernel.getAs<CalcGBSAOBCForceKernel>().copyParametersToContext(context, owner);
-    context.systemChanged();
-}
+string Messages::cutoffTooLarge = "The cutoff distance cannot be greater than half the periodic box size.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#boxsize";

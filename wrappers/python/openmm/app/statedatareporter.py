@@ -362,9 +362,9 @@ class StateDataReporter(object):
         if self._needEnergy:
             energy = (state.getKineticEnergy()+state.getPotentialEnergy()).value_in_unit(unit.kilojoules_per_mole)
             if math.isnan(energy):
-                raise ValueError('Energy is NaN')
+                raise ValueError('Energy is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
             if math.isinf(energy):
-                raise ValueError('Energy is infinite')
+                raise ValueError('Energy is infinite.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
 
     def __del__(self):
         if self._openedFile:

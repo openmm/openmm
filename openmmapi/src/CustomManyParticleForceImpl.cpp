@@ -32,6 +32,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
+#include "openmm/internal/Messages.h"
 #include "openmm/kernels.h"
 #include "lepton/Operation.h"
 #include "lepton/Parser.h"
@@ -129,7 +130,7 @@ void CustomManyParticleForceImpl::initialize(ContextImpl& context) {
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
-            throw OpenMMException("CustomManyParticleForce: The cutoff distance cannot be greater than half the periodic box size.");
+            throw OpenMMException("CustomManyParticleForce: "+Messages::cutoffTooLarge);
     }
     kernel.getAs<CalcCustomManyParticleForceKernel>().initialize(context.getSystem(), owner);
 }

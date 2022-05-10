@@ -35,6 +35,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
+#include "openmm/internal/Messages.h"
 #include "openmm/internal/SplineFitter.h"
 #include "openmm/kernels.h"
 #include "ReferenceTabulatedFunction.h"
@@ -110,7 +111,7 @@ void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
-            throw OpenMMException("CustomNonbondedForce: The cutoff distance cannot be greater than half the periodic box size.");
+            throw OpenMMException("CustomNonbondedForce: "+Messages::cutoffTooLarge);
     }
     // Check that all interaction groups only specify particles that have been defined.
     for (int group = 0; group < owner.getNumInteractionGroups(); group++) {

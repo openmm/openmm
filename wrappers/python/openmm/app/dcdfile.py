@@ -122,9 +122,9 @@ class DCDFile(object):
         if is_quantity(positions):
             positions = positions.value_in_unit(nanometers)
         if any(math.isnan(norm(pos)) for pos in positions):
-            raise ValueError('Particle position is NaN')
+            raise ValueError('Particle position is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
         if any(math.isinf(norm(pos)) for pos in positions):
-            raise ValueError('Particle position is infinite')
+            raise ValueError('Particle position is infinite.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
         file = self._file
 
         self._modelCount += 1
