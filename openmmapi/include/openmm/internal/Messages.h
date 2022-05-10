@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "windowsExport.h"
 #include <string>
 
 namespace OpenMM {
@@ -40,7 +41,7 @@ namespace OpenMM {
  * This class provides a central place to store strings that get used in many
  * places, such as common error messages.
  */
-class Messages {
+class OPENMM_EXPORT Messages {
 public:
     static std::string cutoffTooLarge;
 };
