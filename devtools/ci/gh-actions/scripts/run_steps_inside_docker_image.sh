@@ -51,6 +51,7 @@ rm -rf build || true
 mkdir -p build
 cd build
 cmake ${WORKSPACE} \
+    -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
     -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
     -DCMAKE_C_COMPILER_LAUNCHER=ccache \
