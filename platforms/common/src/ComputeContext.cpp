@@ -512,7 +512,7 @@ void ComputeContext::reorderAtomsImpl() {
             molPos[i].y *= invNumAtoms;
             molPos[i].z *= invNumAtoms;
             if (molPos[i].x != molPos[i].x)
-                throw OpenMMException("Particle coordinate is nan");
+                throw OpenMMException("Particle coordinate is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan");
         }
         if (getNonbondedUtilities().getUsePeriodic()) {
             // Move each molecule position into the same box.

@@ -229,7 +229,7 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
     });
     data.threads.waitForThreads();
     if (!positionsValid)
-        throw OpenMMException("Particle coordinate is nan");
+        throw OpenMMException("Particle coordinate is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan");
 
     // Determine whether we need to recompute the neighbor list.
         

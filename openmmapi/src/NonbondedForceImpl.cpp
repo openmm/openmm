@@ -34,6 +34,7 @@
 #endif
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/Messages.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/kernels.h"
 #include <cmath>
@@ -127,7 +128,7 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
-            throw OpenMMException("NonbondedForce: The cutoff distance cannot be greater than half the periodic box size.");
+            throw OpenMMException("NonbondedForce: "+Messages::cutoffTooLarge);
         if (owner.getNonbondedMethod() == NonbondedForce::Ewald && (boxVectors[1][0] != 0.0 || boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0))
             throw OpenMMException("NonbondedForce: Ewald is not supported with non-rectangular boxes.  Use PME instead.");
     }
