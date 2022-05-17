@@ -92,11 +92,8 @@ public:
                 voxelSizeZ = (maxz-minz)/nz;
         }
         bins.resize(ny);
-        for (int i = 0; i < ny; i++) {
+        for (int i = 0; i < ny; i++)
             bins[i].resize(nz);
-            for (int j = 0; j < nz; j++)
-                bins[i][j].resize(0);
-        }
     }
 
     /**

@@ -391,19 +391,12 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     includeEnergy = (totalEnergy != NULL);
     threadEnergy.resize(threads.getNumThreads());
     atomicCounter = 0;
+    atomicCounter2 = 0;
     
     // Signal the threads to start running and wait for them to finish.
     
     threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeDirect(threads, threadIndex); });
     threads.waitForThreads();
-    
-    // Signal the threads to subtract the exclusions.
-    
-    if (ewald || pme) {
-        atomicCounter = 0;
-        threads.resumeThreads();
-        threads.waitForThreads();
-    }
     
     // Combine the energies from all the threads.
     
@@ -436,10 +429,9 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
 
         // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
 
-        threads.syncThreads();
         const int groupSize = max(1, numberOfAtoms/(10*numThreads));
         while (true) {
-            int start = atomicCounter.fetch_add(groupSize);
+            int start = atomicCounter2.fetch_add(groupSize);
             if (start >= numberOfAtoms)
                 break;
             int end = min(start+groupSize, numberOfAtoms);
