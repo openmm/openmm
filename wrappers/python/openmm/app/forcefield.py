@@ -298,6 +298,8 @@ class ForceField(object):
                         template.overrideLevel = int(residue.attrib['override'])
                     if 'rigidWater' in residue.attrib:
                         template.rigidWater = (residue.attrib['rigidWater'].lower() == 'true')
+                    for key in residue.attrib:
+                        template.attributes[key] = residue.attrib[key]
                     atomIndices = template.atomIndices
                     for ia, atom in enumerate(residue.findall('Atom')):
                         params = {}
@@ -342,6 +344,8 @@ class ForceField(object):
                     else:
                         numResidues = 1
                     patchData = ForceField._PatchData(patchName, numResidues)
+                    for key in patch.attrib:
+                        patchData.attributes[key] = patch.attrib[key]
                     for atom in patch.findall('AddAtom'):
                         params = {}
                         for key in atom.attrib:
@@ -668,6 +672,7 @@ class ForceField(object):
             self.externalBonds = []
             self.overrideLevel = 0
             self.rigidWater = True
+            self.attributes = {}
 
         def getAtomIndexByName(self, atom_name):
             """Look up an atom index by atom name, providing a helpful error message if not found."""
@@ -799,6 +804,7 @@ class ForceField(object):
             self.deletedExternalBonds = []
             self.allAtomNames = set()
             self.virtualSites = [[] for i in range(numResidues)]
+            self.attributes = {}
 
         def createPatchedTemplates(self, templates):
             """Apply this patch to a set of templates, creating new modified ones."""
