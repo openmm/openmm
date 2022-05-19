@@ -1303,8 +1303,8 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     // Add in the long range correction.
     
     if (!hasInitializedLongRangeCorrection) {
-        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy);
         ThreadPool threads;
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(*forceCopy, threads.getNumThreads());
         CustomNonbondedForceImpl::calcLongRangeCorrection(*forceCopy, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
         hasInitializedLongRangeCorrection = true;
     }
@@ -1337,8 +1337,8 @@ void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImp
     // If necessary, recompute the long range correction.
     
     if (forceCopy != NULL) {
-        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force);
         ThreadPool threads;
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, threads.getNumThreads());
         CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
         hasInitializedLongRangeCorrection = true;
         *forceCopy = force;
