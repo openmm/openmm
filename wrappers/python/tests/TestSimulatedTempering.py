@@ -61,7 +61,7 @@ class TestSimulatedTempering(unittest.TestCase):
         force = HarmonicBondForce()
         force.addBond(0, 1, 1.0, 1000.0)
         system.addForce(force)
-        mcBarostat = MonteCarloBarostat(1*bar, 300*kelvin* 2)
+        mcBarostat = MonteCarloBarostat(1*bar, 300*kelvin, 2)
         system.addForce(mcBarostat)
         integrator = LangevinIntegrator(300*kelvin, 10/picosecond, 0.001*picosecond)
         topology = Topology()
