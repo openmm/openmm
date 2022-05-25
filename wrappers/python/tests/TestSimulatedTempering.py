@@ -53,3 +53,32 @@ class TestSimulatedTempering(unittest.TestCase):
             meanEnergy = sum([0.5*1000*(r-1)**2 for r in d])/n
             expectedEnergy = (0.5*MOLAR_GAS_CONSTANT_R*t).value_in_unit(kilojoules_per_mole)
             self.assertAlmostEqual(expectedEnergy, meanEnergy, delta=expectedEnergy*0.3)
+
+    def testHarmonicOscillatorNPT(self):
+        system = System()
+        system.addParticle(1.0)
+        system.addParticle(1.0)
+        force = HarmonicBondForce()
+        force.addBond(0, 1, 1.0, 1000.0)
+        system.addForce(force)
+        mcBarostat = MonteCarloBarostat(1*bar, 300*kelvin* 2)
+        system.addForce(mcBarostat)
+        integrator = LangevinIntegrator(300*kelvin, 10/picosecond, 0.001*picosecond)
+        topology = Topology()
+        chain = topology.addChain()
+        residue = topology.addResidue('H2', chain)
+        topology.addAtom('H1', element.hydrogen, residue)
+        topology.addAtom('H2', element.hydrogen, residue)
+        simulation = Simulation(topology, system, integrator, Platform.getPlatformByName('Reference'))
+        st = SimulatedTempering(simulation, numTemperatures=10, minTemperature=200*kelvin, maxTemperature=400*kelvin, tempChangeInterval=4, reportInterval=10000)
+        self.assertEqual(10, len(st.temperatures))
+        self.assertEqual(200*kelvin, st.temperatures[0])
+        self.assertEqual(400*kelvin, st.temperatures[-1])
+        simulation.context.setPositions([Vec3(0, 0, 0), Vec3(1, 0, 0)])
+
+        # We let the simulation run and assert at every step T(mcBarostat) == T(integrator) == T(tempering)
+        for i in range(20000):
+            st.step(2)
+            self.assertEqual(st.temperatures[st.currentTemperature], integrator.getTemperature())
+            self.assertEqual(st.temperatures[st.currentTemperature], simulation.context.getParameter('MonteCarloTemperature'))
+
