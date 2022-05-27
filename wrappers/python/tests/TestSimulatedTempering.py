@@ -60,7 +60,7 @@ class TestSimulatedTempering(unittest.TestCase):
         inpcrd = AmberInpcrdFile('systems/alanine-dipeptide-explicit.inpcrd')
         system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer, constraints=HBonds)
         mcbarostat = MonteCarloBarostat(1*bar, 100*kelvin, 2)
-        system.addForce(mcBarostat)
+        system.addForce(mcbarostat)
         integrator = LangevinIntegrator(100*kelvin, 1/picosecond, 0.001*picosecond)
         simulation = Simulation(topology, system, integrator, Platform.getPlatformByName('Reference'))
         simulation.context.setPositions(inpcrd.positions)
