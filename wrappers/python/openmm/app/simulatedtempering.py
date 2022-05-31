@@ -160,6 +160,9 @@ class SimulatedTempering(object):
         
         self.currentTemperature = 0
         self.simulation.integrator.setTemperature(self.temperatures[self.currentTemperature])
+        for param in self.simulation.context.getParameters():
+            if 'MonteCarloTemperature' in param:
+                self.simulation.context.setParameter(param, self.temperatures[self.currentTemperature])
         
         # Add a reporter to the simulation which will handle the updates and reports.
         
@@ -230,6 +233,9 @@ class SimulatedTempering(object):
                     self._hasMadeTransition = True
                     self.currentTemperature = j
                     self.simulation.integrator.setTemperature(self.temperatures[j])
+                    for param in self.simulation.context.getParameters():
+                        if 'MonteCarloTemperature' in param:
+                            self.simulation.context.setParameter(param, self.temperatures[self.currentTemperature])
                 if self._updateWeights:
                     # Update the weight factors.
                     
