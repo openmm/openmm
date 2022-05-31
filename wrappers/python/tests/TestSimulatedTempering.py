@@ -55,17 +55,26 @@ class TestSimulatedTempering(unittest.TestCase):
             self.assertAlmostEqual(expectedEnergy, meanEnergy, delta=expectedEnergy*0.3)
 
 
-    def testAlanineDipeptideExplicit(self):
-        prmtop = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
-        inpcrd = AmberInpcrdFile('systems/alanine-dipeptide-explicit.inpcrd')
-        system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer, constraints=HBonds)
+    def testHarmonicOscillatorNPT(self):
+        """Test running simulated tempering on a harmonic oscillator with a Monte Carlo barostat."""
+        system = System()
+        system.addParticle(1.0)
+        system.addParticle(1.0)
+        force = HarmonicBondForce()
+        force.addBond(0, 1, 1.0, 1000.0)
+        system.addForce(force)
         mcbarostat = MonteCarloBarostat(1*bar, 100*kelvin, 2)
         system.addForce(mcbarostat)
-        integrator = LangevinIntegrator(100*kelvin, 1/picosecond, 0.001*picosecond)
+        force.setUsesPeriodicBoundaryConditions(True)
+        integrator = LangevinIntegrator(100*kelvin, 10/picosecond, 0.001*picosecond)
+        topology = Topology()
+        chain = topology.addChain()
+        residue = topology.addResidue('H2', chain)
+        topology.addAtom('H1', element.hydrogen, residue)
+        topology.addAtom('H2', element.hydrogen, residue)
         simulation = Simulation(topology, system, integrator, Platform.getPlatformByName('Reference'))
-        simulation.context.setPositions(inpcrd.positions)
-        simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
-        
+        simulation.context.setPositions([Vec3(0, 0, 0), Vec3(1, 0, 0)])
+
         # Check the temperature is correct before creating the simulated tempering simulation
         
         self.assertEqual(100*kelvin, integrator.getTemperature())
@@ -83,8 +92,9 @@ class TestSimulatedTempering(unittest.TestCase):
 
         # Let the simulation run and assert at every step T(mcbarostat) == T(integrator) == T(tempering)
 
-        for i in range(50):
+        for i in range(1000):
             st.step(2)
             self.assertEqual(st.temperatures[st.currentTemperature], integrator.getTemperature())
             self.assertEqual(st.temperatures[st.currentTemperature], simulation.context.getParameter('MonteCarloTemperature')*kelvin)
+
 
