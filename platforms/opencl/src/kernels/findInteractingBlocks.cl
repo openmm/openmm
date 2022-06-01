@@ -249,6 +249,9 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                         neighborsInBuffer -= TILE_SIZE*tilesToStore;
                    }
                 }
+                else {
+                    SYNC_WARPS;
+                }
             }
         }
         
