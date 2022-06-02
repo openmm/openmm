@@ -5518,16 +5518,21 @@ class AmoebaWcaDispersionGenerator(object):
         #   <WcaDispersion class="1" radius="0.1855" epsilon="0.46024" />
         #   <WcaDispersion class="2" radius="0.191" epsilon="0.422584" />
 
-        generator = AmoebaWcaDispersionGenerator(element.attrib['epso'],
-                                                  element.attrib['epsh'],
-                                                  element.attrib['rmino'],
-                                                  element.attrib['rminh'],
-                                                  element.attrib['awater'],
-                                                  element.attrib['slevy'],
-                                                  element.attrib['dispoff'],
-                                                  element.attrib['shctd'])
-        forceField._forces.append(generator)
-        generator.params = ForceField._AtomTypeParameters(forceField, 'AmoebaWcaDispersionForce', 'WcaDispersion', ('radius', 'epsilon'))
+        existing = [f for f in forceField._forces if isinstance(f, AmoebaWcaDispersionGenerator)]
+        if len(existing) == 0:
+            generator = AmoebaWcaDispersionGenerator(element.attrib['epso'],
+                                                     element.attrib['epsh'],
+                                                     element.attrib['rmino'],
+                                                     element.attrib['rminh'],
+                                                     element.attrib['awater'],
+                                                     element.attrib['slevy'],
+                                                     element.attrib['dispoff'],
+                                                     element.attrib['shctd'])
+            forceField.registerGenerator(generator)
+            generator.params = ForceField._AtomTypeParameters(forceField, 'AmoebaWcaDispersionForce', 'WcaDispersion', ('radius', 'epsilon'))
+        else:
+            # Multiple <AmoebaWcaDispersionForce> tags were found, probably in different files.  Simply add more types to the existing one.
+            generator = existing[0]
         generator.params.parseDefinitions(element)
 
     #=========================================================================================
@@ -5750,10 +5755,17 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
         #   <GeneralizedKirkwood type="1" charge="-0.22620" shct="0.79"  />
         #   <GeneralizedKirkwood type="2" charge="-0.15245" shct="0.72"  />
 
-        generator = AmoebaGeneralizedKirkwoodGenerator(forceField, element.attrib['solventDielectric'], element.attrib['soluteDielectric'],
-                                                        element.attrib['includeCavityTerm'],
-                                                        element.attrib['probeRadius'], element.attrib['surfaceAreaFactor'])
-        forceField._forces.append(generator)
+        existing = [f for f in forceField._forces if isinstance(f, AmoebaGeneralizedKirkwoodGenerator)]
+        if len(existing) == 0:
+            generator = AmoebaGeneralizedKirkwoodGenerator(forceField, element.attrib['solventDielectric'],
+                                                           element.attrib['soluteDielectric'],
+                                                           element.attrib['includeCavityTerm'],
+                                                           element.attrib['probeRadius'],
+                                                           element.attrib['surfaceAreaFactor'])
+            forceField.registerGenerator(generator)
+        else:
+            # Multiple <AmoebaGeneralizedKirkwoodFprce> tags were found, probably in different files.  Simply add more types to the existing one.
+            generator = existing[0]
 
     #=========================================================================================
 
