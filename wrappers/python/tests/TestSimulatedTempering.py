@@ -92,7 +92,7 @@ class TestSimulatedTempering(unittest.TestCase):
 
         # Let the simulation run and assert at every step T(mcbarostat) == T(integrator) == T(tempering)
 
-        for i in range(1000):
+        for i in range(100):
             st.step(2)
             self.assertEqual(st.temperatures[st.currentTemperature], integrator.getTemperature())
             self.assertEqual(st.temperatures[st.currentTemperature], simulation.context.getParameter('MonteCarloTemperature')*kelvin)
