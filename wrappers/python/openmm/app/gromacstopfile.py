@@ -1012,7 +1012,7 @@ class GromacsTopFile(object):
 
                 for fields in moleculeType.constraints:
                     atoms = [int(x)-1 for x in fields[:2]]
-                    length = float(fields[2])
+                    length = float(fields[3])
                     sys.addConstraint(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], length)
 
         # Create nonbonded exceptions.
