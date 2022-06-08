@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2018 Stanford University and the Authors.
+Portions copyright (c) 2012-2022 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -1012,7 +1012,7 @@ class GromacsTopFile(object):
 
                 for fields in moleculeType.constraints:
                     atoms = [int(x)-1 for x in fields[:2]]
-                    length = float(fields[2])
+                    length = float(fields[3])
                     sys.addConstraint(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], length)
 
         # Create nonbonded exceptions.
@@ -1079,8 +1079,11 @@ class GromacsTopFile(object):
             for pair in pairs:
                 nb.addException(pair[0], pair[1], pair[2], 1.0, 0.0, True)
                 pair_bond.addBond(pair[0], pair[1], [pair[3], pair[4]])
+            existing = set(tuple(lj.getExclusionParticles(i)) for i in range(lj.getNumExclusions()))
             for exclusion in exclusions:
-                lj.addExclusion(exclusion[0], exclusion[1])
+                if exclusion not in existing and tuple(reversed(exclusion)) not in existing:
+                    lj.addExclusion(exclusion[0], exclusion[1])
+                    existing.add(exclusion)
         elif self._defaults[1] == '2':
             for pair in pairs:
                 nb.addException(pair[0], pair[1], pair[2], pair[3], pair[4], True)
