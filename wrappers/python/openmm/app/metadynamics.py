@@ -106,7 +106,7 @@ class Metadynamics(object):
         if not unit.is_quantity(height):
             height = height*unit.kilojoules_per_mole
         if biasFactor <= 1.0:
-            raise ValueError('biasFactor must be >= 1')
+            raise ValueError('biasFactor must be > 1')
         if (saveFrequency is None and biasDir is not None) or (saveFrequency is not None and biasDir is None):
             raise ValueError('Must specify both saveFrequency and biasDir')
         if saveFrequency is not None and (saveFrequency < frequency or saveFrequency%frequency != 0):
