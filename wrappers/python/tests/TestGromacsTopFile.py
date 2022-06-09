@@ -213,6 +213,20 @@ class TestGromacsTopFile(unittest.TestCase):
         # the energy output is from gromacs and it only prints out 6 sig digits.
         self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 1.88855e+02, places=3)
 
+    def test_Vsite3(self):
+        """Test a three particle virtual site."""
+        top = GromacsTopFile('systems/tip4pew.top')
+        system = top.createSystem()
+        self.assertTrue(system.isVirtualSite(3))
+        vs = system.getVirtualSite(3)
+        self.assertIsInstance(vs, ThreeParticleAverageSite)
+        self.assertEqual(0, vs.getParticle(0))
+        self.assertEqual(1, vs.getParticle(1))
+        self.assertEqual(2, vs.getParticle(2))
+        self.assertAlmostEqual(0.786646558, vs.getWeight(0))
+        self.assertAlmostEqual(0.106676721, vs.getWeight(1))
+        self.assertAlmostEqual(0.106676721, vs.getWeight(2))
+
 if __name__ == '__main__':
     unittest.main()
 
