@@ -28,15 +28,14 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
-
-#include "ReferenceTabulatedFunction.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/internal/SplineFitter.h"
-
 #ifdef _MSC_VER
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
 #endif
+
+#include "ReferenceTabulatedFunction.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/internal/SplineFitter.h"
 
 #ifdef _MSC_VER
 
