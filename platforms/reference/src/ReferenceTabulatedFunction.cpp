@@ -28,6 +28,10 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
+#ifdef _MSC_VER
+    // Prevent Windows from defining macros that interfere with other code.
+    #define NOMINMAX
+#endif
 
 #include "ReferenceTabulatedFunction.h"
 #include "openmm/OpenMMException.h"
