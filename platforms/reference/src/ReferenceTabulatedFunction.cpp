@@ -34,6 +34,11 @@
 #include "openmm/internal/SplineFitter.h"
 
 #ifdef _MSC_VER
+    // Prevent Windows from defining macros that interfere with other code.
+    #define NOMINMAX
+#endif
+
+#ifdef _MSC_VER
 
 #if _MSC_VER < 1800
 /**
