@@ -530,7 +530,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;
 };
 
@@ -579,7 +579,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     std::vector<void*> groupForcesArgs;
     ComputeKernel computeCentersKernel, groupForcesKernel, applyForcesKernel;
     const System& system;
@@ -632,7 +632,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     std::vector<std::string> paramNames, computedValueNames;
     std::vector<ComputeParameterInfo> paramBuffers, computedValueBuffers;
     double longRangeCoefficient;
@@ -735,7 +735,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
     const System& system;
     ComputeKernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
@@ -793,7 +793,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;
     ComputeKernel donorKernel, acceptorKernel;
 };
@@ -845,7 +845,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;
     ComputeKernel forceKernel, blockBoundsKernel, neighborsKernel, startIndicesKernel, copyPairsKernel;
     ComputeEvent event;

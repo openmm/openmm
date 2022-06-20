@@ -706,7 +706,7 @@ private:
     std::vector<std::string> parameterNames, globalParameterNames, computedValueNames, energyParamDerivNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     std::vector<double> longRangeCoefficientDerivs;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
 };
@@ -797,7 +797,7 @@ private:
     std::vector<std::vector<Lepton::CompiledExpression> > energyGradientExpressions;
     std::vector<std::vector<Lepton::CompiledExpression> > energyParamDerivExpressions;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
 };
@@ -884,7 +884,7 @@ private:
     ReferenceCustomHbondIxn* ixn;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> globalParameterNames;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
 };
 
 /**
@@ -927,7 +927,7 @@ private:
     std::vector<std::vector<double> > bondParamArray;
     ReferenceCustomCentroidBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     bool usePeriodic;
     Vec3* boxVectors;
 };
@@ -970,7 +970,7 @@ private:
     std::vector<std::vector<double> > bondParamArray;
     ReferenceCustomCompoundBondIxn* ixn;
     std::vector<std::string> globalParameterNames, energyParamDerivNames;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     bool usePeriodic;
     Vec3* boxVectors;
 };
@@ -1012,7 +1012,7 @@ private:
     std::vector<std::vector<double> > particleParamArray;
     ReferenceCustomManyParticleIxn* ixn;
     std::vector<std::string> globalParameterNames;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     NonbondedMethod nonbondedMethod;
 };
 
