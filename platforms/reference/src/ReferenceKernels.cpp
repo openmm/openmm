@@ -80,7 +80,6 @@
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/Integrator.h"
 #include "openmm/OpenMMException.h"
-#include "openmm/serialization/XmlSerializer.h"
 #include "SimTKOpenMMUtilities.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/Operation.h"
@@ -1177,10 +1176,10 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
         switchingDistance = force.getSwitchingDistance();
     }
 
-    // Record the tabulated functions for future reference.
+    // Record the tabulated function update counts for future reference.
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
-        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[force.getTabulatedFunctionName(i)] = force.getTabulatedFunction(i).getUpdateCount();
 
     // Create the expressions.
     
@@ -1349,8 +1348,8 @@ void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImp
     bool changed = false;
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             changed = true;
         }
     }
@@ -1465,10 +1464,10 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
     else
         neighborList = new NeighborList();
 
-    // Record the tabulated functions for future reference.
+    // Record the tabulated function update counts for future reference.
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
-        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[force.getTabulatedFunctionName(i)] = force.getTabulatedFunction(i).getUpdateCount();
 
     // Create the expressions.
     
@@ -1624,8 +1623,8 @@ void ReferenceCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& cont
     bool changed = false;
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             changed = true;
         }
     }
@@ -1750,10 +1749,10 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
         globalParameterNames.push_back(force.getGlobalParameterName(i));
     nonbondedCutoff = force.getCutoffDistance();
 
-    // Record the tabulated functions for future reference.
+    // Record the tabulated function update counts for future reference.
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
-        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[force.getTabulatedFunctionName(i)] = force.getTabulatedFunction(i).getUpdateCount();
 
     // Create the interaction.
     
@@ -1839,8 +1838,8 @@ void ReferenceCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& c
     bool changed = false;
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             changed = true;
         }
     }
@@ -1873,10 +1872,10 @@ void ReferenceCalcCustomCentroidBondForceKernel::initialize(const System& system
     for (int i = 0; i < numBonds; ++i)
         force.getBondParameters(i, bondGroups[i], bondParamArray[i]);
 
-    // Record the tabulated functions for future reference.
+    // Record the tabulated function update counts for future reference.
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
-        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[force.getTabulatedFunctionName(i)] = force.getTabulatedFunction(i).getUpdateCount();
 
     // Create the interaction.
     
@@ -1962,8 +1961,8 @@ void ReferenceCalcCustomCentroidBondForceKernel::copyParametersToContext(Context
     bool changed = false;
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             changed = true;
         }
     }
@@ -1990,10 +1989,10 @@ void ReferenceCalcCustomCompoundBondForceKernel::initialize(const System& system
     for (int i = 0; i < numBonds; ++i)
         force.getBondParameters(i, bondParticles[i], bondParamArray[i]);
 
-    // Record the tabulated functions for future reference.
+    // Record the tabulated function update counts for future reference.
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
-        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[force.getTabulatedFunctionName(i)] = force.getTabulatedFunction(i).getUpdateCount();
 
     // Create the interaction.
 
@@ -2078,8 +2077,8 @@ void ReferenceCalcCustomCompoundBondForceKernel::copyParametersToContext(Context
     bool changed = false;
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             changed = true;
         }
     }
@@ -2107,10 +2106,10 @@ void ReferenceCalcCustomManyParticleForceKernel::initialize(const System& system
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
 
-    // Record the tabulated functions for future reference.
+    // Record the tabulated function update counts for future reference.
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++)
-        tabulatedFunctions[force.getTabulatedFunctionName(i)] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[force.getTabulatedFunctionName(i)] = force.getTabulatedFunction(i).getUpdateCount();
 
     // Create the interaction.
 
@@ -2158,8 +2157,8 @@ void ReferenceCalcCustomManyParticleForceKernel::copyParametersToContext(Context
     bool changed = false;
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             changed = true;
         }
     }

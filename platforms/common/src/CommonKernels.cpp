@@ -35,7 +35,6 @@
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
-#include "openmm/serialization/XmlSerializer.h"
 #include "CommonKernelSources.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
@@ -1294,7 +1293,7 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
-        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
@@ -1417,8 +1416,8 @@ void CommonCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImp
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             int width;
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
@@ -1553,7 +1552,7 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
-        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
         string arrayName = "table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
@@ -1747,8 +1746,8 @@ void CommonCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImp
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             int width;
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
@@ -1902,7 +1901,7 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
-        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
         string arrayName = prefix+"table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
@@ -2459,8 +2458,8 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             int width;
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
@@ -2798,7 +2797,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
-        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
         string arrayName = prefix+"table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
@@ -3785,8 +3784,8 @@ void CommonCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             int width;
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
@@ -4012,7 +4011,7 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
-        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
         string arrayName = "table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
@@ -4336,8 +4335,8 @@ void CommonCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& cont
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             int width;
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
@@ -4425,7 +4424,7 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
-        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
         string arrayName = "table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
@@ -4855,8 +4854,8 @@ void CommonCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImp
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             int width;
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
