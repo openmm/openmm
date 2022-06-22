@@ -5,6 +5,8 @@
 ENABLE_TESTING()
 
 INCLUDE_DIRECTORIES(${CUDA_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${OPENMM_DIR}/plugins/amoeba/tests)
+INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/cuda/tests)
 
 # Automatically create tests using files named "Test*.cpp"
 FILE(GLOB TEST_PROGS "*Test*.cpp")

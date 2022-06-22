@@ -44,6 +44,8 @@ DrudeForceProxy::DrudeForceProxy() : SerializationProxy("DrudeForce") {
 void DrudeForceProxy::serialize(const void* object, SerializationNode& node) const {
     node.setIntProperty("version", 1);
     const DrudeForce& force = *reinterpret_cast<const DrudeForce*>(object);
+    node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     SerializationNode& particles = node.createChildNode("Particles");
     for (int i = 0; i < force.getNumParticles(); i++) {
         int p, p1, p2, p3, p4;
@@ -66,6 +68,8 @@ void* DrudeForceProxy::deserialize(const SerializationNode& node) const {
         throw OpenMMException("Unsupported version number");
     DrudeForce* force = new DrudeForce();
     try {
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         const SerializationNode& particles = node.getChildNode("Particles");
         for (auto& particle : particles.getChildren())
             force->addParticle(particle.getIntProperty("p"), particle.getIntProperty("p1"), particle.getIntProperty("p2"), particle.getIntProperty("p3"), particle.getIntProperty("p4"),

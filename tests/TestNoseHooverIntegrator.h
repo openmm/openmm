@@ -140,7 +140,7 @@ void testConstraints() {
 void testConstrainedClusters() {
     const int numParticles = 7;
     System system;
-    NoseHooverIntegrator integrator(0.0005);
+    NoseHooverIntegrator integrator(0.0004);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
@@ -351,7 +351,7 @@ int makeDimerBox(System& system, std::vector<Vec3>& positions, bool constrain=tr
         int particle2 = system.addParticle(mass);
         forceField->addParticle(0.0, 0.1, 1.0);
         forceField->addParticle(0.0, 0.1, 1.0);
-        forceField->addException(particle1, particle2, 0, 0, 0);
+        forceField->addException(particle1, particle2, 0, 1, 0);
         bondForce->addBond(particle1, particle2, bondLength, bondForceConstant);
         numDOF += 6;
         if (constrain) {

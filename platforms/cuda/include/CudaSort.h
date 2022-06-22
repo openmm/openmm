@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -77,8 +77,12 @@ public:
      *                   on the heap with the "new" operator.  This object takes over ownership of it,
      *                   and deletes it when the CudaSort is deleted.
      * @param length     the length of the arrays this object will be used to sort
+     * @param uniform    whether the input data is expected to follow a uniform or nonuniform
+     *                   distribution.  This argument is used only as a hint.  It allows parts
+     *                   of the algorithm to be tuned for faster performance on the expected
+     *                   distribution.
      */
-    CudaSort(CudaContext& context, SortTrait* trait, unsigned int length);
+    CudaSort(CudaContext& context, SortTrait* trait, unsigned int length, bool uniform=true);
     ~CudaSort();
     /**
      * Sort an array.
@@ -94,7 +98,7 @@ private:
     CudaArray buckets;
     CUfunction shortListKernel, shortList2Kernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
     unsigned int dataLength, rangeKernelSize, positionsKernelSize, sortKernelSize;
-    bool isShortList;
+    bool isShortList, uniform;
 };
 
 /**

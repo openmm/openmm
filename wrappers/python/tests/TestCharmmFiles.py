@@ -1,9 +1,9 @@
 import unittest
 from validateConstraints import *
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
-import simtk.openmm.app.element as elem
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
+import openmm.app.element as elem
 import math
 import os
 import tempfile
@@ -91,7 +91,10 @@ class TestCharmmFiles(unittest.TestCase):
         for atom in topology.atoms():
             if atom.element == elem.hydrogen:
                 self.assertNotEqual(hydrogenMass, system1.getParticleMass(atom.index))
-                self.assertEqual(hydrogenMass, system2.getParticleMass(atom.index))
+                if atom.residue.name == 'HOH':
+                    self.assertEqual(system1.getParticleMass(atom.index), system2.getParticleMass(atom.index))
+                else:
+                    self.assertEqual(hydrogenMass, system2.getParticleMass(atom.index))
         totalMass1 = sum([system1.getParticleMass(i) for i in range(system1.getNumParticles())]).value_in_unit(amu)
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
@@ -147,6 +150,30 @@ class TestCharmmFiles(unittest.TestCase):
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, 15559.71602, delta=0.05)
 
+    def test_NBFIX14(self):
+        """Tests CHARMM systems with NBFIX modifications to 1-4 interactions"""
+        warnings.filterwarnings('ignore', category=CharmmPSFWarning)
+        psf = CharmmPsfFile('systems/chl1.psf')
+        crd = CharmmCrdFile('systems/chl1.crd')
+        params = CharmmParameterSet('systems/par_all36_lipid.prm', 'systems/par_all36_cgenff.prm', 'systems/toppar_all36_lipid_cholesterol.str')
+
+        # Turn off charges so we only test the Lennard-Jones energies
+        for a in psf.atom_list:
+            a.charge = 0.0
+
+        # Compute the Lennard-Jones energy
+        system = psf.createSystem(params, nonbondedMethod=CutoffNonPeriodic, nonbondedCutoff=12*angstroms)
+        for i, f in enumerate(system.getForces()):
+            if isinstance(f, NonbondedForce) or isinstance(f, CustomNonbondedForce):
+                f.setForceGroup(1)
+            else:
+                f.setForceGroup(0)
+        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatformByName('Reference'))
+        context.setPositions(crd.positions)
+        state = context.getState(getEnergy=True, groups={1})
+        energy = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        self.assertAlmostEqual(energy, 3.1166, delta=1e-4)
+
     def test_NBThole(self):
         """Tests CHARMM system with NBTHole"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
@@ -166,7 +193,37 @@ class TestCharmmFiles(unittest.TestCase):
         state = con.getState(getEnergy=True, enforcePeriodicBox=True)
         ene = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         self.assertAlmostEqual(ene, -292.73015, delta=1.0)
-        
+
+    def test_PSFSetUnitCellDimensions(self):
+        """Test that setting the box via unit cell dimensions works correctly."""
+        psf = CharmmPsfFile('systems/ala3_solv_drude.psf')
+
+        # Orthorhombic
+        psf.setBox(2.1*nanometer, 2.3*nanometer, 2.4*nanometer)
+        pbv1 = psf.topology.getPeriodicBoxVectors()
+        self.assertAlmostEqual(pbv1[0][0]/nanometers, 2.1)
+        self.assertAlmostEqual(pbv1[0][1]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv1[0][2]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv1[1][0]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv1[1][1]/nanometers, 2.3)
+        self.assertAlmostEqual(pbv1[1][2]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv1[2][0]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv1[2][1]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv1[2][2]/nanometers, 2.4)
+
+        # Triclinic
+        psf.setBox(2.1*nanometer, 2.3*nanometer, 2.4*nanometer, 65*degrees, 75*degrees, 85*degrees)
+        pbv2 = psf.topology.getPeriodicBoxVectors()
+        self.assertAlmostEqual(pbv2[0][0]/nanometers, 2.1)
+        self.assertAlmostEqual(pbv2[0][1]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv2[0][2]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv2[1][0]/nanometers, 0.20045820831961367)
+        self.assertAlmostEqual(pbv2[1][1]/nanometers, 2.2912478056110146)
+        self.assertAlmostEqual(pbv2[1][2]/nanometers, 0.0)
+        self.assertAlmostEqual(pbv2[2][0]/nanometers, 0.6211657082460498)
+        self.assertAlmostEqual(pbv2[2][1]/nanometers, 0.963813269981581)
+        self.assertAlmostEqual(pbv2[2][2]/nanometers, 2.1083683604879377)
+
     def test_Drude(self):
         """Test CHARMM systems with Drude force field"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)

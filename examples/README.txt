@@ -10,7 +10,7 @@ the Simbios National Center for Physics-based Simulation of
 Biological Structures funded by the National Institutes of Health
 through the NIH Roadmap for Medical Research, Grant U54 GM072970. 
 Information on the National Centers for Biomedical Computing can 
-be obtained here: http://nihroadmap.nih.gov/bioinformatics/.
+be obtained here: https://commonfund.nih.gov/bioinformatics.
 
 OpenMM is developed under the supervision of Simbios P.I. Vijay 
 Pande at Stanford. Any work that uses OpenMM should cite the 

@@ -36,7 +36,7 @@
 namespace OpenMM {
 
 enum BlockType {EWALD, NON_EWALD}; // :TODO: Better name for non-ewald.
-enum PeriodicType {NoPeriodic, PeriodicPerAtom, PeriodicPerInteraction, PeriodicTriclinic};
+enum PeriodicType {NoCutoff, NoPeriodic, PeriodicPerAtom, PeriodicPerInteraction, PeriodicTriclinic};
 
 /**
  * Generic SIMD implementation of CpuNonbondedForce. The templating allows the same
@@ -50,6 +50,10 @@ public:
      * Store how many elements are contained in each block of atoms.
      */
     static constexpr int blockSize = sizeof(FVEC) / sizeof(float);
+    /**
+     * Constructor.
+     */
+    CpuNonbondedForceFvec(const CpuNeighborList& neighbors);
 
 protected:
     /**---------------------------------------------------------------------------------------
@@ -94,6 +98,10 @@ protected:
       FVEC approximateFunctionFromTable(const std::vector<float>& table, FVEC x, FVEC inverse) const;
 
 };
+
+template <typename FVEC>
+CpuNonbondedForceFvec<FVEC>::CpuNonbondedForceFvec(const CpuNeighborList& neighbors) : CpuNonbondedForce(neighbors) {
+}
 
 /**
  * Use a table lookup to approximate a function specific function.
@@ -166,7 +174,9 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnHandler(int blockIndex, float
     }
     
     // Call the appropriate version depending on what calculation is required for periodic boundary conditions.
-    if (periodicType == NoPeriodic)
+    if (!cutoff)
+        calculateBlockIxnImpl<NoCutoff, BLOCK_TYPE>(blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
+    else if (periodicType == NoPeriodic)
         calculateBlockIxnImpl<NoPeriodic, BLOCK_TYPE>(blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
     else if (periodicType == PeriodicPerAtom)
         calculateBlockIxnImpl<PeriodicPerAtom, BLOCK_TYPE>(blockIndex, forces, totalEnergy, boxSize, invBoxSize, blockCenter);
@@ -181,7 +191,7 @@ template <int PERIODIC_TYPE, BlockType BLOCK_TYPE>
 void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize, const fvec4& blockCenter) {
     // Load the positions and parameters of the atoms in the block.
 
-    const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize * blockIndex];
+    const int32_t* blockAtom = &neighborList->getSortedAtoms()[blockSize*blockIndex];
     fvec4 blockAtomPosq[blockSize];
     FVEC blockAtomForceX(0.0f), blockAtomForceY(0.0f), blockAtomForceZ(0.0f);
     FVEC blockAtomX, blockAtomY, blockAtomZ, blockAtomCharge;
@@ -198,8 +208,7 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
     // the cycles are spent anyway.
     FVEC blockAtomSigma = {};
     FVEC blockAtomEpsilon = {};
-    for (int i=0; i<blockSize; ++i)
-    {
+    for (int i = 0; i < blockSize; ++i) {
         ((float*)&blockAtomSigma)[i] = atomParameters[blockAtom[i]].first;
         ((float*)&blockAtomEpsilon)[i] = atomParameters[blockAtom[i]].second;
     }
@@ -207,30 +216,27 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
     // Ewald needs C6 data gathered from a table. Unused variable for non-ewald.
     const FVEC C6s = (BLOCK_TYPE == BlockType::EWALD) ? FVEC(C6params, blockAtom) : FVEC();
 
-    const bool needPeriodic = (PERIODIC_TYPE == PeriodicPerInteraction || PERIODIC_TYPE == PeriodicTriclinic);
     const float invSwitchingInterval = 1/(cutoffDistance-switchingDistance);
     const FVEC cutoffDistanceSquared = cutoffDistance * cutoffDistance;
 
     // Loop over neighbors for this block.
-    const auto& neighbors = neighborList->getBlockNeighbors(blockIndex);
-    const auto& exclusions = neighborList->getBlockExclusions(blockIndex);
+    CpuNeighborList::NeighborIterator neighbors = neighborList->getNeighborIterator(blockIndex);
     FVEC partialEnergy = {};
-
-    for (int i = 0; i < (int) neighbors.size(); i++) {
+    while (neighbors.next()) {
         // Load the next neighbor.
-        
-        int atom = neighbors[i];
-        
+
+        int atom = neighbors.getNeighbor();
+
         // Compute the distances to the block atoms.
-        
+
         FVEC dx, dy, dz, r2;
         fvec4 atomPos(posq+4*atom);
         if (PERIODIC_TYPE == PeriodicPerAtom)
             atomPos -= floor((atomPos-blockCenter)*invBoxSize+0.5f)*boxSize;
         getDeltaR<PERIODIC_TYPE>(atomPos, blockAtomX, blockAtomY, blockAtomZ, dx, dy, dz, r2, boxSize, invBoxSize);
-
-        const auto exclNotMask = FVEC::expandBitsToMask(~exclusions[i]);
-        const auto include = blendZero(r2 < cutoffDistanceSquared, exclNotMask);
+        auto include = FVEC::expandBitsToMask(~neighbors.getExclusions());
+        if (PERIODIC_TYPE != NoCutoff)
+            include = blendZero(r2 < cutoffDistanceSquared, include);
         if (!any(include))
             continue; // No interactions to compute.
 
@@ -271,12 +277,10 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
             dEdR = 0.0f;
         }
         const auto chargeProd = blockAtomCharge*posq[4*atom+3];
-        if (BLOCK_TYPE == BlockType::EWALD)
-        {
+        if (BLOCK_TYPE == BlockType::EWALD) {
             dEdR += chargeProd*inverseR*approximateFunctionFromTable(ewaldScaleTable, r, FVEC(ewaldDXInv));
         }
-        else
-        {
+        else {
             if (cutoff)
                 dEdR += chargeProd*(inverseR-2.0f*krf*r2);
             else
@@ -288,8 +292,7 @@ void CpuNonbondedForceFvec<FVEC>::calculateBlockIxnImpl(int blockIndex, float* f
         if (totalEnergy) {
             if (BLOCK_TYPE == BlockType::EWALD)
                 energy += chargeProd*inverseR*approximateFunctionFromTable(erfcTable, alphaEwald*r, FVEC(erfcDXInv));
-            else // Non-ewald.
-            {
+            else {  // Non-ewald.
                 if (cutoff)
                     energy += chargeProd*(inverseR+krf*r2-crf);
                 else

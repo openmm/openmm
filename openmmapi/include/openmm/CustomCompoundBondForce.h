@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -77,16 +77,24 @@ namespace OpenMM {
  * is an interaction between three particles that depends on the angle formed by p1-p2-p3, and on the distance between
  * p1 and p3.
  *
- * <tt>CustomCompoundBondForce* force = new CustomCompoundBondForce(3, "0.5*(kangle*(angle(p1,p2,p3)-theta0)^2+kbond*(distance(p1,p3)-r0)^2)");</tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomCompoundBondForce* force = new CustomCompoundBondForce(3, "0.5*(kangle*(angle(p1,p2,p3)-theta0)^2+kbond*(distance(p1,p3)-r0)^2)");
+ *
+ * \endverbatim
  *
  * This force depends on four parameters: kangle, kbond, theta0, and r0.  The following code defines these as per-bond parameters:
  *
- * <tt><pre>
- * force->addPerBondParameter("kangle");
- * force->addPerBondParameter("kbond");
- * force->addPerBondParameter("theta0");
- * force->addPerBondParameter("r0");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    force->addPerBondParameter("kangle");
+ *    force->addPerBondParameter("kbond");
+ *    force->addPerBondParameter("theta0");
+ *    force->addPerBondParameter("r0");
+ *
+ * \endverbatim
  *
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
@@ -96,6 +104,20 @@ namespace OpenMM {
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
  * select(x,y,z) = z if x = 0, y otherwise.
+ * 
+ * This class also supports the functions pointdistance(x1, y1, z1, x2, y2, z2),
+ * pointangle(x1, y1, z1, x2, y2, z2, x3, y3, z3), and pointdihedral(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4).
+ * These functions are similar to distance(), angle(), and dihedral(), but the arguments are the
+ * coordinates of points to perform the calculation based on rather than the names of particles.
+ * This enables more flexible geometric calculations.  For example, the following computes the distance
+ * from particle p1 to the midpoint between particles p2 and p3.
+ * 
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomCompoundBondForce* force = new CustomCompoundBondForce(3, "pointdistance(x1, y1, z1, (x2+x3)/2, (y2+y3)/2, (z2+z3)/2)");
+ *
+ * \endverbatim
  *
  * In addition, you can call addTabulatedFunction() to define a new function based on tabulated values.  You specify the function by
  * creating a TabulatedFunction object.  That function can then appear in the expression.
@@ -316,14 +338,15 @@ public:
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
     /**
-     * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
+     * Update the per-bond parameters and tabulated functions in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setBondParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
      *
-     * This method has several limitations.  The only information it updates is the values of per-bond parameters.
-     * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
-     * the Context.  The set of particles involved in a bond cannot be changed, nor can new bonds be added.
+     * This method has several limitations.  The only information it updates is the values of per-bond parameters and tabulated
+     * functions.  All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
+     * the Context.  The set of particles involved in a bond cannot be changed, nor can new bonds be added.  Also, while the
+     * tabulated values of a function can change, everything else about it (its dimensions, the data range) must not be changed.
      */
     void updateParametersInContext(Context& context);
     /**

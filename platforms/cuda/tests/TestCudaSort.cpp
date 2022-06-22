@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -59,19 +59,20 @@ class SortTrait : public CudaSort::SortTrait {
     const char* getSortKey() const {return "value";}
 };
 
-void verifySorting(vector<float> array) {
+void verifySorting(vector<float> array, bool uniform) {
     // Sort the array.
 
     System system;
     system.addParticle(0.0);
     CudaPlatform::PlatformData platformData(NULL, system, "", "true", platform.getPropertyDefaultValue("CudaPrecision"), "false",
             platform.getPropertyDefaultValue(CudaPlatform::CudaCompiler()), platform.getPropertyDefaultValue(CudaPlatform::CudaTempDirectory()),
-            platform.getPropertyDefaultValue(CudaPlatform::CudaHostCompiler()), platform.getPropertyDefaultValue(CudaPlatform::CudaDisablePmeStream()), "false", 1, NULL);
+            platform.getPropertyDefaultValue(CudaPlatform::CudaHostCompiler()), platform.getPropertyDefaultValue(CudaPlatform::CudaDisablePmeStream()), "false", true, 1, NULL);
     CudaContext& context = *platformData.contexts[0];
     context.initialize();
+    context.setAsCurrent();
     CudaArray data(context, array.size(), 4, "sortData");
     data.upload(array);
-    CudaSort sort(context, new SortTrait(), array.size());
+    CudaSort sort(context, new SortTrait(), array.size(), uniform);
     sort.sort(data);
     vector<float> sorted;
     data.download(sorted);
@@ -95,7 +96,8 @@ void testUniformValues() {
     vector<float> array(10000);
     for (int i = 0; i < (int) array.size(); i++)
         array[i] = (float) genrand_real2(sfmt);
-    verifySorting(array);
+    verifySorting(array, true);
+    verifySorting(array, false);
 }
 
 void testLogValues() {
@@ -105,7 +107,8 @@ void testLogValues() {
     vector<float> array(10000);
     for (int i = 0; i < (int) array.size(); i++)
         array[i] = (float) log(genrand_real2(sfmt));
-    verifySorting(array);
+    verifySorting(array, true);
+    verifySorting(array, false);
 }
 
 void testShortList() {
@@ -115,7 +118,8 @@ void testShortList() {
     vector<float> array(500);
     for (int i = 0; i < (int) array.size(); i++)
         array[i] = (float) log(genrand_real2(sfmt));
-    verifySorting(array);
+    verifySorting(array, true);
+    verifySorting(array, false);
 }
 
 int main(int argc, char* argv[]) {

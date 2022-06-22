@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,9 +42,10 @@ CustomNonbondedForceProxy::CustomNonbondedForceProxy() : SerializationProxy("Cus
 }
 
 void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const CustomNonbondedForce& force = *reinterpret_cast<const CustomNonbondedForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setStringProperty("energy", force.getEnergyFunction());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
@@ -59,6 +60,12 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParams.createChildNode("Parameter").setStringProperty("name", force.getGlobalParameterName(i)).setDoubleProperty("default", force.getGlobalParameterDefaultValue(i));
     }
+    SerializationNode& computedValues = node.createChildNode("ComputedValues");
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        string name, expression;
+        force.getComputedValueParameters(i, name, expression);
+        computedValues.createChildNode("Value").setStringProperty("name", name).setStringProperty("expression", expression);
+    }
     SerializationNode& energyDerivs = node.createChildNode("EnergyParameterDerivatives");
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
         energyDerivs.createChildNode("Parameter").setStringProperty("name", force.getEnergyParameterDerivativeName(i));
@@ -67,12 +74,12 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
     for (int i = 0; i < force.getNumParticles(); i++) {
         vector<double> params;
         force.getParticleParameters(i, params);
-        SerializationNode& node = particles.createChildNode("Particle");
+        SerializationNode& particle = particles.createChildNode("Particle");
         for (int j = 0; j < (int) params.size(); j++) {
             stringstream key;
             key << "param";
             key << j+1;
-            node.setDoubleProperty(key.str(), params[j]);
+            particle.setDoubleProperty(key.str(), params[j]);
         }
     }
     SerializationNode& exclusions = node.createChildNode("Exclusions");
@@ -102,12 +109,13 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
 
 void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 2)
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     CustomNonbondedForce* force = NULL;
     try {
         CustomNonbondedForce* force = new CustomNonbondedForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setNonbondedMethod((CustomNonbondedForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction", false));
@@ -119,6 +127,11 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
         for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
+        if (version > 2) {
+            const SerializationNode& computedValues = node.getChildNode("ComputedValues");
+            for (auto& value : computedValues.getChildren())
+                force->addComputedValue(value.getStringProperty("name"), value.getStringProperty("expression"));
+        }
         if (version > 1) {
             const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
             for (auto& parameter : energyDerivs.getChildren())

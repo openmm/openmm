@@ -41,13 +41,7 @@
 #include "openmm/OpenMMException.h"
 
 #include "openmm/AmoebaGeneralizedKirkwoodForce.h"
-#include "openmm/AmoebaBondForce.h"
-#include "openmm/AmoebaAngleForce.h"
-#include "openmm/AmoebaInPlaneAngleForce.h"
 #include "openmm/AmoebaMultipoleForce.h"
-#include "openmm/AmoebaOutOfPlaneBendForce.h"
-#include "openmm/AmoebaPiTorsionForce.h"
-#include "openmm/AmoebaStretchBendForce.h"
 #include "openmm/AmoebaTorsionTorsionForce.h"
 #include "openmm/AmoebaVdwForce.h"
 #include "openmm/AmoebaWcaDispersionForce.h"
@@ -56,13 +50,7 @@
 #include "openmm/serialization/SerializationProxy.h"
 
 #include "openmm/serialization/AmoebaGeneralizedKirkwoodForceProxy.h"
-#include "openmm/serialization/AmoebaBondForceProxy.h"
-#include "openmm/serialization/AmoebaAngleForceProxy.h"
-#include "openmm/serialization/AmoebaInPlaneAngleForceProxy.h"
 #include "openmm/serialization/AmoebaMultipoleForceProxy.h"
-#include "openmm/serialization/AmoebaOutOfPlaneBendForceProxy.h"
-#include "openmm/serialization/AmoebaPiTorsionForceProxy.h"
-#include "openmm/serialization/AmoebaStretchBendForceProxy.h"
 #include "openmm/serialization/AmoebaTorsionTorsionForceProxy.h"
 #include "openmm/serialization/AmoebaVdwForceProxy.h"
 #include "openmm/serialization/AmoebaWcaDispersionForceProxy.h"
@@ -84,13 +72,7 @@ using namespace OpenMM;
 
 extern "C" OPENMM_EXPORT_AMOEBA void registerAmoebaSerializationProxies() {
     SerializationProxy::registerProxy(typeid(AmoebaGeneralizedKirkwoodForce),         new AmoebaGeneralizedKirkwoodForceProxy());
-    SerializationProxy::registerProxy(typeid(AmoebaBondForce),                new AmoebaBondForceProxy());
-    SerializationProxy::registerProxy(typeid(AmoebaAngleForce),               new AmoebaAngleForceProxy());
-    SerializationProxy::registerProxy(typeid(AmoebaInPlaneAngleForce),        new AmoebaInPlaneAngleForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaMultipoleForce),                   new AmoebaMultipoleForceProxy());
-    SerializationProxy::registerProxy(typeid(AmoebaOutOfPlaneBendForce),              new AmoebaOutOfPlaneBendForceProxy());
-    SerializationProxy::registerProxy(typeid(AmoebaPiTorsionForce),                   new AmoebaPiTorsionForceProxy());
-    SerializationProxy::registerProxy(typeid(AmoebaStretchBendForce),                 new AmoebaStretchBendForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaTorsionTorsionForce),              new AmoebaTorsionTorsionForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaVdwForce),                         new AmoebaVdwForceProxy());
     SerializationProxy::registerProxy(typeid(AmoebaWcaDispersionForce),               new AmoebaWcaDispersionForceProxy());

@@ -140,7 +140,7 @@ const string& CustomCVForce::getTabulatedFunctionName(int index) const {
     return functions[index].name;
 }
 
-void CustomCVForce::getCollectiveVariableValues(Context& context, vector<double>& values) {
+void CustomCVForce::getCollectiveVariableValues(Context& context, vector<double>& values) const {
     dynamic_cast<CustomCVForceImpl&>(getImplInContext(context)).getCollectiveVariableValues(getContextImpl(context), values);
 }
 

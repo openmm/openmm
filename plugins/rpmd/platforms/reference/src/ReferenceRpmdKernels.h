@@ -73,11 +73,11 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const RPMDIntegrator& integrator);
     /**
-     * Get the positions of all particles in one copy of the system.
+     * Set the positions of all particles in one copy of the system.
      */
     void setPositions(int copy, const std::vector<Vec3>& positions);
     /**
-     * Get the velocities of all particles in one copy of the system.
+     * Set the velocities of all particles in one copy of the system.
      */
     void setVelocities(int copy, const std::vector<Vec3>& velocities);
     /**

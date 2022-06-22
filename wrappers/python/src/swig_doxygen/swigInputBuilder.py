@@ -9,8 +9,6 @@ import time
 import getopt
 import re
 import xml.etree.ElementTree as etree
-from distutils.version import LooseVersion
-import copy
 
 try:
     from html.parser import HTMLParser
@@ -19,7 +17,7 @@ except ImportError:
     from HTMLParser import HTMLParser
 
 INDENT = "   "
-docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt', 'subscript':'sub'}
+docTags = {'emphasis':'i', 'bold':'b', 'itemizedlist':'ul', 'listitem':'li', 'preformatted':'pre', 'computeroutput':'tt', 'subscript':'sub', 'verbatim': 'verbatim'}
 
 def is_method_abstract(argstring):
     return argstring.split(")")[-1].find("=0") >= 0
@@ -127,6 +125,7 @@ def getClassMethodList(classNode, skipMethods):
         for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):
             methDefinition = getText("definition", memberNode)
             shortMethDefinition=stripOpenmmPrefix(methDefinition)
+            shortMethDefinition = shortMethDefinition.replace(' &', '&')
             methName=shortMethDefinition.split()[-1]
             if (shortClassName, methName) in skipMethods: continue
             numParams=len(findNodes(memberNode, 'param'))
@@ -178,7 +177,6 @@ class SwigInputBuilder:
                  skipAdditionalMethods=[],
                  SWIG_VERSION='3.0.2'):
         self.nodeByID={}
-        self.SWIG_COMPACT_ARGUMENTS = LooseVersion(SWIG_VERSION) < LooseVersion('3.0.5')
 
         self.configModule = __import__(os.path.splitext(configFilename)[0])
 
@@ -273,7 +271,7 @@ class SwigInputBuilder:
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
 
-        self.fOut.write("%factory(OpenMM::Force* OpenMM::Force::__copy__")
+        self.fOut.write("%factory(OpenMM::Force* OpenMM_XmlSerializer__cloneForce")
         for name in sorted(forceSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
@@ -288,7 +286,7 @@ class SwigInputBuilder:
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
 
-        self.fOut.write("%factory(OpenMM::Integrator* OpenMM::Integrator::__copy__")
+        self.fOut.write("%factory(OpenMM::Integrator* OpenMM_XmlSerializer__cloneIntegrator")
         for name in sorted(integratorSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
@@ -308,7 +306,7 @@ class SwigInputBuilder:
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
 
-        self.fOut.write("%factory(OpenMM::TabulatedFunction* OpenMM::TabulatedFunction::__copy__")
+        self.fOut.write("%factory(OpenMM::TabulatedFunction* OpenMM_XmlSerializer__cloneTabulatedFunction")
         for name in sorted(tabulatedFunctionSubclassList):
             self.fOut.write(",\n         OpenMM::%s" % name)
         self.fOut.write(");\n\n")
@@ -521,10 +519,7 @@ class SwigInputBuilder:
                 textInside = ''
                 key = (shortClassName, methName)
                 for argNum in self.configModule.STEAL_OWNERSHIP.get(key, []):
-                    if self.SWIG_COMPACT_ARGUMENTS:
-                        argName = 'args[%s]' % argNum
-                    else:
-                        argName = getText('declname', paramList[argNum])
+                    argName = getText('declname', paramList[argNum])
 
                     textInside += '''
     if not {argName}.thisown:
@@ -541,12 +536,12 @@ class SwigInputBuilder:
                         argUnits=self.configModule.UNITS[("*", methName)][1]
                     else:
                         argUnits = ()
-                    if len(argUnits) > 0 and (self.SWIG_COMPACT_ARGUMENTS or isConstructors):
+                    if len(argUnits) > 0 and isConstructors:
                         textInside += '''
     args = list(args)'''
                     for i, units in enumerate(argUnits):
                         if units is not None:
-                            if self.SWIG_COMPACT_ARGUMENTS or isConstructors:
+                            if isConstructors:
                                 argName = 'args[%s]' % i
                             else:
                                 argName = getText('declname', paramList[i])
@@ -555,10 +550,7 @@ class SwigInputBuilder:
         {argName} = {argName}.value_in_unit({units})'''.format(argName=argName, units=units)
 
                 for argNum in self.configModule.REQUIRE_ORDERED_SET.get(key, []):
-                    if self.SWIG_COMPACT_ARGUMENTS:
-                        argName = 'args[%s]' % argNum
-                    else:
-                        argName = getText('declname', paramList[argNum])
+                    argName = getText('declname', paramList[argNum])
 
                     textInside += '''
     {argName} = list({argName})'''.format(argName=argName)
@@ -607,10 +599,7 @@ class SwigInputBuilder:
 
                 if key in self.configModule.STEAL_OWNERSHIP:
                     for argNum in self.configModule.STEAL_OWNERSHIP[key]:
-                        if self.SWIG_COMPACT_ARGUMENTS:
-                            argName = 'args[%s]' % argNum
-                        else:
-                            argName = getText('declname', paramList[argNum])
+                        argName = getText('declname', paramList[argNum])
                         addText = "%s%s%s.thisown=0\n" \
                                 % (addText, INDENT, argName)
 

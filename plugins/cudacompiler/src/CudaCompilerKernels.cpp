@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
+ * Portions copyright (c) 2015-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -46,6 +46,22 @@ using namespace std;
 
 static string getErrorString(nvrtcResult result) {
     return nvrtcGetErrorString(result);
+}
+
+CudaRuntimeCompilerKernel::CudaRuntimeCompilerKernel(const std::string& name, const Platform& platform) : CudaCompilerKernel(name, platform) {
+    // Find the maximum architecture the compiler supports.
+    
+#if CUDA_VERSION < 11020
+    // CUDA versions before 11.2 can't query the compiler to see what it supports.
+    
+    maxSupportedArchitecture = 75;
+#else
+    int numArchs;
+    CHECK_RESULT(nvrtcGetNumSupportedArchs(&numArchs), "Error querying supported architectures");
+    vector<int> archs(numArchs);
+    CHECK_RESULT(nvrtcGetSupportedArchs(archs.data()), "Error querying supported architectures");
+    maxSupportedArchitecture = archs.back();
+#endif
 }
 
 string CudaRuntimeCompilerKernel::createModule(const string& source, const string& flags, CudaContext& cu) {

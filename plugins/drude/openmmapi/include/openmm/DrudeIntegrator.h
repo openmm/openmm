@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -69,17 +69,15 @@ public:
      *
      * @param temp    the temperature of the heat bath, measured in Kelvin
      */
-    void setDrudeTemperature(double temp) {
-        drudeTemperature = temp;
-    }
+    void setDrudeTemperature(double temp);
     /**
      * Get the maximum distance a Drude particle can ever move from its parent particle, measured in nm.  This is implemented
-     * with a hard wall constraint.  If this distance is set to 0 (the default), the hard wall constraint is omitted.
+     * with a hard wall constraint.  The default value is 0.02.  If this distance is set to 0, the hard wall constraint is omitted.
      */
     double getMaxDrudeDistance() const;
     /**
      * Set the maximum distance a Drude particle can ever move from its parent particle, measured in nm.  This is implemented
-     * with a hard wall constraint.  If this distance is set to 0 (the default), the hard wall constraint is omitted.
+     * with a hard wall constraint.  The default value is 0.02.  If this distance is set to 0, the hard wall constraint is omitted.
      */
     void setMaxDrudeDistance(double distance);
     /**

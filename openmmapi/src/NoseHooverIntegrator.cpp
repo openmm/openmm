@@ -70,6 +70,16 @@ NoseHooverIntegrator::~NoseHooverIntegrator() {}
 
 int NoseHooverIntegrator::addThermostat(double temperature, double collisionFrequency,
                                         int chainLength, int numMTS, int numYoshidaSuzuki) {
+    if (temperature < 0)
+        throw OpenMMException("NoseHooverIntegrator: temperature cannot be negative");
+    if (collisionFrequency <= 0)
+        throw OpenMMException("NoseHooverIntegrator: collisionFrequency must be positive");
+    if (collisionFrequency < 0)
+        throw OpenMMException("NoseHooverIntegrator: chainLength must be positive");
+    if (numMTS < 0)
+        throw OpenMMException("NoseHooverIntegrator: numMTS must be positive");
+    if (numYoshidaSuzuki != 1 && numYoshidaSuzuki != 3 && numYoshidaSuzuki != 5 && numYoshidaSuzuki != 7)
+        throw OpenMMException("NoseHooverIntegrator: numYoshidaSuzuki must be 1, 3, 5, or 7");
     hasSubsystemThermostats_ = false;
     return addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int, int>>(), temperature,
                                   collisionFrequency, temperature, collisionFrequency, chainLength, numMTS, numYoshidaSuzuki);
@@ -80,6 +90,20 @@ int NoseHooverIntegrator::addSubsystemThermostat(const std::vector<int>& thermos
                                                  double temperature, double collisionFrequency,
                                                  double relativeTemperature, double relativeCollisionFrequency,
                                                  int chainLength, int numMTS, int numYoshidaSuzuki) {
+    if (temperature < 0)
+        throw OpenMMException("NoseHooverIntegrator: temperature cannot be negative");
+    if (relativeTemperature < 0)
+        throw OpenMMException("NoseHooverIntegrator: relativeTemperature cannot be negative");
+    if (collisionFrequency <= 0)
+        throw OpenMMException("NoseHooverIntegrator: collisionFrequency must be positive");
+    if (relativeCollisionFrequency <= 0)
+        throw OpenMMException("NoseHooverIntegrator: relativeCollisionFrequency must be positive");
+    if (collisionFrequency < 0)
+        throw OpenMMException("NoseHooverIntegrator: chainLength must be positive");
+    if (numMTS < 0)
+        throw OpenMMException("NoseHooverIntegrator: numMTS must be positive");
+    if (numYoshidaSuzuki != 1 && numYoshidaSuzuki != 3 && numYoshidaSuzuki != 5 && numYoshidaSuzuki != 7)
+        throw OpenMMException("NoseHooverIntegrator: numYoshidaSuzuki must be 1, 3, 5, or 7");
     int chainID = noseHooverChains.size();
     // check if one thermostat already applies to all atoms or pairs
     if ( (chainID > 0) && (noseHooverChains[0].getThermostatedAtoms().size()+noseHooverChains[0].getThermostatedPairs().size() == 0) ) {

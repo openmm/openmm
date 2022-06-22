@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -353,6 +353,21 @@ void testContinuous1DFunction() {
         context.setPositions(positions);
         State state = context.getState(State::Energy);
         double energy = (x < 1.0 || x > 6.0 ? 0.0 : sin(x-1.0))+1.0;
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 1e-4);
+    }
+
+    // Try updating the tabulated function.
+
+    for (int i = 0; i < table.size(); i++)
+        table[i] *= 0.5;
+    dynamic_cast<Continuous1DFunction&>(forceField->getTabulatedFunction(0)).setFunctionParameters(table, 1.0, 6.0);
+    forceField->updateParametersInContext(context);
+    for (int i = 1; i < 20; i++) {
+        double x = 0.25*i+1.0;
+        positions[1] = Vec3(x, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Energy);
+        double energy = (x < 1.0 || x > 6.0 ? 0.0 : 0.5*sin(x-1.0))+1.0;
         ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 1e-4);
     }
 }
@@ -1430,6 +1445,69 @@ void testEnergyParameterDerivativesWithGroups() {
     }
 }
 
+void testComputedValues(int mode) {
+    // Create a box of particles.
+
+    int gridSize = 5;
+    int numParticles = gridSize*gridSize*gridSize;
+    double boxSize = gridSize*0.7;
+    double cutoff = boxSize/3;
+    System system;
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* nb1 = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2); sigma1=(1-lambda)*sigmaA1+lambda*sigmaB1; sigma2=(1-lambda)*sigmaA2+lambda*sigmaB2");
+    CustomNonbondedForce* nb2 = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2)");
+    nb2->addComputedValue("sigma", "(1-lambda)*sigmaA+lambda*sigmaB");
+    for (int model = 0; model < 2; model++) {
+        CustomNonbondedForce* force = (model == 0 ? nb1 : nb2);
+        force->addGlobalParameter("lambda", 0);
+        force->addPerParticleParameter("sigmaA");
+        force->addPerParticleParameter("sigmaB");
+        force->addPerParticleParameter("eps");
+        if (mode == 1) {
+            // Test with a cutoff.
+            
+            force->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+            force->setCutoffDistance(cutoff);
+            force->setUseLongRangeCorrection(true);
+            force->setUseSwitchingFunction(true);
+            force->setSwitchingDistance(0.8*cutoff);
+        }
+        if (mode == 2) {
+            // Test with interaction groups.
+            
+            force->addInteractionGroup({0, 1, 2, 3, 4, 5}, {0, 3, 10, 15, 20, 25, 30});
+        }
+        force->setForceGroup(model);
+        for (int i = 0; i < numParticles; i++) {
+            if (i%2 == 0)
+                force->addParticle({1.1, 1.6, 0.5});
+            else
+                force->addParticle({1.0, 1.0, 1.0});
+        }
+        system.addForce(force);
+    }
+    vector<Vec3> positions(numParticles);
+    int index = 0;
+    for (int i = 0; i < gridSize; i++)
+        for (int j = 0; j < gridSize; j++)
+            for (int k = 0; k < gridSize; k++) {
+                system.addParticle(1.0);
+                positions[index++] = Vec3(i*boxSize/gridSize, j*boxSize/gridSize, k*boxSize/gridSize);
+            }
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+
+    // Compute the force and energy for a few values of lambda and make sure both versions agree.
+
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    for (double lambda : {0.0, 0.3, 0.7, 1.0}) {
+        context.setParameter("lambda", lambda);
+        double e1 = context.getState(State::Energy, false, 1<<0).getPotentialEnergy();
+        double e2 = context.getState(State::Energy, false, 1<<1).getPotentialEnergy();
+        ASSERT_EQUAL_TOL(e1, e2, 1e-5);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -1464,6 +1542,9 @@ int main(int argc, char* argv[]) {
         testEnergyParameterDerivatives();
         testEnergyParameterDerivatives2();
         testEnergyParameterDerivativesWithGroups();
+        testComputedValues(0); // No cutoff
+        testComputedValues(1); // Cutoff, periodic
+        testComputedValues(2); // Interaction groups
         runPlatformTests();
     }
     catch(const exception& e) {

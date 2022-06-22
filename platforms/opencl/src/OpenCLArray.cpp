@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,11 +35,11 @@ using namespace OpenMM;
 OpenCLArray::OpenCLArray() : buffer(NULL), ownsBuffer(false) {
 }
 
-OpenCLArray::OpenCLArray(OpenCLContext& context, int size, int elementSize, const std::string& name, cl_int flags) : buffer(NULL) {
+OpenCLArray::OpenCLArray(OpenCLContext& context, size_t size, int elementSize, const std::string& name, cl_int flags) : buffer(NULL) {
     initialize(context, size, elementSize, name, flags);
 }
 
-OpenCLArray::OpenCLArray(OpenCLContext& context, cl::Buffer* buffer, int size, int elementSize, const std::string& name) : buffer(NULL) {
+OpenCLArray::OpenCLArray(OpenCLContext& context, cl::Buffer* buffer, size_t size, int elementSize, const std::string& name) : buffer(NULL) {
     initialize(context, buffer, size, elementSize, name);
 }
 
@@ -48,11 +48,11 @@ OpenCLArray::~OpenCLArray() {
         delete buffer;
 }
 
-void OpenCLArray::initialize(ComputeContext& context, int size, int elementSize, const std::string& name) {
+void OpenCLArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name) {
     initialize(dynamic_cast<OpenCLContext&>(context), size, elementSize, name, CL_MEM_READ_WRITE);
 }
 
-void OpenCLArray::initialize(OpenCLContext& context, int size, int elementSize, const std::string& name, cl_int flags) {
+void OpenCLArray::initialize(OpenCLContext& context, size_t size, int elementSize, const std::string& name, cl_int flags) {
     if (buffer != NULL)
         throw OpenMMException("OpenCLArray has already been initialized");
     this->context = &context;
@@ -71,7 +71,7 @@ void OpenCLArray::initialize(OpenCLContext& context, int size, int elementSize, 
     }
 }
 
-void OpenCLArray::initialize(OpenCLContext& context, cl::Buffer* buffer, int size, int elementSize, const std::string& name) {
+void OpenCLArray::initialize(OpenCLContext& context, cl::Buffer* buffer, size_t size, int elementSize, const std::string& name) {
     if (this->buffer != NULL)
         throw OpenMMException("OpenCLArray has already been initialized");
     this->context = &context;
@@ -82,7 +82,7 @@ void OpenCLArray::initialize(OpenCLContext& context, cl::Buffer* buffer, int siz
     ownsBuffer = false;
 }
 
-void OpenCLArray::resize(int size) {
+void OpenCLArray::resize(size_t size) {
     if (buffer == NULL)
         throw OpenMMException("OpenCLArray has not been initialized");
     if (!ownsBuffer)
@@ -96,11 +96,13 @@ ComputeContext& OpenCLArray::getContext() {
     return *context;
 }
 
-void OpenCLArray::upload(const void* data, bool blocking) {
+void OpenCLArray::uploadSubArray(const void* data, int offset, int elements, bool blocking) {
     if (buffer == NULL)
         throw OpenMMException("OpenCLArray has not been initialized");
+    if (offset < 0 || offset+elements > getSize())
+        throw OpenMMException("uploadSubArray: data exceeds range of array");
     try {
-        context->getQueue().enqueueWriteBuffer(*buffer, blocking ? CL_TRUE : CL_FALSE, 0, size*elementSize, data);
+        context->getQueue().enqueueWriteBuffer(*buffer, blocking ? CL_TRUE : CL_FALSE, offset*elementSize, elements*elementSize, data);
     }
     catch (cl::Error err) {
         std::stringstream str;

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2013 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -70,9 +70,7 @@ public:
      *
      * @param tol    the error tolerance to use, measured in kJ/mol/nm
      */
-    void setMinimizationErrorTolerance(double tol) {
-        tolerance = tol;
-    }
+    void setMinimizationErrorTolerance(double tol);
     /**
      * Advance a simulation through time by taking a series of time steps.
      *

@@ -1,12 +1,10 @@
 from collections import defaultdict
 import unittest
-import math
-import sys
 
 from validateModeller import *
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
 
 if sys.version_info >= (3, 0):
     from io import StringIO
@@ -333,7 +331,6 @@ class TestModeller(unittest.TestCase):
         self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(0, 0, 5.5))
 
         # Second way of passing in the periodic box vectors: with the boxSize parameter to addSolvent()
-        topology_start = self.pdb.topology
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
         modeller.addSolvent(self.forcefield, boxSize = Vec3(3.6, 4.6, 5.6)*nanometers)
@@ -345,7 +342,6 @@ class TestModeller(unittest.TestCase):
         self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(0, 0, 5.6))
 
         # Third way of passing in the periodic box vectors: with the boxVectors parameter to addSolvent()
-        topology_start = self.pdb.topology
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
         modeller.addSolvent(self.forcefield, boxVectors = (Vec3(3.4, 0, 0), Vec3(0.5, 4.4, 0), Vec3(-1.0, -1.5, 5.4))*nanometers)
@@ -357,24 +353,42 @@ class TestModeller(unittest.TestCase):
         self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(-1.0, -1.5, 5.4))
 
         # Fourth way of passing in the periodic box vectors: pass a 'padding' value to addSolvent()
-        topology_start = self.pdb.topology
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
-        modeller.addSolvent(self.forcefield, padding = 1.0*nanometers)
+        modeller.addSolvent(self.forcefield, padding = 0.9*nanometers)
         topology_after = modeller.getTopology()
         dim3 = topology_after.getPeriodicBoxVectors()
 
-        self.assertVecAlmostEqual(dim3[0]/nanometers, Vec3(2.8802, 0, 0))
-        self.assertVecAlmostEqual(dim3[1]/nanometers, Vec3(0, 2.8802, 0))
-        self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(0, 0, 2.8802))
+        self.assertVecAlmostEqual(dim3[0]/nanometers, Vec3(1.824363, 0, 0))
+        self.assertVecAlmostEqual(dim3[1]/nanometers, Vec3(0, 1.824363, 0))
+        self.assertVecAlmostEqual(dim3[2]/nanometers, Vec3(0, 0, 1.824363))
 
         # Fifth way: specify a number of molecules to add instead of a box size
-        topology_start = self.pdb.topology
         modeller = Modeller(topology_start, self.positions)
         modeller.deleteWater()
         numInitial = len(list(modeller.topology.residues()))
         modeller.addSolvent(self.forcefield, numAdded=1000)
         self.assertEqual(numInitial+1000, len(list(modeller.topology.residues())))
+
+    def test_addSolventBoxShape(self):
+        """Test the addSolvent() method; test the different box shapes."""
+        modeller = Modeller(self.pdb.topology, self.positions)
+        modeller.deleteWater()
+        modeller.addSolvent(self.forcefield, padding=1.0*nanometers, boxShape='cube')
+        cubeVectors = modeller.getTopology().getPeriodicBoxVectors()
+        modeller = Modeller(self.pdb.topology, self.positions)
+        modeller.deleteWater()
+        modeller.addSolvent(self.forcefield, padding=1.0*nanometers, boxShape='dodecahedron')
+        dodecVectors = modeller.getTopology().getPeriodicBoxVectors()
+        modeller = Modeller(self.pdb.topology, self.positions)
+        modeller.deleteWater()
+        modeller.addSolvent(self.forcefield, padding=1.0*nanometers, boxShape='octahedron')
+        octVectors = modeller.getTopology().getPeriodicBoxVectors()
+        cubeVolume = cubeVectors[0][0]*cubeVectors[1][1]*cubeVectors[2][2]/(nanometers**3)
+        dodecVolume = dodecVectors[0][0]*dodecVectors[1][1]*dodecVectors[2][2]/(nanometers**3)
+        octVolume = octVectors[0][0]*octVectors[1][1]*octVectors[2][2]/(nanometers**3)
+        self.assertAlmostEqual(0.707, dodecVolume/cubeVolume, places=3)
+        self.assertAlmostEqual(0.770, octVolume/cubeVolume, places=3)
 
     def test_addSolventNeutralSolvent(self):
         """ Test the addSolvent() method; test adding ions to neutral solvent. """
@@ -952,6 +966,20 @@ class TestModeller(unittest.TestCase):
 
         validate_equivalence(self, topology_LYN, topology_after)
 
+    def test_addHydrogensGlycam(self):
+        """Test adding hydrogens for GLYCAM."""
+        pdb = PDBFile('systems/glycopeptide.pdb')
+        Modeller.loadHydrogenDefinitions('glycam-hydrogens.xml')
+        modeller = Modeller(pdb.topology, pdb.positions)
+        hydrogens = [a for a in modeller.topology.atoms() if a.element == element.hydrogen]
+        modeller.delete(hydrogens)
+        self.assertTrue(modeller.topology.getNumAtoms() < pdb.topology.getNumAtoms())
+        modeller.addHydrogens()
+        self.assertEqual(modeller.topology.getNumAtoms(), pdb.topology.getNumAtoms())
+        for res1, res2 in zip(pdb.topology.residues(), modeller.topology.residues()):
+            names1 = sorted([a.name for a in res1.atoms()])
+            names2 = sorted([a.name for a in res2.atoms()])
+            self.assertEqual(names1, names2)
 
     def test_removeExtraHydrogens(self):
         """Test that addHydrogens() can remove hydrogens that shouldn't be there. """

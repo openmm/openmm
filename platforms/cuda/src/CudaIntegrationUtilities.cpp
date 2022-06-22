@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -26,6 +26,7 @@
 
 #include "CudaIntegrationUtilities.h"
 #include "CudaContext.h"
+#include "openmm/common/ContextSelector.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -40,13 +41,13 @@ using namespace std;
 
 CudaIntegrationUtilities::CudaIntegrationUtilities(CudaContext& context, const System& system) : IntegrationUtilities(context, system),
         ccmaConvergedMemory(NULL) {
-        CHECK_RESULT2(cuEventCreate(&ccmaEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for CCMA");
+        CHECK_RESULT2(cuEventCreate(&ccmaEvent, context.getEventFlags()), "Error creating event for CCMA");
         CHECK_RESULT2(cuMemHostAlloc((void**) &ccmaConvergedMemory, sizeof(int), CU_MEMHOSTALLOC_DEVICEMAP), "Error allocating pinned memory");
         CHECK_RESULT2(cuMemHostGetDevicePointer(&ccmaConvergedDeviceMemory, ccmaConvergedMemory, 0), "Error getting device address for pinned memory");
 }
 
 CudaIntegrationUtilities::~CudaIntegrationUtilities() {
-    context.setAsCurrent();
+    ContextSelector selector(context);
     if (ccmaConvergedMemory != NULL) {
         cuMemFreeHost(ccmaConvergedMemory);
         cuEventDestroy(ccmaEvent);
@@ -66,6 +67,7 @@ CudaArray& CudaIntegrationUtilities::getStepSize() {
 }
 
 void CudaIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, double tol) {
+    ContextSelector selector(context);
     ComputeKernel settleKernel, shakeKernel, ccmaForceKernel;
     if (constrainVelocities) {
         settleKernel = settleVelKernel;
@@ -131,6 +133,7 @@ void CudaIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, do
 }
 
 void CudaIntegrationUtilities::distributeForcesFromVirtualSites() {
+    ContextSelector selector(context);
     if (numVsites > 0) {
         vsiteForceKernel->setArg(2, context.getLongForceBuffer());
         vsiteForceKernel->execute(numVsites);

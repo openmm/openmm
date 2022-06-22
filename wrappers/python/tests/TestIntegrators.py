@@ -2,9 +2,9 @@ import unittest
 import warnings
 import tempfile
 from datetime import datetime, timedelta
-from simtk.openmm import *
-from simtk.openmm.app import *
-from simtk.unit import *
+from openmm import *
+from openmm.app import *
+from openmm.unit import *
 import math, random
 
 class TestIntegrators(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestIntegrators(unittest.TestCase):
         # Create a periodic solvated system with PME
         pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
         ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
-        system = ff.createSystem(pdb.topology, cutoffMethod=PME)
+        system = ff.createSystem(pdb.topology, nonbondedMethod=PME)
 
         # Split forces into groups
         for force in system.getForces():
@@ -102,7 +102,7 @@ class TestIntegrators(unittest.TestCase):
         # Create a periodic solvated system with PME
         pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
         ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
-        system = ff.createSystem(pdb.topology, cutoffMethod=PME)
+        system = ff.createSystem(pdb.topology, nonbondedMethod=PME)
 
         # Split forces into groups
         for force in system.getForces():
@@ -126,7 +126,7 @@ class TestIntegrators(unittest.TestCase):
         # Create a periodic solvated system with PME
         pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
         ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
-        system = ff.createSystem(pdb.topology, cutoffMethod=PME)
+        system = ff.createSystem(pdb.topology, nonbondedMethod=PME)
 
         # Split forces into groups
         for force in system.getForces():
@@ -160,7 +160,7 @@ class TestIntegrators(unittest.TestCase):
         """Test partial thermostating in the NoseHooverIntegrator (only API)"""
         pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
         ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
-        system = ff.createSystem(pdb.topology, cutoffMethod=PME)
+        system = ff.createSystem(pdb.topology, nonbondedMethod=PME)
 
         integrator = NoseHooverIntegrator(1.0*femtosecond) 
         integrator.addSubsystemThermostat(list(range(5)), [], 200*kelvin, 1/picosecond, 200*kelvin, 1/picosecond, 3,3,3)

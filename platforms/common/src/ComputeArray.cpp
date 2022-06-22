@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -43,14 +43,14 @@ ArrayInterface& ComputeArray::getArray() {
     return *impl;
 }
 
-void ComputeArray::initialize(ComputeContext& context, int size, int elementSize, const std::string& name) {
+void ComputeArray::initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name) {
     if (impl != NULL)
         throw OpenMMException("The array "+getName()+" has already been initialized");
     impl = context.createArray();
     impl->initialize(context, size, elementSize, name);
 }
 
-void ComputeArray::resize(int size) {
+void ComputeArray::resize(size_t size) {
     if (impl == NULL)
         throw OpenMMException("ComputeArray has not been initialized");
     impl->resize(size);
@@ -60,7 +60,7 @@ bool ComputeArray::isInitialized() const {
     return (impl != NULL);
 }
 
-int ComputeArray::getSize() const {
+size_t ComputeArray::getSize() const {
     if (impl == NULL)
         throw OpenMMException("ComputeArray has not been initialized");
     return impl->getSize();
@@ -84,10 +84,10 @@ ComputeContext& ComputeArray::getContext() {
     return impl->getContext();
 }
 
-void ComputeArray::upload(const void* data, bool blocking) {
+void ComputeArray::uploadSubArray(const void* data, int offset, int elements, bool blocking) {
     if (impl == NULL)
         throw OpenMMException("ComputeArray has not been initialized");
-    impl->upload(data, blocking);
+    impl->uploadSubArray(data, offset, elements, blocking);
 }
 
 void ComputeArray::download(void* data, bool blocking) const {

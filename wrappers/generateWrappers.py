@@ -1,7 +1,5 @@
 from __future__ import print_function
 import sys, os
-import time
-import getopt
 import re
 import xml.etree.ElementTree as etree
 
@@ -80,8 +78,23 @@ class WrapperGenerator:
                             'std::vector<double> OpenMM::NoseHooverChain::getYoshidaSuzukiWeights',
                             'const std::vector<int>& OpenMM::NoseHooverIntegrator::getAllThermostatedIndividualParticles',
                             'const std::vector<std::tuple<int, int, double> >& OpenMM::NoseHooverIntegrator::getAllThermostatedPairs',
-                            'virtual void OpenMM::NoseHooverIntegrator::stateChanged'
-                           ] 
+                            'virtual void OpenMM::NoseHooverIntegrator::stateChanged',
+                            'virtual bool OpenMM::TabulatedFunction::operator==',
+                            'bool OpenMM::Continuous1DFunction::operator==',
+                            'bool OpenMM::Continuous2DFunction::operator==',
+                            'bool OpenMM::Continuous3DFunction::operator==',
+                            'bool OpenMM::Discrete1DFunction::operator==',
+                            'bool OpenMM::Discrete2DFunction::operator==',
+                            'bool OpenMM::Discrete3DFunction::operator==',
+                            'virtual bool OpenMM::TabulatedFunction::operator!=',
+                            'bool OpenMM::Continuous1DFunction::operator!=',
+                            'bool OpenMM::Continuous2DFunction::operator!=',
+                            'bool OpenMM::Continuous3DFunction::operator!=',
+                            'bool OpenMM::Discrete1DFunction::operator!=',
+                            'bool OpenMM::Discrete2DFunction::operator!=',
+                            'bool OpenMM::Discrete3DFunction::operator!='
+                           ]
+        self.skipMethods = [s.replace(' ', '') for s in self.skipMethods]
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']
         self.nodeByID={}
 
@@ -110,7 +123,7 @@ class WrapperGenerator:
             self.findBaseNodes(node, orderedClassNodes)
         return orderedClassNodes
 
-    def findBaseNodes(self, node, excludedClassNodes=[]):
+    def findBaseNodes(self, node, excludedClassNodes):
         if node in excludedClassNodes:
             return
         if node.attrib['prot'] == 'private':
@@ -127,12 +140,11 @@ class WrapperGenerator:
 
     def getClassMethods(self, classNode):
         className = getText("compoundname", classNode)
-        shortClassName = stripOpenMMPrefix(className)
         methodList = []
         for section in findNodes(classNode, "sectiondef", kind="public-static-func")+findNodes(classNode, "sectiondef", kind="public-func"):
             for memberNode in findNodes(section, "memberdef", kind="function", prot="public"):
                 methodDefinition = getText("definition", memberNode)
-                if methodDefinition in self.skipMethods:
+                if methodDefinition.replace(' ', '') in self.skipMethods:
                     continue
                 methodList.append(memberNode)
         return methodList
@@ -211,7 +223,6 @@ class CHeaderGenerator(WrapperGenerator):
             for node in findNodes(section, "memberdef", kind="enum", prot="public"):
                 enumNodes.append(node)
         className = getText("compoundname", classNode)
-        shortClassName = stripOpenMMPrefix(className)
         typeName = convertOpenMMPrefix(className)
         for enumNode in enumNodes:
             enumName = getText("name", enumNode)
@@ -889,6 +900,7 @@ class FortranHeaderGenerator(WrapperGenerator):
         WrapperGenerator.__init__(self, inputDirname, output)
         self.typeTranslations = {'int': 'integer*4',
                                  'bool': 'integer*4',
+                                 'long long': 'integer*8',
                                  'double': 'real*8',
                                  'char *': 'character(*)',
                                  'const char *': 'character(*)',
@@ -906,6 +918,7 @@ class FortranHeaderGenerator(WrapperGenerator):
     
     def writeGlobalConstants(self):
         self.out.write("    ! Global Constants\n\n")
+        self.out.write("    integer, parameter :: dp = kind(1.d0)\n")
         node = next((x for x in findNodes(self.doc.getroot(), "compounddef", kind="namespace") if x.findtext("compoundname") == "OpenMM"))
         for section in findNodes(node, "sectiondef", kind="var"):
             for memberNode in findNodes(section, "memberdef", kind="variable", mutable="no", prot="public", static="yes"):
@@ -913,6 +926,9 @@ class FortranHeaderGenerator(WrapperGenerator):
                 iDef = getText("initializer", memberNode)
                 if iDef.startswith("="):
                     iDef = iDef[1:]
+                # Append _dp to constants so they will be interpreted as double precision.  Some constants
+                # are defined as ratios, so we need to append it to both numerator and denominator.
+                iDef = '/'.join(f'{x}_dp' for x in iDef.split('/'))
                 self.out.write("    real*8, parameter :: OpenMM_%s = %s\n" % (vDef, iDef))
 
     def writeTypeDeclarations(self):
@@ -1590,7 +1606,6 @@ class FortranSourceGenerator(WrapperGenerator):
     
     def writeOneConstructor(self, classNode, methodNode, functionName, wrapperFunctionName):
         className = getText("compoundname", classNode)
-        shortClassName = stripOpenMMPrefix(className)
         typeName = convertOpenMMPrefix(className)
         self.out.write("OPENMM_EXPORT void %s(%s*& result" % (wrapperFunctionName, typeName))
         self.writeArguments(methodNode, True)
@@ -1616,8 +1631,6 @@ class FortranSourceGenerator(WrapperGenerator):
         returnType = self.getType(methodType)
         hasReturnValue = (returnType in ('int', 'bool', 'double'))
         hasReturnArg = not (hasReturnValue or returnType == 'void')
-        if methodType in self.classesByShortName:
-            methodType = self.classesByShortName[methodType]
         self.out.write("OPENMM_EXPORT ")
         if hasReturnValue:
             self.out.write(returnType)
@@ -1636,7 +1649,7 @@ class FortranSourceGenerator(WrapperGenerator):
                 returnArg = 'char* result'
             else:
                 returnArg = "%s& result" % returnType
-        numArgs = self.writeArguments(methodNode, isInstanceMethod, returnArg)
+        self.writeArguments(methodNode, isInstanceMethod, returnArg)
         if hasReturnArg and returnType == 'const char*':
             self.out.write(", int result_length")
         self.out.write(") {\n")

@@ -72,6 +72,7 @@ void AmoebaMultipoleForceProxy::serialize(const void* object, SerializationNode&
     const AmoebaMultipoleForce& force = *reinterpret_cast<const AmoebaMultipoleForce*>(object);
 
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setIntProperty("nonbondedMethod",                  force.getNonbondedMethod());
     node.setIntProperty("polarizationType",                 force.getPolarizationType());
     node.setIntProperty("mutualInducedMaxIterations",       force.getMutualInducedMaxIterations());
@@ -137,8 +138,8 @@ void* AmoebaMultipoleForceProxy::deserialize(const SerializationNode& node) cons
     AmoebaMultipoleForce* force = new AmoebaMultipoleForce();
 
     try {
-        if (version > 3)
-            force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setNonbondedMethod(static_cast<AmoebaMultipoleForce::NonbondedMethod>(node.getIntProperty("nonbondedMethod")));
         if (version >= 2)
             force->setPolarizationType(static_cast<AmoebaMultipoleForce::PolarizationType>(node.getIntProperty("polarizationType")));

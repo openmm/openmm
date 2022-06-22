@@ -55,14 +55,22 @@ namespace OpenMM {
  *
  * As an example, the following code creates a CustomAngleForce that implements a harmonic potential:
  *
- * <tt>CustomAngleForce* force = new CustomAngleForce("0.5*k*(theta-theta0)^2");</tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomAngleForce* force = new CustomAngleForce("0.5*k*(theta-theta0)^2");
+ *
+ * \endverbatim
  *
  * This force depends on two parameters: the spring constant k and equilibrium angle theta0.  The following code defines these parameters:
  *
- * <tt><pre>
- * force->addPerAngleParameter("k");
- * force->addPerAngleParameter("theta0");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    force->addPerAngleParameter("k");
+ *    force->addPerAngleParameter("theta0");
+ *
+ * \endverbatim
  * 
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -121,6 +121,30 @@ SerializationNode& SerializationNode::setIntProperty(const string& name, int val
     return *this;
 }
 
+long long SerializationNode::getLongProperty(const string& name) const {
+    map<string, string>::const_iterator iter = properties.find(name);
+    if (iter == properties.end())
+        throw OpenMMException("Unknown property '"+name+"' in node '"+getName()+"'");
+    long long value;
+    stringstream(iter->second) >> value;
+    return value;
+}
+
+long long SerializationNode::getLongProperty(const string& name, long long defaultValue) const {
+    map<string, string>::const_iterator iter = properties.find(name);
+    if (iter == properties.end())
+        return defaultValue;
+    long long value;
+    stringstream(iter->second) >> value;
+    return value;
+}
+
+SerializationNode& SerializationNode::setLongProperty(const string& name, long long value) {
+    stringstream s;
+    s << value;
+    properties[name] = s.str();
+    return *this;
+}
 
 bool SerializationNode::getBoolProperty(const string& name) const {
     map<string, string>::const_iterator iter = properties.find(name);

@@ -2030,7 +2030,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Bond from="P" to="O1P"/>
   <Bond from="P" to="O2P"/>
@@ -2100,7 +2100,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Atom name="H3T" tinkerLookupName="H3T"/>
   <Bond from="P" to="O1P"/>
@@ -2170,7 +2170,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Bond from="H5T" to="O5'"/>
   <Bond from="O5'" to="C5'"/>
@@ -2236,7 +2236,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Atom name="H3T" tinkerLookupName="H3T"/>
   <Bond from="H5T" to="O5'"/>
@@ -2304,7 +2304,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Bond from="P" to="O1P"/>
   <Bond from="P" to="O2P"/>
@@ -2369,7 +2369,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Atom name="H3T" tinkerLookupName="H3T"/>
   <Bond from="P" to="O1P"/>
@@ -2434,7 +2434,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Bond from="H5T" to="O5'"/>
   <Bond from="O5'" to="C5'"/>
@@ -2495,7 +2495,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Atom name="H3T" tinkerLookupName="H3T"/>
   <Bond from="H5T" to="O5'"/>
@@ -2563,7 +2563,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Bond from="P" to="O1P"/>
   <Bond from="P" to="O2P"/>
@@ -2635,7 +2635,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Atom name="H3T" tinkerLookupName="H3T"/>
   <Bond from="P" to="O1P"/>
@@ -2707,7 +2707,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Bond from="H5T" to="O5'"/>
   <Bond from="O5'" to="C5'"/>
@@ -2775,7 +2775,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Atom name="H3T" tinkerLookupName="H3T"/>
   <Bond from="H5T" to="O5'"/>
@@ -2843,7 +2843,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Bond from="P" to="O1P"/>
   <Bond from="P" to="O2P"/>
@@ -2906,7 +2906,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Atom name="H3T" tinkerLookupName="H3T"/>
   <Bond from="P" to="O1P"/>
@@ -2969,7 +2969,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Bond from="H5T" to="O5'"/>
   <Bond from="O5'" to="C5'"/>
@@ -3028,7 +3028,7 @@
   <Atom name="C2'" tinkerLookupName="C2*"/>
   <Atom name="H2'" tinkerLookupName="H2*"/>
   <Atom name="O2'" tinkerLookupName="O2*"/>
-  <Atom name="HO2'" tinkerLookupName="H2*"/>
+  <Atom name="HO2'" tinkerLookupName="HO*"/>
   <Atom name="O3'" tinkerLookupName="O3*"/>
   <Atom name="H3T" tinkerLookupName="H3T"/>
   <Bond from="H5T" to="O5'"/>

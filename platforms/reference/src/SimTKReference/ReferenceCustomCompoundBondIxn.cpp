@@ -45,7 +45,6 @@ using namespace OpenMM;
 
 ReferenceCustomCompoundBondIxn::ReferenceCustomCompoundBondIxn(int numParticlesPerBond, const vector<vector<int> >& bondAtoms,
             const Lepton::ParsedExpression& energyExpression, const vector<string>& bondParameterNames,
-            const map<string, vector<int> >& distances, const map<string, vector<int> >& angles, const map<string, vector<int> >& dihedrals,
             const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions) :
             bondAtoms(bondAtoms), energyExpression(energyExpression.createCompiledExpression()), usePeriodic(false),
             energyParamDerivExpressions(energyParamDerivExpressions) {
@@ -61,27 +60,9 @@ ReferenceCustomCompoundBondIxn::ReferenceCustomCompoundBondIxn(int numParticlesP
         particleTerms.push_back(ReferenceCustomCompoundBondIxn::ParticleTermInfo(yname.str(), i, 1, energyExpression.differentiate(yname.str()).createCompiledExpression()));
         particleTerms.push_back(ReferenceCustomCompoundBondIxn::ParticleTermInfo(zname.str(), i, 2, energyExpression.differentiate(zname.str()).createCompiledExpression()));
     }
-    for (auto& term : distances)
-        distanceTerms.push_back(ReferenceCustomCompoundBondIxn::DistanceTermInfo(term.first, term.second, energyExpression.differentiate(term.first).createCompiledExpression()));
-    for (auto& term : angles)
-        angleTerms.push_back(ReferenceCustomCompoundBondIxn::AngleTermInfo(term.first, term.second, energyExpression.differentiate(term.first).createCompiledExpression()));
-    for (auto& term : dihedrals)
-        dihedralTerms.push_back(ReferenceCustomCompoundBondIxn::DihedralTermInfo(term.first, term.second, energyExpression.differentiate(term.first).createCompiledExpression()));
     for (int i = 0; i < particleTerms.size(); i++) {
         expressionSet.registerExpression(particleTerms[i].forceExpression);
         particleTerms[i].index = expressionSet.getVariableIndex(particleTerms[i].name);
-    }
-    for (int i = 0; i < distanceTerms.size(); i++) {
-        expressionSet.registerExpression(distanceTerms[i].forceExpression);
-        distanceTerms[i].index = expressionSet.getVariableIndex(distanceTerms[i].name);
-    }
-    for (int i = 0; i < angleTerms.size(); i++) {
-        expressionSet.registerExpression(angleTerms[i].forceExpression);
-        angleTerms[i].index = expressionSet.getVariableIndex(angleTerms[i].name);
-    }
-    for (int i = 0; i < dihedralTerms.size(); i++) {
-        expressionSet.registerExpression(dihedralTerms[i].forceExpression);
-        dihedralTerms[i].index = expressionSet.getVariableIndex(dihedralTerms[i].name);
     }
     numParameters = bondParameterNames.size();
     for (int i = 0; i < numParameters; i++)
@@ -148,95 +129,11 @@ void ReferenceCustomCompoundBondIxn::calculateOneIxn(int bond, vector<Vec3>& ato
     const vector<int>& atoms = bondAtoms[bond];
     for (auto& term : particleTerms)
         expressionSet.setVariable(term.index, atomCoordinates[atoms[term.atom]][term.component]);
-    for (auto& term : distanceTerms) {
-        computeDelta(atoms[term.p1], atoms[term.p2], term.delta, atomCoordinates);
-        expressionSet.setVariable(term.index, term.delta[ReferenceForce::RIndex]);
-    }
-    for (auto& term : angleTerms) {
-        computeDelta(atoms[term.p1], atoms[term.p2], term.delta1, atomCoordinates);
-        computeDelta(atoms[term.p3], atoms[term.p2], term.delta2, atomCoordinates);
-        expressionSet.setVariable(term.index, computeAngle(term.delta1, term.delta2));
-    }
-    for (auto& term : dihedralTerms) {
-        computeDelta(atoms[term.p2], atoms[term.p1], term.delta1, atomCoordinates);
-        computeDelta(atoms[term.p2], atoms[term.p3], term.delta2, atomCoordinates);
-        computeDelta(atoms[term.p4], atoms[term.p3], term.delta3, atomCoordinates);
-        double dotDihedral, signOfDihedral;
-        double* crossProduct[] = {term.cross1, term.cross2};
-        expressionSet.setVariable(term.index,getDihedralAngleBetweenThreeVectors(term.delta1, term.delta2, term.delta3, crossProduct, &dotDihedral, term.delta1, &signOfDihedral, 1));
-    }
     
-    // Apply forces based on individual particle coordinates.
+    // Apply forces based on particle coordinates.
     
     for (auto& term : particleTerms)
         forces[atoms[term.atom]][term.component] -= term.forceExpression.evaluate();
-
-    // Apply forces based on distances.
-
-    for (auto& term : distanceTerms) {
-        double dEdR = term.forceExpression.evaluate()/(term.delta[ReferenceForce::RIndex]);
-        for (int i = 0; i < 3; i++) {
-           double force  = -dEdR*term.delta[i];
-           forces[atoms[term.p1]][i] -= force;
-           forces[atoms[term.p2]][i] += force;
-        }
-    }
-
-    // Apply forces based on angles.
-
-    for (auto& term : angleTerms) {
-        double dEdTheta = term.forceExpression.evaluate();
-        double thetaCross[ReferenceForce::LastDeltaRIndex];
-        SimTKOpenMMUtilities::crossProductVector3(term.delta1, term.delta2, thetaCross);
-        double lengthThetaCross = sqrt(DOT3(thetaCross, thetaCross));
-        if (lengthThetaCross < 1.0e-06)
-            lengthThetaCross = 1.0e-06;
-        double termA = dEdTheta/(term.delta1[ReferenceForce::R2Index]*lengthThetaCross);
-        double termC = -dEdTheta/(term.delta2[ReferenceForce::R2Index]*lengthThetaCross);
-        double deltaCrossP[3][3];
-        SimTKOpenMMUtilities::crossProductVector3(term.delta1, thetaCross, deltaCrossP[0]);
-        SimTKOpenMMUtilities::crossProductVector3(term.delta2, thetaCross, deltaCrossP[2]);
-        for (int i = 0; i < 3; i++) {
-            deltaCrossP[0][i] *= termA;
-            deltaCrossP[2][i] *= termC;
-            deltaCrossP[1][i] = -(deltaCrossP[0][i]+deltaCrossP[2][i]);
-        }
-        for (int i = 0; i < 3; i++) {
-            forces[atoms[term.p1]][i] += deltaCrossP[0][i];
-            forces[atoms[term.p2]][i] += deltaCrossP[1][i];
-            forces[atoms[term.p3]][i] += deltaCrossP[2][i];
-        }
-    }
-
-    // Apply forces based on dihedrals.
-
-    for (auto& term : dihedralTerms) {
-        double dEdTheta = term.forceExpression.evaluate();
-        double internalF[4][3];
-        double forceFactors[4];
-        double normCross1 = DOT3(term.cross1, term.cross1);
-        double normBC = term.delta2[ReferenceForce::RIndex];
-        forceFactors[0] = (-dEdTheta*normBC)/normCross1;
-        double normCross2 = DOT3(term.cross2, term.cross2);
-        forceFactors[3] = (dEdTheta*normBC)/normCross2;
-        forceFactors[1] = DOT3(term.delta1, term.delta2);
-        forceFactors[1] /= term.delta2[ReferenceForce::R2Index];
-        forceFactors[2] = DOT3(term.delta3, term.delta2);
-        forceFactors[2] /= term.delta2[ReferenceForce::R2Index];
-        for (int i = 0; i < 3; i++) {
-            internalF[0][i] = forceFactors[0]*term.cross1[i];
-            internalF[3][i] = forceFactors[3]*term.cross2[i];
-            double s = forceFactors[1]*internalF[0][i] - forceFactors[2]*internalF[3][i];
-            internalF[1][i] = internalF[0][i] - s;
-            internalF[2][i] = internalF[3][i] + s;
-        }
-        for (int i = 0; i < 3; i++) {
-            forces[atoms[term.p1]][i] += internalF[0][i];
-            forces[atoms[term.p2]][i] -= internalF[1][i];
-            forces[atoms[term.p3]][i] -= internalF[2][i];
-            forces[atoms[term.p4]][i] += internalF[3][i];
-        }
-    }
 
     // Add the energy
 

@@ -1,8 +1,6 @@
-.. include:: header.rst
-
-####################################
-OpenMM Users Manual and Theory Guide
-####################################
+#####################################
+OpenMM User's Manual and Theory Guide
+#####################################
 
 .. only:: latex
 
@@ -10,12 +8,21 @@ OpenMM Users Manual and Theory Guide
 
 .. toctree::
    :numbered:
-   :maxdepth: 4
+   :maxdepth: 3
 
    introduction
+
+.. toctree::
+   :maxdepth: 3
+
    application
    library
    theory
+
+.. toctree::
+   :numbered:
+   :maxdepth: 3
+
    zbibliography
 
 .. only:: html

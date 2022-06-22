@@ -38,6 +38,9 @@ using namespace std;
 double State::getTime() const {
     return time;
 }
+long long State::getStepCount() const {
+    return stepCount;
+}
 const vector<Vec3>& State::getPositions() const {
     if ((types&Positions) == 0)
         throw OpenMMException("Invoked getPositions() on a State which does not contain positions.");
@@ -94,7 +97,7 @@ SerializationNode& State::updateIntegratorParameters() {
 int State::getDataTypes() const {
     return types;
 }
-State::State(double time) : types(0), time(time), ke(0), pe(0) {
+State::State(double time, long long stepCount) : types(0), time(time), stepCount(stepCount), ke(0), pe(0) {
 }
 State::State() : types(0), time(0.0), ke(0), pe(0) {
 }
@@ -135,7 +138,7 @@ void State::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
     periodicBoxVectors[2] = c;
 }
 
-State::StateBuilder::StateBuilder(double time) : state(time) {
+State::StateBuilder::StateBuilder(double time, long long stepCount) : state(time, stepCount) {
 }
 
 State State::StateBuilder::getState() {

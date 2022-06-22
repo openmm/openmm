@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,14 +31,10 @@
 #include "OpenCLArray.h"
 #include "OpenCLContext.h"
 #include "OpenCLFFT3D.h"
-#include "OpenCLParameterSet.h"
 #include "OpenCLSort.h"
 #include "openmm/kernels.h"
-#include "openmm/internal/CompiledExpressionSet.h"
-#include "openmm/internal/CustomIntegratorUtilities.h"
-#include "lepton/CompiledExpression.h"
-#include "lepton/ExpressionProgram.h"
 #include "openmm/System.h"
+#include "openmm/common/CommonKernels.h"
 
 namespace OpenMM {
 
@@ -113,6 +109,18 @@ public:
      */
     void setTime(ContextImpl& context, double time);
     /**
+     * Get the current step count
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    long long getStepCount(const ContextImpl& context) const;
+    /**
+     * Set the current step count
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void setStepCount(const ContextImpl& context, long long count);
+    /**
      * Get the positions of all particles.
      *
      * @param positions  on exit, this contains the particle positions
@@ -136,6 +144,15 @@ public:
      * @param velocities  a vector containg the particle velocities
      */
     void setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities);
+    /**
+     * Compute velocities, shifted in time to account for a leapfrog integrator.  The shift
+     * is based on the most recently computed forces.
+     * 
+     * @param context     the context in which to execute this kernel
+     * @param timeShift   the amount by which to shift the velocities in time
+     * @param velocities  the shifted velocities are returned in this
+     */
+    void computeShiftedVelocities(ContextImpl& context, double timeShift, std::vector<Vec3>& velocities);
     /**
      * Get the current forces on all particles.
      *
@@ -176,63 +193,6 @@ public:
      * @param stream    an input stream the checkpoint data should be read from
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
-private:
-    OpenCLContext& cl;
-};
-
-/**
- * This kernel modifies the positions of particles to enforce distance constraints.
- */
-class OpenCLApplyConstraintsKernel : public ApplyConstraintsKernel {
-public:
-    OpenCLApplyConstraintsKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyConstraintsKernel(name, platform),
-            cl(cl), hasInitializedKernel(false) {
-    }
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     */
-    void initialize(const System& system);
-    /**
-     * Update particle positions to enforce constraints.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param tol        the distance tolerance within which constraints must be satisfied.
-     */
-    void apply(ContextImpl& context, double tol);
-    /**
-     * Update particle velocities to enforce constraints.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param tol        the velocity tolerance within which constraints must be satisfied.
-     */
-    void applyToVelocities(ContextImpl& context, double tol);
-private:
-    OpenCLContext& cl;
-    bool hasInitializedKernel;
-    cl::Kernel applyDeltasKernel;
-};
-
-/**
- * This kernel recomputes the positions of virtual sites.
- */
-class OpenCLVirtualSitesKernel : public VirtualSitesKernel {
-public:
-    OpenCLVirtualSitesKernel(std::string name, const Platform& platform, OpenCLContext& cl) : VirtualSitesKernel(name, platform), cl(cl) {
-    }
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     */
-    void initialize(const System& system);
-    /**
-     * Compute the virtual site locations.
-     *
-     * @param context    the context in which to execute this kernel
-     */
-    void computePositions(ContextImpl& context);
 private:
     OpenCLContext& cl;
 };
@@ -349,8 +309,8 @@ private:
     cl::Kernel pmeDispersionAtomRangeKernel;
     cl::Kernel pmeZIndexKernel;
     cl::Kernel pmeDispersionZIndexKernel;
-    cl::Kernel pmeUpdateBsplinesKernel;
-    cl::Kernel pmeDispersionUpdateBsplinesKernel;
+    cl::Kernel pmeGridIndexKernel;
+    cl::Kernel pmeDispersionGridIndexKernel;
     cl::Kernel pmeSpreadChargeKernel;
     cl::Kernel pmeDispersionSpreadChargeKernel;
     cl::Kernel pmeFinishSpreadChargeKernel;
@@ -376,103 +336,13 @@ private:
 /**
  * This kernel is invoked by CustomCVForce to calculate the forces acting on the system and the energy of the system.
  */
-class OpenCLCalcCustomCVForceKernel : public CalcCustomCVForceKernel {
+class OpenCLCalcCustomCVForceKernel : public CommonCalcCustomCVForceKernel {
 public:
-    OpenCLCalcCustomCVForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcCustomCVForceKernel(name, platform),
-            cl(cl), hasInitializedKernels(false) {
+    OpenCLCalcCustomCVForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : CommonCalcCustomCVForceKernel(name, platform, cc) {
     }
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the CustomCVForce this kernel will be used for
-     * @param innerContext   the context created by the CustomCVForce for computing collective variables
-     */
-    void initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param innerContext   the context created by the CustomCVForce for computing collective variables
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, ContextImpl& innerContext, bool includeForces, bool includeEnergy);
-    /**
-     * Copy state information to the inner context.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param innerContext   the context created by the CustomCVForce for computing collective variables
-     */
-    void copyState(ContextImpl& context, ContextImpl& innerContext);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomCVForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const CustomCVForce& force);
-private:
-    class ForceInfo;
-    class ReorderListener;
-    OpenCLContext& cl;
-    bool hasInitializedKernels;
-    Lepton::ExpressionProgram energyExpression;
-    std::vector<std::string> variableNames, paramDerivNames, globalParameterNames;
-    std::vector<Lepton::ExpressionProgram> variableDerivExpressions;
-    std::vector<Lepton::ExpressionProgram> paramDerivExpressions;
-    std::vector<OpenCLArray> cvForces;
-    OpenCLArray invAtomOrder;
-    OpenCLArray innerInvAtomOrder;
-    cl::Kernel copyStateKernel, copyForcesKernel, addForcesKernel;
-};
-
-/**
- * This kernel is invoked by MonteCarloBarostat to adjust the periodic box volume
- */
-class OpenCLApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
-public:
-    OpenCLApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyMonteCarloBarostatKernel(name, platform), cl(cl),
-            hasInitializedKernels(false) {
+    ComputeContext& getInnerComputeContext(ContextImpl& innerContext) {
+        return *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
     }
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param barostat   the MonteCarloBarostat this kernel will be used for
-     */
-    void initialize(const System& system, const Force& barostat);
-    /**
-     * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
-     * This version scales the x, y, and z positions independently.
-     * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
-     * or cluster into the first periodic box, so that coordinates will still be correct after the box size
-     * is changed.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param scaleX     the scale factor by which to multiply particle x-coordinate
-     * @param scaleY     the scale factor by which to multiply particle y-coordinate
-     * @param scaleZ     the scale factor by which to multiply particle z-coordinate
-     */
-    void scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ);
-    /**
-     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were before
-     * scaleCoordinates() was last called.
-     *
-     * @param context    the context in which to execute this kernel
-     */
-    void restoreCoordinates(ContextImpl& context);
-private:
-    OpenCLContext& cl;
-    bool hasInitializedKernels;
-    int numMolecules;
-    OpenCLArray savedPositions;
-    OpenCLArray savedForces;
-    OpenCLArray moleculeAtoms;
-    OpenCLArray moleculeStartIndex;
-    cl::Kernel kernel;
-    std::vector<int> lastAtomOrder;
 };
 
 } // namespace OpenMM

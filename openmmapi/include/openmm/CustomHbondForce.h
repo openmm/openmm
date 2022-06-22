@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -78,15 +78,23 @@ namespace OpenMM {
  * As an example, the following code creates a CustomHbondForce that implements a simple harmonic potential
  * to keep the distance between a1 and d1, and the angle formed by a1-d1-d2, near ideal values:
  *
- * <tt>CustomHbondForce* force = new CustomHbondForce("k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2");</tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomHbondForce* force = new CustomHbondForce("k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2");
+ *
+ * \endverbatim
  *
  * This force depends on three parameters: k, r0, and theta0.  The following code defines these as per-donor parameters:
  *
- * <tt><pre>
- * force->addPerDonorParameter("k");
- * force->addPerDonorParameter("r0");
- * force->addPerDonorParameter("theta0");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    force->addPerDonorParameter("k");
+ *    force->addPerDonorParameter("r0");
+ *    force->addPerDonorParameter("theta0");
+ *
+ * \endverbatim
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta, select.  All trigonometric functions
@@ -435,15 +443,16 @@ public:
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
     /**
-     * Update the per-donor and per-acceptor parameters in a Context to match those stored in this Force object.  This method
+     * Update the per-donor and per-acceptor parameters and tabulated functions in a Context to match those stored in this Force object.  This method
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setDonorParameters() and setAcceptorParameters() to modify this object's parameters, then call
      * updateParametersInContext() to copy them over to the Context.
      *
-     * This method has several limitations.  The only information it updates is the values of per-donor and per-acceptor parameters.
-     * All other aspects of the Force (the energy function, nonbonded method, cutoff distance, etc.) are unaffected and can only
+     * This method has several limitations.  The only information it updates is the values of per-donor and per-acceptor parameters and tabulated
+     * functions.  All other aspects of the Force (the energy function, nonbonded method, cutoff distance, etc.) are unaffected and can only
      * be changed by reinitializing the Context.  The set of particles involved in a donor or acceptor cannot be changed, nor can
-     * new donors or acceptors be added.
+     * new donors or acceptors be added.  While the tabulated values of a function can change, everything else about it (its dimensions,
+     * the data range) must not be changed.
      */
     void updateParametersInContext(Context& context);
     /**

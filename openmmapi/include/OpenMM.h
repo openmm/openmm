@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -60,6 +60,7 @@
 #include "openmm/LocalEnergyMinimizer.h"
 #include "openmm/MonteCarloAnisotropicBarostat.h"
 #include "openmm/MonteCarloBarostat.h"
+#include "openmm/MonteCarloFlexibleBarostat.h"
 #include "openmm/MonteCarloMembraneBarostat.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/Context.h"

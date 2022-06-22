@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -66,21 +66,49 @@ namespace OpenMM {
  *
  * As an example, the following code creates a CustomNonbondedForce that implements a 12-6 Lennard-Jones potential:
  *
- * <tt>CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)");</tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)");
+ *
+ * \endverbatim
  *
  * This force depends on two parameters: sigma and epsilon.  The following code defines these as per-particle parameters:
  *
- * <tt><pre>
- * force->addPerParticleParameter("sigma");
- * force->addPerParticleParameter("epsilon");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    force->addPerParticleParameter("sigma");
+ *    force->addPerParticleParameter("epsilon");
+ *
+ * \endverbatim
  *
  * The expression <i>must</i> be symmetric with respect to the two particles.  It typically will only be evaluated once
  * for each pair of particles, and no guarantee is made about which particle will be identified as "particle 1".  In the
  * above example, the energy only depends on the products sigma1*sigma2 and epsilon1*epsilon2, both of which are unchanged
  * if the labels 1 and 2 are reversed.  In contrast, if it depended on the difference sigma1-sigma2, the results would
  * be undefined, because reversing the labels 1 and 2 would change the energy.
+ * 
+ * The energy also may depend on "computed values".  These are similar to per-particle parameters, but instead of being
+ * specified in advance, their values are computed based on global and per-particle parameters.  For example, the following
+ * code uses a global parameter (lambda) to interpolate between two different sigma values for each particle (sigmaA and sigmaB).
+ * 
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
  *
+ *    CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)");
+ *    force->addComputedValue("sigma", "(1-lambda)*sigmaA + lambda*sigmaB");
+ *    force->addGlobalParameter("lambda", 0);
+ *    force->addPerParticleParameter("sigmaA");
+ *    force->addPerParticleParameter("sigmaB");
+ *    force->addPerParticleParameter("epsilon");
+ *
+ * \endverbatim
+ *
+ * You could, of course, embed the computation of sigma directly into the energy expression, but then it would need to be
+ * repeated for every interaction.  By separating it out as a computed value, it only needs to be computed once for each
+ * particle instead of once for each interaction, thus saving computation time.
+ * 
  * CustomNonbondedForce can operate in two modes.  By default, it computes the interaction of every particle in the System
  * with every other particle.  Alternatively, you can restrict it to only a subset of particle pairs.  To do this, specify
  * one or more "interaction groups".  An interaction group consists of two sets of particles that should interact with
@@ -201,6 +229,12 @@ public:
      */
     int getNumFunctions() const {
         return functions.size();
+    }
+    /**
+     * Get the number of per-particle computed values the interaction depends on.
+     */
+    int getNumComputedValues() const {
+        return computedValues.size();
     }
     /**
      * Get the number of interaction groups that have been defined.
@@ -458,6 +492,36 @@ public:
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
     /**
+     * Add a computed value to calculate for each particle.
+     *
+     * @param name        the name of the value
+     * @param expression  an algebraic expression to evaluate when calculating the computed value.  It may
+     *                    depend on the values of per-particle and global parameters, but not one other
+     *                    computed values.
+     * @return the index of the computed value that was added
+     */
+    int addComputedValue(const std::string& name, const std::string& expression);
+    /**
+     * Get the properties of a computed value.
+     *
+     * @param index            the index of the computed value for which to get parameters
+     * @param[out] name        the name of the value
+     * @param[out] expression  an algebraic expression to evaluate when calculating the computed value.  It may
+     *                         depend on the values of per-particle and global parameters, but not one other
+     *                         computed values.
+     */
+    void getComputedValueParameters(int index, std::string& name, std::string& expression) const;
+    /**
+     * Set the properties of a computed value.
+     *
+     * @param index       the index of the computed value for which to set parameters
+     * @param name        the name of the value
+     * @param expression  an algebraic expression to evaluate when calculating the computed value.  It may
+     *                    depend on the values of per-particle and global parameters, but not one other
+     *                    computed values.
+     */
+    void setComputedValueParameters(int index, const std::string& name, const std::string& expression);
+    /**
      * Add an interaction group.  An interaction will be computed between every particle in set1 and every particle in set2.
      *
      * @param set1    the first set of particles forming the interaction group
@@ -482,15 +546,16 @@ public:
      */
     void setInteractionGroupParameters(int index, const std::set<int>& set1, const std::set<int>& set2);
     /**
-     * Update the per-particle parameters in a Context to match those stored in this Force object.  This method provides
+     * Update the per-particle parameters and tabulated functions in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
      *
-     * This method has several limitations.  The only information it updates is the values of per-particle parameters.
-     * All other aspects of the Force (the energy function, nonbonded method, cutoff distance, etc.) are unaffected and can
+     * This method has several limitations.  The only information it updates is the values of per-particle parameters and tabulated
+     * functions.  All other aspects of the Force (the energy function, nonbonded method, cutoff distance, etc.) are unaffected and can
      * only be changed by reinitializing the Context.  Also, this method cannot be used to add new particles, only to change
-     * the parameters of existing ones.
+     * the parameters of existing ones.  While the tabulated values of a function can change, everything else about it (its dimensions,
+     * the data range) must not be changed.
      */
     void updateParametersInContext(Context& context);
     /**
@@ -511,6 +576,7 @@ private:
     class GlobalParameterInfo;
     class ExclusionInfo;
     class FunctionInfo;
+    class ComputedValueInfo;
     class InteractionGroupInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, switchingDistance;
@@ -521,6 +587,7 @@ private:
     std::vector<ParticleInfo> particles;
     std::vector<ExclusionInfo> exclusions;
     std::vector<FunctionInfo> functions;
+    std::vector<ComputedValueInfo> computedValues;
     std::vector<InteractionGroupInfo> interactionGroups;
     std::vector<int> energyParameterDerivatives;
 };
@@ -591,6 +658,19 @@ public:
     FunctionInfo() {
     }
     FunctionInfo(const std::string& name, TabulatedFunction* function) : name(name), function(function) {
+    }
+};
+
+/**
+ * This is an internal class used to record information about a computed value.
+ * @private
+ */
+class CustomNonbondedForce::ComputedValueInfo {
+public:
+    std::string name, expression;
+    ComputedValueInfo() {
+    }
+    ComputedValueInfo(const std::string& name, const std::string& expression) : name(name), expression(expression) {
     }
 };
 

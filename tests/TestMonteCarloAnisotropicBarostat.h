@@ -301,18 +301,6 @@ void testTriclinic() {
     for (int i = 0; i < 3; i++) {
         ASSERT_EQUAL_VEC(Vec3(xscale*initialBox[i][0], yscale*initialBox[i][1], zscale*initialBox[i][2]), box[i], 1e-5);
     }
-
-    // The barostat should have put all particles inside the first periodic box.  One integration step
-    // has happened since then, so they may have moved slightly outside it.
-
-    for (int i = 0; i < numParticles; i++) {
-        Vec3 pos = state.getPositions()[i];
-        ASSERT(pos[2]/box[2][2] > -1 && pos[2]/box[2][2] < 2);
-        pos -= box[2]*floor(pos[2]/box[2][2]);
-        ASSERT(pos[1]/box[1][1] > -1 && pos[1]/box[1][1] < 2);
-        pos -= box[1]*floor(pos[1]/box[1][1]);
-        ASSERT(pos[0]/box[0][0] > -1 && pos[0]/box[0][0] < 2);
-    }
 }
 
 /**

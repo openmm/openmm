@@ -41,8 +41,7 @@
 #include <algorithm>
 
 using namespace OpenMM;
-using namespace OpenMM_SFMT;
-using std::vector;
+using namespace std;
 
 MonteCarloMembraneBarostatImpl::MonteCarloMembraneBarostatImpl(const MonteCarloMembraneBarostat& owner) : owner(owner), step(0) {
 }
@@ -118,13 +117,12 @@ void MonteCarloMembraneBarostatImpl::updateContextState(ContextImpl& context) {
     
     double finalEnergy = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
     double kT = BOLTZ*context.getParameter(MonteCarloMembraneBarostat::Temperature());
-    double w = finalEnergy-initialEnergy + pressure*deltaVolume - tension*deltaArea - context.getMolecules().size()*kT*std::log(newVolume/volume);
-    if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > std::exp(-w/kT)) {
+    double w = finalEnergy-initialEnergy + pressure*deltaVolume - tension*deltaArea - context.getMolecules().size()*kT*log(newVolume/volume);
+    if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > exp(-w/kT)) {
         // Reject the step.
         
         kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
         context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
-        volume = newVolume;
     }
     else
         numAccepted[axis]++;
@@ -136,23 +134,23 @@ void MonteCarloMembraneBarostatImpl::updateContextState(ContextImpl& context) {
             numAccepted[axis] = 0;
         }
         else if (numAccepted[axis] > 0.75*numAttempted[axis]) {
-            volumeScale[axis] = std::min(volumeScale[axis]*1.1, volume*0.3);
+            volumeScale[axis] = min(volumeScale[axis]*1.1, volume*0.3);
             numAttempted[axis] = 0;
             numAccepted[axis] = 0;
         }
     }
 }
 
-std::map<std::string, double> MonteCarloMembraneBarostatImpl::getDefaultParameters() {
-    std::map<std::string, double> parameters;
+map<string, double> MonteCarloMembraneBarostatImpl::getDefaultParameters() {
+    map<string, double> parameters;
     parameters[MonteCarloMembraneBarostat::Pressure()] = getOwner().getDefaultPressure();
     parameters[MonteCarloMembraneBarostat::SurfaceTension()] = getOwner().getDefaultSurfaceTension();
     parameters[MonteCarloMembraneBarostat::Temperature()] = getOwner().getDefaultTemperature();
     return parameters;
 }
 
-std::vector<std::string> MonteCarloMembraneBarostatImpl::getKernelNames() {
-    std::vector<std::string> names;
+vector<string> MonteCarloMembraneBarostatImpl::getKernelNames() {
+    vector<string> names;
     names.push_back(ApplyMonteCarloBarostatKernel::Name());
     return names;
 }

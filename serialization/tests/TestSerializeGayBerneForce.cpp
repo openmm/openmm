@@ -43,6 +43,7 @@ void testSerialization() {
 
     GayBerneForce force;
     force.setForceGroup(3);
+    force.setName("custom name");
     force.setNonbondedMethod(GayBerneForce::CutoffPeriodic);
     force.setSwitchingDistance(1.5);
     force.setUseSwitchingFunction(true);
@@ -63,6 +64,7 @@ void testSerialization() {
 
     GayBerneForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.getNonbondedMethod(), force2.getNonbondedMethod());
     ASSERT_EQUAL(force.getSwitchingDistance(), force2.getSwitchingDistance());
     ASSERT_EQUAL(force.getUseSwitchingFunction(), force2.getUseSwitchingFunction());

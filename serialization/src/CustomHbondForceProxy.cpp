@@ -45,6 +45,7 @@ void CustomHbondForceProxy::serialize(const void* object, SerializationNode& nod
     node.setIntProperty("version", 1);
     const CustomHbondForce& force = *reinterpret_cast<const CustomHbondForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setStringProperty("energy", force.getEnergyFunction());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
@@ -65,12 +66,12 @@ void CustomHbondForceProxy::serialize(const void* object, SerializationNode& nod
         int p1, p2, p3;
         vector<double> params;
         force.getDonorParameters(i, p1, p2, p3, params);
-        SerializationNode& node = donors.createChildNode("Donor").setIntProperty("p1", p1).setIntProperty("p2", p2).setIntProperty("p3", p3);
+        SerializationNode& donor = donors.createChildNode("Donor").setIntProperty("p1", p1).setIntProperty("p2", p2).setIntProperty("p3", p3);
         for (int j = 0; j < (int) params.size(); j++) {
             stringstream key;
             key << "param";
             key << j+1;
-            node.setDoubleProperty(key.str(), params[j]);
+            donor.setDoubleProperty(key.str(), params[j]);
         }
     }
     SerializationNode& acceptors = node.createChildNode("Acceptors");
@@ -78,12 +79,12 @@ void CustomHbondForceProxy::serialize(const void* object, SerializationNode& nod
         int p1, p2, p3;
         vector<double> params;
         force.getAcceptorParameters(i, p1, p2, p3, params);
-        SerializationNode& node = acceptors.createChildNode("Acceptor").setIntProperty("p1", p1).setIntProperty("p2", p2).setIntProperty("p3", p3);
+        SerializationNode& acceptor = acceptors.createChildNode("Acceptor").setIntProperty("p1", p1).setIntProperty("p2", p2).setIntProperty("p3", p3);
         for (int j = 0; j < (int) params.size(); j++) {
             stringstream key;
             key << "param";
             key << j+1;
-            node.setDoubleProperty(key.str(), params[j]);
+            acceptor.setDoubleProperty(key.str(), params[j]);
         }
     }
     SerializationNode& exclusions = node.createChildNode("Exclusions");
@@ -104,6 +105,7 @@ void* CustomHbondForceProxy::deserialize(const SerializationNode& node) const {
     try {
         CustomHbondForce* force = new CustomHbondForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setNonbondedMethod((CustomHbondForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         const SerializationNode& perDonorParams = node.getChildNode("PerDonorParameters");

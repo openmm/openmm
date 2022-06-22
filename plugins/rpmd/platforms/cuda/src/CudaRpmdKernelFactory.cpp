@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,7 +27,8 @@
 #include <exception>
 
 #include "CudaRpmdKernelFactory.h"
-#include "CudaRpmdKernels.h"
+#include "CommonRpmdKernels.h"
+#include "CudaContext.h"
 #include "openmm/internal/windowsExport.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
@@ -61,6 +62,6 @@ extern "C" OPENMM_EXPORT void registerRPMDCudaKernelFactories() {
 KernelImpl* CudaRpmdKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     CudaContext& cl = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData())->contexts[0];
     if (name == IntegrateRPMDStepKernel::Name())
-        return new CudaIntegrateRPMDStepKernel(name, platform, cl);
+        return new CommonIntegrateRPMDStepKernel(name, platform, cl);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

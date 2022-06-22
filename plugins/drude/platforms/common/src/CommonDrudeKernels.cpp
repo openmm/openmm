@@ -34,6 +34,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/common/BondedUtilities.h"
 #include "openmm/common/ComputeForceInfo.h"
+#include "openmm/common/ContextSelector.h"
 #include "openmm/common/IntegrationUtilities.h"
 #include "CommonKernelSources.h"
 #include "SimTKOpenMMRealType.h"
@@ -101,9 +102,9 @@ private:
 };
 
 void CommonCalcDrudeForceKernel::initialize(const System& system, const DrudeForce& force) {
-    cc.setAsCurrent();
     if (cc.getContextIndex() != 0)
         return; // This is run entirely on one device
+    ContextSelector selector(cc);
     int numParticles = force.getNumParticles();
     if (numParticles > 0) {
         // Create the harmonic interaction .
@@ -173,6 +174,7 @@ void CommonCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, c
     
     // Set the particle parameters.
     
+    ContextSelector selector(cc);
     int numParticles = force.getNumParticles();
     if (numParticles > 0) {
         if (!particleParams.isInitialized() || numParticles != particleParams.getSize())
@@ -222,6 +224,7 @@ void CommonCalcDrudeForceKernel::copyParametersToContext(ContextImpl& context, c
 
 void CommonIntegrateDrudeLangevinStepKernel::initialize(const System& system, const DrudeLangevinIntegrator& integrator, const DrudeForce& force) {
     cc.initializeContexts();
+    ContextSelector selector(cc);
     cc.getIntegrationUtilities().initRandomNumberGenerator((unsigned int) integrator.getRandomNumberSeed());
     
     // Identify particle pairs and ordinary particles.
@@ -263,7 +266,7 @@ void CommonIntegrateDrudeLangevinStepKernel::initialize(const System& system, co
 }
 
 void CommonIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, const DrudeLangevinIntegrator& integrator) {
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
     int numAtoms = cc.getNumAtoms();
     if (!hasInitializedKernels) {
@@ -378,7 +381,7 @@ CommonIntegrateDrudeSCFStepKernel::~CommonIntegrateDrudeSCFStepKernel() {
 
 void CommonIntegrateDrudeSCFStepKernel::initialize(const System& system, const DrudeSCFIntegrator& integrator, const DrudeForce& force) {
     cc.initializeContexts();
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
 
     // Identify Drude particles.
     
@@ -406,7 +409,7 @@ void CommonIntegrateDrudeSCFStepKernel::initialize(const System& system, const D
 }
 
 void CommonIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
-    cc.setAsCurrent();
+    ContextSelector selector(cc);
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
     int numAtoms = cc.getNumAtoms();
     double dt = integrator.getStepSize();

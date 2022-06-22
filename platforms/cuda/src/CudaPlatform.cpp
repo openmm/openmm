@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -201,8 +201,10 @@ void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string
     char* threadsEnv = getenv("OPENMM_CPU_THREADS");
     if (threadsEnv != NULL)
         stringstream(threadsEnv) >> threads;
+    char* compilerEnv = getenv("OPENMM_CUDA_COMPILER");
+    bool allowRuntimeCompiler = (compilerEnv == NULL && properties.find(CudaCompiler()) == properties.end());
     context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue,
-            hostCompilerPropValue, pmeStreamPropValue, deterministicForcesValue, threads, NULL));
+            hostCompilerPropValue, pmeStreamPropValue, deterministicForcesValue, threads, allowRuntimeCompiler, NULL));
 }
 
 void CudaPlatform::linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const {
@@ -217,8 +219,9 @@ void CudaPlatform::linkedContextCreated(ContextImpl& context, ContextImpl& origi
     string pmeStreamPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaDisablePmeStream());
     string deterministicForcesValue = platform.getPropertyValue(originalContext.getOwner(), CudaDeterministicForces());
     int threads = reinterpret_cast<PlatformData*>(originalContext.getPlatformData())->threads.getNumThreads();
+    bool allowRuntimeCompiler = reinterpret_cast<PlatformData*>(originalContext.getPlatformData())->allowRuntimeCompiler;
     context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue,
-            hostCompilerPropValue, pmeStreamPropValue, deterministicForcesValue, threads, &originalContext));
+            hostCompilerPropValue, pmeStreamPropValue, deterministicForcesValue, threads, allowRuntimeCompiler, &originalContext));
 }
 
 void CudaPlatform::contextDestroyed(ContextImpl& context) const {
@@ -228,8 +231,9 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
 
 CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& system, const string& deviceIndexProperty, const string& blockingProperty, const string& precisionProperty,
             const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty, const string& hostCompilerProperty, const string& pmeStreamProperty,
-            const string& deterministicForcesProperty, int numThreads, ContextImpl* originalContext) :
-                context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false), threads(numThreads) {
+            const string& deterministicForcesProperty, int numThreads, bool allowRuntimeCompiler, ContextImpl* originalContext) :
+                context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false),
+                threads(numThreads), allowRuntimeCompiler(allowRuntimeCompiler) {
     bool blocking = (blockingProperty == "true");
     vector<string> devices;
     size_t searchPos = 0, nextPos;
@@ -246,11 +250,11 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
             if (devices[i].length() > 0) {
                 int deviceIndex;
                 stringstream(devices[i]) >> deviceIndex;
-                contexts.push_back(new CudaContext(system, deviceIndex, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, *this, (originalData == NULL ? NULL : originalData->contexts[i])));
+                contexts.push_back(new CudaContext(system, deviceIndex, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, allowRuntimeCompiler, *this, (originalData == NULL ? NULL : originalData->contexts[i])));
             }
         }
         if (contexts.size() == 0)
-            contexts.push_back(new CudaContext(system, -1, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, *this, (originalData == NULL ? NULL : originalData->contexts[0])));
+            contexts.push_back(new CudaContext(system, -1, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, allowRuntimeCompiler, *this, (originalData == NULL ? NULL : originalData->contexts[0])));
     }
     catch (...) {
         // If an exception was thrown, do our best to clean up memory.
@@ -270,10 +274,6 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
         CHECK_RESULT(cuDeviceGetName(name, 1000, contexts[i]->getDevice()), "Error querying device name");
         deviceName << name;
     }
-    size_t printfsize;
-    cuCtxGetLimit(&printfsize, CU_LIMIT_PRINTF_FIFO_SIZE);
-    cuCtxSetLimit(CU_LIMIT_PRINTF_FIFO_SIZE, 10*printfsize);
-
     useCpuPme = (cpuPmeProperty == "true" && !contexts[0]->getUseDoublePrecision());
     disablePmeStream = (pmeStreamProperty == "true");
     deterministicForces = (deterministicForcesProperty == "true");

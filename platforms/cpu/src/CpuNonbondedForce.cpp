@@ -47,8 +47,9 @@ const int CpuNonbondedForce::NUM_TABLE_POINTS = 2048;
 
    --------------------------------------------------------------------------------------- */
 
-CpuNonbondedForce::CpuNonbondedForce() : cutoff(false), useSwitch(false), periodic(false), periodicExceptions(false), ewald(false), pme(false), ljpme(false), tableIsValid(false), expTableIsValid(false),
-    cutoffDistance(0.0f), alphaDispersionEwald(0.0f), alphaEwald(0.0f) {
+CpuNonbondedForce::CpuNonbondedForce(const CpuNeighborList& neighbors) : neighborList(&neighbors), cutoff(false), useSwitch(false), periodic(false),
+        periodicExceptions(false), ewald(false), pme(false), ljpme(false), tableIsValid(false), expTableIsValid(false), cutoffDistance(0.0f),
+        alphaDispersionEwald(0.0f), alphaEwald(0.0f) {
 }
 
 CpuNonbondedForce::~CpuNonbondedForce() {
@@ -59,18 +60,16 @@ CpuNonbondedForce::~CpuNonbondedForce() {
    Set the force to use a cutoff.
 
    @param distance            the cutoff distance
-   @param neighbors           the neighbor list to use
    @param solventDielectric   the dielectric constant of the bulk solvent
 
      --------------------------------------------------------------------------------------- */
 
-void CpuNonbondedForce::setUseCutoff(float distance, const CpuNeighborList& neighbors, float solventDielectric) {
+void CpuNonbondedForce::setUseCutoff(float distance, float solventDielectric) {
     if (distance != cutoffDistance)
         tableIsValid = false;
     cutoff = true;
     cutoffDistance = distance;
     inverseRcut6 = pow(cutoffDistance, -6);
-    neighborList = &neighbors;
     krf = pow(cutoffDistance, -3.0f)*(solventDielectric-1.0)/(2.0*solventDielectric+1.0);
     crf = (1.0/cutoffDistance)*(3.0*solventDielectric)/(2.0*solventDielectric+1.0);
     if(alphaDispersionEwald != 0.0f){
@@ -392,19 +391,12 @@ void CpuNonbondedForce::calculateDirectIxn(int numberOfAtoms, float* posq, const
     includeEnergy = (totalEnergy != NULL);
     threadEnergy.resize(threads.getNumThreads());
     atomicCounter = 0;
+    atomicCounter2 = 0;
     
     // Signal the threads to start running and wait for them to finish.
     
     threads.execute([&] (ThreadPool& threads, int threadIndex) { threadComputeDirect(threads, threadIndex); });
     threads.waitForThreads();
-    
-    // Signal the threads to subtract the exclusions.
-    
-    if (ewald || pme) {
-        atomicCounter = 0;
-        threads.resumeThreads();
-        threads.waitForThreads();
-    }
     
     // Combine the energies from all the threads.
     
@@ -437,10 +429,9 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
 
         // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
 
-        threads.syncThreads();
         const int groupSize = max(1, numberOfAtoms/(10*numThreads));
         while (true) {
-            int start = atomicCounter.fetch_add(groupSize);
+            int start = atomicCounter2.fetch_add(groupSize);
             if (start >= numberOfAtoms)
                 break;
             int end = min(start+groupSize, numberOfAtoms);
@@ -486,7 +477,7 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
             }
         }
     }
-    else if (cutoff) {
+    else {
         // Compute the interactions from the neighbor list.
 
         while (true) {
@@ -496,72 +487,6 @@ void CpuNonbondedForce::threadComputeDirect(ThreadPool& threads, int threadIndex
             calculateBlockIxn(nextBlock, forces, energyPtr, boxSize, invBoxSize);
         }
     }
-    else {
-        // Loop over all atom pairs
-
-        while (true) {
-            int i = atomicCounter++;
-            if (i >= numberOfAtoms)
-                break;
-            for (int j = i+1; j < numberOfAtoms; j++)
-                if (exclusions[j].find(i) == exclusions[j].end())
-                    calculateOneIxn(i, j, forces, energyPtr, boxSize, invBoxSize);
-        }
-    }
-}
-
-void CpuNonbondedForce::calculateOneIxn(int ii, int jj, float* forces, double* totalEnergy, const fvec4& boxSize, const fvec4& invBoxSize) {
-    // get deltaR, R2, and R between 2 atoms
-
-    fvec4 deltaR;
-    fvec4 posI(posq+4*ii);
-    fvec4 posJ(posq+4*jj);
-    float r2;
-    getDeltaR(posJ, posI, deltaR, r2, periodic, boxSize, invBoxSize);
-    if (cutoff && r2 >= cutoffDistance*cutoffDistance)
-        return;
-    float r = sqrtf(r2);
-    float inverseR = 1/r;
-    float switchValue = 1, switchDeriv = 0;
-    if (useSwitch && r > switchingDistance) {
-        float t = (r-switchingDistance)/(cutoffDistance-switchingDistance);
-        switchValue = 1+t*t*t*(-10+t*(15-t*6));
-        switchDeriv = t*t*(-30+t*(60-t*30))/(cutoffDistance-switchingDistance);
-    }
-    float sig       = atomParameters[ii].first + atomParameters[jj].first;
-    float sig2      = inverseR*sig;
-    sig2     *= sig2;
-    float sig6      = sig2*sig2*sig2;
-
-    float eps       = atomParameters[ii].second*atomParameters[jj].second;
-    float dEdR      = switchValue*eps*(12.0f*sig6 - 6.0f)*sig6;
-    float chargeProd = ONE_4PI_EPS0*posq[4*ii+3]*posq[4*jj+3];
-    if (cutoff)
-        dEdR += (float) (chargeProd*(inverseR-2.0f*krf*r2));
-    else
-        dEdR += (float) (chargeProd*inverseR);
-    dEdR *= inverseR*inverseR;
-    float energy = eps*(sig6-1.0f)*sig6;
-    if (useSwitch) {
-        dEdR -= energy*switchDeriv*inverseR;
-        energy *= switchValue;
-    }
-
-    // accumulate energies
-
-    if (totalEnergy) {
-        if (cutoff)
-            energy += (float) (chargeProd*(inverseR+krf*r2-crf));
-        else
-            energy += (float) (chargeProd*inverseR);
-        *totalEnergy += energy;
-    }
-
-    // accumulate forces
-
-    fvec4 result = deltaR*dEdR;
-    (fvec4(forces+4*ii)+result).store(forces+4*ii);
-    (fvec4(forces+4*jj)-result).store(forces+4*jj);
 }
 
 void CpuNonbondedForce::getDeltaR(const fvec4& posI, const fvec4& posJ, fvec4& deltaR, float& r2, bool periodic, const fvec4& boxSize, const fvec4& invBoxSize) const {

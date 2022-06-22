@@ -1,10 +1,10 @@
 import unittest
 from validateConstraints import *
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
-from simtk.openmm.app.gromacstopfile import _defaultGromacsIncludeDir
-import simtk.openmm.app.element as elem
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
+from openmm.app.gromacstopfile import _defaultGromacsIncludeDir
+import openmm.app.element as elem
 
 GROMACS_INCLUDE = _defaultGromacsIncludeDir()
 
@@ -161,10 +161,14 @@ class TestGromacsTopFile(unittest.TestCase):
                     found_matching_solvent_dielectric = True
                 if force.getSoluteDielectric() == 0.9:
                     found_matching_solute_dielectric = True
+                gbcharges = [force.getParticleParameters(i)[0] for i in range(system.getNumParticles())]
             if isinstance(force, NonbondedForce):
                 self.assertEqual(force.getReactionFieldDielectric(), 1.0)
+                nbcharges = [force.getParticleParameters(i)[0] for i in range(system.getNumParticles())]
         self.assertTrue(found_matching_solvent_dielectric and
                         found_matching_solute_dielectric)
+        for q1, q2 in zip(gbcharges, nbcharges):
+            self.assertEqual(q1, q2)
 
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""
@@ -176,7 +180,10 @@ class TestGromacsTopFile(unittest.TestCase):
         for atom in topology.atoms():
             if atom.element == elem.hydrogen:
                 self.assertNotEqual(hydrogenMass, system1.getParticleMass(atom.index))
-                self.assertEqual(hydrogenMass, system2.getParticleMass(atom.index))
+                if atom.residue.name == 'HOH':
+                    self.assertEqual(system1.getParticleMass(atom.index), system2.getParticleMass(atom.index))
+                else:
+                    self.assertEqual(hydrogenMass, system2.getParticleMass(atom.index))
         totalMass1 = sum([system1.getParticleMass(i) for i in range(system1.getNumParticles())]).value_in_unit(amu)
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
@@ -205,6 +212,20 @@ class TestGromacsTopFile(unittest.TestCase):
         ene = context.getState(getEnergy=True).getPotentialEnergy()
         # the energy output is from gromacs and it only prints out 6 sig digits.
         self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 1.88855e+02, places=3)
+
+    def test_Vsite3(self):
+        """Test a three particle virtual site."""
+        top = GromacsTopFile('systems/tip4pew.top')
+        system = top.createSystem()
+        self.assertTrue(system.isVirtualSite(3))
+        vs = system.getVirtualSite(3)
+        self.assertIsInstance(vs, ThreeParticleAverageSite)
+        self.assertEqual(0, vs.getParticle(0))
+        self.assertEqual(1, vs.getParticle(1))
+        self.assertEqual(2, vs.getParticle(2))
+        self.assertAlmostEqual(0.786646558, vs.getWeight(0))
+        self.assertAlmostEqual(0.106676721, vs.getWeight(1))
+        self.assertAlmostEqual(0.106676721, vs.getWeight(2))
 
 if __name__ == '__main__':
     unittest.main()

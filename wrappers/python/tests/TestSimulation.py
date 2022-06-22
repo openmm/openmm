@@ -1,9 +1,9 @@
 import unittest
 import tempfile
 from datetime import datetime, timedelta
-from simtk.openmm import *
-from simtk.openmm.app import *
-from simtk.unit import *
+from openmm import *
+from openmm.app import *
+from openmm.unit import *
 
 class TestSimulation(unittest.TestCase):
     """Test the Simulation class"""
@@ -112,11 +112,13 @@ class TestSimulation(unittest.TestCase):
         simulation.context.setVelocitiesToTemperature(300*kelvin)
         self.assertEqual(0, simulation.currentStep)
         self.assertEqual(0*picoseconds, simulation.context.getState().getTime())
+        simulation.currentStep = 5
+        self.assertEqual(5, simulation.currentStep)
 
         # Take some steps and verify the simulation has advanced by the correct amount.
 
         simulation.step(23)
-        self.assertEqual(23, simulation.currentStep)
+        self.assertEqual(28, simulation.currentStep)
         self.assertAlmostEqual(0.023, simulation.context.getState().getTime().value_in_unit(picoseconds))
 
     def testRunForClockTime(self):

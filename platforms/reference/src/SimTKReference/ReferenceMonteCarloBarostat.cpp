@@ -82,15 +82,9 @@ void ReferenceMonteCarloBarostat::applyBarostat(vector<Vec3>& atomPositions, con
         }
         pos /= molecule.size();
 
-        // Move it into the first periodic box.
-
-        Vec3 newPos = pos;
-        newPos -= boxVectors[2]*floor(newPos[2]/boxVectors[2][2]);
-        newPos -= boxVectors[1]*floor(newPos[1]/boxVectors[1][1]);
-        newPos -= boxVectors[0]*floor(newPos[0]/boxVectors[0][0]);
-
         // Now scale the position of the molecule center.
 
+        Vec3 newPos = pos;
         newPos[0] *= scaleX;
         newPos[1] *= scaleY;
         newPos[2] *= scaleZ;

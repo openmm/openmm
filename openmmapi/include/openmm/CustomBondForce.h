@@ -55,14 +55,22 @@ namespace OpenMM {
  *
  * As an example, the following code creates a CustomBondForce that implements a harmonic potential:
  *
- * <tt>CustomBondForce* force = new CustomBondForce("0.5*k*(r-r0)^2");</tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomBondForce* force = new CustomBondForce("0.5*k*(r-r0)^2");
+ *
+ * \endverbatim
  *
  * This force depends on two parameters: the spring constant k and equilibrium distance r0.  The following code defines these parameters:
  *
- * <tt><pre>
- * force->addPerBondParameter("k");
- * force->addPerBondParameter("r0");
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    force->addPerBondParameter("k");
+ *    force->addPerBondParameter("r0");
+ *
+ * \endverbatim
  * 
  * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
  * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be

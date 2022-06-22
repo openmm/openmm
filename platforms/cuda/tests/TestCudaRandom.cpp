@@ -56,9 +56,10 @@ void testGaussian() {
         system.addParticle(1.0);
     CudaPlatform::PlatformData platformData(NULL, system, "", "true", platform.getPropertyDefaultValue("CudaPrecision"), "false",
             platform.getPropertyDefaultValue(CudaPlatform::CudaCompiler()), platform.getPropertyDefaultValue(CudaPlatform::CudaTempDirectory()),
-            platform.getPropertyDefaultValue(CudaPlatform::CudaHostCompiler()), platform.getPropertyDefaultValue(CudaPlatform::CudaDisablePmeStream()), "false", 1, NULL);
+            platform.getPropertyDefaultValue(CudaPlatform::CudaHostCompiler()), platform.getPropertyDefaultValue(CudaPlatform::CudaDisablePmeStream()), "false", true, 1, NULL);
     CudaContext& context = *platformData.contexts[0];
     context.initialize();
+    context.setAsCurrent();
     context.getIntegrationUtilities().initRandomNumberGenerator(0);
     CudaArray& random = context.getIntegrationUtilities().getRandom();
     context.getIntegrationUtilities().prepareRandomNumbers(random.getSize());

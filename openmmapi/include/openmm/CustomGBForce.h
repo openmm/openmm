@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -82,27 +82,30 @@ namespace OpenMM {
  * This is a complicated class to use, and an example may help to clarify it.  The following code implements the OBC variant
  * of the GB/SA solvation model, using the ACE approximation to estimate surface area:
  *
- * <tt><pre>
- * CustomGBForce* custom = new CustomGBForce();
- * custom->addPerParticleParameter("q");
- * custom->addPerParticleParameter("radius");
- * custom->addPerParticleParameter("scale");
- * custom->addGlobalParameter("solventDielectric", obc->getSolventDielectric());
- * custom->addGlobalParameter("soluteDielectric", obc->getSoluteDielectric());
- * custom->addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(1/U^2-1/L^2)*(r-sr2*sr2/r)+0.5*log(L/U)/r+C);"
- *                               "U=r+sr2;"
- *                               "C=2*(1/or1-1/L)*step(sr2-r-or1);"
- *                               "L=max(or1, D);"
- *                               "D=abs(r-sr2);"
- *                               "sr2 = scale2*or2;"
- *                               "or1 = radius1-0.009; or2 = radius2-0.009", CustomGBForce::ParticlePairNoExclusions);
- * custom->addComputedValue("B", "1/(1/or-tanh(1*psi-0.8*psi^2+4.85*psi^3)/radius);"
- *                               "psi=I*or; or=radius-0.009", CustomGBForce::SingleParticle);
- * custom->addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6-0.5*138.935456*(1/soluteDielectric-1/solventDielectric)*q^2/B",
- *                       CustomGBForce::SingleParticle);
- * custom->addEnergyTerm("-138.935456*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
- *                       "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePair);
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    CustomGBForce* custom = new CustomGBForce();
+ *    custom->addPerParticleParameter("q");
+ *    custom->addPerParticleParameter("radius");
+ *    custom->addPerParticleParameter("scale");
+ *    custom->addGlobalParameter("solventDielectric", obc->getSolventDielectric());
+ *    custom->addGlobalParameter("soluteDielectric", obc->getSoluteDielectric());
+ *    custom->addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(1/U^2-1/L^2)*(r-sr2*sr2/r)+0.5*log(L/U)/r+C);"
+ *                                  "U=r+sr2;"
+ *                                  "C=2*(1/or1-1/L)*step(sr2-r-or1);"
+ *                                  "L=max(or1, D);"
+ *                                  "D=abs(r-sr2);"
+ *                                  "sr2 = scale2*or2;"
+ *                                  "or1 = radius1-0.009; or2 = radius2-0.009", CustomGBForce::ParticlePairNoExclusions);
+ *    custom->addComputedValue("B", "1/(1/or-tanh(1*psi-0.8*psi^2+4.85*psi^3)/radius);"
+ *                                  "psi=I*or; or=radius-0.009", CustomGBForce::SingleParticle);
+ *    custom->addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6-0.5*138.935456*(1/soluteDielectric-1/solventDielectric)*q^2/B",
+ *                          CustomGBForce::SingleParticle);
+ *    custom->addEnergyTerm("-138.935456*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+ *                          "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePair);
+ *
+ * \endverbatim
  *
  * It begins by defining three per-particle parameters (charge, atomic radius, and scale factor) and two global parameters
  * (the dielectric constants for the solute and solvent).  It then defines a computed value "I" of type ParticlePair.  The
@@ -541,14 +544,15 @@ public:
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
     /**
-     * Update the per-particle parameters in a Context to match those stored in this Force object.  This method provides
+     * Update the per-particle parameters and tabulated functions in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() to modify this object's parameters, then call updateParametersInContext()
      * to copy them over to the Context.
      *
-     * This method has several limitations.  The only information it updates is the values of per-particle parameters.
-     * All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
-     * the Context.  Also, this method cannot be used to add new particles, only to change the parameters of existing ones.
+     * This method has several limitations.  The only information it updates is the values of per-particle parameters and tabulated
+     * functions.  All other aspects of the Force (such as the energy function) are unaffected and can only be changed by reinitializing
+     * the Context.  Also, this method cannot be used to add new particles, only to change the parameters of existing ones.  While
+     * the tabulated values of a function can change, everything else about it (its dimensions, the data range) must not be changed.
      */
     void updateParametersInContext(Context& context);
     /**

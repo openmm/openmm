@@ -45,6 +45,7 @@ void CMMotionRemoverProxy::serialize(const void* object, SerializationNode& node
     node.setIntProperty("version", 1);
     const CMMotionRemover& force = *reinterpret_cast<const CMMotionRemover*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setIntProperty("frequency", force.getFrequency());
 }
 
@@ -55,6 +56,7 @@ void* CMMotionRemoverProxy::deserialize(const SerializationNode& node) const {
     try {
         CMMotionRemover* force = new CMMotionRemover(node.getIntProperty("frequency"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         return force;
     }
     catch (...) {

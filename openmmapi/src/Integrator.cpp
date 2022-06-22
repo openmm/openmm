@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
 #include "sfmt/SFMT.h"
 #include "SimTKOpenMMRealType.h"
 #include "openmm/Integrator.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/System.h"
 #include "openmm/internal/ContextImpl.h"
 
@@ -58,6 +59,8 @@ double Integrator::getStepSize() const {
 }
 
 void Integrator::setStepSize(double size) {
+    if (size < 0)
+        throw OpenMMException("Step size cannot be negative");
     stepSize = size;
 }
 
@@ -66,6 +69,8 @@ double Integrator::getConstraintTolerance() const {
 }
 
 void Integrator::setConstraintTolerance(double tol) {
+    if (tol <= 0)
+        throw OpenMMException("Constraint tolerance must be positive");
     constraintTol = tol;
 }
 

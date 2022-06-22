@@ -48,6 +48,7 @@ void testSerialization() {
 
     HippoNonbondedForce force1;
     force1.setForceGroup(3);
+    force1.setName("custom name");
     force1.setNonbondedMethod(HippoNonbondedForce::PME);
     force1.setCutoffDistance(0.7);
     force1.setSwitchingDistance(0.6);
@@ -79,6 +80,7 @@ void testSerialization() {
 
     HippoNonbondedForce& force2 = *copy;
     ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force1.getName(), force2.getName());
     ASSERT_EQUAL(force1.getNonbondedMethod(), force2.getNonbondedMethod());
     ASSERT_EQUAL(force1.getCutoffDistance(), force2.getCutoffDistance());
     ASSERT_EQUAL(force1.getSwitchingDistance(), force2.getSwitchingDistance());

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -89,8 +89,9 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
             numForceBuffers = numForceThreadBlocks*forceThreadBlockSize/OpenCLContext::TileSize;
         }
     }
-    pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(int));
-    pinnedCountMemory = (int*) context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(int));
+    pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(unsigned int));
+    pinnedCountMemory = (unsigned int*) context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(int));
+    setKernelSource(deviceIsCpu ? OpenCLKernelSources::nonbonded_cpu : OpenCLKernelSources::nonbonded);
 }
 
 OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
@@ -127,7 +128,7 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
 
 void OpenCLNonbondedUtilities::addParameter(ComputeParameterInfo parameter) {
     parameters.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
-            parameter.getSize(), context.unwrap(parameter.getArray()).getDeviceBuffer()));
+            parameter.getSize(), context.unwrap(parameter.getArray()).getDeviceBuffer(), parameter.isConstant()));
 }
 
 void OpenCLNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
@@ -136,7 +137,7 @@ void OpenCLNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
 
 void OpenCLNonbondedUtilities::addArgument(ComputeParameterInfo parameter) {
     arguments.push_back(ParameterInfo(parameter.getName(), parameter.getComponentType(), parameter.getNumComponents(),
-            parameter.getSize(), context.unwrap(parameter.getArray()).getDeviceBuffer()));
+            parameter.getSize(), context.unwrap(parameter.getArray()).getDeviceBuffer(), parameter.isConstant()));
 }
 
 void OpenCLNonbondedUtilities::addArgument(const ParameterInfo& parameter) {
@@ -226,7 +227,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     vector<mm_int2> exclusionTilesVec;
     for (set<pair<int, int> >::const_iterator iter = tilesWithExclusions.begin(); iter != tilesWithExclusions.end(); ++iter)
         exclusionTilesVec.push_back(mm_int2(iter->first, iter->second));
-    sort(exclusionTilesVec.begin(), exclusionTilesVec.end(), context.getSIMDWidth() <= 32 ? compareInt2 : compareInt2LargeSIMD);
+    sort(exclusionTilesVec.begin(), exclusionTilesVec.end(), context.getSIMDWidth() <= 32 || !useCutoff ? compareInt2 : compareInt2LargeSIMD);
     exclusionTiles.initialize<mm_int2>(context, exclusionTilesVec.size(), "exclusionTiles");
     exclusionTiles.upload(exclusionTilesVec);
     map<pair<int, int>, int> exclusionTileMap;
@@ -304,7 +305,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         sortedBlockBoundingBox.initialize(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
-        blockSorter = new OpenCLSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
+        blockSorter = new OpenCLSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks, false);
         vector<cl_uint> count(1, 0);
         interactionCount.upload(count);
         rebuildNeighborList.upload(count);
@@ -394,18 +395,19 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
 bool OpenCLNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
-    if (pinnedCountMemory[0] <= (unsigned int) interactingTiles.getSize())
+    if (pinnedCountMemory[0] <= interactingTiles.getSize())
         return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
 
-    int maxTiles = (int) (1.2*pinnedCountMemory[0]);
-    int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
+    unsigned int maxTiles = (unsigned int) (1.2*pinnedCountMemory[0]);
+    unsigned int numBlocks = context.getNumAtomBlocks();
+    int totalTiles = numBlocks*(numBlocks+1)/2;
     if (maxTiles > totalTiles)
         maxTiles = totalTiles;
     interactingTiles.resize(maxTiles);
-    interactingAtoms.resize(OpenCLContext::TileSize*maxTiles);
+    interactingAtoms.resize(OpenCLContext::TileSize*(size_t) maxTiles);
     for (map<int, KernelSet>::iterator iter = groupKernels.begin(); iter != groupKernels.end(); ++iter) {
         KernelSet& kernels = iter->second;
         if (*reinterpret_cast<cl_kernel*>(&kernels.forceKernel) != NULL) {
@@ -556,97 +558,108 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     const string suffixes[] = {"x", "y", "z", "w"};
     stringstream localData;
     int localDataSize = 0;
-    for (int i = 0; i < (int) params.size(); i++) {
-        if (params[i].getNumComponents() == 1)
-            localData<<params[i].getType()<<" "<<params[i].getName()<<";\n";
+    for (const ParameterInfo& param : params) {
+        if (param.getNumComponents() == 1)
+            localData<<param.getType()<<" "<<param.getName()<<";\n";
         else {
-            for (int j = 0; j < params[i].getNumComponents(); ++j)
-                localData<<params[i].getComponentType()<<" "<<params[i].getName()<<"_"<<suffixes[j]<<";\n";
+            for (int j = 0; j < param.getNumComponents(); ++j)
+                localData<<param.getComponentType()<<" "<<param.getName()<<"_"<<suffixes[j]<<";\n";
         }
-        localDataSize += params[i].getSize();
+        localDataSize += param.getSize();
     }
     replacements["ATOM_PARAMETER_DATA"] = localData.str();
     stringstream args;
-    for (int i = 0; i < (int) params.size(); i++) {
-        args << ", __global const ";
-        args << params[i].getType();
+    for (const ParameterInfo& param : params) {
+        args << ", __global ";
+        if (param.isConstant())
+            args << "const ";
+        if (param.getNumComponents() == 3)
+            args << param.getComponentType();
+        else
+            args << param.getType();
         args << "* restrict global_";
-        args << params[i].getName();
+        args << param.getName();
     }
-    for (int i = 0; i < (int) arguments.size(); i++) {
-        if (arguments[i].getMemory().getInfo<CL_MEM_TYPE>() == CL_MEM_OBJECT_IMAGE2D) {
+    for (const ParameterInfo& arg : arguments) {
+        if (arg.getMemory().getInfo<CL_MEM_TYPE>() == CL_MEM_OBJECT_IMAGE2D) {
             args << ", __read_only image2d_t ";
-            args << arguments[i].getName();
+            args << arg.getName();
         }
         else {
-            if ((arguments[i].getMemory().getInfo<CL_MEM_FLAGS>() & CL_MEM_READ_ONLY) == 0)
-                args << ", __global const ";
+            if ((arg.getMemory().getInfo<CL_MEM_FLAGS>() & CL_MEM_READ_ONLY) == 0) {
+                args << ", __global ";
+                if (arg.isConstant())
+                    args << "const ";
+            }
             else
                 args << ", __constant ";
-            args << arguments[i].getType();
+            args << arg.getType();
             args << "* restrict ";
-            args << arguments[i].getName();
+            args << arg.getName();
         }
     }
     if (energyParameterDerivatives.size() > 0)
         args << ", __global mixed* restrict energyParamDerivs";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream loadLocal1;
-    for (int i = 0; i < (int) params.size(); i++) {
-        if (params[i].getNumComponents() == 1) {
-            loadLocal1<<"localData[localAtomIndex]."<<params[i].getName()<<" = "<<params[i].getName()<<"1;\n";
+    for (const ParameterInfo& param : params) {
+        if (param.getNumComponents() == 1) {
+            loadLocal1<<"localData[localAtomIndex]."<<param.getName()<<" = "<<param.getName()<<"1;\n";
         }
         else {
-            for (int j = 0; j < params[i].getNumComponents(); ++j)
-                loadLocal1<<"localData[localAtomIndex]."<<params[i].getName()<<"_"<<suffixes[j]<<" = "<<params[i].getName()<<"1."<<suffixes[j]<<";\n";
+            for (int j = 0; j < param.getNumComponents(); ++j)
+                loadLocal1<<"localData[localAtomIndex]."<<param.getName()<<"_"<<suffixes[j]<<" = "<<param.getName()<<"1."<<suffixes[j]<<";\n";
         }
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
+    replacements["DECLARE_LOCAL_PARAMETERS"] = "";
     stringstream loadLocal2;
-    for (int i = 0; i < (int) params.size(); i++) {
-        if (params[i].getNumComponents() == 1) {
-            loadLocal2<<"localData[localAtomIndex]."<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+    for (const ParameterInfo& param : params) {
+        if (param.getNumComponents() == 1) {
+            loadLocal2<<"localData[localAtomIndex]."<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
         }
         else {
-            loadLocal2<<params[i].getType()<<" temp_"<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
-            for (int j = 0; j < params[i].getNumComponents(); ++j)
-                loadLocal2<<"localData[localAtomIndex]."<<params[i].getName()<<"_"<<suffixes[j]<<" = temp_"<<params[i].getName()<<"."<<suffixes[j]<<";\n";
+            if (param.getNumComponents() == 3)
+                loadLocal2<<param.getType()<<" temp_"<<param.getName()<<" = make_"<<param.getType()<<"(global_"<<param.getName()<<"[3*j], global_"<<param.getName()<<"[3*j+1], global_"<<param.getName()<<"[3*j+2]);\n";
+            else
+                loadLocal2<<param.getType()<<" temp_"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
+            for (int j = 0; j < param.getNumComponents(); ++j)
+                loadLocal2<<"localData[localAtomIndex]."<<param.getName()<<"_"<<suffixes[j]<<" = temp_"<<param.getName()<<"."<<suffixes[j]<<";\n";
         }
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
     stringstream load1;
-    for (int i = 0; i < (int) params.size(); i++) {
-        load1 << params[i].getType();
-        load1 << " ";
-        load1 << params[i].getName();
-        load1 << "1 = global_";
-        load1 << params[i].getName();
-        load1 << "[atom1];\n";
+    for (const ParameterInfo& param : params) {
+        load1<<param.getType()<<" "<<param.getName()<<"1 = ";
+        if (param.getNumComponents() == 3)
+            load1<<"make_"<<param.getType()<<"(global_"<<param.getName()<<"[3*atom1], global_"<<param.getName()<<"[3*atom1+1], global_"<<param.getName()<<"[3*atom1+2]);\n";
+        else
+            load1<<"global_"<<param.getName()<<"[atom1];\n";
     }
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
     stringstream load2j;
-    for (int i = 0; i < (int) params.size(); i++) {
-        if (params[i].getNumComponents() == 1) {
-            load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = localData[atom2]."<<params[i].getName()<<";\n";
+    for (const ParameterInfo& param : params) {
+        if (param.getNumComponents() == 1) {
+            load2j<<param.getType()<<" "<<param.getName()<<"2 = localData[atom2]."<<param.getName()<<";\n";
         }
         else {
-            load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = ("<<params[i].getType()<<") (";
-            for (int j = 0; j < params[i].getNumComponents(); ++j) {
+            load2j<<param.getType()<<" "<<param.getName()<<"2 = ("<<param.getType()<<") (";
+            for (int j = 0; j < param.getNumComponents(); ++j) {
                 if (j > 0)
                     load2j<<", ";
-                load2j<<"localData[atom2]."<<params[i].getName()<<"_"<<suffixes[j];
+                load2j<<"localData[atom2]."<<param.getName()<<"_"<<suffixes[j];
             }
             load2j<<");\n";
         }
     }
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
     stringstream clearLocal;
-    for (int i = 0; i < (int) params.size(); i++) {
-        if (params[i].getNumComponents() == 1)
-            clearLocal<<"localData[localAtomIndex]."<<params[i].getName()<<" = 0;\n";
+    for (const ParameterInfo& param : params) {
+        if (param.getNumComponents() == 1)
+            clearLocal<<"localData[localAtomIndex]."<<param.getName()<<" = 0;\n";
         else
-            for (int j = 0; j < params[i].getNumComponents(); ++j)
-                clearLocal<<"localData[localAtomIndex]."<<params[i].getName()<<"_"<<suffixes[j]<<" = 0;\n";
+            for (int j = 0; j < param.getNumComponents(); ++j)
+                clearLocal<<"localData[localAtomIndex]."<<param.getName()<<"_"<<suffixes[j]<<" = 0;\n";
     }
     replacements["CLEAR_LOCAL_PARAMETERS"] = clearLocal.str();
     stringstream initDerivs;
@@ -659,7 +672,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     for (int i = 0; i < energyParameterDerivatives.size(); i++)
         for (int index = 0; index < numDerivs; index++)
             if (allParamDerivNames[index] == energyParameterDerivatives[i])
-                saveDerivs<<"energyParamDerivs[get_global_id(0)*"<<numDerivs<<"+"<<index<<"] += energyParamDeriv"<<i<<";\n";
+                saveDerivs<<"energyParamDerivs[GLOBAL_ID*"<<numDerivs<<"+"<<index<<"] += energyParamDeriv"<<i<<";\n";
     replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
     map<string, string> defines;
     if (useCutoff)
@@ -676,6 +689,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         defines["INCLUDE_FORCES"] = "1";
     if (includeEnergy)
         defines["INCLUDE_ENERGY"] = "1";
+    defines["THREAD_BLOCK_SIZE"] = context.intToString(forceThreadBlockSize);
     defines["FORCE_WORK_GROUP_SIZE"] = context.intToString(forceThreadBlockSize);
     double maxCutoff = 0.0;
     for (int i = 0; i < 32; i++) {
@@ -700,12 +714,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     defines["LAST_EXCLUSION_TILE"] = context.intToString(endExclusionIndex);
     if ((localDataSize/4)%2 == 0)
         defines["PARAMETER_SIZE_IS_EVEN"] = "1";
-    string file;
-    if (deviceIsCpu)
-        file = OpenCLKernelSources::nonbonded_cpu;
-    else
-        file = OpenCLKernelSources::nonbonded;
-    cl::Program program = context.createProgram(context.replaceStrings(file, replacements), defines);
+    cl::Program program = context.createProgram(context.replaceStrings(kernelSource, replacements), defines);
     cl::Kernel kernel(program, "computeNonbonded");
 
     // Set arguments to the Kernel.
@@ -730,13 +739,15 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         kernel.setArg<cl::Buffer>(index++, blockBoundingBox.getDeviceBuffer());
         kernel.setArg<cl::Buffer>(index++, interactingAtoms.getDeviceBuffer());
     }
-    for (int i = 0; i < (int) params.size(); i++) {
-        kernel.setArg<cl::Memory>(index++, params[i].getMemory());
-    }
-    for (int i = 0; i < (int) arguments.size(); i++) {
-        kernel.setArg<cl::Memory>(index++, arguments[i].getMemory());
-    }
+    for (const ParameterInfo& param : params)
+        kernel.setArg<cl::Memory>(index++, param.getMemory());
+    for (const ParameterInfo& arg : arguments)
+        kernel.setArg<cl::Memory>(index++, arg.getMemory());
     if (energyParameterDerivatives.size() > 0)
         kernel.setArg<cl::Memory>(index++, context.getEnergyParamDerivBuffer().getDeviceBuffer());
     return kernel;
+}
+
+void OpenCLNonbondedUtilities::setKernelSource(const string& source) {
+    kernelSource = source;
 }

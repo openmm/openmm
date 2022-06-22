@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -26,6 +26,7 @@
 
 #include "CudaParallelKernels.h"
 #include "CudaKernelSources.h"
+#include "openmm/common/ContextSelector.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -69,7 +70,7 @@ public:
     void execute() {
         // Copy coordinates over to this device and execute the kernel.
 
-        cu.setAsCurrent();
+        ContextSelector selector(cu);
         if (cu.getContextIndex() > 0) {
             cuStreamWaitEvent(cu.getCurrentStream(), event, 0);
             if (!cu.getPlatformData().peerAccessSupported)
@@ -93,13 +94,16 @@ private:
 class CudaParallelCalcForcesAndEnergyKernel::FinishComputationTask : public CudaContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, CudaContext& cu, CudaCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, long long* pinnedMemory, CudaArray& contextForces, bool& valid, int2& interactionCount) :
+            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, long long* pinnedMemory, CudaArray& contextForces,
+            bool& valid, int2& interactionCount, CUstream stream, CUevent event, CUevent localEvent) :
             context(context), cu(cu), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
-            completionTime(completionTime), pinnedMemory(pinnedMemory), contextForces(contextForces), valid(valid), interactionCount(interactionCount) {
+            completionTime(completionTime), pinnedMemory(pinnedMemory), contextForces(contextForces), valid(valid), interactionCount(interactionCount),
+            stream(stream), event(event), localEvent(localEvent) {
     }
     void execute() {
         // Execute the kernel, then download forces.
         
+        ContextSelector selector(cu);
         energy += kernel.finishComputation(context, includeForce, includeEnergy, groups, valid);
         if (cu.getComputeForceCount() < 200) {
             // Record timing information for load balancing.  Since this takes time, only do it at the start of the simulation.
@@ -109,12 +113,15 @@ public:
         }
         if (includeForce) {
             if (cu.getContextIndex() > 0) {
+                cuEventRecord(localEvent, cu.getCurrentStream());
+                cuStreamWaitEvent(stream, localEvent, 0);
                 int numAtoms = cu.getPaddedNumAtoms();
                 if (cu.getPlatformData().peerAccessSupported) {
                     int numBytes = numAtoms*3*sizeof(long long);
                     int offset = (cu.getContextIndex()-1)*numBytes;
                     CudaContext& context0 = *cu.getPlatformData().contexts[0];
-                    CHECK_RESULT(cuMemcpy(contextForces.getDevicePointer()+offset, cu.getForce().getDevicePointer(), numBytes), "Error copying forces");
+                    CHECK_RESULT(cuMemcpyAsync(contextForces.getDevicePointer()+offset, cu.getForce().getDevicePointer(), numBytes, stream), "Error copying forces");
+                    cuEventRecord(event, stream);
                 }
                 else
                     cu.getForce().download(&pinnedMemory[(cu.getContextIndex()-1)*numAtoms*3]);
@@ -138,6 +145,9 @@ private:
     CudaArray& contextForces;
     bool& valid;
     int2& interactionCount;
+    CUstream stream;
+    CUevent event;
+    CUevent localEvent;
 };
 
 CudaParallelCalcForcesAndEnergyKernel::CudaParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, CudaPlatform::PlatformData& data) :
@@ -148,20 +158,25 @@ CudaParallelCalcForcesAndEnergyKernel::CudaParallelCalcForcesAndEnergyKernel(str
 }
 
 CudaParallelCalcForcesAndEnergyKernel::~CudaParallelCalcForcesAndEnergyKernel() {
-    data.contexts[0]->setAsCurrent();
+    ContextSelector selector(*data.contexts[0]);
     if (pinnedPositionBuffer != NULL)
         cuMemFreeHost(pinnedPositionBuffer);
     if (pinnedForceBuffer != NULL)
         cuMemFreeHost(pinnedForceBuffer);
     cuEventDestroy(event);
-    cuStreamDestroy(peerCopyStream);
+    for (int i = 0; i < peerCopyEvent.size(); i++)
+        cuEventDestroy(peerCopyEvent[i]);
+    for (int i = 0; i < peerCopyEventLocal.size(); i++)
+        cuEventDestroy(peerCopyEventLocal[i]);
+    for (int i = 0; i < peerCopyStream.size(); i++)
+        cuStreamDestroy(peerCopyStream[i]);
     if (interactionCounts != NULL)
         cuMemFreeHost(interactionCounts);
 }
 
 void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
     CudaContext& cu = *data.contexts[0];
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     CUmodule module = cu.createModule(CudaKernelSources::parallel);
     sumKernel = cu.getKernel(module, "sumForces");
     int numContexts = data.contexts.size();
@@ -169,14 +184,25 @@ void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
         getKernel(i).initialize(system);
     for (int i = 0; i < numContexts; i++)
         contextNonbondedFractions[i] = 1/(double) numContexts;
-    CHECK_RESULT(cuEventCreate(&event, 0), "Error creating event");
-    CHECK_RESULT(cuStreamCreate(&peerCopyStream, CU_STREAM_NON_BLOCKING), "Error creating stream");
+    CHECK_RESULT(cuEventCreate(&event, cu.getEventFlags()), "Error creating event");
+    peerCopyEvent.resize(numContexts);
+    peerCopyEventLocal.resize(numContexts);
+    peerCopyStream.resize(numContexts);
+    for (int i = 0; i < numContexts; i++) {
+        CHECK_RESULT(cuEventCreate(&peerCopyEvent[i], cu.getEventFlags()), "Error creating event");
+        CHECK_RESULT(cuStreamCreate(&peerCopyStream[i], CU_STREAM_NON_BLOCKING), "Error creating stream");
+    }
+    for (int i = 0; i < numContexts; i++) {
+        CudaContext& cuLocal = *data.contexts[i];
+        ContextSelector selectorLocal(cuLocal);
+        CHECK_RESULT(cuEventCreate(&peerCopyEventLocal[i], cu.getEventFlags()), "Error creating event");
+    }
     CHECK_RESULT(cuMemHostAlloc((void**) &interactionCounts, numContexts*sizeof(int2), 0), "Error creating interaction counts buffer");
 }
 
 void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
     CudaContext& cu = *data.contexts[0];
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     if (!contextForces.isInitialized()) {
         contextForces.initialize<long long>(cu, 3*(data.contexts.size()-1)*cu.getPaddedNumAtoms(), "contextForces");
         CHECK_RESULT(cuMemHostAlloc((void**) &pinnedForceBuffer, 3*(data.contexts.size()-1)*cu.getPaddedNumAtoms()*sizeof(long long), CU_MEMHOSTALLOC_PORTABLE), "Error allocating pinned memory");
@@ -192,33 +218,41 @@ void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& contex
     else {
         int numBytes = cu.getPosq().getSize()*cu.getPosq().getElementSize();
         cuEventRecord(event, cu.getCurrentStream());
-        cuStreamWaitEvent(peerCopyStream, event, 0);
-        for (int i = 1; i < (int) data.contexts.size(); i++)
-            CHECK_RESULT(cuMemcpyAsync(data.contexts[i]->getPosq().getDevicePointer(), cu.getPosq().getDevicePointer(), numBytes, peerCopyStream), "Error copying positions");
-        cuEventRecord(event, peerCopyStream);
+        for (int i = 1; i < (int) data.contexts.size(); i++) {
+            cuStreamWaitEvent(peerCopyStream[i], event, 0);
+            CHECK_RESULT(cuMemcpyAsync(data.contexts[i]->getPosq().getDevicePointer(), cu.getPosq().getDevicePointer(), numBytes, peerCopyStream[i]), "Error copying positions");
+            cuEventRecord(peerCopyEvent[i], peerCopyStream[i]);
+        }
     }
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         data.contextEnergy[i] = 0.0;
         CudaContext& cu = *data.contexts[i];
         ComputeContext::WorkThread& thread = cu.getWorkThread();
-        thread.addTask(new BeginComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, pinnedPositionBuffer, event, interactionCounts[i]));
+        CUevent waitEvent = (cu.getPlatformData().peerAccessSupported ? peerCopyEvent[i] : event);
+        thread.addTask(new BeginComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, pinnedPositionBuffer, waitEvent, interactionCounts[i]));
     }
+    data.syncContexts();
 }
 
 double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups, bool& valid) {
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         CudaContext& cu = *data.contexts[i];
         ComputeContext::WorkThread& thread = cu.getWorkThread();
-        thread.addTask(new FinishComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i], pinnedForceBuffer, contextForces, valid, interactionCounts[i]));
+        thread.addTask(new FinishComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i],
+                pinnedForceBuffer, contextForces, valid, interactionCounts[i], peerCopyStream[i], peerCopyEvent[i], peerCopyEventLocal[i]));
     }
     data.syncContexts();
+    CudaContext& cu = *data.contexts[0];
+    ContextSelector selector(cu);
+    if (cu.getPlatformData().peerAccessSupported)
+        for (int i = 1; i < data.contexts.size(); i++)
+            cuStreamWaitEvent(cu.getCurrentStream(), peerCopyEvent[i], 0);
     double energy = 0.0;
     for (int i = 0; i < (int) data.contextEnergy.size(); i++)
         energy += data.contextEnergy[i];
     if (includeForce && valid) {
         // Sum the forces from all devices.
         
-        CudaContext& cu = *data.contexts[0];
         if (!cu.getPlatformData().peerAccessSupported)
             contextForces.upload(pinnedForceBuffer, false);
         int bufferSize = 3*cu.getPaddedNumAtoms();

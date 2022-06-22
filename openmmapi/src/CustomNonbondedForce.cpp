@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -53,6 +53,8 @@ CustomNonbondedForce::CustomNonbondedForce(const string& energy) : energyExpress
 
 CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
     // Copy everything and deep copy the tabulated functions
+    setForceGroup(rhs.getForceGroup());
+    setName(rhs.getName());
     energyExpression = rhs.energyExpression;
     nonbondedMethod = rhs.nonbondedMethod;
     cutoffDistance = rhs.cutoffDistance;
@@ -61,6 +63,7 @@ CustomNonbondedForce::CustomNonbondedForce(const CustomNonbondedForce& rhs) {
     useLongRangeCorrection = rhs.useLongRangeCorrection;
     parameters = rhs.parameters;
     globalParameters = rhs.globalParameters;
+    computedValues = rhs.computedValues;
     energyParameterDerivatives = rhs.energyParameterDerivatives;
     particles = rhs.particles;
     exclusions = rhs.exclusions;
@@ -278,6 +281,23 @@ void CustomNonbondedForce::setFunctionParameters(int index, const std::string& n
         throw OpenMMException("CustomNonbondedForce: function is not a Continuous1DFunction");
     functions[index].name = name;
     function->setFunctionParameters(values, min, max);
+}
+
+int CustomNonbondedForce::addComputedValue(const string& name, const string& expression) {
+    computedValues.push_back(ComputedValueInfo(name, expression));
+    return computedValues.size()-1;
+}
+
+void CustomNonbondedForce::getComputedValueParameters(int index, string& name, string& expression) const {
+    ASSERT_VALID_INDEX(index, computedValues);
+    name = computedValues[index].name;
+    expression = computedValues[index].expression;
+}
+
+void CustomNonbondedForce::setComputedValueParameters(int index, const string& name, const string& expression) {
+    ASSERT_VALID_INDEX(index, computedValues);
+    computedValues[index].name = name;
+    computedValues[index].expression = expression;
 }
 
 int CustomNonbondedForce::addInteractionGroup(const std::set<int>& set1, const std::set<int>& set2) {

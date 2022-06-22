@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -464,6 +464,7 @@ void testLargeSystem() {
     System system;
     for (int i = 0; i < numParticles; i++)
         system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     NonbondedForce* nonbonded = new NonbondedForce();
     HarmonicBondForce* bonds = new HarmonicBondForce();
     vector<Vec3> positions(numParticles);
@@ -488,10 +489,9 @@ void testLargeSystem() {
         nonbonded->addException(2*i, 2*i+1, 0.0, 0.15, 0.0);
     }
 
-    // Try with cutoffs but not periodic boundary conditions, and make sure it agrees with the Reference platform.
+    // Try with no cutoffs and make sure it agrees with the Reference platform.
 
-    nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
-    nonbonded->setCutoffDistance(cutoff);
+    nonbonded->setNonbondedMethod(NonbondedForce::NoCutoff);
     system.addForce(nonbonded);
     system.addForce(bonds);
     VerletIntegrator integrator1(0.01);
@@ -511,16 +511,26 @@ void testLargeSystem() {
     }
     ASSERT_EQUAL_TOL(state.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 
+    // Now try cutoffs but not periodic boundary conditions.
+
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    nonbonded->setCutoffDistance(cutoff);
+    context.reinitialize(true);
+    referenceContext.reinitialize(true);
+    state = context.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
+    referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL_VEC(state.getPositions()[i], referenceState.getPositions()[i], tol);
+        ASSERT_EQUAL_VEC(state.getVelocities()[i], referenceState.getVelocities()[i], tol);
+        ASSERT_EQUAL_VEC(state.getForces()[i], referenceState.getForces()[i], tol);
+    }
+    ASSERT_EQUAL_TOL(state.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
+
     // Now do the same thing with periodic boundary conditions.
 
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
-    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-    context.reinitialize();
-    referenceContext.reinitialize();
-    context.setPositions(positions);
-    context.setVelocities(velocities);
-    referenceContext.setPositions(positions);
-    referenceContext.setVelocities(velocities);
+    context.reinitialize(true);
+    referenceContext.reinitialize(true);
     state = context.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     for (int i = 0; i < numParticles; i++) {
@@ -536,7 +546,7 @@ void testLargeSystem() {
     ASSERT_EQUAL_TOL(state.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 }
 
-void testHugeSystem() {
+void testHugeSystem(double tol=1e-5) {
     // Create a system with over 3 million particles.
     
     const int gridSize = 150;
@@ -590,7 +600,7 @@ void testHugeSystem() {
     State state2 = context.getState(State::Energy);
     context.setPositions(positions3);
     State state3 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state3.getPotentialEnergy()+norm*delta, 1e-5)
+    ASSERT_EQUAL_TOL(state2.getPotentialEnergy(), state3.getPotentialEnergy()+norm*delta, tol)
 }
 
 void testDispersionCorrection() {
@@ -933,6 +943,50 @@ void testEwaldExceptions() {
     ASSERT_EQUAL_TOL(expectedChange, e2-e1, 1e-5);
 }
 
+void testDirectAndReciprocal() {
+    // Create a minimal system with direct space and reciprocal space in different force groups.
+
+    System system;
+    for (int i = 0; i < 4; i++)
+        system.addParticle(1.0);
+    system.setDefaultPeriodicBoxVectors(Vec3(2, 0, 0), Vec3(0, 2, 0), Vec3(0, 0, 2));
+    NonbondedForce* force = new NonbondedForce();
+    system.addForce(force);
+    force->setNonbondedMethod(NonbondedForce::PME);
+    force->setCutoffDistance(1.0);
+    force->setReciprocalSpaceForceGroup(1);
+    force->addParticle(1.0, 0.5, 1.0);
+    force->addParticle(1.0, 0.5, 1.0);
+    force->addParticle(-1.0, 0.5, 1.0);
+    force->addParticle(-1.0, 0.5, 1.0);
+    force->addException(0, 2, -2.0, 0.5, 3.0);
+    vector<Vec3> positions = {
+        Vec3(0, 0, 0),
+        Vec3(1.5, 0, 0),
+        Vec3(0, 0.5, 0.5),
+        Vec3(0.2, 1.3, 0)
+    };
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    
+    // Compute the direct and reciprocal space energies together and separately.
+    
+    double e1 = context.getState(State::Energy).getPotentialEnergy();
+    double e2 = context.getState(State::Energy, true, 1<<0).getPotentialEnergy();
+    double e3 = context.getState(State::Energy, true, 1<<1).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(e1, e2+e3, 1e-5);
+    ASSERT(e2 != 0);
+    ASSERT(e3 != 0);
+    
+    // Completely disable the direct space calculation.
+    
+    force->setIncludeDirectSpace(false);
+    context.reinitialize(true);
+    double e4 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(e3, e4, 1e-5);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -954,6 +1008,7 @@ int main(int argc, char* argv[]) {
         testTwoForces();
         testParameterOffsets();
         testEwaldExceptions();
+        testDirectAndReciprocal();
         runPlatformTests();
     }
     catch(const exception& e) {

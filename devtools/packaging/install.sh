@@ -54,7 +54,7 @@ then
     echo "Installation is complete.  You should now test your installation to make sure"
     echo "it is working correctly by typing the following command:"
     echo
-    echo "python -m simtk.testInstallation"
+    echo "python -m openmm.testInstallation"
 else
     echo
     echo "INSTALLATION FAILED"

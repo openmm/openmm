@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,13 +30,35 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/MonteCarloBarostat.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/internal/MonteCarloBarostatImpl.h"
+#include "openmm/MonteCarloAnisotropicBarostat.h"
 
 using namespace OpenMM;
 
-MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double defaultTemperature, int frequency) :
-        defaultPressure(defaultPressure), defaultTemperature(defaultTemperature), frequency(frequency) {
+MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double defaultTemperature, int frequency) {
+    setDefaultPressure(defaultPressure);
+    setDefaultTemperature(defaultTemperature);
+    setFrequency(frequency);
     setRandomNumberSeed(0);
+}
+
+void MonteCarloBarostat::setDefaultPressure(double pressure) {
+    if (pressure < 0)
+        throw OpenMMException("Pressure cannot be negative");
+    defaultPressure = pressure;
+}
+
+void MonteCarloBarostat::setFrequency(int freq) {
+    if (freq < 0)
+        throw OpenMMException("Frequency cannot be negative");
+    frequency = freq;
+}
+
+void MonteCarloBarostat::setDefaultTemperature(double temp) {
+    if (temp < 0)
+        throw OpenMMException("Temperature cannot be negative");
+    defaultTemperature = temp;
 }
 
 ForceImpl* MonteCarloBarostat::createImpl() const {

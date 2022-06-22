@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,6 +45,7 @@
 #include "CpuPlatform.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
+#include "openmm/internal/CustomNonbondedForceImpl.h"
 #include <array>
 #include <tuple>
 
@@ -319,18 +320,21 @@ public:
      * @param force      the CustomNonbondedForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
-private:   
+private:
+    void createInteraction(const CustomNonbondedForce& force);
     CpuPlatform::PlatformData& data;
     int numParticles;
     std::vector<std::vector<double> > particleParamArray;
     double nonbondedCutoff, switchingDistance, periodicBoxSize[3], longRangeCoefficient;
     bool useSwitchingFunction, hasInitializedLongRangeCorrection;
     CustomNonbondedForce* forceCopy;
+    CustomNonbondedForceImpl::LongRangeCorrectionData longRangeCorrectionData;
     std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;
-    std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
+    std::vector<std::string> parameterNames, globalParameterNames, computedValueNames, energyParamDerivNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     std::vector<double> longRangeCoefficientDerivs;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     NonbondedMethod nonbondedMethod;
     CpuCustomNonbondedForce* nonbonded;
 };
@@ -408,6 +412,7 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomGBForce& force);
 private:
+    void createInteraction(const CustomGBForce& force);
     CpuPlatform::PlatformData& data;
     int numParticles;
     bool isPeriodic;
@@ -419,6 +424,7 @@ private:
     std::vector<std::string> particleParameterNames, globalParameterNames, energyParamDerivNames, valueNames;
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     NonbondedMethod nonbondedMethod;
 };
 
@@ -461,6 +467,7 @@ private:
     std::vector<std::vector<double> > particleParamArray;
     CpuCustomManyParticleForce* ixn;
     std::vector<std::string> globalParameterNames;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     NonbondedMethod nonbondedMethod;
 };
 

@@ -72,9 +72,9 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == UpdateStateDataKernel::Name())
         return new OpenCLUpdateStateDataKernel(name, platform, cl);
     if (name == ApplyConstraintsKernel::Name())
-        return new OpenCLApplyConstraintsKernel(name, platform, cl);
+        return new CommonApplyConstraintsKernel(name, platform, cl);
     if (name == VirtualSitesKernel::Name())
-        return new OpenCLVirtualSitesKernel(name, platform, cl);
+        return new CommonVirtualSitesKernel(name, platform, cl);
     if (name == CalcHarmonicBondForceKernel::Name())
         return new CommonCalcHarmonicBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomBondForceKernel::Name())
@@ -134,7 +134,7 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == IntegrateNoseHooverStepKernel::Name())
         return new CommonIntegrateNoseHooverStepKernel(name, platform, cl);
     if (name == ApplyMonteCarloBarostatKernel::Name())
-        return new OpenCLApplyMonteCarloBarostatKernel(name, platform, cl);
+        return new CommonApplyMonteCarloBarostatKernel(name, platform, cl);
     if (name == RemoveCMMotionKernel::Name())
         return new CommonRemoveCMMotionKernel(name, platform, cl);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -149,6 +149,18 @@ public:
      */
     virtual void setTime(ContextImpl& context, double time) = 0;
     /**
+     * Get the current step count
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    virtual long long getStepCount(const ContextImpl& context) const = 0;
+    /**
+     * Set the current step count
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void setStepCount(const ContextImpl& context, long long count) = 0;
+    /**
      * Get the positions of all particles.
      *
      * @param positions  on exit, this contains the particle positions
@@ -172,6 +184,15 @@ public:
      * @param velocities  a vector containing the particle velocities
      */
     virtual void setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities) = 0;
+    /**
+     * Compute velocities, shifted in time to account for a leapfrog integrator.  The shift
+     * is based on the most recently computed forces.
+     * 
+     * @param context     the context in which to execute this kernel
+     * @param timeShift   the amount by which to shift the velocities in time
+     * @param velocities  the shifted velocities are returned in this
+     */
+    virtual void computeShiftedVelocities(ContextImpl& context, double timeShift, std::vector<Vec3>& velocities) = 0;
     /**
      * Get the current forces on all particles.
      *
@@ -1432,10 +1453,11 @@ public:
     /**
      * Initialize the kernel.
      *
-     * @param system     the System this kernel will be applied to
-     * @param barostat   the MonteCarloBarostat this kernel will be used for
+     * @param system          the System this kernel will be applied to
+     * @param barostat        the MonteCarloBarostat this kernel will be used for
+     * @param rigidMolecules  whether molecules should be kept rigid while scaling coordinates
      */
-    virtual void initialize(const System& system, const Force& barostat) = 0;
+    virtual void initialize(const System& system, const Force& barostat, bool rigidMolecules=true) = 0;
     /**
      * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
      * This version scales the x, y, and z positions independently.

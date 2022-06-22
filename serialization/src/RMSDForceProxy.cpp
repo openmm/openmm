@@ -45,6 +45,7 @@ void RMSDForceProxy::serialize(const void* object, SerializationNode& node) cons
     node.setIntProperty("version", 0);
     const RMSDForce& force = *reinterpret_cast<const RMSDForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     SerializationNode& positionsNode = node.createChildNode("ReferencePositions");
     for (const Vec3& pos : force.getReferencePositions())
        positionsNode.createChildNode("Position").setDoubleProperty("x", pos[0]).setDoubleProperty("y", pos[1]).setDoubleProperty("z", pos[2]);
@@ -67,6 +68,7 @@ void* RMSDForceProxy::deserialize(const SerializationNode& node) const {
             particles.push_back(particle.getIntProperty("index"));
         force = new RMSDForce(positions, particles);
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         return force;
     }
     catch (...) {

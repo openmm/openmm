@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,7 +32,8 @@
 using namespace OpenMM;
 using namespace std;
 
-CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) : context(context), trait(trait), dataLength(length) {
+CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length, bool uniform) :
+        context(context), trait(trait), dataLength(length), uniform(uniform) {
     // Create kernels.
 
     map<string, string> replacements;
@@ -42,11 +43,12 @@ CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length) 
     replacements["MIN_KEY"] = trait->getMinKey();
     replacements["MAX_KEY"] = trait->getMaxKey();
     replacements["MAX_VALUE"] = trait->getMaxValue();
+    replacements["UNIFORM"] = (uniform ? "1" : "0");
     CUmodule module = context.createModule(context.replaceStrings(CudaKernelSources::sort, replacements));
     shortListKernel = context.getKernel(module, "sortShortList");
     shortList2Kernel = context.getKernel(module, "sortShortList2");
     computeRangeKernel = context.getKernel(module, "computeRange");
-    assignElementsKernel = context.getKernel(module, "assignElementsToBuckets");
+    assignElementsKernel = context.getKernel(module, uniform ? "assignElementsToBuckets" : "assignElementsToBuckets2");
     computeBucketPositionsKernel = context.getKernel(module, "computeBucketPositions");
     copyToBucketsKernel = context.getKernel(module, "copyDataToBuckets");
     sortBucketsKernel = context.getKernel(module, "sortBuckets");

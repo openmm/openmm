@@ -72,11 +72,11 @@ __device__ void computeBSplinePoint(real4* thetai, real w, real* array) {
 /**
  * Convert the fixed multipoles from Cartesian to fractional coordinates.
  */
-extern "C" __global__ void transformMultipolesToFractionalCoordinates(const real* __restrict__ labFrameDipole,
+extern "C" __global__ void transformMultipolesToFractionalCoordinates(const real* __restrict__ labDipole,
 #ifdef HIPPO
         const real* __restrict__ labQXX, const real* __restrict__ labQXY, const real* __restrict__ labQXZ, const real* __restrict__ labQYY, const real* __restrict__ labQYZ,
 #else
-        const real* __restrict__ labFrameQuadrupole,
+        const real* __restrict__ labQuadrupole,
 #endif
         real* __restrict__ fracDipole, real* __restrict__ fracQuadrupole, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     // Build matrices for transforming the dipoles and quadrupoles.
@@ -113,7 +113,7 @@ extern "C" __global__ void transformMultipolesToFractionalCoordinates(const real
         for (int j = 0; j < 3; j++) {
             real dipole = 0;
             for (int k = 0; k < 3; k++)
-                dipole += a[j][k]*labFrameDipole[3*i+k];
+                dipole += a[j][k]*labDipole[3*i+k];
             fracDipole[3*i+j] = dipole;
         }
         for (int j = 0; j < 6; j++) {
@@ -127,8 +127,8 @@ extern "C" __global__ void transformMultipolesToFractionalCoordinates(const real
 #else
             real quadrupole = 0;
             for (int k = 0; k < 5; k++)
-                quadrupole += quadScale[k]*b[j][k]*labFrameQuadrupole[5*i+k];
-            quadrupole -= quadScale[5]*b[j][5]*(labFrameQuadrupole[5*i]+labFrameQuadrupole[5*i+3]);
+                quadrupole += quadScale[k]*b[j][k]*labQuadrupole[5*i+k];
+            quadrupole -= quadScale[5]*b[j][5]*(labQuadrupole[5*i]+labQuadrupole[5*i+3]);
 #endif
             fracQuadrupole[6*i+j] = quadrupole;
         }
@@ -289,11 +289,11 @@ extern "C" __global__ void gridSpreadFixedMultipoles(const real4* __restrict__ p
     }
 }
 
-extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ posq, const real* __restrict__ inducedDipole,
+extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ posq, const real3* __restrict__ inducedDipole,
 #ifdef HIPPO
         real* __restrict__ pmeGrid,
 #else
-        const real* __restrict__ inducedDipolePolar, real2* __restrict__ pmeGrid,
+        const real3* __restrict__ inducedDipolePolar, real2* __restrict__ pmeGrid,
 #endif
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
 #if __CUDA_ARCH__ < 500
@@ -325,12 +325,12 @@ extern "C" __global__ void gridSpreadInducedDipoles(const real4* __restrict__ po
         pos -= periodicBoxVecZ*floor(pos.z*recipBoxVecZ.z+0.5f);
         pos -= periodicBoxVecY*floor(pos.y*recipBoxVecY.z+0.5f);
         pos -= periodicBoxVecX*floor(pos.x*recipBoxVecX.z+0.5f);
-        real3 cinducedDipole = ((const real3*) inducedDipole)[m];
+        real3 cinducedDipole = inducedDipole[m];
         real3 finducedDipole = make_real3(cinducedDipole.x*cartToFrac[0][0] + cinducedDipole.y*cartToFrac[0][1] + cinducedDipole.z*cartToFrac[0][2],
                                           cinducedDipole.x*cartToFrac[1][0] + cinducedDipole.y*cartToFrac[1][1] + cinducedDipole.z*cartToFrac[1][2],
                                           cinducedDipole.x*cartToFrac[2][0] + cinducedDipole.y*cartToFrac[2][1] + cinducedDipole.z*cartToFrac[2][2]);
 #ifndef HIPPO
-        real3 cinducedDipolePolar = ((const real3*) inducedDipolePolar)[m];
+        real3 cinducedDipolePolar = inducedDipolePolar[m];
         real3 finducedDipolePolar = make_real3(cinducedDipolePolar.x*cartToFrac[0][0] + cinducedDipolePolar.y*cartToFrac[0][1] + cinducedDipolePolar.z*cartToFrac[0][2],
                                                cinducedDipolePolar.x*cartToFrac[1][0] + cinducedDipolePolar.y*cartToFrac[1][1] + cinducedDipolePolar.z*cartToFrac[1][2],
                                                cinducedDipolePolar.x*cartToFrac[2][0] + cinducedDipolePolar.y*cartToFrac[2][1] + cinducedDipolePolar.z*cartToFrac[2][2]);
@@ -480,7 +480,7 @@ extern "C" __global__ void computeFixedPotentialFromGrid(
 #ifndef HIPPO
         long long* __restrict__ fieldPolarBuffers,
 #endif
-        const real4* __restrict__ posq, const real* __restrict__ labFrameDipole, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        const real4* __restrict__ posq, const real* __restrict__ labDipole, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
 #if __CUDA_ARCH__ < 500
     real array[PME_ORDER*PME_ORDER];
@@ -643,9 +643,9 @@ extern "C" __global__ void computeFixedPotentialFromGrid(
         phi[m+NUM_ATOMS*18] = tuv012;
         phi[m+NUM_ATOMS*19] = tuv111;
         real dipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
-        long long fieldx = (long long) ((dipoleScale*labFrameDipole[m*3]-tuv100*fracToCart[0][0]-tuv010*fracToCart[0][1]-tuv001*fracToCart[0][2])*0x100000000);
-        long long fieldy = (long long) ((dipoleScale*labFrameDipole[m*3+1]-tuv100*fracToCart[1][0]-tuv010*fracToCart[1][1]-tuv001*fracToCart[1][2])*0x100000000);
-        long long fieldz = (long long) ((dipoleScale*labFrameDipole[m*3+2]-tuv100*fracToCart[2][0]-tuv010*fracToCart[2][1]-tuv001*fracToCart[2][2])*0x100000000);
+        long long fieldx = (long long) ((dipoleScale*labDipole[m*3]-tuv100*fracToCart[0][0]-tuv010*fracToCart[0][1]-tuv001*fracToCart[0][2])*0x100000000);
+        long long fieldy = (long long) ((dipoleScale*labDipole[m*3+1]-tuv100*fracToCart[1][0]-tuv010*fracToCart[1][1]-tuv001*fracToCart[1][2])*0x100000000);
+        long long fieldz = (long long) ((dipoleScale*labDipole[m*3+2]-tuv100*fracToCart[2][0]-tuv010*fracToCart[2][1]-tuv001*fracToCart[2][2])*0x100000000);
         fieldBuffers[m] = fieldx;
         fieldBuffers[m+PADDED_NUM_ATOMS] = fieldy;
         fieldBuffers[m+2*PADDED_NUM_ATOMS] = fieldz;
@@ -942,12 +942,12 @@ extern "C" __global__ void computeInducedPotentialFromGrid(
 }
 
 extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict__ posq, unsigned long long* __restrict__ forceBuffers,
-        long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer, const real* __restrict__ labFrameDipole,
+        long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer, const real* __restrict__ labDipole,
 #ifdef HIPPO
         const real* __restrict__ coreCharge, const real* __restrict__ valenceCharge, const real* __restrict__ labQXX,
         const real* __restrict__ labQXY, const real* __restrict__ labQXZ, const real* __restrict__ labQYY, const real* __restrict__ labQYZ,
 #else
-        const real* __restrict__ labFrameQuadrupole,
+        const real* __restrict__ labQuadrupole,
 #endif
         const real* __restrict__ fracDipole, const real* __restrict__ fracQuadrupole,
         const real* __restrict__ phi, const real* __restrict__ cphi_global, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
@@ -972,9 +972,9 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         // Compute the torque.
 
-        multipole[1] = labFrameDipole[i*3];
-        multipole[2] = labFrameDipole[i*3+1];
-        multipole[3] = labFrameDipole[i*3+2];
+        multipole[1] = labDipole[i*3];
+        multipole[2] = labDipole[i*3+1];
+        multipole[3] = labDipole[i*3+2];
 #ifdef HIPPO
         multipole[0] = coreCharge[i]+valenceCharge[i];
         multipole[4] = labQXX[i];
@@ -984,11 +984,11 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
         multipole[9] = 2*labQYZ[i];
 #else
         multipole[0] = posq[i].w;
-        multipole[4] = labFrameQuadrupole[i*5];
-        multipole[5] = labFrameQuadrupole[i*5+3];
-        multipole[7] = 2*labFrameQuadrupole[i*5+1];
-        multipole[8] = 2*labFrameQuadrupole[i*5+2];
-        multipole[9] = 2*labFrameQuadrupole[i*5+4];
+        multipole[4] = labQuadrupole[i*5];
+        multipole[5] = labQuadrupole[i*5+3];
+        multipole[7] = 2*labQuadrupole[i*5+1];
+        multipole[8] = 2*labQuadrupole[i*5+2];
+        multipole[9] = 2*labQuadrupole[i*5+4];
 #endif
         multipole[6] = -(multipole[4]+multipole[5]);
 
@@ -1039,17 +1039,17 @@ extern "C" __global__ void computeFixedMultipoleForceAndEnergy(real4* __restrict
 }
 
 extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict__ posq, unsigned long long* __restrict__ forceBuffers,
-        long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer, const real* __restrict__ labFrameDipole,
+        long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer, const real* __restrict__ labDipole,
 #ifdef HIPPO
         const real* __restrict__ coreCharge, const real* __restrict__ valenceCharge, const real* __restrict__ extrapolatedDipole,
         const real* __restrict__ extrapolatedPhi, const real* __restrict__ labQXX, const real* __restrict__ labQXY,
         const real* __restrict__ labQXZ, const real* __restrict__ labQYY, const real* __restrict__ labQYZ,
 #else
-        const real* __restrict__ labFrameQuadrupole,
+        const real* __restrict__ labQuadrupole,
 #endif
-        const real* __restrict__ fracDipole, const real* __restrict__ fracQuadrupole, const real* __restrict__ inducedDipole_global,
+        const real* __restrict__ fracDipole, const real* __restrict__ fracQuadrupole, const real3* __restrict__ inducedDipole_global,
 #ifndef HIPPO
-        const real* __restrict__ inducedDipolePolar_global,
+        const real3* __restrict__ inducedDipolePolar_global,
 #endif
         const real* __restrict__ phi,
 #ifndef HIPPO
@@ -1082,9 +1082,9 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         // Compute the torque.
 
-        multipole[1] = labFrameDipole[i*3];
-        multipole[2] = labFrameDipole[i*3+1];
-        multipole[3] = labFrameDipole[i*3+2];
+        multipole[1] = labDipole[i*3];
+        multipole[2] = labDipole[i*3+1];
+        multipole[3] = labDipole[i*3+2];
 #ifdef HIPPO
         multipole[0] = coreCharge[i]+valenceCharge[i];
         multipole[4] = labQXX[i];
@@ -1095,11 +1095,11 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
         const real scale = EPSILON_FACTOR;
 #else
         multipole[0] = posq[i].w;
-        multipole[4] = labFrameQuadrupole[i*5];
-        multipole[5] = labFrameQuadrupole[i*5+3];
-        multipole[7] = 2*labFrameQuadrupole[i*5+1];
-        multipole[8] = 2*labFrameQuadrupole[i*5+2];
-        multipole[9] = 2*labFrameQuadrupole[i*5+4];
+        multipole[4] = labQuadrupole[i*5];
+        multipole[5] = labQuadrupole[i*5+3];
+        multipole[7] = 2*labQuadrupole[i*5+1];
+        multipole[8] = 2*labQuadrupole[i*5+2];
+        multipole[9] = 2*labQuadrupole[i*5+4];
         const real scale = EPSILON_FACTOR/2;
 #endif
         multipole[6] = -(multipole[4]+multipole[5]);
@@ -1132,13 +1132,13 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
         multipole[8] = fracQuadrupole[i*6+2];
         multipole[9] = fracQuadrupole[i*6+4];
 
-        cinducedDipole[0] = inducedDipole_global[i*3];
-        cinducedDipole[1] = inducedDipole_global[i*3+1];
-        cinducedDipole[2] = inducedDipole_global[i*3+2];
+        cinducedDipole[0] = inducedDipole_global[i].x;
+        cinducedDipole[1] = inducedDipole_global[i].y;
+        cinducedDipole[2] = inducedDipole_global[i].z;
 #ifndef HIPPO
-        cinducedDipolePolar[0] = inducedDipolePolar_global[i*3];
-        cinducedDipolePolar[1] = inducedDipolePolar_global[i*3+1];
-        cinducedDipolePolar[2] = inducedDipolePolar_global[i*3+2];
+        cinducedDipolePolar[0] = inducedDipolePolar_global[i].x;
+        cinducedDipolePolar[1] = inducedDipolePolar_global[i].y;
+        cinducedDipolePolar[2] = inducedDipolePolar_global[i].z;
 #endif
         
         // Multiply the dipoles by cartToFrac, which is just the transpose of fracToCart.
@@ -1212,7 +1212,7 @@ extern "C" __global__ void computeInducedDipoleForceAndEnergy(real4* __restrict_
 
 #ifdef HIPPO
 extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ phidp, long long* __restrict__ inducedField,
-        const real* __restrict__ inducedDipole, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+        const real3* __restrict__ inducedDipole, real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
     __shared__ real fracToCart[3][3];
     if (threadIdx.x == 0) {
         fracToCart[0][0] = GRID_SIZE_X*recipBoxVecX.x;
@@ -1228,15 +1228,15 @@ extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ ph
     __syncthreads();
     real selfDipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        inducedField[i] -= (long long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[0][0] + phidp[i+NUM_ATOMS*2]*fracToCart[0][1] + phidp[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[3*i]));
-        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[1][0] + phidp[i+NUM_ATOMS*2]*fracToCart[1][1] + phidp[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[3*i+1]));
-        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[2][0] + phidp[i+NUM_ATOMS*2]*fracToCart[2][1] + phidp[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[3*i+2]));
+        inducedField[i] -= (long long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[0][0] + phidp[i+NUM_ATOMS*2]*fracToCart[0][1] + phidp[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[i].x));
+        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[1][0] + phidp[i+NUM_ATOMS*2]*fracToCart[1][1] + phidp[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[i].y));
+        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phidp[i+NUM_ATOMS]*fracToCart[2][0] + phidp[i+NUM_ATOMS*2]*fracToCart[2][1] + phidp[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[i].z));
     }
 }
 
 extern "C" __global__ void calculateSelfEnergyAndTorque(long long* __restrict__ torqueBuffers, mixed* __restrict__ energyBuffer,
-        const real* __restrict__ labFrameDipole, const real* __restrict__ coreCharge, const real* __restrict__ valenceCharge,
-        const real* __restrict__ c6, const real* __restrict__ inducedDipole, const real* __restrict__ labQXX, const real* __restrict__ labQXY,
+        const real3* __restrict__ labDipole, const real* __restrict__ coreCharge, const real* __restrict__ valenceCharge,
+        const real* __restrict__ c6, const real3* __restrict__ inducedDipole, const real* __restrict__ labQXX, const real* __restrict__ labQXY,
         const real* __restrict__ labQXZ, const real* __restrict__ labQYY, const real* __restrict__ labQYZ) {
     const real torqueScale = 4*EPSILON_FACTOR*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/(3*SQRT_PI);
     real cii = 0;
@@ -1245,8 +1245,8 @@ extern "C" __global__ void calculateSelfEnergyAndTorque(long long* __restrict__ 
     real c6ii = 0;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
         real charge = coreCharge[i]+valenceCharge[i];
-        real3 dipole = make_real3(labFrameDipole[i*3], labFrameDipole[i*3+1], labFrameDipole[i*3+2]);
-        real3 induced = make_real3(inducedDipole[i*3], inducedDipole[i*3+1], inducedDipole[i*3+2]);
+        real3 dipole = labDipole[i];
+        real3 induced = inducedDipole[i];
         real qXX = labQXX[i];
         real qXY = labQXY[i];
         real qXZ = labQXZ[i];
@@ -1270,11 +1270,12 @@ extern "C" __global__ void calculateSelfEnergyAndTorque(long long* __restrict__ 
 }
 #else
 extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ phid, real* const __restrict__ phip, long long* __restrict__ inducedField,
-        long long* __restrict__ inducedFieldPolar, const real* __restrict__ inducedDipole, const real* __restrict__ inducedDipolePolar,
+        long long* __restrict__ inducedFieldPolar, const real3* __restrict__ inducedDipole, const real3* __restrict__ inducedDipolePolar,
+        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ
 #ifdef EXTRAPOLATED_POLARIZATION
-        unsigned long long* __restrict__ fieldGradient, unsigned long long* __restrict__ fieldGradientPolar,
+        , unsigned long long* __restrict__ fieldGradient, unsigned long long* __restrict__ fieldGradientPolar
 #endif
-        real3 recipBoxVecX, real3 recipBoxVecY, real3 recipBoxVecZ) {
+        ) {
     __shared__ real fracToCart[3][3];
     if (threadIdx.x == 0) {
         fracToCart[0][0] = GRID_SIZE_X*recipBoxVecX.x;
@@ -1290,12 +1291,12 @@ extern "C" __global__ void recordInducedFieldDipoles(const real* __restrict__ ph
     __syncthreads();
     real selfDipoleScale = (4/(real) 3)*(EWALD_ALPHA*EWALD_ALPHA*EWALD_ALPHA)/SQRT_PI;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x) {
-        inducedField[i] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[0][0] + phid[i+NUM_ATOMS*2]*fracToCart[0][1] + phid[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[3*i]));
-        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[1][0] + phid[i+NUM_ATOMS*2]*fracToCart[1][1] + phid[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[3*i+1]));
-        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[2][0] + phid[i+NUM_ATOMS*2]*fracToCart[2][1] + phid[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[3*i+2]));
-        inducedFieldPolar[i] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[0][0] + phip[i+NUM_ATOMS*2]*fracToCart[0][1] + phip[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipolePolar[3*i]));
-        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[1][0] + phip[i+NUM_ATOMS*2]*fracToCart[1][1] + phip[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipolePolar[3*i+1]));
-        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[2][0] + phip[i+NUM_ATOMS*2]*fracToCart[2][1] + phip[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipolePolar[3*i+2]));
+        inducedField[i] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[0][0] + phid[i+NUM_ATOMS*2]*fracToCart[0][1] + phid[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipole[i].x));
+        inducedField[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[1][0] + phid[i+NUM_ATOMS*2]*fracToCart[1][1] + phid[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipole[i].y));
+        inducedField[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phid[i+NUM_ATOMS]*fracToCart[2][0] + phid[i+NUM_ATOMS*2]*fracToCart[2][1] + phid[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipole[i].z));
+        inducedFieldPolar[i] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[0][0] + phip[i+NUM_ATOMS*2]*fracToCart[0][1] + phip[i+NUM_ATOMS*3]*fracToCart[0][2] - selfDipoleScale*inducedDipolePolar[i].x));
+        inducedFieldPolar[i+PADDED_NUM_ATOMS] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[1][0] + phip[i+NUM_ATOMS*2]*fracToCart[1][1] + phip[i+NUM_ATOMS*3]*fracToCart[1][2] - selfDipoleScale*inducedDipolePolar[i].y));
+        inducedFieldPolar[i+PADDED_NUM_ATOMS*2] -= (long long) (0x100000000*(phip[i+NUM_ATOMS]*fracToCart[2][0] + phip[i+NUM_ATOMS*2]*fracToCart[2][1] + phip[i+NUM_ATOMS*3]*fracToCart[2][2] - selfDipoleScale*inducedDipolePolar[i].z));
 #ifdef EXTRAPOLATED_POLARIZATION
         // Compute and store the field gradients for later use.
 

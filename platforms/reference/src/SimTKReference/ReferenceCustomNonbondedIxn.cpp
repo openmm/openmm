@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2022 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -45,19 +45,30 @@ using namespace OpenMM;
 
 ReferenceCustomNonbondedIxn::ReferenceCustomNonbondedIxn(const Lepton::CompiledExpression& energyExpression,
         const Lepton::CompiledExpression& forceExpression, const vector<string>& parameterNames,
-        const vector<Lepton::CompiledExpression> energyParamDerivExpressions) :
+        const vector<Lepton::CompiledExpression> energyParamDerivExpressions,
+        const std::vector<std::string>& computedValueNames, const std::vector<Lepton::CompiledExpression> computedValueExpressions) :
             cutoff(false), useSwitch(false), periodic(false), energyExpression(energyExpression), forceExpression(forceExpression),
-            paramNames(parameterNames), energyParamDerivExpressions(energyParamDerivExpressions) {
+            paramNames(parameterNames), energyParamDerivExpressions(energyParamDerivExpressions), computedValueNames(computedValueNames),
+            computedValueExpressions(computedValueExpressions) {
     expressionSet.registerExpression(this->energyExpression);
     expressionSet.registerExpression(this->forceExpression);
     for (int i = 0; i < this->energyParamDerivExpressions.size(); i++)
         expressionSet.registerExpression(this->energyParamDerivExpressions[i]);
+    for (int i = 0; i < this->computedValueExpressions.size(); i++)
+        expressionSet.registerExpression(this->computedValueExpressions[i]);
     rIndex = expressionSet.getVariableIndex("r");
     for (auto& param : paramNames) {
         for (int j = 1; j < 3; j++) {
             stringstream name;
             name << param << j;
             particleParamIndex.push_back(expressionSet.getVariableIndex(name.str()));
+        }
+    }
+    for (auto& value : computedValueNames) {
+        for (int j = 1; j < 3; j++) {
+            stringstream name;
+            name << value << j;
+            computedValueIndex.push_back(expressionSet.getVariableIndex(name.str()));
         }
     }
 }
@@ -159,7 +170,25 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Vec
 
     for (auto& param : globalParameters)
         expressionSet.setVariable(expressionSet.getVariableIndex(param.first), param.second);
-    if (interactionGroups.size() > 0) { 
+    
+    // Calculate computed values.
+    
+    vector<int> paramIndex, valueIndex;
+    for (auto& name : paramNames)
+        paramIndex.push_back(expressionSet.getVariableIndex(name));
+    for (auto& name : computedValueNames)
+        valueIndex.push_back(expressionSet.getVariableIndex(name));
+    vector<vector<double> > computedValues(computedValueNames.size(), vector<double>(numberOfAtoms));
+    for (int i = 0; i < numberOfAtoms; i++) {
+        for (int j = 0; j < paramNames.size(); j++)
+            expressionSet.setVariable(paramIndex[j], atomParameters[i][j]);
+        for (int j = 0; j < computedValueNames.size(); j++)
+            computedValues[j][i] = computedValueExpressions[j].evaluate();
+    }
+    
+    // Compute the interactions.
+
+    if (interactionGroups.size() > 0) {
         // The user has specified interaction groups, so compute only the requested interactions.
         
         for (auto& group : interactionGroups) {
@@ -175,6 +204,10 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Vec
                         expressionSet.setVariable(particleParamIndex[j*2], atomParameters[*atom1][j]);
                         expressionSet.setVariable(particleParamIndex[j*2+1], atomParameters[*atom2][j]);
                     }
+                    for (int j = 0; j < (int) computedValueNames.size(); j++) {
+                        expressionSet.setVariable(computedValueIndex[j*2], computedValues[j][*atom1]);
+                        expressionSet.setVariable(computedValueIndex[j*2+1], computedValues[j][*atom2]);
+                    }
                     calculateOneIxn(*atom1, *atom2, atomCoordinates, forces, totalEnergy, energyParamDerivs);
                 }
             }
@@ -188,6 +221,10 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Vec
                 expressionSet.setVariable(particleParamIndex[j*2], atomParameters[pair.first][j]);
                 expressionSet.setVariable(particleParamIndex[j*2+1], atomParameters[pair.second][j]);
             }
+            for (int j = 0; j < (int) computedValueNames.size(); j++) {
+                expressionSet.setVariable(computedValueIndex[j*2], computedValues[j][pair.first]);
+                expressionSet.setVariable(computedValueIndex[j*2+1], computedValues[j][pair.second]);
+            }
             calculateOneIxn(pair.first, pair.second, atomCoordinates, forces, totalEnergy, energyParamDerivs);
         }
     }
@@ -200,6 +237,10 @@ void ReferenceCustomNonbondedIxn::calculatePairIxn(int numberOfAtoms, vector<Vec
                     for (int j = 0; j < (int) paramNames.size(); j++) {
                         expressionSet.setVariable(particleParamIndex[j*2], atomParameters[ii][j]);
                         expressionSet.setVariable(particleParamIndex[j*2+1], atomParameters[jj][j]);
+                    }
+                    for (int j = 0; j < (int) computedValueNames.size(); j++) {
+                        expressionSet.setVariable(computedValueIndex[j*2], computedValues[j][ii]);
+                        expressionSet.setVariable(computedValueIndex[j*2+1], computedValues[j][jj]);
                     }
                     calculateOneIxn(ii, jj, atomCoordinates, forces, totalEnergy, energyParamDerivs);
                 }

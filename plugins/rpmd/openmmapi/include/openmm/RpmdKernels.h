@@ -69,11 +69,11 @@ public:
      */
     virtual void execute(ContextImpl& context, const RPMDIntegrator& integrator, bool forcesAreValid) = 0;
     /**
-     * Get the positions of all particles in one copy of the system.
+     * Set the positions of all particles in one copy of the system.
      */
     virtual void setPositions(int copy, const std::vector<Vec3>& positions) = 0;
     /**
-     * Get the velocities of all particles in one copy of the system.
+     * Set the velocities of all particles in one copy of the system.
      */
     virtual void setVelocities(int copy, const std::vector<Vec3>& velocities) = 0;
     /**

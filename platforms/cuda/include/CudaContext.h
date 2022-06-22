@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -75,8 +75,8 @@ public:
     static const int ThreadBlockSize;
     static const int TileSize;
     CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const std::string& precision,
-            const std::string& compiler, const std::string& tempDir, const std::string& hostCompiler, CudaPlatform::PlatformData& platformData,
-            CudaContext* originalContext);
+            const std::string& compiler, const std::string& tempDir, const std::string& hostCompiler, bool allowRuntimeCompiler,
+            CudaPlatform::PlatformData& platformData, CudaContext* originalContext);
     ~CudaContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system
@@ -100,6 +100,16 @@ public:
      * valid, this returns without doing anything.
      */
     void setAsCurrent();
+    /**
+     * Push the CUcontext associated with this object to be the current context.  If the context is not
+     * valid, this returns without doing anything.
+     */
+    void pushAsCurrent();
+    /**
+     * Pop the CUcontext associated with this object off the stack of contexts.  If the context is not
+     * valid, this returns without doing anything.
+     */
+    void popAsCurrent();
     /**
      * Get the CUdevice associated with this object.
      */
@@ -197,6 +207,12 @@ public:
         return force;
     }
     /**
+     * The CUDA platform does not use floating point force buffers, so this throws an exception.
+     */
+    ArrayInterface& getFloatForceBuffer() {
+        throw OpenMMException("CUDA platform does not use floating point force buffers");
+    }
+    /**
      * Get the array which contains a contribution to each force represented as 64 bit fixed point.
      * This is a synonym for getForce().  It exists to satisfy the ComputeContext interface.
      */
@@ -205,7 +221,6 @@ public:
     }
     /**
      * All CUDA devices support 64 bit atomics, so this throws an exception.
-     * @return 
      */
     ArrayInterface& getForceBuffers() {
         throw OpenMMException("CUDA platform does not use floating point force buffers");
@@ -284,9 +299,8 @@ public:
      * shared memory per thread.
      * 
      * @param memory        the number of bytes of shared memory per thread
-     * @param preferShared  whether the kernel is set to prefer shared memory over cache
      */
-    int computeThreadBlockSize(double memory, bool preferShared=true) const;
+    int computeThreadBlockSize(double memory) const;
     /**
      * Set all elements of an array to 0.
      */
@@ -477,6 +491,15 @@ public:
         return *nonbonded;
     }
     /**
+     * Create a new NonbondedUtilities for use with this context.  This should be called
+     * only in unusual situations, when a Force needs its own NonbondedUtilities object
+     * separate from the standard one.  The caller is responsible for deleting the object
+     * when it is no longer needed.
+     */
+    CudaNonbondedUtilities* createNonbondedUtilities() {
+        return new CudaNonbondedUtilities(*this);
+    }
+    /**
      * This should be called by the Integrator from its own initialize() method.
      * It ensures all contexts are fully initialized.
      */
@@ -518,6 +541,10 @@ public:
      * expense of reduced simulation performance.
      */
     void flushQueue();
+    /**
+     * Get the flags that should be used when creating CUevent objects.
+     */
+    unsigned int getEventFlags();
 private:
     /**
      * Compute a sorted list of device indices in decreasing order of desirability
@@ -530,9 +557,10 @@ private:
     int contextIndex;
     int numAtomBlocks;
     int numThreadBlocks;
+    int gpuArchitecture;
     bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, boxIsTriclinic, hasCompilerKernel, isNvccAvailable, hasAssignedPosqCharges;
     bool isLinkedContext;
-    std::string compiler, tempDir, cacheDir, gpuArchitecture;
+    std::string compiler, tempDir, cacheDir;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;
     std::string defaultOptimizationOptions;

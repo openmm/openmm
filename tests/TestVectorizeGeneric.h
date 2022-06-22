@@ -36,6 +36,7 @@
  */
 
 #include <array>
+#include <cstring>
 #include <functional>
 #include <iostream>
 #include <iterator>

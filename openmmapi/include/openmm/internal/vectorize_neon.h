@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2014 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
  * Authors: Mateus Lima, Peter Eastman                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,7 +34,7 @@
 
 #ifdef __ANDROID__
 #include <cpu-features.h>
-#else
+#elif !defined(__APPLE__)
 #include <sys/auxv.h>
 #include <asm/hwcap.h>
 #endif
@@ -53,7 +53,9 @@ float32x4_t log_ps(float32x4_t);
  * Determine whether ivec4 and fvec4 are supported on this processor.
  */
 static bool isVec4Supported() {
-#ifdef __ANDROID__
+#ifdef __APPLE__
+    return true;
+#elif defined(__ANDROID__)
     uint64_t features = android_getCpuFeatures();
     return (features & ANDROID_CPU_ARM_FEATURE_NEON) != 0;
 #elif defined(__ARM__)
@@ -128,13 +130,7 @@ public:
         return vmulq_f32(val, other);
     }
     fvec4 operator/(fvec4 other) const {
-        // NEON does not have a divide float-point operator, so we get the reciprocal and multiply.
-
-        float32x4_t reciprocal = vrecpeq_f32(other);
-        reciprocal = vmulq_f32(vrecpsq_f32(other, reciprocal), reciprocal);
-        reciprocal = vmulq_f32(vrecpsq_f32(other, reciprocal), reciprocal);
-        fvec4 result = vmulq_f32(val,reciprocal);
-        return result;
+        return vdivq_f32(val, other);
     }
     void operator+=(fvec4 other) {
         val = vaddq_f32(val, other);
@@ -335,16 +331,11 @@ static inline float dot3(fvec4 v1, fvec4 v2) {
 }
 
 static inline float dot4(fvec4 v1, fvec4 v2) {
-    fvec4 result = v1*v2;
-    return vgetq_lane_f32(result, 0) + vgetq_lane_f32(result, 1) + vgetq_lane_f32(result, 2) + vgetq_lane_f32(result,3);
+    return vaddvq_f32(v1*v2);
 }
 
 static inline float reduceAdd(fvec4 v) {
-#ifdef __ARM64__
     return vaddvq_f32(v);
-#else
-    return dot4(v, fvec4(1.0f));
-#endif
 }
 
 static inline fvec4 cross(fvec4 v1, fvec4 v2) {
@@ -395,11 +386,7 @@ static inline ivec4 abs(ivec4 v) {
 }
 
 static inline bool any(ivec4 v) {
-#ifdef __ARM64__
     return (vmaxvq_u32(vreinterpretq_u32_s32(v)) != 0);
-#else
-    return (vgetq_lane_s32(v, 0) != 0 || vgetq_lane_s32(v, 1) != 0 || vgetq_lane_s32(v, 2) != 0 || vgetq_lane_s32(v, 3) != 0);
-#endif
 }
 
 // Mathematical operators involving a scalar and a vector.
@@ -437,19 +424,15 @@ static inline ivec4 blendZero(ivec4 v, ivec4 mask) {
 // These are at the end since they involve other functions defined above.
 
 static inline fvec4 round(fvec4 v) {
-    fvec4 shift(0x1.0p23f);
-    fvec4 absResult = (abs(v)+shift)-shift;
-    return blend(v, absResult, ivec4(0x7FFFFFFF));
+    return vrndnq_f32(v);
 }
 
 static inline fvec4 floor(fvec4 v) {
-    fvec4 rounded = round(v);
-    return rounded + blend(0.0f, -1.0f, rounded>v);
+    return vrndmq_f32(v);
 }
 
 static inline fvec4 ceil(fvec4 v) {
-    fvec4 rounded = round(v);
-    return rounded + blend(0.0f, 1.0f, rounded<v);
+    return vrndpq_f32(v);
 }
 
 /* Given a table of floating-point values and a set of indexes, perform a gather read into a pair

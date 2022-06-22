@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -93,11 +93,14 @@ namespace OpenMM {
  * 
  * The "effective" parameters for a particle (those used to compute forces) are given by
  * 
- * <tt><pre>
- * charge = baseCharge + param*chargeScale
- * sigma = baseSigma + param*sigmaScale
- * epsilon = baseEpsilon + param*epsilonScale
- * </pre></tt>
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    charge = baseCharge + param*chargeScale
+ *    sigma = baseSigma + param*sigmaScale
+ *    epsilon = baseEpsilon + param*epsilonScale
+ *
+ * \endverbatim
  * 
  * where the "base" values are the ones specified by addParticle() and "oaram" is the current value
  * of the Context parameter.  A single Context parameter can apply offsets to multiple particles,
@@ -350,6 +353,10 @@ public:
      * Add an interaction to the list of exceptions that should be calculated differently from other interactions.
      * If chargeProd and epsilon are both equal to 0, this will cause the interaction to be completely omitted from
      * force and energy calculations.
+     * 
+     * Regardless of the NonbondedMethod used by this Force, cutoffs are never applied to exceptions.  That is because
+     * they are primarily used for 1-4 interactions, which are really a type of bonded interaction and are parametrized
+     * together with the other bonded interactions.
      *
      * In many cases, you can use createExceptionsFromBonds() rather than adding each exception explicitly.
      *
@@ -378,6 +385,10 @@ public:
      * Set the force field parameters for an interaction that should be calculated differently from others.
      * If chargeProd and epsilon are both equal to 0, this will cause the interaction to be completely omitted from
      * force and energy calculations.
+     * 
+     * Regardless of the NonbondedMethod used by this Force, cutoffs are never applied to exceptions.  That is because
+     * they are primarily used for 1-4 interactions, which are really a type of bonded interaction and are parametrized
+     * together with the other bonded interactions.
      *
      * @param index      the index of the interaction for which to get parameters
      * @param particle1  the index of the first particle involved in the interaction
@@ -544,6 +555,18 @@ public:
      */
     void setReciprocalSpaceForceGroup(int group);
     /**
+     * Get whether to include direct space interactions when calculating forces and energies.  This is useful if you want
+     * to completely replace the direct space calculation, typically with a CustomNonbondedForce that computes it in a
+     * nonstandard way, while still using this object for the reciprocal space calculation.
+     */
+    bool getIncludeDirectSpace() const;
+    /**
+     * Set whether to include direct space interactions when calculating forces and energies.  This is useful if you want
+     * to completely replace the direct space calculation, typically with a CustomNonbondedForce that computes it in a
+     * nonstandard way, while still using this object for the reciprocal space calculation.
+     */
+    void setIncludeDirectSpace(bool include);
+    /**
      * Update the particle and exception parameters in a Context to match those stored in this Force object.  This method
      * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
      * Simply call setParticleParameters() and setExceptionParameters() to modify this object's parameters, then call
@@ -604,7 +627,7 @@ private:
     class ExceptionOffsetInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, switchingDistance, rfDielectric, ewaldErrorTol, alpha, dalpha;
-    bool useSwitchingFunction, useDispersionCorrection, exceptionsUsePeriodic;
+    bool useSwitchingFunction, useDispersionCorrection, exceptionsUsePeriodic, includeDirectSpace;
     int recipForceGroup, nx, ny, nz, dnx, dny, dnz;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
     int getGlobalParameterIndex(const std::string& parameter) const;

@@ -1,46 +1,82 @@
 # -*- coding: utf-8 -*-
 
-import sys
 import os
-import simtk.openmm.version
+import sys
 
-extensions = ['sphinx.ext.mathjax', 'sphinx.ext.ifconfig', 'sphinx.ext.autosummary',
-              'sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'process-docstring',
-              'sphinxcontrib.lunrsearch']
+import openmm.version
+
+extensions = [
+    "sphinx.ext.mathjax",
+    "sphinx.ext.ifconfig",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "process-docstring",
+]
 
 autosummary_generate = True
-autodoc_default_flags = ['members', 'inherited-members']
-autodoc_member_order = 'bysource'
+autodoc_default_options = {
+    "members": True,
+    "inherited-members": True,
+    "member-order": "bysource",
+}
 
-source_suffix = '.rst'
-master_doc = 'index'
+source_suffix = ".rst"
+master_doc = "index"
 
-project = u'OpenMM'
-copyright = u'2015, Stanford University and the Authors'
+project = u"OpenMM Python API"
+copyright = u"2015, Stanford University and the Authors"
 
-version = simtk.openmm.version.short_version
-release = simtk.openmm.version.full_version
+version = openmm.version.short_version
+release = openmm.version.full_version
 
-exclude_patterns = ['_build', '_templates']
-html_static_path = ['_static']
-templates_path = ['_templates']
+exclude_patterns = ["_build", "_templates"]
+html_static_path = ["_static"]
+templates_path = ["_templates"]
 
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 html_theme = "alabaster"
 html_theme_options = {
-    'description': "High performance molecular simulation on GPUs",
-    'github_button': False,
-    # 'github_user': 'pandegroup',
-    # 'github_repo': 'openmm',
-    'logo_name': False,
-    'logo': 'logo.png',
+    "github_button": False,
+    "github_user": "openmm",
+    "github_repo": "openmm",
+    "logo_name": True,
+    "logo": "logo.png",
+    "extra_nav_links": [
+        {
+            "title": "OpenMM.org",
+            "uri": "https://openmm.org",
+            "relative": False,
+        },
+        {
+            "title": "User's Manual",
+            "uri": "../userguide/",
+            "relative": True,
+        },
+        {
+            "title": "Developer Guide",
+            "uri": "../developerguide/",
+            "relative": True,
+        },
+        {
+            "title": "C++ API reference",
+            "uri": "../api-c++/",
+            "relative": True,
+        },
+        {
+            "title": "GitHub",
+            "uri": "https://github.com/openmm",
+            "relative": False,
+        },
+    ],
+    "show_relbar_bottom": True,
 }
 html_sidebars = {
-    '**': [
-        'about.html',
-        'searchbox.html',
-        'navigation.html',
+    "**": [
+        "about.html",
+        "searchbox.html",
+        "navigation.html",
     ]
 }
 

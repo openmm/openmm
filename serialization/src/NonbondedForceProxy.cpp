@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,6 +45,7 @@ void NonbondedForceProxy::serialize(const void* object, SerializationNode& node)
     node.setIntProperty("version", 4);
     const NonbondedForce& force = *reinterpret_cast<const NonbondedForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setIntProperty("method", (int) force.getNonbondedMethod());
     node.setDoubleProperty("cutoff", force.getCutoffDistance());
     node.setBoolProperty("useSwitchingFunction", force.getUseSwitchingFunction());
@@ -53,6 +54,7 @@ void NonbondedForceProxy::serialize(const void* object, SerializationNode& node)
     node.setDoubleProperty("rfDielectric", force.getReactionFieldDielectric());
     node.setIntProperty("dispersionCorrection", force.getUseDispersionCorrection());
     node.setIntProperty("exceptionsUsePeriodic", force.getExceptionsUsePeriodicBoundaryConditions());
+    node.setBoolProperty("includeDirectSpace", force.getIncludeDirectSpace());
     double alpha;
     int nx, ny, nz;
     force.getPMEParameters(alpha, nx, ny, nz);
@@ -107,6 +109,7 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
     NonbondedForce* force = new NonbondedForce();
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         force->setNonbondedMethod((NonbondedForce::NonbondedMethod) node.getIntProperty("method"));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
         force->setUseSwitchingFunction(node.getBoolProperty("useSwitchingFunction", false));
@@ -114,6 +117,8 @@ void* NonbondedForceProxy::deserialize(const SerializationNode& node) const {
         force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
         force->setReactionFieldDielectric(node.getDoubleProperty("rfDielectric"));
         force->setUseDispersionCorrection(node.getIntProperty("dispersionCorrection"));
+        if (node.hasProperty("includeDirectSpace"))
+            force->setIncludeDirectSpace(node.getBoolProperty("includeDirectSpace"));
         double alpha = node.getDoubleProperty("alpha", 0.0);
         int nx = node.getIntProperty("nx", 0);
         int ny = node.getIntProperty("ny", 0);

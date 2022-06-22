@@ -45,6 +45,7 @@ void HarmonicBondForceProxy::serialize(const void* object, SerializationNode& no
     node.setIntProperty("version", 2);
     const HarmonicBondForce& force = *reinterpret_cast<const HarmonicBondForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     SerializationNode& bonds = node.createChildNode("Bonds");
     for (int i = 0; i < force.getNumBonds(); i++) {
@@ -62,6 +63,7 @@ void* HarmonicBondForceProxy::deserialize(const SerializationNode& node) const {
     HarmonicBondForce* force = new HarmonicBondForce();
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& bonds = node.getChildNode("Bonds");

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -55,6 +55,18 @@ void LangevinMiddleIntegrator::initialize(ContextImpl& contextRef) {
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateLangevinMiddleStepKernel::Name(), contextRef);
     kernel.getAs<IntegrateLangevinMiddleStepKernel>().initialize(contextRef.getSystem(), *this);
+}
+
+void LangevinMiddleIntegrator::setTemperature(double temp) {
+    if (temp < 0)
+        throw OpenMMException("Temperature cannot be negative");
+    temperature = temp;
+}
+
+void LangevinMiddleIntegrator::setFriction(double coeff) {
+    if (coeff < 0)
+        throw OpenMMException("Friction cannot be negative");
+    friction = coeff;
 }
 
 void LangevinMiddleIntegrator::cleanup() {

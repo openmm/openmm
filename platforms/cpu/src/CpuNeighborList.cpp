@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -62,8 +62,12 @@ public:
     Voxels(int blockSize, float vsy, float vsz, float miny, float maxy, float minz, float maxz, const Vec3* boxVectors, bool usePeriodic) :
             blockSize(blockSize), voxelSizeY(vsy), voxelSizeZ(vsz), miny(miny), maxy(maxy), minz(minz), maxz(maxz), usePeriodic(usePeriodic) {
         for (int i = 0; i < 3; i++)
-            for (int j = 0; j < 3; j++)
-                periodicBoxVectors[i][j] = (float) boxVectors[i][j];
+            for (int j = 0; j < 3; j++) {
+                // Copying to a volatile temporary variable is a workaround for
+                // a bug in GCC9 on PPC.
+                volatile float temp = (float) boxVectors[i][j];
+                periodicBoxVectors[i][j] = temp;
+            }
         periodicBoxSize[0] = (float) boxVectors[0][0];
         periodicBoxSize[1] = (float) boxVectors[1][1];
         periodicBoxSize[2] = (float) boxVectors[2][2];
@@ -88,11 +92,8 @@ public:
                 voxelSizeZ = (maxz-minz)/nz;
         }
         bins.resize(ny);
-        for (int i = 0; i < ny; i++) {
+        for (int i = 0; i < ny; i++)
             bins[i].resize(nz);
-            for (int j = 0; j < nz; j++)
-                bins[i][j].resize(0);
-        }
     }
 
     /**
@@ -414,6 +415,7 @@ CpuNeighborList::CpuNeighborList(int blockSize) : blockSize(blockSize) {
 
 void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const vector<set<int> >& exclusions,
             const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads) {
+    dense = false;
     int numBlocks = (numAtoms+blockSize-1)/blockSize;
     blockNeighbors.resize(numBlocks);
     blockExclusions.resize(numBlocks);
@@ -493,6 +495,58 @@ void CpuNeighborList::computeNeighborList(int numAtoms, const AlignedArray<float
     }
 }
 
+void CpuNeighborList::createDenseNeighborList(int numAtoms, const vector<set<int> >& exclusions) {
+    dense = true;
+    this->numAtoms = numAtoms;
+    int numBlocks = (numAtoms+blockSize-1)/blockSize;
+    blockExclusionIndices.resize(numBlocks);
+    blockExclusions.resize(numBlocks);
+    sortedAtoms.resize(numAtoms);
+    for (int i = 0; i < numAtoms; i++)
+        sortedAtoms[i] = i;
+    for (int i = 0; i < numBlocks; i++) {
+        // Build the list of exclusions for this block.
+
+        int firstIndex = blockSize*i;
+        int atomsInBlock = min(blockSize, numAtoms-firstIndex);
+        map<int, int> exclusionMap;
+        for (int j = 0; j < atomsInBlock; j++) {
+            exclusionMap[firstIndex+j] = (1<<(j+1))-1;
+        }
+        for (int j = 0; j < atomsInBlock; j++) {
+            const set<int>& atomExclusions = exclusions[firstIndex+j];
+            const BlockExclusionMask mask = 1<<j;
+            for (int exclusion : atomExclusions) {
+                if (firstIndex <= exclusion) {
+                    auto thisAtomFlags = exclusionMap.find(exclusion);
+                    if (thisAtomFlags == exclusionMap.end())
+                        exclusionMap[exclusion] = mask;
+                    else
+                        thisAtomFlags->second |= mask;
+                }
+            }
+        }
+        blockExclusionIndices[i].clear();
+        blockExclusions[i].clear();
+        for (auto flags : exclusionMap) {
+            blockExclusionIndices[i].push_back(flags.first);
+            blockExclusions[i].push_back(flags.second);
+        }
+    }
+
+    // Add padding atoms to fill up the last block.
+
+    int numPadding = numBlocks*blockSize-numAtoms;
+    if (numPadding > 0) {
+        const BlockExclusionMask mask = (~0) << (blockSize - numPadding);
+        for (int i = 0; i < numPadding; i++)
+            sortedAtoms.push_back(0);
+        auto& exc = blockExclusions.back();
+        for (int i = 0; i < (int) exc.size(); i++)
+            exc[i] |= mask;
+    }
+}
+
 int CpuNeighborList::getNumBlocks() const {
     return sortedAtoms.size()/blockSize;
 }
@@ -512,6 +566,13 @@ const std::vector<int>& CpuNeighborList::getBlockNeighbors(int blockIndex) const
 const std::vector<CpuNeighborList::BlockExclusionMask>& CpuNeighborList::getBlockExclusions(int blockIndex) const {
     return blockExclusions[blockIndex];
     
+}
+
+CpuNeighborList::NeighborIterator CpuNeighborList::getNeighborIterator(int blockIndex) const {
+    if (dense)
+        return NeighborIterator(blockIndex*blockSize, numAtoms, blockExclusionIndices[blockIndex], blockExclusions[blockIndex]);
+    else
+        return NeighborIterator(blockNeighbors[blockIndex], blockExclusions[blockIndex]);
 }
 
 void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadIndex) {
@@ -593,6 +654,42 @@ void CpuNeighborList::threadComputeNeighborList(ThreadPool& threads, int threadI
                 blockExclusions[i][k] |= thisAtomFlags->second;
         }
     }
+}
+
+CpuNeighborList::NeighborIterator::NeighborIterator(const vector<int>& neighbors, const vector<BlockExclusionMask>& exclusions) :
+        dense(false), neighbors(&neighbors), exclusions(&exclusions), currentIndex(-1) {
+}
+
+CpuNeighborList::NeighborIterator::NeighborIterator(int firstAtom, int lastAtom, const vector<int>& exclusionIndices, const vector<BlockExclusionMask>& exclusions) :
+        dense(true), currentAtom(firstAtom-1), lastAtom(lastAtom), exclusionIndices(&exclusionIndices), exclusions(&exclusions), currentIndex(0) {
+}
+
+bool CpuNeighborList::NeighborIterator::next() {
+    if (dense) {
+        if (++currentAtom >= lastAtom)
+            return false;
+        if (currentIndex < exclusionIndices->size() && (*exclusionIndices)[currentIndex] == currentAtom)
+            currentExclusions = (*exclusions)[currentIndex++];
+        else
+            currentExclusions = 0;
+        return true;
+    }
+    else {
+        if (++currentIndex < neighbors->size()) {
+            currentAtom = (*neighbors)[currentIndex];
+            currentExclusions = (*exclusions)[currentIndex];
+            return true;
+        }
+        return false;
+    }
+}
+
+int CpuNeighborList::NeighborIterator::getNeighbor() const {
+    return currentAtom;
+}
+
+CpuNeighborList::BlockExclusionMask CpuNeighborList::NeighborIterator::getExclusions() const {
+    return currentExclusions;
 }
 
 } // namespace OpenMM

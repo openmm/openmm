@@ -86,7 +86,7 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 unsigned int offset1 = atom1;
-                ATOMIC_ADD(&global_value[offset1], (mm_ulong) ((mm_long) (value*0x100000000)));
+                ATOMIC_ADD(&global_value[offset1], (mm_ulong) realToFixedPoint(value));
 #else
                 unsigned int offset1 = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
                 global_value[offset1] += value;
@@ -148,7 +148,7 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 unsigned int offset1 = atom1;
-                ATOMIC_ADD(&global_value[offset1], (mm_ulong) ((mm_long) (value*0x100000000)));
+                ATOMIC_ADD(&global_value[offset1], (mm_ulong) realToFixedPoint(value));
 #else
                 unsigned int offset1 = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
                 global_value[offset1] += value;
@@ -161,7 +161,7 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
             for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 unsigned int offset2 = y*TILE_SIZE+tgx;
-                ATOMIC_ADD(&global_value[offset2], (mm_ulong) ((mm_long) (local_value[tgx]*0x100000000)));
+                ATOMIC_ADD(&global_value[offset2], (mm_ulong) realToFixedPoint(local_value[tgx]));
 #else
                 unsigned int offset2 = y*TILE_SIZE+tgx + get_group_id(0)*PADDED_NUM_ATOMS;
                 global_value[offset2] += local_value[tgx];
@@ -275,7 +275,7 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
                     unsigned int offset1 = atom1;
-                    ATOMIC_ADD(&global_value[offset1], (mm_ulong) ((mm_long) (value*0x100000000)));
+                    ATOMIC_ADD(&global_value[offset1], (mm_ulong) realToFixedPoint(value));
 #else
                     unsigned int offset1 = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
                     global_value[offset1] += value;
@@ -324,7 +324,7 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
                     unsigned int offset1 = atom1;
-                    ATOMIC_ADD(&global_value[offset1], (mm_ulong) ((mm_long) (value*0x100000000)));
+                    ATOMIC_ADD(&global_value[offset1], (mm_ulong) realToFixedPoint(value));
 #else
                     unsigned int offset1 = atom1 + get_group_id(0)*PADDED_NUM_ATOMS;
                     global_value[offset1] += value;
@@ -344,7 +344,7 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
                 if (atom2 < PADDED_NUM_ATOMS) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
                     unsigned int offset2 = atom2;
-                    ATOMIC_ADD(&global_value[offset2], (mm_ulong) ((mm_long) (local_value[tgx]*0x100000000)));
+                    ATOMIC_ADD(&global_value[offset2], (mm_ulong) realToFixedPoint(local_value[tgx]));
 #else
                     unsigned int offset2 = atom2 + get_group_id(0)*PADDED_NUM_ATOMS;
                     global_value[offset2] += local_value[tgx];

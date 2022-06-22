@@ -39,12 +39,12 @@ def removePackage(mod, verbose):
         except AttributeError:
             return
         if len(pathList) > 1:
-           raise Exception("more than one item in simtk.__path__")
-        simtkInstallPath = pathList[0]
-        if os.path.exists(simtkInstallPath):
+           raise Exception("more than one item in openmm.__path__")
+        installPath = pathList[0]
+        if os.path.exists(installPath):
             if verbose:
-                sys.stdout.write('REMOVING "%s"\n' % simtkInstallPath)
-            removeRecursive(simtkInstallPath)
+                sys.stdout.write('REMOVING "%s"\n' % installPath)
+            removeRecursive(installPath)
 
 def uninstall(verbose=True):
     save_path=sys.path[:]
@@ -53,8 +53,8 @@ def uninstall(verbose=True):
         if item!='.' and item!=os.getcwd():
             sys.path.append(item)
     try:
-        import simtk.openmm as openmm
-        removePackage(openmm, verbose)
+        import simtk.openmm
+        removePackage(simtk.openmm, verbose)
     except ImportError:
         pass
 
@@ -63,10 +63,16 @@ def uninstall(verbose=True):
         removePackage(unit, verbose)
     except ImportError:
         pass
+
+    try:
+        import openmm
+        removePackage(openmm, verbose)
+    except ImportError:
+        pass
     sys.path=save_path
 
 
-def writeVersionPy(filename="simtk/openmm/version.py", major_version_num=MAJOR_VERSION_NUM,
+def writeVersionPy(filename="openmm/version.py", major_version_num=MAJOR_VERSION_NUM,
                      minor_version_num=MINOR_VERSION_NUM, build_info=BUILD_INFO):
     """Write a version.py file into the python source directory before installation.
     If a version.py file already exists, we assume that it contains only the git_revision
@@ -125,27 +131,29 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     setupKeywords["version"]           = "%s.%s.%s" % (major_version_num,
                                                        minor_version_num,
                                                        build_info)
-    setupKeywords["author"]            = "Randall J. Radmer"
-    setupKeywords["author_email"]      = "radmer@stanford.edu"
+    setupKeywords["author"]            = "Peter Eastman"
     setupKeywords["license"]           = \
     "Python Software Foundation License (BSD-like)"
-    setupKeywords["url"]               = "https://simtk.org/home/openmm"
-    setupKeywords["download_url"]      = "https://simtk.org/home/openmm"
-    setupKeywords["packages"]          = ["simtk",
+    setupKeywords["url"]               = "https://openmm.org"
+    setupKeywords["download_url"]      = "https://openmm.org"
+    setupKeywords["packages"]          = [
+                                          "simtk",
                                           "simtk.unit",
                                           "simtk.openmm",
                                           "simtk.openmm.app",
-                                          "simtk.openmm.app.internal",
-                                          "simtk.openmm.app.internal.charmm",
-                                          "simtk.openmm.app.internal.pdbx",
-                                          "simtk.openmm.app.internal.pdbx.reader",
-                                          "simtk.openmm.app.internal.pdbx.writer"]
+                                          "openmm",
+                                          "openmm.unit",
+                                          "openmm",
+                                          "openmm.app",
+                                          "openmm.app.internal",
+                                          "openmm.app.internal.charmm",
+                                          "openmm.app.internal.pdbx",
+                                          "openmm.app.internal.pdbx.reader",
+                                          "openmm.app.internal.pdbx.writer"]
     setupKeywords["data_files"]        = []
-    setupKeywords["package_data"]      = {"simtk" : [],
-                                          "simtk.unit" : [],
-                                          "simtk.openmm" : [],
-                                          "simtk.openmm.app" : ['data/*.xml', 'data/*.pdb', 'data/amber14/*.xml', 'data/charmm36/*.xml'],
-                                          "simtk.openmm.app.internal" : []}
+    setupKeywords["package_data"]      = {"openmm" : [],
+                                          "openmm.app" : ['data/*.xml', 'data/*.pdb', 'data/amber14/*.xml', 'data/charmm36/*.xml', 'data/implicit/*.xml'],
+                                          "openmm.app.internal" : []}
     setupKeywords["platforms"]         = ["Linux", "Mac OS X", "Windows"]
     setupKeywords["description"]       = \
     "Python wrapper for OpenMM (a C++ MD package)"
@@ -190,21 +198,25 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
         extra_compile_args.append('/EHsc')
     else:
         if platform.system() == 'Darwin':
-            extra_compile_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7']
-            extra_link_args += ['-stdlib=libc++', '-mmacosx-version-min=10.7', '-Wl', '-rpath', openmm_lib_path]
+            extra_compile_args += ['-stdlib=libc++']
+            extra_link_args += ['-stdlib=libc++', '-Wl', '-rpath', openmm_lib_path]
+            if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ and platform.processor() != 'arm':
+                extra_compile_args += ['-mmacosx-version-min=10.7']
+                extra_link_args += ['-mmacosx-version-min=10.7']
             # Hard-code CC and CXX to clang, since gcc/g++ will *not* work with
             # Anaconda, despite the fact that distutils will try to use them.
             # System Python, homebrew, and MacPorts on Macs will always use
             # clang, so this hack should always work and fix issues with users
             # that have GCC installed from MacPorts or homebrew *and* Anaconda
-            os.environ['CC'] = 'clang'
-            os.environ['CXX'] = 'clang++'
+            if 'CC' not in os.environ:
+                os.environ['CC'] = 'clang'
+                os.environ['CXX'] = 'clang++'
 
     library_dirs=[openmm_lib_path]
     include_dirs=openmm_include_path.split(';')
     include_dirs.append(numpy.get_include())
 
-    extensionArgs = {"name": "simtk.openmm._openmm",
+    extensionArgs = {"name": "openmm._openmm",
                     "sources": ["src/swig_doxygen/OpenMMSwig.cxx"],
                     "include_dirs": include_dirs,
                     "define_macros": define_macros,
@@ -215,7 +227,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     if platform.system() != "Windows":
         extensionArgs["runtime_library_dirs"] = library_dirs
     setupKeywords["ext_modules"] = [Extension(**extensionArgs)]
-    setupKeywords["ext_modules"] += cythonize('simtk/openmm/app/internal/*.pyx', language='c++')
+    setupKeywords["ext_modules"] += cythonize('openmm/app/internal/*.pyx')
 
     outputString = ''
     firstTab     = 40

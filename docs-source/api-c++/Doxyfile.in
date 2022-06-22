@@ -313,7 +313,7 @@ EXTRACT_STATIC         = NO
 # defined locally in source files will be included in the documentation.
 # If set to NO only classes defined in header files are included.
 
-EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_LOCAL_CLASSES  = NO
 
 # This flag is only useful for Objective-C code. When set to YES local
 # methods, which are defined in the implementation section but not in
@@ -614,10 +614,10 @@ EXCLUDE_SYMLINKS       = NO
 # against the file with absolute path, so to exclude all test directories
 # for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       = */tests/* \
-                         */openmmapi/src/* \
-                         */internal/* \
-                         */.svn/* \
+EXCLUDE_PATTERNS       = @CMAKE_SOURCE_DIR@/*/tests/* \
+                         @CMAKE_SOURCE_DIR@/*/openmmapi/src/* \
+                         @CMAKE_SOURCE_DIR@/*/internal/* \
+                         @CMAKE_SOURCE_DIR@/*/.svn/* \
                          *amoebaKernels.h \
                          *DrudeKernels.h \
                          *RpmdKernels.h \
@@ -631,9 +631,8 @@ EXCLUDE_PATTERNS       = */tests/* \
 # wildcard * is used, a substring. Examples: ANamespace, AClass,
 # AClass::ANamespace, ANamespace::*Test
 
-EXCLUDE_SYMBOLS        = StandardMMForceField::*Info \
-                         GBSAOBCForceField::AtomInfo \
-                         System::ConstraintInfo
+EXCLUDE_SYMBOLS        = 
+
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or
 # directories that contain example code fragments that are included (see

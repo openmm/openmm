@@ -88,7 +88,7 @@ KERNEL void computeBornSum(
                 // Write results.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                ATOMIC_ADD(&global_bornSum[atom1], (mm_long) (bornSum*0x100000000));
+                ATOMIC_ADD(&global_bornSum[atom1], realToFixedPoint(bornSum));
 #else
                 unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
                 global_bornSum[offset] += bornSum;
@@ -150,7 +150,7 @@ KERNEL void computeBornSum(
                // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                ATOMIC_ADD(&global_bornSum[atom1], (mm_long) (bornSum*0x100000000));
+                ATOMIC_ADD(&global_bornSum[atom1], realToFixedPoint(bornSum));
 #else
                 unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
                 global_bornSum[offset] += bornSum;
@@ -162,7 +162,7 @@ KERNEL void computeBornSum(
             for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 unsigned int offset = y*TILE_SIZE + tgx;
-                ATOMIC_ADD(&global_bornSum[offset], (mm_long) (localData[tgx].bornSum*0x100000000));
+                ATOMIC_ADD(&global_bornSum[offset], realToFixedPoint(localData[tgx].bornSum));
 #else
                 unsigned int offset = y*TILE_SIZE+tgx + GROUP_ID*PADDED_NUM_ATOMS;
                 global_bornSum[offset] += localData[tgx].bornSum;
@@ -297,7 +297,7 @@ KERNEL void computeBornSum(
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    ATOMIC_ADD(&global_bornSum[atom1], (mm_long) (bornSum*0x100000000));
+                    ATOMIC_ADD(&global_bornSum[atom1], realToFixedPoint(bornSum));
 #else
                     unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
                     global_bornSum[offset] += bornSum;
@@ -360,7 +360,7 @@ KERNEL void computeBornSum(
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    ATOMIC_ADD(&global_bornSum[atom1], (mm_long) (bornSum*0x100000000));
+                    ATOMIC_ADD(&global_bornSum[atom1], realToFixedPoint(bornSum));
 #else
                     unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
                     global_bornSum[offset] += bornSum;
@@ -378,7 +378,7 @@ KERNEL void computeBornSum(
 #endif
                 if (atom2 < PADDED_NUM_ATOMS) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    ATOMIC_ADD(&global_bornSum[atom2], (mm_long) (localData[tgx].bornSum*0x100000000));
+                    ATOMIC_ADD(&global_bornSum[atom2], realToFixedPoint(localData[tgx].bornSum));
 #else
                     unsigned int offset = atom2 + GROUP_ID*PADDED_NUM_ATOMS;
                     global_bornSum[offset] += localData[tgx].bornSum;
@@ -491,10 +491,10 @@ KERNEL void computeGBSAForce1(
                 // Write results.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                ATOMIC_ADD(&forceBuffers[atom1], (mm_long) (force.x*0x100000000));
-                ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_long) (force.y*0x100000000));
-                ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_long) (force.z*0x100000000));
-                ATOMIC_ADD(&global_bornForce[atom1], (mm_long) (force.w*0x100000000));
+                ATOMIC_ADD(&forceBuffers[atom1], realToFixedPoint(force.x));
+                ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], realToFixedPoint(force.y));
+                ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], realToFixedPoint(force.z));
+                ATOMIC_ADD(&global_bornForce[atom1], realToFixedPoint(force.w));
 #else
                 unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
                 forceBuffers[offset] += make_real4(force.x, force.y, force.z, 0);
@@ -562,10 +562,10 @@ KERNEL void computeGBSAForce1(
                // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                ATOMIC_ADD(&forceBuffers[atom1], (mm_long) (force.x*0x100000000));
-                ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_long) (force.y*0x100000000));
-                ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_long) (force.z*0x100000000));
-                ATOMIC_ADD(&global_bornForce[atom1], (mm_long) (force.w*0x100000000));
+                ATOMIC_ADD(&forceBuffers[atom1], realToFixedPoint(force.x));
+                ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], realToFixedPoint(force.y));
+                ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], realToFixedPoint(force.z));
+                ATOMIC_ADD(&global_bornForce[atom1], realToFixedPoint(force.w));
 #else
                 unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
                 forceBuffers[offset] += make_real4(force.x, force.y, force.z, 0);
@@ -578,10 +578,10 @@ KERNEL void computeGBSAForce1(
             for (int tgx = 0; tgx < TILE_SIZE; tgx++) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
                 unsigned int offset = y*TILE_SIZE + tgx;
-                ATOMIC_ADD(&forceBuffers[offset], (mm_long) (localData[tgx].fx*0x100000000));
-                ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_long) (localData[tgx].fy*0x100000000));
-                ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_long) (localData[tgx].fz*0x100000000));
-                ATOMIC_ADD(&global_bornForce[offset], (mm_long) (localData[tgx].fw*0x100000000));
+                ATOMIC_ADD(&forceBuffers[offset], realToFixedPoint(localData[tgx].fx));
+                ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], realToFixedPoint(localData[tgx].fy));
+                ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], realToFixedPoint(localData[tgx].fz));
+                ATOMIC_ADD(&global_bornForce[offset], realToFixedPoint(localData[tgx].fw));
 #else
                 unsigned int offset = y*TILE_SIZE+tgx + GROUP_ID*PADDED_NUM_ATOMS;
                 real4 f = forceBuffers[offset];
@@ -723,10 +723,10 @@ KERNEL void computeGBSAForce1(
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    ATOMIC_ADD(&forceBuffers[atom1], (mm_long) (force.x*0x100000000));
-                    ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_long) (force.y*0x100000000));
-                    ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_long) (force.z*0x100000000));
-                    ATOMIC_ADD(&global_bornForce[atom1], (mm_long) (force.w*0x100000000));
+                    ATOMIC_ADD(&forceBuffers[atom1], realToFixedPoint(force.x));
+                    ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], realToFixedPoint(force.y));
+                    ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], realToFixedPoint(force.z));
+                    ATOMIC_ADD(&global_bornForce[atom1], realToFixedPoint(force.w));
 #else
                     unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
                     forceBuffers[offset] += make_real4(force.x, force.y, force.z, 0);
@@ -791,10 +791,10 @@ KERNEL void computeGBSAForce1(
                     // Write results for atom1.
 
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    ATOMIC_ADD(&forceBuffers[atom1], (mm_long) (force.x*0x100000000));
-                    ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_long) (force.y*0x100000000));
-                    ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_long) (force.z*0x100000000));
-                    ATOMIC_ADD(&global_bornForce[atom1], (mm_long) (force.w*0x100000000));
+                    ATOMIC_ADD(&forceBuffers[atom1], realToFixedPoint(force.x));
+                    ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], realToFixedPoint(force.y));
+                    ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], realToFixedPoint(force.z));
+                    ATOMIC_ADD(&global_bornForce[atom1], realToFixedPoint(force.w));
 #else
                     unsigned int offset = atom1 + GROUP_ID*PADDED_NUM_ATOMS;
                     forceBuffers[offset] += make_real4(force.x, force.y, force.z, 0);
@@ -813,10 +813,10 @@ KERNEL void computeGBSAForce1(
 #endif
                 if (atom2 < PADDED_NUM_ATOMS) {
 #ifdef SUPPORTS_64_BIT_ATOMICS
-                    ATOMIC_ADD(&forceBuffers[atom2], (mm_long) (localData[tgx].fx*0x100000000));
-                    ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_long) (localData[tgx].fy*0x100000000));
-                    ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_long) (localData[tgx].fz*0x100000000));
-                    ATOMIC_ADD(&global_bornForce[atom2], (mm_long) (localData[tgx].fw*0x100000000));
+                    ATOMIC_ADD(&forceBuffers[atom2], realToFixedPoint(localData[tgx].fx));
+                    ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], realToFixedPoint(localData[tgx].fy));
+                    ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], realToFixedPoint(localData[tgx].fz));
+                    ATOMIC_ADD(&global_bornForce[atom2], realToFixedPoint(localData[tgx].fw));
 #else
                     unsigned int offset = atom2 + GROUP_ID*PADDED_NUM_ATOMS;
                     real4 f = forceBuffers[offset];

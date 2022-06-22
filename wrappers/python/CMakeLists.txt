@@ -8,6 +8,7 @@ set(OPENMM_PYTHON_STAGING_DIR "${CMAKE_BINARY_DIR}/python"
 mark_as_advanced(OPENMM_PYTHON_STAGING_DIR)
 
 # Create package directory structure
+file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/openmm)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/simtk/unit)
 file(MAKE_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}/src/swig_doxygen/swig_lib/python)
@@ -37,14 +38,14 @@ execute_process(
 if(NOT rev_hash_str)
   set(rev_hash_str "Unknown")
 endif()
-file(WRITE "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/version.py" "git_revision = '${rev_hash_str}'\n")
+file(WRITE "${OPENMM_PYTHON_STAGING_DIR}/openmm/version.py" "git_revision = '${rev_hash_str}'\n")
 
 # file(GLOB_RECURSE temp RELATIVE "${CMAKE_SOURCE_DIR}" "${CMAKE_SOURCE_DIR}/src/*.i")
 # foreach(f ${temp})
 #     set(temp2 "${temp2}\n${f}")
 # endforeach()
 
-set(SUBDIRS src simtk tests)
+set(SUBDIRS src openmm simtk tests)
 foreach(SUBDIR ${SUBDIRS})
     file(GLOB_RECURSE STAGING_INPUT_FILES1 RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
         "${CMAKE_CURRENT_SOURCE_DIR}/${SUBDIR}/*README.txt"
@@ -189,10 +190,10 @@ INSTALL_FILES(/include/swig FILES "${SWIG_OPENMM_DIR}/OpenMMSwigHeaders.i" "${SW
 
 # Run swig
 add_custom_command(
-    OUTPUT "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx" "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/openmm.py"
+    OUTPUT "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx" "${OPENMM_PYTHON_STAGING_DIR}/openmm/openmm.py"
     COMMAND ${SWIG_EXECUTABLE}
         -python -c++
-        -outdir "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm"
+        -outdir "${OPENMM_PYTHON_STAGING_DIR}/openmm"
         -o OpenMMSwig.cxx
         OpenMM.i
     WORKING_DIRECTORY "${SWIG_OPENMM_DIR}"
@@ -204,11 +205,11 @@ add_custom_command(
 )
 add_custom_target(RunSwig DEPENDS
     "${SWIG_OPENMM_DIR}/OpenMMSwig.cxx"
-    "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/openmm.py")
+    "${OPENMM_PYTHON_STAGING_DIR}/openmm/openmm.py")
 
 set (STAGING_OUTPUT_FILES ${STAGING_OUTPUT_FILES}
     "${OPENMM_PYTHON_STAGING_DIR}/src/swig_doxygen/OpenMMSwig.cxx"
-    "${OPENMM_PYTHON_STAGING_DIR}/simtk/openmm/openmm.py")
+    "${OPENMM_PYTHON_STAGING_DIR}/openmm/openmm.py")
 
 ##################################################################################################
 ### Make a list of all folders containing include files the wrappers must be compiled against. ###

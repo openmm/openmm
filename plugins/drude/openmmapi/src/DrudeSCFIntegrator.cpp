@@ -48,6 +48,7 @@ DrudeSCFIntegrator::DrudeSCFIntegrator(double stepSize) : DrudeIntegrator(stepSi
     setStepSize(stepSize);
     setMinimizationErrorTolerance(0.1);
     setConstraintTolerance(1e-5);
+    setMaxDrudeDistance(0.0);
 }
 
 void DrudeSCFIntegrator::initialize(ContextImpl& contextRef) {
@@ -64,10 +65,18 @@ void DrudeSCFIntegrator::initialize(ContextImpl& contextRef) {
         }
     if (force == NULL)
         throw OpenMMException("The System does not contain a DrudeForce");
+    if (getMaxDrudeDistance() != 0.0)
+        throw OpenMMException("DrudeSCFIntegrator does not currently support setting max Drude distance");
     context = &contextRef;
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateDrudeSCFStepKernel::Name(), contextRef);
     kernel.getAs<IntegrateDrudeSCFStepKernel>().initialize(contextRef.getSystem(), *this, *force);
+}
+
+void DrudeSCFIntegrator::setMinimizationErrorTolerance(double tol) {
+    if (tol <= 0)
+        throw OpenMMException("Minimization error tolerance must be positive");
+    tolerance = tol;
 }
 
 void DrudeSCFIntegrator::cleanup() {

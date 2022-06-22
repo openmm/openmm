@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -46,11 +46,34 @@ namespace OpenMM {
 class OPENMM_EXPORT_CPU CpuNeighborList {
 public:
     class Voxels;
+    class NeighborIterator;
     CpuNeighborList(int blockSize);
+    /**
+     * Compute the neighbor list based on the current positions of atoms.
+     * 
+     * @param numAtoms            the number of atoms in the system
+     * @param atomLocations       the positions of the atoms
+     * @param exclusions          exclusions[i] contains the indices of all atoms with which atom i should not interact
+     * @param periodicBoxVectors  the current periodic box vectors
+     * @param usePeriodic         whether to apply periodic boundary conditions
+     * @param maxDistance         the neighbor list will contain all pairs that are within this distance of each other
+     * @param threads             used for parallelization
+     */
     void computeNeighborList(int numAtoms, const AlignedArray<float>& atomLocations, const std::vector<std::set<int> >& exclusions,
             const Vec3* periodicBoxVectors, bool usePeriodic, float maxDistance, ThreadPool& threads);
+    /**
+     * Build a dense neighbor list, in which every atom interacts with every other (except exclusions), regardless of distance.
+     * 
+     * @param numAtoms            the number of atoms in the system
+     * @param exclusions          exclusions[i] contains the indices of all atoms with which atom i should not interact
+     */
+    void createDenseNeighborList(int numAtoms, const std::vector<std::set<int> >& exclusions);
     int getNumBlocks() const;
     int getBlockSize() const;
+    /**
+     * Get an object for iterating over the neighbors of an atom block.
+     */
+    NeighborIterator getNeighborIterator(int blockIndex) const;
     const std::vector<int32_t>& getSortedAtoms() const;
     const std::vector<int>& getBlockNeighbors(int blockIndex) const;
 
@@ -71,7 +94,7 @@ private:
     int blockSize;
     std::vector<int> sortedAtoms;
     std::vector<float> sortedPositions;
-    std::vector<std::vector<int> > blockNeighbors;
+    std::vector<std::vector<int> > blockNeighbors, blockExclusionIndices;
     std::vector<std::vector<BlockExclusionMask> > blockExclusions;
     // The following variables are used to make information accessible to the individual threads.
     float minx, maxx, miny, maxy, minz, maxz;
@@ -81,9 +104,44 @@ private:
     const float* atomLocations;
     Vec3 periodicBoxVectors[3];
     int numAtoms;
-    bool usePeriodic;
+    bool usePeriodic, dense;
     float maxDistance;
     std::atomic<int> atomicCounter;
+};
+
+class OPENMM_EXPORT_CPU CpuNeighborList::NeighborIterator {
+public:
+    /**
+     * This constructor is used for standard neighbor lists.  Do not call it directly.  Obtain a
+     * NeighborIterator by calling getNeighborIterator() on a neighbor list.
+     */
+    NeighborIterator(const std::vector<int>& neighbors, const std::vector<BlockExclusionMask>& exclusions);
+    /**
+     * This constructor is used for dense neighbor lists.  Do not call it directly.  Obtain a
+     * NeighborIterator by calling getNeighborIterator() on a neighbor list.
+     */
+    NeighborIterator(int firstAtom, int lastAtom, const std::vector<int>& exclusionIndices, const std::vector<BlockExclusionMask>& exclusions);
+    /**
+     * Advance the iterator to the next neighbor.
+     * 
+     * @return false if there are no more neighbors, true otherwise.
+     */
+    bool next();
+    /**
+     * Get the index of the current neighbor.
+     */
+    int getNeighbor() const;
+    /**
+     * Get bit flags marking which atoms in the block the current atom is excluded from interacting with.
+     */
+    BlockExclusionMask getExclusions() const;
+private:
+    bool dense;
+    int currentAtom, currentIndex, lastAtom;
+    BlockExclusionMask currentExclusions;
+    const std::vector<int>* neighbors;
+    const std::vector<int>* exclusionIndices;
+    const std::vector<BlockExclusionMask>* exclusions;
 };
 
 } // namespace OpenMM

@@ -90,7 +90,9 @@ private:
     long long* pinnedForceBuffer;
     CUfunction sumKernel;
     CUevent event;
-    CUstream peerCopyStream;
+    std::vector<CUevent> peerCopyEvent;
+    std::vector<CUevent> peerCopyEventLocal;
+    std::vector<CUstream> peerCopyStream;
 };
 
 /**

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,6 +42,10 @@ DrudeForce::DrudeForce() {
 }
 
 int DrudeForce::addParticle(int particle, int particle1, int particle2, int particle3, int particle4, double charge, double polarizability, double aniso12, double aniso34) {
+    if (polarizability <= 0)
+        throw OpenMMException("Polarizability must be positive");
+    if ((aniso12 <= 0 && particle2 != -1) || (aniso34 <= 0 && particle3 != -1 && particle4 != -1))
+        throw OpenMMException("Anisotropy factors must be positive");
     particles.push_back(ParticleInfo(particle, particle1, particle2, particle3, particle4, charge, polarizability, aniso12, aniso34));
     return particles.size()-1;
 }
@@ -61,6 +65,10 @@ void DrudeForce::getParticleParameters(int index, int& particle, int& particle1,
 
 void DrudeForce::setParticleParameters(int index, int particle, int particle1, int particle2, int particle3, int particle4, double charge, double polarizability, double aniso12, double aniso34) {
     ASSERT_VALID_INDEX(index, particles);
+    if (polarizability <= 0)
+        throw OpenMMException("Polarizability must be positive");
+    if ((aniso12 <= 0 && particle2 != -1) || (aniso34 <= 0 && particle3 != -1 && particle4 != -1))
+        throw OpenMMException("Anisotropy factors must be positive");
     particles[index].particle = particle;
     particles[index].particle1 = particle1;
     particles[index].particle2 = particle2;

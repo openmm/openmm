@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,8 +35,29 @@
 using namespace OpenMM;
 
 MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double defaultTemperature, bool scaleX, bool scaleY, bool scaleZ, int frequency) :
-        defaultPressure(defaultPressure), defaultTemperature(defaultTemperature), scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ), frequency(frequency) {
+        scaleX(scaleX), scaleY(scaleY), scaleZ(scaleZ) {
+    setDefaultPressure(defaultPressure);
+    setDefaultTemperature(defaultTemperature);
+    setFrequency(frequency);
     setRandomNumberSeed(0);
+}
+
+void MonteCarloAnisotropicBarostat::setDefaultPressure(const Vec3& pressure) {
+    if (pressure[0] < 0 || pressure[1] < 0 || pressure[2] < 0)
+        throw OpenMMException("All components of pressure must be non-negative");
+    defaultPressure = pressure;
+}
+
+void MonteCarloAnisotropicBarostat::setFrequency(int freq) {
+    if (freq < 0)
+        throw OpenMMException("Frequency cannot be negative");
+    frequency = freq;
+}
+
+void MonteCarloAnisotropicBarostat::setDefaultTemperature(double temp) {
+    if (temp < 0)
+        throw OpenMMException("Temperature cannot be negative");
+    defaultTemperature = temp;
 }
 
 ForceImpl* MonteCarloAnisotropicBarostat::createImpl() const {

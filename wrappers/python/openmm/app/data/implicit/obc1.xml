@@ -1,0 +1,46 @@
+<ForceField>
+ <Script>
+import openmm
+import openmm.app as app
+import openmm.unit as unit
+
+# Find the NonbondedForce.  We need it to look up charges, and also to set the reaction field dielectric to 1.
+
+nonbonded = [f for f in sys.getForces() if isinstance(f, openmm.NonbondedForce)]
+if len(nonbonded) != 1:
+    raise ValueError('Implicit solvent requires the System to contain a single NonbondedForce')
+nonbonded = nonbonded[0]
+nonbonded.setReactionFieldDielectric(1)
+
+# Construct the CustomGBForce.
+
+from openmm.app.internal.customgbforces import GBSAOBC1Force
+argMap = {'soluteDielectric':'soluteDielectric', 'solventDielectric':'solventDielectric', 'implicitSolventKappa':'kappa'}
+solventArgs = {'SA':'ACE'}
+for key in argMap:
+    if key in args:
+        solventArgs[argMap[key]] = args[key]
+if nonbondedMethod != app.NoCutoff:
+    solventArgs['cutoff'] = nonbondedCutoff.value_in_unit(unit.nanometers)
+force = GBSAOBC1Force(**solventArgs)
+params = GBSAOBC1Force.getStandardParameters(topology)
+for i, p in enumerate(params):
+    charge, sigma, epsilon = nonbonded.getParticleParameters(i)
+    force.addParticle([charge, p[0], p[1]])
+force.finalize()
+
+# Set the nonbonded method and cutoff distance.
+
+if nonbondedMethod == app.NoCutoff:
+    force.setNonbondedMethod(openmm.CustomNonbondedForce.NoCutoff)
+elif nonbondedMethod == app.CutoffNonPeriodic:
+    force.setNonbondedMethod(openmm.CustomNonbondedForce.CutoffNonPeriodic)
+    force.setCutoffDistance(nonbondedCutoff)
+elif nonbondedMethod == app.CutoffPeriodic:
+    force.setNonbondedMethod(openmm.CustomNonbondedForce.CutoffPeriodic)
+    force.setCutoffDistance(nonbondedCutoff)
+else:
+    raise ValueError("Illegal nonbonded method for use with implicit solvent")
+sys.addForce(force)
+ </Script>
+</ForceField>

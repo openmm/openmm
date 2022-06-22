@@ -1,10 +1,10 @@
 import unittest
 from validateConstraints import *
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
-import simtk.openmm.app.element as elem
-import simtk.openmm.app.forcefield as forcefield
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
+import openmm.app.element as elem
+import openmm.app.forcefield as forcefield
 import math
 import textwrap
 try:
@@ -246,7 +246,10 @@ class TestForceField(unittest.TestCase):
         for atom in topology.atoms():
             if atom.element == elem.hydrogen:
                 self.assertNotEqual(hydrogenMass, system1.getParticleMass(atom.index))
-                self.assertEqual(hydrogenMass, system2.getParticleMass(atom.index))
+                if atom.residue.name == 'HOH':
+                    self.assertEqual(system1.getParticleMass(atom.index), system2.getParticleMass(atom.index))
+                else:
+                    self.assertEqual(hydrogenMass, system2.getParticleMass(atom.index))
         totalMass1 = sum([system1.getParticleMass(i) for i in range(system1.getNumParticles())]).value_in_unit(amu)
         totalMass2 = sum([system2.getParticleMass(i) for i in range(system2.getNumParticles())]).value_in_unit(amu)
         self.assertAlmostEqual(totalMass1, totalMass2)
@@ -279,6 +282,18 @@ class TestForceField(unittest.TestCase):
             else:
                 self.assertEqual(trueMass[i], adjustedMass[i])
 
+    def test_UnusedArgs(self):
+        """Test that specifying an argument that is never used throws an exception."""
+        topology = self.pdb1.topology
+        # Using the default value should not raise an exception.
+        self.forcefield1.createSystem(topology, drudeMass=0.4*amu)
+        # Specifying a non-default value should.
+        with self.assertRaises(ValueError):
+            self.forcefield1.createSystem(topology, drudeMass=0.5*amu)
+        # Specifying a nonexistant argument should raise an exception.
+        with self.assertRaises(ValueError):
+            self.forcefield1.createSystem(topology, nonbndedCutoff=1.0*nanometer)
+
     def test_Forces(self):
         """Compute forces and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
 
@@ -296,6 +311,27 @@ class TestForceField(unittest.TestCase):
             if diff > 0.1 and diff/norm(f1) > 1e-3:
                 numDifferences += 1
         self.assertTrue(numDifferences < system.getNumParticles()/20) # Tolerate occasional differences from numerical error
+
+    def test_ImplicitSolventForces(self):
+        """Compute forces for different implicit solvent types, and compare them to ones generated with AmberPrmtopFile."""
+
+        solventType = ['hct', 'obc1', 'obc2', 'gbn', 'gbn2']
+        nonbondedMethod = [NoCutoff, CutoffNonPeriodic, CutoffNonPeriodic, NoCutoff, NoCutoff]
+        kappa = [0.0, 0.0, 1.698295227342757, 1.698295227342757, 0.0]
+        file = [None, 'OBC1_NonPeriodic', 'OBC2_NonPeriodic_Salt', None, 'GBn2_NoCutoff']
+        for i in range(len(file)):
+            forcefield = ForceField('amber96.xml', f'implicit/{solventType[i]}.xml')
+            system = forcefield.createSystem(self.pdb2.topology, nonbondedMethod=nonbondedMethod[i], implicitSolventKappa=kappa[i])
+            integrator = VerletIntegrator(0.001)
+            context = Context(system, integrator, Platform.getPlatformByName("Reference"))
+            context.setPositions(self.pdb2.positions)
+            state1 = context.getState(getForces=True)
+            if file[i] is not None:
+                with open('systems/alanine-dipeptide-implicit-forces/'+file[i]+'.xml') as infile:
+                    state2 = XmlSerializer.deserialize(infile.read())
+                for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
+                    diff = norm(f1-f2)
+                    self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-4)
 
     def test_ProgrammaticForceField(self):
         """Test building a ForceField programmatically."""
@@ -388,6 +424,64 @@ class TestForceField(unittest.TestCase):
                 self.assertEqual(params[1], 1.0*nanometers)
                 self.assertEqual(params[2], 0.0*kilojoule_per_mole)
 
+    def test_residueMatcher(self):
+        """Test using a custom template matcher to select templates."""
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="tip3p-O" class="OW" element="O" mass="15.99943"/>
+  <Type name="tip3p-H" class="HW" element="H" mass="1.007947"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="HOH">
+   <Atom name="O" type="tip3p-O" charge="-0.834"/>
+   <Atom name="H1" type="tip3p-H" charge="0.417"/>
+   <Atom name="H2" type="tip3p-H" charge="0.417"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="2"/>
+   <Bond from="1" to="2"/>
+  </Residue>
+  <Residue name="HOH2">
+   <Atom name="O" type="tip3p-O" charge="0.834"/>
+   <Atom name="H1" type="tip3p-H" charge="-0.417"/>
+   <Atom name="H2" type="tip3p-H" charge="-0.417"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="2"/>
+   <Bond from="1" to="2"/>
+  </Residue>
+ </Residues>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <UseAttributeFromResidue name="charge"/>
+  <Atom type="tip3p-O" sigma="0.315" epsilon="0.635"/>
+  <Atom type="tip3p-H" sigma="1" epsilon="0"/>
+ </NonbondedForce>
+</ForceField>"""
+        ff = ForceField(StringIO(xml))
+
+        # Load a water box.
+        prmtop = AmberPrmtopFile('systems/water-box-216.prmtop')
+        top = prmtop.topology
+        
+        # Building a System should fail, because two templates match each residue.
+        self.assertRaises(Exception, lambda: ff.createSystem(top))
+        
+        # Register a template matcher that selects a particular one.
+        def matcher(ff, res, bondedToAtom, ignoreExternalBonds, ignoreExtraParticles):
+            return ff._templates['HOH2']
+        ff.registerTemplateMatcher(matcher)
+        
+        # It should now succeed in building a System.
+        system = ff.createSystem(top)
+        
+        # Make sure it used the correct parameters.
+        nb = [f for f in system.getForces() if isinstance(f, NonbondedForce)][0]
+        for atom in top.atoms():
+            charge, sigma, epsilon = nb.getParticleParameters(atom.index)
+            if atom.name == 'O':
+                self.assertEqual(0.834*elementary_charge, charge)
+            else:
+                self.assertEqual(-0.417*elementary_charge, charge)
+
     def test_residueTemplateGenerator(self):
         """Test the ability to add residue template generators to parameterize unmatched residues."""
         def simpleTemplateGenerator(forcefield, residue):
@@ -401,7 +495,7 @@ class TestForceField(unittest.TestCase):
             from uuid import uuid4
             template_name = uuid4()
             # Create residue template.
-            from simtk.openmm.app.forcefield import _createResidueTemplate
+            from openmm.app.forcefield import _createResidueTemplate
             template = _createResidueTemplate(residue) # use helper function
             template.name = template_name # replace template name
             for (template_atom, residue_atom) in zip(template.atoms, residue.atoms()):
@@ -926,13 +1020,13 @@ class TestForceField(unittest.TestCase):
         system1 = ff1.createSystem(pdb.topology)
         system2 = ff2.createSystem(pdb.topology)
 
-        imp1 = system1.getForce(2).getTorsionParameters(158)
+        imp1 = system1.getForce(1).getTorsionParameters(158)
         imp2 = system2.getForce(0).getTorsionParameters(158)
 
         system1_indexes = [imp1[0], imp1[1], imp1[2], imp1[3]]
         system2_indexes = [imp2[0], imp2[1], imp2[2], imp2[3]]
 
-        self.assertEqual(system1_indexes, [51, 56, 54, 55])
+        self.assertEqual(system1_indexes, [51, 55, 54, 56])
         self.assertEqual(system2_indexes, [51, 55, 54, 56])
 
     def test_ImpropersOrdering_smirnoff(self):
@@ -1088,6 +1182,88 @@ END"""))
         self.assertAlmostEqual(26.10373, propers, delta=propers*1e-3) # DIHEdrals
         self.assertAlmostEqual(0.14113, impropers, delta=impropers*1e-3) # IMPRopers
 
+    def test_InitializationScript(self):
+        """Test that <InitializationScript> tags get executed."""
+        xml = """
+<ForceField>
+  <InitializationScript>
+self.scriptExecuted = True
+  </InitializationScript>
+</ForceField>
+"""
+        ff = ForceField(StringIO(xml))
+        self.assertTrue(ff.scriptExecuted)
+
+    def test_Glycam(self):
+        """Test computing energy with GLYCAM."""
+        ff = ForceField('amber14/protein.ff14SB.xml', 'amber14/GLYCAM_06j-1.xml')
+        pdb = PDBFile('systems/glycopeptide.pdb')
+        system = ff.createSystem(pdb.topology)
+        for i, f in enumerate(system.getForces()):
+            f.setForceGroup(i)
+        integrator = VerletIntegrator(0.001)
+        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energies = {}
+        for i, f in enumerate(system.getForces()):
+            energy = context.getState(getEnergy=True, groups={i}).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+            energies[f.getName()] = energy
+
+        # Compare to values computed with ParmEd.
+
+        self.assertAlmostEqual(32.14082401103625, energies['HarmonicBondForce'], 4)
+        self.assertAlmostEqual(48.92017455984504, energies['HarmonicAngleForce'], 3)
+        self.assertAlmostEqual(291.61241586209286, energies['PeriodicTorsionForce'], 4)
+        self.assertAlmostEqual(1547.011267801862, energies['NonbondedForce'], 4)
+        self.assertAlmostEqual(1919.6846822348361, sum(list(energies.values())), 3)
+
+    def test_CustomNonbondedGenerator(self):
+        """ Test the CustomNonbondedForce generator"""
+        pdb = PDBFile('systems/ions.pdb')
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="SOD" class="SOD" element="Na" mass="22.98977"/>
+  <Type name="CLA" class="CLA" element="Cl" mass="35.45"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="CLA">
+   <Atom name="CLA" type="CLA"/>
+  </Residue>
+  <Residue name="SOD">
+   <Atom name="SOD" type="SOD"/>
+  </Residue>
+ </Residues>
+ <CustomNonbondedForce energy="scale*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=halfSig1+halfSig2; epsilon=rootEps1*rootEps2" bondCutoff="3">
+  <GlobalParameter name="scale" defaultValue="4"/>
+  <PerParticleParameter name="sigma"/>
+  <PerParticleParameter name="epsilon"/>
+  <ComputedValue name="halfSig" expression="0.5*sigma"/>
+  <ComputedValue name="rootEps" expression="sqrt(epsilon)"/>
+  <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
+  <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
+ </CustomNonbondedForce>
+</ForceField> """
+        ff = ForceField(StringIO(xml))
+        system = ff.createSystem(pdb.topology)
+        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energy1 = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+
+        # See if it matches an equivalent NonbondedForce.
+        
+        system = System()
+        system.addParticle(1.0)
+        system.addParticle(1.0)
+        f = NonbondedForce()
+        f.addParticle(0, 0.404468018036, 0.6276)
+        f.addParticle(0, 0.251367073323, 0.1962296)
+        system.addForce(f)
+        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energy2 = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        self.assertAlmostEqual(energy1, energy2)
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 
@@ -1175,7 +1351,7 @@ class AmoebaTestForceField(unittest.TestCase):
         forcefield = ForceField('amoeba2013.xml', 'amoeba2013_gk.xml')
         system = forcefield.createSystem(pdb.topology, polarization='direct')
         integrator = VerletIntegrator(0.001)
-        context = Context(system, integrator)
+        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
         context.setPositions(pdb.positions)
         state1 = context.getState(getForces=True)
         with open('systems/alanine-dipeptide-amoeba-forces.xml') as input:
@@ -1184,6 +1360,55 @@ class AmoebaTestForceField(unittest.TestCase):
             diff = norm(f1-f2)
             self.assertTrue(diff < 0.1 or diff/norm(f1) < 1e-3)
 
+    def computeAmoeba18Energies(self, filename):
+        pdb = PDBFile(filename)
+        forcefield = ForceField('amoeba2018.xml')
+        system = forcefield.createSystem(pdb.topology, polarization='mutual', mutualInducedTargetEpsilon=1e-5)
+        for i, f in enumerate(system.getForces()):
+            f.setForceGroup(i)
+        integrator = VerletIntegrator(0.001)
+        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energies = {}
+        for i, f in enumerate(system.getForces()):
+            state = context.getState(getEnergy=True, groups={i})
+            energies[f.getName()] = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        return energies
+
+    def test_Amoeba18BPTI(self):
+        """Test that AMOEBA18 computes energies correctly for BPTI."""
+        energies = self.computeAmoeba18Energies('systems/bpti.pdb')
+
+        # Compare to values computed with Tinker.
+
+        self.assertAlmostEqual(290.2445, energies['AmoebaBond'], 4)
+        self.assertAlmostEqual(496.4300, energies['AmoebaAngle']+energies['AmoebaInPlaneAngle'], 4)
+        self.assertAlmostEqual(51.2913, energies['AmoebaOutOfPlaneBend'], 4)
+        self.assertAlmostEqual(5.7695, energies['AmoebaStretchBend'], 4)
+        self.assertAlmostEqual(75.6890, energies['PeriodicTorsionForce'], 4)
+        self.assertAlmostEqual(19.3364, energies['AmoebaPiTorsion'], 4)
+        self.assertAlmostEqual(-32.6689, energies['AmoebaTorsionTorsionForce'], 4)
+        self.assertAlmostEqual(383.8705, energies['AmoebaVdwForce'], 4)
+        self.assertAlmostEqual(-1323.5640-225.3660, energies['AmoebaMultipoleForce'], 2)
+        self.assertAlmostEqual(-258.9676, sum(list(energies.values())), 2)
+
+    def test_Amoeba18Nucleic(self):
+        """Test that AMOEBA18 computes energies correctly for DNA and RNA."""
+        energies = self.computeAmoeba18Energies('systems/nucleic.pdb')
+
+        # Compare to values computed with Tinker.
+
+        self.assertAlmostEqual(749.6953, energies['AmoebaBond'], 4)
+        self.assertAlmostEqual(579.9971, energies['AmoebaAngle']+energies['AmoebaInPlaneAngle'], 4)
+        self.assertAlmostEqual(10.6630, energies['AmoebaOutOfPlaneBend'], 4)
+        self.assertAlmostEqual(5.2225, energies['AmoebaStretchBend'], 4)
+        self.assertAlmostEqual(166.7233, energies['PeriodicTorsionForce'], 4)
+        self.assertAlmostEqual(57.2066, energies['AmoebaPiTorsion'], 4)
+        self.assertAlmostEqual(-4.2538, energies['AmoebaStretchTorsion'], 4)
+        self.assertAlmostEqual(-5.0402, energies['AmoebaAngleTorsion'], 4)
+        self.assertAlmostEqual(187.1103, energies['AmoebaVdwForce'], 4)
+        self.assertAlmostEqual(1635.1289-236.1484, energies['AmoebaMultipoleForce'], 3)
+        self.assertAlmostEqual(3146.3046, sum(list(energies.values())), 3)
 
 if __name__ == '__main__':
     unittest.main()

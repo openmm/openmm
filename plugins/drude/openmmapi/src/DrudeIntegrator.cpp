@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -45,6 +45,12 @@ namespace OpenMM {
 
 std::vector<Vec3> DrudeIntegrator::getVelocitiesForTemperature(const System &system, double temperature, int randomSeedIn) const {
     return assignDrudeVelocities(system, temperature, drudeTemperature, randomSeedIn);
+}
+
+void DrudeIntegrator::setDrudeTemperature(double temp) {
+    if (temp < 0)
+        throw OpenMMException("Drude temperature cannot be negative");
+    drudeTemperature = temp;
 }
 
 double DrudeIntegrator::getMaxDrudeDistance() const {

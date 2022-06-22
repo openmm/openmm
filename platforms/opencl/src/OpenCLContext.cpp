@@ -413,6 +413,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     compilationDefines["ACOS"] = "acos";
     compilationDefines["ASIN"] = "asin";
     compilationDefines["ATAN"] = "atan";
+    compilationDefines["ERF"] = "erf";
+    compilationDefines["ERFC"] = "erfc";
 
     // Set defines for applying periodic boundary conditions.
 
@@ -530,7 +532,9 @@ void OpenCLContext::initialize() {
             energyParamDerivBuffer.initialize<cl_float>(*this, numEnergyParamDerivs*energyBufferSize, "energyParamDerivBuffer");
         addAutoclearBuffer(energyParamDerivBuffer);
     }
-    int bufferBytes = max(velm.getSize()*velm.getElementSize(), energyBufferSize*energyBuffer.getElementSize());
+    int bufferBytes = max(max((int) velm.getSize()*velm.getElementSize(),
+            energyBufferSize*energyBuffer.getElementSize()),
+            (int) longForceBuffer.getSize()*longForceBuffer.getElementSize());
     pinnedBuffer = new cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, bufferBytes);
     pinnedMemory = currentQueue.enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
     for (int i = 0; i < numAtoms; i++) {
@@ -570,10 +574,13 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     if (!options.empty())
         src << "// Compilation Options: " << options << endl << endl;
     for (auto& pair : compilationDefines) {
-        src << "#define " << pair.first;
-        if (!pair.second.empty())
-            src << " " << pair.second;
-        src << endl;
+        // Query defines to avoid duplicate variables
+        if (defines.find(pair.first) == defines.end()) {
+            src << "#define " << pair.first;
+            if (!pair.second.empty())
+                src << " " << pair.second;
+            src << endl;
+        }
     }
     if (!compilationDefines.empty())
         src << endl;
@@ -674,6 +681,19 @@ void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSi
     }
 }
 
+int OpenCLContext::computeThreadBlockSize(double memory) const {
+    int maxShared = device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+    // On some implementations, more local memory gets used than we calculate by
+    // adding up the sizes of the fields.  To be safe, include a factor of 0.5.
+    int max = (int) (0.5*maxShared/memory);
+    if (max < 64)
+        return 32;
+    int threads = 64;
+    while (threads+64 < max)
+        threads += 64;
+    return threads;
+}
+
 void OpenCLContext::clearBuffer(ArrayInterface& array) {
     clearBuffer(unwrap(array).getDeviceBuffer(), array.getSize()*array.getElementSize());
 }
@@ -762,11 +782,12 @@ void OpenCLContext::reduceForces() {
     executeKernel(reduceForcesKernel, paddedNumAtoms, 128);
 }
 
-void OpenCLContext::reduceBuffer(OpenCLArray& array, int numBuffers) {
+void OpenCLContext::reduceBuffer(OpenCLArray& array, OpenCLArray& longBuffer, int numBuffers) {
     int bufferSize = array.getSize()/numBuffers;
     reduceReal4Kernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
-    reduceReal4Kernel.setArg<cl_int>(1, bufferSize);
-    reduceReal4Kernel.setArg<cl_int>(2, numBuffers);
+    reduceReal4Kernel.setArg<cl::Buffer>(1, longBuffer.getDeviceBuffer());
+    reduceReal4Kernel.setArg<cl_int>(2, bufferSize);
+    reduceReal4Kernel.setArg<cl_int>(3, numBuffers);
     executeKernel(reduceReal4Kernel, bufferSize, 128);
 }
 

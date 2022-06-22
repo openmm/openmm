@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,9 +34,22 @@
 
 using namespace OpenMM;
 
-RPMDMonteCarloBarostat::RPMDMonteCarloBarostat(double defaultPressure, int frequency) :
-        defaultPressure(defaultPressure), frequency(frequency) {
+RPMDMonteCarloBarostat::RPMDMonteCarloBarostat(double defaultPressure, int frequency) {
+    setDefaultPressure(defaultPressure);
+    setFrequency(frequency);
     setRandomNumberSeed(0);
+}
+
+void RPMDMonteCarloBarostat::setDefaultPressure(double pressure) {
+    if (pressure < 0)
+        throw OpenMMException("Pressure cannot be negative");
+    defaultPressure = pressure;
+}
+
+void RPMDMonteCarloBarostat::setFrequency(int freq) {
+    if (freq <= 0)
+        throw OpenMMException("Frequency must be positive");
+    frequency = freq;
 }
 
 ForceImpl* RPMDMonteCarloBarostat::createImpl() const {

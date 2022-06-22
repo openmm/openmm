@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,9 +35,36 @@
 using namespace OpenMM;
 
 MonteCarloMembraneBarostat::MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode, int frequency) :
-        defaultPressure(defaultPressure), defaultSurfaceTension(defaultSurfaceTension), defaultTemperature(defaultTemperature),
-        xymode(xymode), zmode(zmode), frequency(frequency) {
+        xymode(xymode), zmode(zmode) {
+    setDefaultPressure(defaultPressure);
+    setDefaultSurfaceTension(defaultSurfaceTension);
+    setDefaultTemperature(defaultTemperature);
+    setFrequency(frequency);
     setRandomNumberSeed(0);
+}
+
+void MonteCarloMembraneBarostat::setDefaultPressure(double pressure) {
+    if (pressure < 0)
+        throw OpenMMException("Pressure cannot be negative");
+    defaultPressure = pressure;
+}
+
+void MonteCarloMembraneBarostat::setDefaultSurfaceTension(double surfaceTension) {
+    if (surfaceTension < 0)
+        throw OpenMMException("Surface tension cannot be negative");
+    defaultSurfaceTension = surfaceTension;
+}
+
+void MonteCarloMembraneBarostat::setFrequency(int freq) {
+    if (freq < 0)
+        throw OpenMMException("Frequency cannot be negative");
+    frequency = freq;
+}
+
+void MonteCarloMembraneBarostat::setDefaultTemperature(double temp) {
+    if (temp < 0)
+        throw OpenMMException("Temperature cannot be negative");
+    defaultTemperature = temp;
 }
 
 ForceImpl* MonteCarloMembraneBarostat::createImpl() const {

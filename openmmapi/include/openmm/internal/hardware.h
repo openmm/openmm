@@ -36,9 +36,6 @@
  * This file defines a collection of functions for querying the specific hardware being used.
  */
 
-/**
- * Get the number of CPU cores available.
- */
 #ifdef __APPLE__
    #include <sys/sysctl.h>
    #include <dlfcn.h>
@@ -56,6 +53,9 @@
    #endif
 #endif
 
+/**
+ * Get the number of CPU cores available.
+ */
 static int getNumProcessors() {
 #ifdef __APPLE__
     int ncpu;
@@ -95,7 +95,7 @@ static int getNumProcessors() {
 #else
 #if !defined(__ANDROID__) && !defined(__PNACL__) && !defined(__PPC__) \
     && !defined(__ARM__) && !defined(__ARM64__)
-    static void cpuid(int cpuInfo[4], int infoType){
+    static void cpuid(int cpuInfo[4], int infoType) {
     #ifdef __LP64__
         __asm__ __volatile__ (
             "cpuid":
@@ -119,7 +119,33 @@ static int getNumProcessors() {
         );
     #endif
     }
-    #endif
+#else
+    static void cpuid(int cpuInfo[4], int infoType) {
+        cpuInfo[0] = cpuInfo[1] = cpuInfo[2] = 0;
+    }
+#endif
 #endif
 
+/**
+ * Get whether this is an x86 CPU that supports AVX.
+ */
+static bool isAvxSupported() {
+    int cpuInfo[4];
+    cpuid(cpuInfo, 0);
+    if (cpuInfo[0] >= 1) {
+        cpuid(cpuInfo, 1);
+        return ((cpuInfo[2] & ((int) 1 << 28)) != 0);
+    }
+    return false;
+}
+
+/**
+ * Get the maximum supported size for vectors in multiples of four bytes.  This
+ * is the number of int or float values that can be contained in a vector.
+ */
+static int getVectorWidth() {
+    if (isAvxSupported())
+        return 8;
+    return 4;
+}
 #endif // OPENMM_HARDWARE_H_

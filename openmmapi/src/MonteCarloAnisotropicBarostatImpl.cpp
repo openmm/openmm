@@ -41,8 +41,7 @@
 #include <algorithm>
 
 using namespace OpenMM;
-using namespace OpenMM_SFMT;
-using std::vector;
+using namespace std;
 
 MonteCarloAnisotropicBarostatImpl::MonteCarloAnisotropicBarostatImpl(const MonteCarloAnisotropicBarostat& owner) : owner(owner), step(0) {
 }
@@ -117,13 +116,12 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     
     double finalEnergy = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
     double kT = BOLTZ*context.getParameter(MonteCarloAnisotropicBarostat::Temperature());
-    double w = finalEnergy-initialEnergy + pressure*deltaVolume - context.getMolecules().size()*kT*std::log(newVolume/volume);
-    if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > std::exp(-w/kT)) {
+    double w = finalEnergy-initialEnergy + pressure*deltaVolume - context.getMolecules().size()*kT*log(newVolume/volume);
+    if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > exp(-w/kT)) {
         // Reject the step.
         
         kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
         context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
-        volume = newVolume;
     }
     else
         numAccepted[axis]++;
@@ -135,15 +133,15 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
             numAccepted[axis] = 0;
         }
         else if (numAccepted[axis] > 0.75*numAttempted[axis]) {
-            volumeScale[axis] = std::min(volumeScale[axis]*1.1, volume*0.3);
+            volumeScale[axis] = min(volumeScale[axis]*1.1, volume*0.3);
             numAttempted[axis] = 0;
             numAccepted[axis] = 0;
         }
     }
 }
 
-std::map<std::string, double> MonteCarloAnisotropicBarostatImpl::getDefaultParameters() {
-    std::map<std::string, double> parameters;
+map<string, double> MonteCarloAnisotropicBarostatImpl::getDefaultParameters() {
+    map<string, double> parameters;
     parameters[MonteCarloAnisotropicBarostat::PressureX()] = getOwner().getDefaultPressure()[0];
     parameters[MonteCarloAnisotropicBarostat::PressureY()] = getOwner().getDefaultPressure()[1];
     parameters[MonteCarloAnisotropicBarostat::PressureZ()] = getOwner().getDefaultPressure()[2];
@@ -151,8 +149,8 @@ std::map<std::string, double> MonteCarloAnisotropicBarostatImpl::getDefaultParam
     return parameters;
 }
 
-std::vector<std::string> MonteCarloAnisotropicBarostatImpl::getKernelNames() {
-    std::vector<std::string> names;
+vector<string> MonteCarloAnisotropicBarostatImpl::getKernelNames() {
+    vector<string> names;
     names.push_back(ApplyMonteCarloBarostatKernel::Name());
     return names;
 }

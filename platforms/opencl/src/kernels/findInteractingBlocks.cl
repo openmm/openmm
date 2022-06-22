@@ -97,12 +97,12 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
     __local int workgroupBuffer[BUFFER_SIZE*(GROUP_SIZE/32)];
     __local int warpExclusions[MAX_EXCLUSIONS*(GROUP_SIZE/32)];
     __local real3 posBuffer[GROUP_SIZE];
-    __local volatile int workgroupTileIndex[GROUP_SIZE/32];
+    __local volatile unsigned int workgroupTileIndex[GROUP_SIZE/32];
     __local bool includeBlockFlags[GROUP_SIZE];
     __local volatile short2 atomCountBuffer[GROUP_SIZE];
     __local int* buffer = workgroupBuffer+BUFFER_SIZE*(warpStart/32);
     __local int* exclusionsForX = warpExclusions+MAX_EXCLUSIONS*(warpStart/32);
-    __local volatile int* tileStartIndex = workgroupTileIndex+(warpStart/32);
+    __local volatile unsigned int* tileStartIndex = workgroupTileIndex+(warpStart/32);
 
     // Loop over blocks.
 
@@ -233,11 +233,11 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                     if (neighborsInBuffer > BUFFER_SIZE-TILE_SIZE) {
                         // Store the new tiles to memory.
 
-                        int tilesToStore = neighborsInBuffer/TILE_SIZE;
+                        unsigned int tilesToStore = neighborsInBuffer/TILE_SIZE;
                         if (indexInWarp == 0)
                             *tileStartIndex = atom_add(interactionCount, tilesToStore);
                         SYNC_WARPS;
-                        int newTileStartIndex = *tileStartIndex;
+                        unsigned int newTileStartIndex = *tileStartIndex;
                         if (newTileStartIndex+tilesToStore <= maxTiles) {
                             if (indexInWarp < tilesToStore)
                                 interactingTiles[newTileStartIndex+indexInWarp] = x;
@@ -249,17 +249,20 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                         neighborsInBuffer -= TILE_SIZE*tilesToStore;
                    }
                 }
+                else {
+                    SYNC_WARPS;
+                }
             }
         }
         
         // If we have a partially filled buffer,  store it to memory.
         
         if (neighborsInBuffer > 0) {
-            int tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
+            unsigned int tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
             if (indexInWarp == 0)
                 *tileStartIndex = atom_add(interactionCount, tilesToStore);
             SYNC_WARPS;
-            int newTileStartIndex = *tileStartIndex;
+            unsigned int newTileStartIndex = *tileStartIndex;
             if (newTileStartIndex+tilesToStore <= maxTiles) {
                 if (indexInWarp < tilesToStore)
                     interactingTiles[newTileStartIndex+indexInWarp] = x;

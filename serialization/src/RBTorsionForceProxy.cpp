@@ -45,6 +45,7 @@ void RBTorsionForceProxy::serialize(const void* object, SerializationNode& node)
     node.setIntProperty("version", 2);
     const RBTorsionForce& force = *reinterpret_cast<const RBTorsionForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setBoolProperty("usesPeriodic", force.usesPeriodicBoundaryConditions());
     SerializationNode& torsions = node.createChildNode("Torsions");
     for (int i = 0; i < force.getNumTorsions(); i++) {
@@ -62,6 +63,7 @@ void* RBTorsionForceProxy::deserialize(const SerializationNode& node) const {
     RBTorsionForce* force = new RBTorsionForce();
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         if (version > 1)
             force->setUsesPeriodicBoundaryConditions(node.getBoolProperty("usesPeriodic"));
         const SerializationNode& torsions = node.getChildNode("Torsions");

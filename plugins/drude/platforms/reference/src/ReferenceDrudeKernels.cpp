@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -64,26 +64,8 @@ static ReferenceConstraints& extractConstraints(ContextImpl& context) {
 static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& inverseMasses, double timeShift) {
     const System& system = context.getSystem();
     int numParticles = system.getNumParticles();
-    vector<Vec3>& posData = extractPositions(context);
-    vector<Vec3>& velData = extractVelocities(context);
-    vector<Vec3>& forceData = extractForces(context);
-    
-    // Compute the shifted velocities.
-    
     vector<Vec3> shiftedVel(numParticles);
-    for (int i = 0; i < numParticles; ++i) {
-        if (inverseMasses[i] > 0)
-            shiftedVel[i] = velData[i]+forceData[i]*(timeShift*inverseMasses[i]);
-        else
-            shiftedVel[i] = velData[i];
-    }
-    
-    // Apply constraints to them.
-    
-    extractConstraints(context).applyToVelocities(posData, shiftedVel, inverseMasses, 1e-4);
-    
-    // Compute the kinetic energy.
-    
+    context.computeShiftedVelocities(timeShift, shiftedVel);
     double energy = 0.0;
     for (int i = 0; i < numParticles; ++i)
         if (inverseMasses[i] > 0)

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/GBSAOBCForceImpl.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/Messages.h"
 #include "openmm/kernels.h"
 #include <vector>
 
@@ -50,7 +51,15 @@ void GBSAOBCForceImpl::initialize(ContextImpl& context) {
         context.getSystem().getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
-            throw OpenMMException("GBSAOBCForce: The cutoff distance cannot be greater than half the periodic box size.");
+            throw OpenMMException("GBSAOBCForce: "+Messages::cutoffTooLarge);
+    }
+    for (int i = 0; i < owner.getNumParticles(); i++) {
+        double charge, radius, scalingFactor;
+        owner.getParticleParameters(i, charge, radius, scalingFactor);
+        if (radius <= 0)
+            throw OpenMMException("GBSAOBCForce: particle radius must be positive");
+        if (scalingFactor <= 0)
+            throw OpenMMException("GBSAOBCForce: particle scaling factor must be positive");
     }
     kernel.getAs<CalcGBSAOBCForceKernel>().initialize(context.getSystem(), owner);
 }

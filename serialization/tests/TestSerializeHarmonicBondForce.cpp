@@ -43,6 +43,7 @@ void testSerialization() {
 
     HarmonicBondForce force;
     force.setForceGroup(3);
+    force.setName("custom name");
     force.addBond(0, 1, 1.0, 2.0);
     force.addBond(0, 2, 2.0, 2.1);
     force.addBond(2, 3, 3.0, 2.2);
@@ -59,6 +60,7 @@ void testSerialization() {
 
     HarmonicBondForce& force2 = *copy;
     ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
     ASSERT_EQUAL(force.usesPeriodicBoundaryConditions(), force2.usesPeriodicBoundaryConditions());
     ASSERT_EQUAL(force.getNumBonds(), force2.getNumBonds());
     for (int i = 0; i < force.getNumBonds(); i++) {

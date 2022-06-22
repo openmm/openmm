@@ -1,7 +1,7 @@
-from simtk.openmm.app import *
-from simtk.openmm import *
-from simtk.unit import *
-from sys import stdout, exit, stderr
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
+from sys import stdout
 
 # Read the PSF
 psf = CharmmPsfFile('ala_ala_ala.psf')

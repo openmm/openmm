@@ -83,7 +83,7 @@ ReferenceBondIxn::~ReferenceBondIxn() {
    --------------------------------------------------------------------------------------- */
 
 double ReferenceBondIxn::getNormedDotProduct(double* vector1, double* vector2,
-                                             int hasREntry = 0) {
+                                             int hasREntry) {
 
    double dotProduct = DOT3(vector1, vector2);
    if (dotProduct != 0.0) {
@@ -122,9 +122,7 @@ double ReferenceBondIxn::getNormedDotProduct(double* vector1, double* vector2,
 
    --------------------------------------------------------------------------------------- */
 
-double ReferenceBondIxn::getAngleBetweenTwoVectors(double* vector1, double* vector2, 
-                                                   double* outputDotProduct = NULL,
-                                                   int hasREntry = 0) {
+double ReferenceBondIxn::getAngleBetweenTwoVectors(double* vector1, double* vector2, double* outputDotProduct, int hasREntry) {
 
     // get dot product betweenn vectors and then angle
 
@@ -173,11 +171,11 @@ double ReferenceBondIxn::getAngleBetweenTwoVectors(double* vector1, double* vect
 double ReferenceBondIxn::getDihedralAngleBetweenThreeVectors(double*  vector1,
                                                              double*  vector2, 
                                                              double*  vector3, 
-                                                             double** outputCrossProduct  = NULL, 
-                                                             double*  cosineOfAngle       = NULL, 
-                                                             double*  signVector          = NULL, 
-                                                             double*  signOfAngle         = NULL, 
-                                                             int          hasREntry = 0) {
+                                                             double** outputCrossProduct, 
+                                                             double*  cosineOfAngle, 
+                                                             double*  signVector, 
+                                                             double*  signOfAngle, 
+                                                             int      hasREntry) {
 
    double   tempVectors[6]         = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 

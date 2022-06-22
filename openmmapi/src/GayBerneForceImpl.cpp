@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/GayBerneForceImpl.h"
+#include "openmm/internal/Messages.h"
 #include "openmm/kernels.h"
 #include <set>
 #include <sstream>
@@ -73,41 +74,49 @@ void GayBerneForceImpl::initialize(ContextImpl& context) {
             msg << yparticle;
             throw OpenMMException(msg.str());
         }
+        if (sigma < 0)
+            throw OpenMMException("GayBerneForce: sigma for a particle cannot be negative");
+        if (epsilon < 0)
+            throw OpenMMException("GayBerneForce: epsilon for a particle cannot be negative");
+        if (rx <= 0 || ry <= 0 || rz <= 0)
+            throw OpenMMException("GayBerneForce: radii for a particle must be positive");
+        if (ex <= 0 || ey <= 0 || ez <= 0)
+            throw OpenMMException("GayBerneForce: scale factors for a particle must be positive");
     }
     vector<set<int> > exceptions(owner.getNumParticles());
     for (int i = 0; i < owner.getNumExceptions(); i++) {
-        int particle1, particle2;
+        int particle[2];
         double sigma, epsilon;
-        owner.getExceptionParameters(i, particle1, particle2, sigma, epsilon);
-        if (particle1 < 0 || particle1 >= owner.getNumParticles()) {
-            stringstream msg;
-            msg << "GayBerneForce: Illegal particle index for an exception: ";
-            msg << particle1;
-            throw OpenMMException(msg.str());
+        owner.getExceptionParameters(i, particle[0], particle[1], sigma, epsilon);
+        for (int j = 0; j < 2; j++) {
+            if (particle[j] < 0 || particle[j] >= owner.getNumParticles()) {
+                stringstream msg;
+                msg << "GayBerneForce: Illegal particle index for an exception: ";
+                msg << particle[j];
+                throw OpenMMException(msg.str());
+            }
         }
-        if (particle2 < 0 || particle2 >= owner.getNumParticles()) {
-            stringstream msg;
-            msg << "GayBerneForce: Illegal particle index for an exception: ";
-            msg << particle2;
-            throw OpenMMException(msg.str());
-        }
-        if (exceptions[particle1].count(particle2) > 0 || exceptions[particle2].count(particle1) > 0) {
+        if (exceptions[particle[0]].count(particle[1]) > 0 || exceptions[particle[1]].count(particle[0]) > 0) {
             stringstream msg;
             msg << "GayBerneForce: Multiple exceptions are specified for particles ";
-            msg << particle1;
+            msg << particle[0];
             msg << " and ";
-            msg << particle2;
+            msg << particle[1];
             throw OpenMMException(msg.str());
         }
-        exceptions[particle1].insert(particle2);
-        exceptions[particle2].insert(particle1);
+        if (sigma < 0)
+            throw OpenMMException("GayBerneForce: sigma for an exception cannot be negative");
+        if (epsilon < 0)
+            throw OpenMMException("GayBerneForce: epsilon for an exception cannot be negative");
+        exceptions[particle[0]].insert(particle[1]);
+        exceptions[particle[1]].insert(particle[0]);
     }
     if (owner.getNonbondedMethod() == GayBerneForce::CutoffPeriodic) {
         Vec3 boxVectors[3];
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
-            throw OpenMMException("GayBerneForce: The cutoff distance cannot be greater than half the periodic box size.");
+            throw OpenMMException("GayBerneForce: "+Messages::cutoffTooLarge);
     }
     kernel.getAs<CalcGayBerneForceKernel>().initialize(context.getSystem(), owner);
 }

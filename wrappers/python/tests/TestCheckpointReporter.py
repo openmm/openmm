@@ -1,9 +1,9 @@
 import os
 import unittest
 import tempfile
-from simtk.openmm import app
-import simtk.openmm as mm
-from simtk import unit
+from openmm import app
+import openmm as mm
+from openmm import unit
 
 
 class TestCheckpointReporter(unittest.TestCase):
@@ -18,24 +18,28 @@ class TestCheckpointReporter(unittest.TestCase):
         self.simulation.context.setPositions(pdb.positions)
 
     def test_1(self):
-        file = tempfile.NamedTemporaryFile(delete=False)
-        self.simulation.reporters.append(app.CheckpointReporter(file, 1))
-        self.simulation.step(1)
-
-        # get the current positions
-        positions = self.simulation.context.getState(getPositions=True).getPositions()
-
-        # now set the positions into junk...
-        self.simulation.context.setPositions([mm.Vec3(0, 0, 0)] * len(positions))
-
-        # then reload the right positions from the checkpoint
-        file.close()
-        with open(file.name, 'rb') as f:
-            self.simulation.context.loadCheckpoint(f.read())
-        os.unlink(file.name)
-
-        newPositions = self.simulation.context.getState(getPositions=True).getPositions()
-        self.assertSequenceEqual(positions, newPositions)
+        """Test CheckpointReporter."""
+        for writeState in [True, False]:
+            with tempfile.TemporaryDirectory() as tempdir:
+                filename = os.path.join(tempdir, 'checkpoint')
+                self.simulation.reporters.clear()
+                self.simulation.reporters.append(app.CheckpointReporter(filename, 1, writeState=writeState))
+                self.simulation.step(1)
+        
+                # get the current positions
+                positions = self.simulation.context.getState(getPositions=True).getPositions()
+        
+                # now set the positions into junk...
+                self.simulation.context.setPositions([mm.Vec3(0, 0, 0)] * len(positions))
+        
+                # then reload the right positions from the checkpoint
+                if writeState:
+                    self.simulation.loadState(filename)
+                else:
+                    self.simulation.loadCheckpoint(filename)
+        
+                newPositions = self.simulation.context.getState(getPositions=True).getPositions()
+                self.assertSequenceEqual(positions, newPositions)
 
 if __name__ == '__main__':
     unittest.main()

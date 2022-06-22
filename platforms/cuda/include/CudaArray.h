@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -55,7 +55,7 @@ public:
      * @param name              the name of the array
      */
     template <class T>
-    static CudaArray* create(CudaContext& context, int size, const std::string& name) {
+    static CudaArray* create(CudaContext& context, size_t size, const std::string& name) {
         return new CudaArray(context, size, sizeof(T), name);
     }
     /**
@@ -71,7 +71,7 @@ public:
      * @param elementSize       the size of each element in bytes
      * @param name              the name of the array
      */
-    CudaArray(CudaContext& context, int size, int elementSize, const std::string& name);
+    CudaArray(CudaContext& context, size_t size, int elementSize, const std::string& name);
     ~CudaArray();
     /**
      * Initialize this object.
@@ -81,7 +81,7 @@ public:
      * @param elementSize       the size of each element in bytes
      * @param name              the name of the array
      */
-    void initialize(ComputeContext& context, int size, int elementSize, const std::string& name);
+    void initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name);
     /**
      * Initialize this object.  The template argument is the data type of each array element.
      *
@@ -90,13 +90,13 @@ public:
      * @param name              the name of the array
      */
     template <class T>
-    void initialize(ComputeContext& context, int size, const std::string& name) {
+    void initialize(ComputeContext& context, size_t size, const std::string& name) {
         initialize(context, size, sizeof(T), name);
     }
     /**
      * Recreate the internal storage to have a different size.
      */
-    void resize(int size);
+    void resize(size_t size);
     /**
      * Get whether this array has been initialized.
      */
@@ -106,7 +106,7 @@ public:
     /**
      * Get the number of elements in the array.
      */
-    int getSize() const {
+    size_t getSize() const {
         return size;
     }
     /**
@@ -146,13 +146,25 @@ public:
         ArrayInterface::download(data);
     }
     /**
-     * Copy the values in an array to the device memory.
+     * Copy the values from host memory to the array.
      * 
      * @param data     the data to copy
      * @param blocking if true, this call will block until the transfer is complete.  If false,
      *                 the source array  must be in page-locked memory.
      */
-    void upload(const void* data, bool blocking=true);
+    void upload(const void* data, bool blocking=true) {
+        uploadSubArray(data, 0, getSize(), blocking);
+    }
+    /**
+     * Copy values from host memory to a subset of the array.
+     * 
+     * @param data     the data to copy
+     * @param offset   the index of the element within the array at which the copy should begin
+     * @param elements the number of elements to copy
+     * @param blocking if true, this call will block until the transfer is complete.  If false,
+     *                 the source array  must be in page-locked memory.
+     */
+    void uploadSubArray(const void* data, int offset, int elements, bool blocking=true);
     /**
      * Copy the values in the device memory to an array.
      * 
@@ -170,7 +182,8 @@ public:
 private:
     CudaContext* context;
     CUdeviceptr pointer;
-    int size, elementSize;
+    size_t size;
+    int elementSize;
     bool ownsMemory;
     std::string name;
 };

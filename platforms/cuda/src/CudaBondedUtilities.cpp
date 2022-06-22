@@ -166,9 +166,9 @@ string CudaBondedUtilities::createForceSource(int forceIndex, int numBonds, int 
     }
     s<<computeForce<<"\n";
     for (int i = 0; i < numAtoms; i++) {
-        s<<"    atomicAdd(&forceBuffer[atom"<<(i+1)<<"], static_cast<unsigned long long>((long long) (force"<<(i+1)<<".x*0x100000000)));\n";
-        s<<"    atomicAdd(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force"<<(i+1)<<".y*0x100000000)));\n";
-        s<<"    atomicAdd(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS*2], static_cast<unsigned long long>((long long) (force"<<(i+1)<<".z*0x100000000)));\n";
+        s<<"    atomicAdd(&forceBuffer[atom"<<(i+1)<<"], static_cast<unsigned long long>(realToFixedPoint(force"<<(i+1)<<".x)));\n";
+        s<<"    atomicAdd(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force"<<(i+1)<<".y)));\n";
+        s<<"    atomicAdd(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS*2], static_cast<unsigned long long>(realToFixedPoint(force"<<(i+1)<<".z)));\n";
         s<<"    __threadfence_block();\n";
     }
     s<<"}\n";

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -50,7 +50,7 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-void testBond() {
+void testBond(bool byParticles) {
     // Create a system using a CustomCompoundBondForce.
 
     System customSystem;
@@ -58,7 +58,12 @@ void testBond() {
     customSystem.addParticle(1.0);
     customSystem.addParticle(1.0);
     customSystem.addParticle(1.0);
-    CustomCompoundBondForce* custom = new CustomCompoundBondForce(4, "0.5*kb*((distance(p1,p2)-b0)^2+(distance(p2,p3)-b0)^2)+0.5*ka*(angle(p2,p3,p4)-a0)^2+kt*(1+cos(dihedral(p1,p2,p3,p4)-t0))");
+    string expression;
+    if (byParticles)
+        expression = "0.5*kb*((distance(p1,p2)-b0)^2+(distance(p2,p3)-b0)^2)+0.5*ka*(angle(p2,p3,p4)-a0)^2+kt*(1+cos(dihedral(p1,p2,p3,p4)-t0))";
+    else
+        expression = "0.5*kb*((pointdistance(x1,y1,z1,x2,y2,z2)-b0)^2+(pointdistance(x2,y2,z2,x3,y3,z3)-b0)^2)+0.5*ka*(pointangle(x2,y2,z2,x3,y3,z3,x4,y4,z4)-a0)^2+kt*(1+cos(pointdihedral(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)-t0))";
+    CustomCompoundBondForce* custom = new CustomCompoundBondForce(4, expression);
     custom->addPerBondParameter("kb");
     custom->addPerBondParameter("ka");
     custom->addPerBondParameter("kt");
@@ -207,6 +212,31 @@ void testContinuous2DFunction() {
             ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.05);
         }
     }
+
+    // Try updating the tabulated function.
+
+    for (int i = 0; i < table.size(); i++)
+        table[i] *= 0.5;
+    Continuous2DFunction& fn = dynamic_cast<Continuous2DFunction&>(forceField->getTabulatedFunction(0));
+    fn.setFunctionParameters(xsize, ysize, table, xmin, xmax, ymin, ymax);
+    forceField->updateParametersInContext(context);
+    for (double x = xmin-0.15; x < xmax+0.2; x += 0.1) {
+        for (double y = ymin-0.15; y < ymax+0.2; y += 0.1) {
+            positions[0] = Vec3(x, y, 1.5);
+            context.setPositions(positions);
+            State state = context.getState(State::Forces | State::Energy);
+            const vector<Vec3>& forces = state.getForces();
+            double energy = 1;
+            Vec3 force(0, 0, 0);
+            if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
+                energy = 0.5*sin(0.25*x)*cos(0.33*y)+1;
+                force[0] = 0.5*(-0.25*cos(0.25*x)*cos(0.33*y));
+                force[1] = 0.5*0.3*sin(0.25*x)*sin(0.33*y);
+            }
+            ASSERT_EQUAL_VEC(force, forces[0], 0.1);
+            ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.05);
+        }
+    }
 }
 
 void testContinuous3DFunction() {
@@ -330,7 +360,7 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
-void testPeriodic() {
+void testPeriodic(bool byParticles) {
     // Create a force that uses periodic boundary conditions.
 
     System customSystem;
@@ -339,7 +369,12 @@ void testPeriodic() {
     customSystem.addParticle(1.0);
     customSystem.addParticle(1.0);
     customSystem.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
-    CustomCompoundBondForce* custom = new CustomCompoundBondForce(4, "0.5*kb*((distance(p1,p2)-b0)^2+(distance(p2,p3)-b0)^2)+0.5*ka*(angle(p2,p3,p4)-a0)^2+kt*(1+cos(dihedral(p1,p2,p3,p4)-t0))");
+    string expression;
+    if (byParticles)
+        expression = "0.5*kb*((distance(p1,p2)-b0)^2+(distance(p2,p3)-b0)^2)+0.5*ka*(angle(p2,p3,p4)-a0)^2+kt*(1+cos(dihedral(p1,p2,p3,p4)-t0))";
+    else
+        expression = "0.5*kb*((pointdistance(x1,y1,z1,x2,y2,z2)-b0)^2+(pointdistance(x2,y2,z2,x3,y3,z3)-b0)^2)+0.5*ka*(pointangle(x2,y2,z2,x3,y3,z3,x4,y4,z4)-a0)^2+kt*(1+cos(pointdihedral(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)-t0))";
+    CustomCompoundBondForce* custom = new CustomCompoundBondForce(4, expression);
     custom->addPerBondParameter("kb");
     custom->addPerBondParameter("ka");
     custom->addPerBondParameter("kt");
@@ -453,13 +488,15 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
-        testBond();
+        testBond(true);
+        testBond(false);
         testPositionDependence();
         testContinuous2DFunction();
         testContinuous3DFunction();
         testMultipleBonds();
         testIllegalVariable();
-        testPeriodic();
+        testPeriodic(true);
+        testPeriodic(false);
         testEnergyParameterDerivatives();
         runPlatformTests();
     }

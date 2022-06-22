@@ -45,6 +45,7 @@ void CustomExternalForceProxy::serialize(const void* object, SerializationNode& 
     node.setIntProperty("version", 1);
     const CustomExternalForce& force = *reinterpret_cast<const CustomExternalForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
+    node.setStringProperty("name", force.getName());
     node.setStringProperty("energy", force.getEnergyFunction());
     SerializationNode& perParticleParams = node.createChildNode("PerParticleParameters");
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
@@ -56,15 +57,15 @@ void CustomExternalForceProxy::serialize(const void* object, SerializationNode& 
     }
     SerializationNode& particles = node.createChildNode("Particles");
     for (int i = 0; i < force.getNumParticles(); i++) {
-        int particle;
+        int particleIndex;
         vector<double> params;
-        force.getParticleParameters(i, particle, params);
-        SerializationNode& node = particles.createChildNode("Particle").setIntProperty("index", particle);
+        force.getParticleParameters(i, particleIndex, params);
+        SerializationNode& particle = particles.createChildNode("Particle").setIntProperty("index", particleIndex);
         for (int j = 0; j < (int) params.size(); j++) {
             stringstream key;
             key << "param";
             key << j+1;
-            node.setDoubleProperty(key.str(), params[j]);
+            particle.setDoubleProperty(key.str(), params[j]);
         }
     }
 }
@@ -76,6 +77,7 @@ void* CustomExternalForceProxy::deserialize(const SerializationNode& node) const
     try {
         CustomExternalForce* force = new CustomExternalForce(node.getStringProperty("energy"));
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
+        force->setName(node.getStringProperty("name", force->getName()));
         const SerializationNode& perParticleParams = node.getChildNode("PerParticleParameters");
         for (auto& parameter : perParticleParams.getChildren())
             force->addPerParticleParameter(parameter.getStringProperty("name"));
