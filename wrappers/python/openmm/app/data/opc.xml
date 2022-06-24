@@ -4,8 +4,8 @@
   <Reference>Izadi S, Anandakrishnan R, Onufriev AV. Building Water Models: A Different Approach. The Journal of Physical Chemistry Letters. 2014 Nov 6;5(21):3863-71. DOI:10.1021/jz501780a</Reference>
  </Info>
  <AtomTypes>
-  <Type name="opc-O" class="OW" element="O" mass="15.99943"/>
-  <Type name="opc-H" class="HW" element="H" mass="1.007947"/>
+  <Type name="opc-O" class="OW" element="O" mass="16.00000"/>
+  <Type name="opc-H" class="HW" element="H" mass="1.00800"/>
   <Type name="opc-M" class="MW" mass="0"/>
  </AtomTypes>
  <Residues>
@@ -14,20 +14,20 @@
    <Atom name="H1" type="opc-H"/>
    <Atom name="H2" type="opc-H"/>
    <Atom name="M" type="opc-M"/>
-   <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.7045409593616588" weight2="0.14772952031917058" weight3="0.14772952031917058"/>
+   <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.704555274" weight2="0.147722363" weight3="0.147722363"/>
    <Bond from="0" to="1"/>
    <Bond from="0" to="2"/>
   </Residue>
  </Residues>
  <HarmonicBondForce>
-  <Bond class1="OW" class2="HW" length="0.08724" k="462750.4"/>
+  <Bond class1="OW" class2="HW" length="0.08724" k="502416.0"/>
  </HarmonicBondForce>
  <HarmonicAngleForce>
-  <Angle class1="HW" class2="OW" class3="HW" angle="1.8081611050661253" k="836.8"/>
+  <Angle class1="HW" class2="OW" class3="HW" angle="1.8081611050661253" k="628.02"/>
  </HarmonicAngleForce>
  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
-  <Atom type="opc-O" charge="0" sigma="0.316655" epsilon="0.89036"/>
-  <Atom type="opc-H" charge="0.6791" sigma="1" epsilon="0"/>
-  <Atom type="opc-M" charge="-1.3582" sigma="1" epsilon="0"/>
+  <Atom type="opc-O" charge="0" sigma="0.316655" epsilon="0.8903586"/>
+  <Atom type="opc-H" charge="0.67914" sigma="1" epsilon="0"/>
+  <Atom type="opc-M" charge="-1.35828" sigma="1" epsilon="0"/>
  </NonbondedForce>
 </ForceField>
