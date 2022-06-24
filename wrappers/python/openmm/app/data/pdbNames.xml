@@ -129,7 +129,7 @@
   <Atom name="HE1" alt1="HE"/>
   <Atom name="HE2" alt1="HNE" alt2="HNE2"/>
  </Residue>
- <Residue name="ASP" type="Protein">
+ <Residue name="ASP" type="Protein" alt1="ASH">
   <Atom name="HB2" alt1="2HB"/>
   <Atom name="HB3" alt1="HB1" alt2="1HB" alt3="3HB"/>
  </Residue>
@@ -141,7 +141,7 @@
   <Atom name="HD21" alt1="1HD2" alt2="HND1"/>
   <Atom name="HD22" alt1="2HD2" alt2="HND2"/>
  </Residue>
- <Residue name="GLU" type="Protein">
+ <Residue name="GLU" type="Protein" alt1="GLH">
   <Atom name="HB2" alt1="2HB"/>
   <Atom name="HB3" alt1="HB1" alt2="1HB" alt3="3HB"/>
   <Atom name="HG2" alt1="2HG"/>
