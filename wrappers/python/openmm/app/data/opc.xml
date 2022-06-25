@@ -14,20 +14,20 @@
    <Atom name="H1" type="opc-H"/>
    <Atom name="H2" type="opc-H"/>
    <Atom name="M" type="opc-M"/>
-   <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.704555274" weight2="0.147722363" weight3="0.147722363"/>
+   <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.7045587810585758" weight2="0.1477206094707121" weight3="0.1477206094707121"/>
    <Bond from="0" to="1"/>
    <Bond from="0" to="2"/>
   </Residue>
  </Residues>
  <HarmonicBondForce>
-  <Bond class1="OW" class2="HW" length="0.08724" k="502416.0"/>
+  <Bond class1="OW" class2="HW" length="0.087243313" k="502416.0"/>
  </HarmonicBondForce>
  <HarmonicAngleForce>
-  <Angle class1="HW" class2="OW" class3="HW" angle="1.8081611050661253" k="628.02"/>
+  <Angle class1="HW" class2="OW" class3="HW" angle="1.8081424254418306" k="628.02"/>
  </HarmonicAngleForce>
  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
-  <Atom type="opc-O" charge="0" sigma="0.316655" epsilon="0.8903586"/>
-  <Atom type="opc-H" charge="0.67914" sigma="1" epsilon="0"/>
-  <Atom type="opc-M" charge="-1.35828" sigma="1" epsilon="0"/>
+  <Atom type="opc-O" charge="0" sigma="0.316655208182147" epsilon="0.8903586017365637"/>
+  <Atom type="opc-H" charge="0.679142001832919" sigma="0.08908987181403394" epsilon="0"/>
+  <Atom type="opc-M" charge="-1.3582839981780566" sigma="0.08908987181403394" epsilon="0"/>
  </NonbondedForce>
 </ForceField>
