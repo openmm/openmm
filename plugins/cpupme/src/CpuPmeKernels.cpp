@@ -53,7 +53,7 @@ static const int PME_ORDER = 5;
 bool CpuCalcDispersionPmeReciprocalForceKernel::hasInitializedThreads = false;
 int CpuCalcDispersionPmeReciprocalForceKernel::numThreads = 0;
 
-static void spreadCharge(float* posq, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3* periodicBoxVectors, Vec3* recipBoxVectors,
+static void spreadCharge(float* posq, vector<float>& grid, int gridx, int gridy, int gridz, int numParticles, Vec3* periodicBoxVectors, Vec3* recipBoxVectors,
         atomic<int>& atomicCounter, const float epsilonFactor, int threadIndex, int numThreads, bool deterministic) {
     float temp[4];
     fvec4 boxSize((float) periodicBoxVectors[0][0], (float) periodicBoxVectors[1][1], (float) periodicBoxVectors[2][2], 0);
@@ -66,7 +66,7 @@ static void spreadCharge(float* posq, float* grid, int gridx, int gridy, int gri
     fvec4 one(1);
     fvec4 scale(1.0f/(PME_ORDER-1));
     float posInBox[4] = {0,0,0,0};
-    memset(grid, 0, sizeof(float)*gridx*gridy*gridz);
+    memset(grid.data(), 0, sizeof(float)*gridx*gridy*gridz);
 
     const int groupSize = max(1, numParticles / (10 * numThreads));
     int start = groupSize * threadIndex;
@@ -246,7 +246,7 @@ static void computeReciprocalEterm(int start, int end, int gridx, int gridy, int
     }
 }
 
-static double reciprocalEnergy(int start, int end, complex<float>* grid, vector<float>& recipEterm, int gridx, int gridy, int gridz, double alpha, vector<float>* bsplineModuli, Vec3* periodicBoxVectors, Vec3* recipBoxVectors) {
+static double reciprocalEnergy(int start, int end, vector<complex<float> >& grid, vector<float>& recipEterm, int gridx, int gridy, int gridz, double alpha, vector<float>* bsplineModuli, Vec3* periodicBoxVectors, Vec3* recipBoxVectors) {
     const unsigned int zsizeHalf = gridz/2+1;
     const unsigned int yzsizeHalf = gridy*zsizeHalf;
 
@@ -279,7 +279,7 @@ static double reciprocalEnergy(int start, int end, complex<float>* grid, vector<
 }
 
 
-static double reciprocalDispersionEnergy(int start, int end, complex<float>* grid, const vector<float>& recipEterm, int gridx, int gridy, int gridz, double alpha, vector<float>* bsplineModuli, Vec3* periodicBoxVectors, Vec3* recipBoxVectors) {
+static double reciprocalDispersionEnergy(int start, int end, vector<complex<float> >& grid, const vector<float>& recipEterm, int gridx, int gridy, int gridz, double alpha, vector<float>* bsplineModuli, Vec3* periodicBoxVectors, Vec3* recipBoxVectors) {
     const unsigned int zsizeHalf = gridz/2+1;
     const unsigned int yzsizeHalf = gridy*zsizeHalf;
 
@@ -310,14 +310,14 @@ static double reciprocalDispersionEnergy(int start, int end, complex<float>* gri
 }
 
 
-static void reciprocalConvolution(int start, int end, complex<float>* grid, vector<float>& recipEterm) {
+static void reciprocalConvolution(int start, int end, vector<complex<float> >& grid, vector<float>& recipEterm) {
     for (int index = start; index < end; index++) {
         float eterm = recipEterm[index];
         grid[index] *= eterm;
     }
 }
 
-static void interpolateForces(float* posq, float* force, float* grid, int gridx, int gridy, int gridz, int numParticles, Vec3* periodicBoxVectors, Vec3* recipBoxVectors, atomic<int>& atomicCounter, const float epsilonFactor, int numThreads) {
+static void interpolateForces(float* posq, vector<float>& force, vector<float>& grid, int gridx, int gridy, int gridz, int numParticles, Vec3* periodicBoxVectors, Vec3* recipBoxVectors, atomic<int>& atomicCounter, const float epsilonFactor, int numThreads) {
     fvec4 boxSize((float) periodicBoxVectors[0][0], (float) periodicBoxVectors[1][1], (float) periodicBoxVectors[2][2], 0);
     fvec4 invBoxSize((float) recipBoxVectors[0][0], (float) recipBoxVectors[1][1], (float) recipBoxVectors[2][2], 0);
     fvec4 recipBoxVec0((float) recipBoxVectors[0][0], (float) recipBoxVectors[0][1], (float) recipBoxVectors[0][2], 0);
@@ -596,7 +596,7 @@ void CpuCalcPmeReciprocalForceKernel::runWorkerThread(ThreadPool& threads, int i
     int complexStart = std::max(1, ((index*complexSize)/numThreads));
     int complexEnd = (((index+1)*complexSize)/numThreads);
     const float epsilonFactor = sqrt(ONE_4PI_EPS0);
-    spreadCharge(posq, realGrids[index].data(), gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, index, numThreads, deterministic);
+    spreadCharge(posq, realGrids[index], gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, index, numThreads, deterministic);
     threads.syncThreads();
     int numGrids = realGrids.size();
     for (int i = gridStart; i < gridEnd; i += 4) {
@@ -611,12 +611,12 @@ void CpuCalcPmeReciprocalForceKernel::runWorkerThread(ThreadPool& threads, int i
         threads.syncThreads();
     }
     if (includeEnergy) {
-        threadEnergy[index] = reciprocalEnergy(gridxStart, gridxEnd, complexGrid.data(), recipEterm, gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxVectors, recipBoxVectors);
+        threadEnergy[index] = reciprocalEnergy(gridxStart, gridxEnd, complexGrid, recipEterm, gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxVectors, recipBoxVectors);
         threads.syncThreads();
     }
-    reciprocalConvolution(complexStart, complexEnd, complexGrid.data(), recipEterm);
+    reciprocalConvolution(complexStart, complexEnd, complexGrid, recipEterm);
     threads.syncThreads();
-    interpolateForces(posq, &force[0], realGrids[0].data(), gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, numThreads);
+    interpolateForces(posq, force, realGrids[0], gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, numThreads);
 }
 
 void CpuCalcPmeReciprocalForceKernel::beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) {
@@ -880,7 +880,7 @@ void CpuCalcDispersionPmeReciprocalForceKernel::runWorkerThread(ThreadPool& thre
     int complexStart = std::max(1, ((index*complexSize)/numThreads));
     int complexEnd = (((index+1)*complexSize)/numThreads);
     const float epsilonFactor = 1.0f;
-    spreadCharge(posq, realGrids[index].data(), gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, index, numThreads, deterministic);
+    spreadCharge(posq, realGrids[index], gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, index, numThreads, deterministic);
     threads.syncThreads();
     int numGrids = realGrids.size();
     for (int i = gridStart; i < gridEnd; i += 4) {
@@ -895,14 +895,14 @@ void CpuCalcDispersionPmeReciprocalForceKernel::runWorkerThread(ThreadPool& thre
         threads.syncThreads();
     }
     if (includeEnergy) {
-        threadEnergy[index] = reciprocalDispersionEnergy(gridxStart, gridxEnd, complexGrid.data(), recipEterm, gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxVectors, recipBoxVectors);
+        threadEnergy[index] = reciprocalDispersionEnergy(gridxStart, gridxEnd, complexGrid, recipEterm, gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxVectors, recipBoxVectors);
         threads.syncThreads();
     }
     // For dispersion, we include the {0,0,0} term, so the start point needs to be redefined
     complexStart = (index*complexSize)/numThreads;
-    reciprocalConvolution(complexStart, complexEnd, complexGrid.data(), recipEterm);
+    reciprocalConvolution(complexStart, complexEnd, complexGrid, recipEterm);
     threads.syncThreads();
-    interpolateForces(posq, &force[0], realGrids[0].data(), gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, numThreads);
+    interpolateForces(posq, force, realGrids[0], gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, numThreads);
 }
 
 void CpuCalcDispersionPmeReciprocalForceKernel::beginComputation(CalcPmeReciprocalForceKernel::IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) {
