@@ -4,8 +4,8 @@
   <Reference>Izadi S, Onufriev AV. Accuracy limit of rigid 3-point water models. The Journal of Chemical Physics 145, 074501 (2016); DOI:10.1063/1.4960175</Reference>
  </Info>
  <AtomTypes>
-  <Type name="opc3-O" class="OW" element="O" mass="15.99943"/>
-  <Type name="opc3-H" class="HW" element="H" mass="1.007947"/>
+  <Type name="opc3-O" class="OW" element="O" mass="16.00000"/>
+  <Type name="opc3-H" class="HW" element="H" mass="1.00800"/>
  </AtomTypes>
  <Residues>
   <Residue name="HOH">
@@ -17,13 +17,16 @@
   </Residue>
  </Residues>
  <HarmonicBondForce>
-  <Bond class1="OW" class2="HW" length="0.97888" k="462750.4"/>
+  <Bond class1="OW" class2="HW" length="0.978882" k="502416.0"/>
  </HarmonicBondForce>
  <HarmonicAngleForce>
-  <Angle class1="HW" class2="OW" class3="HW" angle="1.9106119321581925" k="836.8"/>
+  <!-- angle = arccos(1 - (1.598507**2 / (2*0.978882**2))) -->
+  <Angle class1="HW" class2="OW" class3="HW" angle="1.9106321528999624" k="628.02"/>
  </HarmonicAngleForce>
  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
-  <Atom type="opc3-O" charge="-0.895170" sigma="0.317427" epsilon="0.68369"/>
+  <!-- sigma = (1.7814990 * 2 / (2**(1/6)))*unit.angstrom/unit.nanometer -->
+  <!-- epsilon = (0.163406*unit.kilocalorie)/(unit.kilojoule) -->
+  <Atom type="opc3-O" charge="-0.895170" sigma="0.31742703509365927" epsilon="0.683690704"/>
   <Atom type="opc3-H" charge="0.447585" sigma="1" epsilon="0"/>
  </NonbondedForce>
 </ForceField>
