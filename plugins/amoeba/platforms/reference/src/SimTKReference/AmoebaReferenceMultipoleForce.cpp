@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
+/* Portions copyright (c) 2006-222 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -26,6 +26,10 @@
 #include "SimTKOpenMMRealType.h"
 #include "jama_svd.h"
 #include <algorithm>
+#ifdef _MSC_VER
+  #define POCKETFFT_NO_VECTORS
+#endif
+#include "pocketfft_hdronly.h"
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -4809,16 +4813,12 @@ AmoebaReferencePmeMultipoleForce::AmoebaReferencePmeMultipoleForce() :
                _pmeGridSize(0), _totalGridSize(0), _alphaEwald(0.0)
 {
 
-    _fftplan = NULL;
     _pmeGrid = NULL;
     _pmeGridDimensions = IntVec(-1, -1, -1);
 }
 
 AmoebaReferencePmeMultipoleForce::~AmoebaReferencePmeMultipoleForce()
 {
-    if (_fftplan) {
-        fftpack_destroy(_fftplan);
-    }
     if (_pmeGrid) {
         delete[] _pmeGrid;
     }
@@ -4863,11 +4863,6 @@ void AmoebaReferencePmeMultipoleForce::setPmeGridDimensions(vector<int>& pmeGrid
         (pmeGridDimensions[2] == _pmeGridDimensions[2]))
         return;
 
-    if (_fftplan) {
-        fftpack_destroy(_fftplan);
-    }
-    fftpack_init_3d(&_fftplan,pmeGridDimensions[0], pmeGridDimensions[1], pmeGridDimensions[2]);
-
     _pmeGridDimensions[0] = pmeGridDimensions[0];
     _pmeGridDimensions[1] = pmeGridDimensions[1];
     _pmeGridDimensions[2] = pmeGridDimensions[2];
@@ -4908,7 +4903,7 @@ void AmoebaReferencePmeMultipoleForce::resizePmeArrays()
         if (_pmeGrid) {
             delete[] _pmeGrid;
         }
-        _pmeGrid      = new t_complex[_totalGridSize];
+        _pmeGrid      = new complex<double>[_totalGridSize];
         _pmeGridSize  = _totalGridSize;
     }
 
@@ -4930,7 +4925,7 @@ void AmoebaReferencePmeMultipoleForce::initializePmeGrid()
         return;
 
     for (int jj = 0; jj < _totalGridSize; jj++)
-        _pmeGrid[jj].re = _pmeGrid[jj].im = 0.0;
+        _pmeGrid[jj] = complex<double>(0, 0);
 }
 
 void AmoebaReferencePmeMultipoleForce::getPeriodicDelta(Vec3& deltaR) const
@@ -5175,9 +5170,14 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleField(const vector
     computeAmoebaBsplines(particleData);
     initializePmeGrid();
     spreadFixedMultipolesOntoGrid(particleData);
-    fftpack_exec_3d(_fftplan, FFTPACK_FORWARD, _pmeGrid, _pmeGrid);
+    vector<size_t> shape = {(size_t) _pmeGridDimensions[0], (size_t) _pmeGridDimensions[1], (size_t) _pmeGridDimensions[2]};
+    vector<size_t> axes = {0, 1, 2};
+    vector<ptrdiff_t> stride = {(ptrdiff_t) (_pmeGridDimensions[1]*_pmeGridDimensions[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) (_pmeGridDimensions[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) sizeof(complex<double>)};
+    pocketfft::c2c(shape, stride, stride, axes, true, _pmeGrid, _pmeGrid, 1.0, 0);
     performAmoebaReciprocalConvolution();
-    fftpack_exec_3d(_fftplan, FFTPACK_BACKWARD, _pmeGrid, _pmeGrid);
+    pocketfft::c2c(shape, stride, stride, axes, false, _pmeGrid, _pmeGrid, 1.0, 0);
     computeFixedPotentialFromGrid();
     recordFixedMultipoleField();
 
@@ -5385,7 +5385,7 @@ void AmoebaReferencePmeMultipoleForce::spreadFixedMultipolesOntoGrid(const vecto
     // Clear the grid.
 
     for (int gridIndex = 0; gridIndex < _totalGridSize; gridIndex++)
-        _pmeGrid[gridIndex] = t_complex(0, 0);
+        _pmeGrid[gridIndex] = complex<double>(0, 0);
 
     // Loop over atoms and spread them on the grid.
 
@@ -5414,8 +5414,8 @@ void AmoebaReferencePmeMultipoleForce::spreadFixedMultipolesOntoGrid(const vecto
                 for (int iz = 0; iz < AMOEBA_PME_ORDER; iz++) {
                     int z = (gridPoint[2]+iz) % _pmeGridDimensions[2];
                     double4 v = _thetai[2][atomIndex*AMOEBA_PME_ORDER+iz];
-                    t_complex& gridValue = _pmeGrid[x*_pmeGridDimensions[1]*_pmeGridDimensions[2]+y*_pmeGridDimensions[2]+z];
-                    gridValue.re += term0*v[0] + term1*v[1] + term2*v[2];
+                    complex<double>& gridValue = _pmeGrid[x*_pmeGridDimensions[1]*_pmeGridDimensions[2]+y*_pmeGridDimensions[2]+z];
+                    gridValue += term0*v[0] + term1*v[1] + term2*v[2];
                 }
             }
         }
@@ -5436,7 +5436,7 @@ void AmoebaReferencePmeMultipoleForce::performAmoebaReciprocalConvolution()
         int kz = remainder-ky*_pmeGridDimensions[2];
 
         if (kx == 0 && ky == 0 && kz == 0) {
-            _pmeGrid[index].re = _pmeGrid[index].im = 0.0;
+            _pmeGrid[index] = complex<double>(0, 0);
             continue;
         }
 
@@ -5456,8 +5456,7 @@ void AmoebaReferencePmeMultipoleForce::performAmoebaReciprocalConvolution()
         double denom = m2*bx*by*bz;
         double eterm = scaleFactor*exp(-expFactor*m2)/denom;
 
-        _pmeGrid[index].re *= eterm;
-        _pmeGrid[index].im *= eterm;
+        _pmeGrid[index] *= eterm;
     }
 }
 
@@ -5507,7 +5506,7 @@ void AmoebaReferencePmeMultipoleForce::computeFixedPotentialFromGrid()
                 for (int ix = 0; ix < AMOEBA_PME_ORDER; ix++) {
                     int i = gridPoint[0]+ix-(gridPoint[0]+ix >= _pmeGridDimensions[0] ? _pmeGridDimensions[0] : 0);
                     int gridIndex = i*_pmeGridDimensions[1]*_pmeGridDimensions[2] + j*_pmeGridDimensions[2] + k;
-                    double tq = _pmeGrid[gridIndex].re;
+                    double tq = _pmeGrid[gridIndex].real();
                     double4 tadd = _thetai[0][m*AMOEBA_PME_ORDER+ix];
                     t[0] += tq*tadd[0];
                     t[1] += tq*tadd[1];
@@ -5581,7 +5580,7 @@ void AmoebaReferencePmeMultipoleForce::spreadInducedDipolesOnGrid(const vector<V
     // Clear the grid.
 
     for (int gridIndex = 0; gridIndex < _totalGridSize; gridIndex++)
-        _pmeGrid[gridIndex] = t_complex(0, 0);
+        _pmeGrid[gridIndex] = complex<double>(0, 0);
 
     // Loop over atoms and spread them on the grid.
 
@@ -5606,9 +5605,8 @@ void AmoebaReferencePmeMultipoleForce::spreadInducedDipolesOnGrid(const vector<V
                 for (int iz = 0; iz < AMOEBA_PME_ORDER; iz++) {
                     int z = (gridPoint[2]+iz) % _pmeGridDimensions[2];
                     double4 v = _thetai[2][atomIndex*AMOEBA_PME_ORDER+iz];
-                    t_complex& gridValue = _pmeGrid[x*_pmeGridDimensions[1]*_pmeGridDimensions[2]+y*_pmeGridDimensions[2]+z];
-                    gridValue.re += term01*v[0] + term11*v[1];
-                    gridValue.im += term02*v[0] + term12*v[1];
+                    complex<double>& gridValue = _pmeGrid[x*_pmeGridDimensions[1]*_pmeGridDimensions[2]+y*_pmeGridDimensions[2]+z];
+                    gridValue += complex<double>(term01*v[0] + term11*v[1], term02*v[0] + term12*v[1]);
                 }
             }
         }
@@ -5697,15 +5695,15 @@ void AmoebaReferencePmeMultipoleForce::computeInducedPotentialFromGrid()
                 for (int ix = 0; ix < AMOEBA_PME_ORDER; ix++) {
                     int i = gridPoint[0]+ix-(gridPoint[0]+ix >= _pmeGridDimensions[0] ? _pmeGridDimensions[0] : 0);
                     int gridIndex = i*_pmeGridDimensions[1]*_pmeGridDimensions[2] + j*_pmeGridDimensions[2] + k;
-                    t_complex tq = _pmeGrid[gridIndex];
+                    complex<double> tq = _pmeGrid[gridIndex];
                     double4 tadd = _thetai[0][m*AMOEBA_PME_ORDER+ix];
-                    t0_1 += tq.re*tadd[0];
-                    t1_1 += tq.re*tadd[1];
-                    t2_1 += tq.re*tadd[2];
-                    t0_2 += tq.im*tadd[0];
-                    t1_2 += tq.im*tadd[1];
-                    t2_2 += tq.im*tadd[2];
-                    t3 += (tq.re+tq.im)*tadd[3];
+                    t0_1 += tq.real()*tadd[0];
+                    t1_1 += tq.real()*tadd[1];
+                    t2_1 += tq.real()*tadd[2];
+                    t0_2 += tq.imag()*tadd[0];
+                    t1_2 += tq.imag()*tadd[1];
+                    t2_2 += tq.imag()*tadd[2];
+                    t3 += (tq.real()+tq.imag())*tadd[3];
                 }
                 tu00_1 += t0_1*u[0];
                 tu10_1 += t1_1*u[0];
@@ -6049,9 +6047,14 @@ void AmoebaReferencePmeMultipoleForce::calculateReciprocalSpaceInducedDipoleFiel
 
     initializePmeGrid();
     spreadInducedDipolesOnGrid(*updateInducedDipoleFields[0].inducedDipoles, *updateInducedDipoleFields[1].inducedDipoles);
-    fftpack_exec_3d(_fftplan, FFTPACK_FORWARD, _pmeGrid, _pmeGrid);
+    vector<size_t> shape = {(size_t) _pmeGridDimensions[0], (size_t) _pmeGridDimensions[1], (size_t) _pmeGridDimensions[2]};
+    vector<size_t> axes = {0, 1, 2};
+    vector<ptrdiff_t> stride = {(ptrdiff_t) (_pmeGridDimensions[1]*_pmeGridDimensions[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) (_pmeGridDimensions[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) sizeof(complex<double>)};
+    pocketfft::c2c(shape, stride, stride, axes, true, _pmeGrid, _pmeGrid, 1.0, 0);
     performAmoebaReciprocalConvolution();
-    fftpack_exec_3d(_fftplan, FFTPACK_BACKWARD, _pmeGrid, _pmeGrid);
+    pocketfft::c2c(shape, stride, stride, axes, false, _pmeGrid, _pmeGrid, 1.0, 0);
     computeInducedPotentialFromGrid();
     recordInducedDipoleField(updateInducedDipoleFields[0].inducedDipoleField, updateInducedDipoleFields[1].inducedDipoleField);
 }

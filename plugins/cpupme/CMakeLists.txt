@@ -65,7 +65,7 @@ IF(NOT MSVC)
 ENDIF()
 
 # Include PocketFFT.
-INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/libraries/pocketfft")
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/libraries/include/pocketfft")
 
 # Build the shared plugin library.
 IF (OPENMM_BUILD_SHARED_LIB)

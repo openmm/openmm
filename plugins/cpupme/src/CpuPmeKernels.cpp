@@ -32,6 +32,9 @@
 #ifdef WIN32
   #define _USE_MATH_DEFINES // Needed to get M_PI
 #endif
+#ifdef _MSC_VER
+  #define POCKETFFT_NO_VECTORS
+#endif
 #define POCKETFFT_CACHE_SIZE 4
 #include "CpuPmeKernels.h"
 #include "SimTKOpenMMRealType.h"
