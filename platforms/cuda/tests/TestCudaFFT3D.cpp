@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the CUDA implementation of sorting.
+ * This tests the CUDA implementation of FFT.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
