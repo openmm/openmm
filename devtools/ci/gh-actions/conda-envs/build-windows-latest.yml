@@ -12,7 +12,6 @@ dependencies:
 - python
 - cython
 - swig
-- fftw
 - numpy
 - doxygen 1.8.14
 - khronos-opencl-icd-loader
