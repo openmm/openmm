@@ -1812,7 +1812,8 @@ public:
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<force->getForceGroup())) == 0)
             return 0;
-        cc.getWorkThread().flush();
+        if (!cc.getWorkThread().isCurrentThread())
+            cc.getWorkThread().flush();
         Vec3 a, b, c;
         cc.getPeriodicBoxVectors(a, b, c);
         double volume = a[0]*b[1]*c[2];
