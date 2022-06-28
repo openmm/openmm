@@ -756,6 +756,8 @@ File                 Water Model
 :code:`tip5p.xml`    TIP5P water model\ :cite:`Mahoney2000`
 :code:`spce.xml`     SPC/E water model\ :cite:`Berendsen1987`
 :code:`swm4ndp.xml`  SWM4-NDP water model\ :cite:`Lamoureux2006`
+:code:`opc.xml`      OPC water model\ :cite:`Izadi2014`
+:code:`opc3.xml`     OPC3 water model\ :cite:`Izadi2016`
 ===================  ============================================
 
 Small molecule parameters

@@ -1,0 +1,37 @@
+<ForceField>
+ <Info>
+  <DateGenerated>2022-06-21</DateGenerated>
+  <Reference>Izadi S, Anandakrishnan R, Onufriev AV. Building Water Models: A Different Approach. The Journal of Physical Chemistry Letters. 2014 Nov 6;5(21):3863-71. DOI:10.1021/jz501780a</Reference>
+ </Info>
+ <AtomTypes>
+  <Type name="opc-O" class="OW" element="O" mass="16.00000"/>
+  <Type name="opc-H" class="HW" element="H" mass="1.00800"/>
+  <Type name="opc-M" class="MW" mass="0"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="HOH">
+   <Atom name="O" type="opc-O"/>
+   <Atom name="H1" type="opc-H"/>
+   <Atom name="H2" type="opc-H"/>
+   <Atom name="M" type="opc-M"/>
+   <!-- weight2 = 0.15939833/(2*(cos(angle/2) * 0.87243313)) -->
+   <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.7045587810585758" weight2="0.1477206094707121" weight3="0.1477206094707121"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="2"/>
+  </Residue>
+ </Residues>
+ <HarmonicBondForce>
+  <Bond class1="OW" class2="HW" length="0.087243313" k="502416.0"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <!-- angle = arccos(1 - (1.37120510**2 / (2*0.87243313**2))) -->
+  <Angle class1="HW" class2="OW" class3="HW" angle="1.8081424254418306" k="628.02"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+  <!-- sigma = (1.777167268 * 2 / (2**(1/6)))*unit.angstrom/unit.nanometer -->
+  <!-- epsilon = (0.2128008130*unit.kilocalorie)/(unit.kilojoule) -->
+  <Atom type="opc-O" charge="0" sigma="0.3166552081964338" epsilon="0.8903586015920001"/>
+  <Atom type="opc-H" charge="0.679142" sigma="0.08908987181403394" epsilon="0"/>
+  <Atom type="opc-M" charge="-1.358284" sigma="0.08908987181403394" epsilon="0"/>
+ </NonbondedForce>
+</ForceField>

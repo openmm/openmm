@@ -1264,6 +1264,67 @@ self.scriptExecuted = True
         energy2 = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
         self.assertAlmostEqual(energy1, energy2)
 
+    def test_OpcEnergy(self):
+        pdb = PDBFile('systems/opcbox.pdb')
+        topology, positions = pdb.topology, pdb.positions
+        self.assertEqual(len(positions), 864)
+        forcefield = ForceField('opc.xml')
+        system = forcefield.createSystem(
+            topology,
+            nonbondedMethod=PME,
+            nonbondedCutoff=0.7*nanometer,
+            constraints=HBonds,
+            rigidWater=True,
+        )
+
+        integrator = LangevinIntegrator(300*kelvin, 2.0/picoseconds, 2.0*femtoseconds)
+        simulation = Simulation(topology, system, integrator)
+        context = simulation.context
+        context.setPositions(positions)
+
+        # Compare to values computed with Amber (sander).
+        energy_amber = -2647.6233 # kcal/mol
+        energy_tolerance = 1.0
+
+        state = context.getState(getEnergy=True)
+        energy1 = state.getPotentialEnergy().value_in_unit(kilocalorie_per_mole)
+        # -2647.2222697324237
+        self.assertTrue(abs(energy1 - energy_amber) < energy_tolerance)
+
+        context.applyConstraints(1e-12)
+        state = context.getState(getEnergy=True)
+        energy2 = state.getPotentialEnergy().value_in_unit(kilocalorie_per_mole)
+        # -2647.441600693312
+        self.assertTrue(abs(energy1 - energy_amber) < energy_tolerance)
+        self.assertTrue(abs(energy1 - energy2) < energy_tolerance)
+
+    def test_Opc3Energy(self):
+        pdb = PDBFile('systems/opc3box.pdb')
+        topology, positions = pdb.topology, pdb.positions
+        self.assertEqual(len(positions), 648)
+        forcefield = ForceField('opc3.xml')
+        system = forcefield.createSystem(
+            topology,
+            nonbondedMethod=PME,
+            nonbondedCutoff=0.7*nanometer,
+            constraints=HBonds,
+            rigidWater=True,
+        )
+
+        integrator = LangevinIntegrator(300*kelvin, 2.0/picoseconds, 2.0*femtoseconds)
+        simulation = Simulation(topology, system, integrator)
+        context = simulation.context
+        context.setPositions(positions)
+
+        # Compare to values computed with Amber (sander).
+        energy_amber = -2532.1414 # kcal/mol
+        energy_tolerance = 1.0
+
+        state = context.getState(getEnergy=True)
+        energy1 = state.getPotentialEnergy().value_in_unit(kilocalorie_per_mole)
+        # -2532.4862082354407
+        self.assertTrue(abs(energy1 - energy_amber) < energy_tolerance)
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 
