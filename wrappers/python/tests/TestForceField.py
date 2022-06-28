@@ -1265,7 +1265,7 @@ self.scriptExecuted = True
         self.assertAlmostEqual(energy1, energy2)
 
     def test_OpcEnergy(self):
-        pdb = PDBFile('../openmm/app/data/opcbox.pdb')
+        pdb = PDBFile('systems/opcbox.pdb')
         topology, positions = pdb.topology, pdb.positions
         self.assertEqual(len(positions), 864)
         forcefield = ForceField('opc.xml')
@@ -1299,10 +1299,10 @@ self.scriptExecuted = True
         self.assertTrue(abs(energy1 - energy2) < energy_tolerance)
 
     def test_Opc3Energy(self):
-        pdb = app.PDBFile('../openmm/app/data/opc3box.pdb')
+        pdb = PDBFile('systems/opc3box.pdb')
         topology, positions = pdb.topology, pdb.positions
         self.assertEqual(len(positions), 648)
-        forcefield = app.ForceField('opc3.xml')
+        forcefield = ForceField('opc3.xml')
         system = forcefield.createSystem(
             topology,
             nonbondedMethod=PME,
