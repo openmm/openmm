@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the OpenCL implementation of sorting.
+ * This tests the OpenCL implementation of FFT.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
@@ -38,12 +38,16 @@
 #include "OpenCLContext.h"
 #include "OpenCLFFT3D.h"
 #include "OpenCLSort.h"
-#include "fftpack.h"
 #include "sfmt/SFMT.h"
 #include "openmm/System.h"
+#include <complex>
 #include <iostream>
 #include <cmath>
 #include <set>
+#ifdef _MSC_VER
+  #define POCKETFFT_NO_VECTORS
+#endif
+#include "pocketfft_hdronly.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -60,17 +64,17 @@ void testTransform(bool realToComplex, int xsize, int ysize, int zsize) {
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     vector<Real2> original(xsize*ysize*zsize);
-    vector<t_complex> reference(original.size());
+    vector<complex<double> > reference(original.size());
     for (int i = 0; i < (int) original.size(); i++) {
         Real2 value = Real2((cl_float) genrand_real2(sfmt), (cl_float) genrand_real2(sfmt));
         original[i] = value;
-        reference[i] = t_complex(value.x, value.y);
+        reference[i] = complex<double>(value.x, value.y);
     }
     for (int i = 0; i < (int) reference.size(); i++) {
         if (realToComplex)
-            reference[i] = t_complex(i%2 == 0 ? original[i/2].x : original[i/2].y, 0);
+            reference[i] = complex<double>(i%2 == 0 ? original[i/2].x : original[i/2].y, 0);
         else
-            reference[i] = t_complex(original[i].x, original[i].y);
+            reference[i] = complex<double>(original[i].x, original[i].y);
     }
     OpenCLArray grid1(context, original.size(), sizeof(Real2), "grid1");
     OpenCLArray grid2(context, original.size(), sizeof(Real2), "grid2");
@@ -82,19 +86,21 @@ void testTransform(bool realToComplex, int xsize, int ysize, int zsize) {
     fft.execFFT(grid1, grid2, true);
     vector<Real2> result;
     grid2.download(result);
-    fftpack_t plan;
-    fftpack_init_3d(&plan, xsize, ysize, zsize);
-    fftpack_exec_3d(plan, FFTPACK_FORWARD, &reference[0], &reference[0]);
+    vector<size_t> shape = {(size_t) xsize, (size_t) ysize, (size_t) zsize};
+    vector<size_t> axes = {0, 1, 2};
+    vector<ptrdiff_t> stride = {(ptrdiff_t) (ysize*zsize*sizeof(complex<double>)),
+                                (ptrdiff_t) (zsize*sizeof(complex<double>)),
+                                (ptrdiff_t) sizeof(complex<double>)};
+    pocketfft::c2c(shape, stride, stride, axes, true, reference.data(), reference.data(), 1.0);
     int outputZSize = (realToComplex ? zsize/2+1 : zsize);
     for (int x = 0; x < xsize; x++)
         for (int y = 0; y < ysize; y++)
             for (int z = 0; z < outputZSize; z++) {
                 int index1 = x*ysize*zsize + y*zsize + z;
                 int index2 = x*ysize*outputZSize + y*outputZSize + z;
-                ASSERT_EQUAL_TOL(reference[index1].re, result[index2].x, 1e-3);
-                ASSERT_EQUAL_TOL(reference[index1].im, result[index2].y, 1e-3);
+                ASSERT_EQUAL_TOL(reference[index1].real(), result[index2].x, 1e-3);
+                ASSERT_EQUAL_TOL(reference[index1].imag(), result[index2].y, 1e-3);
             }
-    fftpack_destroy(plan);
 
     // Perform a backward transform and see if we get the original values.
 

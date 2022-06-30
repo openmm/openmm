@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2022 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,7 +28,6 @@
 #include "openmm/Vec3.h"
 #include "AmoebaReferenceGeneralizedKirkwoodForce.h"
 #include <map>
-#include "fftpack.h"
 #include <complex>
 
 namespace OpenMM {
@@ -1474,10 +1473,8 @@ private:
     int _totalGridSize;
     IntVec _pmeGridDimensions;
 
-    fftpack_t   _fftplan;
-
     unsigned int _pmeGridSize;
-    t_complex* _pmeGrid;
+    std::complex<double>* _pmeGrid;
  
     std::vector<double> _pmeBsplineModuli[3];
     std::vector<double4> _thetai[3];

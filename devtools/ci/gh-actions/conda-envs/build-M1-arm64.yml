@@ -10,7 +10,6 @@ dependencies:
 - python
 - cython
 - swig
-- fftw
 - numpy
 - doxygen 1.9.1
 # test

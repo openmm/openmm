@@ -29,4 +29,4 @@ yum install -y libgcrypt
 
 # Ensure configuration is up to date.
 conda config --add channels omnia
-conda install --yes --quiet swig fftw3f pip doxygen sphinx sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen lxml cmake
+conda install --yes --quiet swig pip doxygen sphinx sphinxcontrib-bibtex sphinxcontrib-lunrsearch sphinxcontrib-autodoc_doxygen lxml cmake

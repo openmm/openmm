@@ -35,9 +35,7 @@ The OpenCL Platform recognizes the following Platform-specific properties:
   is the most accurate option, but is usually much slower than the others.
 * UseCpuPme: This selects whether to use the CPU-based PME
   implementation.  The allowed values are “true” or “false”.  Depending on your
-  hardware, this might (or might not) improve performance.  To use this option,
-  you must have FFTW (single precision, multithreaded) installed, and your CPU
-  must support SSE 4.1.
+  hardware, this might (or might not) improve performance.
 * OpenCLPlatformIndex: When multiple OpenCL implementations are installed on
   your computer, this is used to select which one to use.  The value is the
   zero-based index of the platform (in the OpenCL sense, not the OpenMM sense) to use,
@@ -74,9 +72,7 @@ The CUDA Platform recognizes the following Platform-specific properties:
   is the most accurate option, but is usually much slower than the others.
 * UseCpuPme: This selects whether to use the CPU-based PME implementation.
   The allowed values are “true” or “false”.  Depending on your hardware, this
-  might (or might not) improve performance.  To use this option, you must have
-  FFTW (single precision, multithreaded) installed, and your CPU must support SSE
-  4.1.
+  might (or might not) improve performance.
 * CudaCompiler: This specifies the path to the CUDA kernel compiler.  Versions
   of CUDA before 7.0 require a separate compiler executable.  If you do
   not specify this, OpenMM will try to locate the compiler itself.  Specify this
