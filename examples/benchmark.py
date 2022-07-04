@@ -463,16 +463,16 @@ POLARIZATION_MODES = ('direct', 'extrapolated', 'mutual')
 STYLES = ('simple', 'rich')
 
 parser = ArgumentParser()
-parser.add_argument('--platform', default=None, dest='platform', help=f'name of the platform to benchmark, or comma-separated list (CUDA,OpenCL): {PLATFORMS} [default: all]')
-parser.add_argument('--test', default=None, dest='test', help=f'the test to perform, or comma-separated list (pme,rf): {TESTS} [default: all]')
-parser.add_argument('--ensemble', default=None, dest='ensemble', help=f'the thermodynamic ensemble to simulate: {ENSEMBLES} [default: all]')
+parser.add_argument('--platform', default=None, dest='platform', help=f'name of the platform to benchmark, or comma-separated list: {PLATFORMS} [default: all]')
+parser.add_argument('--test', default=None, dest='test', help=f'the test to perform, or comma-separated list: {TESTS} [default: all]')
+parser.add_argument('--ensemble', default=None, dest='ensemble', help=f'the thermodynamic ensemble to simulate: {ENSEMBLES} [default: NVT]')
 parser.add_argument('--pme-cutoff', default=0.9, dest='pme_cutoff', type=float, help='direct space cutoff for PME in nm [default: 0.9]')
 parser.add_argument('--seconds', default=60, dest='seconds', type=float, help='target simulation length in seconds [default: 60]')
 parser.add_argument('--polarization', default='mutual', dest='polarization', choices=POLARIZATION_MODES, help='the polarization method for AMOEBA: {POLARIZATION_MODES} [default: mutual]')
 parser.add_argument('--mutual-epsilon', default=1e-5, dest='epsilon', type=float, help='mutual induced epsilon for AMOEBA [default: 1e-5]')
-parser.add_argument('--bond-constraints', default=None, dest='bond_constraints', help='hbonds: constrain bonds to hydrogen, use 1.5*amu H mass; allbonds: constrain all bonds, use 4*amu H mass [default: all]')
+parser.add_argument('--bond-constraints', default=None, dest='bond_constraints', help='hbonds: constrain bonds to hydrogen, use 1.5*amu H mass; allbonds: constrain all bonds, use 4*amu H mass: {BOND_CONSTRAINTS} [default: hbonds]')
 parser.add_argument('--device', default=None, dest='device', help='device index for CUDA or OpenCL')
-parser.add_argument('--precision', default=None, dest='precision', help=f'precision mode for CUDA or OpenCL: {PRECISIONS} [default: all]')
+parser.add_argument('--precision', default=None, dest='precision', help=f'precision mode for CUDA or OpenCL: {PRECISIONS} [default: single]')
 parser.add_argument('--style', default='simple', dest='style', choices=STYLES, help=f'output style: {STYLES} [default: simple]')
 parser.add_argument('--outfile', default=None, dest='outfile', help='output filename for benchmark logging (must end with .yaml or .json)')
 parser.add_argument('--serialize', default=None, dest='serialize', help='if specified, output serialized test systems for Folding@home or other uses')
@@ -530,6 +530,8 @@ if args.precision is not None:
     if not set(requested_precisions).issubset(PRECISIONS):
         parser.error(f'Available precisions: {PRECISIONS}')
     PRECISIONS = requested_precisions
+else:
+    PRECISIONS = ['single'] # Peter's preferred default
 
 if args.ensemble is not None:
     # Use specified subset of ensembles
@@ -537,6 +539,8 @@ if args.ensemble is not None:
     if not set(requested_ensembles).issubset(ENSEMBLES):
         parser.error(f'Available ensembles: {ENSEMBLES}')
     ENSEMBLES = requested_ensembles
+else:
+    ENSEMBLES = ['NVT'] # Peter's preferred default
 
 if args.bond_constraints is not None:
     # Use specified subset of constraints
@@ -544,6 +548,8 @@ if args.bond_constraints is not None:
     if not set(requested_bond_constraints).issubset(BOND_CONSTRAINTS):
         parser.error(f'Available bond constraints: {BOND_CONSTRAINTS}')
     BOND_CONSTRAINTS = requested_bond_constraints
+else:
+    BOND_CONSTRAINTS = ['hbonds'] # Peter's preferred default
 
 # Combinatorially run all requested benchmarks, ignoring combinations that cannot be run
 from openmm import OpenMMException
