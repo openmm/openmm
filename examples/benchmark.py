@@ -149,6 +149,8 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
         The test system object
     positions : openmm.unit.Quantity with shape (natoms,3)
         The initial positions
+    test_parameters : dict of str : str
+        Special test parameters to report in test results
 
     """
     explicit = (testName not in ('gbsa', 'amoebagk'))
@@ -157,9 +159,16 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
     amber = (testName.startswith('amber'))
     hydrogenMass = None
 
+    # Create dictionary of test parameters
+    test_parameters = dict()
+
+    # Store the test name
+    test_parameters['test'] = testName
+
     # Create the System.
     if amoeba:
         constraints = None
+        test_parameters['epsilon'] = epsilon
         epsilon = float(epsilon)
         if explicit:
             ff = app.ForceField('amoeba2009.xml')
@@ -175,6 +184,8 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
             if isinstance(f, mm.AmoebaMultipoleForce) or isinstance(f, mm.AmoebaVdwForce) or isinstance(f, mm.AmoebaGeneralizedKirkwoodForce) or isinstance(f, mm.AmoebaWcaDispersionForce):
                 f.setForceGroup(1)
         positions = pdb.positions
+        test_parameters['constraints'] = 'None'
+        test_parameters['hydrogen_mass'] = '1'
     elif amber:
         dirname = downloadAmberSuite()
         names = {'amber20-dhfr':'JAC', 'amber20-factorix':'FactorIX', 'amber20-cellulose':'Cellulose', 'amber20-stmv':'STMV'}
@@ -189,6 +200,9 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
         system = prmtop.createSystem(nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints)
         if inpcrd.boxVectors is not None:
             system.setDefaultPeriodicBoxVectors(*inpcrd.boxVectors)
+        test_parameters['cutoff'] = cutoff
+        test_parameters['constraints'] = 'HBonds'
+        test_parameters['hydrogen_mass'] = '1.5'
     else:
         if apoa1:
             ff = app.ForceField('amber14/protein.ff14SB.xml', 'amber14/lipid17.xml', 'amber14/tip3p.xml')
@@ -221,16 +235,22 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
         if bond_constraints == 'hbonds':
             constraints = app.HBonds
             hydrogenMass = 1.5*unit.amu
+            test_parameters['constraints'] = 'HBonds'
+            test_parameters['hydrogen_mass'] = '1.5'
         elif bond_constraints == 'allbonds':
-            constraints = app.AllBonds # JDC: Isn't constraining all bonds problematic?
+            constraints = app.AllBonds # CAUTION: Constraining all bonds will perturb the effective dihedral marginal distributions.
             hydrogenMass = 4*unit.amu
+            test_parameters['constraints'] = 'AllBonds'
+            test_parameters['hydrogen_mass'] = '4'
         else:
             raise ValueError(f"bond_constraints must be one of 'hbonds', 'allbonds': found {bond_constraints}")
+            
+        test_parameters['cutoff'] = f'{cutoff / unit.nanometers:.3f}'
 
         positions = pdb.positions
         system = ff.createSystem(pdb.topology, nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints, hydrogenMass=hydrogenMass)
 
-    return system, positions
+    return system, positions, test_parameters
 
 def serializeTest(directory=None, system=None, integrator=None, state=None, coredata=None, metadata=None):
     """Serialize test system for benchmarking on Folding@home.
@@ -288,38 +308,20 @@ def runOneTest(testName, options):
        or ((options.platform == 'CPU') and (options.precision != 'mixed')):
         return
 
-    system, positions = retrieveTestSystem(testName, pme_cutoff=options.pme_cutoff, bond_constraints=options.bond_constraints, polarization=options.polarization, epsilon=options.epsilon)
+    system, positions, test_parameters = retrieveTestSystem(testName, pme_cutoff=options.pme_cutoff, bond_constraints=options.bond_constraints, polarization=options.polarization, epsilon=options.epsilon)
 
-    test_result = dict()
-    test_result['test'] = testName
+    # Create a copy of the basic test_parameters dict (which may be cached) to report the test results
+    test_result = test_parameters.copy()
+
+    # Store the ensemble
+    test_result['ensemble'] = options.ensemble
 
     explicit = (testName not in ('gbsa', 'amoebagk'))
     amoeba = (testName in ('amoebagk', 'amoebapme'))
     apoa1 = testName.startswith('apoa1')
     amber = (testName.startswith('amber'))
-    hydrogenMass = None
-
-    if amoeba:
-        test_result['epsilon'] = options.epsilon
-    elif (testName in ['pme', 'ljpme']) or testName.startswith('amber'):
-        test_result['cutoff'] = options.pme_cutoff
-
-    if amoeba:
-        test_result['constraints'] = 'None'
-        test_result['hydrogen_mass'] = '1'
-    elif options.bond_constraints == 'hbonds':
-        test_result['constraints'] = 'HBonds'
-        test_result['hydrogen_mass'] = '1.5'
-    elif options.bond_constraints == 'allbonds':
-        test_result['constraints'] = 'AllBonds'
-        test_result['hydrogen_mass'] = '4'
-    else:
-        raise ValueError(f'Unknown bond_constraints: {bond_constraints}')
-
-    test_result['ensemble'] = options.ensemble
-
+    
     # Create the integrator
-
     temperature = 300*unit.kelvin
     if explicit:
         friction = 1*(1/unit.picoseconds)
@@ -346,7 +348,6 @@ def runOneTest(testName, options):
                 integ = mm.LangevinMiddleIntegrator(temperature, friction, dt)
         elif options.bond_constraints == 'allbonds':
             dt = 0.005*unit.picoseconds
-            hydrogenMass = 4*unit.amu
             if options.ensemble == 'NVE':
                 integ = mm.VerletIntegrator(dt)
             else:
@@ -361,8 +362,6 @@ def runOneTest(testName, options):
         properties['DeviceIndex'] = options.device
         if ',' in options.device or ' ' in options.device:
             initialSteps = 250
-    if options.precision is not None and options.platform in ('CUDA', 'OpenCL'):
-        properties['Precision'] = options.precision
 
     # Add barostat if requested
     if options.ensemble == 'NPT':
@@ -380,6 +379,8 @@ def runOneTest(testName, options):
     platform = context.getPlatform()
     test_result['precision'] = options.precision # requested precision
     test_result['platform'] = platform.getName()
+    if (options.precision is not None) and ('Precision' in platform.getPropertyNames()):
+        properties['Precision'] = options.precision
     test_result['platform_properties'] = { property_name : platform.getPropertyValue(context, property_name) for property_name in platform.getPropertyNames() }
 
     # Prepare the simulation
@@ -463,16 +464,16 @@ POLARIZATION_MODES = ('direct', 'extrapolated', 'mutual')
 STYLES = ('simple', 'rich')
 
 parser = ArgumentParser()
-parser.add_argument('--platform', default=None, dest='platform', help=f'name of the platform to benchmark, or comma-separated list: {PLATFORMS} [default: all]')
-parser.add_argument('--test', default=None, dest='test', help=f'the test to perform, or comma-separated list: {TESTS} [default: all]')
-parser.add_argument('--ensemble', default=None, dest='ensemble', help=f'the thermodynamic ensemble to simulate: {ENSEMBLES} [default: NVT]')
+parser.add_argument('--platform', default=','.join(PLATFORMS), dest='platform', help=f'name of the platform to benchmark, or comma-separated list: {PLATFORMS} [default: all]')
+parser.add_argument('--test', default=','.join(TESTS), dest='test', help=f'the test to perform, or comma-separated list: {TESTS} [default: all]')
+parser.add_argument('--ensemble', default='NVT', dest='ensemble', help=f'the thermodynamic ensemble to simulate: {ENSEMBLES} [default: NVT]')
 parser.add_argument('--pme-cutoff', default=0.9, dest='pme_cutoff', type=float, help='direct space cutoff for PME in nm [default: 0.9]')
 parser.add_argument('--seconds', default=60, dest='seconds', type=float, help='target simulation length in seconds [default: 60]')
 parser.add_argument('--polarization', default='mutual', dest='polarization', choices=POLARIZATION_MODES, help=f'the polarization method for AMOEBA: {POLARIZATION_MODES} [default: mutual]')
 parser.add_argument('--mutual-epsilon', default=1e-5, dest='epsilon', type=float, help='mutual induced epsilon for AMOEBA [default: 1e-5]')
-parser.add_argument('--bond-constraints', default=None, dest='bond_constraints', help=f'hbonds: constrain bonds to hydrogen, use 1.5*amu H mass; allbonds: constrain all bonds, use 4*amu H mass, and use larger timestep (if not AMOEBA): {BOND_CONSTRAINTS} [default: hbonds]')
+parser.add_argument('--bond-constraints', default='hbonds', dest='bond_constraints', help=f'hbonds: constrain bonds to hydrogen, use 1.5*amu H mass; allbonds: constrain all bonds, use 4*amu H mass, and use larger timestep. This option is ignored for AMOEBA: {BOND_CONSTRAINTS} [default: hbonds]')
 parser.add_argument('--device', default=None, dest='device', help='device index for CUDA or OpenCL')
-parser.add_argument('--precision', default=None, dest='precision', help=f'precision mode for CUDA or OpenCL: {PRECISIONS} [default: single]')
+parser.add_argument('--precision', default='single', dest='precision', help=f'precision modes for CUDA or OpenCL: {PRECISIONS} [default: single]')
 parser.add_argument('--style', default='simple', dest='style', choices=STYLES, help=f'output style: {STYLES} [default: simple]')
 parser.add_argument('--outfile', default=None, dest='outfile', help='output filename for benchmark logging (must end with .yaml or .json)')
 parser.add_argument('--serialize', default=None, dest='serialize', help='if specified, output serialized test systems for Folding@home or other uses')
@@ -510,53 +511,32 @@ if args.outfile is not None:
     # Write system info
     appendTestResult(args.outfile, system_info=system_info)
 
-if args.platform is not None:
-    # Use specified subset of platforms
-    requested_platforms = args.platform.split(',')
-    if not set(requested_platforms).issubset(PLATFORMS):
-        parser.error(f'Available platforms: {PLATFORMS}')
-    PLATFORMS = requested_platforms
+platforms = args.platform.split(',')
+if not set(platforms).issubset(PLATFORMS):
+    parser.error(f'Available platforms: {PLATFORMS}')
 
-if args.test is not None:
-    # Use specified subset of tests
-    requested_tests = args.test.split(',')
-    if not set(requested_tests).issubset(TESTS):
-        parser.error(f'Available tests: {TESTS}')
-    TESTS = requested_tests
+tests = args.test.split(',')
+if not set(tests).issubset(TESTS):
+    parser.error(f'Available tests: {TESTS}')
 
-if args.precision is not None:
-    # Use specified subset of precisions
-    requested_precisions = args.precision.split(',')
-    if not set(requested_precisions).issubset(PRECISIONS):
-        parser.error(f'Available precisions: {PRECISIONS}')
-    PRECISIONS = requested_precisions
-else:
-    PRECISIONS = ['single'] # Peter's preferred default
+precisions = args.precision.split(',')
+if not set(precisions).issubset(PRECISIONS):
+    parser.error(f'Available precisions: {PRECISIONS}')
 
-if args.ensemble is not None:
-    # Use specified subset of ensembles
-    requested_ensembles = args.ensemble.split(',')
-    if not set(requested_ensembles).issubset(ENSEMBLES):
-        parser.error(f'Available ensembles: {ENSEMBLES}')
-    ENSEMBLES = requested_ensembles
-else:
-    ENSEMBLES = ['NVT'] # Peter's preferred default
+ensembles = args.ensemble.split(',')
+if not set(ensembles).issubset(ENSEMBLES):
+    parser.error(f'Available ensembles: {ENSEMBLES}')
 
-if args.bond_constraints is not None:
-    # Use specified subset of constraints
-    requested_bond_constraints = args.bond_constraints.split(',')
-    if not set(requested_bond_constraints).issubset(BOND_CONSTRAINTS):
-        parser.error(f'Available bond constraints: {BOND_CONSTRAINTS}')
-    BOND_CONSTRAINTS = requested_bond_constraints
-else:
-    BOND_CONSTRAINTS = ['hbonds'] # Peter's preferred default
+bond_constraints = args.bond_constraints.split(',')
+if not set(bond_constraints).issubset(BOND_CONSTRAINTS):
+    parser.error(f'Available bond constraints: {BOND_CONSTRAINTS}')
 
 # Combinatorially run all requested benchmarks, ignoring combinations that cannot be run
 from openmm import OpenMMException
 from itertools import product
 
 if args.style == 'simple':
-    for (test, args.bond_constraints, args.ensemble, args.platform, args.precision) in product(TESTS, BOND_CONSTRAINTS, ENSEMBLES, PLATFORMS, PRECISIONS):
+    for (test, args.bond_constraints, args.ensemble, args.platform, args.precision) in product(tests, bond_constraints, ensembles, platforms, precisions):
         try:
             runOneTest(test, args)
         except OpenMMException as e:
