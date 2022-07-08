@@ -125,7 +125,7 @@ def downloadAmberSuite():
     return dirname
 
 import functools
-@functools.cache
+@functools.lru_cache(maxsize=None)
 def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', polarization='mutual', epsilon=1e-5):
     """Retrieve a benchmark system
 
