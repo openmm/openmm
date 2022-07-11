@@ -83,7 +83,7 @@ find_library(OPENCL_LIBRARY
     PATH_SUFFIXES ${path_suffixes} "lib"
 )
 
-find_package_handle_standard_args(OPENCL DEFAULT_MSG OPENCL_LIBRARY OPENCL_INCLUDE_DIR)
+find_package_handle_standard_args(OpenCL DEFAULT_MSG OPENCL_LIBRARY OPENCL_INCLUDE_DIR)
 
 if(OPENCL_FOUND)
   set(OPENCL_LIBRARIES ${OPENCL_LIBRARY})
