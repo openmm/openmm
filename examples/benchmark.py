@@ -216,7 +216,7 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
             else:
                 # Reaction field uses hard-coded cutoff
                 method = app.CutoffPeriodic
-                cutoff = 1*unit.nanometers # JDC: Shouldn't this be larger for reaction field?
+                cutoff = 1.0 # nanometers ; JDC: Shouldn't this be larger for reaction field?
         elif explicit:
             ff = app.ForceField('amber99sb.xml', 'tip3p.xml')
             pdb = app.PDBFile('5dfr_solv-cube_equil.pdb')
@@ -226,12 +226,12 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
             else:
                 # Reaction field uses hard-coded cutoff
                 method = app.CutoffPeriodic
-                cutoff = 1*unit.nanometers # JDC: Shouldn't this be larger for reaction field?
+                cutoff = 1.0 # nanometers; JDC: Shouldn't this be larger for reaction field?
         else:
             ff = app.ForceField('amber99sb.xml', 'amber99_obc.xml')
             pdb = app.PDBFile('5dfr_minimized.pdb')
             method = app.CutoffNonPeriodic # JDC: Shouldn't this be app.NoCutoff?
-            cutoff = 2*unit.nanometers
+            cutoff = 2.0 # nanometers
         if bond_constraints == 'hbonds':
             constraints = app.HBonds
             hydrogenMass = 1.5*unit.amu
@@ -245,7 +245,7 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
         else:
             raise ValueError(f"bond_constraints must be one of 'hbonds', 'allbonds': found {bond_constraints}")
             
-        test_parameters['cutoff'] = f'{cutoff / unit.nanometers:.3f}'
+        test_parameters['cutoff'] = cutoff
 
         positions = pdb.positions
         system = ff.createSystem(pdb.topology, nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints, hydrogenMass=hydrogenMass)
@@ -390,8 +390,10 @@ def runOneTest(testName, options):
     context.setVelocitiesToTemperature(temperature)
 
     if options.serialize:
-        # Take a step to enforce constraints on positions and velocities if needing to serialize for Folding@home
-        integ.step(1)
+        # Apply constraints on positions and velocities if needing to serialize for Folding@home
+        tol = 1.0e-8
+        context.applyConstraints(tol)
+        context.applyVelocityConstraints(tol)
         state = context.getState(getPositions=True, getVelocities=True, getEnergy=True, getForces=True, getParameters=True)
 
     # Time integration, ensuring we trigger kernel compilation before we start timing
@@ -561,7 +563,7 @@ elif args.style == 'rich':
     setattr(args, 'rich_table', table)
 
     with Live(table, auto_refresh=False, vertical_overflow='visible') as live:
-        for (test, args.bond_constraints, args.ensemble, args.platform, args.precision) in product(TESTS, BOND_CONSTRAINTS, ENSEMBLES, PLATFORMS, PRECISIONS):
+        for (test, args.bond_constraints, args.ensemble, args.platform, args.precision) in product(tests, bond_constraints, ensembles, platforms, precisions):
             try:
                 setattr(args, 'rich_live', live)
                 runOneTest(test, args)
