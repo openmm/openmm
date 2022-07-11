@@ -389,9 +389,10 @@ def runOneTest(testName, options):
         mm.LocalEnergyMinimizer.minimize(context, 100*unit.kilojoules_per_mole/unit.nanometer)
     context.setVelocitiesToTemperature(temperature)
 
-    # Take one step (to enforce constraints and trigger kernel compulation) and store the initial state
-    integ.step(1)
-    state = context.getState(getPositions=True, getVelocities=True, getEnergy=True, getForces=True, getParameters=True)
+    if options.serialize:
+        # Take a step to enforce constraints on positions and velocities if needing to serialize for Folding@home
+        integ.step(1)
+        state = context.getState(getPositions=True, getVelocities=True, getEnergy=True, getForces=True, getParameters=True)
 
     # Time integration, ensuring we trigger kernel compilation before we start timing
     steps = 20
