@@ -377,7 +377,6 @@ def runOneTest(testName, options):
 
     # Store information about the Platform used by the Context
     platform = context.getPlatform()
-    test_result['precision'] = options.precision # requested precision
     test_result['platform'] = platform.getName()
     if (options.precision is not None) and ('Precision' in platform.getPropertyNames()):
         properties['Precision'] = options.precision
