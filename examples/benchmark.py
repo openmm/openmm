@@ -304,8 +304,11 @@ def runOneTest(testName, options):
     """Perform a single benchmarking simulation."""
 
     # Return if we do not support the requested precision
-    if ((options.platform == 'Reference') and (options.precision != 'double')) \
-       or ((options.platform == 'CPU') and (options.precision != 'mixed')):
+    if ((options.platform == 'Reference') and (options.precision != 'double')):
+        print("Skipping test because Reference platform only supports 'double' precision.")
+        return        
+    if ((options.platform == 'CPU') and (options.precision != 'mixed')):
+        print("Skipping test because CPU platform only supports 'mixed' precision.")
         return
 
     system, positions, test_parameters = retrieveTestSystem(testName, pme_cutoff=options.pme_cutoff, bond_constraints=options.bond_constraints, polarization=options.polarization, epsilon=options.epsilon)
