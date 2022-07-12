@@ -61,6 +61,9 @@ KERNEL void findAtomGridIndex(GLOBAL const real4* RESTRICT posq, GLOBAL int2* RE
 #ifdef SUPPORTS_64_BIT_ATOMICS
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 
+#if defined(USE_HIP) && !defined(AMD_RDNA)
+LAUNCH_BOUNDS_EXACT(128, 1)
+#endif
 KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
 #ifdef USE_FIXED_POINT_CHARGE_SPREADING
         GLOBAL mm_ulong* RESTRICT pmeGrid,
@@ -75,6 +78,10 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
         GLOBAL const real* RESTRICT charges
 #endif
         ) {
+// HIP-TODO: Workaround for RDNA, remove it when the compiler issue is fixed
+#if defined(USE_HIP)
+    (void)GLOBAL_ID;
+#endif
     // To improve memory efficiency, we divide indices along the z axis into
     // PME_ORDER blocks, where the data for each block is stored together.  We
     // can ensure that all threads write to the same block at the same time,
@@ -84,7 +91,7 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
     int blockSize = (int) ceil(GRID_SIZE_Z/(real) PME_ORDER);
     for (int i = LOCAL_ID; i < GRID_SIZE_Z+PME_ORDER; i += LOCAL_SIZE) {
         int zindex = i % GRID_SIZE_Z;
-	int block = zindex % PME_ORDER;
+        int block = zindex % PME_ORDER;
         zindexTable[i] = zindex/PME_ORDER + block*GRID_SIZE_X*GRID_SIZE_Y*blockSize;
     }
     SYNC_THREADS;
@@ -137,7 +144,7 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
 
         // Spread the charge from this atom onto each grid point.
 
-	int izoffset = (PME_ORDER-(gridIndex.z%PME_ORDER)) % PME_ORDER;
+        int izoffset = (PME_ORDER-(gridIndex.z%PME_ORDER)) % PME_ORDER;
         for (int ix = 0; ix < PME_ORDER; ix++) {
             int xbase = gridIndex.x+ix;
             xbase -= (xbase >= GRID_SIZE_X ? GRID_SIZE_X : 0);
@@ -149,7 +156,7 @@ KERNEL void gridSpreadCharge(GLOBAL const real4* RESTRICT posq,
                 ybase = (xbase+ybase)*blockSize;
                 real dxdy = dx*data[iy].y;
                 for (int i = 0; i < PME_ORDER; i++) {
-		    int iz = (i+izoffset) % PME_ORDER;
+                    int iz = (i+izoffset) % PME_ORDER;
                     int zindex = gridIndex.z+iz;
                     int index = ybase + zindexTable[zindex];
                     real add = dxdy*data[iz].z;
@@ -171,6 +178,10 @@ KERNEL void finishSpreadCharge(
         GLOBAL const real* RESTRICT grid1,
 #endif
         GLOBAL real* RESTRICT grid2) {
+// HIP-TODO: Workaround for RDNA, remove it when the compiler issue is fixed
+#if defined(USE_HIP)
+    (void)GLOBAL_ID;
+#endif
     // During charge spreading, we shuffled the order of indices along the z
     // axis to make memory access more efficient.  We now need to unshuffle
     // them.  If the values were accumulated as fixed point, we also need to
@@ -179,7 +190,7 @@ KERNEL void finishSpreadCharge(
     LOCAL int zindexTable[GRID_SIZE_Z];
     int blockSize = (int) ceil(GRID_SIZE_Z/(real) PME_ORDER);
     for (int i = LOCAL_ID; i < GRID_SIZE_Z; i += LOCAL_SIZE) {
-	int block = i % PME_ORDER;
+        int block = i % PME_ORDER;
         zindexTable[i] = i/PME_ORDER + block*GRID_SIZE_X*GRID_SIZE_Y*blockSize;
     }
     SYNC_THREADS;
@@ -503,6 +514,9 @@ KERNEL void gridEvaluateEnergy(GLOBAL real2* RESTRICT pmeGrid, GLOBAL mixed* RES
 #endif
 }
 
+#if defined(USE_HIP) && !defined(AMD_RDNA) && !defined(USE_DOUBLE_PRECISION)
+LAUNCH_BOUNDS_EXACT(128, 1)
+#endif
 KERNEL void gridInterpolateForce(GLOBAL const real4* RESTRICT posq, GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL const real* RESTRICT pmeGrid,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ, GLOBAL const int2* RESTRICT pmeAtomGridIndex,
