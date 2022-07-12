@@ -602,7 +602,7 @@ class Modeller(object):
             filteredWaters = []
             cells.cells = {}
             for i in range(len(lowerSkinPositions)):
-                cell = tuple((int(floor(lowerSkinPositions[i][j]/cells.cellSize[j]))%cells.numCells[j] for j in range(3)))
+                cell = cells.cellForPosition(lowerSkinPositions[i])
                 if cell in cells.cells:
                     cells.cells[cell].append(i)
                 else:
@@ -1587,6 +1587,8 @@ class _CellList(object):
         self.cells = {}
         self.numCells = tuple((max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)))
         self.cellSize = tuple((vectors[i][i]/self.numCells[i] for i in range(3)))
+        self.vectors = vectors
+        self.periodic = periodic
         invBox = Vec3(1.0/vectors[0][0], 1.0/vectors[1][1], 1.0/vectors[2][2])
         for i in range(len(self.positions)):
             pos = self.positions[i]
@@ -1595,19 +1597,26 @@ class _CellList(object):
                 pos -= floor(pos[1]*invBox[1])*vectors[1]
                 pos -= floor(pos[0]*invBox[0])*vectors[0]
                 self.positions[i] = pos
-            cell = tuple((int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)))
+            cell = self.cellForPosition(pos)
             if cell in self.cells:
                 self.cells[cell].append(i)
             else:
                 self.cells[cell] = [i]
 
+    def cellForPosition(self, pos):
+        if self.periodic:
+            invBox = Vec3(1.0/self.vectors[0][0], 1.0/self.vectors[1][1], 1.0/self.vectors[2][2])
+            pos = pos-floor(pos[2]*invBox[2])*self.vectors[2]
+            pos -= floor(pos[1]*invBox[1])*self.vectors[1]
+            pos -= floor(pos[0]*invBox[0])*self.vectors[0]
+        return tuple((int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)))
+
     def neighbors(self, pos):
-        centralCell = tuple((int(floor(pos[i]/self.cellSize[i])) for i in range(3)))
         offsets = (-1, 0, 1)
         for i in offsets:
             for j in offsets:
                 for k in offsets:
-                    cell = ((centralCell[0]+i+self.numCells[0])%self.numCells[0], (centralCell[1]+j+self.numCells[1])%self.numCells[1], (centralCell[2]+k+self.numCells[2])%self.numCells[2])
+                    cell = self.cellForPosition(Vec3(pos[0]+i*self.cellSize[0], pos[1]+j*self.cellSize[1], pos[2]+k*self.cellSize[2]))
                     if cell in self.cells:
                         for atom in self.cells[cell]:
                             yield atom
