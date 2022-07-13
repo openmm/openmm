@@ -16,5 +16,5 @@ ADD_CUSTOM_TARGET(CommonKernels DEPENDS ${KERNELS_CPP} ${KERNELS_H})
 
 # Install headers
 
-FILE(GLOB CORE_HEADERS include/openmm/common/*.h)
+FILE(GLOB CORE_HEADERS include/openmm/common/*.h ${KERNELS_H})
 INSTALL_FILES(/include/openmm/common FILES ${CORE_HEADERS})

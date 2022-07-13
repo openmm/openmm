@@ -87,7 +87,7 @@ INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_BINARY_DIR}/../common/src)
 
 # Install headers
 
-FILE(GLOB CORE_HEADERS include/*.h)
+FILE(GLOB CORE_HEADERS include/*.h ${KERNELS_H})
 INSTALL_FILES(/include/openmm/cuda FILES ${CORE_HEADERS})
 
 SUBDIRS (sharedTarget)
