@@ -142,12 +142,12 @@ void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
         mm_float4* posq = (mm_float4*) cl.getPinnedBuffer();
         cl.getPosq().download(posq);
     }
-    
+
     // Filling in the output array is done in parallel for speed.
-    
+
     cl.getPlatformData().threads.execute([&] (ThreadPool& threads, int threadIndex) {
         // Compute the position of each particle to return to the user.  This is done in parallel for speed.
-        
+
         const vector<int>& order = cl.getAtomIndex();
         int numParticles = cl.getNumAtoms();
         Vec3 boxVectors[3];
@@ -231,6 +231,8 @@ void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const vecto
     }
     for (auto& offset : cl.getPosCellOffsets())
         offset = mm_int4(0, 0, 0, 0);
+    // Force reordering of atoms after positions have been updated for efficiency
+    cl.setStepsSinceReorder(99999);
     cl.reorderAtoms();
 }
 
@@ -361,7 +363,7 @@ void OpenCLUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, co
             break;
         }
     }
-    
+
     // Update the vectors.
 
     for (auto ctx : contexts)
@@ -658,9 +660,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         double reactionFieldC = (1.0 / force.getCutoffDistance())*(3.0*force.getReactionFieldDielectric())/(2.0*force.getReactionFieldDielectric()+1.0);
         defines["REACTION_FIELD_K"] = cl.doubleToString(reactionFieldK);
         defines["REACTION_FIELD_C"] = cl.doubleToString(reactionFieldC);
-        
+
         // Compute the switching coefficients.
-        
+
         if (force.getUseSwitchingFunction()) {
             defines["LJ_SWITCH_CUTOFF"] = cl.doubleToString(force.getSwitchingDistance());
             defines["LJ_SWITCH_C3"] = cl.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
@@ -953,7 +955,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     }
 
     // Add the interaction to the default nonbonded kernel.
-    
+
     string source = cl.replaceStrings(CommonKernelSources::coulombLennardJones, defines);
     charges.initialize(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "charges");
     baseParticleParams.initialize<mm_float4>(cl, cl.getPaddedNumAtoms(), "baseParticleParams");
@@ -1006,7 +1008,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         if (force.getIncludeDirectSpace())
             cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(CommonKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }
-    
+
     // Initialize parameter offsets.
 
     vector<vector<mm_float4> > particleOffsetVec(force.getNumParticles());
@@ -1076,9 +1078,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     if (paramValues.size() > 0)
         globalParams.upload(paramValues, true);
     recomputeParams = true;
-    
+
     // Initialize the kernel for updating parameters.
-    
+
     cl::Program program = cl.createProgram(CommonKernelSources::nonbondedParameters, paramsDefines);
     computeParamsKernel = cl::Kernel(program, "computeParameters");
     computeExclusionParamsKernel = cl::Kernel(program, "computeExclusionParameters");
@@ -1126,7 +1128,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         }
         if (pmeGrid1.isInitialized()) {
             // Create kernels for Coulomb PME.
-            
+
             map<string, string> replacements;
             replacements["CHARGE"] = (usePosqCharges ? "pos.w" : "charges[atom]");
             cl::Program program = cl.createProgram(cl.replaceStrings(CommonKernelSources::pme, replacements), pmeDefines);
@@ -1260,7 +1262,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             }
        }
     }
-    
+
     // Update particle and exception parameters.
 
     bool paramChanged = false;
@@ -1290,9 +1292,9 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             energy = 0.0; // The Ewald self energy was computed in the kernel.
         recomputeParams = false;
     }
-    
+
     // Do reciprocal space calculations.
-    
+
     if (cosSinSums.isInitialized() && includeReciprocal) {
         mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
         if (cl.getUseDoublePrecision()) {
@@ -1309,9 +1311,9 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     if (pmeGrid1.isInitialized() && includeReciprocal) {
         if (usePmeQueue && !includeEnergy)
             cl.setQueue(pmeQueue);
-        
+
         // Invert the periodic box vectors.
-        
+
         Vec3 boxVectors[3];
         cl.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
@@ -1323,7 +1325,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         mm_float4 recipBoxVectorsFloat[3];
         for (int i = 0; i < 3; i++)
             recipBoxVectorsFloat[i] = mm_float4((float) recipBoxVectors[i].x, (float) recipBoxVectors[i].y, (float) recipBoxVectors[i].z, 0);
-        
+
         // Execute the reciprocal space kernels.
 
         if (hasCoulomb) {
@@ -1419,7 +1421,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             else
                 cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms());
         }
-        
+
         if (doLJPME && hasLJ) {
             setPeriodicBoxArgs(cl, pmeDispersionGridIndexKernel, 2);
             if (cl.getUseDoublePrecision()) {
@@ -1578,9 +1580,9 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
         baseParticleParamVec[i] = mm_float4(charge, sigma, epsilon, 0);
     }
     baseParticleParams.upload(baseParticleParamVec);
-    
+
     // Record the exceptions.
-    
+
     if (numExceptions > 0) {
         vector<mm_float4> baseExceptionParamsVec(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
@@ -1593,9 +1595,9 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
         }
         baseExceptionParams.upload(baseExceptionParamsVec);
     }
-    
+
     // Compute other values.
-    
+
     ewaldSelfEnergy = 0.0;
     if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
         if (cl.getContextIndex() == 0) {

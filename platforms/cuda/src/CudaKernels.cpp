@@ -128,12 +128,12 @@ void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>&
         float4* posq = (float4*) cu.getPinnedBuffer();
         cu.getPosq().download(posq);
     }
-    
+
     // Filling in the output array is done in parallel for speed.
-    
+
     cu.getPlatformData().threads.execute([&] (ThreadPool& threads, int threadIndex) {
         // Compute the position of each particle to return to the user.  This is done in parallel for speed.
-        
+
         const vector<int>& order = cu.getAtomIndex();
         int numParticles = cu.getNumAtoms();
         Vec3 boxVectors[3];
@@ -218,6 +218,8 @@ void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<
     }
     for (auto& offset : cu.getPosCellOffsets())
         offset = mm_int4(0, 0, 0, 0);
+    // Force reordering of atoms after positions have been updated for efficiency
+    cu.setStepsSinceReorder(99999);
     cu.reorderAtoms();
 }
 
@@ -342,7 +344,7 @@ void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, cons
             break;
         }
     }
-    
+
     // Update the vectors.
 
     for (auto ctx : contexts)
@@ -563,7 +565,7 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
             cufftDestroy(fftBackward);
             if (doLJPME) {
                 cufftDestroy(dispersionFftForward);
-                cufftDestroy(dispersionFftBackward);                
+                cufftDestroy(dispersionFftBackward);
             }
         }
         if (usePmeStream) {
@@ -653,9 +655,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         double reactionFieldC = (1.0 / force.getCutoffDistance())*(3.0*force.getReactionFieldDielectric())/(2.0*force.getReactionFieldDielectric()+1.0);
         defines["REACTION_FIELD_K"] = cu.doubleToString(reactionFieldK);
         defines["REACTION_FIELD_C"] = cu.doubleToString(reactionFieldC);
-        
+
         // Compute the switching coefficients.
-        
+
         if (force.getUseSwitchingFunction()) {
             defines["LJ_SWITCH_CUTOFF"] = cu.doubleToString(force.getSwitchingDistance());
             defines["LJ_SWITCH_C3"] = cu.doubleToString(10/pow(force.getSwitchingDistance()-force.getCutoffDistance(), 3.0));
@@ -854,7 +856,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     if (result != CUFFT_SUCCESS)
                         throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
                     if (doLJPME) {
-                        result = cufftPlan3d(&dispersionFftForward, dispersionGridSizeX, dispersionGridSizeY, 
+                        result = cufftPlan3d(&dispersionFftForward, dispersionGridSizeX, dispersionGridSizeY,
                                                 dispersionGridSizeZ, cu.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
                         if (result != CUFFT_SUCCESS)
                             throw OpenMMException("Error initializing disperison FFT: "+cu.intToString(result));
@@ -1062,7 +1064,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         if (force.getIncludeDirectSpace())
             cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CommonKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }
-    
+
     // Initialize parameter offsets.
 
     vector<vector<float4> > particleOffsetVec(force.getNumParticles());
@@ -1132,9 +1134,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     if (paramValues.size() > 0)
         globalParams.upload(paramValues, true);
     recomputeParams = true;
-    
+
     // Initialize the kernel for updating parameters.
-    
+
     CUmodule module = cu.createModule(CommonKernelSources::nonbondedParameters, paramsDefines);
     computeParamsKernel = cu.getKernel(module, "computeParameters");
     computeExclusionParamsKernel = cu.getKernel(module, "computeExclusionParameters");
@@ -1189,9 +1191,9 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             energy = 0.0; // The Ewald self energy was computed in the kernel.
         recomputeParams = false;
     }
-    
+
     // Do reciprocal space calculations.
-    
+
     if (cosSinSums.isInitialized() && includeReciprocal) {
         void* sumsArgs[] = {&cu.getEnergyBuffer().getDevicePointer(), &cu.getPosq().getDevicePointer(), &cosSinSums.getDevicePointer(), cu.getPeriodicBoxSizePointer()};
         cu.executeKernel(ewaldSumsKernel, sumsArgs, cosSinSums.getSize());
@@ -1380,7 +1382,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
 
 void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
     // Make sure the new parameters are acceptable.
-    
+
     ContextSelector selector(cu);
     if (force.getNumParticles() != cu.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
@@ -1416,9 +1418,9 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
     int numExceptions = endIndex-startIndex;
     if (numExceptions != exceptionAtoms.size())
         throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
-    
+
     // Record the per-particle parameters.
-    
+
     vector<float4> baseParticleParamVec(cu.getPaddedNumAtoms(), make_float4(0, 0, 0, 0));
     const vector<int>& order = cu.getAtomIndex();
     for (int i = 0; i < force.getNumParticles(); i++) {
@@ -1427,9 +1429,9 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
         baseParticleParamVec[i] = make_float4(charge, sigma, epsilon, 0);
     }
     baseParticleParams.upload(baseParticleParamVec);
-    
+
     // Record the exceptions.
-    
+
     if (numExceptions > 0) {
         vector<float4> baseExceptionParamsVec(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
@@ -1442,9 +1444,9 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
         }
         baseExceptionParams.upload(baseExceptionParamsVec);
     }
-    
+
     // Compute other values.
-    
+
     ewaldSelfEnergy = 0.0;
     if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
         if (cu.getContextIndex() == 0) {
