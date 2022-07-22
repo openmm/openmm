@@ -190,11 +190,17 @@ typedef struct {
     real q, bornRadius, bornForce;
 } AtomData2;
 
-DEVICE void computeOneInteractionF1(AtomData2 atom1, volatile AtomData2 atom2, real* outputEnergy, real3* force);
-DEVICE void computeOneInteractionF2(AtomData2 atom1, volatile AtomData2 atom2, real* outputEnergy, real3* force);
-DEVICE void computeOneInteractionT1(AtomData2 atom1, volatile AtomData2 atom2, real3* torque);
-DEVICE void computeOneInteractionT2(AtomData2 atom1, volatile AtomData2 atom2, real3* torque);
-DEVICE void computeOneInteractionB1B2(AtomData2 atom1, volatile AtomData2 atom2, real* bornForce1, real* bornForce2);
+#if defined(USE_HIP)
+#define ATOM2_ARG_SPEC
+#else
+#define ATOM2_ARG_SPEC volatile
+#endif
+
+DEVICE void computeOneInteractionF1(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real* outputEnergy, real3* force);
+DEVICE void computeOneInteractionF2(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real* outputEnergy, real3* force);
+DEVICE void computeOneInteractionT1(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real3* torque);
+DEVICE void computeOneInteractionT2(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real3* torque);
+DEVICE void computeOneInteractionB1B2(AtomData2 atom1, ATOM2_ARG_SPEC AtomData2 atom2, real* bornForce1, real* bornForce2);
 
 inline DEVICE AtomData2 loadAtomData2(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
         GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar, GLOBAL const real* RESTRICT bornRadius) {
@@ -585,16 +591,38 @@ KERNEL void computeChainRuleForce(
     } while (pos < end);
 }
 
-typedef struct {
-    real3 pos, force, dipole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS;
-    real q, quadrupoleXX, quadrupoleXY, quadrupoleXZ;
+#if defined(USE_HIP)
+    #define ALIGN alignas(16)
+#else
+    #define ALIGN
+#endif
+
+typedef struct ALIGN {
+    real3 pos;
+    real q;
+    real3 dipole;
+#if defined(USE_HIP)
+    real padding0;
+#endif
+    real3 inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS;
+    real quadrupoleXX, quadrupoleXY, quadrupoleXZ;
     real quadrupoleYY, quadrupoleYZ, quadrupoleZZ;
+    real3 force;
     float thole, damp;
+#if defined(USE_HIP) && !defined(USE_DOUBLE_PRECISION)
+    real padding1[2]; // Prevent bank conflicts because the aligned size is 128
+#endif
 } AtomData4;
 
-DEVICE void computeOneEDiffInteractionF1(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real* outputEnergy, real3* outputForce);
-DEVICE void computeOneEDiffInteractionT1(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real3* outputForce);
-DEVICE void computeOneEDiffInteractionT3(AtomData4* atom1, LOCAL_ARG volatile AtomData4* atom2, float dScale, float pScale, real3* outputForce);
+#if defined(USE_HIP)
+#define ATOM2_PTR_ARG_SPEC const
+#else
+#define ATOM2_PTR_ARG_SPEC volatile
+#endif
+
+DEVICE void computeOneEDiffInteractionF1(const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, real* outputEnergy, real3* outputForce);
+DEVICE void computeOneEDiffInteractionT1(const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, real3* outputForce);
+DEVICE void computeOneEDiffInteractionT3(const AtomData4* atom1, LOCAL_ARG ATOM2_PTR_ARG_SPEC AtomData4* atom2, float dScale, float pScale, real3* outputForce);
 
 inline DEVICE AtomData4 loadAtomData4(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT labFrameDipole,
         GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar,

@@ -78,6 +78,19 @@ string ComputeContext::replaceStrings(const string& input, const std::map<std::s
                 if ((index == 0 || symbolChars.find(result[index-1]) == symbolChars.end()) && (index == result.size()-size || symbolChars.find(result[index+size]) == symbolChars.end())) {
                     // We have found a complete symbol, not part of a longer symbol.
 
+                    // Do not allow to replace a symbol contained in single-line comments with a multi-line content
+                    // because only the first line will be commented
+                    // (the check is used to prevent incorrect commenting during development).
+                    if (pair.second.find('\n') != pair.second.npos) {
+                        int prevIndex = index;
+                        while (prevIndex > 1 && result[prevIndex] != '\n') {
+                            if (result[prevIndex] == '/' && result[prevIndex - 1] == '/') {
+                                throw OpenMMException("Symbol " + pair.first + " is contained in a single-line comment");
+                            }
+                            prevIndex--;
+                        }
+                    }
+
                     result.replace(index, size, pair.second);
                     index += pair.second.size();
                 }
@@ -625,6 +638,23 @@ void ComputeContext::addPreComputation(ForcePreComputation* computation) {
 
 void ComputeContext::addPostComputation(ForcePostComputation* computation) {
     postComputations.push_back(computation);
+}
+
+int ComputeContext::findLegalFFTDimension(int minimum) {
+    if (minimum < 1)
+        return 1;
+    while (true) {
+        // Attempt to factor the current value.
+
+        int unfactored = minimum;
+        for (int factor = 2; factor < 8; factor++) {
+            while (unfactored > 1 && unfactored%factor == 0)
+                unfactored /= factor;
+        }
+        if (unfactored == 1)
+            return minimum;
+        minimum++;
+    }
 }
 
 struct ComputeContext::WorkThread::ThreadData {

@@ -1,8 +1,15 @@
 #define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)
 
-typedef struct {
-    real3 pos, force, torque, inducedDipole, inducedDipolePolar, sphericalDipole;
+#if defined(USE_HIP)
+    #define ALIGN alignas(16)
+#else
+    #define ALIGN
+#endif
+
+typedef struct ALIGN {
+    real3 pos;
     real q;
+    real3 force, torque, inducedDipole, inducedDipolePolar, sphericalDipole;
     float thole, damp;
 #ifdef INCLUDE_QUADRUPOLES
     real sphericalQuadrupole[5];

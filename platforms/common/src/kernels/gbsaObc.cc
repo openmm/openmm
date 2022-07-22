@@ -1,6 +1,12 @@
 #define WARPS_PER_GROUP (FORCE_WORK_GROUP_SIZE/TILE_SIZE)
 
-typedef struct {
+#if defined(USE_HIP)
+    #define ALIGN alignas(16)
+#else
+    #define ALIGN
+#endif
+
+typedef struct ALIGN {
     real x, y, z;
     real q;
     float radius, scaledRadius;
@@ -367,7 +373,7 @@ KERNEL void computeBornSum(
     }
 }
 
-typedef struct {
+typedef struct ALIGN {
     real x, y, z;
     real q;
     real fx, fy, fz, fw;

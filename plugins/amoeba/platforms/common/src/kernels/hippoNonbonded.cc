@@ -19,6 +19,12 @@ typedef struct {
 #endif
 
 #ifdef ENABLE_SHUFFLE
+#if defined(USE_HIP)
+
+#define real_shfl SHFL
+
+#else
+
 //support for 64 bit shuffles
 static __inline__ __device__ float real_shfl(float var, int srcLane) {
     return SHFL(var, srcLane);
@@ -41,6 +47,8 @@ static __inline__ __device__ mm_long real_shfl(mm_long var, int srcLane) {
     int2 fuse; fuse.x = lo; fuse.y = hi;
     return *reinterpret_cast<mm_long*>(&fuse);
 }
+
+#endif
 #endif
 
 KERNEL void computeNonbonded(
@@ -50,7 +58,7 @@ KERNEL void computeNonbonded(
         , GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize, 
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
         GLOBAL const real4* RESTRICT blockSize, GLOBAL const unsigned int* RESTRICT interactingAtoms
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(USE_HIP)
         , unsigned int maxSinglePairs, GLOBAL const int2* RESTRICT singlePairs
 #endif
 #endif
