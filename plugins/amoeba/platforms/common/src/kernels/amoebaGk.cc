@@ -591,11 +591,27 @@ KERNEL void computeChainRuleForce(
     } while (pos < end);
 }
 
-typedef struct {
-    real3 pos, force, dipole, inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS;
-    real q, quadrupoleXX, quadrupoleXY, quadrupoleXZ;
+#if defined(USE_HIP)
+    #define ALIGN alignas(16)
+#else
+    #define ALIGN
+#endif
+
+typedef struct ALIGN {
+    real3 pos;
+    real q;
+    real3 dipole;
+#if defined(USE_HIP)
+    real padding0;
+#endif
+    real3 inducedDipole, inducedDipolePolar, inducedDipoleS, inducedDipolePolarS;
+    real quadrupoleXX, quadrupoleXY, quadrupoleXZ;
     real quadrupoleYY, quadrupoleYZ, quadrupoleZZ;
+    real3 force;
     float thole, damp;
+#if defined(USE_HIP) && !defined(USE_DOUBLE_PRECISION)
+    real padding1[2]; // Prevent bank conflicts because the aligned size is 128
+#endif
 } AtomData4;
 
 #if defined(USE_HIP)
