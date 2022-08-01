@@ -333,6 +333,7 @@ private:
     bool useCutoff, usePeriodic, deviceIsCpu, anyExclusions, usePadding, forceRebuildNeighborList;
     int numForceBuffers, startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
     int forceThreadBlockSize, interactingBlocksThreadBlockSize, groupFlags;
+    unsigned int tilesAfterReorder;
     long long numTiles;
     std::string kernelSource;
 };

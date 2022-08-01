@@ -44,7 +44,7 @@ const int ComputeContext::ThreadBlockSize = 64;
 const int ComputeContext::TileSize = 32;
 
 ComputeContext::ComputeContext(const System& system) : system(system), time(0.0), stepCount(0), computeForceCount(0), stepsSinceReorder(99999),
-        atomsWereReordered(false), forcesValid(false), thread(NULL) {
+        forceNextReorder(false), atomsWereReordered(false), forcesValid(false), thread(NULL) {
     thread = new WorkThread();
 }
 
@@ -439,16 +439,22 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
     findMoleculeGroups();
     for (auto listener : reorderListeners)
         listener->execute();
+    forceNextReorder = true;
     reorderAtoms();
     return true;
 }
 
+void ComputeContext::forceReorder() {
+    forceNextReorder = true;
+}
+
 void ComputeContext::reorderAtoms() {
     atomsWereReordered = false;
-    if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff() || stepsSinceReorder < 250) {
+    if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff() || (stepsSinceReorder < 250 && !forceNextReorder)) {
         stepsSinceReorder++;
         return;
     }
+    forceNextReorder = false;
     atomsWereReordered = true;
     stepsSinceReorder = 0;
     if (getUseDoublePrecision())
