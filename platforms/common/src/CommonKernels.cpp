@@ -1910,7 +1910,8 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
         tabulatedFunctionArrays[i].initialize<float>(cc, f.size(), "TabulatedFunction");
         tabulatedFunctionArrays[i].upload(f);
-        cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(tabulatedFunctionArrays[i], arrayName, "float", width));
+        if (force.getNumInteractionGroups() == 0)
+            cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(tabulatedFunctionArrays[i], arrayName, "float", width));
         if (width == 1)
             tableTypes.push_back("float");
         else
