@@ -395,6 +395,10 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
 bool OpenCLNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
+    if (context.getStepsSinceReorder() == 0)
+        tilesAfterReorder = pinnedCountMemory[0];
+    else if (context.getStepsSinceReorder() > 25 && pinnedCountMemory[0] > 1.1*tilesAfterReorder)
+        context.forceReorder();
     if (pinnedCountMemory[0] <= interactingTiles.getSize())
         return false;
 

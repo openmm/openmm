@@ -248,8 +248,18 @@ public:
     /**
      * Reorder the internal arrays of atoms to try to keep spatially contiguous atoms close
      * together in the arrays.
+     * 
+     * Calling this method might or might not actually change the atom order.  It uses
+     * internal heuristics to decide when and how often to update the order.  If you
+     * want to guarantee that reordering will definitely be done, call forceReorder() before
+     * calling this.
      */
     void reorderAtoms();
+    /**
+     * Calling this method guarantees that the next call to reorderAtoms() will actually
+     * perform reordering.
+     */
+    void forceReorder();
     /**
      * Add a listener that should be called whenever atoms get reordered.  The OpenCLContext
      * assumes ownership of the object, and deletes it when the context itself is deleted.
@@ -507,7 +517,7 @@ protected:
     double time;
     int numAtoms, paddedNumAtoms, computeForceCount, stepsSinceReorder;
     long long stepCount;
-    bool atomsWereReordered, forcesValid;
+    bool forceNextReorder, atomsWereReordered, forcesValid;
     std::vector<ComputeForceInfo*> forces;
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
