@@ -218,8 +218,6 @@ CommonCalcAmoebaMultipoleForceKernel::~CommonCalcAmoebaMultipoleForceKernel() {
 
 void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
     ContextSelector selector(cc);
-    if (!cc.getSupports64BitGlobalAtomics())
-        throw OpenMMException("AmoebaMultipoleForce requires a device that supports 64 bit atomic operations");
 
     // Initialize multipole parameters.
 
@@ -2367,8 +2365,6 @@ CommonCalcHippoNonbondedForceKernel::CommonCalcHippoNonbondedForceKernel(const s
 
 void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
     ContextSelector selector(cc);
-    if (!cc.getSupports64BitGlobalAtomics())
-        throw OpenMMException("HippoNonbondedForce requires a device that supports 64 bit atomic operations");
     extrapolationCoefficients = force.getExtrapolationCoefficients();
     usePME = (force.getNonbondedMethod() == HippoNonbondedForce::PME);
 

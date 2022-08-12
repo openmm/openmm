@@ -10,20 +10,13 @@
  */
 
 KERNEL void computePerParticleEnergy(GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq,
-#ifdef SUPPORTS_64_BIT_ATOMICS
         GLOBAL mm_long* RESTRICT forceBuffers
-#else
-        GLOBAL real4* RESTRICT forceBuffers, int bufferSize, int numBuffers
-#endif
         PARAMETER_ARGUMENTS) {
     mixed energy = 0;
     INIT_PARAM_DERIVS
     for (int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         // Reduce the derivatives
 
-#ifndef SUPPORTS_64_BIT_ATOMICS
-        int totalSize = bufferSize*numBuffers;
-#endif
         REDUCE_DERIVATIVES
 
         // Now calculate the per-particle energy terms.

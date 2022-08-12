@@ -44,11 +44,7 @@ inline DEVICE real4 computeCross(real4 vec1, real4 vec2) {
  * Compute forces on donors.
  */
 KERNEL void computeDonorForces(
-#ifdef SUPPORTS_64_BIT_ATOMICS
 	GLOBAL mm_ulong* RESTRICT force,
-#else
-	GLOBAL real4* RESTRICT forceBuffers, GLOBAL const int4* RESTRICT donorBufferIndices,
-#endif
 	GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT exclusions,
         GLOBAL const int4* RESTRICT donorAtoms, GLOBAL const int4* RESTRICT acceptorAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
@@ -114,7 +110,6 @@ KERNEL void computeDonorForces(
         // Write results
 
         if (donorIndex < NUM_DONORS) {
-#ifdef SUPPORTS_64_BIT_ATOMICS
             if (atoms.x > -1) {
                 ATOMIC_ADD(&force[atoms.x], (mm_ulong) realToFixedPoint(f1.x));
                 ATOMIC_ADD(&force[atoms.x+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f1.y));
@@ -133,27 +128,6 @@ KERNEL void computeDonorForces(
                 ATOMIC_ADD(&force[atoms.z+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f3.z));
                 MEM_FENCE;
             }
-#else
-            int4 bufferIndices = donorBufferIndices[donorIndex];
-            if (atoms.x > -1) {
-                unsigned int offset = atoms.x+bufferIndices.x*PADDED_NUM_ATOMS;
-                real4 force = forceBuffers[offset];
-                force.xyz += f1.xyz;
-                forceBuffers[offset] = force;
-            }
-            if (atoms.y > -1) {
-                unsigned int offset = atoms.y+bufferIndices.y*PADDED_NUM_ATOMS;
-                real4 force = forceBuffers[offset];
-                force.xyz += f2.xyz;
-                forceBuffers[offset] = force;
-            }
-            if (atoms.z > -1) {
-                unsigned int offset = atoms.z+bufferIndices.z*PADDED_NUM_ATOMS;
-                real4 force = forceBuffers[offset];
-                force.xyz += f3.xyz;
-                forceBuffers[offset] = force;
-            }
-#endif
         }
     }
     energyBuffer[GLOBAL_ID] += energy;
@@ -162,11 +136,7 @@ KERNEL void computeDonorForces(
  * Compute forces on acceptors.
  */
 KERNEL void computeAcceptorForces(
-#ifdef SUPPORTS_64_BIT_ATOMICS
 	GLOBAL mm_ulong* RESTRICT force,
-#else
-	GLOBAL real4* RESTRICT forceBuffers, GLOBAL const int4* RESTRICT acceptorBufferIndices,
-#endif
         GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT exclusions,
         GLOBAL const int4* RESTRICT donorAtoms, GLOBAL const int4* RESTRICT acceptorAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
@@ -231,7 +201,6 @@ KERNEL void computeAcceptorForces(
         // Write results
 
         if (acceptorIndex < NUM_ACCEPTORS) {
-#ifdef SUPPORTS_64_BIT_ATOMICS
             if (atoms.x > -1) {
                 ATOMIC_ADD(&force[atoms.x], (mm_ulong) realToFixedPoint(f1.x));
                 ATOMIC_ADD(&force[atoms.x+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f1.y));
@@ -250,27 +219,6 @@ KERNEL void computeAcceptorForces(
                 ATOMIC_ADD(&force[atoms.z+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f3.z));
                 MEM_FENCE;
             }
-#else
-            int4 bufferIndices = acceptorBufferIndices[acceptorIndex];
-            if (atoms.x > -1) {
-                unsigned int offset = atoms.x+bufferIndices.x*PADDED_NUM_ATOMS;
-                real4 force = forceBuffers[offset];
-                force.xyz += f1.xyz;
-                forceBuffers[offset] = force;
-            }
-            if (atoms.y > -1) {
-                unsigned int offset = atoms.y+bufferIndices.y*PADDED_NUM_ATOMS;
-                real4 force = forceBuffers[offset];
-                force.xyz += f2.xyz;
-                forceBuffers[offset] = force;
-            }
-            if (atoms.z > -1) {
-                unsigned int offset = atoms.z+bufferIndices.z*PADDED_NUM_ATOMS;
-                real4 force = forceBuffers[offset];
-                force.xyz += f3.xyz;
-                forceBuffers[offset] = force;
-            }
-#endif
         }
     }
 }

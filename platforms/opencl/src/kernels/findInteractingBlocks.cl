@@ -235,7 +235,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
 
                         unsigned int tilesToStore = neighborsInBuffer/TILE_SIZE;
                         if (indexInWarp == 0)
-                            *tileStartIndex = atom_add(interactionCount, tilesToStore);
+                            *tileStartIndex = ATOMIC_ADD(interactionCount, tilesToStore);
                         SYNC_WARPS;
                         unsigned int newTileStartIndex = *tileStartIndex;
                         if (newTileStartIndex+tilesToStore <= maxTiles) {
@@ -260,7 +260,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
         if (neighborsInBuffer > 0) {
             unsigned int tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
             if (indexInWarp == 0)
-                *tileStartIndex = atom_add(interactionCount, tilesToStore);
+                *tileStartIndex = ATOMIC_ADD(interactionCount, tilesToStore);
             SYNC_WARPS;
             unsigned int newTileStartIndex = *tileStartIndex;
             if (newTileStartIndex+tilesToStore <= maxTiles) {
@@ -406,7 +406,7 @@ void storeInteractionData(int x, __local int* buffer, __local int* sum, __local 
         int tilesToStore = (storePartialTile ? (atomsToStore+TILE_SIZE-1)/TILE_SIZE : atomsToStore/TILE_SIZE);
         if (tilesToStore > 0) {
             if (get_local_id(0) == 0)
-                *baseIndex = atom_add(interactionCount, tilesToStore);
+                *baseIndex = ATOMIC_ADD(interactionCount, tilesToStore);
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) == 0)
                 *numAtoms = atomsToStore-tilesToStore*TILE_SIZE;
@@ -432,7 +432,7 @@ void storeInteractionData(int x, __local int* buffer, __local int* sum, __local 
         // previous call to this function.  Save them now.
 
         if (get_local_id(0) == 0)
-            *baseIndex = atom_add(interactionCount, 1);
+            *baseIndex = ATOMIC_ADD(interactionCount, 1);
         barrier(CLK_LOCAL_MEM_FENCE);
         if (*baseIndex < maxTiles) {
             if (get_local_id(0) == 0)
