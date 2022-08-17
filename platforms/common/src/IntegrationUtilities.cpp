@@ -528,8 +528,6 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     for (int i = 0; i < numAtoms; i++)
         if (atomCounts[i] > 1)
             hasOverlappingVsites = true;
-    if (hasOverlappingVsites && !context.getSupports64BitGlobalAtomics())
-        throw OpenMMException("This device does not support 64 bit atomics.  Cannot have multiple virtual sites that depend on the same atom.");
 
     // Create the kernels used by this class.
 

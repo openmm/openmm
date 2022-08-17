@@ -17,11 +17,7 @@ typedef struct ALIGN {
  * Compute the Born sum.
  */
 KERNEL void computeBornSum(
-#ifdef SUPPORTS_64_BIT_ATOMICS
         GLOBAL mm_ulong* RESTRICT global_bornSum,
-#else
-        GLOBAL real* RESTRICT global_bornSum,
-#endif
         GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT charge, GLOBAL const float2* RESTRICT global_params,
 #ifdef USE_CUTOFF
         GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
@@ -152,20 +148,12 @@ KERNEL void computeBornSum(
 
         // Write results.
 
-#ifdef SUPPORTS_64_BIT_ATOMICS
         unsigned int offset = x*TILE_SIZE + tgx;
         ATOMIC_ADD(&global_bornSum[offset], (mm_ulong) realToFixedPoint(bornSum));
         if (x != y) {
             offset = y*TILE_SIZE + tgx;
             ATOMIC_ADD(&global_bornSum[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].bornSum));
         }
-#else
-        unsigned int offset1 = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-        unsigned int offset2 = y*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-        global_bornSum[offset1] += bornSum;
-        if (x != y)
-            global_bornSum[offset2] += localData[LOCAL_ID].bornSum;
-#endif
     }
 
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
@@ -357,17 +345,9 @@ KERNEL void computeBornSum(
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
-#ifdef SUPPORTS_64_BIT_ATOMICS
             ATOMIC_ADD(&global_bornSum[atom1], (mm_ulong) realToFixedPoint(bornSum));
             if (atom2 < PADDED_NUM_ATOMS)
                 ATOMIC_ADD(&global_bornSum[atom2], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].bornSum));
-#else
-            unsigned int offset1 = atom1 + warp*PADDED_NUM_ATOMS;
-            unsigned int offset2 = atom2 + warp*PADDED_NUM_ATOMS;
-            global_bornSum[offset1] += bornSum;
-            if (atom2 < PADDED_NUM_ATOMS)
-                global_bornSum[offset2] += localData[LOCAL_ID].bornSum;
-#endif
         }
         pos++;
     }
@@ -385,11 +365,7 @@ typedef struct ALIGN {
  */
 
 KERNEL void computeGBSAForce1(
-#ifdef SUPPORTS_64_BIT_ATOMICS
         GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mm_ulong* RESTRICT global_bornForce,
-#else
-        GLOBAL real4* RESTRICT forceBuffers, GLOBAL real* RESTRICT global_bornForce,
-#endif
         GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT charge,
         GLOBAL const real* RESTRICT global_bornRadii, int needEnergy,
 #ifdef USE_CUTOFF
@@ -538,7 +514,6 @@ KERNEL void computeGBSAForce1(
         
         // Write results.
         
-#ifdef SUPPORTS_64_BIT_ATOMICS
         unsigned int offset = x*TILE_SIZE + tgx;
         ATOMIC_ADD(&forceBuffers[offset], (mm_ulong) realToFixedPoint(force.x));
         ATOMIC_ADD(&forceBuffers[offset+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
@@ -551,16 +526,6 @@ KERNEL void computeGBSAForce1(
             ATOMIC_ADD(&forceBuffers[offset+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fz));
             ATOMIC_ADD(&global_bornForce[offset], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fw));
         }
-#else
-        unsigned int offset1 = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-        unsigned int offset2 = y*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-        forceBuffers[offset1] += make_real4(force.x, force.y, force.z, 0);
-        global_bornForce[offset1] += force.w;
-        if (x != y) {
-            forceBuffers[offset2] += (real4) (localData[LOCAL_ID].fx, localData[LOCAL_ID].fy, localData[LOCAL_ID].fz, 0.0f);
-            global_bornForce[offset2] += localData[LOCAL_ID].fw;
-        }
-#endif
     }
 
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
@@ -763,7 +728,6 @@ KERNEL void computeGBSAForce1(
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
-#ifdef SUPPORTS_64_BIT_ATOMICS
             ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) realToFixedPoint(force.x));
             ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
             ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
@@ -774,16 +738,6 @@ KERNEL void computeGBSAForce1(
                 ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fz));
                 ATOMIC_ADD(&global_bornForce[atom2], (mm_ulong) realToFixedPoint(localData[LOCAL_ID].fw));
             }
-#else
-            unsigned int offset1 = atom1 + warp*PADDED_NUM_ATOMS;
-            unsigned int offset2 = atom2 + warp*PADDED_NUM_ATOMS;
-            forceBuffers[offset1] += make_real4(force.x, force.y, force.z, 0);
-            global_bornForce[offset1] += force.w;
-            if (atom2 < PADDED_NUM_ATOMS) {
-                forceBuffers[offset2] += (real4) (localData[LOCAL_ID].fx, localData[LOCAL_ID].fy, localData[LOCAL_ID].fz, 0.0f);
-                global_bornForce[offset2] += localData[LOCAL_ID].fw;
-            }
-#endif
         }
         pos++;
     }

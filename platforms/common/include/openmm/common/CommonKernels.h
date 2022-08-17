@@ -786,8 +786,6 @@ private:
     ComputeArray globals;
     ComputeArray donors;
     ComputeArray acceptors;
-    ComputeArray donorBufferIndices;
-    ComputeArray acceptorBufferIndices;
     ComputeArray donorExclusions;
     ComputeArray acceptorExclusions;
     std::vector<std::string> globalParamNames;
