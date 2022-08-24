@@ -409,7 +409,9 @@ class Modeller(object):
         forcefield : ForceField
             the ForceField to use for determining van der Waals radii and atomic charges
         model : str='tip3p'
-            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
+            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'. 
+            If the water model is not supported, you can specify the same site model.  For example to use the 4-site opc 
+            water model, specify 'tip4pew'. 
         boxSize : Vec3=None
             the size of the box to fill with water
         boxVectors : tuple of Vec3=None
