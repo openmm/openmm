@@ -404,14 +404,19 @@ class Modeller(object):
         between periodic copies to be achieved with a smaller box.  The most compact option is a rhombic dodecahedron,
         for which the box volume is 70.7% the volume of a cubic box with the same amount of padding.
 
+        There exist many different water models, many of which are very similar to each other. This method creates 
+        preequilibrated water boxes for a limited set of water models. In most cases, they work equally well for other models 
+        that involve the same number of particles. For example, to simulate a box of TIP3P-FB water, use this method to 
+        create a box of TIP3P water, construct a System using TIP3P-FB parameters, and perform a local energy minimization 
+        to correct for the small differences between the models. Likewise, a box of TIP4P-Ew water can be used for most 
+        four site water models.
+
         Parameters
         ----------
         forcefield : ForceField
             the ForceField to use for determining van der Waals radii and atomic charges
         model : str='tip3p'
             the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'. 
-            If the water model is not supported, you can specify the same site model.  For example to use the 4-site opc 
-            water model, specify 'tip4pew'. 
         boxSize : Vec3=None
             the size of the box to fill with water
         boxVectors : tuple of Vec3=None
