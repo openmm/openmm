@@ -7571,6 +7571,13 @@ double CommonCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
 
     vector<REAL> b;
     buffer.download(b);
+
+    // JAMA::Eigenvalue may run into an infinite loop if we have any NaN
+    for (int i = 0; i < 9; i++) {
+        if (b[i] != b[i])
+            throw OpenMMException("NaN encountered during RMSD force calculation");
+    }
+    
     Array2D<double> F(4, 4);
     F[0][0] =  b[0*3+0] + b[1*3+1] + b[2*3+2];
     F[1][0] =  b[1*3+2] - b[2*3+1];
