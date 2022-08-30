@@ -447,6 +447,8 @@ class Modeller(object):
             waterRadius = 0.315365*vdwRadiusPerSigma
         elif model == 'tip5p':
             waterRadius = 0.312*vdwRadiusPerSigma
+        elif model == 'swm4-ndp':
+            waterRadius = 3.18395*vdwRadiusPerSigma
         else:
             raise ValueError('Unknown water model: %s' % model)
         pdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', model+'.pdb'))
