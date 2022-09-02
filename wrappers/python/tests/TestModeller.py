@@ -264,7 +264,7 @@ class TestModeller(unittest.TestCase):
 
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
-        for model in ['tip3p', 'spce', 'tip4pew', 'tip5p']:
+        for model in ['tip3p', 'spce', 'tip4pew', 'tip5p', 'swm4ndp']:
             forcefield = ForceField('amber10.xml', model + '.xml')
             modeller = Modeller(topology_start, self.positions)
             # delete water to get the "before" topology
