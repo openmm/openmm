@@ -8,7 +8,7 @@ Medical Research, grant U54 GM072970. See https://simtk.org.
 
 Portions copyright (c) 2012-2022 Stanford University and the Authors.
 Authors: Peter Eastman
-Contributors:
+Contributors: 
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -404,11 +404,11 @@ class Modeller(object):
         between periodic copies to be achieved with a smaller box.  The most compact option is a rhombic dodecahedron,
         for which the box volume is 70.7% the volume of a cubic box with the same amount of padding.
 
-        There exist many different water models, many of which are very similar to each other. This method creates 
-        preequilibrated water boxes for a limited set of water models. In most cases, they work equally well for other models 
-        that involve the same number of particles. For example, to simulate a box of TIP3P-FB water, use this method to 
-        create a box of TIP3P water, construct a System using TIP3P-FB parameters, and perform a local energy minimization 
-        to correct for the small differences between the models. Likewise, a box of TIP4P-Ew water can be used for most 
+        There exist many different water models, many of which are very similar to each other. This method creates
+        preequilibrated water boxes for a limited set of water models. In most cases, they work equally well for other models
+        that involve the same number of particles. For example, to simulate a box of TIP3P-FB water, use this method to
+        create a box of TIP3P water, construct a System using TIP3P-FB parameters, and perform a local energy minimization
+        to correct for the small differences between the models. Likewise, a box of TIP4P-Ew water can be used for most
         four site water models.
 
         Parameters
@@ -416,7 +416,7 @@ class Modeller(object):
         forcefield : ForceField
             the ForceField to use for determining van der Waals radii and atomic charges
         model : str='tip3p'
-            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'. 
+            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', 'tip5p', and 'swm4ndp' (polarizable).
         boxSize : Vec3=None
             the size of the box to fill with water
         boxVectors : tuple of Vec3=None
@@ -454,6 +454,8 @@ class Modeller(object):
             waterRadius = 0.315365*vdwRadiusPerSigma
         elif model == 'tip5p':
             waterRadius = 0.312*vdwRadiusPerSigma
+        elif model == 'swm4ndp':
+            waterRadius = 0.318395*vdwRadiusPerSigma
         else:
             raise ValueError('Unknown water model: %s' % model)
         pdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', model+'.pdb'))
