@@ -465,6 +465,13 @@ example, if a :class:`CustomNonbondedForce` uses a long range correction, changi
 a global parameter may require the correction coefficient to be recalculated,
 which is expensive.
 
+It is possible for multiple forces to depend on the same global parameter.  To do this,
+simply have each force specify a parameter with the same name.  This can be useful
+in certain cases.  For example, in an alchemical simulation, you might have a
+parameter that interpolates between two endpoints corresponding to different molecules.
+Changing the one parameter would simultaneously modify multiple bonded and nonbonded
+forces.
+
 The other type of parameter is ones that record many values, one for each element
 of the force, such as per-particle or per-bond parameters.  These values are stored
 directly in the force object itself, and hence are part of the system definition.

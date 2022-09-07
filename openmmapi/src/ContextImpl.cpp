@@ -188,6 +188,9 @@ void ContextImpl::initialize() {
     for (size_t i = 0; i < forceImpls.size(); ++i) {
         forceImpls[i]->initialize(*this);
         map<string, double> forceParameters = forceImpls[i]->getDefaultParameters();
+        for (auto param : forceParameters)
+            if (parameters.find(param.first) != parameters.end() && parameters[param.first] != forceParameters[param.first])
+                throw OpenMMException("Two Forces define different default values for the parameter '"+param.first+"'");
         parameters.insert(forceParameters.begin(), forceParameters.end());
     }
     integrator.initialize(*this);
