@@ -291,7 +291,8 @@ class Topology(object):
             bonds = []
             Topology._standardBonds[residue.attrib['name']] = bonds
             for bond in residue.findall('Bond'):
-                bonds.append((bond.attrib['from'], bond.attrib['to']))
+                bonds.append((bond.attrib['from'], bond.attrib['to'], bond.attrib['type'], int(
+                        bond.attrib['order'])))
 
     def createStandardBonds(self):
         """Create bonds based on the atom and residue names for all standard residue types.
@@ -338,8 +339,10 @@ class Topology(object):
                         else:
                             toResidue = i
                             toAtom = bond[1]
+                        bond_type = bond[2]
+                        bond_order = bond[3]                        
                         if fromAtom in atomMaps[fromResidue] and toAtom in atomMaps[toResidue]:
-                            self.addBond(atomMaps[fromResidue][fromAtom], atomMaps[toResidue][toAtom])
+                            self.addBond(atomMaps[fromResidue][fromAtom], atomMaps[toResidue][toAtom], type=bond_type, order=bond_order)
 
     def createDisulfideBonds(self, positions):
         """Identify disulfide bonds based on proximity and add them to the
@@ -379,7 +382,7 @@ class Topology(object):
                     candidate_atom = sg2
             # Assign bond to closest pair.
             if candidate_atom:
-                self.addBond(sg1, candidate_atom)
+                self.addBond(sg1, candidate_atom, type="Single", order=1)
 
 class Chain(object):
     """A Chain object represents a chain within a Topology."""
