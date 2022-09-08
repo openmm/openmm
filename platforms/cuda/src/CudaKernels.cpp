@@ -424,6 +424,7 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
     SimTKOpenMMUtilities::loadCheckpoint(stream);
     for (auto listener : cu.getReorderListeners())
         listener->execute();
+    cu.validateAtomOrder();
 }
 
 class CudaCalcNonbondedForceKernel::ForceInfo : public CudaForceInfo {

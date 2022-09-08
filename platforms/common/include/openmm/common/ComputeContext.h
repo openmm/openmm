@@ -497,6 +497,11 @@ public:
      */
     bool invalidateMolecules(ComputeForceInfo* force);
     /**
+     * Make sure the current atom order is valid, based on the forces.  If not, perform reordering
+     * to generate a new valid order.  This method is only needed in very unusual situations.
+     */
+    void validateAtomOrder();
+    /**
      * Wait until all work that has been queued (kernel executions, asynchronous data transfers, etc.)
      * has been submitted to the device.  This does not mean it has necessarily been completed.
      * Calling this periodically may improve the responsiveness of the computer's GUI, but at the
@@ -508,6 +513,7 @@ protected:
     struct MoleculeGroup;
     class VirtualSiteInfo;
     void findMoleculeGroups();
+    void resetAtomOrder();
     /**
      * This is the internal implementation of reorderAtoms(), templatized by the numerical precision in use.
      */
