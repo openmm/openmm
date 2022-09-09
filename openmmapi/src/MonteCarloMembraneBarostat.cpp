@@ -32,8 +32,8 @@
 
 using namespace OpenMM;
 
-MonteCarloMembraneBarostat::MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode, int frequency) :
-        xymode(xymode), zmode(zmode) {
+MonteCarloMembraneBarostat::MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode, int frequency, bool scaleMoleculesAsRigid) :
+        xymode(xymode), zmode(zmode), scaleMoleculesAsRigid(scaleMoleculesAsRigid) {
     setDefaultPressure(defaultPressure);
     setDefaultSurfaceTension(defaultSurfaceTension);
     setDefaultTemperature(defaultTemperature);

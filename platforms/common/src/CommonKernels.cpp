@@ -4291,9 +4291,7 @@ void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) 
         if (rigidMolecules)
             molecules = context.getMolecules();
         else {
-            molecules.resize(cc.getNumAtoms());
-            for (int i = 0; i < molecules.size(); i++)
-                molecules[i].push_back(i);
+            molecules = context.getConstrainedGroups();
         }
         numMolecules = molecules.size();
         moleculeAtoms.initialize<int>(cc, cc.getNumAtoms(), "moleculeAtoms");
