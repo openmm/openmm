@@ -7826,8 +7826,8 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     kernel->setArg(2, (float) scaleZ);
     setPeriodicBoxArgs(cc, kernel, 4);
     kernel->execute(cc.getNumAtoms());
-    for (auto& offset : cc.getPosCellOffsets())
-        offset = mm_int4(0, 0, 0, 0);
+    // for (auto& offset : cc.getPosCellOffsets())
+    //     offset = mm_int4(0, 0, 0, 0);
     lastAtomOrder = cc.getAtomIndex();
 }
 

@@ -365,10 +365,10 @@ const vector<vector<int> >& ContextImpl::getMolecules() const {
         system.getConstraintParameters(i, particle1, particle2, distance);
         bonds.push_back(std::make_pair(particle1, particle2));
     }
-    for (auto force : forceImpls) {
-        vector<pair<int, int> > forceBonds = force->getBondedParticles();
-        bonds.insert(bonds.end(), forceBonds.begin(), forceBonds.end());
-    }
+    // for (auto force : forceImpls) {
+    //     vector<pair<int, int> > forceBonds = force->getBondedParticles();
+    //     bonds.insert(bonds.end(), forceBonds.begin(), forceBonds.end());
+    // }
     for (int i = 0; i < system.getNumParticles(); i++) {
         if (system.isVirtualSite(i)) {
             const VirtualSite& site = system.getVirtualSite(i);
