@@ -339,9 +339,33 @@ class Topology(object):
                         else:
                             toResidue = i
                             toAtom = bond[1]
+                            
                         bond_type = bond[2]
-                        bond_order = bond[3]                        
+                        bond_order = bond[3] 
+                                               
                         if fromAtom in atomMaps[fromResidue] and toAtom in atomMaps[toResidue]:
+                            
+                            # Histidine bond order correction depending on Protonation state of actual HIS
+                            # HD1-ND1-CE1=ND2 <-> ND1=CE1-NE2-HE2 - avoid "charged" resonance structure
+                            bond_atoms = (fromAtom, toAtom) 
+                            if(name == "HIS" and "CE1" in bond_atoms and any([N in bond_atoms for N in ["ND1", "NE2"]])):
+                                atoms = atomMaps[i]
+                                ND1_protonated = "HD1" in atoms
+                                NE2_protonated = "HE2" in atoms
+                                
+                                if(ND1_protonated and not NE2_protonated): # HD1-ND1-CE1=ND2
+                                    if("ND1" in bond_atoms):
+                                       bond_order = 1 
+                                    else:
+                                       bond_order = 2
+                                elif(not ND1_protonated and NE2_protonated): # ND1=CE1-NE2-HE2
+                                    if("ND1" in bond_atoms):
+                                       bond_order = 2 
+                                    else:
+                                       bond_order = 1
+                                else: # does not matter if doubly or none protonated.        
+                                    pass
+
                             self.addBond(atomMaps[fromResidue][fromAtom], atomMaps[toResidue][toAtom], type=bond_type, order=bond_order)
 
     def createDisulfideBonds(self, positions):
