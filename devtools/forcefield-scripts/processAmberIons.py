@@ -39,7 +39,9 @@ def amber_frcmod_ions_to_openmm_xml(
             
     ionname_to_residuename['Na+'] = 'NA' # this is a duplicate in atomic_ions.lib
     ionname_to_residuename['Cl-'] = 'CL' # this is a duplicate in atomic_ions.lib
-    
+    ionname_to_residuename['Cu2+'] = 'CU' # consistent with previous residue names
+    ionname_to_residuename['Cu+'] = 'CU1'
+
     with open(frcmod_file) as fh:
         lines = fh.readlines()
         lines = [x.strip() for x in lines]
@@ -109,7 +111,9 @@ def amber_frcmod_ions_to_openmm_xml(
     output_lines.append('  </AtomTypes>')
 
     output_lines.append('  <Residues>')
-    for ionname, mass, extra in mass_data:
+    # NOTE this is a hack to sort residues in a similar way to the older converted xml files, for easier diff
+    # NOTE it would be better to keep them in the order in which ions are listed
+    for ionname in sorted([x[0] for x in mass_data], key=str.casefold):
         if not ionname in ionname_to_residuename:
             print(f'Warning: ion name {ionname} not found in list of atomic ions')
             continue
@@ -153,7 +157,8 @@ os.makedirs(output_path, exist_ok=True)
 
 for frcmod_file in frcmod_files:
     if '1264' in frcmod_file:
-        print(f'Skipped {frcmod_file} because it has 12-6-4 parameters')
+        print(f'Skipped {frcmod_file} because it has 12-6-4 parameters, only 12-6 are supported')
+        continue
     setname = os.path.basename(frcmod_file)
     setname = setname.replace('frcmod.', '')
     xml_file = f'{output_path}/{setname}.xml'
