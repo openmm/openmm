@@ -1,0 +1,85 @@
+<ForceField>
+  <Info>
+    <!-- Li/Merz ion parameters of monovalent ions for TIP4P/EW water model (12-6 normal usage set) -->
+    <DateGenerated>2022-09-11T06:28:33.616234</DateGenerated>
+    <Source Source="parm/frcmod.ions1lm_126_tip4pew" md5hash="f4e9c94f85653071e02c9c537ad21933" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ions1lm_126_tip4pew</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ions1lm_126_tip4pew-Li+" element="Li" mass="6.94" name="ions1lm_126_tip4pew-Li+"/>
+    <Type class="ions1lm_126_tip4pew-Na+" element="Na" mass="22.99" name="ions1lm_126_tip4pew-Na+"/>
+    <Type class="ions1lm_126_tip4pew-K+" element="K" mass="39.10" name="ions1lm_126_tip4pew-K+"/>
+    <Type class="ions1lm_126_tip4pew-Rb+" element="Rb" mass="85.47" name="ions1lm_126_tip4pew-Rb+"/>
+    <Type class="ions1lm_126_tip4pew-Cs+" element="Cs" mass="132.91" name="ions1lm_126_tip4pew-Cs+"/>
+    <Type class="ions1lm_126_tip4pew-Tl+" element="Tl" mass="204.38" name="ions1lm_126_tip4pew-Tl+"/>
+    <Type class="ions1lm_126_tip4pew-Cu+" element="Cu" mass="63.55" name="ions1lm_126_tip4pew-Cu+"/>
+    <Type class="ions1lm_126_tip4pew-Ag+" element="Ag" mass="107.87" name="ions1lm_126_tip4pew-Ag+"/>
+    <Type class="ions1lm_126_tip4pew-NH4+" element="NH" mass="18.04" name="ions1lm_126_tip4pew-NH4+"/>
+    <Type class="ions1lm_126_tip4pew-H3O+" element="HO" mass="19.02" name="ions1lm_126_tip4pew-H3O+"/>
+    <Type class="ions1lm_126_tip4pew-F-" element="F" mass="19.00" name="ions1lm_126_tip4pew-F-"/>
+    <Type class="ions1lm_126_tip4pew-Cl-" element="Cl" mass="35.45" name="ions1lm_126_tip4pew-Cl-"/>
+    <Type class="ions1lm_126_tip4pew-Br-" element="Br" mass="79.90" name="ions1lm_126_tip4pew-Br-"/>
+    <Type class="ions1lm_126_tip4pew-I-" element="I" mass="126.9" name="ions1lm_126_tip4pew-I-"/>
+  </AtomTypes>
+  <Residues>
+    <Residue name="AG">
+      <Atom charge="1.0" name="AG" type="ions1lm_126_tip4pew-Ag+"/>
+    </Residue>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="ions1lm_126_tip4pew-Br-"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="ions1lm_126_tip4pew-Cl-"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="ions1lm_126_tip4pew-Cs+"/>
+    </Residue>
+    <Residue name="CU1">
+      <Atom charge="1.0" name="CU1" type="ions1lm_126_tip4pew-Cu+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="ions1lm_126_tip4pew-F-"/>
+    </Residue>
+    <Residue name="O">
+      <Atom charge="1.0" name="O" type="ions1lm_126_tip4pew-H3O+"/>
+    </Residue>
+    <Residue name="I">
+      <Atom charge="-1.0" name="I" type="ions1lm_126_tip4pew-I-"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="ions1lm_126_tip4pew-K+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="ions1lm_126_tip4pew-Li+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="ions1lm_126_tip4pew-Na+"/>
+    </Residue>
+    <Residue name="N">
+      <Atom charge="1.0" name="N" type="ions1lm_126_tip4pew-NH4+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="ions1lm_126_tip4pew-Rb+"/>
+    </Residue>
+    <Residue name="TL">
+      <Atom charge="1.0" name="TL" type="ions1lm_126_tip4pew-Tl+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.007057822240000001" sigma="0.21844836568801118" type="ions1lm_126_tip4pew-Li+"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.090124406" sigma="0.2551533928753932" type="ions1lm_126_tip4pew-Na+"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.49387597096" sigma="0.2973819921152453" type="ions1lm_126_tip4pew-K+"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.7819792236800001" sigma="0.3148436069907959" type="ions1lm_126_tip4pew-Rb+"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="1.3862789460800002" sigma="0.34495598366393937" type="ions1lm_126_tip4pew-Cs+"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.43586389048" sigma="0.2932838580117997" type="ions1lm_126_tip4pew-Tl+"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.0021137568000000003" sigma="0.20597578363404645" type="ions1lm_126_tip4pew-Cu+"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.01894778792" sigma="0.23056458825471982" type="ions1lm_126_tip4pew-Ag+"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.59811815528" sigma="0.30415282237311186" type="ions1lm_126_tip4pew-NH4+"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.01844784176" sigma="0.23020822876746372" type="ions1lm_126_tip4pew-H3O+"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="1.0385202632000001" sigma="0.32820708776290103" type="ions1lm_126_tip4pew-F-"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="2.7308865492" sigma="0.4135551849607455" type="ions1lm_126_tip4pew-Cl-"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="3.2231123087199998" sigma="0.44901295394273105" type="ions1lm_126_tip4pew-Br-"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="3.69371662064" sigma="0.5022886972875232" type="ions1lm_126_tip4pew-I-"/><!--     HFE set for TIP4P\EW water from Li et al., JCTC, 2015, 11, 1645 -->
+  </NonbondedForce>
+</ForceField>

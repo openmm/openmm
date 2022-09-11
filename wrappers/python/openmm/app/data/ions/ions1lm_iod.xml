@@ -1,0 +1,95 @@
+<ForceField>
+  <Info>
+    <!-- Li/Merz ion parameters of monovalent ions for TIP3P, SPC/E and TIP4P/EW water models (12-6 IOD set) -->
+    <DateGenerated>2022-09-11T06:28:33.577179</DateGenerated>
+    <Source Source="parm/frcmod.ions1lm_iod" md5hash="1c384cb45aec5c706021dd4d847ce20a" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ions1lm_iod</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ions1lm_iod-Li+" element="Li" mass="6.94" name="ions1lm_iod-Li+"/>
+    <Type class="ions1lm_iod-Na+" element="Na" mass="22.99" name="ions1lm_iod-Na+"/>
+    <Type class="ions1lm_iod-K+" element="K" mass="39.10" name="ions1lm_iod-K+"/>
+    <Type class="ions1lm_iod-Rb+" element="Rb" mass="85.47" name="ions1lm_iod-Rb+"/>
+    <Type class="ions1lm_iod-Cs+" element="Cs" mass="132.91" name="ions1lm_iod-Cs+"/>
+    <Type class="ions1lm_iod-Tl+" element="Tl" mass="204.38" name="ions1lm_iod-Tl+"/>
+    <Type class="ions1lm_iod-Cu+" element="Cu" mass="63.55" name="ions1lm_iod-Cu+"/>
+    <Type class="ions1lm_iod-Ag+" element="Ag" mass="107.87" name="ions1lm_iod-Ag+"/>
+    <Type class="ions1lm_iod-NH4+" element="NH" mass="18.04" name="ions1lm_iod-NH4+"/>
+    <Type class="ions1lm_iod-HE+" element="HE" mass="1.007" name="ions1lm_iod-HE+"/>
+    <Type class="ions1lm_iod-HZ+" element="HZ" mass="1.007" name="ions1lm_iod-HZ+"/>
+    <Type class="ions1lm_iod-H3O+" element="HO" mass="19.02" name="ions1lm_iod-H3O+"/>
+    <Type class="ions1lm_iod-F-" element="F" mass="19.00" name="ions1lm_iod-F-"/>
+    <Type class="ions1lm_iod-Cl-" element="Cl" mass="35.45" name="ions1lm_iod-Cl-"/>
+    <Type class="ions1lm_iod-Br-" element="Br" mass="79.90" name="ions1lm_iod-Br-"/>
+    <Type class="ions1lm_iod-I-" element="I" mass="126.9" name="ions1lm_iod-I-"/>
+  </AtomTypes>
+  <Residues>
+    <Residue name="AG">
+      <Atom charge="1.0" name="AG" type="ions1lm_iod-Ag+"/>
+    </Residue>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="ions1lm_iod-Br-"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="ions1lm_iod-Cl-"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="ions1lm_iod-Cs+"/>
+    </Residue>
+    <Residue name="CU1">
+      <Atom charge="1.0" name="CU1" type="ions1lm_iod-Cu+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="ions1lm_iod-F-"/>
+    </Residue>
+    <Residue name="O">
+      <Atom charge="1.0" name="O" type="ions1lm_iod-H3O+"/>
+    </Residue>
+    <Residue name="H">
+      <Atom charge="1.0" name="H" type="ions1lm_iod-HE+"/>
+    </Residue>
+    <Residue name="H">
+      <Atom charge="1.0" name="H" type="ions1lm_iod-HZ+"/>
+    </Residue>
+    <Residue name="I">
+      <Atom charge="-1.0" name="I" type="ions1lm_iod-I-"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="ions1lm_iod-K+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="ions1lm_iod-Li+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="ions1lm_iod-Na+"/>
+    </Residue>
+    <Residue name="N">
+      <Atom charge="1.0" name="N" type="ions1lm_iod-NH4+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="ions1lm_iod-Rb+"/>
+    </Residue>
+    <Residue name="TL">
+      <Atom charge="1.0" name="TL" type="ions1lm_iod-Tl+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.024893754" sigma="0.23430636287090922" type="ions1lm_iod-Li+"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.12171954728" sigma="0.26103332441511945" type="ions1lm_iod-Na+"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.71203621616" sigma="0.31092365263097843" type="ions1lm_iod-K+"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.9607396613600001" sigma="0.3242871334030835" type="ions1lm_iod-Rb+"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="1.6293855800000001" sigma="0.35635948725613575" type="ions1lm_iod-Cs+"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="1.13990929424" sigma="0.3331961205844869" type="ions1lm_iod-Tl+"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.0058239606400000005" sigma="0.21631020876447438" type="ions1lm_iod-Cu+"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.16316922192" sigma="0.2672696154421018" type="ions1lm_iod-Ag+"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.8579022132" sigma="0.31894174109424145" type="ions1lm_iod-NH4+"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="2.765624e-07" sigma="0.14984916439120508" type="ions1lm_iod-HE+"/><!--   IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="6.15048e-06" sigma="0.1648162628559628" type="ions1lm_iod-HZ+"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.6360531444" sigma="0.3064691590402767" type="ions1lm_iod-H3O+"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="0.69344913088" sigma="0.30985457416921003" type="ions1lm_iod-F-"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="2.2239911836" sigma="0.38522460572388273" type="ions1lm_iod-Cl-"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="2.75947218112" sigma="0.41533698239702616" type="ions1lm_iod-Br-"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+    <Atom epsilon="3.35949706888" sigma="0.46148553599669573" type="ions1lm_iod-I-"/><!--     IOD set from Li et al., JCTC, 2015, 11, 1645 -->
+  </NonbondedForce>
+</ForceField>

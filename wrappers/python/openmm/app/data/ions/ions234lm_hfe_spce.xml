@@ -1,0 +1,255 @@
+<ForceField>
+  <Info>
+    <!-- Li/Merz ion parameters of divalent to tetravalent ions for SPC/E water model (12-6 HFE set) -->
+    <DateGenerated>2022-09-11T06:28:33.603058</DateGenerated>
+    <Source Source="parm/frcmod.ions234lm_hfe_spce" md5hash="ad366f1740e9f3c52e262041f5dcfdc9" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ions234lm_hfe_spce</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ions234lm_hfe_spce-Be2+" element="Be" mass="9.01" name="ions234lm_hfe_spce-Be2+"/>
+    <Type class="ions234lm_hfe_spce-Cu2+" element="Cu" mass="63.55" name="ions234lm_hfe_spce-Cu2+"/>
+    <Type class="ions234lm_hfe_spce-Ni2+" element="Ni" mass="58.69" name="ions234lm_hfe_spce-Ni2+"/>
+    <Type class="ions234lm_hfe_spce-Pt2+" element="Pt" mass="195.08" name="ions234lm_hfe_spce-Pt2+"/>
+    <Type class="ions234lm_hfe_spce-Zn2+" element="Zn" mass="65.4" name="ions234lm_hfe_spce-Zn2+"/>
+    <Type class="ions234lm_hfe_spce-Co2+" element="Co" mass="58.93" name="ions234lm_hfe_spce-Co2+"/>
+    <Type class="ions234lm_hfe_spce-Pd2+" element="Pd" mass="106.42" name="ions234lm_hfe_spce-Pd2+"/>
+    <Type class="ions234lm_hfe_spce-Ag2+" element="Ag" mass="107.87" name="ions234lm_hfe_spce-Ag2+"/>
+    <Type class="ions234lm_hfe_spce-Cr2+" element="Cr" mass="52.00" name="ions234lm_hfe_spce-Cr2+"/>
+    <Type class="ions234lm_hfe_spce-Fe2+" element="Fe" mass="55.85" name="ions234lm_hfe_spce-Fe2+"/>
+    <Type class="ions234lm_hfe_spce-Mg2+" element="Mg" mass="24.305" name="ions234lm_hfe_spce-Mg2+"/>
+    <Type class="ions234lm_hfe_spce-V2+" element="V" mass="50.94" name="ions234lm_hfe_spce-V2+"/>
+    <Type class="ions234lm_hfe_spce-Mn2+" element="Mn" mass="54.94" name="ions234lm_hfe_spce-Mn2+"/>
+    <Type class="ions234lm_hfe_spce-Hg2+" element="Hg" mass="200.59" name="ions234lm_hfe_spce-Hg2+"/>
+    <Type class="ions234lm_hfe_spce-Cd2+" element="Cd" mass="112.41" name="ions234lm_hfe_spce-Cd2+"/>
+    <Type class="ions234lm_hfe_spce-Yb2+" element="Yb" mass="173.05" name="ions234lm_hfe_spce-Yb2+"/>
+    <Type class="ions234lm_hfe_spce-Ca2+" element="Ca" mass="40.08" name="ions234lm_hfe_spce-Ca2+"/>
+    <Type class="ions234lm_hfe_spce-Sn2+" element="Sn" mass="118.71" name="ions234lm_hfe_spce-Sn2+"/>
+    <Type class="ions234lm_hfe_spce-Pb2+" element="Pb" mass="207.2" name="ions234lm_hfe_spce-Pb2+"/>
+    <Type class="ions234lm_hfe_spce-Eu2+" element="Eu" mass="151.96" name="ions234lm_hfe_spce-Eu2+"/>
+    <Type class="ions234lm_hfe_spce-Sr2+" element="Sr" mass="87.62" name="ions234lm_hfe_spce-Sr2+"/>
+    <Type class="ions234lm_hfe_spce-Sm2+" element="Sm" mass="150.36" name="ions234lm_hfe_spce-Sm2+"/>
+    <Type class="ions234lm_hfe_spce-Ba2+" element="Ba" mass="137.33" name="ions234lm_hfe_spce-Ba2+"/>
+    <Type class="ions234lm_hfe_spce-Ra2+" element="Ra" mass="226.03" name="ions234lm_hfe_spce-Ra2+"/>
+    <Type class="ions234lm_hfe_spce-Al3+" element="Al" mass="26.98" name="ions234lm_hfe_spce-Al3+"/>
+    <Type class="ions234lm_hfe_spce-Fe3+" element="Fe" mass="55.85" name="ions234lm_hfe_spce-Fe3+"/>
+    <Type class="ions234lm_hfe_spce-Cr3+" element="Cr" mass="52.00" name="ions234lm_hfe_spce-Cr3+"/>
+    <Type class="ions234lm_hfe_spce-In3+" element="In" mass="114.82" name="ions234lm_hfe_spce-In3+"/>
+    <Type class="ions234lm_hfe_spce-Tl3+" element="Tl" mass="204.38" name="ions234lm_hfe_spce-Tl3+"/>
+    <Type class="ions234lm_hfe_spce-Y3+" element="Y" mass="88.91" name="ions234lm_hfe_spce-Y3+"/>
+    <Type class="ions234lm_hfe_spce-La3+" element="La" mass="138.91" name="ions234lm_hfe_spce-La3+"/>
+    <Type class="ions234lm_hfe_spce-Ce3+" element="Ce" mass="140.12" name="ions234lm_hfe_spce-Ce3+"/>
+    <Type class="ions234lm_hfe_spce-Pr3+" element="Pr" mass="140.91" name="ions234lm_hfe_spce-Pr3+"/>
+    <Type class="ions234lm_hfe_spce-Nd3+" element="Nd" mass="144.24" name="ions234lm_hfe_spce-Nd3+"/>
+    <Type class="ions234lm_hfe_spce-Sm3+" element="Sm" mass="150.36" name="ions234lm_hfe_spce-Sm3+"/>
+    <Type class="ions234lm_hfe_spce-Eu3+" element="Eu" mass="151.96" name="ions234lm_hfe_spce-Eu3+"/>
+    <Type class="ions234lm_hfe_spce-Gd3+" element="Gd" mass="157.25" name="ions234lm_hfe_spce-Gd3+"/>
+    <Type class="ions234lm_hfe_spce-Tb3+" element="Tb" mass="158.93" name="ions234lm_hfe_spce-Tb3+"/>
+    <Type class="ions234lm_hfe_spce-Dy3+" element="Dy" mass="162.5" name="ions234lm_hfe_spce-Dy3+"/>
+    <Type class="ions234lm_hfe_spce-Er3+" element="Er" mass="167.26" name="ions234lm_hfe_spce-Er3+"/>
+    <Type class="ions234lm_hfe_spce-Tm3+" element="Tm" mass="168.93" name="ions234lm_hfe_spce-Tm3+"/>
+    <Type class="ions234lm_hfe_spce-Lu3+" element="Lu" mass="174.97" name="ions234lm_hfe_spce-Lu3+"/>
+    <Type class="ions234lm_hfe_spce-Hf4+" element="Hf" mass="178.49" name="ions234lm_hfe_spce-Hf4+"/>
+    <Type class="ions234lm_hfe_spce-Zr4+" element="Zr" mass="91.22" name="ions234lm_hfe_spce-Zr4+"/>
+    <Type class="ions234lm_hfe_spce-Ce4+" element="Ce" mass="140.12" name="ions234lm_hfe_spce-Ce4+"/>
+    <Type class="ions234lm_hfe_spce-U4+" element="U" mass="238.03" name="ions234lm_hfe_spce-U4+"/>
+    <Type class="ions234lm_hfe_spce-Pu4+" element="Pu" mass="244.06" name="ions234lm_hfe_spce-Pu4+"/>
+    <Type class="ions234lm_hfe_spce-Th4+" element="Th" mass="232.04" name="ions234lm_hfe_spce-Th4+"/>
+  </AtomTypes>
+  <Residues>
+    <Residue name="Ag">
+      <Atom charge="2.0" name="Ag" type="ions234lm_hfe_spce-Ag2+"/>
+    </Residue>
+    <Residue name="AL">
+      <Atom charge="3.0" name="AL" type="ions234lm_hfe_spce-Al3+"/>
+    </Residue>
+    <Residue name="BA">
+      <Atom charge="2.0" name="BA" type="ions234lm_hfe_spce-Ba2+"/>
+    </Residue>
+    <Residue name="Be">
+      <Atom charge="2.0" name="Be" type="ions234lm_hfe_spce-Be2+"/>
+    </Residue>
+    <Residue name="CA">
+      <Atom charge="2.0" name="CA" type="ions234lm_hfe_spce-Ca2+"/>
+    </Residue>
+    <Residue name="CD">
+      <Atom charge="2.0" name="CD" type="ions234lm_hfe_spce-Cd2+"/>
+    </Residue>
+    <Residue name="CE">
+      <Atom charge="3.0" name="CE" type="ions234lm_hfe_spce-Ce3+"/>
+    </Residue>
+    <Residue name="Ce">
+      <Atom charge="4.0" name="Ce" type="ions234lm_hfe_spce-Ce4+"/>
+    </Residue>
+    <Residue name="CO">
+      <Atom charge="2.0" name="CO" type="ions234lm_hfe_spce-Co2+"/>
+    </Residue>
+    <Residue name="Cr">
+      <Atom charge="2.0" name="Cr" type="ions234lm_hfe_spce-Cr2+"/>
+    </Residue>
+    <Residue name="CR">
+      <Atom charge="3.0" name="CR" type="ions234lm_hfe_spce-Cr3+"/>
+    </Residue>
+    <Residue name="CU">
+      <Atom charge="2.0" name="CU" type="ions234lm_hfe_spce-Cu2+"/>
+    </Residue>
+    <Residue name="Dy">
+      <Atom charge="3.0" name="Dy" type="ions234lm_hfe_spce-Dy3+"/>
+    </Residue>
+    <Residue name="Er">
+      <Atom charge="3.0" name="Er" type="ions234lm_hfe_spce-Er3+"/>
+    </Residue>
+    <Residue name="EU">
+      <Atom charge="2.0" name="EU" type="ions234lm_hfe_spce-Eu2+"/>
+    </Residue>
+    <Residue name="EU3">
+      <Atom charge="3.0" name="EU3" type="ions234lm_hfe_spce-Eu3+"/>
+    </Residue>
+    <Residue name="FE2">
+      <Atom charge="2.0" name="FE2" type="ions234lm_hfe_spce-Fe2+"/>
+    </Residue>
+    <Residue name="FE">
+      <Atom charge="3.0" name="FE" type="ions234lm_hfe_spce-Fe3+"/>
+    </Residue>
+    <Residue name="GD">
+      <Atom charge="3.0" name="GD" type="ions234lm_hfe_spce-Gd3+"/>
+    </Residue>
+    <Residue name="Hf">
+      <Atom charge="4.0" name="Hf" type="ions234lm_hfe_spce-Hf4+"/>
+    </Residue>
+    <Residue name="HG">
+      <Atom charge="2.0" name="HG" type="ions234lm_hfe_spce-Hg2+"/>
+    </Residue>
+    <Residue name="IN">
+      <Atom charge="3.0" name="IN" type="ions234lm_hfe_spce-In3+"/>
+    </Residue>
+    <Residue name="LA">
+      <Atom charge="3.0" name="LA" type="ions234lm_hfe_spce-La3+"/>
+    </Residue>
+    <Residue name="LU">
+      <Atom charge="3.0" name="LU" type="ions234lm_hfe_spce-Lu3+"/>
+    </Residue>
+    <Residue name="MG">
+      <Atom charge="2.0" name="MG" type="ions234lm_hfe_spce-Mg2+"/>
+    </Residue>
+    <Residue name="MN">
+      <Atom charge="2.0" name="MN" type="ions234lm_hfe_spce-Mn2+"/>
+    </Residue>
+    <Residue name="Nd">
+      <Atom charge="3.0" name="Nd" type="ions234lm_hfe_spce-Nd3+"/>
+    </Residue>
+    <Residue name="NI">
+      <Atom charge="2.0" name="NI" type="ions234lm_hfe_spce-Ni2+"/>
+    </Residue>
+    <Residue name="PB">
+      <Atom charge="2.0" name="PB" type="ions234lm_hfe_spce-Pb2+"/>
+    </Residue>
+    <Residue name="PD">
+      <Atom charge="2.0" name="PD" type="ions234lm_hfe_spce-Pd2+"/>
+    </Residue>
+    <Residue name="PR">
+      <Atom charge="3.0" name="PR" type="ions234lm_hfe_spce-Pr3+"/>
+    </Residue>
+    <Residue name="PT">
+      <Atom charge="2.0" name="PT" type="ions234lm_hfe_spce-Pt2+"/>
+    </Residue>
+    <Residue name="Pu">
+      <Atom charge="4.0" name="Pu" type="ions234lm_hfe_spce-Pu4+"/>
+    </Residue>
+    <Residue name="Ra">
+      <Atom charge="2.0" name="Ra" type="ions234lm_hfe_spce-Ra2+"/>
+    </Residue>
+    <Residue name="Sm">
+      <Atom charge="2.0" name="Sm" type="ions234lm_hfe_spce-Sm2+"/>
+    </Residue>
+    <Residue name="SM">
+      <Atom charge="3.0" name="SM" type="ions234lm_hfe_spce-Sm3+"/>
+    </Residue>
+    <Residue name="Sn">
+      <Atom charge="2.0" name="Sn" type="ions234lm_hfe_spce-Sn2+"/>
+    </Residue>
+    <Residue name="SR">
+      <Atom charge="2.0" name="SR" type="ions234lm_hfe_spce-Sr2+"/>
+    </Residue>
+    <Residue name="TB">
+      <Atom charge="3.0" name="TB" type="ions234lm_hfe_spce-Tb3+"/>
+    </Residue>
+    <Residue name="Th">
+      <Atom charge="4.0" name="Th" type="ions234lm_hfe_spce-Th4+"/>
+    </Residue>
+    <Residue name="Tl">
+      <Atom charge="3.0" name="Tl" type="ions234lm_hfe_spce-Tl3+"/>
+    </Residue>
+    <Residue name="Tm">
+      <Atom charge="3.0" name="Tm" type="ions234lm_hfe_spce-Tm3+"/>
+    </Residue>
+    <Residue name="U">
+      <Atom charge="4.0" name="U" type="ions234lm_hfe_spce-U4+"/>
+    </Residue>
+    <Residue name="V2+">
+      <Atom charge="2.0" name="V2+" type="ions234lm_hfe_spce-V2+"/>
+    </Residue>
+    <Residue name="Y">
+      <Atom charge="3.0" name="Y" type="ions234lm_hfe_spce-Y3+"/>
+    </Residue>
+    <Residue name="YB2">
+      <Atom charge="2.0" name="YB2" type="ions234lm_hfe_spce-Yb2+"/>
+    </Residue>
+    <Residue name="ZN">
+      <Atom charge="2.0" name="ZN" type="ions234lm_hfe_spce-Zn2+"/>
+    </Residue>
+    <Residue name="Zr">
+      <Atom charge="4.0" name="Zr" type="ions234lm_hfe_spce-Zr4+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="4.3932e-06" sigma="0.1630344654196821" type="ions234lm_hfe_spce-Be2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.00185158736" sigma="0.20472852542865" type="ions234lm_hfe_spce-Cu2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.0025439975199999998" sigma="0.20775758107032713" type="ions234lm_hfe_spce-Ni2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.0030480021600000004" sigma="0.2095393785066078" type="ions234lm_hfe_spce-Pt2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.0031585016" sigma="0.20989573799386393" type="ions234lm_hfe_spce-Zn2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.00611382816" sigma="0.21684474799535858" type="ions234lm_hfe_spce-Co2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.00611382816" sigma="0.21684474799535858" type="ions234lm_hfe_spce-Pd2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.012688858640000002" sigma="0.22539737568950585" type="ions234lm_hfe_spce-Ag2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.014823368080000001" sigma="0.2273573528694146" type="ions234lm_hfe_spce-Cr2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.01655449808" sigma="0.22878279081843914" type="ions234lm_hfe_spce-Fe2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.01748020808" sigma="0.2294955097929514" type="ions234lm_hfe_spce-Mg2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.01869645504" sigma="0.23038640851109174" type="ions234lm_hfe_spce-V2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.03304037856" sigma="0.2384044969743548" type="ions234lm_hfe_spce-Mn2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.03304037856" sigma="0.2384044969743548" type="ions234lm_hfe_spce-Hg2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.03548032" sigma="0.23947357543612321" type="ions234lm_hfe_spce-Cd2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.18790243584000002" sigma="0.270476850827407" type="ions234lm_hfe_spce-Yb2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.19079901904000002" sigma="0.2708332103146632" type="ions234lm_hfe_spce-Ca2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.2088123524" sigma="0.2729713672382" type="ions234lm_hfe_spce-Sn2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.35100580160000006" sigma="0.28669120749756116" type="ions234lm_hfe_spce-Pb2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.46060074448" sigma="0.29506565544808033" type="ions234lm_hfe_spce-Eu2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.46816830344000004" sigma="0.2956001946789646" type="ions234lm_hfe_spce-Sr2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.48867542632000005" sigma="0.29702563262798914" type="ions234lm_hfe_spce-Sm2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.97825442928" sigma="0.32517803212122387" type="ions234lm_hfe_spce-Ba2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.97825442928" sigma="0.32517803212122387" type="ions234lm_hfe_spce-Ra2+"/><!--     HFE set for SPC\E water from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="4.631688e-05" sigma="0.17657612593541527" type="ions234lm_hfe_spce-Al3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.0005632500800000001" sigma="0.19439410029822202" type="ions234lm_hfe_spce-Fe3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.004318222720000001" sigma="0.21310297337916914" type="ions234lm_hfe_spce-Cr3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.0053666912800000004" sigma="0.21541931004633408" type="ions234lm_hfe_spce-In3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.00572994616" sigma="0.21613202902084636" type="ions234lm_hfe_spce-Tl3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.11545547168" sigma="0.25996424595335105" type="ions234lm_hfe_spce-Y3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.39555874904000005" sigma="0.2902548023701225" type="ions234lm_hfe_spce-La3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.32577870832" sigma="0.28455305057402436" type="ions234lm_hfe_spce-Ce3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.27501557520000003" sigma="0.2799203772396946" type="ions234lm_hfe_spce-Pr3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.23958713680000002" sigma="0.27635678236713324" type="ions234lm_hfe_spce-Nd3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.19966935008" sigma="0.2719022887764316" type="ions234lm_hfe_spce-Sm3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.17250406064" sigma="0.26851687364749827" type="ions234lm_hfe_spce-Eu3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.16186477624" sigma="0.26709143569847377" type="ions234lm_hfe_spce-Gd3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.14435620064" sigma="0.2645969192876808" type="ions234lm_hfe_spce-Tb3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.12933141480000002" sigma="0.26228058262051585" type="ions234lm_hfe_spce-Dy3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.0935912684" sigma="0.25586611184990543" type="ions234lm_hfe_spce-Er3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.08510343864" sigma="0.2540843144136248" type="ions234lm_hfe_spce-Tm3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.08510343864" sigma="0.2540843144136248" type="ions234lm_hfe_spce-Lu3+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.0006562604" sigma="0.19564135850361852" type="ions234lm_hfe_spce-Hf4+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.00185158736" sigma="0.20472852542865" type="ions234lm_hfe_spce-Zr4+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.042686716080000006" sigma="0.2423244513341723" type="ions234lm_hfe_spce-Ce4+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.00621311448" sigma="0.21702292773898668" type="ions234lm_hfe_spce-U4+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.0158868572" sigma="0.22824825158755493" type="ions234lm_hfe_spce-Pu4+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.12494139464000001" sigma="0.26156786364600365" type="ions234lm_hfe_spce-Th4+"/><!--     HFE set for SPC\E water from Li et al., JPCB, 2015, 119, 883 -->
+  </NonbondedForce>
+</ForceField>

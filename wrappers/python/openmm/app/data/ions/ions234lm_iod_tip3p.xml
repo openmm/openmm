@@ -1,0 +1,215 @@
+<ForceField>
+  <Info>
+    <!-- Li/Merz ion parameters of divalent to tetravalent ions for TIP3P water model (12-6 IOD set) -->
+    <DateGenerated>2022-09-11T06:28:33.643011</DateGenerated>
+    <Source Source="parm/frcmod.ions234lm_iod_tip3p" md5hash="2e458b2ecd1a7bdbababfa42eb8f3221" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ions234lm_iod_tip3p</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ions234lm_iod_tip3p-Be2+" element="Be" mass="9.01" name="ions234lm_iod_tip3p-Be2+"/>
+    <Type class="ions234lm_iod_tip3p-Cu2+" element="Cu" mass="63.55" name="ions234lm_iod_tip3p-Cu2+"/>
+    <Type class="ions234lm_iod_tip3p-Ni2+" element="Ni" mass="58.69" name="ions234lm_iod_tip3p-Ni2+"/>
+    <Type class="ions234lm_iod_tip3p-Zn2+" element="Zn" mass="65.4" name="ions234lm_iod_tip3p-Zn2+"/>
+    <Type class="ions234lm_iod_tip3p-Co2+" element="Co" mass="58.93" name="ions234lm_iod_tip3p-Co2+"/>
+    <Type class="ions234lm_iod_tip3p-Cr2+" element="Cr" mass="52.00" name="ions234lm_iod_tip3p-Cr2+"/>
+    <Type class="ions234lm_iod_tip3p-Fe2+" element="Fe" mass="55.85" name="ions234lm_iod_tip3p-Fe2+"/>
+    <Type class="ions234lm_iod_tip3p-Mg2+" element="Mg" mass="24.305" name="ions234lm_iod_tip3p-Mg2+"/>
+    <Type class="ions234lm_iod_tip3p-V2+" element="V" mass="50.94" name="ions234lm_iod_tip3p-V2+"/>
+    <Type class="ions234lm_iod_tip3p-Mn2+" element="Mn" mass="54.94" name="ions234lm_iod_tip3p-Mn2+"/>
+    <Type class="ions234lm_iod_tip3p-Hg2+" element="Hg" mass="200.59" name="ions234lm_iod_tip3p-Hg2+"/>
+    <Type class="ions234lm_iod_tip3p-Cd2+" element="Cd" mass="112.41" name="ions234lm_iod_tip3p-Cd2+"/>
+    <Type class="ions234lm_iod_tip3p-Ca2+" element="Ca" mass="40.08" name="ions234lm_iod_tip3p-Ca2+"/>
+    <Type class="ions234lm_iod_tip3p-Sn2+" element="Sn" mass="118.71" name="ions234lm_iod_tip3p-Sn2+"/>
+    <Type class="ions234lm_iod_tip3p-Sr2+" element="Sr" mass="87.62" name="ions234lm_iod_tip3p-Sr2+"/>
+    <Type class="ions234lm_iod_tip3p-Ba2+" element="Ba" mass="137.33" name="ions234lm_iod_tip3p-Ba2+"/>
+    <Type class="ions234lm_iod_tip3p-Al3+" element="Al" mass="26.98" name="ions234lm_iod_tip3p-Al3+"/>
+    <Type class="ions234lm_iod_tip3p-Fe3+" element="Fe" mass="55.85" name="ions234lm_iod_tip3p-Fe3+"/>
+    <Type class="ions234lm_iod_tip3p-Cr3+" element="Cr" mass="52.00" name="ions234lm_iod_tip3p-Cr3+"/>
+    <Type class="ions234lm_iod_tip3p-In3+" element="In" mass="114.82" name="ions234lm_iod_tip3p-In3+"/>
+    <Type class="ions234lm_iod_tip3p-Tl3+" element="Tl" mass="204.38" name="ions234lm_iod_tip3p-Tl3+"/>
+    <Type class="ions234lm_iod_tip3p-Y3+" element="Y" mass="88.91" name="ions234lm_iod_tip3p-Y3+"/>
+    <Type class="ions234lm_iod_tip3p-La3+" element="La" mass="138.91" name="ions234lm_iod_tip3p-La3+"/>
+    <Type class="ions234lm_iod_tip3p-Ce3+" element="Ce" mass="140.12" name="ions234lm_iod_tip3p-Ce3+"/>
+    <Type class="ions234lm_iod_tip3p-Pr3+" element="Pr" mass="140.91" name="ions234lm_iod_tip3p-Pr3+"/>
+    <Type class="ions234lm_iod_tip3p-Nd3+" element="Nd" mass="144.24" name="ions234lm_iod_tip3p-Nd3+"/>
+    <Type class="ions234lm_iod_tip3p-Sm3+" element="Sm" mass="150.36" name="ions234lm_iod_tip3p-Sm3+"/>
+    <Type class="ions234lm_iod_tip3p-Eu3+" element="Eu" mass="151.96" name="ions234lm_iod_tip3p-Eu3+"/>
+    <Type class="ions234lm_iod_tip3p-Gd3+" element="Gd" mass="157.25" name="ions234lm_iod_tip3p-Gd3+"/>
+    <Type class="ions234lm_iod_tip3p-Tb3+" element="Tb" mass="158.93" name="ions234lm_iod_tip3p-Tb3+"/>
+    <Type class="ions234lm_iod_tip3p-Dy3+" element="Dy" mass="162.5" name="ions234lm_iod_tip3p-Dy3+"/>
+    <Type class="ions234lm_iod_tip3p-Er3+" element="Er" mass="167.26" name="ions234lm_iod_tip3p-Er3+"/>
+    <Type class="ions234lm_iod_tip3p-Tm3+" element="Tm" mass="168.93" name="ions234lm_iod_tip3p-Tm3+"/>
+    <Type class="ions234lm_iod_tip3p-Lu3+" element="Lu" mass="174.97" name="ions234lm_iod_tip3p-Lu3+"/>
+    <Type class="ions234lm_iod_tip3p-Hf4+" element="Hf" mass="178.49" name="ions234lm_iod_tip3p-Hf4+"/>
+    <Type class="ions234lm_iod_tip3p-Zr4+" element="Zr" mass="91.22" name="ions234lm_iod_tip3p-Zr4+"/>
+    <Type class="ions234lm_iod_tip3p-Ce4+" element="Ce" mass="140.12" name="ions234lm_iod_tip3p-Ce4+"/>
+    <Type class="ions234lm_iod_tip3p-U4+" element="U" mass="238.03" name="ions234lm_iod_tip3p-U4+"/>
+    <Type class="ions234lm_iod_tip3p-Pu4+" element="Pu" mass="244.06" name="ions234lm_iod_tip3p-Pu4+"/>
+    <Type class="ions234lm_iod_tip3p-Th4+" element="Th" mass="232.04" name="ions234lm_iod_tip3p-Th4+"/>
+  </AtomTypes>
+  <Residues>
+    <Residue name="AL">
+      <Atom charge="3.0" name="AL" type="ions234lm_iod_tip3p-Al3+"/>
+    </Residue>
+    <Residue name="BA">
+      <Atom charge="2.0" name="BA" type="ions234lm_iod_tip3p-Ba2+"/>
+    </Residue>
+    <Residue name="Be">
+      <Atom charge="2.0" name="Be" type="ions234lm_iod_tip3p-Be2+"/>
+    </Residue>
+    <Residue name="CA">
+      <Atom charge="2.0" name="CA" type="ions234lm_iod_tip3p-Ca2+"/>
+    </Residue>
+    <Residue name="CD">
+      <Atom charge="2.0" name="CD" type="ions234lm_iod_tip3p-Cd2+"/>
+    </Residue>
+    <Residue name="CE">
+      <Atom charge="3.0" name="CE" type="ions234lm_iod_tip3p-Ce3+"/>
+    </Residue>
+    <Residue name="Ce">
+      <Atom charge="4.0" name="Ce" type="ions234lm_iod_tip3p-Ce4+"/>
+    </Residue>
+    <Residue name="CO">
+      <Atom charge="2.0" name="CO" type="ions234lm_iod_tip3p-Co2+"/>
+    </Residue>
+    <Residue name="Cr">
+      <Atom charge="2.0" name="Cr" type="ions234lm_iod_tip3p-Cr2+"/>
+    </Residue>
+    <Residue name="CR">
+      <Atom charge="3.0" name="CR" type="ions234lm_iod_tip3p-Cr3+"/>
+    </Residue>
+    <Residue name="CU">
+      <Atom charge="2.0" name="CU" type="ions234lm_iod_tip3p-Cu2+"/>
+    </Residue>
+    <Residue name="Dy">
+      <Atom charge="3.0" name="Dy" type="ions234lm_iod_tip3p-Dy3+"/>
+    </Residue>
+    <Residue name="Er">
+      <Atom charge="3.0" name="Er" type="ions234lm_iod_tip3p-Er3+"/>
+    </Residue>
+    <Residue name="EU3">
+      <Atom charge="3.0" name="EU3" type="ions234lm_iod_tip3p-Eu3+"/>
+    </Residue>
+    <Residue name="FE2">
+      <Atom charge="2.0" name="FE2" type="ions234lm_iod_tip3p-Fe2+"/>
+    </Residue>
+    <Residue name="FE">
+      <Atom charge="3.0" name="FE" type="ions234lm_iod_tip3p-Fe3+"/>
+    </Residue>
+    <Residue name="GD">
+      <Atom charge="3.0" name="GD" type="ions234lm_iod_tip3p-Gd3+"/>
+    </Residue>
+    <Residue name="Hf">
+      <Atom charge="4.0" name="Hf" type="ions234lm_iod_tip3p-Hf4+"/>
+    </Residue>
+    <Residue name="HG">
+      <Atom charge="2.0" name="HG" type="ions234lm_iod_tip3p-Hg2+"/>
+    </Residue>
+    <Residue name="IN">
+      <Atom charge="3.0" name="IN" type="ions234lm_iod_tip3p-In3+"/>
+    </Residue>
+    <Residue name="LA">
+      <Atom charge="3.0" name="LA" type="ions234lm_iod_tip3p-La3+"/>
+    </Residue>
+    <Residue name="LU">
+      <Atom charge="3.0" name="LU" type="ions234lm_iod_tip3p-Lu3+"/>
+    </Residue>
+    <Residue name="MG">
+      <Atom charge="2.0" name="MG" type="ions234lm_iod_tip3p-Mg2+"/>
+    </Residue>
+    <Residue name="MN">
+      <Atom charge="2.0" name="MN" type="ions234lm_iod_tip3p-Mn2+"/>
+    </Residue>
+    <Residue name="Nd">
+      <Atom charge="3.0" name="Nd" type="ions234lm_iod_tip3p-Nd3+"/>
+    </Residue>
+    <Residue name="NI">
+      <Atom charge="2.0" name="NI" type="ions234lm_iod_tip3p-Ni2+"/>
+    </Residue>
+    <Residue name="PR">
+      <Atom charge="3.0" name="PR" type="ions234lm_iod_tip3p-Pr3+"/>
+    </Residue>
+    <Residue name="Pu">
+      <Atom charge="4.0" name="Pu" type="ions234lm_iod_tip3p-Pu4+"/>
+    </Residue>
+    <Residue name="SM">
+      <Atom charge="3.0" name="SM" type="ions234lm_iod_tip3p-Sm3+"/>
+    </Residue>
+    <Residue name="Sn">
+      <Atom charge="2.0" name="Sn" type="ions234lm_iod_tip3p-Sn2+"/>
+    </Residue>
+    <Residue name="SR">
+      <Atom charge="2.0" name="SR" type="ions234lm_iod_tip3p-Sr2+"/>
+    </Residue>
+    <Residue name="TB">
+      <Atom charge="3.0" name="TB" type="ions234lm_iod_tip3p-Tb3+"/>
+    </Residue>
+    <Residue name="Th">
+      <Atom charge="4.0" name="Th" type="ions234lm_iod_tip3p-Th4+"/>
+    </Residue>
+    <Residue name="Tl">
+      <Atom charge="3.0" name="Tl" type="ions234lm_iod_tip3p-Tl3+"/>
+    </Residue>
+    <Residue name="Tm">
+      <Atom charge="3.0" name="Tm" type="ions234lm_iod_tip3p-Tm3+"/>
+    </Residue>
+    <Residue name="U">
+      <Atom charge="4.0" name="U" type="ions234lm_iod_tip3p-U4+"/>
+    </Residue>
+    <Residue name="V2+">
+      <Atom charge="2.0" name="V2+" type="ions234lm_iod_tip3p-V2+"/>
+    </Residue>
+    <Residue name="Y">
+      <Atom charge="3.0" name="Y" type="ions234lm_iod_tip3p-Y3+"/>
+    </Residue>
+    <Residue name="ZN">
+      <Atom charge="2.0" name="ZN" type="ions234lm_iod_tip3p-Zn2+"/>
+    </Residue>
+    <Residue name="Zr">
+      <Atom charge="4.0" name="Zr" type="ions234lm_iod_tip3p-Zr4+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.0026385977600000003" sigma="0.20811394055758325" type="ions234lm_iod_tip3p-Be2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.07200664" sigma="0.2510552587719476" type="ions234lm_iod_tip3p-Cu2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.04934496632" sigma="0.24464078800133718" type="ions234lm_iod_tip3p-Ni2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.062412728" sigma="0.24856074236115466" type="ions234lm_iod_tip3p-Zn2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.06846053264" sigma="0.25016436005380727" type="ions234lm_iod_tip3p-Co2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.05799739464" sigma="0.24731348415575818" type="ions234lm_iod_tip3p-Cr2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.07200664" sigma="0.2510552587719476" type="ions234lm_iod_tip3p-Fe2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.062412728" sigma="0.24856074236115466" type="ions234lm_iod_tip3p-Mg2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.1338302608" sigma="0.26299330159502815" type="ions234lm_iod_tip3p-V2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.12386075112" sigma="0.2613896839023756" type="ions234lm_iod_tip3p-Mn2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.28247819944" sigma="0.2806330962142069" type="ions234lm_iod_tip3p-Hg2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.17114857016" sigma="0.2683386939038702" type="ions234lm_iod_tip3p-Cd2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.34886028824000004" sigma="0.2865130277539331" type="ions234lm_iod_tip3p-Ca2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.6903723846400001" sigma="0.309676394425582" type="ions234lm_iod_tip3p-Sn2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.73715046696" sigma="0.312349090580003" type="ions234lm_iod_tip3p-Sr2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="1.2995585169600001" sigma="0.34085784956049386" type="ions234lm_iod_tip3p-Ba2+"/><!--     IOD set from Li et al., JCTC, 2013, 9, 2733 -->
+    <Atom epsilon="0.01971831336" sigma="0.23109912748560402" type="ions234lm_iod_tip3p-Al3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.05678093848" sigma="0.24695712466850203" type="ions234lm_iod_tip3p-Fe3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.03548032" sigma="0.23947357543612321" type="ions234lm_iod_tip3p-Cr3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.11751709584" sigma="0.26032060544060714" type="ions234lm_iod_tip3p-In3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.18079185336" sigma="0.26958595210926667" type="ions234lm_iod_tip3p-Tl3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.33615222504000003" sigma="0.2854439492921647" type="ions234lm_iod_tip3p-Y3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.63014479248" sigma="0.3061127995530206" type="ions234lm_iod_tip3p-La3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.69962078192" sigma="0.3102109336564662" type="ions234lm_iod_tip3p-Ce3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.67508049224" sigma="0.3087854957074416" type="ions234lm_iod_tip3p-Pr3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.52569060488" sigma="0.2995201490387821" type="ions234lm_iod_tip3p-Nd3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.46816830344000004" sigma="0.2956001946789646" type="ions234lm_iod_tip3p-Sm3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.48608615792" sigma="0.29684745288436104" type="ions234lm_iod_tip3p-Eu3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.38186547936" sigma="0.2891857239083541" type="ions234lm_iod_tip3p-Gd3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.39786810784" sigma="0.29043298211375057" type="ions234lm_iod_tip3p-Tb3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.35100580160000006" sigma="0.28669120749756116" type="ions234lm_iod_tip3p-Dy3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.33615222504000003" sigma="0.2854439492921647" type="ions234lm_iod_tip3p-Er3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.33615222504000003" sigma="0.2854439492921647" type="ions234lm_iod_tip3p-Tm3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.30760316128000004" sigma="0.28294943288137175" type="ions234lm_iod_tip3p-Lu3+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.16186477624" sigma="0.26709143569847377" type="ions234lm_iod_tip3p-Hf4+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.18934696184" sigma="0.27065503057103507" type="ions234lm_iod_tip3p-Zr4+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.53380618416" sigma="0.30005468826966625" type="ions234lm_iod_tip3p-Ce4+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.53380618416" sigma="0.30005468826966625" type="ions234lm_iod_tip3p-U4+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.47580293192" sigma="0.29613473390984874" type="ions234lm_iod_tip3p-Pu4+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+    <Atom epsilon="0.6009964544" sigma="0.3043310021167399" type="ions234lm_iod_tip3p-Th4+"/><!--     IOD set for TIP3P water from Li et al., JPCB, 2015, 119, 883 -->
+  </NonbondedForce>
+</ForceField>
