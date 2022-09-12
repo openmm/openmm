@@ -441,6 +441,7 @@ void OpenCLUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& 
     SimTKOpenMMUtilities::loadCheckpoint(stream);
     for (auto listener : cl.getReorderListeners())
         listener->execute();
+    cl.validateAtomOrder();
 }
 
 class OpenCLCalcNonbondedForceKernel::ForceInfo : public OpenCLForceInfo {

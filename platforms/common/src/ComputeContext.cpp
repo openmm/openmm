@@ -376,6 +376,13 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
     // atoms to their original order, rebuild the list of identical molecules, and sort them
     // again.
 
+    resetAtomOrder();
+    findMoleculeGroups();
+    reorderAtoms();
+    return true;
+}
+
+void ComputeContext::resetAtomOrder() {
     ContextSelector selector(*this);
     vector<mm_int4> newCellOffsets(numAtoms);
     if (getUseDoublePrecision()) {
@@ -436,12 +443,25 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
         posCellOffsets[i] = newCellOffsets[i];
     }
     getAtomIndexArray().upload(atomIndex);
-    findMoleculeGroups();
     for (auto listener : reorderListeners)
         listener->execute();
     forceNextReorder = true;
-    reorderAtoms();
-    return true;
+}
+
+void ComputeContext::validateAtomOrder() {
+    for (auto& mol : moleculeGroups) {
+        for (int atom : mol.atoms) {
+            set<int> identical;
+            for (int offset : mol.offsets)
+                identical.insert(atom+offset);
+            for (int i : identical)
+                if (identical.find(atomIndex[i]) == identical.end()) {
+                    resetAtomOrder();
+                    reorderAtoms();
+                    return;
+                }
+        }
+    }
 }
 
 void ComputeContext::forceReorder() {
