@@ -146,7 +146,7 @@
   <Bond from="CB" to="CG" type="Single" order="1" />
   <Bond from="CB" to="HB2" type="Single" order="1" />
   <Bond from="CB" to="HB3" type="Single" order="1" />
-  <Bond from="CG" to="OD1" type="Amide" order="2" />
+  <Bond from="CG" to="OD1" type="Double" order="2" />
   <Bond from="CG" to="OD2" type="Single" order="1" />
   <Bond from="H" to="N" type="Single" order="1" />
   <Bond from="H2" to="N" type="Single" order="1" />
@@ -462,7 +462,7 @@
   <Bond from="CB" to="HB2" type="Single" order="1" />
   <Bond from="CB" to="HB3" type="Single" order="1" />
   <Bond from="CD" to="CG" type="Single" order="1" />
-  <Bond from="CD" to="OE1" type="Amide" order="2" />
+  <Bond from="CD" to="OE1" type="Double" order="2" />
   <Bond from="CD" to="OE2" type="Single" order="1" />
   <Bond from="CG" to="HG2" type="Single" order="1" />
   <Bond from="CG" to="HG3" type="Single" order="1" />
@@ -685,10 +685,10 @@
   <Bond from="CB" to="HB2" type="Single" order="1" />
   <Bond from="CB" to="HB3" type="Single" order="1" />
   <Bond from="CD1" to="CE1" type="Aromatic" order="1" />
-  <Bond from="CD1" to="CG" type="Single" order="2" />
+  <Bond from="CD1" to="CG" type="Aromatic" order="2" />
   <Bond from="CD1" to="HD1" type="Single" order="1" />
-  <Bond from="CD2" to="CE2" type="Single" order="2" />
-  <Bond from="CD2" to="CG" type="Single" order="1" />
+  <Bond from="CD2" to="CE2" type="Aromatic" order="2" />
+  <Bond from="CD2" to="CG" type="Aromatic" order="1" />
   <Bond from="CD2" to="HD2" type="Single" order="1" />
   <Bond from="CE1" to="CZ" type="Aromatic" order="2" />
   <Bond from="CE1" to="HE1" type="Single" order="1" />
@@ -770,7 +770,7 @@
   <Bond from="CB" to="CG" type="Single" order="1" />
   <Bond from="CB" to="HB2" type="Single" order="1" />
   <Bond from="CB" to="HB3" type="Single" order="1" />
-  <Bond from="CD1" to="CG" type="Single" order="2" />
+  <Bond from="CD1" to="CG" type="Aromatic" order="2" />
   <Bond from="CD1" to="HD1" type="Single" order="1" />
   <Bond from="CD1" to="NE1" type="Aromatic" order="1" />
   <Bond from="CD2" to="CE2" type="Aromatic" order="1" />
@@ -778,7 +778,7 @@
   <Bond from="CD2" to="CG" type="Aromatic" order="1" />
   <Bond from="CE2" to="CZ2" type="Aromatic" order="2" />
   <Bond from="CE2" to="NE1" type="Aromatic" order="1" />
-  <Bond from="CE3" to="CZ3" type="Single" order="1" />
+  <Bond from="CE3" to="CZ3" type="Aromatic" order="1" />
   <Bond from="CE3" to="HE3" type="Single" order="1" />
   <Bond from="CH2" to="CZ2" type="Aromatic" order="1" />
   <Bond from="CH2" to="CZ3" type="Aromatic" order="2" />
@@ -803,10 +803,10 @@
   <Bond from="CB" to="HB2" type="Single" order="1" />
   <Bond from="CB" to="HB3" type="Single" order="1" />
   <Bond from="CD1" to="CE1" type="Aromatic" order="1" />
-  <Bond from="CD1" to="CG" type="Single" order="2" />
+  <Bond from="CD1" to="CG" type="Aromatic" order="2" />
   <Bond from="CD1" to="HD1" type="Single" order="1" />
-  <Bond from="CD2" to="CE2" type="Single" order="2" />
-  <Bond from="CD2" to="CG" type="Single" order="1" />
+  <Bond from="CD2" to="CE2" type="Aromatic" order="2" />
+  <Bond from="CD2" to="CG" type="Aromatic" order="1" />
   <Bond from="CD2" to="HD2" type="Single" order="1" />
   <Bond from="CE1" to="CZ" type="Aromatic" order="2" />
   <Bond from="CE1" to="HE1" type="Single" order="1" />
