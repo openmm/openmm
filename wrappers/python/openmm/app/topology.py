@@ -463,6 +463,14 @@ class Atom(object):
         ## A user defined identifier for this Atom
         self.id = id
 
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        if isinstance(other, Atom):
+            return str(other) == str(self)
+        return False
+
     def __repr__(self):
         return "<Atom %d (%s) of chain %d residue %d (%s)>" % (self.index, self.name, self.residue.chain.index, self.residue.index, self.residue.name)
 
