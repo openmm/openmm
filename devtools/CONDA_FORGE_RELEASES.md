@@ -102,3 +102,17 @@ git merge upstream/dev
 git commit --allow-empty -m "Trigger CI"
 git push upstream dev
 ```
+
+## Hosted Environments
+
+Anaconda.org supports hosting environments (as defined in a yaml) in the Anaconda cloud.
+This makes it easier for end users to create a specified conda environment as they do not need a local copy of the yaml file.
+This is especially useful when distributing an environment that uses lots of channels and/or labels.
+
+To upload en environment
+
+1. Create the yaml file
+1. Test that the yaml file works e.g. `mamba env create --file openmm-8-beta.yaml`
+1. Upload the environment e.g. `anaconda upload -u openmm hosted-envs/openmm-8-beta.yaml`
+
+Now users can create an environment with `mamba env create openmm/openmm-8-beta`
