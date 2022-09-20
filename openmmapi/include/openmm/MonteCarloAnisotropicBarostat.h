@@ -98,6 +98,8 @@ public:
      * @param scaleY              whether to allow the Y dimension of the periodic box to change size
      * @param scaleZ              whether to allow the Z dimension of the periodic box to change size
      * @param frequency           the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param scaleMoleculesAsRigid   if true, coordinate scaling keeps molecules rigid, scaling only the center of mass
+     *                                of each one.  If false, every atom is scaled independently.
      */
     MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double defaultTemperature, bool scaleX = true, bool scaleY = true, bool scaleZ = true, int frequency = 25, bool scaleMoleculesAsRigid = false);
     /**

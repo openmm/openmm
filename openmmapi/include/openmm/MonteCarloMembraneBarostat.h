@@ -128,6 +128,8 @@ public:
      * @param xymode                 the mode specifying the behavior of the X and Y axes
      * @param zmode                  the mode specifying the behavior of the Z axis
      * @param frequency              the frequency at which Monte Carlo volume changes should be attempted (in time steps)
+     * @param scaleMoleculesAsRigid   if true, coordinate scaling keeps molecules rigid, scaling only the center of mass
+     *                                of each one.  If false, every atom is scaled independently.
      */
     MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode, int frequency = 25, bool scaleMoleculesAsRigid=false);
     /**
