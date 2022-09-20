@@ -99,7 +99,7 @@ public:
      * @param scaleZ              whether to allow the Z dimension of the periodic box to change size
      * @param frequency           the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
      */
-    MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double defaultTemperature, bool scaleX = true, bool scaleY = true, bool scaleZ = true, int frequency = 25);
+    MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double defaultTemperature, bool scaleX = true, bool scaleY = true, bool scaleZ = true, int frequency = 25, bool scaleMoleculesAsRigid = false);
     /**
      * Get the default pressure (in bar).
      *
@@ -187,9 +187,26 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return false;
     }
+    /**
+     * Get whether scaling is applied to the centroid of each molecule while keeping
+     * the molecules rigid, or to each atom independently.
+     *
+     * @returns true if scaling is applied to molecule centroids, false if it is applied to each atom independently.
+     */
+    bool getScaleMoleculesAsRigid() const {
+        return scaleMoleculesAsRigid;
+    }
+    /**
+     * Set whether scaling is applied to the centroid of each molecule while keeping
+     * the molecules rigid, or to each atom independently.
+     */
+    void setScaleMoleculesAsRigid(bool rigid) {
+        scaleMoleculesAsRigid = rigid;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:
+    bool scaleMoleculesAsRigid;
     Vec3 defaultPressure;
     double defaultTemperature;
     bool scaleX, scaleY, scaleZ;

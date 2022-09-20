@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double defaultTemperature, int frequency) {
+MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double defaultTemperature, int frequency, bool scaleMoleculesAsRigid) : scaleMoleculesAsRigid(scaleMoleculesAsRigid) {
     setDefaultPressure(defaultPressure);
     setDefaultTemperature(defaultTemperature);
     setFrequency(frequency);

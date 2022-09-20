@@ -365,10 +365,10 @@ const vector<vector<int> >& ContextImpl::getMolecules() const {
         system.getConstraintParameters(i, particle1, particle2, distance);
         bonds.push_back(std::make_pair(particle1, particle2));
     }
-    // for (auto force : forceImpls) {
-    //     vector<pair<int, int> > forceBonds = force->getBondedParticles();
-    //     bonds.insert(bonds.end(), forceBonds.begin(), forceBonds.end());
-    // }
+    for (auto force : forceImpls) {
+        vector<pair<int, int> > forceBonds = force->getBondedParticles();
+        bonds.insert(bonds.end(), forceBonds.begin(), forceBonds.end());
+    }
     for (int i = 0; i < system.getNumParticles(); i++) {
         if (system.isVirtualSite(i)) {
             const VirtualSite& site = system.getVirtualSite(i);
@@ -390,6 +390,44 @@ const vector<vector<int> >& ContextImpl::getMolecules() const {
 
     molecules = findMolecules(numParticles, particleBonds);
     return molecules;
+}
+
+const vector<vector<int> >& ContextImpl::getConstrainedGroups() const {
+    if (!hasInitializedForces)
+        throw OpenMMException("ContextImpl: getConstrainedGroups() cannot be called until all ForceImpls have been initialized");
+    if (constrainedGroups.size() > 0 || system.getNumParticles() == 0)
+        return constrainedGroups;
+
+    // First make a list of bonds and constraints.
+
+    vector<pair<int, int> > bonds;
+    for (int i = 0; i < system.getNumConstraints(); i++) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        bonds.push_back(std::make_pair(particle1, particle2));
+    }
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        if (system.isVirtualSite(i)) {
+            const VirtualSite& site = system.getVirtualSite(i);
+            for (int j = 0; j < site.getNumParticles(); j++)
+                bonds.push_back(std::make_pair(i, site.getParticle(j)));
+        }
+    }
+
+    // Make a list of every other particle to which each particle is connected
+
+    int numParticles = system.getNumParticles();
+    vector<vector<int> > particleBonds(numParticles);
+    for (auto& bond : bonds) {
+        particleBonds[bond.first].push_back(bond.second);
+        particleBonds[bond.second].push_back(bond.first);
+    }
+
+    // Now identify particles by which molecule they belong to.
+
+    constrainedGroups = findMolecules(numParticles, particleBonds);
+    return constrainedGroups;
 }
 
 vector<vector<int> > ContextImpl::findMolecules(int numParticles, vector<vector<int> >& particleBonds) {

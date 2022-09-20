@@ -129,7 +129,7 @@ public:
      * @param zmode                  the mode specifying the behavior of the Z axis
      * @param frequency              the frequency at which Monte Carlo volume changes should be attempted (in time steps)
      */
-    MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode, int frequency = 25);
+    MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode, int frequency = 25, bool scaleMoleculesAsRigid=false);
     /**
      * Get the default pressure acting on the system (in bar).
      *
@@ -238,9 +238,26 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return false;
     }
+    /**
+     * Get whether scaling is applied to the centroid of each molecule while keeping
+     * the molecules rigid, or to each atom independently.
+     *
+     * @returns true if scaling is applied to molecule centroids, false if it is applied to each atom independently.
+     */
+    bool getScaleMoleculesAsRigid() const {
+        return scaleMoleculesAsRigid;
+    }
+    /**
+     * Set whether scaling is applied to the centroid of each molecule while keeping
+     * the molecules rigid, or to each atom independently.
+     */
+    void setScaleMoleculesAsRigid(bool rigid) {
+        scaleMoleculesAsRigid = rigid;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:
+    bool scaleMoleculesAsRigid;
     double defaultPressure, defaultSurfaceTension, defaultTemperature;
     XYMode xymode;
     ZMode zmode;
