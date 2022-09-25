@@ -162,8 +162,8 @@ class TestIntegrators(unittest.TestCase):
         system = System()
         system.addParticle(12.0*amu)
         platform = Platform.getPlatformByName('Reference')
-        initial_positions = Vec3(0,0,0)
-        initial_velocities = Vec3(1,0,0)
+        initial_positions = [Vec3(0,0,0)]
+        initial_velocities = [Vec3(1,0,0)]
         nsteps = 125 # number of steps to take
 
         def get_final_velocities(nsubsteps):
@@ -181,9 +181,9 @@ class TestIntegrators(unittest.TestCase):
         reference_velocities = get_final_velocities(1)
         for nsubsteps in range(2,6):
             mts_velocities = get_final_velocities(nsubsteps)
-            self.assertAlmostEqual(reference_velocities.x, mts_velocities.x)
-            self.assertAlmostEqual(reference_velocities.y, mts_velocities.y)
-            self.assertAlmostEqual(reference_velocities.z, mts_velocities.z)
+            self.assertAlmostEqual(math.exp(-context.getTime()*friction), mts_velocities.x)
+            self.assertAlmostEqual(0, mts_velocities.y)
+            self.assertAlmostEqual(0, mts_velocities.z)
 
     def testNoseHooverIntegrator(self):
         """Test partial thermostating in the NoseHooverIntegrator (only API)"""
