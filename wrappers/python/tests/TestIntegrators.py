@@ -156,13 +156,42 @@ class TestIntegrators(unittest.TestCase):
         temperature = averageEnergy*2/(dofs*MOLAR_GAS_CONSTANT_R)
         self.assertTrue(290*kelvin < temperature < 310*kelvin)
 
+    def testMTSLangevinIntegratorFriction(self):
+        """Test the MTSLangevinIntegrator on a force-free particle to ensure friction is properly accounted for (issue #3790)"""
+        # Create a System with a single particle and no forces
+        system = System()
+        system.addParticle(12.0*amu)
+        platform = Platform.GetPlatformByName('Reference')
+        initial_positions = Vec3(0,0,0)
+        initial_velocities = Vec3(1,0,0)
+        nsteps = 125 # number of steps to take
+
+        def get_final_velocities(nsubsteps):
+            """Get the final velocity vector after a fixed number of steps for the specified number of substeps"""
+            integrator = MTSLangevinIntegrator(0*kelvin, 1/picosecond, 4*femtoseconds, [(0,ngroups)])
+            context = Context(system, integrator, platform)
+            context.setPositions(initial_positions)
+            context.setVelocities(initial_velocity)
+            integrator.step(nsteps)
+            final_velocities = context.getState(getVelocities=True).getVelocities()
+            del context, integrator
+            return final_velocities
+
+        # Compare sub-stepped MTS with single-step MTS
+        reference_velocities = get_final_velocities(1)
+        for nsubsteps in range(2,6):
+            mts_velocities = get_final_velocities(nsubsteps)
+            self.assertAlmostEqual(reference_velocities.x, mts_velocities.x)
+            self.assertAlmostEqual(reference_velocities.y, mts_velocities.y)
+            self.assertAlmostEqual(reference_velocities.z, mts_velocities.z)
+
     def testNoseHooverIntegrator(self):
         """Test partial thermostating in the NoseHooverIntegrator (only API)"""
         pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
         ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
         system = ff.createSystem(pdb.topology, nonbondedMethod=PME)
 
-        integrator = NoseHooverIntegrator(1.0*femtosecond) 
+        integrator = NoseHooverIntegrator(1.0*femtosecond)
         integrator.addSubsystemThermostat(list(range(5)), [], 200*kelvin, 1/picosecond, 200*kelvin, 1/picosecond, 3,3,3)
         con = Context(system, integrator)
         con.setPositions(pdb.positions)
