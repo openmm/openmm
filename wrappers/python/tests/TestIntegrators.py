@@ -168,7 +168,7 @@ class TestIntegrators(unittest.TestCase):
 
         def get_final_velocities(nsubsteps):
             """Get the final velocity vector after a fixed number of steps for the specified number of substeps"""
-            integrator = MTSLangevinIntegrator(0*kelvin, 1/picosecond, 4*femtoseconds, [(0,ngroups)])
+            integrator = MTSLangevinIntegrator(0*kelvin, 1/picosecond, 4*femtoseconds, [(0,nsubsteps)])
             context = Context(system, integrator, platform)
             context.setPositions(initial_positions)
             context.setVelocities(initial_velocity)
