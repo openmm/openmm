@@ -165,10 +165,12 @@ class TestIntegrators(unittest.TestCase):
         initial_positions = [Vec3(0,0,0)]
         initial_velocities = [Vec3(1,0,0)]
         nsteps = 125 # number of steps to take
+        collision_rate = 1/picosecond
+        timestep = 4*femtoseconds
 
         def get_final_velocities(nsubsteps):
             """Get the final velocity vector after a fixed number of steps for the specified number of substeps"""
-            integrator = MTSLangevinIntegrator(0*kelvin, 1/picosecond, 4*femtoseconds, [(0,nsubsteps)])
+            integrator = MTSLangevinIntegrator(0*kelvin, collision_rate, timestep, [(0,nsubsteps)])
             context = Context(system, integrator, platform)
             context.setPositions(initial_positions)
             context.setVelocities(initial_velocity)
@@ -181,7 +183,7 @@ class TestIntegrators(unittest.TestCase):
         reference_velocities = get_final_velocities(1)
         for nsubsteps in range(2,6):
             mts_velocities = get_final_velocities(nsubsteps)
-            self.assertAlmostEqual(math.exp(-context.getTime()*friction), mts_velocities.x)
+            self.assertAlmostEqual(math.exp(-timestep*nsteps*collision_rate), mts_velocities.x)
             self.assertAlmostEqual(0, mts_velocities.y)
             self.assertAlmostEqual(0, mts_velocities.z)
 
