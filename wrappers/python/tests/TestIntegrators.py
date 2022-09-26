@@ -173,14 +173,13 @@ class TestIntegrators(unittest.TestCase):
             integrator = MTSLangevinIntegrator(0*kelvin, collision_rate, timestep, [(0,nsubsteps)])
             context = Context(system, integrator, platform)
             context.setPositions(initial_positions)
-            context.setVelocities(initial_velocity)
+            context.setVelocities(initial_velocities)
             integrator.step(nsteps)
             final_velocities = context.getState(getVelocities=True).getVelocities()
             del context, integrator
             return final_velocities
 
         # Compare sub-stepped MTS with single-step MTS
-        reference_velocities = get_final_velocities(1)
         for nsubsteps in range(2,6):
             mts_velocities = get_final_velocities(nsubsteps)
             self.assertAlmostEqual(math.exp(-timestep*nsteps*collision_rate), mts_velocities.x)
