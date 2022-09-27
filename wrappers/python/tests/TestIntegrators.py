@@ -143,7 +143,7 @@ class TestIntegrators(unittest.TestCase):
         context = Context(system, integrator)
         context.setPositions(pdb.positions)
         context.setVelocitiesToTemperature(300*kelvin)
-        integrator.step(500)
+        integrator.step(5000)
 
         # See if the temperature is correct.
         totalEnergy = 0*kilojoules_per_mole
