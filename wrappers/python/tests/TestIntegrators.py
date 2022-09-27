@@ -182,9 +182,9 @@ class TestIntegrators(unittest.TestCase):
         # Compare sub-stepped MTS with single-step MTS
         for nsubsteps in range(2,6):
             mts_velocities = get_final_velocities(nsubsteps)
-            self.assertAlmostEqual(math.exp(-timestep*nsteps*collision_rate), mts_velocities.x)
-            self.assertAlmostEqual(0, mts_velocities.y)
-            self.assertAlmostEqual(0, mts_velocities.z)
+            self.assertAlmostEqual(math.exp(-timestep*nsteps*collision_rate), mts_velocities[0].x)
+            self.assertAlmostEqual(0, mts_velocities[0].y)
+            self.assertAlmostEqual(0, mts_velocities[0].z)
 
     def testNoseHooverIntegrator(self):
         """Test partial thermostating in the NoseHooverIntegrator (only API)"""
