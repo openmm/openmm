@@ -92,16 +92,16 @@ public:
     /**
      * Create a MonteCarloAnisotropicBarostat.
      *
-     * @param defaultPressure     The default pressure acting on each axis (in bar)
-     * @param defaultTemperature  the default temperature at which the system is being maintained (in Kelvin)
-     * @param scaleX              whether to allow the X dimension of the periodic box to change size
-     * @param scaleY              whether to allow the Y dimension of the periodic box to change size
-     * @param scaleZ              whether to allow the Z dimension of the periodic box to change size
-     * @param frequency           the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param defaultPressure         The default pressure acting on each axis (in bar)
+     * @param defaultTemperature      the default temperature at which the system is being maintained (in Kelvin)
+     * @param scaleX                  whether to allow the X dimension of the periodic box to change size
+     * @param scaleY                  whether to allow the Y dimension of the periodic box to change size
+     * @param scaleZ                  whether to allow the Z dimension of the periodic box to change size
+     * @param frequency               the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
      * @param scaleMoleculesAsRigid   if true, coordinate scaling keeps molecules rigid, scaling only the center of mass
-     *                                of each one.  If false, every atom is scaled independently.
+     *                                of each one. If false, every constrained atom group is scaled independently.
      */
-    MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double defaultTemperature, bool scaleX = true, bool scaleY = true, bool scaleZ = true, int frequency = 25, bool scaleMoleculesAsRigid = false);
+    MonteCarloAnisotropicBarostat(const Vec3& defaultPressure, double defaultTemperature, bool scaleX = true, bool scaleY = true, bool scaleZ = true, int frequency = 25, bool scaleMoleculesAsRigid = true);
     /**
      * Get the default pressure (in bar).
      *

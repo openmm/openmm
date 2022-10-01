@@ -122,16 +122,16 @@ public:
     /**
      * Create a MonteCarloMembraneBarostat.
      *
-     * @param defaultPressure        the default pressure acting on the system (in bar)
-     * @param defaultSurfaceTension  the default surface tension acting on the system (in bar*nm)
-     * @param defaultTemperature     the default temperature at which the system is being maintained (in Kelvin)
-     * @param xymode                 the mode specifying the behavior of the X and Y axes
-     * @param zmode                  the mode specifying the behavior of the Z axis
-     * @param frequency              the frequency at which Monte Carlo volume changes should be attempted (in time steps)
+     * @param defaultPressure         the default pressure acting on the system (in bar)
+     * @param defaultSurfaceTension   the default surface tension acting on the system (in bar*nm)
+     * @param defaultTemperature      the default temperature at which the system is being maintained (in Kelvin)
+     * @param xymode                  the mode specifying the behavior of the X and Y axes
+     * @param zmode                   the mode specifying the behavior of the Z axis
+     * @param frequency               the frequency at which Monte Carlo volume changes should be attempted (in time steps)
      * @param scaleMoleculesAsRigid   if true, coordinate scaling keeps molecules rigid, scaling only the center of mass
-     *                                of each one.  If false, every atom is scaled independently.
+     *                                of each one. If false, every constrained atom group is scaled independently.
      */
-    MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode, int frequency = 25, bool scaleMoleculesAsRigid=false);
+    MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode, int frequency = 25, bool scaleMoleculesAsRigid = true);
     /**
      * Get the default pressure acting on the system (in bar).
      *

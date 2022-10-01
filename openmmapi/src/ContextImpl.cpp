@@ -398,20 +398,20 @@ const vector<vector<int> >& ContextImpl::getConstrainedGroups() const {
     if (constrainedGroups.size() > 0 || system.getNumParticles() == 0)
         return constrainedGroups;
 
-    // First make a list of bonds and constraints.
+    // First make a list of constraints.
 
-    vector<pair<int, int> > bonds;
+    vector<pair<int, int> > links;
     for (int i = 0; i < system.getNumConstraints(); i++) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
-        bonds.push_back(std::make_pair(particle1, particle2));
+        links.push_back(std::make_pair(particle1, particle2));
     }
     for (int i = 0; i < system.getNumParticles(); i++) {
         if (system.isVirtualSite(i)) {
             const VirtualSite& site = system.getVirtualSite(i);
             for (int j = 0; j < site.getNumParticles(); j++)
-                bonds.push_back(std::make_pair(i, site.getParticle(j)));
+                links.push_back(std::make_pair(i, site.getParticle(j)));
         }
     }
 
@@ -419,9 +419,9 @@ const vector<vector<int> >& ContextImpl::getConstrainedGroups() const {
 
     int numParticles = system.getNumParticles();
     vector<vector<int> > particleBonds(numParticles);
-    for (auto& bond : bonds) {
-        particleBonds[bond.first].push_back(bond.second);
-        particleBonds[bond.second].push_back(bond.first);
+    for (auto& link : links) {
+        particleBonds[link.first].push_back(link.second);
+        particleBonds[link.second].push_back(link.first);
     }
 
     // Now identify particles by which molecule they belong to.
