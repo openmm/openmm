@@ -25,7 +25,7 @@ SET(OPENMM_SOURCE_SUBDIRS . ../common)
 # Collect up information about the version of the OpenMM library we're building
 # and make it available to the code so it can be built into the binaries.
 
-SET(OPENMMCUDA_LIBRARY_NAME OpenMMCUDA)
+SET(OPENMMCUDA_LIBRARY_NAME OpenMMCUDA${CUDA_VERSION})
 
 SET(SHARED_TARGET ${OPENMMCUDA_LIBRARY_NAME})
 SET(STATIC_TARGET ${OPENMMCUDA_LIBRARY_NAME}_static)
