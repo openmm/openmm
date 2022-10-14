@@ -48,6 +48,13 @@ extern "C" OPENMM_EXPORT void registerKernelFactories() {
 #endif
     try {
         Platform& platform = Platform::getPlatformByName("CUDA");
+
+        // If this plugin was compiled with a different CUDA version than the
+        // platform, don't register it.
+
+        double version = (CUDA_VERSION/1000)+(CUDA_VERSION%100)*0.01;
+        if (version != platform.getVersionNumber())
+            return;
         AmoebaCudaKernelFactory* factory = new AmoebaCudaKernelFactory();
         platform.registerKernelFactory(CalcAmoebaTorsionTorsionForceKernel::Name(), factory);
         platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(), factory);

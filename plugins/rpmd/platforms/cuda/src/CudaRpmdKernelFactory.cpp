@@ -41,6 +41,13 @@ extern "C" OPENMM_EXPORT void registerPlatforms() {
 extern "C" OPENMM_EXPORT void registerKernelFactories() {
     try {
         Platform& platform = Platform::getPlatformByName("CUDA");
+
+        // If this plugin was compiled with a different CUDA version than the
+        // platform, don't register it.
+
+        double version = (CUDA_VERSION/1000)+(CUDA_VERSION%100)*0.01;
+        if (version != platform.getVersionNumber())
+            return;
         CudaRpmdKernelFactory* factory = new CudaRpmdKernelFactory();
         platform.registerKernelFactory(IntegrateRPMDStepKernel::Name(), factory);
     }
