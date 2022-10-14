@@ -138,6 +138,10 @@ bool Platform::supportsKernels(const vector<string>& kernelNames) const {
     return true;
 }
 
+double Platform::getVersionNumber() const {
+    return 1.0;
+}
+
 Kernel Platform::createKernel(const string& name, ContextImpl& context) const {
     if (kernelFactories.find(name) == kernelFactories.end())
         throw OpenMMException("Called createKernel() on a Platform which does not support the requested kernel");
@@ -149,6 +153,18 @@ vector<Platform*>& Platform::getPlatforms() {
 }
 
 void Platform::registerPlatform(Platform* platform) {
+    for (int i = 0; i < getNumPlatforms(); i++)
+        if (getPlatform(i).getName() == platform->getName()) {
+            // There's an existing Platform with the same name.  Compare the versions.
+
+            if (platform->getVersionNumber() > getPlatform(i).getVersionNumber()) {
+                delete getPlatforms()[i];
+                getPlatforms()[i] = platform;
+            }
+            else
+                delete platform;
+            return;
+        }
     getPlatforms().push_back(platform);
 }
 

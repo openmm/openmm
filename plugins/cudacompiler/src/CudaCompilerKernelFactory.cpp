@@ -44,6 +44,13 @@ extern "C" OPENMM_EXPORT_CUDACOMPILER void registerKernelFactories() {
         cuDriverGetVersion(&driverVersion);
         if (driverVersion >= 7000) {
             Platform& platform = Platform::getPlatformByName("CUDA");
+
+            // If this plugin was compiled with a different CUDA version than the
+            // platform, don't register it.
+
+            double version = (CUDA_VERSION/1000)+(CUDA_VERSION%100)*0.01;
+            if (version != platform.getVersionNumber())
+                return;
             CudaCompilerKernelFactory* factory = new CudaCompilerKernelFactory();
             platform.registerKernelFactory(CudaCompilerKernel::Name(), factory);
         }

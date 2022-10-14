@@ -229,6 +229,10 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
     delete data;
 }
 
+double CudaPlatform::getVersionNumber() const {
+    return (CUDA_VERSION/1000)+(CUDA_VERSION%100)*0.01;
+}
+
 CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& system, const string& deviceIndexProperty, const string& blockingProperty, const string& precisionProperty,
             const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty, const string& hostCompilerProperty, const string& pmeStreamProperty,
             const string& deterministicForcesProperty, int numThreads, bool allowRuntimeCompiler, ContextImpl* originalContext) :

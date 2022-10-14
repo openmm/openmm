@@ -174,7 +174,24 @@ public:
      */
     Kernel createKernel(const std::string& name, ContextImpl& context) const;
     /**
-     * Register a new Platform.
+     * Get the version number of this Platform.  The meaning of this value is platform
+     * specific and need not follow any particular numbering system.
+     * 
+     * The only purpose of the version number is to select between plugins when
+     * multiple plugins provide different versions of the same platform.  It was
+     * created to support the CUDA platform, for which getVersionNumber() returns
+     * the CUDA toolkit version it was compiled against.
+     */
+    virtual double getVersionNumber() const;
+    /**
+     * Register a new Platform.  The argument should have been allocated on the
+     * heap with the "new" operator.  This method assumes ownership of the object.
+     * 
+     * Only one Platform with the same name can be registered at a time.  If another
+     * Platform with the same name has already been registered, their version numbers
+     * are compared.  If the new platform has the higher version number, the previous
+     * one is deleted and replaced with the new one.  Otherwise, the new Platform
+     * is immediately deleted and discarded.
      */
     static void registerPlatform(Platform* platform);
     /**

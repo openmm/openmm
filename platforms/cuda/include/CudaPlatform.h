@@ -55,6 +55,7 @@ public:
     void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
     void linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const;
     void contextDestroyed(ContextImpl& context) const;
+    double getVersionNumber() const;
     /**
      * This is the name of the parameter for selecting which CUDA device or devices to use.
      */

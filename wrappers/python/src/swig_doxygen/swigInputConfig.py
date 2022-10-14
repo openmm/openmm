@@ -441,6 +441,7 @@ UNITS = {
 ("Platform", "getPropertyNames") : (None, ()),
 ("Platform", "getPropertyValue") : (None, ()),
 ("Platform", "getSpeed") : (None, ()),
+("Platform", "getVersionNumber") : (None, ()),
 ("RBTorsionForce", "addTorsion") : (None, (None, None, None, None, "unit.kilojoules_per_mole", "unit.kilojoules_per_mole", "unit.kilojoules_per_mole", "unit.kilojoules_per_mole", "unit.kilojoules_per_mole", "unit.kilojoules_per_mole")),
 ("RBTorsionForce", "getTorsionParameters") : (None, (None, None, None, None, "unit.kilojoules_per_mole", "unit.kilojoules_per_mole", "unit.kilojoules_per_mole", "unit.kilojoules_per_mole", "unit.kilojoules_per_mole", "unit.kilojoules_per_mole")),
 ("RBTorsionForce", "setTorsionParameters") : (None, (None, None, None, None, None, "unit.kilojoules_per_mole", "unit.kilojoules_per_mole", "unit.kilojoules_per_mole", "unit.kilojoules_per_mole", "unit.kilojoules_per_mole", "unit.kilojoules_per_mole")),
