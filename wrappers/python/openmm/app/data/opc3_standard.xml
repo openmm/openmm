@@ -1,0 +1,4 @@
+<ForceField>
+ <Include file="amber/opc3.xml"/>
+ <Include file="amber/ions/ionslm_126_opc3.xml"/>
+</ForceField>
