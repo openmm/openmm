@@ -9,4 +9,5 @@ dependencies:
   - openmm==8.0.0beta
   - openmm-ml==1.0beta
   - openmm-torch==1.0beta
+  - torchani==2.2.2
   - pytest

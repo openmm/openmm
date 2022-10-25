@@ -10,4 +10,5 @@ dependencies:
   - openmm-ml==1.0beta
   - openmm-torch==1.0beta
   - nnpops==0.2
+  - torchani==2.2.2
   - pytest
