@@ -24,4 +24,4 @@ The core developers will review the pull request and may suggest changes.  Simpl
 changes to the branch that is being pulled from, and they will automatically be added to the
 pull request.  In addition, the full test suite is automatically run on every pull request,
 and rerun every time a change is added.  Once the tests are passing and everyone is satisfied
-with the code, the pull request will be merged.  Congratulations on a succesful contribution!
+with the code, the pull request will be merged.  Congratulations on a successful contribution!
