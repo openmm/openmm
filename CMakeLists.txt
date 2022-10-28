@@ -88,7 +88,7 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 platforms/reference serialization libraries/irrxml)
+SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 libraries/pocketfft platforms/reference serialization libraries/irrxml)
 IF(X86 OR ARM)
     SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} libraries/vecmath)
 ENDIF()
@@ -163,8 +163,8 @@ ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
 # and make it available to the code so it can be built into the binaries.
 
 SET(OPENMM_LIBRARY_NAME OpenMM)
-SET(OPENMM_MAJOR_VERSION 7)
-SET(OPENMM_MINOR_VERSION 7)
+SET(OPENMM_MAJOR_VERSION 8)
+SET(OPENMM_MINOR_VERSION 0)
 SET(OPENMM_BUILD_VERSION 0)
 
 ADD_DEFINITIONS(-DOPENMM_LIBRARY_NAME=${OPENMM_LIBRARY_NAME}
@@ -352,7 +352,9 @@ ENDIF(OPENMM_BUILD_OPENCL_LIB)
 
 # Common compute files
 
-IF(CUDAToolkit_FOUND OR OPENCL_FOUND)
+SET(OPENMM_BUILD_COMMON OFF CACHE BOOL "Build common files even if CUDA or OpenCL platforms are not built")
+
+IF(OPENMM_BUILD_CUDA_LIB OR OPENMM_BUILD_OPENCL_LIB OR OPENMM_BUILD_COMMON)
     ADD_SUBDIRECTORY(platforms/common)
 ENDIF()
 
@@ -392,12 +394,7 @@ ENDIF(OPENMM_BUILD_DRUDE_PLUGIN)
 
 # CPU PME plugin
 
-FIND_PACKAGE(FFTW QUIET)
-IF(FFTW_FOUND)
-    SET(OPENMM_BUILD_PME_PLUGIN ON CACHE BOOL "Build CPU PME plugin")
-ELSE(FFTW_FOUND)
-    SET(OPENMM_BUILD_PME_PLUGIN OFF CACHE BOOL "Build CPU PME plugin")
-ENDIF(FFTW_FOUND)
+SET(OPENMM_BUILD_PME_PLUGIN ON CACHE BOOL "Build CPU PME plugin")
 SET(OPENMM_BUILD_PME_PATH)
 IF(OPENMM_BUILD_PME_PLUGIN)
    SET(OPENMM_BUILD_PME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/plugins/cpupme)

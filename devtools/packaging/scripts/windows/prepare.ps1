@@ -19,7 +19,7 @@ wget https://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe -U
 # Install software with conda.
 
 & "C:\Miniconda3\Scripts\conda.exe" config --add channels omnia --add channels conda-forge
-& "C:\Miniconda3\Scripts\conda.exe" install -y fftw3f==3.3.4=vc14_2 jinja2 lxml sphinx sphinxcontrib-autodoc_doxygen sphinxcontrib-lunrsearch conda-build anaconda-client
+& "C:\Miniconda3\Scripts\conda.exe" install -y jinja2 lxml sphinx sphinxcontrib-autodoc_doxygen sphinxcontrib-lunrsearch conda-build anaconda-client
 & "C:\Miniconda3\Scripts\pip.exe" install sphinxcontrib.bibtex
 
 # Install software with choco.

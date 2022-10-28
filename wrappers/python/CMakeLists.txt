@@ -277,8 +277,17 @@ add_custom_target(PythonSdist
     COMMENT "Packaging source distribution package (sdist)..."
 )
 
-# Install binary module (to system location)
-set(PYTHON_SETUP_COMMAND "install --root=\$ENV{DESTDIR}/")
+set(OPENMM_PYTHON_USER_INSTALL OFF CACHE BOOL
+    "Whether to install OpenMM Python binary module into the user site-packages directory")
+mark_as_advanced(OPENMM_PYTHON_USER_INSTALL)
+
+if(OPENMM_PYTHON_USER_INSTALL)
+    # Install binary module to user location
+    set(PYTHON_SETUP_COMMAND "install --user")
+else()
+    # Install binary module to system location
+    set(PYTHON_SETUP_COMMAND "install --root=\$ENV{DESTDIR}/")
+endif()
 configure_file(pysetup.cmake.in
     "${CMAKE_CURRENT_BINARY_DIR}/pysetupinstall.cmake" @ONLY)
 add_custom_target(PythonInstall

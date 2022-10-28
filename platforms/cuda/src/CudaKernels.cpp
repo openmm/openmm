@@ -424,6 +424,7 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
     SimTKOpenMMUtilities::loadCheckpoint(stream);
     for (auto listener : cu.getReorderListeners())
         listener->execute();
+    cu.validateAtomOrder();
 }
 
 class CudaCalcNonbondedForceKernel::ForceInfo : public CudaForceInfo {
@@ -1024,7 +1025,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         replacements["CHARGE1"] = prefix+"charge1";
         replacements["CHARGE2"] = prefix+"charge2";
     }
-    if (hasCoulomb)
+    if (hasCoulomb && !usePosqCharges)
         cu.getNonbondedUtilities().addParameter(CudaNonbondedUtilities::ParameterInfo(prefix+"charge", "real", 1, charges.getElementSize(), charges.getDevicePointer()));
     sigmaEpsilon.initialize<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
     if (hasLJ) {

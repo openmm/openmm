@@ -4,11 +4,26 @@
  */
 
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#ifdef SUPPORTS_64_BIT_ATOMICS
+#ifdef cl_khr_int64_base_atomics
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 typedef unsigned long TileIndex;
 #else
 typedef unsigned int TileIndex;
+void atom_add(volatile __global unsigned long* p, long unsigned val) {
+    volatile __global unsigned int* word = (volatile __global unsigned int*) p;
+#ifdef __ENDIAN_LITTLE__
+    int lowIndex = 0;
+#else
+    int lowIndex = 1;
+#endif
+    unsigned int lower = val;
+    unsigned int upper = val >> 32;
+    unsigned int result = atomic_add(&word[lowIndex], lower);
+    int carry = (lower + (unsigned long) result >= 0x100000000 ? 1 : 0);
+    upper += carry;
+    if (upper != 0)
+        atomic_add(&word[1-lowIndex], upper);
+}
 #endif
 
 #define KERNEL __kernel

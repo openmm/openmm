@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,7 +44,7 @@ const int ComputeContext::ThreadBlockSize = 64;
 const int ComputeContext::TileSize = 32;
 
 ComputeContext::ComputeContext(const System& system) : system(system), time(0.0), stepCount(0), computeForceCount(0), stepsSinceReorder(99999),
-        atomsWereReordered(false), forcesValid(false), thread(NULL) {
+        forceNextReorder(false), atomsWereReordered(false), forcesValid(false), thread(NULL) {
     thread = new WorkThread();
 }
 
@@ -77,6 +77,19 @@ string ComputeContext::replaceStrings(const string& input, const std::map<std::s
             if (index != result.npos) {
                 if ((index == 0 || symbolChars.find(result[index-1]) == symbolChars.end()) && (index == result.size()-size || symbolChars.find(result[index+size]) == symbolChars.end())) {
                     // We have found a complete symbol, not part of a longer symbol.
+
+                    // Do not allow to replace a symbol contained in single-line comments with a multi-line content
+                    // because only the first line will be commented
+                    // (the check is used to prevent incorrect commenting during development).
+                    if (pair.second.find('\n') != pair.second.npos) {
+                        int prevIndex = index;
+                        while (prevIndex > 1 && result[prevIndex] != '\n') {
+                            if (result[prevIndex] == '/' && result[prevIndex - 1] == '/') {
+                                throw OpenMMException("Symbol " + pair.first + " is contained in a single-line comment");
+                            }
+                            prevIndex--;
+                        }
+                    }
 
                     result.replace(index, size, pair.second);
                     index += pair.second.size();
@@ -363,6 +376,13 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
     // atoms to their original order, rebuild the list of identical molecules, and sort them
     // again.
 
+    resetAtomOrder();
+    findMoleculeGroups();
+    reorderAtoms();
+    return true;
+}
+
+void ComputeContext::resetAtomOrder() {
     ContextSelector selector(*this);
     vector<mm_int4> newCellOffsets(numAtoms);
     if (getUseDoublePrecision()) {
@@ -423,19 +443,38 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
         posCellOffsets[i] = newCellOffsets[i];
     }
     getAtomIndexArray().upload(atomIndex);
-    findMoleculeGroups();
     for (auto listener : reorderListeners)
         listener->execute();
-    reorderAtoms();
-    return true;
+    forceNextReorder = true;
+}
+
+void ComputeContext::validateAtomOrder() {
+    for (auto& mol : moleculeGroups) {
+        for (int atom : mol.atoms) {
+            set<int> identical;
+            for (int offset : mol.offsets)
+                identical.insert(atom+offset);
+            for (int i : identical)
+                if (identical.find(atomIndex[i]) == identical.end()) {
+                    resetAtomOrder();
+                    reorderAtoms();
+                    return;
+                }
+        }
+    }
+}
+
+void ComputeContext::forceReorder() {
+    forceNextReorder = true;
 }
 
 void ComputeContext::reorderAtoms() {
     atomsWereReordered = false;
-    if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff() || stepsSinceReorder < 250) {
+    if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff() || (stepsSinceReorder < 250 && !forceNextReorder)) {
         stepsSinceReorder++;
         return;
     }
+    forceNextReorder = false;
     atomsWereReordered = true;
     stepsSinceReorder = 0;
     if (getUseDoublePrecision())
@@ -512,7 +551,7 @@ void ComputeContext::reorderAtomsImpl() {
             molPos[i].y *= invNumAtoms;
             molPos[i].z *= invNumAtoms;
             if (molPos[i].x != molPos[i].x)
-                throw OpenMMException("Particle coordinate is nan");
+                throw OpenMMException("Particle coordinate is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan");
         }
         if (getNonbondedUtilities().getUsePeriodic()) {
             // Move each molecule position into the same box.
@@ -627,6 +666,23 @@ void ComputeContext::addPostComputation(ForcePostComputation* computation) {
     postComputations.push_back(computation);
 }
 
+int ComputeContext::findLegalFFTDimension(int minimum) {
+    if (minimum < 1)
+        return 1;
+    while (true) {
+        // Attempt to factor the current value.
+
+        int unfactored = minimum;
+        for (int factor = 2; factor < 8; factor++) {
+            while (unfactored > 1 && unfactored%factor == 0)
+                unfactored /= factor;
+        }
+        if (unfactored == 1)
+            return minimum;
+        minimum++;
+    }
+}
+
 struct ComputeContext::WorkThread::ThreadData {
     ThreadData(std::queue<ComputeContext::WorkTask*>& tasks, bool& waiting,  bool& finished, bool& threwException, OpenMMException& stashedException,
             pthread_mutex_t& queueLock, pthread_cond_t& waitForTaskCondition, pthread_cond_t& queueEmptyCondition) :
@@ -714,6 +770,10 @@ bool ComputeContext::WorkThread::isWaiting() {
 
 bool ComputeContext::WorkThread::isFinished() {
     return finished;
+}
+
+bool ComputeContext::WorkThread::isCurrentThread() {
+    return (pthread_self() == thread);
 }
 
 void ComputeContext::WorkThread::flush() {

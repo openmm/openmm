@@ -42,7 +42,6 @@ jobs:
       - script: |
           conda install cmake ^
                         cython ^
-                        fftw ^
                         ninja ^
                         numpy ^
                         swig ^

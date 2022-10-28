@@ -340,9 +340,9 @@ class PDBFile(object):
         if is_quantity(positions):
             positions = positions.value_in_unit(angstroms)
         if any(math.isnan(norm(pos)) for pos in positions):
-            raise ValueError('Particle position is NaN')
+            raise ValueError('Particle position is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
         if any(math.isinf(norm(pos)) for pos in positions):
-            raise ValueError('Particle position is infinite')
+            raise ValueError('Particle position is infinite.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
         nonHeterogens = PDBFile._standardResidues[:]
         nonHeterogens.remove('HOH')
         atomIndex = 1

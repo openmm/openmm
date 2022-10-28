@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -148,6 +148,28 @@ void testIllegalVariable() {
     ASSERT(threwException);
 }
 
+void testInconsistentParameters() {
+    // Specifying two inconsistent default values for a global parameter should throw an exception.
+    
+    System system;
+    system.addParticle(1.0);
+    CustomBondForce* bonds1 = new CustomBondForce("k*r");
+    CustomBondForce* bonds2 = new CustomBondForce("k*r");
+    bonds1->addGlobalParameter("k", 1.0);
+    bonds2->addGlobalParameter("k", 2.0);
+    system.addForce(bonds1);
+    system.addForce(bonds2);
+    VerletIntegrator integrator(0.001);
+    bool threwException = false;
+    try {
+        Context context(system, integrator, platform);
+    }
+    catch (const exception& e) {
+        threwException = true;
+    }
+    ASSERT(threwException);
+}
+
 void testPeriodic() {
     // Create a force that uses periodic boundary conditions.
     
@@ -221,6 +243,7 @@ int main(int argc, char* argv[]) {
         testBonds();
         testManyParameters();
         testIllegalVariable();
+        testInconsistentParameters();
         testPeriodic();
         testEnergyParameterDerivatives();
         runPlatformTests();

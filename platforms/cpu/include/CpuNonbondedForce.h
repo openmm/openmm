@@ -210,7 +210,7 @@ protected:
         bool includeEnergy;
         float inverseRcut6;
         float inverseRcut6Expterm;
-        std::atomic<int> atomicCounter;
+        std::atomic<int> atomicCounter, atomicCounter2;
 
         static const float TWO_OVER_SQRT_PI;
         static const int NUM_TABLE_POINTS;

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2017 Stanford University and the Authors.           *
+ * Portions copyright (c) 2017-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -38,9 +38,11 @@
 #include "openmm/CustomCVForce.h"
 #include "openmm/CustomExternalForce.h"
 #include "openmm/CustomNonbondedForce.h"
+#include "openmm/HarmonicBondForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "sfmt/SFMT.h"
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
@@ -234,6 +236,38 @@ void testReordering() {
     ASSERT_EQUAL_VEC(delta*2/r, state.getForces()[10], 1e-5);
 }
 
+void testMolecules() {
+    // Verify that CustomCVForce correctly propagates information about molecules
+    // from the forces it contains.
+    
+    System system;
+    for (int i = 0; i < 5; i++)
+        system.addParticle(1.0);
+    CustomCVForce* cv = new CustomCVForce("x+y");
+    system.addForce(cv);
+    HarmonicBondForce* bonds1 = new HarmonicBondForce();
+    bonds1->addBond(0, 1, 1.0, 1.0);
+    bonds1->addBond(2, 3, 1.0, 1.0);
+    cv->addCollectiveVariable("x", bonds1);
+    HarmonicBondForce* bonds2 = new HarmonicBondForce();
+    bonds2->addBond(1, 2, 1.0, 1.0);
+    cv->addCollectiveVariable("y", bonds2);
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    vector<vector<int> > molecules = context.getMolecules();
+    ASSERT_EQUAL(2, molecules.size());
+    for (auto& mol : molecules) {
+        if (mol.size() == 1) {
+            ASSERT_EQUAL(4, mol[0]);
+        }
+        else {
+            ASSERT_EQUAL(4, mol.size());
+            for (int i = 0; i < 4; i++)
+                ASSERT(find(mol.begin(), mol.end(), i) != mol.end());
+        }
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -243,6 +277,7 @@ int main(int argc, char* argv[]) {
         testEnergyParameterDerivatives();
         testTabulatedFunction();
         testReordering();
+        testMolecules();
         runPlatformTests();
     }
     catch(const exception& e) {

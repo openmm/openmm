@@ -28,13 +28,20 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
+#ifdef _MSC_VER
+    // Prevent Windows from defining macros that interfere with other code.
+    #define NOMINMAX
+#endif
+
+#include <algorithm>
 
 #include "ReferenceTabulatedFunction.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/SplineFitter.h"
 
-#ifdef _MSC_VER
+#include <cmath>
 
+#ifdef _MSC_VER
 #if _MSC_VER < 1800
 /**
  * We need to define this ourselves, since Visual Studio is missing round() from cmath.
@@ -42,13 +49,7 @@
 static int round(double x) {
     return (int) (x+0.5);
 }
-#else
-#include <cmath>
-#endif  // MSC_VER < 1800
-
-
-#else
-#include <cmath>
+#endif
 #endif
 
 static double wrap(double t, double min, double max) {

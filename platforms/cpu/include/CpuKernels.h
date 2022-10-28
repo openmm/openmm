@@ -334,7 +334,7 @@ private:
     std::vector<std::string> parameterNames, globalParameterNames, computedValueNames, energyParamDerivNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     std::vector<double> longRangeCoefficientDerivs;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     NonbondedMethod nonbondedMethod;
     CpuCustomNonbondedForce* nonbonded;
 };
@@ -424,7 +424,7 @@ private:
     std::vector<std::string> particleParameterNames, globalParameterNames, energyParamDerivNames, valueNames;
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     NonbondedMethod nonbondedMethod;
 };
 
@@ -467,7 +467,7 @@ private:
     std::vector<std::vector<double> > particleParamArray;
     CpuCustomManyParticleForce* ixn;
     std::vector<std::string> globalParameterNames;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     NonbondedMethod nonbondedMethod;
 };
 

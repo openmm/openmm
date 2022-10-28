@@ -349,7 +349,7 @@ private:
     double lastCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList, canUsePairList;
     int startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
-    long long numTiles, maxTiles, maxSinglePairs, startTileIndex;
+    long long numTiles, maxTiles, maxSinglePairs, startTileIndex, tilesAfterReorder;
     std::string kernelSource;
 };
 

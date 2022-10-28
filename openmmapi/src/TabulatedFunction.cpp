@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2014-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,6 +39,10 @@ bool TabulatedFunction::getPeriodic() const {
     return periodic;
 }
 
+int TabulatedFunction::getUpdateCount() const {
+    return updateCount;
+}
+
 Continuous1DFunction::Continuous1DFunction(const vector<double>& values, double min, double max, bool periodic) {
     this->periodic = periodic;
     setFunctionParameters(values, min, max);
@@ -66,6 +70,7 @@ void Continuous1DFunction::setFunctionParameters(const vector<double>& values, d
     this->values = values;
     this->min = min;
     this->max = max;
+    updateCount++;
 }
 
 Continuous1DFunction* Continuous1DFunction::Copy() const {
@@ -120,6 +125,7 @@ void Continuous2DFunction::setFunctionParameters(int xsize, int ysize, const vec
     this->xmax = xmax;
     this->ymin = ymin;
     this->ymax = ymax;
+    updateCount++;
 }
 
 Continuous2DFunction* Continuous2DFunction::Copy() const {
@@ -186,6 +192,7 @@ void Continuous3DFunction::setFunctionParameters(int xsize, int ysize, int zsize
     this->ymax = ymax;
     this->zmin = zmin;
     this->zmax = zmax;
+    updateCount++;
 }
 
 Continuous3DFunction* Continuous3DFunction::Copy() const {
@@ -220,6 +227,7 @@ void Discrete1DFunction::getFunctionParameters(vector<double>& values) const {
 
 void Discrete1DFunction::setFunctionParameters(const vector<double>& values) {
     this->values = values;
+    updateCount++;
 }
 
 Discrete1DFunction* Discrete1DFunction::Copy() const {
@@ -256,6 +264,7 @@ void Discrete2DFunction::setFunctionParameters(int xsize, int ysize, const vecto
     this->xsize = xsize;
     this->ysize = ysize;
     this->values = values;
+    updateCount++;
 }
 
 Discrete2DFunction* Discrete2DFunction::Copy() const {
@@ -297,6 +306,7 @@ void Discrete3DFunction::setFunctionParameters(int xsize, int ysize, int zsize, 
     this->ysize = ysize;
     this->zsize = zsize;
     this->values = values;
+    updateCount++;
 }
 
 Discrete3DFunction* Discrete3DFunction::Copy() const {

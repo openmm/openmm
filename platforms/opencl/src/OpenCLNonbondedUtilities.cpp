@@ -56,38 +56,21 @@ private:
 };
 
 OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
-        numForceBuffers(0), blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0) {
+        blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0) {
     // Decide how many thread blocks and force buffers to use.
 
     deviceIsCpu = (context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
     if (deviceIsCpu) {
         numForceThreadBlocks = context.getNumThreadBlocks();
         forceThreadBlockSize = 1;
-        numForceBuffers = numForceThreadBlocks;
     }
     else if (context.getSIMDWidth() == 32) {
-        if (context.getSupports64BitGlobalAtomics()) {
             numForceThreadBlocks = 4*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
             forceThreadBlockSize = 256;
-            // Even though using longForceBuffer, still need a single forceBuffer for the reduceForces kernel to convert the long results into float4 which will be used by later kernels.
-            numForceBuffers = 1;
-        }
-        else {
-            numForceThreadBlocks = 3*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
-            forceThreadBlockSize = 256;
-            numForceBuffers = numForceThreadBlocks*forceThreadBlockSize/OpenCLContext::TileSize;
-        }
     }
     else {
         numForceThreadBlocks = context.getNumThreadBlocks();
         forceThreadBlockSize = (context.getSIMDWidth() >= 32 ? OpenCLContext::ThreadBlockSize : 32);
-        if (context.getSupports64BitGlobalAtomics()) {
-            // Even though using longForceBuffer, still need a single forceBuffer for the reduceForces kernel to convert the long results into float4 which will be used by later kernels.
-            numForceBuffers = 1;
-        }
-        else {
-            numForceBuffers = numForceThreadBlocks*forceThreadBlockSize/OpenCLContext::TileSize;
-        }
     }
     int tileIndexSize = (context.getSupports64BitGlobalAtomics() ? sizeof(cl_ulong) : sizeof(cl_int));
     pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, tileIndexSize);
@@ -401,6 +384,10 @@ bool OpenCLNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
     long long numInteractions = context.getSupports64BitGlobalAtomics() ? *(cl_long*)pinnedCountMemory : *(cl_int*)pinnedCountMemory;
+    if (context.getStepsSinceReorder() == 0)
+        tilesAfterReorder = numInteractions;
+    else if (context.getStepsSinceReorder() > 25 && numInteractions > 1.1*tilesAfterReorder)
+        context.forceReorder();
     if (numInteractions <= interactingTiles.getSize())
         return false;
 
@@ -726,10 +713,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     // Set arguments to the Kernel.
 
     int index = 0;
-    if (context.getSupports64BitGlobalAtomics())
-        kernel.setArg<cl::Memory>(index++, context.getLongForceBuffer().getDeviceBuffer());
-    else
-        kernel.setArg<cl::Buffer>(index++, context.getForceBuffers().getDeviceBuffer());
+    kernel.setArg<cl::Memory>(index++, context.getLongForceBuffer().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, context.getEnergyBuffer().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusions.getDeviceBuffer());

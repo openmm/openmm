@@ -8,7 +8,7 @@ Medical Research, grant U54 GM072970. See https://simtk.org.
 
 Portions copyright (c) 2012-2022 Stanford University and the Authors.
 Authors: Peter Eastman
-Contributors:
+Contributors: 
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -404,12 +404,19 @@ class Modeller(object):
         between periodic copies to be achieved with a smaller box.  The most compact option is a rhombic dodecahedron,
         for which the box volume is 70.7% the volume of a cubic box with the same amount of padding.
 
+        There exist many different water models, many of which are very similar to each other. This method creates
+        preequilibrated water boxes for a limited set of water models. In most cases, they work equally well for other models
+        that involve the same number of particles. For example, to simulate a box of TIP3P-FB water, use this method to
+        create a box of TIP3P water, construct a System using TIP3P-FB parameters, and perform a local energy minimization
+        to correct for the small differences between the models. Likewise, a box of TIP4P-Ew water can be used for most
+        four site water models.
+
         Parameters
         ----------
         forcefield : ForceField
             the ForceField to use for determining van der Waals radii and atomic charges
         model : str='tip3p'
-            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
+            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', 'tip5p', and 'swm4ndp' (polarizable).
         boxSize : Vec3=None
             the size of the box to fill with water
         boxVectors : tuple of Vec3=None
@@ -447,6 +454,8 @@ class Modeller(object):
             waterRadius = 0.315365*vdwRadiusPerSigma
         elif model == 'tip5p':
             waterRadius = 0.312*vdwRadiusPerSigma
+        elif model == 'swm4ndp':
+            waterRadius = 0.318395*vdwRadiusPerSigma
         else:
             raise ValueError('Unknown water model: %s' % model)
         pdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', model+'.pdb'))
@@ -602,7 +611,7 @@ class Modeller(object):
             filteredWaters = []
             cells.cells = {}
             for i in range(len(lowerSkinPositions)):
-                cell = tuple((int(floor(lowerSkinPositions[i][j]/cells.cellSize[j]))%cells.numCells[j] for j in range(3)))
+                cell = cells.cellForPosition(lowerSkinPositions[i])
                 if cell in cells.cells:
                     cells.cells[cell].append(i)
                 else:
@@ -1587,6 +1596,8 @@ class _CellList(object):
         self.cells = {}
         self.numCells = tuple((max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)))
         self.cellSize = tuple((vectors[i][i]/self.numCells[i] for i in range(3)))
+        self.vectors = vectors
+        self.periodic = periodic
         invBox = Vec3(1.0/vectors[0][0], 1.0/vectors[1][1], 1.0/vectors[2][2])
         for i in range(len(self.positions)):
             pos = self.positions[i]
@@ -1595,19 +1606,26 @@ class _CellList(object):
                 pos -= floor(pos[1]*invBox[1])*vectors[1]
                 pos -= floor(pos[0]*invBox[0])*vectors[0]
                 self.positions[i] = pos
-            cell = tuple((int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)))
+            cell = self.cellForPosition(pos)
             if cell in self.cells:
                 self.cells[cell].append(i)
             else:
                 self.cells[cell] = [i]
 
+    def cellForPosition(self, pos):
+        if self.periodic:
+            invBox = Vec3(1.0/self.vectors[0][0], 1.0/self.vectors[1][1], 1.0/self.vectors[2][2])
+            pos = pos-floor(pos[2]*invBox[2])*self.vectors[2]
+            pos -= floor(pos[1]*invBox[1])*self.vectors[1]
+            pos -= floor(pos[0]*invBox[0])*self.vectors[0]
+        return tuple((int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)))
+
     def neighbors(self, pos):
-        centralCell = tuple((int(floor(pos[i]/self.cellSize[i])) for i in range(3)))
         offsets = (-1, 0, 1)
         for i in offsets:
             for j in offsets:
                 for k in offsets:
-                    cell = ((centralCell[0]+i+self.numCells[0])%self.numCells[0], (centralCell[1]+j+self.numCells[1])%self.numCells[1], (centralCell[2]+k+self.numCells[2])%self.numCells[2])
+                    cell = self.cellForPosition(Vec3(pos[0]+i*self.cellSize[0], pos[1]+j*self.cellSize[1], pos[2]+k*self.cellSize[2]))
                     if cell in self.cells:
                         for atom in self.cells[cell]:
                             yield atom

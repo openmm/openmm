@@ -298,6 +298,8 @@ class ForceField(object):
                         template.overrideLevel = int(residue.attrib['override'])
                     if 'rigidWater' in residue.attrib:
                         template.rigidWater = (residue.attrib['rigidWater'].lower() == 'true')
+                    for key in residue.attrib:
+                        template.attributes[key] = residue.attrib[key]
                     atomIndices = template.atomIndices
                     for ia, atom in enumerate(residue.findall('Atom')):
                         params = {}
@@ -342,6 +344,8 @@ class ForceField(object):
                     else:
                         numResidues = 1
                     patchData = ForceField._PatchData(patchName, numResidues)
+                    for key in patch.attrib:
+                        patchData.attributes[key] = patch.attrib[key]
                     for atom in patch.findall('AddAtom'):
                         params = {}
                         for key in atom.attrib:
@@ -668,6 +672,7 @@ class ForceField(object):
             self.externalBonds = []
             self.overrideLevel = 0
             self.rigidWater = True
+            self.attributes = {}
 
         def getAtomIndexByName(self, atom_name):
             """Look up an atom index by atom name, providing a helpful error message if not found."""
@@ -799,6 +804,7 @@ class ForceField(object):
             self.deletedExternalBonds = []
             self.allAtomNames = set()
             self.virtualSites = [[] for i in range(numResidues)]
+            self.attributes = {}
 
         def createPatchedTemplates(self, templates):
             """Apply this patch to a set of templates, creating new modified ones."""
@@ -1424,7 +1430,7 @@ class ForceField(object):
                             # We successfully generated a residue template.  Break out of the for loop.
                             break
             if matches is None:
-                raise ValueError('No template found for residue %d (%s).  %s' % (res.index+1, res.name, _findMatchErrors(self, res)))
+                raise ValueError('No template found for residue %d (%s).  %s  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#template' % (res.index+1, res.name, _findMatchErrors(self, res)))
             else:
                 if recordParameters:
                     data.recordMatchedAtomParameters(res, template, matches)
@@ -5512,16 +5518,21 @@ class AmoebaWcaDispersionGenerator(object):
         #   <WcaDispersion class="1" radius="0.1855" epsilon="0.46024" />
         #   <WcaDispersion class="2" radius="0.191" epsilon="0.422584" />
 
-        generator = AmoebaWcaDispersionGenerator(element.attrib['epso'],
-                                                  element.attrib['epsh'],
-                                                  element.attrib['rmino'],
-                                                  element.attrib['rminh'],
-                                                  element.attrib['awater'],
-                                                  element.attrib['slevy'],
-                                                  element.attrib['dispoff'],
-                                                  element.attrib['shctd'])
-        forceField._forces.append(generator)
-        generator.params = ForceField._AtomTypeParameters(forceField, 'AmoebaWcaDispersionForce', 'WcaDispersion', ('radius', 'epsilon'))
+        existing = [f for f in forceField._forces if isinstance(f, AmoebaWcaDispersionGenerator)]
+        if len(existing) == 0:
+            generator = AmoebaWcaDispersionGenerator(element.attrib['epso'],
+                                                     element.attrib['epsh'],
+                                                     element.attrib['rmino'],
+                                                     element.attrib['rminh'],
+                                                     element.attrib['awater'],
+                                                     element.attrib['slevy'],
+                                                     element.attrib['dispoff'],
+                                                     element.attrib['shctd'])
+            forceField.registerGenerator(generator)
+            generator.params = ForceField._AtomTypeParameters(forceField, 'AmoebaWcaDispersionForce', 'WcaDispersion', ('radius', 'epsilon'))
+        else:
+            # Multiple <AmoebaWcaDispersionForce> tags were found, probably in different files.  Simply add more types to the existing one.
+            generator = existing[0]
         generator.params.parseDefinitions(element)
 
     #=========================================================================================
@@ -5744,10 +5755,17 @@ class AmoebaGeneralizedKirkwoodGenerator(object):
         #   <GeneralizedKirkwood type="1" charge="-0.22620" shct="0.79"  />
         #   <GeneralizedKirkwood type="2" charge="-0.15245" shct="0.72"  />
 
-        generator = AmoebaGeneralizedKirkwoodGenerator(forceField, element.attrib['solventDielectric'], element.attrib['soluteDielectric'],
-                                                        element.attrib['includeCavityTerm'],
-                                                        element.attrib['probeRadius'], element.attrib['surfaceAreaFactor'])
-        forceField._forces.append(generator)
+        existing = [f for f in forceField._forces if isinstance(f, AmoebaGeneralizedKirkwoodGenerator)]
+        if len(existing) == 0:
+            generator = AmoebaGeneralizedKirkwoodGenerator(forceField, element.attrib['solventDielectric'],
+                                                           element.attrib['soluteDielectric'],
+                                                           element.attrib['includeCavityTerm'],
+                                                           element.attrib['probeRadius'],
+                                                           element.attrib['surfaceAreaFactor'])
+            forceField.registerGenerator(generator)
+        else:
+            # Multiple <AmoebaGeneralizedKirkwoodFprce> tags were found, probably in different files.  Simply add more types to the existing one.
+            generator = existing[0]
 
     #=========================================================================================
 

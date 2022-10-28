@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2018 Stanford University and the Authors.
+Portions copyright (c) 2012-2022 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -118,6 +118,7 @@ class GromacsTopFile(object):
             self.constraints = []
             self.cmaps = []
             self.vsites2 = []
+            self.vsites3 = []
             self.has_virtual_sites = False
             self.has_nbfix_terms = False
 
@@ -257,9 +258,11 @@ class GromacsTopFile(object):
                 self._processCmapType(line)
             elif self._currentCategory == 'nonbond_params':
                 self._processNonbondType(line)
-            elif self._currentCategory == 'virtual_sites2':
+            elif self._currentCategory == 'virtual_sites2' or self._currentCategory == 'dummies2':
                 self._processVirtualSites2(line)
-            elif self._currentCategory.startswith('virtual_sites'):
+            elif self._currentCategory == 'virtual_sites3' or self._currentCategory == 'dummies3':
+                self._processVirtualSites3(line)
+            elif self._currentCategory.startswith('virtual_sites') or self._currentCategory.startswith('dummies'):
                 if self._currentMoleculeType is None:
                     raise ValueError('Found %s before [ moleculetype ]' %
                                      self._currentCategory)
@@ -468,7 +471,18 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 5:
             raise ValueError('Too few fields in [ virtual_sites2 ] line: ' + line)
+        if fields[3] != '1':
+            raise ValueError('Unsupported function type in [ virtual_sites2 ] line: '+line)
         self._currentMoleculeType.vsites2.append(fields[:5])
+
+    def _processVirtualSites3(self, line):
+        """Process a line in the [ virtual_sites3 ] category."""
+        fields = line.split()
+        if len(fields) < 7:
+            raise ValueError('Too few fields in [ virtual_sites3 ] line: ' + line)
+        if fields[4] != '1':
+            raise ValueError('Unsupported function type in [ virtual_sites3 ] line: '+line)
+        self._currentMoleculeType.vsites3.append(fields)
 
     def __init__(self, file, periodicBoxVectors=None, unitCellDimensions=None, includeDir=None, defines=None):
         """Load a top file.
@@ -1007,12 +1021,18 @@ class GromacsTopFile(object):
                     c1 = float(fields[4])
                     vsite = mm.TwoParticleAverageSite(baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], (1-c1), c1)
                     sys.setVirtualSite(baseAtomIndex+atoms[0], vsite)
+                for fields in moleculeType.vsites3:
+                    atoms = [int(x)-1 for x in fields[:4]]
+                    c1 = float(fields[5])
+                    c2 = float(fields[6])
+                    vsite = mm.ThreeParticleAverageSite(baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], baseAtomIndex+atoms[3], 1-c1-c2, c1, c2)
+                    sys.setVirtualSite(baseAtomIndex+atoms[0], vsite)
 
                 # Add explicitly specified constraints.
 
                 for fields in moleculeType.constraints:
                     atoms = [int(x)-1 for x in fields[:2]]
-                    length = float(fields[2])
+                    length = float(fields[3])
                     sys.addConstraint(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], length)
 
         # Create nonbonded exceptions.
@@ -1079,8 +1099,11 @@ class GromacsTopFile(object):
             for pair in pairs:
                 nb.addException(pair[0], pair[1], pair[2], 1.0, 0.0, True)
                 pair_bond.addBond(pair[0], pair[1], [pair[3], pair[4]])
+            existing = set(tuple(lj.getExclusionParticles(i)) for i in range(lj.getNumExclusions()))
             for exclusion in exclusions:
-                lj.addExclusion(exclusion[0], exclusion[1])
+                if exclusion not in existing and tuple(reversed(exclusion)) not in existing:
+                    lj.addExclusion(exclusion[0], exclusion[1])
+                    existing.add(exclusion)
         elif self._defaults[1] == '2':
             for pair in pairs:
                 nb.addException(pair[0], pair[1], pair[2], pair[3], pair[4], True)

@@ -1,7 +1,7 @@
 /*
  * Reference implementation of PME reciprocal space interactions.
  *
- * Copyright (c) 2009, Erik Lindahl, Rossen Apostolov, Szilard Pall
+ * Copyright (c) 2009-2022, Erik Lindahl, Rossen Apostolov, Szilard Pall, Peter Eastman
  * All rights reserved.
  * Contact: lindahl@cbr.su.se Stockholm University, Sweden.
  *
@@ -32,12 +32,17 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <complex>
 
 #include "ReferencePME.h"
-#include "fftpack.h"
 #include "SimTKOpenMMRealType.h"
 
-using std::vector;
+#ifdef _MSC_VER
+  #define POCKETFFT_NO_VECTORS
+#endif
+#include "pocketfft_hdronly.h"
+
+using namespace std;
 
 typedef int    ivec[3];
 
@@ -48,12 +53,11 @@ struct pme
     int          natoms;
     double       ewaldcoeff;
 
-    t_complex *  grid;                 /* Memory for the grid we spread charges on.
+    complex<double>* grid;             /* Memory for the grid we spread charges on.
                                         * Element (i,j,k) is accessed as:
                                         * grid[i*ngrid[1]*ngrid[2] + j*ngrid[2] + k]
                                         */
     int          ngrid[3];             /* Total grid dimensions (all data is complex!) */
-    fftpack_t    fftplan;              /* Handle to fourier transform setup  */
 
     int          order;                /* PME interpolation order. Almost always 4 */
 
@@ -346,7 +350,7 @@ pme_grid_spread_charge(pme_t pme, const vector<double>& charges)
     /* Reset the grid */
     for (i=0;i<pme->ngrid[0]*pme->ngrid[1]*pme->ngrid[2];i++)
     {
-        pme->grid[i].re = pme->grid[i].im = 0;
+        pme->grid[i] = complex<double>(0, 0);
     }
 
     for (i=0;i<pme->natoms;i++)
@@ -393,11 +397,11 @@ pme_grid_spread_charge(pme_t pme, const vector<double>& charges)
                 for (iz=0;iz<order;iz++)
                 {
                     /* Can be optimized, but we keep it simple here */
-                    zindex               = (z0index + iz) % pme->ngrid[2];
+                    zindex            = (z0index + iz) % pme->ngrid[2];
                     /* Calculate index in the charge grid */
-                    index                = xindex*pme->ngrid[1]*pme->ngrid[2] + yindex*pme->ngrid[2] + zindex;
+                    index             = xindex*pme->ngrid[1]*pme->ngrid[2] + yindex*pme->ngrid[2] + zindex;
                     /* Add the charge times the bspline spread/interpolation factors to this grid position */
-                    pme->grid[index].re += q*thetax[ix]*thetay[iy]*thetaz[iz];
+                    pme->grid[index] += q*thetax[ix]*thetay[iy]*thetaz[iz];
                 }
             }
         }
@@ -427,7 +431,7 @@ pme_reciprocal_convolution(pme_t     pme,
     double boxfactor;
     double maxkx,maxky,maxkz;
 
-    t_complex *ptr;
+    complex<double> *ptr;
 
     nx = pme->ngrid[0];
     ny = pme->ngrid[1];
@@ -486,8 +490,8 @@ pme_reciprocal_convolution(pme_t     pme,
                 ptr       = pme->grid + kx*ny*nz + ky*nz + kz;
 
                 /* Get grid data for this frequency */
-                d1        = ptr->re;
-                d2        = ptr->im;
+                d1        = ptr->real();
+                d2        = ptr->imag();
 
                 /* Calculate the convolution - see the Essman/Darden paper for the equation! */
                 m2        = mhx*mhx+mhy*mhy+mhz*mhz;
@@ -497,8 +501,8 @@ pme_reciprocal_convolution(pme_t     pme,
                 eterm     = one_4pi_eps*exp(-factor*m2)/denom;
 
                 /* write back convolution data to grid */
-                ptr->re   = d1*eterm;
-                ptr->im   = d2*eterm;
+                ptr->real(d1*eterm);
+                ptr->imag(d2*eterm);
 
                 struct2   = (d1*d1+d2*d2);
 
@@ -532,7 +536,7 @@ dpme_reciprocal_convolution(pme_t pme,
     double boxfactor;
     double maxkx,maxky,maxkz;
 
-    t_complex *ptr;
+    complex<double> *ptr;
 
     nx = pme->ngrid[0];
     ny = pme->ngrid[1];
@@ -580,8 +584,8 @@ dpme_reciprocal_convolution(pme_t pme,
                 ptr       = pme->grid + kx*ny*nz + ky*nz + kz;
 
                 /* Get grid data for this frequency */
-                d1        = ptr->re;
-                d2        = ptr->im;
+                d1        = ptr->real();
+                d2        = ptr->imag();
 
                 /* Calculate the convolution - see the Essman/Darden paper for the equation! */
                 m2        = mhx*mhx+mhy*mhy+mhz*mhz;
@@ -598,8 +602,8 @@ dpme_reciprocal_convolution(pme_t pme,
                 eterm     = (fac1*erfcterm*m3 + expterm*(fac2 + fac3*m2)) * denom;
 
                 /* write back convolution data to grid */
-                ptr->re   = d1*eterm;
-                ptr->im   = d2*eterm;
+                ptr->real(d1*eterm);
+                ptr->imag(d2*eterm);
 
                 struct2   = (d1*d1+d2*d2);
 
@@ -696,7 +700,7 @@ pme_grid_interpolate_force(pme_t pme,
 
                     /* Get the fft+convoluted+ifft:d data from the grid, which must be real by definition */
                     /* Checking that the imaginary part is indeed zero might be a good check :-) */
-                    gridvalue            = pme->grid[index].re;
+                    gridvalue            = pme->grid[index].real();
 
                     /* The d component of the force is calculated by taking the derived bspline in dimension d, normal bsplines in the other two */
                     fx                  += dtx*ty*tz*gridvalue;
@@ -745,9 +749,7 @@ pme_init(pme_t *       ppme,
     pme->particleindex    = (ivec *)malloc(sizeof(ivec)*natoms);
 
     /* Allocate charge grid storage */
-    pme->grid        = (t_complex *)malloc(sizeof(t_complex)*ngrid[0]*ngrid[1]*ngrid[2]);
-
-    fftpack_init_3d(&pme->fftplan,ngrid[0],ngrid[1],ngrid[2]);
+    pme->grid        = (complex<double> *)malloc(sizeof(complex<double>)*ngrid[0]*ngrid[1]*ngrid[2]);
 
     /* Setup bspline moduli (see Essman paper) */
     pme_calculate_bsplines_moduli(pme);
@@ -790,13 +792,18 @@ int pme_exec(pme_t       pme,
     pme_grid_spread_charge(pme, charges);
 
     /* do 3d-fft */
-    fftpack_exec_3d(pme->fftplan,FFTPACK_FORWARD,pme->grid,pme->grid);
+    vector<size_t> shape = {(size_t) pme->ngrid[0], (size_t) pme->ngrid[1], (size_t) pme->ngrid[2]};
+    vector<size_t> axes = {0, 1, 2};
+    vector<ptrdiff_t> stride = {(ptrdiff_t) (pme->ngrid[1]*pme->ngrid[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) (pme->ngrid[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) sizeof(complex<double>)};
+    pocketfft::c2c(shape, stride, stride, axes, true, pme->grid, pme->grid, 1.0, 0);
 
     /* solve in k-space */
     pme_reciprocal_convolution(pme,periodicBoxVectors,recipBoxVectors,energy);
 
     /* do 3d-invfft */
-    fftpack_exec_3d(pme->fftplan,FFTPACK_BACKWARD,pme->grid,pme->grid);
+    pocketfft::c2c(shape, stride, stride, axes, false, pme->grid, pme->grid, 1.0, 0);
 
     /* Get the particle forces from the grid and bsplines in the pme structure */
     pme_grid_interpolate_force(pme,recipBoxVectors,charges,forces);
@@ -834,13 +841,18 @@ int pme_exec_dpme(pme_t       pme,
     pme_grid_spread_charge(pme, c6s);
 
     /* do 3d-fft */
-    fftpack_exec_3d(pme->fftplan,FFTPACK_FORWARD,pme->grid,pme->grid);
+    vector<size_t> shape = {(size_t) pme->ngrid[0], (size_t) pme->ngrid[1], (size_t) pme->ngrid[2]};
+    vector<size_t> axes = {0, 1, 2};
+    vector<ptrdiff_t> stride = {(ptrdiff_t) (pme->ngrid[1]*pme->ngrid[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) (pme->ngrid[2]*sizeof(complex<double>)),
+                                (ptrdiff_t) sizeof(complex<double>)};
+    pocketfft::c2c(shape, stride, stride, axes, true, pme->grid, pme->grid, 1.0, 0);
 
     /* solve in k-space */
     dpme_reciprocal_convolution(pme,periodicBoxVectors,recipBoxVectors,energy);
 
     /* do 3d-invfft */
-    fftpack_exec_3d(pme->fftplan,FFTPACK_BACKWARD,pme->grid,pme->grid);
+    pocketfft::c2c(shape, stride, stride, axes, false, pme->grid, pme->grid, 1.0, 0);
 
     /* Get the particle forces from the grid and bsplines in the pme structure */
     pme_grid_interpolate_force(pme,recipBoxVectors,c6s,forces);
@@ -865,8 +877,6 @@ pme_destroy(pme_t    pme)
 
     free(pme->particlefraction);
     free(pme->particleindex);
-
-    fftpack_destroy(pme->fftplan);
 
     /* destroy structure itself */
     free(pme);

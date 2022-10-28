@@ -1,17 +1,29 @@
 #ifndef HIPPO
 #define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)
 
-typedef struct {
+#if defined(USE_HIP)
+    #define ALIGN alignas(16)
+#else
+    #define ALIGN
+#endif
+
+typedef struct ALIGN {
     real3 pos;
+#if defined(USE_HIP)
+    real padding0;
+#endif
     real3 field, fieldPolar, inducedDipole, inducedDipolePolar;
 #ifdef EXTRAPOLATED_POLARIZATION
     real fieldGradient[6], fieldGradientPolar[6];
 #endif
 #ifdef USE_GK
     real3 fieldS, fieldPolarS, inducedDipoleS, inducedDipolePolarS;
-    real bornRadius;
     #ifdef EXTRAPOLATED_POLARIZATION
         real fieldGradientS[6], fieldGradientPolarS[6];
+    #endif
+    real bornRadius;
+    #if defined(USE_HIP) && !defined(USE_DOUBLE_PRECISION)
+        real padding1[3]; // Prevent bank conflicts because the aligned size is 128
     #endif
 #endif
     float thole, damp;

@@ -125,7 +125,7 @@ public:
      * Get the number of force buffers required for nonbonded forces.
      */
     int getNumForceBuffers() const {
-        return numForceBuffers;
+        return 1;
     }
     /**
      * Get the number of energy buffers required for nonbonded forces.
@@ -333,7 +333,7 @@ private:
     bool useCutoff, usePeriodic, deviceIsCpu, anyExclusions, usePadding, forceRebuildNeighborList;
     int numForceBuffers, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
     int forceThreadBlockSize, interactingBlocksThreadBlockSize, groupFlags;
-    long long numTiles, startTileIndex;
+    long long numTiles, startTileIndex, tilesAfterReorder;
     std::string kernelSource;
 };
 

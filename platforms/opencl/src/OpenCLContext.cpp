@@ -496,8 +496,6 @@ OpenCLContext::~OpenCLContext() {
 void OpenCLContext::initialize() {
     bonded->initialize(system);
     numForceBuffers = std::max(numForceBuffers, (int) platformData.contexts.size());
-    numForceBuffers = std::max(numForceBuffers, bonded->getNumForceBuffers());
-    numForceBuffers = std::max(numForceBuffers, nonbonded->getNumForceBuffers());
     int energyBufferSize = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
         forceBuffers.initialize<mm_double4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");

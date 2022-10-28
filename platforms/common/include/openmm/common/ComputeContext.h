@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -248,8 +248,18 @@ public:
     /**
      * Reorder the internal arrays of atoms to try to keep spatially contiguous atoms close
      * together in the arrays.
+     * 
+     * Calling this method might or might not actually change the atom order.  It uses
+     * internal heuristics to decide when and how often to update the order.  If you
+     * want to guarantee that reordering will definitely be done, call forceReorder() before
+     * calling this.
      */
     void reorderAtoms();
+    /**
+     * Calling this method guarantees that the next call to reorderAtoms() will actually
+     * perform reordering.
+     */
+    void forceReorder();
     /**
      * Add a listener that should be called whenever atoms get reordered.  The OpenCLContext
      * assumes ownership of the object, and deletes it when the context itself is deleted.
@@ -440,6 +450,10 @@ public:
      */
     virtual NonbondedUtilities* createNonbondedUtilities() = 0;
     /**
+     * Get the smallest legal size for a dimension of the grid.
+     */
+    virtual int findLegalFFTDimension(int minimum);
+    /**
      * This should be called by the Integrator from its own initialize() method.
      * It ensures all contexts are fully initialized.
      */
@@ -483,6 +497,11 @@ public:
      */
     bool invalidateMolecules(ComputeForceInfo* force);
     /**
+     * Make sure the current atom order is valid, based on the forces.  If not, perform reordering
+     * to generate a new valid order.  This method is only needed in very unusual situations.
+     */
+    void validateAtomOrder();
+    /**
      * Wait until all work that has been queued (kernel executions, asynchronous data transfers, etc.)
      * has been submitted to the device.  This does not mean it has necessarily been completed.
      * Calling this periodically may improve the responsiveness of the computer's GUI, but at the
@@ -500,6 +519,7 @@ protected:
     struct MoleculeGroup;
     class VirtualSiteInfo;
     void findMoleculeGroups();
+    void resetAtomOrder();
     /**
      * This is the internal implementation of reorderAtoms(), templatized by the numerical precision in use.
      */
@@ -509,7 +529,7 @@ protected:
     double time;
     int numAtoms, paddedNumAtoms, computeForceCount, stepsSinceReorder;
     long long stepCount;
-    bool atomsWereReordered, forcesValid;
+    bool forceNextReorder, atomsWereReordered, forcesValid;
     std::vector<ComputeForceInfo*> forces;
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
@@ -561,6 +581,10 @@ public:
      * Get whether the worker thread has exited.
      */
     bool isFinished();
+    /**
+     * Get whether the thread invoking this method is the worker thread.
+     */
+    bool isCurrentThread();
     /**
      * Block until all tasks have finished executing and the worker thread is idle.
      */

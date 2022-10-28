@@ -118,7 +118,7 @@ CudaPlatform::CudaPlatform() {
     platformProperties.push_back(CudaDeterministicForces());
     setPropertyDefaultValue(CudaDeviceIndex(), "");
     setPropertyDefaultValue(CudaDeviceName(), "");
-    setPropertyDefaultValue(CudaUseBlockingSync(), "true");
+    setPropertyDefaultValue(CudaUseBlockingSync(), "false");
     setPropertyDefaultValue(CudaPrecision(), "single");
     setPropertyDefaultValue(CudaUseCpuPme(), "false");
     setPropertyDefaultValue(CudaDisablePmeStream(), "false");
