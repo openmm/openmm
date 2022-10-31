@@ -172,7 +172,8 @@ Each :code:`<VirtualSite>` tag indicates an atom in the residue that should
 be represented with a virtual site.  The :code:`type` attribute may equal
 :code:`"average2"`\ , :code:`"average3"`\ , :code:`"outOfPlane"`\ , or
 :code:`"localCoords"`\ , which correspond to the TwoParticleAverageSite, ThreeParticleAverageSite,
-OutOfPlaneSite, and LocalCoordinatesSite classes respectively.  The :code:`siteName`
+OutOfPlaneSite, and LocalCoordinatesSite classes respectively.  See Section
+:numref:`virtual-sites` for descriptions of how the virtual site classes work.  The :code:`siteName`
 attribute gives the name of the atom to represent with a virtual site.  The atoms
 it is calculated based on are specified by :code:`atomName1`\ , :code:`atomName2`\ , etc.
 (Some old force fields use the deprecated tags :code:`index`, :code:`atom1`,
