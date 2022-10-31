@@ -1108,24 +1108,48 @@ Using Multiple Files
 ********************
 
 If multiple XML files are specified when a ForceField is created, their
-definitions are combined as follows.
+definitions must be combined into a single force field.  This process involves
+a few steps.
 
-* A file may refer to atom types and classes that it defines, as well as those
-  defined in previous files.  It may not refer to ones defined in later files.
-  This means that the order in which files are listed when calling the ForceField
-  constructor is potentially significant.
-* Forces that involve per-atom parameters (such as NonbondedForce or
-  GBSAOBCForce) require parameter values to be defined for every atom type.  It
-  does not matter which file those types are defined in.  For example, files that
-  define explicit water models generally define a small number of atom types, as
-  well as nonbonded parameters for those types.  In contrast, files that define
-  implicit solvent models do not define any new atom types, but provide parameters
-  for all the atom types that were defined in the main force field file.
-* For other forces, the files are effectively independent.  For example, if two
-  files each include a :code:`<HarmonicBondForce>` tag, bonds will be created
-  based on the rules in the first file, and then more bonds will be created based
-  on the rules in the second file.  This means you could potentially end up with
-  multiple bonds between a single pair of atoms.
+The first step is to load the atom type definitions from all files.  Because this
+happens before any residue template or force definitions are loaded, it is
+possible for the residue templates and forces in one file to refer to atom types
+or classes defined in a different file.
+
+Next the residue and patch definitions are loaded, and finally the forces.
+Special care is needed when two files each define a force of the same type.
+
+For standard forces like HarmonicBondForce or NonbondedForce, the definitions
+are combined into a single definition.  For example, if two files each contain
+a :code:`<HarmonicBondForce>` tag, only a single HarmonicBondForce will be added
+to the system, containing bonds based on the definitions from both files.  An
+important consequence is that only a single bond will be added for any pair of
+atoms.  If each file contains a :code:`<Bond>` tag that matches the same pair of
+atoms, and if those tags specify different parameters, no guarantee is made about
+which parameters will end up being used.  It is generally best to avoid doing
+this.
+
+Combining of standard forces is especially important for forces that involve
+per-atom parameters, such as NonbondedForce or GBSAOBCForce.  These forces
+require parameter values to be defined for every atom type.  Because the
+definitions are combined, it does not matter which file each type is defined in.
+For example, files that define explicit water models generally define a small
+number of atom types, as well as nonbonded parameters for those types.  They are
+combined with the parameters from the main force field to create a single
+NonbondedForce.  In contrast, files that define implicit solvent models do not
+define any new atom types, but provide parameters for the atom types that were
+defined in the main force field file.
+
+In contrast to standard forces, custom forces do not get combined since two
+objects of the same class may still represent different potential functions.
+For example, if there are two :code:`<CustomBondForce>` tags, two separate
+CustomBondForces are added to the System, each containing bonds based only on
+the definitions in that tag.
+
+A consequence is that custom forces requiring per-atom parameters, such as
+CustomNonbondedForce or CustomGBForce, cannot be split between files.  A single
+tag must define parameters for all atom types.  There is no way for a second
+file to define parameters for additional atom types.
 
 
 Extending ForceField
