@@ -505,6 +505,8 @@ File                                 Parameters
 :file:`amber14/tip4pew.xml`          TIP4P-Ew water model\ :cite:`Horn2004` and ions
 :file:`amber14/tip4pfb.xml`          TIP4P-FB water model\ :cite:`Wang2014` and ions
 :file:`amber14/spce.xml`             SPC/E water model\ :cite:`Berendsen1987` and ions
+:code:`amber14/opc.xml`              OPC water model\ :cite:`Izadi2014` and ions
+:code:`amber14/opc3.xml`             OPC3 water model\ :cite:`Izadi2016` and ions
 ===================================  ============================================
 
 As a convenience, the file :file:`amber14-all.xml` can be used as a shortcut to include
