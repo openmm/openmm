@@ -1,6 +1,5 @@
 <ForceField>
  <Info>
-  <DateGenerated>2022-06-21</DateGenerated>
   <Reference>Izadi S, Anandakrishnan R, Onufriev AV. Building Water Models: A Different Approach. The Journal of Physical Chemistry Letters. 2014 Nov 6;5(21):3863-71. DOI:10.1021/jz501780a</Reference>
      <!-- Li/Merz ion parameters of atomic ions for the OPC water model (12-6 set) -->
     <DateGenerated>2022-09-28T04:59:42.378081</DateGenerated>
@@ -74,10 +73,10 @@
   </AtomTypes>
  <Residues>
   <Residue name="HOH">
-   <Atom name="O" type="opc-O"/>
-   <Atom name="H1" type="opc-H"/>
-   <Atom name="H2" type="opc-H"/>
-   <Atom name="M" type="opc-M"/>
+   <Atom name="O" type="opc-O" charge="0"/>
+   <Atom name="H1" type="opc-H" charge="0.679142"/>
+   <Atom name="H2" type="opc-H" charge="0.679142"/>
+   <Atom name="M" type="opc-M" charge="-1.358284"/>
    <!-- weight2 = 0.15939833/(2*(cos(angle/2) * 0.87243313)) -->
    <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.7045587810585758" weight2="0.1477206094707121" weight3="0.1477206094707121"/>
    <Bond from="0" to="1"/>
@@ -272,12 +271,12 @@
   <Angle class1="HW" class2="OW" class3="HW" angle="1.8081424254418306" k="628.02"/>
  </HarmonicAngleForce>
  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+     <UseAttributeFromResidue name="charge"/>
   <!-- sigma = (1.777167268 * 2 / (2**(1/6)))*unit.angstrom/unit.nanometer -->
   <!-- epsilon = (0.2128008130*unit.kilocalorie)/(unit.kilojoule) -->
-  <Atom type="opc-O" charge="0" sigma="0.3166552081964338" epsilon="0.8903586015920001"/>
-  <Atom type="opc-H" charge="0.679142" sigma="0.08908987181403394" epsilon="0"/>
-  <Atom type="opc-M" charge="-1.358284" sigma="0.08908987181403394" epsilon="0"/>
-     <UseAttributeFromResidue name="charge"/>
+  <Atom type="opc-O" sigma="0.3166552081964338" epsilon="0.8903586015920001"/>
+  <Atom type="opc-H" sigma="0.08908987181403394" epsilon="0"/>
+  <Atom type="opc-M" sigma="0.08908987181403394" epsilon="0"/>
     <Atom epsilon="0.009039866720000001" sigma="0.2212992415860603" type="ionslm_126_opc-Li+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
     <Atom epsilon="0.12386075112" sigma="0.2613896839023756" type="ionslm_126_opc-Na+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
     <Atom epsilon="0.58382766144" sigma="0.3032619236549715" type="ionslm_126_opc-K+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
