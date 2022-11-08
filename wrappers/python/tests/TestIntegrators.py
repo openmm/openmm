@@ -137,7 +137,7 @@ class TestIntegrators(unittest.TestCase):
                 force.setForceGroup(0)
 
         # Create an integrator
-        integrator = MTSLangevinIntegrator(300*kelvin, 1/picosecond, 4*femtoseconds, [(2,1), (1,2), (0,4)])
+        integrator = MTSLangevinIntegrator(300*kelvin, 5/picosecond, 4*femtoseconds, [(2,1), (1,2), (0,4)])
 
         # Run some equilibration.
         context = Context(system, integrator)
