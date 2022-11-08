@@ -957,6 +957,58 @@ must include an attribute called :code:`radius`\ .
 CustomManyParticleForce also allows you to define tabulated functions.  See Section
 :numref:`tabulated-functions` for details.
 
+<LennardJonesForce>
+===================
+
+The :code:`<LennardJonesForce>` tag provides an alternative to :code:`<NonbondedForce>`
+for implementing Lennard-Jones nonbonded interactions.  It instead implements
+them with a CustomNonbondedForce, and if necessary a CustomBondForce for 1-4
+interactions.  The advantage of using this tag is that it provides more flexibility
+in how the sigma and epsilon parameters are determined.  The disadvantage is
+that it tends to run slightly slower, so when the extra flexibility is not
+needed, it is better to use :code:`<NonbondedForce>` intead.
+
+To use it, include a tag that looks like this:
+
+.. code-block:: xml
+
+    <LennardJonesForce lj14scale="1.0" useDispersionCorrection="True">
+     <Atom epsilon="0.192464" sigma="0.040001" type="H"/>
+     <Atom epsilon="0.192464" sigma="0.040001" type="HC"/>
+     <Atom epsilon="0.092048" sigma="0.235197" type="HA"/>
+     ...
+     <NBFixPair epsilon="0.134306" sigma="0.29845" type1="CRL1" type2="HAL2"/>
+     <NBFixPair epsilon="0.150205" sigma="0.23876" type1="HAL2" type2="HGA1"/>
+     ...
+    </LennardJonesForce>
+
+The :code:`<LennardJonesForce>` tag has two attributes: :code:`lj14scale` specifies
+the scale factor between pairs of atoms separated by three bonds, and
+:code:`useDispersionCorrection` specifies whether to include a long range
+dispersion correction.
+
+Each :code:`<Atom>` tag specifies the nonbonded parameters for one atom type
+(specified with the :code:`type` attribute) or atom class (specified with
+the :code:`class` attribute).  It is fine to mix these two methods, having
+some tags specify a type and others specify a class.  However you do it, you
+must make sure that a unique set of parameters is defined for every atom type.
+:code:`sigma` is in nm, and :code:`epsilon` is in kJ/mole.
+
+An :code:`<Atom>` tag can optionally include two other attributes: :code:`sigma14`
+and :code:`epsilon14`.  If they are present, they are used in place of the
+standard sigma and epsilon parameters when computing 1-4 interactions.
+
+Each :code:`<NBFixPair>` tag specifies a pair of atom types (:code:`type1` and
+:code:`type2`) or classes (:code:`class1` and :code:`class2`) whose interaction
+should be computed differently.  Instead of using the standard Lorentz-Berthelot
+combining rules to determine sigma and epsilon based on the parameters for the
+individual atoms, the tag specifies different values to use.
+
+Because this tag only computes Lennard-Jones interactions, it usually is used together
+with a :code:`<NonbondedForce>` to compute the Coulomb interactions.  In that
+case, the NonbondedForce should specify :code:`epsilon="0"` for every atom so it
+does not also compute the Lennard-Jones interactions.
+
 Writing Custom Expressions
 ==========================
 
