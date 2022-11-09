@@ -244,7 +244,7 @@
     <Residue name="Tm">
       <Atom charge="3.0" name="Tm" type="ionslm_126_opc-Tm3+"/>
     </Residue>
-    <Residue name="U">
+    <Residue name="U4+">
       <Atom charge="4.0" name="U" type="ionslm_126_opc-U4+"/>
     </Residue>
     <Residue name="V2+">
