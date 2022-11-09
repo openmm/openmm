@@ -79,8 +79,8 @@
    <Bond atomName1="O" atomName2="H1"/>
    <Bond atomName1="O" atomName2="H2"/>
   </Residue>
-     <Residue name="AG">
-      <Atom charge="1.0" name="AG" type="ionslm_126_opc3-Ag+"/>
+     <Residue name="AG1">
+      <Atom charge="1.0" name="AG1" type="ionslm_126_opc3-Ag+"/>
     </Residue>
     <Residue name="Ag">
       <Atom charge="2.0" name="Ag" type="ionslm_126_opc3-Ag2+"/>
@@ -151,7 +151,7 @@
     <Residue name="FE">
       <Atom charge="3.0" name="FE" type="ionslm_126_opc3-Fe3+"/>
     </Residue>
-    <Residue name="GD">
+    <Residue name="GD3">
       <Atom charge="3.0" name="GD" type="ionslm_126_opc3-Gd3+"/>
     </Residue>
     <Residue name="Hf">
@@ -160,7 +160,7 @@
     <Residue name="HG">
       <Atom charge="2.0" name="HG" type="ionslm_126_opc3-Hg2+"/>
     </Residue>
-    <Residue name="I">
+    <Residue name="IOD">
       <Atom charge="-1.0" name="I" type="ionslm_126_opc3-I-"/>
     </Residue>
     <Residue name="IN">
@@ -232,8 +232,8 @@
     <Residue name="Th">
       <Atom charge="4.0" name="Th" type="ionslm_126_opc3-Th4+"/>
     </Residue>
-    <Residue name="TL">
-      <Atom charge="1.0" name="TL" type="ionslm_126_opc3-Tl+"/>
+    <Residue name="TL1">
+      <Atom charge="1.0" name="TL1" type="ionslm_126_opc3-Tl+"/>
     </Residue>
     <Residue name="Tl">
       <Atom charge="3.0" name="Tl" type="ionslm_126_opc3-Tl3+"/>
