@@ -172,7 +172,7 @@ void CpuCustomNonbondedForceFvec<FVEC, BLOCK_SIZE>::calculateBlockIxnImpl(Thread
         r.store(data.rvec.data());
         FVEC dEdR(data.forceVecExpression.evaluate());
         FVEC energy;
-        if (includeEnergy)
+        if (includeEnergy || useSwitch)
             energy = FVEC(data.energyVecExpression.evaluate());
         if (useSwitch) {
             const auto t = blendZero((r-switchingDistance)*invSwitchingInterval, r>switchingDistance);
