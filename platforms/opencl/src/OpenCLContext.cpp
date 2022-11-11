@@ -79,7 +79,7 @@ static bool isSupported(cl::Platform platform) {
 
 OpenCLContext::OpenCLContext(const System& system, int platformIndex, int deviceIndex, const string& precision, OpenCLPlatform::PlatformData& platformData, OpenCLContext* originalContext) :
         ComputeContext(system), platformData(platformData), numForceBuffers(0), hasAssignedPosqCharges(false),
-        integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL) {
+        integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), pinnedBuffer(NULL) {
     if (precision == "single") {
         useDoublePrecision = false;
         useMixedPrecision = false;
