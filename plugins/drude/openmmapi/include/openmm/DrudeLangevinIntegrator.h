@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,7 +47,7 @@ namespace OpenMM {
  *
  * This integrator can optionally set an upper limit on how far any Drude particle is ever allowed to
  * get from its parent particle.  This can sometimes help to improve stability.  The limit is enforced
- * with a hard wall constraint.
+ * with a hard wall constraint.  By default the limit is set to 0.02 nm.
  * 
  * This Integrator requires the System to include a DrudeForce, which it uses to identify the Drude
  * particles.
@@ -117,6 +117,21 @@ public:
      * @param steps   the number of time steps to take
      */
     void step(int steps) override;
+    /**
+     * Compute the instantaneous temperature of the System, measured in Kelvin.
+     * This is calculated based on the kinetic energy of the ordinary particles (ones
+     * not attached to a Drude particle), as well as the center of mass motion of the
+     * Drude particle pairs.  It does not include the internal motion of the pairs.
+     * On average, this should be approximately equal to the value returned by
+     * getTemperature().
+     */
+    double computeSystemTemperature();
+    /**
+     * Compute the instantaneous temperature of the Drude system, measured in Kelvin.
+     * This is calculated based on the kinetic energy of the internal motion of Drude pairs
+     * and should remain close to the prescribed Drude temperature.
+     */
+    double computeDrudeTemperature();
 protected:
     /**
      * This will be called by the Context when it is created.  It informs the Integrator

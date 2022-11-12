@@ -34,6 +34,7 @@
 #endif
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/AmoebaVdwForceImpl.h"
+#include "openmm/internal/Messages.h"
 #include "openmm/amoebaKernels.h"
 #include <map>
 #include <cmath>
@@ -60,7 +61,7 @@ void AmoebaVdwForceImpl::initialize(ContextImpl& context) {
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
-            throw OpenMMException("AmoebaVdwForce: The cutoff distance cannot be greater than half the periodic box size.");
+            throw OpenMMException("AmoebaVdwForce: "+Messages::cutoffTooLarge);
     }   
 
     kernel = context.getPlatform().createKernel(CalcAmoebaVdwForceKernel::Name(), context);

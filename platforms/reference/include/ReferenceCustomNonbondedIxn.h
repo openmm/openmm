@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2009-2018 Stanford University and Simbios.
+/* Portions copyright (c) 2009-2022 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -47,10 +47,10 @@ class ReferenceCustomNonbondedIxn {
       double cutoffDistance, switchingDistance;
       Lepton::CompiledExpression energyExpression;
       Lepton::CompiledExpression forceExpression;
-      std::vector<std::string> paramNames;
-      std::vector<Lepton::CompiledExpression> energyParamDerivExpressions;
+      std::vector<std::string> paramNames, computedValueNames;
+      std::vector<Lepton::CompiledExpression> computedValueExpressions, energyParamDerivExpressions;
       CompiledExpressionSet expressionSet;
-      std::vector<int> particleParamIndex;
+      std::vector<int> particleParamIndex, computedValueIndex;
       int rIndex;
       std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
 
@@ -79,7 +79,8 @@ class ReferenceCustomNonbondedIxn {
          --------------------------------------------------------------------------------------- */
 
        ReferenceCustomNonbondedIxn(const Lepton::CompiledExpression& energyExpression, const Lepton::CompiledExpression& forceExpression,
-                                   const std::vector<std::string>& parameterNames, const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions);
+                                   const std::vector<std::string>& parameterNames, const std::vector<Lepton::CompiledExpression> energyParamDerivExpressions,
+                                   const std::vector<std::string>& computedValueNames, const std::vector<Lepton::CompiledExpression> computedValueExpressions);
 
       /**---------------------------------------------------------------------------------------
 

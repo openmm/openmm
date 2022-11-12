@@ -30,7 +30,7 @@ jobs:
         include:
           - name: Linux CUDA 10.0
             os: ubuntu-latest
-            python-version: "3.6"
+            python-version: "3.7"
             cuda-version: "10.0"
             OPENCL: false
             CMAKE_FLAGS: |
@@ -51,7 +51,7 @@ jobs:
 
           - name: Linux CUDA 11.2
             os: ubuntu-latest
-            python-version: "3.6"
+            python-version: "3.7"
             OPENCL: false
             cuda-version: "11.2"
             CMAKE_FLAGS: |
@@ -72,7 +72,7 @@ jobs:
 
           - name: Linux AMD OpenCL
             os: ubuntu-latest
-            python-version: "3.6"
+            python-version: "3.7"
             OPENCL: true
             cuda-version: ""
             CMAKE_FLAGS: |
@@ -90,9 +90,9 @@ jobs:
               -DOPENCL_INCLUDE_DIR=${GITHUB_WORKSPACE}/AMDAPPSDK/include \
               -DOPENCL_LIBRARY=${GITHUB_WORKSPACE}/AMDAPPSDK/lib/x86_64/libOpenCL.so \
 
-          - name: Linux CPU Python 3.6 with static lib
+          - name: Linux CPU Python 3.7 with static lib
             os: ubuntu-latest
-            python-version: "3.6"
+            python-version: "3.7"
             OPENCL: false
             cuda-version: ""
             CC: $CCACHE/clang
@@ -102,8 +102,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux CPU Python 3.6 with condaforge compilers
-            python-version: "3.6"
+          - name: Linux CPU Python 3.7 with condaforge compilers
+            python-version: "3.7"
             os: ubuntu-latest
             OPENCL: false
             cuda-version: ""
@@ -112,8 +112,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux CPU Python 3.6
-            python-version: "3.6"
+          - name: Linux CPU Python 3.7
+            python-version: "3.7"
             os: ubuntu-latest
             OPENCL: false
             cuda-version: ""
@@ -121,8 +121,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux CPU Python 3.9
-            python-version: "3.9"
+          - name: Linux CPU Python 3.11
+            python-version: "3.11"
             os: ubuntu-latest
             OPENCL: false
             cuda-version: ""
@@ -130,8 +130,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux CPU Pypy 3.6
-            python-version: "3.6.*=*pypy*"
+          - name: Linux CPU Pypy 3.7
+            python-version: "3.7.*=*pypy*"
             os: ubuntu-latest
             OPENCL: false
             cuda-version: ""
@@ -139,8 +139,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS Intel CPU/OpenCL Python 3.9
-            python-version: "3.9"
+          - name: MacOS Intel CPU/OpenCL Python 3.11
+            python-version: "3.11"
             os: macos-latest
             OPENCL: false
             cuda-version: ""
@@ -148,8 +148,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS M1 CPU arm64 Python 3.10
-            python-version: "3.10"
+          - name: MacOS M1 CPU arm64 Python 3.11
+            python-version: "3.11"
             os: M1-arm64
             OPENCL: false
             cuda-version: ""
@@ -322,8 +322,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Windows CUDA 11.2 Python 3.9
-            python-version: "3.9"
+          - name: Windows CUDA 11.2 Python 3.11
+            python-version: "3.11"
             cuda-version: "11.2"
             CMAKE_FLAGS: |
               -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
@@ -382,7 +382,7 @@ jobs:
         env:
           CMAKE_FLAGS: ${{ matrix.CMAKE_FLAGS }}
         run: |
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           mkdir build
           cd build
           cmake -G "NMake Makefiles JOM" ^
@@ -403,7 +403,7 @@ jobs:
       - name: "Build OpenMM"
         shell: cmd /C call {0}
         run: |
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
           jom -j 2
           if errorlevel 1 exit 1
@@ -414,7 +414,7 @@ jobs:
         shell: cmd /C call {0}
         if: ${{ !contains(matrix.CMAKE_FLAGS, 'OPENMM_BUILD_PYTHON_WRAPPERS=OFF') }}
         run: |
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
           jom -j 2 PythonInstall
 
@@ -458,19 +458,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: PowerPC CPU/CUDA 10.2 Python 3.9 with condaforge compilers
+          - name: PowerPC CPU/CUDA 10.2 Python 3.11 with condaforge compilers
             docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:10.2
-            python-version: "3.9"
+            python-version: "3.11"
             compilers: compilers
 
-          - name: PowerPC CPU Python 3.9 devtoolset-7 compilers
+          - name: PowerPC CPU Python 3.11 devtoolset-7 compilers
             docker-image: quay.io/condaforge/linux-anvil-ppc64le
-            python-version: "3.9"
+            python-version: "3.11"
             compilers: devtoolset-7
 
-          - name: ARM CPU Python 3.6 with condaforge compilers
+          - name: ARM CPU Python 3.11 with condaforge compilers
             docker-image: quay.io/condaforge/linux-anvil-aarch64
-            python-version: "3.9"
+            python-version: "3.11"
             compilers: compilers
 
 
@@ -555,7 +555,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         name: "Prepare base dependencies"
         with:
-          python-version: "3.6"
+          python-version: "3.7"
           activate-environment: build
           environment-file: devtools/ci/gh-actions/conda-envs/docs.yml
           auto-activate-base: false
@@ -650,7 +650,7 @@ jobs:
         shell: bash -l {0}
         env:
           # Pipe-seperated list of domains to skip
-          SKIP_DOMAIN: support.amd.com
+          SKIP_DOMAIN: support.amd.com|www.pnas.org|doi.org
         run: |
           set +e
           # Linkinator accepts regex for its --skip argument, so we
@@ -666,12 +666,12 @@ jobs:
           )")
           for d in api-c++ api-python developerguide userguide; do
             echo "::group:: Check ${d}"
-            npx linkinator ./${d}/ --recurse --timeout=20000 --skip "$SKIP_REGEX" --server-root ./build/api-docs --verbosity error
+            npx linkinator@3.0.0 ./${d}/ --recurse --timeout=20000 --skip "$SKIP_REGEX" --server-root ./build/api-docs --verbosity error
             ((exitcode+=$?))
             echo "::endgroup::"
           done
           echo "::group:: Check README"
-          npx linkinator ./README.md --markdown --skip "$SKIP_REGEX"
+          npx linkinator@3.0.0 ./README.md --markdown --skip "$SKIP_REGEX"
           ((exitcode+=$?))
           echo "::endgroup::"
           exit $exitcode

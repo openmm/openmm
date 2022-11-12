@@ -50,8 +50,8 @@ void MonteCarloBarostat::setDefaultPressure(double pressure) {
 }
 
 void MonteCarloBarostat::setFrequency(int freq) {
-    if (freq <= 0)
-        throw OpenMMException("Frequency must be positive");
+    if (freq < 0)
+        throw OpenMMException("Frequency cannot be negative");
     frequency = freq;
 }
 

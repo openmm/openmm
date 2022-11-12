@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,7 +35,6 @@
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
-#include "openmm/serialization/XmlSerializer.h"
 #include "CommonKernelSources.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
@@ -1294,7 +1293,7 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
-        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
         int width;
         vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
@@ -1417,8 +1416,8 @@ void CommonCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImp
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             int width;
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
@@ -1484,8 +1483,6 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     numBonds = force.getNumBonds();
     if (numBonds == 0)
         return;
-    if (!cc.getSupports64BitGlobalAtomics())
-        throw OpenMMException("CustomCentroidBondForce requires a device that supports 64 bit atomic operations");
     info = new ForceInfo(force);
     cc.addForce(info);
     
@@ -1553,7 +1550,7 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
-        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
         string arrayName = "table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
@@ -1651,9 +1648,9 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     // Save the forces to global memory.
     
     for (int i = 0; i < groupsPerBond; i++) {
-        compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"], (mm_ulong) ((mm_long) (force"<<(i+1)<<".x*0x100000000)));\n";
-        compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"+numParticleGroups], (mm_ulong) ((mm_long) (force"<<(i+1)<<".y*0x100000000)));\n";
-        compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"+numParticleGroups*2], (mm_ulong) ((mm_long) (force"<<(i+1)<<".z*0x100000000)));\n";
+        compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".x));\n";
+        compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"+numParticleGroups], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".y));\n";
+        compute<<"ATOMIC_ADD(&groupForce[group"<<(i+1)<<"+numParticleGroups*2], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".z));\n";
         compute<<"MEM_FENCE;\n";
     }
     map<string, string> replacements;
@@ -1747,8 +1744,8 @@ void CommonCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImp
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             int width;
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
@@ -1813,7 +1810,8 @@ public:
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<force->getForceGroup())) == 0)
             return 0;
-        cc.getWorkThread().flush();
+        if (!cc.getWorkThread().isCurrentThread())
+            cc.getWorkThread().flush();
         Vec3 a, b, c;
         cc.getPeriodicBoxVectors(a, b, c);
         double volume = a[0]*b[1]*c[2];
@@ -1852,6 +1850,8 @@ CommonCalcCustomNonbondedForceKernel::~CommonCalcCustomNonbondedForceKernel() {
     ContextSelector selector(cc);
     if (params != NULL)
         delete params;
+    if (computedValues != NULL)
+        delete computedValues;
     if (forceCopy != NULL)
         delete forceCopy;
 }
@@ -1868,7 +1868,7 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     int numParticles = force.getNumParticles();
     int paddedNumParticles = cc.getPaddedNumAtoms();
     int numParams = force.getNumPerParticleParameters();
-    params = new ComputeParameterSet(cc, numParams, paddedNumParticles, "customNonbondedParameters");
+    params = new ComputeParameterSet(cc, numParams, paddedNumParticles, "customNonbondedParameters", true);
     if (force.getNumGlobalParameters() > 0)
         globals.initialize<float>(cc, force.getNumGlobalParameters(), "customNonbondedGlobals");
     vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
@@ -1895,11 +1895,12 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     vector<pair<string, string> > functionDefinitions;
     vector<const TabulatedFunction*> functionList;
     vector<string> tableTypes;
+    stringstream tableArgs;
     tabulatedFunctionArrays.resize(force.getNumTabulatedFunctions());
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
-        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
         string arrayName = prefix+"table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
@@ -1907,11 +1908,16 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
         tabulatedFunctionArrays[i].initialize<float>(cc, f.size(), "TabulatedFunction");
         tabulatedFunctionArrays[i].upload(f);
-        cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(tabulatedFunctionArrays[i], arrayName, "float", width));
+        if (force.getNumInteractionGroups() == 0)
+            cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(tabulatedFunctionArrays[i], arrayName, "float", width));
         if (width == 1)
             tableTypes.push_back("float");
         else
             tableTypes.push_back("float"+cc.intToString(width));
+        tableArgs << ", GLOBAL const float";
+        if (width > 1)
+            tableArgs << width;
+        tableArgs << "* RESTRICT " << arrayName;
     }
 
     // Record information for the expressions.
@@ -1932,6 +1938,26 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     forceExpressions["real customEnergy = "] = energyExpression;
     forceExpressions["tempForce -= "] = forceExpression;
 
+    // Record which per-particle parameters and computed values appear in the energy expression.
+
+    if (force.getNumComputedValues() > 0)
+        computedValues = new ComputeParameterSet(cc, force.getNumComputedValues(), paddedNumParticles, "customNonbondedComputedValues", true);
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
+        string name = force.getPerParticleParameterName(i);
+        if (usesVariable(energyExpression, name+"1") || usesVariable(energyExpression, name+"2")) {
+            paramNames.push_back(name);
+            paramBuffers.push_back(params->getParameterInfos()[i]);
+        }
+    }
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        string name, expression;
+        force.getComputedValueParameters(i, name, expression);
+        if (usesVariable(energyExpression, name+"1") || usesVariable(energyExpression, name+"2")) {
+            computedValueNames.push_back(name);
+            computedValueBuffers.push_back(computedValues->getParameterInfos()[i]);
+        }
+    }
+
     // Create the kernels.
 
     vector<pair<ExpressionTreeNode, string> > variables;
@@ -1939,10 +1965,13 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     variables.push_back(make_pair(rnode, "r"));
     variables.push_back(make_pair(ExpressionTreeNode(new Operation::Square(), rnode), "r2"));
     variables.push_back(make_pair(ExpressionTreeNode(new Operation::Reciprocal(), rnode), "invR"));
-    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
-        const string& name = force.getPerParticleParameterName(i);
-        variables.push_back(makeVariable(name+"1", prefix+"params"+params->getParameterSuffix(i, "1")));
-        variables.push_back(makeVariable(name+"2", prefix+"params"+params->getParameterSuffix(i, "2")));
+    for (int i = 0; i < paramNames.size(); i++) {
+        variables.push_back(makeVariable(paramNames[i]+"1", prefix+"params"+cc.intToString(i+1)+"1"));
+        variables.push_back(makeVariable(paramNames[i]+"2", prefix+"params"+cc.intToString(i+1)+"2"));
+    }
+    for (int i = 0; i < computedValueNames.size(); i++) {
+        variables.push_back(makeVariable(computedValueNames[i]+"1", prefix+"values"+cc.intToString(i+1)+"1"));
+        variables.push_back(makeVariable(computedValueNames[i]+"2", prefix+"values"+cc.intToString(i+1)+"2"));
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);
@@ -1973,15 +2002,68 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         initInteractionGroups(force, source, tableTypes);
     else {
         cc.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
-        for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
-            ComputeParameterInfo& parameter = params->getParameterInfos()[i];
-            cc.getNonbondedUtilities().addParameter(ComputeParameterInfo(parameter.getArray(), prefix+"params"+cc.intToString(i+1),
-                    parameter.getComponentType(), parameter.getNumComponents()));
-        }
+        for (int i = 0; i < paramBuffers.size(); i++)
+            cc.getNonbondedUtilities().addParameter(ComputeParameterInfo(paramBuffers[i].getArray(), prefix+"params"+cc.intToString(i+1),
+                    paramBuffers[i].getComponentType(), paramBuffers[i].getNumComponents()));
+        for (int i = 0; i < computedValueBuffers.size(); i++)
+            cc.getNonbondedUtilities().addParameter(ComputeParameterInfo(computedValueBuffers[i].getArray(), prefix+"values"+cc.intToString(i+1),
+                    computedValueBuffers[i].getComponentType(), computedValueBuffers[i].getNumComponents()));
         if (globals.isInitialized()) {
             globals.upload(globalParamValues);
             cc.getNonbondedUtilities().addArgument(ComputeParameterInfo(globals, prefix+"globals", "float", 1));
         }
+    }
+    if (force.getNumComputedValues() > 0) {
+        // Create the kernel to calculate computed values.
+
+        stringstream valuesSource, args;
+        for (int i = 0; i < computedValues->getParameterInfos().size(); i++) {
+            ComputeParameterInfo& buffer = computedValues->getParameterInfos()[i];
+            string valueName = "values"+cc.intToString(i+1);
+            if (i > 0)
+                args << ", ";
+            args << "GLOBAL " << buffer.getType() << "* RESTRICT global_" << valueName;
+            valuesSource << buffer.getType() << " local_" << valueName << ";\n";
+        }
+        if (force.getNumGlobalParameters() > 0)
+            args << ", GLOBAL const float* globals";
+        for (int i = 0; i < params->getParameterInfos().size(); i++) {
+            ComputeParameterInfo& buffer = params->getParameterInfos()[i];
+            string paramName = "params"+cc.intToString(i+1);
+            args << ", GLOBAL const " << buffer.getType() << "* RESTRICT " << paramName;
+        }
+        map<string, string> variables;
+        for (int i = 0; i < force.getNumPerParticleParameters(); i++)
+            variables[force.getPerParticleParameterName(i)] = "params"+params->getParameterSuffix(i, "[index]");
+        for (int i = 0; i < force.getNumGlobalParameters(); i++)
+            variables[force.getGlobalParameterName(i)] = "globals["+cc.intToString(i)+"]";
+        for (int i = 0; i < force.getNumComputedValues(); i++) {
+            string name, expression;
+            force.getComputedValueParameters(i, name, expression);
+            variables[name] = "local_values"+computedValues->getParameterSuffix(i);
+            map<string, Lepton::ParsedExpression> valueExpressions;
+            valueExpressions["local_values"+computedValues->getParameterSuffix(i)+" = "] = Lepton::Parser::parse(expression, functions).optimize();
+            valuesSource << cc.getExpressionUtilities().createExpressions(valueExpressions, variables, functionList, functionDefinitions, "value"+cc.intToString(i)+"_temp");
+        }
+        for (int i = 0; i < (int) computedValues->getParameterInfos().size(); i++) {
+            string valueName = "values"+cc.intToString(i+1);
+            valuesSource << "global_" << valueName << "[index] = local_" << valueName << ";\n";
+        }
+        map<string, string> replacements;
+        replacements["PARAMETER_ARGUMENTS"] = args.str()+tableArgs.str();
+        replacements["COMPUTE_VALUES"] = valuesSource.str();
+        map<string, string> defines;
+        defines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
+        ComputeProgram program = cc.compileProgram(cc.replaceStrings(CommonKernelSources::customNonbondedComputedValues, replacements), defines);
+        computedValuesKernel = program->createKernel("computePerParticleValues");
+        for (auto& value : computedValues->getParameterInfos())
+            computedValuesKernel->addArg(value.getArray());
+        if (globals.isInitialized())
+            computedValuesKernel->addArg(globals);
+        for (auto& parameter : params->getParameterInfos())
+            computedValuesKernel->addArg(parameter.getArray());
+        for (auto& function : tabulatedFunctionArrays)
+            computedValuesKernel->addArg(function);
     }
     info = new ForceInfo(force);
     cc.addForce(info);
@@ -1990,7 +2072,7 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     
     if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic && force.getUseLongRangeCorrection() && cc.getContextIndex() == 0) {
         forceCopy = new CustomNonbondedForce(force);
-        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force);
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
         cc.addPostComputation(new LongRangePostComputation(cc, longRangeCoefficient, longRangeCoefficientDerivs, forceCopy));
         hasInitializedLongRangeCorrection = false;
     }
@@ -2180,21 +2262,21 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     const string suffixes[] = {"x", "y", "z", "w"};
     stringstream localData;
     int localDataSize = 0;
-    vector<ComputeParameterInfo>& buffers = params->getParameterInfos(); 
-    for (int i = 0; i < (int) buffers.size(); i++) {
-        if (buffers[i].getNumComponents() == 1)
-            localData<<buffers[i].getComponentType()<<" params"<<(i+1)<<";\n";
-        else {
-            for (int j = 0; j < buffers[i].getNumComponents(); ++j)
-                localData<<buffers[i].getComponentType()<<" params"<<(i+1)<<"_"<<suffixes[j]<<";\n";
-        }
-        localDataSize += buffers[i].getSize();
+    for (int i = 0; i < paramBuffers.size(); i++) {
+        localData<<paramBuffers[i].getComponentType()<<" params"<<(i+1)<<";\n";
+        localDataSize += paramBuffers[i].getSize();
+    }
+    for (int i = 0; i < computedValueBuffers.size(); i++) {
+        localData<<computedValueBuffers[i].getComponentType()<<" values"<<(i+1)<<";\n";
+        localDataSize += computedValueBuffers[i].getSize();
     }
     replacements["ATOM_PARAMETER_DATA"] = localData.str();
     stringstream args;
-    for (int i = 0; i < (int) buffers.size(); i++)
-        args<<", GLOBAL const "<<buffers[i].getType()<<"* RESTRICT global_params"<<(i+1);
-    for (int i = 0; i < (int) tabulatedFunctionArrays.size(); i++)
+    for (int i = 0; i < paramBuffers.size(); i++)
+        args<<", GLOBAL const "<<paramBuffers[i].getType()<<"* RESTRICT global_params"<<(i+1);
+    for (int i = 0; i < computedValueBuffers.size(); i++)
+        args<<", GLOBAL const "<<computedValueBuffers[i].getType()<<"* RESTRICT global_values"<<(i+1);
+    for (int i = 0; i < tabulatedFunctionArrays.size(); i++)
         args << ", GLOBAL const " << tableTypes[i]<< "* RESTRICT table" << i;
     if (globals.isInitialized())
         args<<", GLOBAL const float* RESTRICT globals";
@@ -2202,34 +2284,22 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         args << ", GLOBAL mixed* RESTRICT energyParamDerivs";
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream load1;
-    for (int i = 0; i < (int) buffers.size(); i++)
-        load1<<buffers[i].getType()<<" params"<<(i+1)<<"1 = global_params"<<(i+1)<<"[atom1];\n";
+    for (int i = 0; i < paramBuffers.size(); i++)
+        load1<<paramBuffers[i].getType()<<" params"<<(i+1)<<"1 = global_params"<<(i+1)<<"[atom1];\n";
+    for (int i = 0; i < computedValueBuffers.size(); i++)
+        load1<<computedValueBuffers[i].getType()<<" values"<<(i+1)<<"1 = global_values"<<(i+1)<<"[atom1];\n";
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
     stringstream loadLocal2;
-    for (int i = 0; i < (int) buffers.size(); i++) {
-        if (buffers[i].getNumComponents() == 1)
-            loadLocal2<<"localData[LOCAL_ID].params"<<(i+1)<<" = global_params"<<(i+1)<<"[atom2];\n";
-        else {
-            loadLocal2<<buffers[i].getType()<<" temp_params"<<(i+1)<<" = global_params"<<(i+1)<<"[atom2];\n";
-            for (int j = 0; j < buffers[i].getNumComponents(); ++j)
-                loadLocal2<<"localData[LOCAL_ID].params"<<(i+1)<<"_"<<suffixes[j]<<" = temp_params"<<(i+1)<<"."<<suffixes[j]<<";\n";
-        }
-    }
+    for (int i = 0; i < paramBuffers.size(); i++)
+        loadLocal2<<"localData[LOCAL_ID].params"<<(i+1)<<" = global_params"<<(i+1)<<"[atom2];\n";
+    for (int i = 0; i < computedValueBuffers.size(); i++)
+        loadLocal2<<"localData[LOCAL_ID].values"<<(i+1)<<" = global_values"<<(i+1)<<"[atom2];\n";
     replacements["LOAD_LOCAL_PARAMETERS"] = loadLocal2.str();
     stringstream load2;
-    for (int i = 0; i < (int) buffers.size(); i++) {
-        if (buffers[i].getNumComponents() == 1)
-            load2<<buffers[i].getType()<<" params"<<(i+1)<<"2 = localData[localIndex].params"<<(i+1)<<";\n";
-        else {
-            load2<<buffers[i].getType()<<" params"<<(i+1)<<"2 = make_"<<buffers[i].getType()<<"(";
-            for (int j = 0; j < buffers[i].getNumComponents(); ++j) {
-                if (j > 0)
-                    load2<<", ";
-                load2<<"localData[localIndex].params"<<(i+1)<<"_"<<suffixes[j];
-            }
-            load2<<");\n";
-        }
-    }
+    for (int i = 0; i < paramBuffers.size(); i++)
+        load2<<paramBuffers[i].getType()<<" params"<<(i+1)<<"2 = localData[localIndex].params"<<(i+1)<<";\n";
+    for (int i = 0; i < computedValueBuffers.size(); i++)
+        load2<<computedValueBuffers[i].getType()<<" values"<<(i+1)<<"2 = localData[localIndex].values"<<(i+1)<<";\n";
     replacements["LOAD_ATOM2_PARAMETERS"] = load2.str();
     stringstream initDerivs, saveDerivs;
     const vector<string>& allParamDerivNames = cc.getEnergyParamDerivNames();
@@ -2303,11 +2373,12 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
         else
             hasInitializedLongRangeCorrection = false;
     }
+    if (computedValues != NULL)
+        computedValuesKernel->execute(cc.getNumAtoms());
     if (interactionGroupData.isInitialized()) {
         if (!hasInitializedKernel) {
             hasInitializedKernel = true;
-            bool useLong = cc.getSupports64BitGlobalAtomics();
-            interactionGroupKernel->addArg((useLong ? cc.getLongForceBuffer() : cc.getForceBuffers()));
+            interactionGroupKernel->addArg(cc.getLongForceBuffer());
             interactionGroupKernel->addArg(cc.getEnergyBuffer());
             interactionGroupKernel->addArg(cc.getPosq());
             interactionGroupKernel->addArg((useNeighborList ? filteredGroupData : interactionGroupData));
@@ -2315,8 +2386,10 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             interactionGroupKernel->addArg((int) useNeighborList);
             for (int i = 0; i < 5; i++)
                 interactionGroupKernel->addArg(); // Periodic box information will be set just before it is executed.
-            for (auto& parameter : params->getParameterInfos())
-                interactionGroupKernel->addArg(parameter.getArray());
+            for (auto& buffer : paramBuffers)
+                interactionGroupKernel->addArg(buffer.getArray());
+            for (auto& buffer : computedValueBuffers)
+                interactionGroupKernel->addArg(buffer.getArray());
             for (auto& function : tabulatedFunctionArrays)
                 interactionGroupKernel->addArg(function);
             if (globals.isInitialized())
@@ -2374,7 +2447,7 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
     // If necessary, recompute the long range correction.
 
     if (forceCopy != NULL) {
-        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force);
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
         CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, cc.getThreadPool());
         hasInitializedLongRangeCorrection = false;
         *forceCopy = force;
@@ -2384,8 +2457,8 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             int width;
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
@@ -2425,15 +2498,8 @@ void CommonCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     charges.initialize(cc, cc.getPaddedNumAtoms(), elementSize, "gbsaObcCharges");
     bornRadii.initialize(cc, cc.getPaddedNumAtoms(), elementSize, "bornRadii");
     obcChain.initialize(cc, cc.getPaddedNumAtoms(), elementSize, "obcChain");
-    if (cc.getSupports64BitGlobalAtomics()) {
-        bornSum.initialize<long long>(cc, cc.getPaddedNumAtoms(), "bornSum");
-        bornForce.initialize<long long>(cc, cc.getPaddedNumAtoms(), "bornForce");
-    }
-    else {
-        int bufferSize = cc.getPaddedNumAtoms()*nb.getNumForceBuffers();
-        bornSum.initialize(cc, bufferSize, elementSize, "bornSum");
-        bornForce.initialize(cc, bufferSize, elementSize, "bornForce");
-    }
+    bornSum.initialize<long long>(cc, cc.getPaddedNumAtoms(), "bornSum");
+    bornForce.initialize<long long>(cc, cc.getPaddedNumAtoms(), "bornForce");
     cc.addAutoclearBuffer(bornSum);
     cc.addAutoclearBuffer(bornForce);
     vector<double> chargeVec(cc.getPaddedNumAtoms());
@@ -2465,7 +2531,7 @@ void CommonCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     nb.addInteraction(useCutoff, usePeriodic, false, cutoff, vector<vector<int> >(), source, force.getForceGroup());
     nb.addParameter(ComputeParameterInfo(charges, prefix+"charge", "float", 1));
     nb.addParameter(ComputeParameterInfo(params, prefix+"obcParams", "float", 2));
-    nb.addParameter(ComputeParameterInfo(bornForce, prefix+"bornForce", cc.getSupports64BitGlobalAtomics() ? "mm_long" : "real", 1));
+    nb.addParameter(ComputeParameterInfo(bornForce, prefix+"bornForce", "mm_long", 1));
     info = new ForceInfo(force);
     cc.addForce(info);
 }
@@ -2504,7 +2570,6 @@ double CommonCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         else
             file = CommonKernelSources::gbsaObc;
         ComputeProgram program = cc.compileProgram(file, defines);
-        bool useLong = cc.getSupports64BitGlobalAtomics();
         computeBornSumKernel = program->createKernel("computeBornSum");
         computeBornSumKernel->addArg(bornSum);
         computeBornSumKernel->addArg(cc.getPosq());
@@ -2524,7 +2589,7 @@ double CommonCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
             computeBornSumKernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
         computeBornSumKernel->addArg(nb.getExclusionTiles());
         force1Kernel = program->createKernel("computeGBSAForce1");
-        force1Kernel->addArg(useLong ? cc.getLongForceBuffer() : cc.getForceBuffers());
+        force1Kernel->addArg(cc.getLongForceBuffer());
         force1Kernel->addArg(bornForce);
         force1Kernel->addArg(cc.getEnergyBuffer());
         force1Kernel->addArg(cc.getPosq());
@@ -2550,19 +2615,11 @@ double CommonCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         reduceBornSumKernel->addArg(0.8f);
         reduceBornSumKernel->addArg(4.85f);
         reduceBornSumKernel->addArg(bornSum);
-        if (!useLong) {
-            reduceBornSumKernel->addArg(cc.getPaddedNumAtoms());
-            reduceBornSumKernel->addArg(cc.getForceBuffers().getSize()/cc.getPaddedNumAtoms());
-        }
         reduceBornSumKernel->addArg(params);
         reduceBornSumKernel->addArg(bornRadii);
         reduceBornSumKernel->addArg(obcChain);
         reduceBornForceKernel = program->createKernel("reduceBornForce");
         reduceBornForceKernel->addArg(bornForce);
-        if (!useLong) {
-            reduceBornForceKernel->addArg(cc.getPaddedNumAtoms());
-            reduceBornForceKernel->addArg(cc.getForceBuffers().getSize()/cc.getPaddedNumAtoms());
-        }
         reduceBornForceKernel->addArg(cc.getEnergyBuffer());
         reduceBornForceKernel->addArg(params);
         reduceBornForceKernel->addArg(bornRadii);
@@ -2723,7 +2780,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
-        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
         string arrayName = prefix+"table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
@@ -2796,28 +2853,17 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             energyParamDerivExpressions[i].push_back(ex.differentiate(force.getEnergyParameterDerivativeName(j)).optimize());
     }
     bool deviceIsCpu = cc.getIsCPU();
-    bool useLong = cc.getSupports64BitGlobalAtomics();
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-    if (useLong) {
-        valueBuffers.initialize<long long>(cc, cc.getPaddedNumAtoms(), "customGBValueBuffers");
-        longEnergyDerivs.initialize<long long>(cc, numComputedValues*cc.getPaddedNumAtoms(), "customGBLongEnergyDerivatives");
-        energyDerivs = new ComputeParameterSet(cc, numComputedValues, cc.getPaddedNumAtoms(), "customGBEnergyDerivatives", true);
-    }
-    else {
-        int bufferSize = cc.getPaddedNumAtoms()*nb.getNumForceBuffers();
-        valueBuffers.initialize(cc, bufferSize, elementSize, "customGBValueBuffers");
-        energyDerivs = new ComputeParameterSet(cc, numComputedValues, bufferSize, "customGBEnergyDerivatives", true);
-    }
+    valueBuffers.initialize<long long>(cc, cc.getPaddedNumAtoms(), "customGBValueBuffers");
+    longEnergyDerivs.initialize<long long>(cc, numComputedValues*cc.getPaddedNumAtoms(), "customGBLongEnergyDerivatives");
+    energyDerivs = new ComputeParameterSet(cc, numComputedValues, cc.getPaddedNumAtoms(), "customGBEnergyDerivatives", true);
     cc.addAutoclearBuffer(valueBuffers);
     energyDerivChain = new ComputeParameterSet(cc, numComputedValues, cc.getPaddedNumAtoms(), "customGBEnergyDerivativeChain", true);
     needEnergyParamDerivs = (force.getNumEnergyParameterDerivatives() > 0);
     dValue0dParam.resize(force.getNumEnergyParameterDerivatives());
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
         dValuedParam.push_back(new ComputeParameterSet(cc, numComputedValues, cc.getPaddedNumAtoms(), "dValuedParam", true, cc.getUseDoublePrecision()));
-        if (useLong)
-            dValue0dParam[i].initialize<long long>(cc, cc.getPaddedNumAtoms(), "dValue0dParam");
-        else
-            dValue0dParam[i].initialize(cc, cc.getPaddedNumAtoms()*nb.getNumForceBuffers(), elementSize, "dValue0dParam");
+        dValue0dParam[i].initialize<long long>(cc, cc.getPaddedNumAtoms(), "dValue0dParam");
         cc.addAutoclearBuffer(dValue0dParam[i]);
         string name = force.getEnergyParameterDerivativeName(i);
         cc.addEnergyParameterDerivative(name);
@@ -2884,10 +2930,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         }
         for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
             string derivName = "dValue0dParam"+cc.intToString(i+1);
-            if (useLong)
-                extraArgs << ", GLOBAL mm_ulong* RESTRICT global_" << derivName;
-            else
-                extraArgs << ", GLOBAL real* RESTRICT global_" << derivName;
+            extraArgs << ", GLOBAL mm_ulong* RESTRICT global_" << derivName;
             atomParams << "LOCAL real local_" << derivName << "[LOCAL_BUFFER_SIZE];\n";
             loadLocal2 << "local_" << derivName << "[localAtomIndex] = 0;\n";
             load1 << "real " << derivName << " = 0;\n";
@@ -2899,20 +2942,11 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
                     tempDerivs2 << "local_" << derivName << "[j] += temp_" << derivName << "_2;\n";
                 else
                     tempDerivs2 << "local_" << derivName << "[tbx+tj] += temp_" << derivName << "_2;\n";
-                if (useLong) {
-                    storeDeriv1 << "ATOMIC_ADD(&global_" << derivName << "[offset1], (mm_ulong) ((mm_long) (" << derivName << "*0x100000000)));\n";
-                    if (deviceIsCpu)
-                        storeDeriv2 << "ATOMIC_ADD(&global_" << derivName << "[offset2], (mm_ulong) ((mm_long) (local_" << derivName << "[tgx]*0x100000000)));\n";
-                    else
-                        storeDeriv2 << "ATOMIC_ADD(&global_" << derivName << "[offset2], (mm_ulong) ((mm_long) (local_" << derivName << "[LOCAL_ID]*0x100000000)));\n";
-                }
-                else {
-                    storeDeriv1 << "global_" << derivName << "[offset1] += " << derivName << ";\n";
-                    if (deviceIsCpu)
-                        storeDeriv2 << "global_" << derivName << "[offset2] += local_" << derivName << "[tgx];\n";
-                    else
-                        storeDeriv2 << "global_" << derivName << "[offset2] += local_" << derivName << "[LOCAL_ID];\n";
-                }
+                storeDeriv1 << "ATOMIC_ADD(&global_" << derivName << "[offset1], (mm_ulong) realToFixedPoint(" << derivName << "));\n";
+                if (deviceIsCpu)
+                    storeDeriv2 << "ATOMIC_ADD(&global_" << derivName << "[offset2], (mm_ulong) realToFixedPoint(local_" << derivName << "[tgx]));\n";
+                else
+                    storeDeriv2 << "ATOMIC_ADD(&global_" << derivName << "[offset2], (mm_ulong) realToFixedPoint(local_" << derivName << "[LOCAL_ID]));\n";
             }
         }
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
@@ -2963,16 +2997,8 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         }
         for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
             string variableName = "dValuedParam_0_"+cc.intToString(i);
-            if (useLong) {
-                extraArgs << ", GLOBAL const mm_long* RESTRICT dValue0dParam" << i;
-                deriv0 << "real " << variableName << " = RECIP((real) 0x100000000)*dValue0dParam" << i << "[index];\n";
-            }
-            else {
-                extraArgs << ", GLOBAL const real* RESTRICT dValue0dParam" << i;
-                deriv0 << "real " << variableName << " = dValue0dParam" << i << "[index];\n";
-                deriv0 << "for (int i = index+bufferSize; i < totalSize; i += bufferSize)\n";
-                deriv0 << "    " << variableName << " += dValue0dParam" << i << "[i];\n";
-            }
+            extraArgs << ", GLOBAL const mm_long* RESTRICT dValue0dParam" << i;
+            deriv0 << "real " << variableName << " = RECIP((real) 0x100000000)*dValue0dParam" << i << "[index];\n";
             for (int j = 0; j < dValuedParam[i]->getParameterInfos().size(); j++)
                 extraArgs << ", GLOBAL real* RESTRICT global_dValuedParam_" << j << "_" << i;
             deriv0 << "global_dValuedParam_0_" << i << "[index] = dValuedParam_0_" << i << ";\n";
@@ -3053,21 +3079,11 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             map<string, Lepton::ParsedExpression> n2EnergyExpressions;
             n2EnergyExpressions["tempEnergy += "] = Lepton::Parser::parse(expression, functions).optimize();
             n2EnergyExpressions["dEdR += "] = Lepton::Parser::parse(expression, functions).differentiate("r").optimize();
-            if (useLong) {
-                for (int j = 0; j < numComputedValues; j++) {
-                    if (needChainForValue[j]) {
-                        string index = cc.intToString(j+1);
-                        n2EnergyExpressions["/*"+cc.intToString(i+1)+"*/ deriv"+index+"_1 += "] = energyDerivExpressions[i][2*j];
-                        n2EnergyExpressions["/*"+cc.intToString(i+1)+"*/ deriv"+index+"_2 += "] = energyDerivExpressions[i][2*j+1];
-                    }
-                }
-            }
-            else {
-                for (int j = 0; j < numComputedValues; j++) {
-                    if (needChainForValue[j]) {
-                        n2EnergyExpressions["/*"+cc.intToString(i+1)+"*/ deriv"+energyDerivs->getParameterSuffix(j, "_1")+" += "] = energyDerivExpressions[i][2*j];
-                        n2EnergyExpressions["/*"+cc.intToString(i+1)+"*/ deriv"+energyDerivs->getParameterSuffix(j, "_2")+" += "] = energyDerivExpressions[i][2*j+1];
-                    }
+            for (int j = 0; j < numComputedValues; j++) {
+                if (needChainForValue[j]) {
+                    string index = cc.intToString(j+1);
+                    n2EnergyExpressions["/*"+cc.intToString(i+1)+"*/ deriv"+index+"_1 += "] = energyDerivExpressions[i][2*j];
+                    n2EnergyExpressions["/*"+cc.intToString(i+1)+"*/ deriv"+index+"_2 += "] = energyDerivExpressions[i][2*j+1];
                 }
             }
             for (int j = 0; j < force.getNumEnergyParameterDerivatives(); j++)
@@ -3112,32 +3128,16 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
                 pairEnergyUsesValue[i] = true;
             }
         }
-        if (useLong) {
-            extraArgs << ", GLOBAL mm_ulong* RESTRICT derivBuffers";
-            for (int i = 0; i < numComputedValues; i++) {
-                string index = cc.intToString(i+1);
-                atomParams << "LOCAL real local_deriv" << index << "[LOCAL_BUFFER_SIZE];\n";
-                clearLocal << "local_deriv" << index << "[localAtomIndex] = 0.0f;\n";
-                declare1 << "real deriv" << index << "_1 = 0;\n";
-                load2 << "real deriv" << index << "_2 = 0;\n";
-                recordDeriv << "local_deriv" << index << "[atom2] += deriv" << index << "_2;\n";
-                storeDerivs1 << "STORE_DERIVATIVE_1(" << index << ")\n";
-                storeDerivs2 << "STORE_DERIVATIVE_2(" << index << ")\n";
-            }
-        }
-        else {
-            for (int i = 0; i < (int) energyDerivs->getParameterInfos().size(); i++) {
-                const ComputeParameterInfo& buffer = energyDerivs->getParameterInfos()[i];
-                string index = cc.intToString(i+1);
-                extraArgs << ", GLOBAL " << buffer.getType() << "* RESTRICT derivBuffers" << index;
-                atomParams << "LOCAL " << buffer.getType() << " local_deriv" << index << "[LOCAL_BUFFER_SIZE];\n";
-                clearLocal << "local_deriv" << index << "[localAtomIndex] = 0.0f;\n";
-                declare1 << buffer.getType() << " deriv" << index << "_1 = 0.0f;\n";
-                load2 << buffer.getType() << " deriv" << index << "_2 = 0.0f;\n";
-                recordDeriv << "local_deriv" << index << "[atom2] += deriv" << index << "_2;\n";
-                storeDerivs1 << "STORE_DERIVATIVE_1(" << index << ")\n";
-                storeDerivs2 << "STORE_DERIVATIVE_2(" << index << ")\n";
-            }
+        extraArgs << ", GLOBAL mm_ulong* RESTRICT derivBuffers";
+        for (int i = 0; i < numComputedValues; i++) {
+            string index = cc.intToString(i+1);
+            atomParams << "LOCAL real local_deriv" << index << "[LOCAL_BUFFER_SIZE];\n";
+            clearLocal << "local_deriv" << index << "[localAtomIndex] = 0.0f;\n";
+            declare1 << "real deriv" << index << "_1 = 0;\n";
+            load2 << "real deriv" << index << "_2 = 0;\n";
+            recordDeriv << "local_deriv" << index << "[atom2] += deriv" << index << "_2;\n";
+            storeDerivs1 << "STORE_DERIVATIVE_1(" << index << ")\n";
+            storeDerivs2 << "STORE_DERIVATIVE_2(" << index << ")\n";
         }
         if (needEnergyParamDerivs) {
             extraArgs << ", GLOBAL mixed* RESTRICT energyParamDerivs";
@@ -3209,16 +3209,10 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             string index = cc.intToString(i+1);
             extraArgs << ", GLOBAL " << buffer.getType() << "* RESTRICT derivChain" << index;
         }
-        if (useLong) {
-            extraArgs << ", GLOBAL const mm_long* RESTRICT derivBuffersIn";
-            for (int i = 0; i < energyDerivs->getNumParameters(); ++i)
-                reduce << "derivBuffers" << energyDerivs->getParameterSuffix(i, "[index]") <<
-                        " = RECIP((real) 0x100000000)*derivBuffersIn[index+PADDED_NUM_ATOMS*" << cc.intToString(i) << "];\n";
-        }
-        else {
-            for (int i = 0; i < (int) energyDerivs->getParameterInfos().size(); i++)
-                reduce << "REDUCE_VALUE(derivBuffers" << cc.intToString(i+1) << ", " << energyDerivs->getParameterInfos()[i].getType() << ")\n";
-        }
+        extraArgs << ", GLOBAL const mm_long* RESTRICT derivBuffersIn";
+        for (int i = 0; i < energyDerivs->getNumParameters(); ++i)
+            reduce << "derivBuffers" << energyDerivs->getParameterSuffix(i, "[index]") <<
+                    " = RECIP((real) 0x100000000)*derivBuffersIn[index+PADDED_NUM_ATOMS*" << cc.intToString(i) << "];\n";
         if (needEnergyParamDerivs) {
             extraArgs << ", GLOBAL mixed* RESTRICT energyParamDerivs";
             const vector<string>& allParamDerivNames = cc.getEnergyParamDerivNames();
@@ -3277,13 +3271,9 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
             string index = cc.intToString(i+1);
             compute << "derivBuffers" << index << "[index] = deriv" << index << ";\n";
         }
-        if (useLong) {
-            compute << "forceBuffers[index] += (mm_long) (force.x*0x100000000);\n";
-            compute << "forceBuffers[index+PADDED_NUM_ATOMS] += (mm_long) (force.y*0x100000000);\n";
-            compute << "forceBuffers[index+PADDED_NUM_ATOMS*2] += (mm_long) (force.z*0x100000000);\n";
-        }
-        else
-            compute << "forceBuffers[index] = forceBuffers[index]+make_real4(force.x, force.y, force.z, 0);\n";
+        compute << "forceBuffers[index] += realToFixedPoint(force.x);\n";
+        compute << "forceBuffers[index+PADDED_NUM_ATOMS] += realToFixedPoint(force.y);\n";
+        compute << "forceBuffers[index+PADDED_NUM_ATOMS*2] += realToFixedPoint(force.z);\n";
         for (int i = 1; i < numComputedValues; i++) {
             compute << "real totalDeriv"<<i<<" = dV"<<i<<"dV0";
             for (int j = 1; j < i; j++)
@@ -3472,12 +3462,7 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
     }
     info = new ForceInfo(force);
     cc.addForce(info);
-    if (useLong)
-        cc.addAutoclearBuffer(longEnergyDerivs);
-    else {
-        for (auto& buffer : energyDerivs->getParameterInfos())
-            cc.addAutoclearBuffer(buffer.getArray());
-    }
+    cc.addAutoclearBuffer(longEnergyDerivs);
 }
 
 double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -3524,7 +3509,6 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         
         maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : 0);
         int numAtomBlocks = cc.getPaddedNumAtoms()/32;
-        bool useLong = cc.getSupports64BitGlobalAtomics();
         pairValueKernel->addArg(cc.getPosq());
         pairValueKernel->addArg(cc.getNonbondedUtilities().getExclusions());
         pairValueKernel->addArg(cc.getNonbondedUtilities().getExclusionTiles());
@@ -3555,10 +3539,6 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             pairValueKernel->addArg(function);
         perParticleValueKernel->addArg(cc.getPosq());
         perParticleValueKernel->addArg(valueBuffers);
-        if (!useLong) {
-            perParticleValueKernel->addArg(cc.getPaddedNumAtoms());
-            perParticleValueKernel->addArg(cc.getForceBuffers().getSize()/cc.getPaddedNumAtoms());
-        }
         if (globals.isInitialized())
             perParticleValueKernel->addArg(globals);
         for (auto& buffer : params->getParameterInfos())
@@ -3572,7 +3552,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         }
         for (auto& function : tabulatedFunctionArrays)
             perParticleValueKernel->addArg(function);
-        pairEnergyKernel->addArg(useLong ? cc.getLongForceBuffer() : cc.getForceBuffers());
+        pairEnergyKernel->addArg(cc.getLongForceBuffer());
         pairEnergyKernel->addArg(cc.getEnergyBuffer());
         pairEnergyKernel->addArg(cc.getPosq());
         pairEnergyKernel->addArg(cc.getNonbondedUtilities().getExclusions());
@@ -3604,24 +3584,14 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
                 pairEnergyKernel->addArg(buffer.getArray());
             }
         }
-        if (useLong)
-            pairEnergyKernel->addArg(longEnergyDerivs);
-        else
-            for (auto& buffer : energyDerivs->getParameterInfos())
-                pairEnergyKernel->addArg(buffer.getArray());
+        pairEnergyKernel->addArg(longEnergyDerivs);
         if (needEnergyParamDerivs)
             pairEnergyKernel->addArg(cc.getEnergyParamDerivBuffer());
         for (auto& function : tabulatedFunctionArrays)
             pairEnergyKernel->addArg(function);
         perParticleEnergyKernel->addArg(cc.getEnergyBuffer());
         perParticleEnergyKernel->addArg(cc.getPosq());
-        if (cc.getSupports64BitGlobalAtomics())
-            perParticleEnergyKernel->addArg(cc.getLongForceBuffer());
-        else {
-            perParticleEnergyKernel->addArg(cc.getForceBuffers());
-            perParticleEnergyKernel->addArg(cc.getPaddedNumAtoms());
-            perParticleEnergyKernel->addArg(cc.getForceBuffers().getSize()/cc.getPaddedNumAtoms());
-        }
+        perParticleEnergyKernel->addArg(cc.getLongForceBuffer());
         if (globals.isInitialized())
             perParticleEnergyKernel->addArg(globals);
         for (auto& buffer : params->getParameterInfos())
@@ -3632,15 +3602,14 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             perParticleEnergyKernel->addArg(buffer.getArray());
         for (auto& buffer : energyDerivChain->getParameterInfos())
             perParticleEnergyKernel->addArg(buffer.getArray());
-        if (useLong)
-            perParticleEnergyKernel->addArg(longEnergyDerivs);
+        perParticleEnergyKernel->addArg(longEnergyDerivs);
         if (needEnergyParamDerivs)
             perParticleEnergyKernel->addArg(cc.getEnergyParamDerivBuffer());
         for (auto& function : tabulatedFunctionArrays)
             perParticleEnergyKernel->addArg(function);
         if (needParameterGradient || needEnergyParamDerivs) {
             gradientChainRuleKernel->addArg(cc.getPosq());
-            gradientChainRuleKernel->addArg(useLong ? cc.getLongForceBuffer() : cc.getForceBuffers());
+            gradientChainRuleKernel->addArg(cc.getLongForceBuffer());
             if (globals.isInitialized())
                 gradientChainRuleKernel->addArg(globals);
             for (auto& buffer : params->getParameterInfos())
@@ -3710,8 +3679,8 @@ void CommonCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             int width;
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
@@ -3861,33 +3830,6 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     }
     acceptors.upload(acceptorVector);
     acceptorParams->setParameterValues(acceptorParamVector);
-
-    // Select an output buffer index for each donor and acceptor.
-
-    if (!cc.getSupports64BitGlobalAtomics()) {
-        donorBufferIndices.initialize<mm_int4>(cc, numDonors, "customHbondDonorBuffers");
-        acceptorBufferIndices.initialize<mm_int4>(cc, numAcceptors, "customHbondAcceptorBuffers");
-        vector<mm_int4> donorBufferVector(numDonors);
-        vector<mm_int4> acceptorBufferVector(numAcceptors);
-        vector<int> donorBufferCounter(numParticles, 0);
-        for (int i = 0; i < numDonors; i++)
-            donorBufferVector[i] = mm_int4(donorVector[i].x > -1 ? donorBufferCounter[donorVector[i].x]++ : 0,
-                                           donorVector[i].y > -1 ? donorBufferCounter[donorVector[i].y]++ : 0,
-                                           donorVector[i].z > -1 ? donorBufferCounter[donorVector[i].z]++ : 0, 0);
-        vector<int> acceptorBufferCounter(numParticles, 0);
-        for (int i = 0; i < numAcceptors; i++)
-            acceptorBufferVector[i] = mm_int4(acceptorVector[i].x > -1 ? acceptorBufferCounter[acceptorVector[i].x]++ : 0,
-                                           acceptorVector[i].y > -1 ? acceptorBufferCounter[acceptorVector[i].y]++ : 0,
-                                           acceptorVector[i].z > -1 ? acceptorBufferCounter[acceptorVector[i].z]++ : 0, 0);
-        donorBufferIndices.upload(donorBufferVector);
-        acceptorBufferIndices.upload(acceptorBufferVector);
-        int maxBuffers = 1;
-        for (int i : donorBufferCounter)
-            maxBuffers = max(maxBuffers, i);
-        for (int i : acceptorBufferCounter)
-            maxBuffers = max(maxBuffers, i);
-        cc.requestForceBuffers(maxBuffers);
-    }
     info = new ForceInfo(force);
     cc.addForce(info);
 
@@ -3937,7 +3879,7 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
-        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
         string arrayName = "table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
@@ -4167,12 +4109,7 @@ double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
     }
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
-        if (cc.getSupports64BitGlobalAtomics())
-            donorKernel->addArg(cc.getLongForceBuffer());
-        else {
-            donorKernel->addArg(cc.getForceBuffers());
-            donorKernel->addArg(donorBufferIndices);
-        }
+        donorKernel->addArg(cc.getLongForceBuffer());
         donorKernel->addArg(cc.getEnergyBuffer());
         donorKernel->addArg(cc.getPosq());
         donorKernel->addArg(donorExclusions);
@@ -4188,12 +4125,7 @@ double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
             donorKernel->addArg(parameter.getArray());
         for (auto& function : tabulatedFunctionArrays)
             donorKernel->addArg(function);
-        if (cc.getSupports64BitGlobalAtomics())
-            acceptorKernel->addArg(cc.getLongForceBuffer());
-        else {
-            acceptorKernel->addArg(cc.getForceBuffers());
-            acceptorKernel->addArg(acceptorBufferIndices);
-        }
+        acceptorKernel->addArg(cc.getLongForceBuffer());
         acceptorKernel->addArg(cc.getEnergyBuffer());
         acceptorKernel->addArg(cc.getPosq());
         acceptorKernel->addArg(acceptorExclusions);
@@ -4210,9 +4142,9 @@ double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
         for (auto& function : tabulatedFunctionArrays)
             acceptorKernel->addArg(function);
     }
-    setPeriodicBoxArgs(cc, donorKernel, cc.getSupports64BitGlobalAtomics() ? 6 : 7);
+    setPeriodicBoxArgs(cc, donorKernel, 6);
     donorKernel->execute(max(numDonors, numAcceptors), 64);
-    setPeriodicBoxArgs(cc, acceptorKernel, cc.getSupports64BitGlobalAtomics() ? 6 : 7);
+    setPeriodicBoxArgs(cc, acceptorKernel, 6);
     acceptorKernel->execute(max(numDonors, numAcceptors), 64);
     return 0.0;
 }
@@ -4261,8 +4193,8 @@ void CommonCalcCustomHbondForceKernel::copyParametersToContext(ContextImpl& cont
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             int width;
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
@@ -4315,8 +4247,6 @@ CommonCalcCustomManyParticleForceKernel::~CommonCalcCustomManyParticleForceKerne
 
 void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, const CustomManyParticleForce& force) {
     ContextSelector selector(cc);
-    if (!cc.getSupports64BitGlobalAtomics())
-        throw OpenMMException("CustomManyParticleForce requires a device that supports 64 bit atomic operations");
     int numParticles = force.getNumParticles();
     int particlesPerSet = force.getNumParticlesPerSet();
     bool centralParticleMode = (force.getPermutationMode() == CustomManyParticleForce::UniqueCentralParticle);
@@ -4350,7 +4280,7 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         functionList.push_back(&force.getTabulatedFunction(i));
         string name = force.getTabulatedFunctionName(i);
-        tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
         string arrayName = "table"+cc.intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = cc.getExpressionUtilities().getFunctionPlaceholder(force.getTabulatedFunction(i));
@@ -4734,7 +4664,7 @@ double CommonCalcCustomManyParticleForceKernel::execute(ContextImpl& context, bo
             startIndicesKernel->execute(256, 256);
             copyPairsKernel->execute(maxNeighborPairs);
         }
-        int maxThreads = min(cc.getNumAtoms()*forceWorkgroupSize, cc.getEnergyBuffer().getSize());
+        int maxThreads = min(cc.getNumAtoms()*forceWorkgroupSize, (int) cc.getEnergyBuffer().getSize());
         forceKernel->execute(maxThreads, forceWorkgroupSize);
         if (nonbondedMethod != NoCutoff) {
             // Make sure there was enough memory for the neighbor list.
@@ -4780,8 +4710,8 @@ void CommonCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImp
 
     for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
         string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i) != *tabulatedFunctions[name]) {
-            tabulatedFunctions[name] = XmlSerializer::clone(force.getTabulatedFunction(i));
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
             int width;
             vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
             tabulatedFunctionArrays[i].upload(f);
@@ -4857,9 +4787,6 @@ private:
 };
 
 void CommonCalcGayBerneForceKernel::initialize(const System& system, const GayBerneForce& force) {
-    if (!cc.getSupports64BitGlobalAtomics())
-        throw OpenMMException("GayBerneForce requires a device that supports 64 bit atomic operations");
-
     // Initialize interactions.
 
     ContextSelector selector(cc);
@@ -5290,7 +5217,7 @@ void CommonCalcCustomCVForceKernel::initialize(const System& system, const Custo
     copyForcesKernel->addArg(cc.getPaddedNumAtoms());
     addForcesKernel = program->createKernel("addForces");
     addForcesKernel->addArg(cc.getLongForceBuffer());
-    addForcesKernel->addArg(cc.getLongForceBuffer().getSize());
+    addForcesKernel->addArg((int) cc.getLongForceBuffer().getSize());
     for (int i = 0; i < numCVs; i++) {
         addForcesKernel->addArg();
         addForcesKernel->addArg();
@@ -5303,7 +5230,6 @@ void CommonCalcCustomCVForceKernel::initialize(const System& system, const Custo
 }
 
 double CommonCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl& innerContext, bool includeForces, bool includeEnergy) {
-    ContextSelector selector(cc);
     copyState(context, innerContext);
     int numCVs = variableNames.size();
     int numAtoms = cc.getNumAtoms();
@@ -5312,13 +5238,15 @@ double CommonCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl&
     vector<map<string, double> > cvDerivs(numCVs);
     for (int i = 0; i < numCVs; i++) {
         cvValues.push_back(innerContext.calcForcesAndEnergy(true, true, 1<<i));
+        ContextSelector selector(cc);
         copyForcesKernel->setArg(0, cvForces[i]);
         copyForcesKernel->execute(numAtoms);
         innerContext.getEnergyParameterDerivatives(cvDerivs[i]);
     }
-    
+
     // Compute the energy and forces.
-    
+
+    ContextSelector selector(cc);
     map<string, double> variables;
     for (auto& name : globalParameterNames)
         variables[name] = context.getParameter(name);
@@ -6143,7 +6071,7 @@ std::pair<double, double> CommonIntegrateNoseHooverStepKernel::computeMaskedKine
 
         reduceEnergyKernel->addArg(energyBuffer);
         reduceEnergyKernel->addArg(kineticEnergyBuffer);
-        reduceEnergyKernel->addArg(energyBuffer.getSize());
+        reduceEnergyKernel->addArg((int) energyBuffer.getSize());
     }
 
     cc.clearBuffer(energyBuffer);
@@ -6507,7 +6435,7 @@ void CommonIntegrateVariableLangevinStepKernel::initialize(const System& system,
     selectSizeKernel = program->createKernel("selectLangevinStepSize");
     params.initialize(cc, 3, cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "langevinParams");
     blockSize = min(256, system.getNumParticles());
-    blockSize = max(blockSize, params.getSize());
+    blockSize = max(blockSize, (int) params.getSize());
 }
 
 double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
@@ -7643,6 +7571,13 @@ double CommonCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
 
     vector<REAL> b;
     buffer.download(b);
+
+    // JAMA::Eigenvalue may run into an infinite loop if we have any NaN
+    for (int i = 0; i < 9; i++) {
+        if (b[i] != b[i])
+            throw OpenMMException("NaN encountered during RMSD force calculation");
+    }
+
     Array2D<double> F(4, 4);
     F[0][0] =  b[0*3+0] + b[1*3+1] + b[2*3+2];
     F[1][0] =  b[1*3+2] - b[2*3+1];
@@ -7824,8 +7759,6 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     kernel->setArg(2, (float) scaleZ);
     setPeriodicBoxArgs(cc, kernel, 4);
     kernel->execute(cc.getNumAtoms());
-    // for (auto& offset : cc.getPosCellOffsets())
-    //     offset = mm_int4(0, 0, 0, 0);
     lastAtomOrder = cc.getAtomIndex();
 }
 

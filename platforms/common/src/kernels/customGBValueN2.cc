@@ -3,11 +3,7 @@
  */
 KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsigned int* RESTRICT exclusions,
         GLOBAL const int2* exclusionTiles,
-#ifdef SUPPORTS_64_BIT_ATOMICS
         GLOBAL mm_ulong* RESTRICT global_value,
-#else
-        GLOBAL real* RESTRICT global_value,
-#endif
 #ifdef USE_CUTOFF
         GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
@@ -137,25 +133,14 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
 
         // Write results.
 
-#ifdef SUPPORTS_64_BIT_ATOMICS
         unsigned int offset1 = x*TILE_SIZE + tgx;
-        ATOMIC_ADD(&global_value[offset1], (mm_ulong) ((mm_long) (value*0x100000000)));
+        ATOMIC_ADD(&global_value[offset1], (mm_ulong) realToFixedPoint(value));
         STORE_PARAM_DERIVS1
         if (x != y) {
             unsigned int offset2 = y*TILE_SIZE + tgx;
-            ATOMIC_ADD(&global_value[offset2], (mm_ulong) ((mm_long) (local_value[LOCAL_ID]*0x100000000)));
+            ATOMIC_ADD(&global_value[offset2], (mm_ulong) realToFixedPoint(local_value[LOCAL_ID]));
             STORE_PARAM_DERIVS2
         }
-#else
-        unsigned int offset1 = x*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-        unsigned int offset2 = y*TILE_SIZE + tgx + warp*PADDED_NUM_ATOMS;
-        global_value[offset1] += value;
-        STORE_PARAM_DERIVS1
-        if (x != y) {
-            global_value[offset2] += local_value[LOCAL_ID];
-            STORE_PARAM_DERIVS2
-        }
-#endif
     }
 
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
@@ -317,25 +302,14 @@ KERNEL void computeN2Value(GLOBAL const real4* RESTRICT posq, GLOBAL const unsig
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
-#ifdef SUPPORTS_64_BIT_ATOMICS
             unsigned int offset1 = atom1;
-            ATOMIC_ADD(&global_value[offset1], (mm_ulong) ((mm_long) (value*0x100000000)));
+            ATOMIC_ADD(&global_value[offset1], (mm_ulong) realToFixedPoint(value));
             STORE_PARAM_DERIVS1
             if (atom2 < PADDED_NUM_ATOMS) {
                 unsigned int offset2 = atom2;
-                ATOMIC_ADD(&global_value[offset2], (mm_ulong) ((mm_long) (local_value[LOCAL_ID]*0x100000000)));
+                ATOMIC_ADD(&global_value[offset2], (mm_ulong) realToFixedPoint(local_value[LOCAL_ID]));
                 STORE_PARAM_DERIVS2
             }
-#else
-            unsigned int offset1 = atom1 + warp*PADDED_NUM_ATOMS;
-            global_value[offset1] += value;
-            STORE_PARAM_DERIVS1
-            if (atom2 < PADDED_NUM_ATOMS) {
-                unsigned int offset2 = atom2 + warp*PADDED_NUM_ATOMS;
-                global_value[offset2] += local_value[LOCAL_ID];
-                STORE_PARAM_DERIVS2
-            }
-#endif
         }
         pos++;
     }

@@ -248,7 +248,11 @@ class StateDataReporter(object):
         if self._totalEnergy:
             values.append((state.getKineticEnergy()+state.getPotentialEnergy()).value_in_unit(unit.kilojoules_per_mole))
         if self._temperature:
-            values.append((2*state.getKineticEnergy()/(self._dof*unit.MOLAR_GAS_CONSTANT_R)).value_in_unit(unit.kelvin))
+            integrator = simulation.context.getIntegrator()
+            if hasattr(integrator, 'computeSystemTemperature'):
+                values.append(integrator.computeSystemTemperature().value_in_unit(unit.kelvin))
+            else:
+                values.append((2*state.getKineticEnergy()/(self._dof*unit.MOLAR_GAS_CONSTANT_R)).value_in_unit(unit.kelvin))
         if self._volume:
             values.append(volume.value_in_unit(unit.nanometer**3))
         if self._density:
@@ -358,9 +362,9 @@ class StateDataReporter(object):
         if self._needEnergy:
             energy = (state.getKineticEnergy()+state.getPotentialEnergy()).value_in_unit(unit.kilojoules_per_mole)
             if math.isnan(energy):
-                raise ValueError('Energy is NaN')
+                raise ValueError('Energy is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
             if math.isinf(energy):
-                raise ValueError('Energy is infinite')
+                raise ValueError('Energy is infinite.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
 
     def __del__(self):
         if self._openedFile:

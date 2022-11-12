@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014 Stanford University and the Authors.           *
+ * Portions copyright (c) 2014-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -57,6 +57,8 @@ namespace OpenMM {
 
 class OPENMM_EXPORT TabulatedFunction {
 public:
+    TabulatedFunction() : updateCount(0) {
+    }
     virtual ~TabulatedFunction() {
     }
     /**
@@ -67,12 +69,18 @@ public:
      * Get the periodicity status of the tabulated function.
      */
     bool getPeriodic() const;
+    /**
+     * Get the value of a counter that is updated every time setFunctionParameters()
+     * is called.  This provides a fast way to detect when a function has changed.
+     */
+    int getUpdateCount() const;
     virtual bool operator==(const TabulatedFunction& other) const = 0;
     virtual bool operator!=(const TabulatedFunction& other) const {
         return !(*this == other);
     }
 protected:
     bool periodic;
+    int updateCount;
 };
 
 /**

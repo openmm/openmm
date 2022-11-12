@@ -367,15 +367,31 @@ class TestAmberPrmtopFile(unittest.TestCase):
         os.remove(fname)
 
     def testChamber(self):
-        """ Tests that Chamber prmtops fail with proper error message """
-        self.assertRaises(TypeError, lambda: AmberPrmtopFile('systems/ala3_solv.parm7'))
-        try:
-            parm = AmberPrmtopFile('systems/ala3_solv.parm7')
-            # Should not make it past here
-            self.assertTrue(False)
-        except TypeError as e:
-            # Make sure it says something about chamber
-            self.assertTrue('chamber' in str(e).lower())
+        """Test a prmtop file created with Chamber."""
+        prmtop = AmberPrmtopFile('systems/ala3_solv.parm7')
+        crd = CharmmCrdFile('systems/ala3_solv.crd')
+        system = prmtop.createSystem()
+        for i,f in enumerate(system.getForces()):
+            f.setForceGroup(i)
+        integrator = VerletIntegrator(0.001)
+        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+        context.setPositions(crd.positions)
+        
+        # Compare to energies computed with pytraj.energy_decomposition()
+        
+        energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        self.assertAlmostEqual(energy, -7806.981602, delta=5e-4*abs(energy))
+        components = {}
+        for i,f in enumerate(system.getForces()):
+            components[f.getName()] = context.getState(getEnergy=True, groups={i}).getPotentialEnergy().value_in_unit(kilocalories_per_mole)
+        self.assertAlmostEqual(components['HarmonicBondForce'], 1.13242125)
+        self.assertAlmostEqual(components['HarmonicAngleForce'], 1.06880188)
+        self.assertAlmostEqual(components['UreyBradleyForce'], 0.06142407)
+        self.assertAlmostEqual(components['PeriodicTorsionForce'], 7.81143025)
+        self.assertAlmostEqual(components['ImproperTorsionForce'], 2.66453526e-14, delta=1e-6)
+        self.assertAlmostEqual(components['CMAPTorsionForce'], 0.12679003)
+        self.assertAlmostEqual(components['CustomNonbondedForce'], 909.28136359)
+        self.assertAlmostEqual(components['NonbondedForce'], -9007.16903192+277.35152722+3.35367163, delta=5e-4*abs(components['NonbondedForce']))
 
     def testGBneckRadii(self):
         """ Tests that GBneck radii limits are correctly enforced """
@@ -431,6 +447,15 @@ class TestAmberPrmtopFile(unittest.TestCase):
 #                print(simulation.context.getState(getEnergy=True, groups=1<<i).getPotentialEnergy().value_in_unit(kilojoules_per_mole))
                 OpenMM_CMAP_E = simulation.context.getState(getEnergy=True, groups=1<<i).getPotentialEnergy().value_in_unit(kilojoules_per_mole)/conversion
                 self.assertAlmostEqual(OpenMM_CMAP_E, sander_CMAP_E, places=4)
+
+    def testEPConstraints(self):
+        """Test different types of constraints when using extra particles"""
+        prmtop = AmberPrmtopFile('systems/peptide_with_tip4p.prmtop')
+        for constraints in (HBonds, AllBonds):
+            system = prmtop.createSystem(constraints=constraints)
+            integrator = VerletIntegrator(0.001*picoseconds)
+            # If a constraint was added to a massless particle, this will throw an exception.
+            context = Context(system, integrator, Platform.getPlatformByName('Reference'))
 
 if __name__ == '__main__':
     unittest.main()

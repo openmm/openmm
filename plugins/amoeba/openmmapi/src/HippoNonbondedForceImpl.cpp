@@ -31,6 +31,7 @@
 
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/HippoNonbondedForceImpl.h"
+#include "openmm/internal/Messages.h"
 #include "openmm/amoebaKernels.h"
 
 using namespace OpenMM;
@@ -55,7 +56,7 @@ void HippoNonbondedForceImpl::initialize(ContextImpl& context) {
         system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
-            throw OpenMMException("HippoNonbondedForce: The cutoff distance cannot be greater than half the periodic box size.");
+            throw OpenMMException("HippoNonbondedForce: "+Messages::cutoffTooLarge);
     }
 
     double quadrupoleValidationTolerance = 1.0e-05;

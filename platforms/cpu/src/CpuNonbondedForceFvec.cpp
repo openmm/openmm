@@ -1,6 +1,6 @@
 
-/* Portions copyright (c) 2006-2015 Stanford University and Simbios.
- * Contributors: Daniel Towner
+/* Portions copyright (c) 2006-2022 Stanford University and Simbios.
+ * Contributors: Daniel Towner, Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -23,28 +23,24 @@
  */
 
 #include "CpuNonbondedForceFvec.h"
+#include "CpuNeighborList.h"
+#include "openmm/internal/hardware.h"
 
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec4();
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx();
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceAvx2();
+using namespace OpenMM;
 
-bool isAvxSupported();
+CpuNonbondedForce* createCpuNonbondedForceVec4(const CpuNeighborList& neighbors);
+CpuNonbondedForce* createCpuNonbondedForceAvx(const CpuNeighborList& neighbors);
+CpuNonbondedForce* createCpuNonbondedForceAvx2(const CpuNeighborList& neighbors);
+
 bool isAvx2Supported();
 
 #include <iostream>
 
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec() {
+CpuNonbondedForce* createCpuNonbondedForceVec(const CpuNeighborList& neighbors) {
     if (isAvx2Supported())
-        return createCpuNonbondedForceAvx2();
+        return createCpuNonbondedForceAvx2(neighbors);
     else if (isAvxSupported())
-        return createCpuNonbondedForceAvx();
+        return createCpuNonbondedForceAvx(neighbors);
     else
-        return createCpuNonbondedForceVec4();
-}
-
-int getVecBlockSize() {
-    if (isAvx2Supported() || isAvxSupported())
-        return 8;
-    else
-        return 4;
+        return createCpuNonbondedForceVec4(neighbors);
 }

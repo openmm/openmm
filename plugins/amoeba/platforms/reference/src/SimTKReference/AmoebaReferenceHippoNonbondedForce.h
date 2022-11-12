@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2006-2019 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2022 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -31,7 +31,6 @@
 #include <map>
 #include <utility>
 #include <vector>
-#include "fftpack.h"
 #include <complex>
 
 namespace OpenMM {
@@ -109,12 +108,6 @@ public:
      * 
      */
     AmoebaReferenceHippoNonbondedForce(const HippoNonbondedForce& force);
-
-    /**
-     * Destructor
-     * 
-     */
-    virtual ~AmoebaReferenceHippoNonbondedForce() {};
  
     /**
      * Get nonbonded method.
@@ -655,9 +648,7 @@ private:
     int _pmeGridDimensions[3];
     int _dpmeGridDimensions[3];
 
-    fftpack_t   _fftplan;
-
-    std::vector<t_complex> _pmeGrid;
+    std::vector<std::complex<double> > _pmeGrid;
  
     std::vector<double> _pmeBsplineModuli[3];
     std::vector<HippoDouble4> _thetai[3];

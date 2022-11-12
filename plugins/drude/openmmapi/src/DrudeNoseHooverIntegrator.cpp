@@ -6,9 +6,9 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2022 Stanford University and the Authors.      *
  * Authors: Andreas Krämer and Andrew C. Simmonett                            *
- * Contributors:                                                              *
+ * Contributors: Peter Eastman                                                *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
  * copy of this software and associated documentation files (the "Software"), *
@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/DrudeNoseHooverIntegrator.h"
+#include "SimTKOpenMMRealType.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
@@ -45,18 +46,19 @@
 using namespace OpenMM;
 using std::string;
 using std::vector;
+using std::pair;
 
 namespace OpenMM {
     extern std::vector<Vec3> assignDrudeVelocities(const System &system, double temperature, double drudeTemperature, int randomSeed);
+    pair<double, double> computeTemperaturesFromVelocities(const System& system, const vector<Vec3>& velocities);
 }
+
 
 DrudeNoseHooverIntegrator::DrudeNoseHooverIntegrator(double temperature, double collisionFrequency, 
                                                      double drudeTemperature, double drudeCollisionFrequency,
                                                      double stepSize, int chainLength, int numMTS, int numYoshidaSuzuki) :
-    NoseHooverIntegrator(stepSize),
-    drudeTemperature(drudeTemperature)
-{
-    setMaxDrudeDistance(0);
+            NoseHooverIntegrator(stepSize), drudeTemperature(drudeTemperature) {
+    setMaxDrudeDistance(0.02);
     hasSubsystemThermostats_ = false;
     addSubsystemThermostat(std::vector<int>(), std::vector<std::pair<int, int>>(), temperature,
                            collisionFrequency, drudeTemperature, drudeCollisionFrequency,
@@ -144,6 +146,26 @@ double DrudeNoseHooverIntegrator::computeDrudeKineticEnergy() {
 
 double DrudeNoseHooverIntegrator::computeTotalKineticEnergy() {
     return kernel.getAs<IntegrateNoseHooverStepKernel>().computeKineticEnergy(*context, *this);
+}
+
+double DrudeNoseHooverIntegrator::computeSystemTemperature() {
+    if (context == NULL)
+        throw OpenMMException("This Integrator is not bound to a context!");  
+    context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
+    vector<Vec3> velocities;
+    context->computeShiftedVelocities(getVelocityTimeOffset(), velocities);
+    return computeTemperaturesFromVelocities(context->getSystem(), velocities).first;
+}
+
+double DrudeNoseHooverIntegrator::computeDrudeTemperature() {
+    if (context == NULL)
+        throw OpenMMException("This Integrator is not bound to a context!");  
+    double kE = computeDrudeKineticEnergy();
+    size_t num_dofs = 0;
+    for (const auto &nhc: noseHooverChains){
+       num_dofs += 3 * nhc.getThermostatedPairs().size();
+    }
+    return kE/(0.5 * num_dofs * BOLTZ);
 }
 
 std::vector<Vec3> DrudeNoseHooverIntegrator::getVelocitiesForTemperature(const System &system, double temperature,

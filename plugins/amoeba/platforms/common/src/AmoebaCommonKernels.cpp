@@ -50,23 +50,6 @@
 using namespace OpenMM;
 using namespace std;
 
-static int findLegalFFTDimension(int minimum) {
-    if (minimum < 1)
-        return 1;
-    while (true) {
-        // Attempt to factor the current value.
-
-        int unfactored = minimum;
-        for (int factor = 2; factor < 8; factor++) {
-            while (unfactored > 1 && unfactored%factor == 0)
-                unfactored /= factor;
-        }
-        if (unfactored == 1)
-            return minimum;
-        minimum++;
-    }
-}
-
 static void setPeriodicBoxArgs(ComputeContext& cc, ComputeKernel kernel, int index) {
     Vec3 a, b, c;
     cc.getPeriodicBoxVectors(a, b, c);
@@ -235,8 +218,6 @@ CommonCalcAmoebaMultipoleForceKernel::~CommonCalcAmoebaMultipoleForceKernel() {
 
 void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
     ContextSelector selector(cc);
-    if (!cc.getSupports64BitGlobalAtomics())
-        throw OpenMMException("AmoebaMultipoleForce requires a device that supports 64 bit atomic operations");
 
     // Initialize multipole parameters.
 
@@ -456,13 +437,13 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
             nb.setCutoffDistance(force.getCutoffDistance());
             NonbondedForceImpl::calcPMEParameters(system, nb, pmeAlpha, gridSizeX, gridSizeY, gridSizeZ, false);
-            gridSizeX = findLegalFFTDimension(gridSizeX);
-            gridSizeY = findLegalFFTDimension(gridSizeY);
-            gridSizeZ = findLegalFFTDimension(gridSizeZ);
+            gridSizeX = cc.findLegalFFTDimension(gridSizeX);
+            gridSizeY = cc.findLegalFFTDimension(gridSizeY);
+            gridSizeZ = cc.findLegalFFTDimension(gridSizeZ);
         } else {
-            gridSizeX = findLegalFFTDimension(nx);
-            gridSizeY = findLegalFFTDimension(ny);
-            gridSizeZ = findLegalFFTDimension(nz);
+            gridSizeX = cc.findLegalFFTDimension(nx);
+            gridSizeY = cc.findLegalFFTDimension(ny);
+            gridSizeZ = cc.findLegalFFTDimension(nz);
         }
         defines["EWALD_ALPHA"] = cc.doubleToString(pmeAlpha);
         defines["SQRT_PI"] = cc.doubleToString(sqrt(M_PI));
@@ -1255,7 +1236,7 @@ void CommonCalcAmoebaMultipoleForceKernel::computeInducedField() {
     computeInducedFieldKernel->setArg(7, numTileIndices);
     if (usePME) {
         setPeriodicBoxArgs(cc, computeInducedFieldKernel, 10);
-        computeInducedFieldKernel->setArg(15, nb.getInteractingTiles().getSize());
+        computeInducedFieldKernel->setArg(15, (int) nb.getInteractingTiles().getSize());
     }
     cc.clearBuffer(inducedField);
     cc.clearBuffer(inducedFieldPolar);
@@ -2384,8 +2365,6 @@ CommonCalcHippoNonbondedForceKernel::CommonCalcHippoNonbondedForceKernel(const s
 
 void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
     ContextSelector selector(cc);
-    if (!cc.getSupports64BitGlobalAtomics())
-        throw OpenMMException("HippoNonbondedForce requires a device that supports 64 bit atomic operations");
     extrapolationCoefficients = force.getExtrapolationCoefficients();
     usePME = (force.getNonbondedMethod() == HippoNonbondedForce::PME);
 
@@ -2550,13 +2529,13 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
             nb.setCutoffDistance(force.getCutoffDistance());
             NonbondedForceImpl::calcPMEParameters(system, nb, pmeAlpha, gridSizeX, gridSizeY, gridSizeZ, false);
-            gridSizeX = findLegalFFTDimension(gridSizeX);
-            gridSizeY = findLegalFFTDimension(gridSizeY);
-            gridSizeZ = findLegalFFTDimension(gridSizeZ);
+            gridSizeX = cc.findLegalFFTDimension(gridSizeX);
+            gridSizeY = cc.findLegalFFTDimension(gridSizeY);
+            gridSizeZ = cc.findLegalFFTDimension(gridSizeZ);
         } else {
-            gridSizeX = findLegalFFTDimension(nx);
-            gridSizeY = findLegalFFTDimension(ny);
-            gridSizeZ = findLegalFFTDimension(nz);
+            gridSizeX = cc.findLegalFFTDimension(nx);
+            gridSizeY = cc.findLegalFFTDimension(ny);
+            gridSizeZ = cc.findLegalFFTDimension(nz);
         }
         force.getDPMEParameters(dpmeAlpha, nx, ny, nz);
         if (nx == 0 || dpmeAlpha == 0) {
@@ -2564,13 +2543,13 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
             nb.setCutoffDistance(force.getCutoffDistance());
             NonbondedForceImpl::calcPMEParameters(system, nb, dpmeAlpha, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
-            dispersionGridSizeX = findLegalFFTDimension(dispersionGridSizeX);
-            dispersionGridSizeY = findLegalFFTDimension(dispersionGridSizeY);
-            dispersionGridSizeZ = findLegalFFTDimension(dispersionGridSizeZ);
+            dispersionGridSizeX = cc.findLegalFFTDimension(dispersionGridSizeX);
+            dispersionGridSizeY = cc.findLegalFFTDimension(dispersionGridSizeY);
+            dispersionGridSizeZ = cc.findLegalFFTDimension(dispersionGridSizeZ);
         } else {
-            dispersionGridSizeX = findLegalFFTDimension(nx);
-            dispersionGridSizeY = findLegalFFTDimension(ny);
-            dispersionGridSizeZ = findLegalFFTDimension(nz);
+            dispersionGridSizeX = cc.findLegalFFTDimension(nx);
+            dispersionGridSizeY = cc.findLegalFFTDimension(ny);
+            dispersionGridSizeZ = cc.findLegalFFTDimension(nz);
         }
         defines["EWALD_ALPHA"] = cc.doubleToString(pmeAlpha);
         defines["SQRT_PI"] = cc.doubleToString(sqrt(M_PI));

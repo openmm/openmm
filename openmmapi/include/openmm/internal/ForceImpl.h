@@ -116,7 +116,7 @@ protected:
     /**
      * Get the ContextImpl corresponding to a Context.
      */
-    ContextImpl& getContextImpl(Context& context) {
+    ContextImpl& getContextImpl(Context& context) const {
         return context.getImpl();
     }
 };

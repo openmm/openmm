@@ -94,6 +94,45 @@ class TestPdbFile(unittest.TestCase):
             self.assertEqual(19, len(pdb.positions))
             self.assertEqual('ILE', list(pdb.topology.residues())[0].name)
 
+    def test_LargeFile(self):
+        """Write and read a file with more than 100,000 atoms"""
+        topology = Topology()
+        chain = topology.addChain('A')
+        for i in range(20000):
+            res = topology.addResidue('MOL', chain)
+            atoms = []
+            for j in range(6):
+                atoms.append(topology.addAtom(f'AT{j}', elem.carbon, res))
+            for j in range(5):
+                topology.addBond(atoms[j], atoms[j+1])
+        positions = [Vec3(0, 0, 0)]*topology.getNumAtoms()
+
+        # The model has 20,000 residues and 120,000 atoms.
+
+        output = StringIO()
+        PDBFile.writeFile(topology, positions, output)
+        input = StringIO(output.getvalue())
+        pdb = PDBFile(input)
+        output.close()
+        input.close()
+        self.assertEqual(len(positions), len(pdb.positions))
+        self.assertEqual(topology.getNumAtoms(), pdb.topology.getNumAtoms())
+        self.assertEqual(topology.getNumResidues(), pdb.topology.getNumResidues())
+        self.assertEqual(topology.getNumChains(), pdb.topology.getNumChains())
+        self.assertEqual(topology.getNumBonds(), pdb.topology.getNumBonds())
+        for atom in pdb.topology.atoms():
+            self.assertEqual(str(atom.index+1), atom.id)
+        for res in pdb.topology.residues():
+            self.assertEqual(str(res.index+1), res.id)
+
+        # Make sure the CONECT records were interpreted correctly.
+
+        bonds = set()
+        for atom1, atom2 in topology.bonds():
+            bonds.add(tuple(sorted((atom1.index, atom2.index))))
+        for atom1, atom2 in pdb.topology.bonds():
+            assert tuple(sorted((atom1.index, atom2.index))) in bonds
+
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         unit = p1.unit
         p1 = p1.value_in_unit(unit)

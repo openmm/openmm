@@ -1020,7 +1020,7 @@ class TestForceField(unittest.TestCase):
         system1 = ff1.createSystem(pdb.topology)
         system2 = ff2.createSystem(pdb.topology)
 
-        imp1 = system1.getForce(2).getTorsionParameters(158)
+        imp1 = system1.getForce(1).getTorsionParameters(158)
         imp2 = system2.getForce(0).getTorsionParameters(158)
 
         system1_indexes = [imp1[0], imp1[1], imp1[2], imp1[3]]
@@ -1216,6 +1216,114 @@ self.scriptExecuted = True
         self.assertAlmostEqual(291.61241586209286, energies['PeriodicTorsionForce'], 4)
         self.assertAlmostEqual(1547.011267801862, energies['NonbondedForce'], 4)
         self.assertAlmostEqual(1919.6846822348361, sum(list(energies.values())), 3)
+
+    def test_CustomNonbondedGenerator(self):
+        """ Test the CustomNonbondedForce generator"""
+        pdb = PDBFile('systems/ions.pdb')
+        xml = """
+<ForceField>
+ <AtomTypes>
+  <Type name="SOD" class="SOD" element="Na" mass="22.98977"/>
+  <Type name="CLA" class="CLA" element="Cl" mass="35.45"/>
+ </AtomTypes>
+ <Residues>
+  <Residue name="CLA">
+   <Atom name="CLA" type="CLA"/>
+  </Residue>
+  <Residue name="SOD">
+   <Atom name="SOD" type="SOD"/>
+  </Residue>
+ </Residues>
+ <CustomNonbondedForce energy="scale*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=halfSig1+halfSig2; epsilon=rootEps1*rootEps2" bondCutoff="3">
+  <GlobalParameter name="scale" defaultValue="4"/>
+  <PerParticleParameter name="sigma"/>
+  <PerParticleParameter name="epsilon"/>
+  <ComputedValue name="halfSig" expression="0.5*sigma"/>
+  <ComputedValue name="rootEps" expression="sqrt(epsilon)"/>
+  <Atom type="CLA" sigma="0.404468018036" epsilon="0.6276"/>
+  <Atom type="SOD" sigma="0.251367073323" epsilon="0.1962296"/>
+ </CustomNonbondedForce>
+</ForceField> """
+        ff = ForceField(StringIO(xml))
+        system = ff.createSystem(pdb.topology)
+        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energy1 = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+
+        # See if it matches an equivalent NonbondedForce.
+        
+        system = System()
+        system.addParticle(1.0)
+        system.addParticle(1.0)
+        f = NonbondedForce()
+        f.addParticle(0, 0.404468018036, 0.6276)
+        f.addParticle(0, 0.251367073323, 0.1962296)
+        system.addForce(f)
+        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatformByName('Reference'))
+        context.setPositions(pdb.positions)
+        energy2 = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        self.assertAlmostEqual(energy1, energy2)
+
+    def test_OpcEnergy(self):
+        pdb = PDBFile('systems/opcbox.pdb')
+        topology, positions = pdb.topology, pdb.positions
+        self.assertEqual(len(positions), 864)
+        forcefield = ForceField('opc.xml')
+        system = forcefield.createSystem(
+            topology,
+            nonbondedMethod=PME,
+            nonbondedCutoff=0.7*nanometer,
+            constraints=HBonds,
+            rigidWater=True,
+        )
+
+        integrator = LangevinIntegrator(300*kelvin, 2.0/picoseconds, 2.0*femtoseconds)
+        simulation = Simulation(topology, system, integrator)
+        context = simulation.context
+        context.setPositions(positions)
+
+        # Compare to values computed with Amber (sander).
+        energy_amber = -2647.6233 # kcal/mol
+        energy_tolerance = 1.0
+
+        state = context.getState(getEnergy=True)
+        energy1 = state.getPotentialEnergy().value_in_unit(kilocalorie_per_mole)
+        # -2647.2222697324237
+        self.assertTrue(abs(energy1 - energy_amber) < energy_tolerance)
+
+        context.applyConstraints(1e-12)
+        state = context.getState(getEnergy=True)
+        energy2 = state.getPotentialEnergy().value_in_unit(kilocalorie_per_mole)
+        # -2647.441600693312
+        self.assertTrue(abs(energy1 - energy_amber) < energy_tolerance)
+        self.assertTrue(abs(energy1 - energy2) < energy_tolerance)
+
+    def test_Opc3Energy(self):
+        pdb = PDBFile('systems/opc3box.pdb')
+        topology, positions = pdb.topology, pdb.positions
+        self.assertEqual(len(positions), 648)
+        forcefield = ForceField('opc3.xml')
+        system = forcefield.createSystem(
+            topology,
+            nonbondedMethod=PME,
+            nonbondedCutoff=0.7*nanometer,
+            constraints=HBonds,
+            rigidWater=True,
+        )
+
+        integrator = LangevinIntegrator(300*kelvin, 2.0/picoseconds, 2.0*femtoseconds)
+        simulation = Simulation(topology, system, integrator)
+        context = simulation.context
+        context.setPositions(positions)
+
+        # Compare to values computed with Amber (sander).
+        energy_amber = -2532.1414 # kcal/mol
+        energy_tolerance = 1.0
+
+        state = context.getState(getEnergy=True)
+        energy1 = state.getPotentialEnergy().value_in_unit(kilocalorie_per_mole)
+        # -2532.4862082354407
+        self.assertTrue(abs(energy1 - energy_amber) < energy_tolerance)
 
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""

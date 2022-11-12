@@ -236,6 +236,12 @@ where :math:`r_\mathit{cutoff}` is the cutoff distance and :math:`\epsilon_\math
 the dielectric constant of the solvent.  In the limit :math:`\epsilon_\mathit{solvent}` >> 1,
 this causes the force to go to zero at the cutoff.
 
+The reaction field approximation is not applied to nonbonded exceptions.  They
+are always evaluated at full strength, regardless of the cutoff distance.  That
+is because exceptions are primarily used to model 1-4 interactions, which are
+really a type of bonded interaction.  They are typically parametrized without a
+cutoff together with the other bonded interactions.
+
 Coulomb Interaction With Ewald Summation
 ========================================
 

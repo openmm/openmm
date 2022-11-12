@@ -23,10 +23,11 @@
  */
 
 #include "CpuNonbondedForceFvec.h"
+#include "CpuNeighborList.h"
 
 // Very minimal file. It exists purely to be able to compile it in SIMD-4.
 
-OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec4()   {
-    return new OpenMM::CpuNonbondedForceFvec<fvec4>();
+OpenMM::CpuNonbondedForce* createCpuNonbondedForceVec4(const OpenMM::CpuNeighborList& neighbors) {
+    return new OpenMM::CpuNonbondedForceFvec<fvec4>(neighbors);
 }
 

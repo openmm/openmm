@@ -79,18 +79,18 @@ KERNEL void computeNonbondedExceptions(
             real tempEnergy = 0.0f;
             COMPUTE_INTERACTION
             energy += tempEnergy;
-            ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) ((mm_long) (tempForce.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempForce.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempForce.z*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[atom2], (mm_ulong) ((mm_long) (-tempForce.x*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (-tempForce.y*0x100000000)));
-            ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (-tempForce.z*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[atom1], (mm_ulong) ((mm_long) (tempTorque1.x*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempTorque1.y*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempTorque1.z*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[atom2], (mm_ulong) ((mm_long) (tempTorque2.x*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempTorque2.y*0x100000000)));
-            ATOMIC_ADD(&torqueBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (tempTorque2.z*0x100000000)));
+            ATOMIC_ADD(&forceBuffers[atom1], (mm_ulong) realToFixedPoint(tempForce.x));
+            ATOMIC_ADD(&forceBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(tempForce.y));
+            ATOMIC_ADD(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(tempForce.z));
+            ATOMIC_ADD(&forceBuffers[atom2], (mm_ulong) realToFixedPoint(-tempForce.x));
+            ATOMIC_ADD(&forceBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(-tempForce.y));
+            ATOMIC_ADD(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(-tempForce.z));
+            ATOMIC_ADD(&torqueBuffers[atom1], (mm_ulong) realToFixedPoint(tempTorque1.x));
+            ATOMIC_ADD(&torqueBuffers[atom1+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(tempTorque1.y));
+            ATOMIC_ADD(&torqueBuffers[atom1+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(tempTorque1.z));
+            ATOMIC_ADD(&torqueBuffers[atom2], (mm_ulong) realToFixedPoint(tempTorque2.x));
+            ATOMIC_ADD(&torqueBuffers[atom2+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(tempTorque2.y));
+            ATOMIC_ADD(&torqueBuffers[atom2+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(tempTorque2.z));
 #ifdef USE_CUTOFF
         }
 #endif

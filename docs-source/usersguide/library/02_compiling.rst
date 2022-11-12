@@ -78,7 +78,7 @@ them is with conda.  The following command will install everything needed to
 build OpenMM.
 ::
 
-    conda install -c conda-forge cmake make cython swig fftw doxygen numpy
+    conda install -c conda-forge cmake make cython swig doxygen numpy
 
 Step 1: Configure with CMake
 ============================
@@ -213,7 +213,7 @@ Before building OpenMM from source, you will need certain tools.
 C++ compiler
 ------------
 
-On Windows systems, use the C++ compiler in Visual Studio 2015 or later.  You
+On Windows systems, use the C++ compiler in Visual Studio 2017 or later.  You
 can download a free version of Visual Studio from https://visualstudio.microsoft.com.
 
 Python
@@ -267,7 +267,7 @@ It will open a command window that is preconfigured for conda.  Enter the
 following command to install everything needed to build OpenMM.
 ::
 
-    conda install -c conda-forge cython swig fftw doxygen numpy
+    conda install -c conda-forge cython swig doxygen numpy
 
 Step 1: Configure with CMake
 ============================

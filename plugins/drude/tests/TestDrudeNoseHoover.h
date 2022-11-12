@@ -6,9 +6,9 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2022 Stanford University and the Authors.      *
  * Authors: Andreas Krämer and Andrew C. Simmonett                            *
- * Contributors:                                                              *
+ * Contributors: Peter Eastman                                                *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
  * copy of this software and associated documentation files (the "Software"), *
@@ -151,7 +151,9 @@ void testWaterBox() {
     }
 
     // Compute the internal and center of mass temperatures.
+
     double totalKE = 0;
+    double systemTemp = 0;
     const int numSteps = 500;
     double meanTemp = 0.0;
     double meanDrudeTemp = 0.0;
@@ -165,17 +167,21 @@ void testWaterBox() {
         double drudeKE = integ.computeDrudeKineticEnergy();
         double temp = KE/(0.5*numStandardDof*BOLTZ);
         double drudeTemp = drudeKE/(0.5*numDrudeDof*BOLTZ);
+	ASSERT_EQUAL_TOL(drudeTemp, integ.computeDrudeTemperature(), 1e-6);
         meanTemp = (i*meanTemp + temp)/(i+1);
         meanDrudeTemp = (i*meanDrudeTemp + drudeTemp)/(i+1);
         double heatBathEnergy = integ.computeHeatBathEnergy();
         double conserved = PE + fullKE + heatBathEnergy;
         meanConserved = (i*meanConserved + conserved)/(i+1);
         totalKE += KE;
+        systemTemp += integ.computeSystemTemperature();
         ASSERT(fabs(meanConserved - conserved) < TOL);
     }
     totalKE /= numSteps;
+    systemTemp /= numSteps;
     ASSERT_USUALLY_EQUAL_TOL(temperature, meanTemp,  0.03);
     ASSERT_USUALLY_EQUAL_TOL(temperatureDrude, meanDrudeTemp,  0.03);
+    ASSERT_USUALLY_EQUAL_TOL(temperature, systemTemp, 0.03);
 }
 
 
@@ -192,7 +198,6 @@ double testWaterBoxWithHardWallConstraint(double hardWallConstraint){
     const int numMolecules = gridSize*gridSize*gridSize;
     int numStandardDof = 3*3*numMolecules - system.getNumConstraints();
     int numDrudeDof = 3*numMolecules;
-    int numDof = numStandardDof+numDrudeDof;
     const double temperature = 300.0;
     const double temperatureDrude = 10.0;
 
@@ -216,11 +221,7 @@ double testWaterBoxWithHardWallConstraint(double hardWallConstraint){
     integ.step(50);
 
     // Compute the internal and center of mass temperatures.
-    double totalKE = 0;
     const int numSteps = 500;
-    double meanTemp = 0.0;
-    double meanDrudeTemp = 0.0;
-    double meanConserved = 0.0;
     double maxR = 0.0;
     for (int i = 0; i < numSteps; i++) {
         integ.step(1);

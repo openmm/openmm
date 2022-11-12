@@ -6,23 +6,12 @@
  */
 
 KERNEL void reduceBornSum(float alpha, float beta, float gamma,
-#ifdef SUPPORTS_64_BIT_ATOMICS
             GLOBAL const mm_long* RESTRICT bornSum,
-#else
-            GLOBAL const real* RESTRICT bornSum, int bufferSize, int numBuffers,
-#endif
             GLOBAL const float2* RESTRICT params, GLOBAL real* RESTRICT bornRadii, GLOBAL real* RESTRICT obcChain) {
     for (unsigned int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         // Get summed Born data
 
-#ifdef SUPPORTS_64_BIT_ATOMICS
         real sum = RECIP((real) 0x100000000)*bornSum[index];
-#else
-        real sum = bornSum[index];
-        int totalSize = bufferSize*numBuffers;
-        for (int i = index+bufferSize; i < totalSize; i += bufferSize)
-            sum += bornSum[i];
-#endif
 
         // Now calculate Born radius and OBC term.
 
@@ -45,24 +34,14 @@ KERNEL void reduceBornSum(float alpha, float beta, float gamma,
  */
 
 KERNEL void reduceBornForce(
-#ifdef SUPPORTS_64_BIT_ATOMICS
             GLOBAL mm_long* RESTRICT bornForce,
-#else
-            GLOBAL real* bornForce, int bufferSize, int numBuffers,
-#endif
             GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const float2* RESTRICT params, GLOBAL const real* RESTRICT bornRadii, GLOBAL const real* RESTRICT obcChain) {
     mixed energy = 0;
     for (unsigned int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         // Get summed Born force
 
-#ifdef SUPPORTS_64_BIT_ATOMICS
         real force = RECIP((real) 0x100000000)*bornForce[index];
-#else
-        real force = bornForce[index];
-        int totalSize = bufferSize*numBuffers;
-        for (int i = index+bufferSize; i < totalSize; i += bufferSize)
-            force += bornForce[i];
-#endif
+
         // Now calculate the actual force
 
         float offsetRadius = params[index].x;
@@ -73,11 +52,7 @@ KERNEL void reduceBornForce(
         force += saTerm/bornRadius;
         energy += saTerm;
         force *= bornRadius*bornRadius*obcChain[index];
-#ifdef SUPPORTS_64_BIT_ATOMICS
-        bornForce[index] = (mm_long) (force*0x100000000);
-#else
-        bornForce[index] = force;
-#endif
+        bornForce[index] = realToFixedPoint(force);
     }
     energyBuffer[GLOBAL_ID] += energy/-6;
 }

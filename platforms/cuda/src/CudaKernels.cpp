@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -280,6 +280,10 @@ void CudaUpdateStateDataKernel::setVelocities(ContextImpl& context, const vector
     }
 }
 
+void CudaUpdateStateDataKernel::computeShiftedVelocities(ContextImpl& context, double timeShift, vector<Vec3>& velocities) {
+    cu.getIntegrationUtilities().computeShiftedVelocities(timeShift, velocities);
+}
+
 void CudaUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& forces) {
     ContextSelector selector(cu);
     long long* force = (long long*) cu.getPinnedBuffer();
@@ -420,6 +424,7 @@ void CudaUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& st
     SimTKOpenMMUtilities::loadCheckpoint(stream);
     for (auto listener : cu.getReorderListeners())
         listener->execute();
+    cu.validateAtomOrder();
 }
 
 class CudaCalcNonbondedForceKernel::ForceInfo : public CudaForceInfo {
@@ -670,6 +675,10 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
+    if (force.getNumParticleParameterOffsets() > 0)
+        paramsDefines["HAS_PARTICLE_OFFSETS"] = "1";
+    if (force.getNumExceptionParameterOffsets() > 0)
+        paramsDefines["HAS_EXCEPTION_OFFSETS"] = "1";
     if (usePosqCharges)
         paramsDefines["USE_POSQ_CHARGES"] = "1";
     if (doLJPME)
@@ -874,8 +883,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                             cufftSetStream(dispersionFftBackward, pmeStream);
                         }
                     }
-                    CHECK_RESULT(cuEventCreate(&pmeSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
-                    CHECK_RESULT(cuEventCreate(&paramsSyncEvent, CU_EVENT_DISABLE_TIMING), "Error creating event for NonbondedForce");
+                    CHECK_RESULT(cuEventCreate(&pmeSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
+                    CHECK_RESULT(cuEventCreate(&paramsSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
@@ -1016,7 +1025,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         replacements["CHARGE1"] = prefix+"charge1";
         replacements["CHARGE2"] = prefix+"charge2";
     }
-    if (hasCoulomb)
+    if (hasCoulomb && !usePosqCharges)
         cu.getNonbondedUtilities().addParameter(CudaNonbondedUtilities::ParameterInfo(prefix+"charge", "real", 1, charges.getElementSize(), charges.getDevicePointer()));
     sigmaEpsilon.initialize<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
     if (hasLJ) {

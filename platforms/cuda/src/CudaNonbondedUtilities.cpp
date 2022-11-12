@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -70,8 +70,8 @@ CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(c
     string errorMessage = "Error initializing nonbonded utilities";
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, context.getDevice()));
-    CHECK_RESULT(cuEventCreate(&downloadCountEvent, 0));
-    CHECK_RESULT(cuMemHostAlloc((void**) &pinnedCountBuffer, 2*sizeof(int), CU_MEMHOSTALLOC_PORTABLE));
+    CHECK_RESULT(cuEventCreate(&downloadCountEvent, context.getEventFlags()));
+    CHECK_RESULT(cuMemHostAlloc((void**) &pinnedCountBuffer, 2*sizeof(unsigned int), CU_MEMHOSTALLOC_PORTABLE));
     numForceThreadBlocks = 4*multiprocessors;
     forceThreadBlockSize = (context.getComputeCapability() < 2.0 ? 128 : 256);
     setKernelSource(CudaKernelSources::nonbonded);
@@ -279,7 +279,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         sortedBlockBoundingBox.initialize(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
-        blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
+        blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks, false);
         vector<unsigned int> count(2, 0);
         interactionCount.upload(count);
         rebuildNeighborList.upload(&count[0]);
@@ -423,6 +423,10 @@ void CudaNonbondedUtilities::computeInteractions(int forceGroups, bool includeFo
 bool CudaNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
+    if (context.getStepsSinceReorder() == 0)
+        tilesAfterReorder = pinnedCountBuffer[0];
+    else if (context.getStepsSinceReorder() > 25 && pinnedCountBuffer[0] > 1.1*tilesAfterReorder)
+        context.forceReorder();
     if (pinnedCountBuffer[0] <= maxTiles && pinnedCountBuffer[1] <= maxSinglePairs)
         return false;
 
@@ -430,12 +434,13 @@ bool CudaNonbondedUtilities::updateNeighborListSize() {
     // this from happening in the future.
 
     if (pinnedCountBuffer[0] > maxTiles) {
-        maxTiles = (int) (1.2*pinnedCountBuffer[0]);
-        int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
+        maxTiles = (unsigned int) (1.2*pinnedCountBuffer[0]);
+        unsigned int numBlocks = context.getNumAtomBlocks();
+        int totalTiles = numBlocks*(numBlocks+1)/2;
         if (maxTiles > totalTiles)
             maxTiles = totalTiles;
         interactingTiles.resize(maxTiles);
-        interactingAtoms.resize(CudaContext::TileSize*maxTiles);
+        interactingAtoms.resize(CudaContext::TileSize*(size_t) maxTiles);
         if (forceArgs.size() > 0)
             forceArgs[7] = &interactingTiles.getDevicePointer();
         findInteractingBlocksArgs[6] = &interactingTiles.getDevicePointer();
@@ -444,7 +449,7 @@ bool CudaNonbondedUtilities::updateNeighborListSize() {
         findInteractingBlocksArgs[7] = &interactingAtoms.getDevicePointer();
     }
     if (pinnedCountBuffer[1] > maxSinglePairs) {
-        maxSinglePairs = (int) (1.2*pinnedCountBuffer[1]);
+        maxSinglePairs = (unsigned int) (1.2*pinnedCountBuffer[1]);
         singlePairs.resize(maxSinglePairs);
         if (forceArgs.size() > 0)
             forceArgs[19] = &singlePairs.getDevicePointer();
@@ -498,7 +503,7 @@ void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
         if (context.getBoxIsTriclinic())
             defines["TRICLINIC"] = "1";
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
-        defines["MAX_BITS_FOR_PAIRS"] = (canUsePairList ? (context.getComputeCapability() < 8.0 ? "2" : "4") : "0");
+        defines["MAX_BITS_FOR_PAIRS"] = (canUsePairList ? (context.getComputeCapability() < 8.0 ? "2" : "3") : "0");
         CUmodule interactingBlocksProgram = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::findInteractingBlocks, defines);
         kernels.findBlockBoundsKernel = context.getKernel(interactingBlocksProgram, "findBlockBounds");
         kernels.sortBoxDataKernel = context.getKernel(interactingBlocksProgram, "sortBoxData");
@@ -555,104 +560,48 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     }
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
 
-    int cudaVersion;
-    cuDriverGetVersion(&cudaVersion);
-    bool useShuffle = (context.getComputeCapability() >= 3.0 && cudaVersion >= 5050);
-
     // Part 1. Defines for on diagonal exclusion tiles
-    stringstream loadLocal1;
-    if(useShuffle) {
-        // not needed if using shuffles as we can directly fetch from register
-    } else {
-        for (const ParameterInfo& param : params) {
-            if (param.getNumComponents() == 1)
-                loadLocal1<<"localData[LOCAL_ID]."<<param.getName()<<" = "<<param.getName()<<"1;\n";
-            else {
-                for (int j = 0; j < param.getNumComponents(); ++j)
-                    loadLocal1<<"localData[LOCAL_ID]."<<param.getName()<<"_"<<suffixes[j]<<" = "<<param.getName()<<"1."<<suffixes[j]<<";\n";
-            }
-        }
-    }
-    replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
 
     stringstream broadcastWarpData;
-    if (useShuffle) {
-        broadcastWarpData << "posq2.x = real_shfl(shflPosq.x, j);\n";
-        broadcastWarpData << "posq2.y = real_shfl(shflPosq.y, j);\n";
-        broadcastWarpData << "posq2.z = real_shfl(shflPosq.z, j);\n";
-        broadcastWarpData << "posq2.w = real_shfl(shflPosq.w, j);\n";
-        for (const ParameterInfo& param : params) {
-            broadcastWarpData << param.getType() << " shfl" << param.getName() << ";\n";
-            for (int j = 0; j < param.getNumComponents(); j++) {
-                if (param.getNumComponents() == 1)
-                    broadcastWarpData << "shfl" << param.getName() << "=real_shfl(" << param.getName() <<"1,j);\n";
-                else
-                    broadcastWarpData << "shfl" << param.getName()+"."+suffixes[j] << "=real_shfl(" << param.getName()+"1."+suffixes[j] <<",j);\n";
-            }
+    broadcastWarpData << "posq2.x = real_shfl(shflPosq.x, j);\n";
+    broadcastWarpData << "posq2.y = real_shfl(shflPosq.y, j);\n";
+    broadcastWarpData << "posq2.z = real_shfl(shflPosq.z, j);\n";
+    broadcastWarpData << "posq2.w = real_shfl(shflPosq.w, j);\n";
+    for (const ParameterInfo& param : params) {
+        broadcastWarpData << param.getType() << " shfl" << param.getName() << ";\n";
+        for (int j = 0; j < param.getNumComponents(); j++) {
+            if (param.getNumComponents() == 1)
+                broadcastWarpData << "shfl" << param.getName() << "=real_shfl(" << param.getName() <<"1,j);\n";
+            else
+                broadcastWarpData << "shfl" << param.getName()+"."+suffixes[j] << "=real_shfl(" << param.getName()+"1."+suffixes[j] <<",j);\n";
         }
-    } else {
-        // not used if not shuffling
     }
     replacements["BROADCAST_WARP_DATA"] = broadcastWarpData.str();
     
     // Part 2. Defines for off-diagonal exclusions, and neighborlist tiles. 
     stringstream declareLocal2;
-    if (useShuffle) {
-        for (const ParameterInfo& param : params)
-            declareLocal2<<param.getType()<<" shfl"<<param.getName()<<";\n";
-    }
-    else {
-        // not used if using shared memory
-    }
+    for (const ParameterInfo& param : params)
+        declareLocal2<<param.getType()<<" shfl"<<param.getName()<<";\n";
     replacements["DECLARE_LOCAL_PARAMETERS"] = declareLocal2.str();
 
     stringstream loadLocal2;
-    if (useShuffle) {
-        for (const ParameterInfo& param : params)
-            loadLocal2<<"shfl"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
-    }
-    else {
-        for (const ParameterInfo& param : params) {
-            if (param.getNumComponents() == 1)
-                loadLocal2<<"localData[LOCAL_ID]."<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
-            else {
-                loadLocal2<<param.getType()<<" temp_"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
-                for (int j = 0; j < param.getNumComponents(); ++j)
-                    loadLocal2<<"localData[LOCAL_ID]."<<param.getName()<<"_"<<suffixes[j]<<" = temp_"<<param.getName()<<"."<<suffixes[j]<<";\n";
-            }
-        }
-    }
+    for (const ParameterInfo& param : params)
+        loadLocal2<<"shfl"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
     replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
    
     stringstream load2j;
-    if (useShuffle) {
-        for (const ParameterInfo& param : params)
-            load2j<<param.getType()<<" "<<param.getName()<<"2 = shfl"<<param.getName()<<";\n";
-    }
-    else {
-        for (const ParameterInfo& param : params) {
-            if (param.getNumComponents() == 1)
-                load2j<<param.getType()<<" "<<param.getName()<<"2 = localData[atom2]."<<param.getName()<<";\n";
-            else {
-                load2j<<param.getType()<<" "<<param.getName()<<"2 = make_"<<param.getType()<<"(";
-                for (int j = 0; j < param.getNumComponents(); ++j) {
-                    if (j > 0)
-                        load2j<<", ";
-                    load2j<<"localData[atom2]."<<param.getName()<<"_"<<suffixes[j];
-                }
-                load2j<<");\n";
-            }
-        }
-    }
+    for (const ParameterInfo& param : params)
+        load2j<<param.getType()<<" "<<param.getName()<<"2 = shfl"<<param.getName()<<";\n";
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
+
+    stringstream load2g;
+    for (const ParameterInfo& param : params)
+        load2g<<param.getType()<<" "<<param.getName()<<"2 = global_"<<param.getName()<<"[atom2];\n";
+    replacements["LOAD_ATOM2_PARAMETERS_FROM_GLOBAL"] = load2g.str();
     
     stringstream clearLocal;
     for (const ParameterInfo& param : params) {
-        if (useShuffle)
-            clearLocal<<"shfl";
-        else
-            clearLocal<<"localData[atom2].";
-        clearLocal<<param.getName()<<" = ";
+        clearLocal<<"shfl"<<param.getName()<<" = ";
         if (param.getNumComponents() == 1)
             clearLocal<<"0;\n";
         else
@@ -674,29 +623,25 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
 
     stringstream shuffleWarpData;
-    if(useShuffle) {
-        shuffleWarpData << "shflPosq.x = real_shfl(shflPosq.x, tgx+1);\n";
-        shuffleWarpData << "shflPosq.y = real_shfl(shflPosq.y, tgx+1);\n";
-        shuffleWarpData << "shflPosq.z = real_shfl(shflPosq.z, tgx+1);\n";
-        shuffleWarpData << "shflPosq.w = real_shfl(shflPosq.w, tgx+1);\n";
-        shuffleWarpData << "shflForce.x = real_shfl(shflForce.x, tgx+1);\n";
-        shuffleWarpData << "shflForce.y = real_shfl(shflForce.y, tgx+1);\n";
-        shuffleWarpData << "shflForce.z = real_shfl(shflForce.z, tgx+1);\n";
-        for (const ParameterInfo& param : params) {
-            if (param.getNumComponents() == 1)
-                shuffleWarpData<<"shfl"<<param.getName()<<"=real_shfl(shfl"<<param.getName()<<", tgx+1);\n";
-            else {
-                for (int j = 0; j < param.getNumComponents(); j++) {
-                    // looks something like shflsigmaEpsilon.x = real_shfl(shflsigmaEpsilon.x,tgx+1);
-                    shuffleWarpData<<"shfl"<<param.getName()
-                        <<"."<<suffixes[j]<<"=real_shfl(shfl"
-                        <<param.getName()<<"."<<suffixes[j]
-                        <<", tgx+1);\n";
-                }
+    shuffleWarpData << "shflPosq.x = real_shfl(shflPosq.x, tgx+1);\n";
+    shuffleWarpData << "shflPosq.y = real_shfl(shflPosq.y, tgx+1);\n";
+    shuffleWarpData << "shflPosq.z = real_shfl(shflPosq.z, tgx+1);\n";
+    shuffleWarpData << "shflPosq.w = real_shfl(shflPosq.w, tgx+1);\n";
+    shuffleWarpData << "shflForce.x = real_shfl(shflForce.x, tgx+1);\n";
+    shuffleWarpData << "shflForce.y = real_shfl(shflForce.y, tgx+1);\n";
+    shuffleWarpData << "shflForce.z = real_shfl(shflForce.z, tgx+1);\n";
+    for (const ParameterInfo& param : params) {
+        if (param.getNumComponents() == 1)
+            shuffleWarpData<<"shfl"<<param.getName()<<"=real_shfl(shfl"<<param.getName()<<", tgx+1);\n";
+        else {
+            for (int j = 0; j < param.getNumComponents(); j++) {
+                // looks something like shflsigmaEpsilon.x = real_shfl(shflsigmaEpsilon.x,tgx+1);
+                shuffleWarpData<<"shfl"<<param.getName()
+                    <<"."<<suffixes[j]<<"=real_shfl(shfl"
+                    <<param.getName()<<"."<<suffixes[j]
+                    <<", tgx+1);\n";
             }
         }
-    } else {
-        // not used otherwise
     }
     replacements["SHUFFLE_WARP_DATA"] = shuffleWarpData.str();
 
@@ -709,8 +654,7 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
         defines["USE_EXCLUSIONS"] = "1";
     if (isSymmetric)
         defines["USE_SYMMETRIC"] = "1";
-    if (useShuffle)
-        defines["ENABLE_SHUFFLE"] = "1";
+    defines["ENABLE_SHUFFLE"] = "1";
     if (includeForces)
         defines["INCLUDE_FORCES"] = "1";
     if (includeEnergy)

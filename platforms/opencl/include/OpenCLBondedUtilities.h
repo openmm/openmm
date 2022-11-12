@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -134,12 +134,6 @@ public:
      */
     void initialize(const System& system);
     /**
-     * Get the number of force buffers required for bonded forces.
-     */
-    int getNumForceBuffers() {
-        return numForceBuffers;
-    }
-    /**
      * Compute the bonded interactions.
      * 
      * @param groups        a set of bit flags for which force groups to include
@@ -148,19 +142,17 @@ public:
 private:
     std::string createForceSource(int forceIndex, int numBonds, int numAtoms, int group, const std::string& computeForce);
     OpenCLContext& context;
-    std::vector<cl::Kernel> kernels;
+    cl::Kernel kernel;
     std::vector<std::vector<std::vector<int> > > forceAtoms;
     std::vector<int> indexWidth;
     std::vector<std::string> forceSource;
     std::vector<int> forceGroup;
-    std::vector<std::vector<int> > forceSets;
     std::vector<cl::Memory*> arguments;
     std::vector<std::string> argTypes;
     std::vector<OpenCLArray> atomIndices;
-    std::vector<OpenCLArray> bufferIndices;
     std::vector<std::string> prefixCode;
     std::vector<std::string> energyParameterDerivatives;
-    int numForceBuffers, maxBonds, allGroups;
+    int maxBonds, allGroups;
     bool hasInitializedKernels;
 };
 

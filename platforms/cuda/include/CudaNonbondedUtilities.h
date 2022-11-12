@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -338,7 +338,7 @@ private:
     CudaArray rebuildNeighborList;
     CudaSort* blockSorter;
     CUevent downloadCountEvent;
-    int* pinnedCountBuffer;
+    unsigned int* pinnedCountBuffer;
     std::vector<void*> forceArgs, findBlockBoundsArgs, sortBoxDataArgs, findInteractingBlocksArgs;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
@@ -348,7 +348,8 @@ private:
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList, canUsePairList;
-    int startTileIndex, startBlockIndex, numBlocks, maxTiles, maxSinglePairs, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
+    int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
+    unsigned int maxTiles, maxSinglePairs, tilesAfterReorder;
     long long numTiles;
     std::string kernelSource;
 };

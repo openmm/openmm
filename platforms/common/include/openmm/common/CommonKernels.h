@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -530,7 +530,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;
 };
 
@@ -579,7 +579,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     std::vector<void*> groupForcesArgs;
     ComputeKernel computeCentersKernel, groupForcesKernel, applyForcesKernel;
     const System& system;
@@ -591,7 +591,7 @@ private:
 class CommonCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     CommonCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            cc(cc), params(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
+            cc(cc), params(NULL), computedValues(NULL), forceCopy(NULL), system(system), hasInitializedKernel(false) {
     }
     ~CommonCalcCustomNonbondedForceKernel();
     /**
@@ -625,13 +625,16 @@ private:
     ComputeContext& cc;
     ForceInfo* info;
     ComputeParameterSet* params;
+    ComputeParameterSet* computedValues;
     ComputeArray globals, interactionGroupData, filteredGroupData, numGroupTiles;
-    ComputeKernel interactionGroupKernel, prepareNeighborListKernel, buildNeighborListKernel;
+    ComputeKernel interactionGroupKernel, prepareNeighborListKernel, buildNeighborListKernel, computedValuesKernel;
     std::vector<void*> interactionGroupArgs;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
+    std::vector<std::string> paramNames, computedValueNames;
+    std::vector<ComputeParameterInfo> paramBuffers, computedValueBuffers;
     double longRangeCoefficient;
     std::vector<double> longRangeCoefficientDerivs;
     bool hasInitializedLongRangeCorrection, hasInitializedKernel, hasParamDerivs, useNeighborList;
@@ -732,7 +735,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     std::vector<bool> pairValueUsesParam, pairEnergyUsesParam, pairEnergyUsesValue;
     const System& system;
     ComputeKernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
@@ -783,14 +786,12 @@ private:
     ComputeArray globals;
     ComputeArray donors;
     ComputeArray acceptors;
-    ComputeArray donorBufferIndices;
-    ComputeArray acceptorBufferIndices;
     ComputeArray donorExclusions;
     ComputeArray acceptorExclusions;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;
     ComputeKernel donorKernel, acceptorKernel;
 };
@@ -842,7 +843,7 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;
     ComputeKernel forceKernel, blockBoundsKernel, neighborsKernel, startIndicesKernel, copyPairsKernel;
     ComputeEvent event;

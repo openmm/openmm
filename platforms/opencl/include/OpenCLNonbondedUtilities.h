@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -125,7 +125,7 @@ public:
      * Get the number of force buffers required for nonbonded forces.
      */
     int getNumForceBuffers() const {
-        return numForceBuffers;
+        return 1;
     }
     /**
      * Get the number of energy buffers required for nonbonded forces.
@@ -322,7 +322,7 @@ private:
     OpenCLSort* blockSorter;
     cl::Event downloadCountEvent;
     cl::Buffer* pinnedCountBuffer;
-    int* pinnedCountMemory;
+    unsigned int* pinnedCountMemory;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
@@ -331,8 +331,9 @@ private:
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
     bool useCutoff, usePeriodic, deviceIsCpu, anyExclusions, usePadding, forceRebuildNeighborList;
-    int numForceBuffers, startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
+    int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
     int forceThreadBlockSize, interactingBlocksThreadBlockSize, groupFlags;
+    unsigned int tilesAfterReorder;
     long long numTiles;
     std::string kernelSource;
 };

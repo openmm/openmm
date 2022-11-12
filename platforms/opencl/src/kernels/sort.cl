@@ -77,6 +77,7 @@ __kernel void sortShortList2(__global const DATA_TYPE* restrict dataIn, __global
  */
 __kernel void computeRange(__global const DATA_TYPE* restrict data, uint length, __global KEY_TYPE* restrict range, __local KEY_TYPE* restrict minBuffer,
         __local KEY_TYPE* restrict maxBuffer, uint numBuckets, __global uint* restrict bucketOffset) {
+#if UNIFORM
     KEY_TYPE minimum = MAX_KEY;
     KEY_TYPE maximum = MIN_KEY;
 
@@ -106,7 +107,8 @@ __kernel void computeRange(__global const DATA_TYPE* restrict data, uint length,
         range[0] = minimum;
         range[1] = maximum;
     }
-    
+#endif
+
     // Clear the bucket counters in preparation for the next kernel.
 
     for (uint index = get_local_id(0); index < numBuckets; index += get_local_size(0))
@@ -114,7 +116,7 @@ __kernel void computeRange(__global const DATA_TYPE* restrict data, uint length,
 }
 
 /**
- * Assign elements to buckets.
+ * Assign elements to buckets.  This version is optimized for uniformly distributed data.
  */
 __kernel void assignElementsToBuckets(__global const DATA_TYPE* restrict data, uint length, uint numBuckets, __global const KEY_TYPE* restrict range,
         __global uint* restrict bucketOffset, __global uint* restrict bucketOfElement, __global uint* restrict offsetInBucket) {
@@ -132,6 +134,85 @@ __kernel void assignElementsToBuckets(__global const DATA_TYPE* restrict data, u
     for (uint index = get_global_id(0); index < length; index += get_global_size(0)) {
         float key = (float) getValue(data[index]);
         uint bucketIndex = min((uint) ((key-minValue)/bucketWidth), numBuckets-1);
+        offsetInBucket[index] = atom_inc(&bucketOffset[bucketIndex]);
+        bucketOfElement[index] = bucketIndex;
+    }
+}
+
+/**
+ * Assign elements to buckets.  This version is optimized for non-uniformly distributed data.
+ */
+__kernel void assignElementsToBuckets2(__global const DATA_TYPE* restrict data, uint length, uint numBuckets, __global const KEY_TYPE* restrict range,
+        __global uint* restrict bucketOffset, __global uint* restrict bucketOfElement, __global uint* restrict offsetInBucket) {
+    // Load 64 datapoints and sort them to get an estimate of the data distribution.
+
+    __local KEY_TYPE elements[64];
+    if (get_local_id(0) < 64) {
+        int index = (int) (get_local_id(0)*length/64.0);
+        elements[get_local_id(0)] = getValue(data[index]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    for (unsigned int k = 2; k <= 64; k *= 2) {
+        for (unsigned int j = k/2; j > 0; j /= 2) {
+            if (get_local_id(0) < 64) {
+                int ixj = get_local_id(0)^j;
+                if (ixj > get_local_id(0)) {
+                    KEY_TYPE value1 = elements[get_local_id(0)];
+                    KEY_TYPE value2 = elements[ixj];
+                    bool ascending = (get_local_id(0)&k) == 0;
+                    KEY_TYPE lowKey = (ascending ? value1 : value2);
+                    KEY_TYPE highKey = (ascending ? value2 : value1);
+                    if (lowKey > highKey) {
+                        elements[get_local_id(0)] = value2;
+                        elements[ixj] = value1;
+                    }
+                }
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
+        }
+    }
+
+    // Create a function composed of linear segments mapping data values to bucket indices.
+
+    __local float segmentLowerBound[9];
+    __local float segmentBaseIndex[9];
+    __local float segmentIndexScale[9];
+    if (get_local_id(0) == 0) {
+        segmentLowerBound[0] = elements[0]-0.2f*(elements[5]-elements[0]);
+        segmentLowerBound[1] = elements[5];
+        segmentLowerBound[2] = elements[10];
+        segmentLowerBound[3] = elements[20];
+        segmentLowerBound[4] = elements[30];
+        segmentLowerBound[5] = elements[40];
+        segmentLowerBound[6] = elements[50];
+        segmentLowerBound[7] = elements[60];
+        segmentLowerBound[8] = elements[63]+0.2f*(elements[63]-elements[58]);
+        segmentBaseIndex[0] = numBuckets/16;
+        segmentBaseIndex[1] = 3*numBuckets/16;
+        segmentBaseIndex[2] = 5*numBuckets/16;
+        segmentBaseIndex[3] = 7*numBuckets/16;
+        segmentBaseIndex[4] = 9*numBuckets/16;
+        segmentBaseIndex[5] = 11*numBuckets/16;
+        segmentBaseIndex[6] = 13*numBuckets/16;
+        segmentBaseIndex[7] = 15*numBuckets/16;
+        segmentBaseIndex[8] = numBuckets;
+        for (int i = 0; i < 8; i++)
+            if (segmentLowerBound[i+1] == segmentLowerBound[i])
+                segmentIndexScale[i] = 0;
+            else
+                segmentIndexScale[i] = (segmentBaseIndex[i+1]-segmentBaseIndex[i])/(segmentLowerBound[i+1]-segmentLowerBound[i]);
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Assign elements to buckets.
+
+    for (unsigned int index = get_global_id(0); index < length; index += get_global_size(0)) {
+        float key = (float) getValue(data[index]);
+        int segment;
+        for (segment = 0; segment < 7 && key > segmentLowerBound[segment+1]; segment++)
+            ;
+        unsigned int bucketIndex = segmentBaseIndex[segment]+(key-segmentLowerBound[segment])*segmentIndexScale[segment];
+        bucketIndex = min(max((uint) 0, bucketIndex), numBuckets-1);
         offsetInBucket[index] = atom_inc(&bucketOffset[bucketIndex]);
         bucketOfElement[index] = bucketIndex;
     }

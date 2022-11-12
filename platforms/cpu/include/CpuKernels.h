@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -331,10 +331,10 @@ private:
     CustomNonbondedForceImpl::LongRangeCorrectionData longRangeCorrectionData;
     std::map<std::string, double> globalParamValues;
     std::vector<std::set<int> > exclusions;
-    std::vector<std::string> parameterNames, globalParameterNames, energyParamDerivNames;
+    std::vector<std::string> parameterNames, globalParameterNames, computedValueNames, energyParamDerivNames;
     std::vector<std::pair<std::set<int>, std::set<int> > > interactionGroups;
     std::vector<double> longRangeCoefficientDerivs;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     NonbondedMethod nonbondedMethod;
     CpuCustomNonbondedForce* nonbonded;
 };
@@ -424,7 +424,7 @@ private:
     std::vector<std::string> particleParameterNames, globalParameterNames, energyParamDerivNames, valueNames;
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
     std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     NonbondedMethod nonbondedMethod;
 };
 
@@ -467,7 +467,7 @@ private:
     std::vector<std::vector<double> > particleParamArray;
     CpuCustomManyParticleForce* ixn;
     std::vector<std::string> globalParameterNames;
-    std::map<std::string, const TabulatedFunction*> tabulatedFunctions;
+    std::map<std::string, int> tabulatedFunctionUpdateCount;
     NonbondedMethod nonbondedMethod;
 };
 

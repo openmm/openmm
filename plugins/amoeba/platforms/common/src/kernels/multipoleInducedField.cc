@@ -1,17 +1,29 @@
 #ifndef HIPPO
 #define WARPS_PER_GROUP (THREAD_BLOCK_SIZE/TILE_SIZE)
 
-typedef struct {
+#if defined(USE_HIP)
+    #define ALIGN alignas(16)
+#else
+    #define ALIGN
+#endif
+
+typedef struct ALIGN {
     real3 pos;
+#if defined(USE_HIP)
+    real padding0;
+#endif
     real3 field, fieldPolar, inducedDipole, inducedDipolePolar;
 #ifdef EXTRAPOLATED_POLARIZATION
     real fieldGradient[6], fieldGradientPolar[6];
 #endif
 #ifdef USE_GK
     real3 fieldS, fieldPolarS, inducedDipoleS, inducedDipolePolarS;
-    real bornRadius;
     #ifdef EXTRAPOLATED_POLARIZATION
         real fieldGradientS[6], fieldGradientPolarS[6];
+    #endif
+    real bornRadius;
+    #if defined(USE_HIP) && !defined(USE_DOUBLE_PRECISION)
+        real padding1[3]; // Prevent bank conflicts because the aligned size is 128
     #endif
 #endif
     float thole, damp;
@@ -107,27 +119,27 @@ inline DEVICE void saveAtomData(int index, AtomData data, GLOBAL mm_ulong* RESTR
     #endif
 #endif
         ) {
-    ATOMIC_ADD(&field[index], (mm_ulong) ((mm_long) (data.field.x*0x100000000)));
-    ATOMIC_ADD(&field[index+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.field.y*0x100000000)));
-    ATOMIC_ADD(&field[index+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.field.z*0x100000000)));
-    ATOMIC_ADD(&fieldPolar[index], (mm_ulong) ((mm_long) (data.fieldPolar.x*0x100000000)));
-    ATOMIC_ADD(&fieldPolar[index+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.fieldPolar.y*0x100000000)));
-    ATOMIC_ADD(&fieldPolar[index+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.fieldPolar.z*0x100000000)));
+    ATOMIC_ADD(&field[index], (mm_ulong) realToFixedPoint(data.field.x));
+    ATOMIC_ADD(&field[index+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.field.y));
+    ATOMIC_ADD(&field[index+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.field.z));
+    ATOMIC_ADD(&fieldPolar[index], (mm_ulong) realToFixedPoint(data.fieldPolar.x));
+    ATOMIC_ADD(&fieldPolar[index+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.fieldPolar.y));
+    ATOMIC_ADD(&fieldPolar[index+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.fieldPolar.z));
 #ifdef USE_GK
-    ATOMIC_ADD(&fieldS[index], (mm_ulong) ((mm_long) (data.fieldS.x*0x100000000)));
-    ATOMIC_ADD(&fieldS[index+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.fieldS.y*0x100000000)));
-    ATOMIC_ADD(&fieldS[index+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.fieldS.z*0x100000000)));
-    ATOMIC_ADD(&fieldPolarS[index], (mm_ulong) ((mm_long) (data.fieldPolarS.x*0x100000000)));
-    ATOMIC_ADD(&fieldPolarS[index+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.fieldPolarS.y*0x100000000)));
-    ATOMIC_ADD(&fieldPolarS[index+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (data.fieldPolarS.z*0x100000000)));
+    ATOMIC_ADD(&fieldS[index], (mm_ulong) realToFixedPoint(data.fieldS.x));
+    ATOMIC_ADD(&fieldS[index+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.fieldS.y));
+    ATOMIC_ADD(&fieldS[index+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.fieldS.z));
+    ATOMIC_ADD(&fieldPolarS[index], (mm_ulong) realToFixedPoint(data.fieldPolarS.x));
+    ATOMIC_ADD(&fieldPolarS[index+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.fieldPolarS.y));
+    ATOMIC_ADD(&fieldPolarS[index+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(data.fieldPolarS.z));
 #endif
 #ifdef EXTRAPOLATED_POLARIZATION
     for (int i = 0; i < 6; i++) {
-        ATOMIC_ADD(&fieldGradient[6*index+i], (mm_ulong) ((mm_long) (data.fieldGradient[i]*0x100000000)));
-        ATOMIC_ADD(&fieldGradientPolar[6*index+i], (mm_ulong) ((mm_long) (data.fieldGradientPolar[i]*0x100000000)));
+        ATOMIC_ADD(&fieldGradient[6*index+i], (mm_ulong) realToFixedPoint(data.fieldGradient[i]));
+        ATOMIC_ADD(&fieldGradientPolar[6*index+i], (mm_ulong) realToFixedPoint(data.fieldGradientPolar[i]));
 #ifdef USE_GK
-        ATOMIC_ADD(&fieldGradientS[6*index+i], (mm_ulong) ((mm_long) (data.fieldGradientS[i]*0x100000000)));
-        ATOMIC_ADD(&fieldGradientPolarS[6*index+i], (mm_ulong) ((mm_long) (data.fieldGradientPolarS[i]*0x100000000)));
+        ATOMIC_ADD(&fieldGradientS[6*index+i], (mm_ulong) realToFixedPoint(data.fieldGradientS[i]));
+        ATOMIC_ADD(&fieldGradientPolarS[6*index+i], (mm_ulong) realToFixedPoint(data.fieldGradientPolarS[i]));
 #endif
     }
 #endif
@@ -995,9 +1007,9 @@ KERNEL void addExtrapolatedFieldGradientToForce(GLOBAL mm_long* RESTRICT forceBu
 #endif
             }
         }
-        forceBuffers[atom] += (mm_long) (fx*0x100000000);
-        forceBuffers[atom+PADDED_NUM_ATOMS] += (mm_long) (fy*0x100000000);
-        forceBuffers[atom+PADDED_NUM_ATOMS*2] += (mm_long) (fz*0x100000000);
+        forceBuffers[atom] += realToFixedPoint(fx);
+        forceBuffers[atom+PADDED_NUM_ATOMS] += realToFixedPoint(fy);
+        forceBuffers[atom+PADDED_NUM_ATOMS*2] += realToFixedPoint(fz);
     }
 }
 

@@ -6,9 +6,9 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2021 Stanford University and the Authors.
+Portions copyright (c) 2012-2022 Stanford University and the Authors.
 Authors: Peter Eastman
-Contributors:
+Contributors: 
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -48,7 +48,7 @@ import random
 import sys
 import xml.etree.ElementTree as etree
 from copy import deepcopy
-from math import ceil, floor
+from math import ceil, floor, sqrt
 from collections import defaultdict
 
 class Modeller(object):
@@ -375,8 +375,8 @@ class Modeller(object):
             self.topology = modeller.topology
             self.positions = modeller.positions
 
-    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
-        """Add solvent (both water and ions) to the model to fill a rectangular box.
+    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, boxShape='cube', positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
+        """Add solvent (both water and ions) to the model to fill a periodic box.
 
         The algorithm works as follows:
 
@@ -390,18 +390,33 @@ class Modeller(object):
 
         1. You can explicitly give the vectors defining the periodic box to use.
         2. Alternatively, for a rectangular box you can simply give the dimensions of the unit cell.
-        3. You can give a padding distance.  The largest dimension of the solute (along the x, y, or z axis) is determined, and a cubic
-           box of size (largest dimension)+2*padding is used.
-        4. You can specify the total number of molecules (both waters and ions) to add.  A cubic box is then created whose size is
+        3. You can give a padding distance.  A bounding sphere containing the solute is determined, and the box size is
+           set to (sphere diameter)+(padding).  This guarantees no atom in the solute will come closer than the padding
+           distance to any atom of another periodic copy.  If the sphere diameter is less than the padding distance,
+           the box size is set to 2*(padding) to ensure no atom is closer than the padding distance to two periodic
+           copies of any other atom.
+        4. You can specify the total number of molecules (both waters and ions) to add.  A box is then created whose size is
            just large enough hold the specified amount of solvent.
         5. Finally, if none of the above options is specified, the existing Topology's box vectors are used.
+
+        When specifying either a padding distance or a number of molecules, you can specify a shape for the periodic box:
+        cubic, rhombic dodecahedron, or truncated octahedron.  Using a non-rectangular box allows the same distance
+        between periodic copies to be achieved with a smaller box.  The most compact option is a rhombic dodecahedron,
+        for which the box volume is 70.7% the volume of a cubic box with the same amount of padding.
+
+        There exist many different water models, many of which are very similar to each other. This method creates
+        preequilibrated water boxes for a limited set of water models. In most cases, they work equally well for other models
+        that involve the same number of particles. For example, to simulate a box of TIP3P-FB water, use this method to
+        create a box of TIP3P water, construct a System using TIP3P-FB parameters, and perform a local energy minimization
+        to correct for the small differences between the models. Likewise, a box of TIP4P-Ew water can be used for most
+        four site water models.
 
         Parameters
         ----------
         forcefield : ForceField
             the ForceField to use for determining van der Waals radii and atomic charges
         model : str='tip3p'
-            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'.
+            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', 'tip5p', and 'swm4ndp' (polarizable).
         boxSize : Vec3=None
             the size of the box to fill with water
         boxVectors : tuple of Vec3=None
@@ -410,6 +425,9 @@ class Modeller(object):
             the padding distance to use
         numAdded : int=None
             the total number of molecules (waters and ions) to add
+        boxShape: str='cube'
+            the box shape to use.  Allowed values are 'cube', 'dodecahedron', and 'octahedron'.  If padding and numAdded
+            are both None, this is ignored.
         positiveIon : string='Na+'
             the type of positive ion to add.  Allowed values are 'Cs+', 'K+', 'Li+', 'Na+', and 'Rb+'
         negativeIon : string='Cl-'
@@ -436,6 +454,8 @@ class Modeller(object):
             waterRadius = 0.315365*vdwRadiusPerSigma
         elif model == 'tip5p':
             waterRadius = 0.312*vdwRadiusPerSigma
+        elif model == 'swm4ndp':
+            waterRadius = 0.318395*vdwRadiusPerSigma
         else:
             raise ValueError('Unknown water model: %s' % model)
         pdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', model+'.pdb'))
@@ -449,7 +469,7 @@ class Modeller(object):
         if numAdded is not None:
             # Select a padding distance which is guaranteed to give more than the specified number of molecules.
 
-            padding = 1.1*(numAdded/((len(pdbResidues)/pdbBoxSize[0]**3)*8))**(1.0/3.0)
+            padding = 2.2*(numAdded/((len(pdbResidues)/pdbBoxSize[0]**3)*8))**(1.0/3.0)
             if padding < 0.5:
                 padding = 0.5 # Ensure we have enough when adding very small numbers of molecules
         if boxVectors is not None:
@@ -466,12 +486,23 @@ class Modeller(object):
             if is_quantity(padding):
                 padding = padding.value_in_unit(nanometer)
             if len(self.positions) == 0:
-                maxSize = 0
+                radius = 0
             else:
-                maxSize = max(max((pos[i] for pos in self.positions))-min((pos[i] for pos in self.positions)) for i in range(3))
-                maxSize = maxSize.value_in_unit(nanometer)
-            box = (maxSize+2*padding)*Vec3(1, 1, 1)
-            vectors = (Vec3(maxSize+2*padding, 0, 0), Vec3(0, maxSize+2*padding, 0), Vec3(0, 0, maxSize+2*padding))
+                positions = self.positions.value_in_unit(nanometer)
+                minRange = Vec3(*(min((pos[i] for pos in positions)) for i in range(3)))
+                maxRange = Vec3(*(max((pos[i] for pos in positions)) for i in range(3)))
+                center = 0.5*(minRange+maxRange)
+                radius = max(unit.norm(center-pos) for pos in positions)
+            width = max(2*radius+padding, 2*padding)
+            if boxShape == 'cube':
+                vectors = (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0, 0, width))
+            elif boxShape == 'dodecahedron':
+                vectors = (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0.5, 0.5, 0.5*sqrt(2))*width)
+            elif boxShape == 'octahedron':
+                vectors = (Vec3(width, 0, 0), Vec3(1/3, 2*sqrt(2)/3, 0)*width, Vec3(-1/3, sqrt(2)/3, sqrt(6)/3)*width)
+            else:
+                raise ValueError(f'Illegal box shape: {boxShape}')
+            box = Vec3(vectors[0][0], vectors[1][1], vectors[2][2])
         else:
             box = self.topology.getUnitCellDimensions().value_in_unit(nanometer)
             vectors = self.topology.getPeriodicBoxVectors().value_in_unit(nanometer)
@@ -580,7 +611,7 @@ class Modeller(object):
             filteredWaters = []
             cells.cells = {}
             for i in range(len(lowerSkinPositions)):
-                cell = tuple((int(floor(lowerSkinPositions[i][j]/cells.cellSize[j]))%cells.numCells[j] for j in range(3)))
+                cell = cells.cellForPosition(lowerSkinPositions[i])
                 if cell in cells.cells:
                     cells.cells[cell].append(i)
                 else:
@@ -1565,6 +1596,8 @@ class _CellList(object):
         self.cells = {}
         self.numCells = tuple((max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)))
         self.cellSize = tuple((vectors[i][i]/self.numCells[i] for i in range(3)))
+        self.vectors = vectors
+        self.periodic = periodic
         invBox = Vec3(1.0/vectors[0][0], 1.0/vectors[1][1], 1.0/vectors[2][2])
         for i in range(len(self.positions)):
             pos = self.positions[i]
@@ -1573,19 +1606,26 @@ class _CellList(object):
                 pos -= floor(pos[1]*invBox[1])*vectors[1]
                 pos -= floor(pos[0]*invBox[0])*vectors[0]
                 self.positions[i] = pos
-            cell = tuple((int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)))
+            cell = self.cellForPosition(pos)
             if cell in self.cells:
                 self.cells[cell].append(i)
             else:
                 self.cells[cell] = [i]
 
+    def cellForPosition(self, pos):
+        if self.periodic:
+            invBox = Vec3(1.0/self.vectors[0][0], 1.0/self.vectors[1][1], 1.0/self.vectors[2][2])
+            pos = pos-floor(pos[2]*invBox[2])*self.vectors[2]
+            pos -= floor(pos[1]*invBox[1])*self.vectors[1]
+            pos -= floor(pos[0]*invBox[0])*self.vectors[0]
+        return tuple((int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)))
+
     def neighbors(self, pos):
-        centralCell = tuple((int(floor(pos[i]/self.cellSize[i])) for i in range(3)))
         offsets = (-1, 0, 1)
         for i in offsets:
             for j in offsets:
                 for k in offsets:
-                    cell = ((centralCell[0]+i+self.numCells[0])%self.numCells[0], (centralCell[1]+j+self.numCells[1])%self.numCells[1], (centralCell[2]+k+self.numCells[2])%self.numCells[2])
+                    cell = self.cellForPosition(Vec3(pos[0]+i*self.cellSize[0], pos[1]+j*self.cellSize[1], pos[2]+k*self.cellSize[2]))
                     if cell in self.cells:
                         for atom in self.cells[cell]:
                             yield atom

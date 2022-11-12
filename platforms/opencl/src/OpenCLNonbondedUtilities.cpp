@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,41 +56,24 @@ private:
 };
 
 OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
-        numForceBuffers(0), blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0) {
+        blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0) {
     // Decide how many thread blocks and force buffers to use.
 
     deviceIsCpu = (context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
     if (deviceIsCpu) {
         numForceThreadBlocks = context.getNumThreadBlocks();
         forceThreadBlockSize = 1;
-        numForceBuffers = numForceThreadBlocks;
     }
     else if (context.getSIMDWidth() == 32) {
-        if (context.getSupports64BitGlobalAtomics()) {
             numForceThreadBlocks = 4*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
             forceThreadBlockSize = 256;
-            // Even though using longForceBuffer, still need a single forceBuffer for the reduceForces kernel to convert the long results into float4 which will be used by later kernels.
-            numForceBuffers = 1;
-        }
-        else {
-            numForceThreadBlocks = 3*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
-            forceThreadBlockSize = 256;
-            numForceBuffers = numForceThreadBlocks*forceThreadBlockSize/OpenCLContext::TileSize;
-        }
     }
     else {
         numForceThreadBlocks = context.getNumThreadBlocks();
         forceThreadBlockSize = (context.getSIMDWidth() >= 32 ? OpenCLContext::ThreadBlockSize : 32);
-        if (context.getSupports64BitGlobalAtomics()) {
-            // Even though using longForceBuffer, still need a single forceBuffer for the reduceForces kernel to convert the long results into float4 which will be used by later kernels.
-            numForceBuffers = 1;
-        }
-        else {
-            numForceBuffers = numForceThreadBlocks*forceThreadBlockSize/OpenCLContext::TileSize;
-        }
     }
-    pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(int));
-    pinnedCountMemory = (int*) context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(int));
+    pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(unsigned int));
+    pinnedCountMemory = (unsigned int*) context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(int));
     setKernelSource(deviceIsCpu ? OpenCLKernelSources::nonbonded_cpu : OpenCLKernelSources::nonbonded);
 }
 
@@ -227,7 +210,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     vector<mm_int2> exclusionTilesVec;
     for (set<pair<int, int> >::const_iterator iter = tilesWithExclusions.begin(); iter != tilesWithExclusions.end(); ++iter)
         exclusionTilesVec.push_back(mm_int2(iter->first, iter->second));
-    sort(exclusionTilesVec.begin(), exclusionTilesVec.end(), context.getSIMDWidth() <= 32 ? compareInt2 : compareInt2LargeSIMD);
+    sort(exclusionTilesVec.begin(), exclusionTilesVec.end(), context.getSIMDWidth() <= 32 || !useCutoff ? compareInt2 : compareInt2LargeSIMD);
     exclusionTiles.initialize<mm_int2>(context, exclusionTilesVec.size(), "exclusionTiles");
     exclusionTiles.upload(exclusionTilesVec);
     map<pair<int, int>, int> exclusionTileMap;
@@ -305,7 +288,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         sortedBlockBoundingBox.initialize(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
-        blockSorter = new OpenCLSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks);
+        blockSorter = new OpenCLSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks, false);
         vector<cl_uint> count(1, 0);
         interactionCount.upload(count);
         rebuildNeighborList.upload(count);
@@ -395,18 +378,23 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
 bool OpenCLNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
-    if (pinnedCountMemory[0] <= (unsigned int) interactingTiles.getSize())
+    if (context.getStepsSinceReorder() == 0)
+        tilesAfterReorder = pinnedCountMemory[0];
+    else if (context.getStepsSinceReorder() > 25 && pinnedCountMemory[0] > 1.1*tilesAfterReorder)
+        context.forceReorder();
+    if (pinnedCountMemory[0] <= interactingTiles.getSize())
         return false;
 
     // The most recent timestep had too many interactions to fit in the arrays.  Make the arrays bigger to prevent
     // this from happening in the future.
 
-    int maxTiles = (int) (1.2*pinnedCountMemory[0]);
-    int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
+    unsigned int maxTiles = (unsigned int) (1.2*pinnedCountMemory[0]);
+    unsigned int numBlocks = context.getNumAtomBlocks();
+    int totalTiles = numBlocks*(numBlocks+1)/2;
     if (maxTiles > totalTiles)
         maxTiles = totalTiles;
     interactingTiles.resize(maxTiles);
-    interactingAtoms.resize(OpenCLContext::TileSize*maxTiles);
+    interactingAtoms.resize(OpenCLContext::TileSize*(size_t) maxTiles);
     for (map<int, KernelSet>::iterator iter = groupKernels.begin(); iter != groupKernels.end(); ++iter) {
         KernelSet& kernels = iter->second;
         if (*reinterpret_cast<cl_kernel*>(&kernels.forceKernel) != NULL) {
@@ -719,10 +707,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     // Set arguments to the Kernel.
 
     int index = 0;
-    if (context.getSupports64BitGlobalAtomics())
-        kernel.setArg<cl::Memory>(index++, context.getLongForceBuffer().getDeviceBuffer());
-    else
-        kernel.setArg<cl::Buffer>(index++, context.getForceBuffers().getDeviceBuffer());
+    kernel.setArg<cl::Memory>(index++, context.getLongForceBuffer().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, context.getEnergyBuffer().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusions.getDeviceBuffer());

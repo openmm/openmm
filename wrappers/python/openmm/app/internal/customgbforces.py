@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2016 University of Virginia and the Authors.
+Portions copyright (c) 2012-2022 University of Virginia and the Authors.
 Authors: Christoph Klein, Michael R. Shirts
 Contributors: Jason M. Swails, Peter Eastman, Justin L. MacCallum
 
@@ -218,7 +218,7 @@ def _get_bonded_atom_list(topology):
 
 
 def _is_carboxylateO(atom, all_bonds):
-    if atom is not E.oxygen: return False
+    if atom.element is not E.oxygen: return False
     bondeds = all_bonds[atom]
     if len(bondeds) != 1:
         return False
@@ -357,6 +357,8 @@ def _createEnergyTerms(force, solventDielectric, soluteDielectric, SA, cutoff, k
     These are identical for all the GB models.
 
     """
+    cutoff = strip_unit(cutoff, u.nanometer)
+    kappa = strip_unit(kappa, u.nanometer**-1)
     params = "; solventDielectric=%.16g; soluteDielectric=%.16g; kappa=%.16g; offset=%.16g" % (solventDielectric, soluteDielectric, kappa, offset)
     if cutoff is not None:
         params += "; cutoff=%.16g" % cutoff

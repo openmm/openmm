@@ -896,13 +896,13 @@ inline DEVICE real3 loadForce(int index, GLOBAL const mm_long* RESTRICT force) {
 inline DEVICE void addForce(int index, GLOBAL mm_long* RESTRICT force, real3 value) {
     GLOBAL mm_ulong* f = (GLOBAL mm_ulong*) force;
 #ifdef HAS_OVERLAPPING_VSITES
-    ATOMIC_ADD(&f[index], (mm_ulong) ((mm_long) (value.x*0x100000000)));
-    ATOMIC_ADD(&f[index+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (value.y*0x100000000)));
-    ATOMIC_ADD(&f[index+PADDED_NUM_ATOMS*2], (mm_ulong) ((mm_long) (value.z*0x100000000)));
+    ATOMIC_ADD(&f[index], (mm_ulong) realToFixedPoint(value.x));
+    ATOMIC_ADD(&f[index+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(value.y));
+    ATOMIC_ADD(&f[index+PADDED_NUM_ATOMS*2], (mm_ulong) realToFixedPoint(value.z));
 #else
-    f[index] += (mm_ulong) ((mm_long) (value.x*0x100000000));
-    f[index+PADDED_NUM_ATOMS] += (mm_ulong) ((mm_long) (value.y*0x100000000));
-    f[index+PADDED_NUM_ATOMS*2] += (mm_ulong) ((mm_long) (value.z*0x100000000));
+    f[index] += (mm_ulong) realToFixedPoint(value.x);
+    f[index+PADDED_NUM_ATOMS] += (mm_ulong) realToFixedPoint(value.y);
+    f[index+PADDED_NUM_ATOMS*2] += (mm_ulong) realToFixedPoint(value.z);
 #endif
 }
 

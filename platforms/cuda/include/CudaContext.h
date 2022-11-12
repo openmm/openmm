@@ -541,6 +541,10 @@ public:
      * expense of reduced simulation performance.
      */
     void flushQueue();
+    /**
+     * Get the flags that should be used when creating CUevent objects.
+     */
+    unsigned int getEventFlags();
 private:
     /**
      * Compute a sorted list of device indices in decreasing order of desirability

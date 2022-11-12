@@ -340,9 +340,9 @@ class PDBFile(object):
         if is_quantity(positions):
             positions = positions.value_in_unit(angstroms)
         if any(math.isnan(norm(pos)) for pos in positions):
-            raise ValueError('Particle position is NaN')
+            raise ValueError('Particle position is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
         if any(math.isinf(norm(pos)) for pos in positions):
-            raise ValueError('Particle position is infinite')
+            raise ValueError('Particle position is infinite.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
         nonHeterogens = PDBFile._standardResidues[:]
         nonHeterogens.remove('HOH')
         atomIndex = 1
@@ -363,7 +363,7 @@ class PDBFile(object):
                 if keepIds and len(res.id) < 5:
                     resId = res.id
                 else:
-                    resId = "%4d" % ((resIndex+1)%10000)
+                    resId = _formatIndex(resIndex+1, 4)
                 if len(res.insertionCode) == 1:
                     resIC = res.insertionCode
                 else:
@@ -384,8 +384,8 @@ class PDBFile(object):
                     else:
                         atomName = atom.name
                     coords = positions[posIndex]
-                    line = "%s%5d %-4s %3s %s%4s%1s   %s%s%s  1.00  0.00          %2s  " % (
-                        recordName, atomIndex%100000, atomName, resName, chainName, resId, resIC, _format_83(coords[0]),
+                    line = "%s%5s %-4s %3s %s%4s%1s   %s%s%s  1.00  0.00          %2s  " % (
+                        recordName, _formatIndex(atomIndex, 5), atomName, resName, chainName, resId, resIC, _format_83(coords[0]),
                         _format_83(coords[1]), _format_83(coords[2]), symbol)
                     if len(line) != 80:
                         raise ValueError('Fixed width overflow detected')
@@ -393,7 +393,7 @@ class PDBFile(object):
                     posIndex += 1
                     atomIndex += 1
                 if resIndex == len(residues)-1:
-                    print("TER   %5d      %3s %s%4s" % (atomIndex, resName, chainName, resId), file=file)
+                    print("TER   %5s      %3s %s%4s" % (_formatIndex(atomIndex, 5), resName, chainName, resId), file=file)
                     atomIndex += 1
         if modelIndex is not None:
             print("ENDMDL", file=file)
@@ -450,11 +450,11 @@ class PDBFile(object):
             for index1 in sorted(atomBonds):
                 bonded = atomBonds[index1]
                 while len(bonded) > 4:
-                    print("CONECT%5d%5d%5d%5d" % (index1, bonded[0], bonded[1], bonded[2]), file=file)
+                    print("CONECT%5s%5s%5s%5s" % (_formatIndex(index1, 5), _formatIndex(bonded[0], 5), _formatIndex(bonded[1], 5), _formatIndex(bonded[2], 5)), file=file)
                     del bonded[:4]
-                line = "CONECT%5d" % index1
+                line = "CONECT%5s" % _formatIndex(index1, 5)
                 for index2 in bonded:
-                    line = "%s%5d" % (line, index2)
+                    line = "%s%5s" % (line, _formatIndex(index2, 5))
                 print(line, file=file)
         print("END", file=file)
 
@@ -470,3 +470,14 @@ def _format_83(f):
         return ('%8.3f' % f)[:8]
     raise ValueError('coordinate "%s" could not be represented '
                      'in a width-8 field' % f)
+
+def _formatIndex(index, places):
+    """Create a string representation of an atom or residue index.  If the value is larger than can fit
+    in the available space, switch to hex.
+    """
+    if index < 10**places:
+        format = f'%{places}d'
+        return format % index
+    format = f'%{places}X'
+    shiftedIndex = (index - 10**places + 10*16**(places-1)) % (16**places)
+    return format % shiftedIndex

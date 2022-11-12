@@ -140,7 +140,7 @@ void testConstraints() {
 void testConstrainedClusters() {
     const int numParticles = 7;
     System system;
-    NoseHooverIntegrator integrator(0.0005);
+    NoseHooverIntegrator integrator(0.0004);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {

@@ -2,9 +2,9 @@
  * Record the force on an atom to global memory.
  */
 inline DEVICE void storeForce(int atom, real3 force, GLOBAL mm_ulong* RESTRICT forceBuffers) {
-    ATOMIC_ADD(&forceBuffers[atom], (mm_ulong) ((mm_long) (force.x*0x100000000)));
-    ATOMIC_ADD(&forceBuffers[atom+PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.y*0x100000000)));
-    ATOMIC_ADD(&forceBuffers[atom+2*PADDED_NUM_ATOMS], (mm_ulong) ((mm_long) (force.z*0x100000000)));
+    ATOMIC_ADD(&forceBuffers[atom], (mm_ulong) realToFixedPoint(force.x));
+    ATOMIC_ADD(&forceBuffers[atom+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.y));
+    ATOMIC_ADD(&forceBuffers[atom+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force.z));
 }
 
 /**
@@ -152,7 +152,7 @@ KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4
         ) {
     LOCAL real3 positionCache[FIND_NEIGHBORS_WORKGROUP_SIZE];
     int indexInWarp = LOCAL_ID%32;
-#ifndef __CUDA_ARCH__
+#if !(defined(__CUDA_ARCH__) || defined(USE_HIP))
     LOCAL bool includeBlockFlags[FIND_NEIGHBORS_WORKGROUP_SIZE];
     int warpStart = LOCAL_ID-indexInWarp;
 #endif
@@ -191,7 +191,7 @@ KERNEL void findNeighbors(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4
             
             // Loop over any blocks we identified as potentially containing neighbors.
             
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(USE_HIP)
             int includeBlockFlags = BALLOT(includeBlock2);
             while (includeBlockFlags != 0) {
                 int i = __ffs(includeBlockFlags)-1;

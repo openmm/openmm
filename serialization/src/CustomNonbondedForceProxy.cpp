@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2022 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,7 +42,7 @@ CustomNonbondedForceProxy::CustomNonbondedForceProxy() : SerializationProxy("Cus
 }
 
 void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const CustomNonbondedForce& force = *reinterpret_cast<const CustomNonbondedForce*>(object);
     node.setIntProperty("forceGroup", force.getForceGroup());
     node.setStringProperty("name", force.getName());
@@ -59,6 +59,12 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
     SerializationNode& globalParams = node.createChildNode("GlobalParameters");
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParams.createChildNode("Parameter").setStringProperty("name", force.getGlobalParameterName(i)).setDoubleProperty("default", force.getGlobalParameterDefaultValue(i));
+    }
+    SerializationNode& computedValues = node.createChildNode("ComputedValues");
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        string name, expression;
+        force.getComputedValueParameters(i, name, expression);
+        computedValues.createChildNode("Value").setStringProperty("name", name).setStringProperty("expression", expression);
     }
     SerializationNode& energyDerivs = node.createChildNode("EnergyParameterDerivatives");
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++) {
@@ -103,7 +109,7 @@ void CustomNonbondedForceProxy::serialize(const void* object, SerializationNode&
 
 void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 2)
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     CustomNonbondedForce* force = NULL;
     try {
@@ -121,6 +127,11 @@ void* CustomNonbondedForceProxy::deserialize(const SerializationNode& node) cons
         const SerializationNode& globalParams = node.getChildNode("GlobalParameters");
         for (auto& parameter : globalParams.getChildren())
             force->addGlobalParameter(parameter.getStringProperty("name"), parameter.getDoubleProperty("default"));
+        if (version > 2) {
+            const SerializationNode& computedValues = node.getChildNode("ComputedValues");
+            for (auto& value : computedValues.getChildren())
+                force->addComputedValue(value.getStringProperty("name"), value.getStringProperty("expression"));
+        }
         if (version > 1) {
             const SerializationNode& energyDerivs = node.getChildNode("EnergyParameterDerivatives");
             for (auto& parameter : energyDerivs.getChildren())
