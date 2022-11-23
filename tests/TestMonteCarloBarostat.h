@@ -33,6 +33,7 @@
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/Context.h"
 #include "openmm/HarmonicBondForce.h"
+#include "openmm/HarmonicAngleForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
@@ -136,6 +137,99 @@ void testIdealGas() {
         volume /= steps;
         double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
         ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
+    }
+}
+
+void testIdealMolecularGas()
+{
+    const int numMolecules = 64;
+    const int frequency = 10;
+    const int steps = 10000;
+    const double pressure = 1.5;
+    const double pressureInMD = pressure * (AVOGADRO * 1e-25); // pressure in kJ/mol/nm^3
+    const double temp[] = {300.0, 600.0};
+    const double initialVolume = numMolecules * BOLTZ * temp[1] / pressureInMD;
+    const double initialLength = std::pow(initialVolume, 1.0 / 3.0);
+
+    // Create a gas of non-interacting molecules.
+    // Each molecule contains three carbon atoms bonded in sequence.
+    // Two bonds have length of 0.15 nm. The first bond is constrained. The angle is 120 degree.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5 * initialLength, 0), Vec3(0, 0, 2 * initialLength));
+    vector<Vec3> positions(numMolecules * 3);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numMolecules; ++i)
+    {
+        system.addParticle(12.0);
+        positions[i * 3] = Vec3(initialLength * genrand_real2(sfmt), 0.5 * initialLength * genrand_real2(sfmt), 2 * initialLength * genrand_real2(sfmt));
+        system.addParticle(12.0);
+        positions[i * 3 + 1] = positions[i * 3] + Vec3(0.15, 0.0, 0.0);
+        system.addParticle(12.0);
+        positions[i * 3 + 2] = positions[i * 3] + Vec3(0.225, 0.130, 0.0);
+    }
+
+    HarmonicBondForce *bonds = new HarmonicBondForce();
+    bonds->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(bonds);
+    HarmonicAngleForce *angles = new HarmonicAngleForce();
+    angles->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(angles);
+    for (int i = 0; i < numMolecules; ++i)
+    {
+        system.addConstraint(i * 3, i * 3 + 1, 0.15);
+        bonds->addBond(i * 3 + 1, i * 3 + 2, 0.15, 50000.0);
+        angles->addAngle(i * 3, i * 3 + 1, i * 3 + 2, 120.0 / 180.0 * PI_M, 100.0);
+    }
+
+    // Test it for two scaling modes and two different temperatures.
+
+    for (int k = 0; k < 2; k++)
+    {
+        MonteCarloBarostat *barostat;
+        if (k == 0)
+        {
+            printf("Molecules scaled\n");
+            barostat = new MonteCarloBarostat(pressure, temp[0], frequency, true);
+        }
+        else
+        {
+            printf("Constrained groups scaled\n");
+            barostat = new MonteCarloBarostat(pressure, temp[0], frequency, false);
+        }
+        system.addForce(barostat);
+
+        for (int i = 0; i < 2; i++)
+        {
+            printf("Temperature = %f\n", temp[i]);
+            barostat->setDefaultTemperature(temp[i]);
+            LangevinIntegrator integrator(temp[i], 1.0, 0.004);
+            Context context(system, integrator, platform);
+            context.setPositions(positions);
+
+            // Let it equilibrate.
+
+            integrator.step(10000);
+
+            // Now run it for a while and see if the volume is correct.
+
+            double volume = 0.0;
+            for (int j = 0; j < steps; ++j)
+            {
+                Vec3 box[3];
+                context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
+                // printf("%f\n", box[0][0] * box[1][1] * box[2][2]);
+                volume += box[0][0] * box[1][1] * box[2][2];
+                ASSERT_EQUAL_TOL(0.5 * box[0][0], box[1][1], 1e-5);
+                ASSERT_EQUAL_TOL(2 * box[0][0], box[2][2], 1e-5);
+                integrator.step(frequency);
+            }
+            volume /= steps;
+            double expected = (numMolecules + 1) * BOLTZ * temp[i] / pressureInMD;
+            ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3 / std::sqrt((double)steps));
+        }
+        system.removeForce(system.getNumForces() - 1);
     }
 }
 
@@ -275,6 +369,7 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         testChangingBoxSize();
         testIdealGas();
+		testIdealMolecularGas();
         testRandomSeed();
         // Don't run testWater() here, because it's very slow on Reference platform.
         // Individual platforms can run it from runPlatformTests().
