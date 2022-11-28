@@ -14,7 +14,7 @@ typedef struct {
  * Compute nonbonded interactions.
  */
 __kernel void computeNonbonded(
-        __global long* restrict forceBuffers,
+        __global unsigned long* restrict forceBuffers,
         __global mixed* restrict energyBuffer, __global const real4* restrict posq, __global const unsigned int* restrict exclusions,
         __global const int2* restrict exclusionTiles, unsigned int startTileIndex, unsigned long numTileIndices
 #ifdef USE_CUTOFF
