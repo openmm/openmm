@@ -177,7 +177,7 @@ jobs:
         if: matrix.python-version == 'pypy'
         with:
           activate-environment: build
-          environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
+          environment-file: devtools/ci/gh-actions/conda-envs/build-ubuntu-pypy.yml
           auto-activate-base: false
           miniforge-variant: Mambaforge-pypy3
           use-mamba: true
