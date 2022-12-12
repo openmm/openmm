@@ -27,7 +27,7 @@ KERNEL void spreadForces(GLOBAL const mm_ulong* RESTRICT forceBuffers, GLOBAL mm
         mm_long fy1 = forceBuffers[atom1+PADDED_NUM_ATOMS];
         mm_long fz1 = forceBuffers[atom1+PADDED_NUM_ATOMS*2];
         if (atom1 != atom2) {
-            double factor = (double) bondReductionFactors[atom1];
+            real factor = (real) bondReductionFactors[atom1];
             mm_long fx2 = (mm_long) ((1-factor)*fx1);
             mm_long fy2 = (mm_long) ((1-factor)*fy1);
             mm_long fz2 = (mm_long) ((1-factor)*fz1);
