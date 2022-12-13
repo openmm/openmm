@@ -41,8 +41,6 @@ RPMDMonteCarloBarostat::RPMDMonteCarloBarostat(double defaultPressure, int frequ
 }
 
 void RPMDMonteCarloBarostat::setDefaultPressure(double pressure) {
-    if (pressure < 0)
-        throw OpenMMException("Pressure cannot be negative");
     defaultPressure = pressure;
 }
 
