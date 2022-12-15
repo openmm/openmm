@@ -84,20 +84,18 @@ def printTestResult(test_result, options):
         for (key, value) in test_result.items():
             print(f'{key}: {value}')
         print('')
-    elif options.style == 'rich':
-        options.rich_table.add_row(
-            f"[red]{test_result['test']}",
-            f"[blue]{test_result['precision']}",
-            f"[blue_violet]{test_result['constraints']}",
-            f"[blue_violet]{test_result['hydrogen_mass']}",
-            f"[blue_violet]{test_result['timestep_in_fs']:.1f}",
-            f"[orange1]{test_result['ensemble']}",
-            f"[blue]{test_result['platform']}",
-            f"[bold][green]{test_result['ns_per_day']:.1f}",
-        )
-        options.rich_live.refresh()
+    elif options.style == 'table':
+        print('%-18s%-12s%-14s%-15s%-10g%-11s%-11s%-g' %
+              (test_result['test'],
+               test_result['precision'],
+               test_result['constraints'],
+               test_result['hydrogen_mass'],
+               test_result['timestep_in_fs'],
+               test_result['ensemble'],
+               test_result['platform'],
+               test_result['ns_per_day']))
     else:
-        raise ValueError(f"style '{style}' must be one of ['legacy', 'rich']")
+        raise ValueError(f"style '{style}' must be one of ['simple', 'table']")
 
 def timeIntegration(context, steps, initialSteps):
     """Integrate a Context for a specified number of steps, then return how many seconds it took."""
@@ -195,7 +193,6 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
         positions = inpcrd.positions
         method = app.PME
         constraints = app.HBonds
-        hydrogenMass = 1.5*unit.amu
         cutoff = pme_cutoff
         system = prmtop.createSystem(nonbondedMethod=method, nonbondedCutoff=cutoff, constraints=constraints)
         if inpcrd.boxVectors is not None:
@@ -230,7 +227,7 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
         else:
             ff = app.ForceField('amber99sb.xml', 'amber99_obc.xml')
             pdb = app.PDBFile('5dfr_minimized.pdb')
-            method = app.CutoffNonPeriodic # JDC: Shouldn't this be app.NoCutoff?
+            method = app.CutoffNonPeriodic
             cutoff = 2.0 # nanometers
         if bond_constraints == 'hbonds':
             constraints = app.HBonds
@@ -303,21 +300,12 @@ def serializeTest(directory=None, system=None, integrator=None, state=None, core
 def runOneTest(testName, options):
     """Perform a single benchmarking simulation."""
 
-    # Return if we do not support the requested precision
-    if ((options.platform == 'Reference') and (options.precision != 'double')):
-        print("Skipping test because Reference platform only supports 'double' precision.")
-        return        
-    if ((options.platform == 'CPU') and (options.precision != 'mixed')):
-        print("Skipping test because CPU platform only supports 'mixed' precision.")
-        return
-
     system, positions, test_parameters = retrieveTestSystem(testName, pme_cutoff=options.pme_cutoff, bond_constraints=options.bond_constraints, polarization=options.polarization, epsilon=options.epsilon)
 
     # Create a copy of the basic test_parameters dict (which may be cached) to report the test results
     test_result = test_parameters.copy()
-
-    # Store the ensemble
     test_result['ensemble'] = options.ensemble
+    test_result['precision'] = options.precision
 
     explicit = (testName not in ('gbsa', 'amoebagk'))
     amoeba = (testName in ('amoebagk', 'amoebapme'))
@@ -361,17 +349,19 @@ def runOneTest(testName, options):
     test_result['timestep_in_fs'] = dt.value_in_unit(unit.femtoseconds)
     properties = {}
     initialSteps = 5
-    if options.device is not None and options.platform in ('CUDA', 'OpenCL'):
+    platform = mm.Platform.getPlatformByName(options.platform)
+    if options.device is not None and 'DeviceIndex' in platform.getPropertyNames():
         properties['DeviceIndex'] = options.device
         if ',' in options.device or ' ' in options.device:
             initialSteps = 250
+    if (options.precision is not None) and ('Precision' in platform.getPropertyNames()):
+        properties['Precision'] = options.precision
 
     # Add barostat if requested
     if options.ensemble == 'NPT':
         system.addForce(mm.MonteCarloBarostat(1*unit.bar, temperature, 100))
 
     # Create the Context
-    platform = mm.Platform.getPlatformByName(options.platform)
     integ.setConstraintTolerance(1e-5)
     if len(properties) > 0:
         context = mm.Context(system, integ, platform, properties)
@@ -381,8 +371,6 @@ def runOneTest(testName, options):
     # Store information about the Platform used by the Context
     platform = context.getPlatform()
     test_result['platform'] = platform.getName()
-    if (options.precision is not None) and ('Precision' in platform.getPropertyNames()):
-        properties['Precision'] = options.precision
     test_result['platform_properties'] = { property_name : platform.getPropertyValue(context, property_name) for property_name in platform.getPropertyNames() }
 
     # Prepare the simulation
@@ -466,10 +454,10 @@ ENSEMBLES = ('NVE', 'NVT', 'NPT')
 BOND_CONSTRAINTS = ('hbonds', 'allbonds')
 PRECISIONS = ('single', 'mixed', 'double')
 POLARIZATION_MODES = ('direct', 'extrapolated', 'mutual')
-STYLES = ('simple', 'rich')
+STYLES = ('simple', 'table')
 
 parser = ArgumentParser()
-parser.add_argument('--platform', default=','.join(PLATFORMS), dest='platform', help=f'name of the platform to benchmark, or comma-separated list: {PLATFORMS} [default: all]')
+parser.add_argument('--platform', dest='platform', choices=PLATFORMS, help='name of the platform to benchmark')
 parser.add_argument('--test', default=','.join(TESTS), dest='test', help=f'the test to perform, or comma-separated list: {TESTS} [default: all]')
 parser.add_argument('--ensemble', default='NVT', dest='ensemble', help=f'the thermodynamic ensemble to simulate: {ENSEMBLES} [default: NVT]')
 parser.add_argument('--pme-cutoff', default=0.9, dest='pme_cutoff', type=float, help='direct space cutoff for PME in nm [default: 0.9]')
@@ -484,6 +472,8 @@ parser.add_argument('--outfile', default=None, dest='outfile', help='output file
 parser.add_argument('--serialize', default=None, dest='serialize', help='if specified, output serialized test systems for Folding@home or other uses')
 parser.add_argument('--verbose', default=False, action='store_true', dest='verbose', help='if specified, print verbose output')
 args = parser.parse_args()
+if args.platform is None:
+    parser.error('No platform specified')
 
 # Collect system information
 system_info = dict()
@@ -516,15 +506,15 @@ if args.outfile is not None:
     # Write system info
     appendTestResult(args.outfile, system_info=system_info)
 
-platforms = args.platform.split(',')
-if not set(platforms).issubset(PLATFORMS):
-    parser.error(f'Available platforms: {PLATFORMS}')
-
 tests = args.test.split(',')
 if not set(tests).issubset(TESTS):
     parser.error(f'Available tests: {TESTS}')
 
 precisions = args.precision.split(',')
+if args.platform == 'Reference':
+    precisions = ['double']
+if args.platform == 'CPU':
+    precisions = ['mixed']
 if not set(precisions).issubset(PRECISIONS):
     parser.error(f'Available precisions: {PRECISIONS}')
 
@@ -541,37 +531,22 @@ from openmm import OpenMMException
 from itertools import product
 
 if args.style == 'simple':
-    for (test, args.bond_constraints, args.ensemble, args.platform, args.precision) in product(tests, bond_constraints, ensembles, platforms, precisions):
+    for (test, args.bond_constraints, args.ensemble, args.precision) in product(tests, bond_constraints, ensembles, precisions):
         try:
             runOneTest(test, args)
         except OpenMMException as e:
             if args.verbose:
                 print(e)
             pass
-elif args.style == 'rich':
-    from rich.live import Live
-    from rich.table import Table
-
-    from rich import box
-    table = Table(box=box.SIMPLE)
-    table.add_column("[red]Test", width=24)
-    table.add_column("[blue]Precision")
-    table.add_column("[blue_violet]Constraints")
-    table.add_column("[blue_violet]H mass (amu)")
-    table.add_column("[blue_violet]dt (fs)")
-    table.add_column("[orange1]Ensemble")
-    table.add_column("[blue]Platform", width=9)
-    table.add_column("[green]ns/day", justify='right', width=10)
-    setattr(args, 'rich_table', table)
-
-    with Live(table, auto_refresh=False, vertical_overflow='visible') as live:
-        for (test, args.bond_constraints, args.ensemble, args.platform, args.precision) in product(tests, bond_constraints, ensembles, platforms, precisions):
-            try:
-                setattr(args, 'rich_live', live)
-                runOneTest(test, args)
-            except OpenMMException as e:
-                if args.verbose:
-                    print(e)
-                pass
+elif args.style == 'table':
+    print()
+    print('Test              Precision   Constraints   H mass (amu)   dt (fs)   Ensemble   Platform   ns/day')
+    for (test, args.bond_constraints, args.ensemble, args.precision) in product(tests, bond_constraints, ensembles, precisions):
+        try:
+            runOneTest(test, args)
+        except OpenMMException as e:
+            if args.verbose:
+                print(e)
+            pass
 else:
-    raise ValueError(f"style {args.style} unkown; must be one of ['simple', 'rich']")
+    raise ValueError(f"style {args.style} unkown; must be one of ['simple', 'table']")
