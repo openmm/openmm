@@ -259,6 +259,42 @@ void testForceGroups() {
     ASSERT_EQUAL_TOL(2.0, sqrt(delta.dot(delta)), 1e-4);
 }
 
+void testMasslessParticles() {
+    // Create a system with massless particles, some of which are involved in constraints.
+    
+    const int numParticles = 10;
+    System system;
+    HarmonicBondForce* force = new HarmonicBondForce();
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(i < 3 || i == 5 ? 0.0 : 1.0);
+        positions[i] = Vec3(i, 0.1*genrand_real2(sfmt), 0.1*genrand_real2(sfmt));
+    }
+    for (int i = 0; i < numParticles-1; i++) {
+        if (i < 2 || i == 6)
+            system.addConstraint(i, i+1, 1.05);
+        else
+            force->addBond(i, i+1, 1.05, 100.0);
+    }
+    
+    // Minimize it and check that massless particles have not moved, while other
+    // constraints are satisfied.
+
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    LocalEnergyMinimizer::minimize(context, 1e-5);
+    State state = context.getState(State::Positions);
+    for (int i = 0; i < numParticles; i++)
+        if (system.getParticleMass(i) == 0)
+            ASSERT_EQUAL_VEC(positions[i], state.getPositions()[i], 1e-6);
+    Vec3 delta = state.getPositions()[6]-state.getPositions()[7];
+    ASSERT_EQUAL_TOL(1.05, sqrt(delta.dot(delta)), 1e-4);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -269,6 +305,7 @@ int main(int argc, char* argv[]) {
         testVirtualSites();
         testLargeForces();
         testForceGroups();
+        testMasslessParticles();
         runPlatformTests();
     }
     catch(const exception& e) {
