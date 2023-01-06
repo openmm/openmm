@@ -464,7 +464,11 @@ Example: run the full suite of benchmarks for the CUDA platform, printing the re
 
 Example: run the apoa1pme benchmark for the CPU platform with a reduced cutoff distance
 
-    python benchmark.py --platform=CPU --test=apoa1pme --pme-cutoff=0.8""")
+    python benchmark.py --platform=CPU --test=apoa1pme --pme-cutoff=0.8
+
+Example: run the full suite in mixed precision mode, saving the results to a YAML file
+
+    python benchmark.py --platform=CUDA --precision=mixed --outfile=benchmark.yaml""")
 parser.add_argument('--platform', dest='platform', choices=PLATFORMS, help='name of the platform to benchmark')
 parser.add_argument('--test', default=','.join(TESTS), dest='test', help=f'the test to perform, or comma-separated list: {TESTS} [default: all]')
 parser.add_argument('--ensemble', default='NVT', dest='ensemble', help=f'the thermodynamic ensemble to simulate: {ENSEMBLES} [default: NVT]')
