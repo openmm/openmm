@@ -108,7 +108,7 @@ __kernel void reduceForces(__global long* restrict longBuffer, __global real4* r
 __kernel void reduceEnergy(__global const mixed* restrict energyBuffer, __global mixed* restrict result, int bufferSize, int workGroupSize, __local mixed* tempBuffer) {
     const unsigned int thread = get_local_id(0);
     mixed sum = 0;
-    for (unsigned int index = thread; index < bufferSize; index += get_local_size(0))
+    for (unsigned int index = get_global_id(0); index < bufferSize; index += get_global_size(0))
         sum += energyBuffer[index];
     tempBuffer[thread] = sum;
     for (int i = 1; i < workGroupSize; i *= 2) {
@@ -117,7 +117,7 @@ __kernel void reduceEnergy(__global const mixed* restrict energyBuffer, __global
             tempBuffer[thread] += tempBuffer[thread+i];
     }
     if (thread == 0)
-        *result = tempBuffer[0];
+        result[get_group_id(0)] = tempBuffer[0];
 }
 
 /**
