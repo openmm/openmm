@@ -1182,7 +1182,7 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
             cc.clearBuffer(pmeGridLong);
         else
             cc.clearBuffer(pmeGrid1);
-        pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
+        pmeSpreadInducedDipolesKernel->execute(cc.getNumThreadBlocks()*64/4); // 64 = OpenCLContext::ThreadBlockSize
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
         computeFFT(true);
@@ -1258,7 +1258,7 @@ void CommonCalcAmoebaMultipoleForceKernel::computeInducedField() {
             cc.clearBuffer(pmeGridLong);
         else
             cc.clearBuffer(pmeGrid1);
-        pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
+        pmeSpreadInducedDipolesKernel->execute(cc.getNumThreadBlocks()*64/4); // 64 = OpenCLContext::ThreadBlockSize
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
         computeFFT(true);
@@ -3337,7 +3337,7 @@ void CommonCalcHippoNonbondedForceKernel::computeInducedField(int optOrder) {
             cc.clearBuffer(pmeGridLong);
         else
             cc.clearBuffer(pmeGrid1);
-        pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
+        pmeSpreadInducedDipolesKernel->execute(cc.getNumThreadBlocks()*64/4); // 64 = OpenCLContext::ThreadBlockSize
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
         computeFFT(true, false);
