@@ -191,11 +191,17 @@ static bool compareInt2LargeSIMD(mm_int2 a, mm_int2 b) {
 }
 
 void OpenCLNonbondedUtilities::initialize(const System& system) {
-    if (context.getSIMDWidth() == 32) {
-        std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
-        if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
+    // For smaller simulations, we don't want to oversubscribe on RDNA.
+    std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
+    if (context.getSIMDWidth() == 32 &&
+        vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.")
+    {
+        
+        // TODO: Find a better heuristic - where is the actual cutoff? Also eliminate #CUs as a confounding variable.
+        if (context.getNumAtoms() < 10000)
             numForceThreadBlocks /= 4;
-        }
+        else if (context.getNumAtoms() < 20000)
+            numForceThreadBlocks /= 2;
     }
 
     if (atomExclusions.size() == 0) {

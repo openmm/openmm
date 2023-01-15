@@ -259,10 +259,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                         // set instead of the VLIW instruction set. It therefore needs more thread blocks per
                         // compute unit to hide memory latency.
                         if (simdPerComputeUnit > 1) {
-                            if (simdWidth == 32)
-                                numThreadBlocksPerComputeUnit = 6*simdPerComputeUnit; // Navi seems to like more thread blocks than older GPUs
-                            else
-                                numThreadBlocksPerComputeUnit = 4*simdPerComputeUnit;
+                            numThreadBlocksPerComputeUnit = 4*simdPerComputeUnit;
                         }
 
                         // If the queries are supported then must be newer than SDK 2.4.
@@ -273,6 +270,55 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                         // Stay with the default simdWidth and numThreadBlocksPerComputeUnit.
                     }
                 }
+                // macOS doesn't have the APP SDK or `cl_amd_device_attribute_query`.
+                #if __APPLE__
+                else {
+                    // Check for RDNA on macOS, using device strings. The amount of shared
+                    // memory is an unreliable indicator of whether something is GCN
+                    // or RDNA: https://community.amd.com/t5/opencl/how-to-access-more-then-32k-byte-shared-memory-on-vega-navi/m-p/88028
+                    //
+                    // Similarly, we can't trust the wavefront size because macOS might put RDNA GPUs in wave64 mode.
+                    //
+                    // TODO: If someone with macOS + RDNA publishes results of `clinfo` online, re-evaluate this approach.
+                    bool isRDNA = false;
+                    string name = device.getInfo<CL_DEVICE_NAME>();
+                    string maybePrefix = "";
+                    
+                    // Be careful to respect spaces in device prefix.
+                    vector<string> candidatePrefixes = {
+                        "AMD Radeon Pro W", "AMD Radeon Pro ", "AMD Radeon RX ",
+                    };
+                    for (auto prefix : candidatePrefixes) {
+                        if (name.find(prefix) == 0) {
+                            maybePrefix = prefix;
+                            break;
+                        }
+                    }
+                    
+                    int numberStart = maybePrefix.size();
+                    if (numberStart > 0 && name.size() <= numberStart + 4) {
+                        // Vega: The next characters are something like: 560, 560X, Vega 64
+                        // RDNA: The next characters are something like 5300M, 5600, 5700 XT, 6800X.
+                        // If and only if RDNA, the fourth character is zero.
+                        string number = name.substr(numberStart, numberStart + 4);
+                        if (number.substr(3, 4) == "0")
+                            isRDNA = true;
+                    }
+                    
+                    // Current macOS doesn't support anything built before 2012, so nothing
+                    // is pre-GCN. Therefore we can assume multiple simds/CU.
+                    int simdPerComputeUnit;
+                    if (isRDNA) {
+                        simdWidth = 32;
+                        simdPerComputeUnit = 2;
+                    } else {
+                        simdWidth = 64;
+                        simdPerComputeUnit = 4;
+                    }
+                    numThreadBlocksPerComputeUnit = 4*simdPerComputeUnit;
+                }
+                #endif
+                
                 // AMD APP SDK 2.4 has a performance problem with atomics. Enable the work around. This is fixed after SDK 2.4.
                 if (!amdPostSdk2_4)
                     compilationDefines["AMD_ATOMIC_WORK_AROUND"] = "";
