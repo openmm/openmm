@@ -211,7 +211,11 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             throw OpenMMException("This device does not support double precision");
         string vendor = device.getInfo<CL_DEVICE_VENDOR>();
         int numThreadBlocksPerComputeUnit = 6;
-        if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
+        if (vendor.size() >= 5 && vendor.substr(0, 5) == "Apple") {
+            simdWidth = 32;
+            numThreadBlocksPerComputeUnit = 12;
+        }
+        else if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
             compilationDefines["WARPS_ARE_ATOMIC"] = "";
             simdWidth = 32;
             if (device.getInfo<CL_DEVICE_EXTENSIONS>().find("cl_nv_device_attribute_query") != string::npos) {
@@ -683,7 +687,11 @@ int OpenCLContext::computeThreadBlockSize(double memory) const {
     int maxShared = device.getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
     // On some implementations, more local memory gets used than we calculate by
     // adding up the sizes of the fields.  To be safe, include a factor of 0.5.
+    #if __APPLE__ && defined(__aarch64__)
+    int max = (int) (double(20 * 1024)/memory);
+    #else
     int max = (int) (0.5*maxShared/memory);
+    #endif
     if (max < 64)
         return 32;
     int threads = 64;

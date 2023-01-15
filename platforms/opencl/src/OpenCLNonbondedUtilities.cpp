@@ -65,8 +65,17 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
         forceThreadBlockSize = 1;
     }
     else if (context.getSIMDWidth() == 32) {
-            numForceThreadBlocks = 4*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
-            forceThreadBlockSize = 256;
+        int blocksPerCore = 4;
+        std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
+        if (vendor.size() >= 5 && vendor.substr(0, 5) == "Apple") {
+            blocksPerCore = 3;
+        }
+        else if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
+            blocksPerCore = 16;
+        }
+        
+        numForceThreadBlocks = blocksPerCore*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+        forceThreadBlockSize = 256;
     }
     else {
         numForceThreadBlocks = context.getNumThreadBlocks();
@@ -182,6 +191,13 @@ static bool compareInt2LargeSIMD(mm_int2 a, mm_int2 b) {
 }
 
 void OpenCLNonbondedUtilities::initialize(const System& system) {
+    if (context.getSIMDWidth() == 32) {
+        std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
+        if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
+            numForceThreadBlocks /= 4;
+        }
+    }
+
     if (atomExclusions.size() == 0) {
         // No exclusions were specifically requested, so just mark every atom as not interacting with itself.
 
