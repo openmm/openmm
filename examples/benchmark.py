@@ -4,10 +4,11 @@ import openmm as mm
 import openmm.unit as unit
 from datetime import datetime
 import argparse
+import os
 
 def cpuinfo():
     """Return CPU info"""
-    import os, platform, subprocess, re
+    import platform, subprocess, re
     if platform.system() == "Windows":
         return platform.processor()
     elif platform.system() == "Darwin":
@@ -41,7 +42,6 @@ def appendTestResult(filename=None, test_result=None, system_info=None):
     if filename is None:
         return
 
-    import os
     all_results = { 'benchmarks' : list() }
     if system_info is not None:
         all_results['system'] = system_info
@@ -266,7 +266,6 @@ def serializeTest(directory=None, system=None, integrator=None, state=None, core
     metadata : dict
         Metadata to dump to YAML
     """
-    import os
     os.makedirs(directory, exist_ok=True)
     import openmm
     def serialize(obj, filename):
@@ -512,7 +511,6 @@ for key, value in system_info.items():
 
 if args.outfile is not None:
     # Remove output file
-    import os
     if os.path.exists(args.outfile):
         os.unlink(args.outfile)
     # Write system info
@@ -561,4 +559,4 @@ elif args.style == 'table':
                 print(e)
             pass
 else:
-    raise ValueError(f"style {args.style} unkown; must be one of ['simple', 'table']")
+    raise ValueError(f"style {args.style} unknown; must be one of ['simple', 'table']")
