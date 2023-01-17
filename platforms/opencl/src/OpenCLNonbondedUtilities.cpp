@@ -65,8 +65,14 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
         forceThreadBlockSize = 1;
     }
     else if (context.getSIMDWidth() == 32) {
-            numForceThreadBlocks = 4*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
-            forceThreadBlockSize = 256;
+        string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
+        int blocksPerCore = 4;
+        if (vendor.size() >= 5 && vendor.substr(0, 5) == "Apple") {
+            // Allocate 768 threads/core, a magic number regarding ALU utilization.
+            blocksPerCore = 3;
+        }
+        numForceThreadBlocks = blocksPerCore*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+        forceThreadBlockSize = 256;
     }
     else {
         numForceThreadBlocks = context.getNumThreadBlocks();
