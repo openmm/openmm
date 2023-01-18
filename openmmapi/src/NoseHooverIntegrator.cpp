@@ -74,7 +74,7 @@ int NoseHooverIntegrator::addThermostat(double temperature, double collisionFreq
         throw OpenMMException("NoseHooverIntegrator: temperature cannot be negative");
     if (collisionFrequency <= 0)
         throw OpenMMException("NoseHooverIntegrator: collisionFrequency must be positive");
-    if (collisionFrequency < 0)
+    if (chainLength <= 0)
         throw OpenMMException("NoseHooverIntegrator: chainLength must be positive");
     if (numMTS < 0)
         throw OpenMMException("NoseHooverIntegrator: numMTS must be positive");
@@ -98,7 +98,7 @@ int NoseHooverIntegrator::addSubsystemThermostat(const std::vector<int>& thermos
         throw OpenMMException("NoseHooverIntegrator: collisionFrequency must be positive");
     if (relativeCollisionFrequency <= 0)
         throw OpenMMException("NoseHooverIntegrator: relativeCollisionFrequency must be positive");
-    if (collisionFrequency < 0)
+    if (chainLength <= 0)
         throw OpenMMException("NoseHooverIntegrator: chainLength must be positive");
     if (numMTS < 0)
         throw OpenMMException("NoseHooverIntegrator: numMTS must be positive");
