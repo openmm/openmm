@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,6 +27,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#define USE_VKFFT
+
+#ifdef USE_VKFFT
+#define VKFFT_BACKEND 3
+#include "vkFFT.h"
+#endif
 #include "OpenCLArray.h"
 
 namespace OpenMM {
@@ -64,6 +70,9 @@ public:
      * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
      */
     OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize, bool realToComplex=false);
+#ifdef USE_VKFFT
+    ~OpenCLFFT3D();
+#endif
     /**
      * Perform a Fourier transform.  The transform cannot be done in-place: the input and output
      * arrays must be different.  Also, the input array is used as workspace, so its contents
@@ -86,14 +95,18 @@ public:
      */
     static int findLegalDimension(int minimum);
 private:
-    cl::Kernel createKernel(int xsize, int ysize, int zsize, int& threads, int axis, bool forward, bool inputIsReal);
     int xsize, ysize, zsize;
     int xthreads, ythreads, zthreads;
     bool packRealAsComplex;
     OpenCLContext& context;
+#ifdef USE_VKFFT
+    VkFFTApplication app;
+#else
+    cl::Kernel createKernel(int xsize, int ysize, int zsize, int& threads, int axis, bool forward, bool inputIsReal);
     cl::Kernel xkernel, ykernel, zkernel;
     cl::Kernel invxkernel, invykernel, invzkernel;
     cl::Kernel packForwardKernel, unpackForwardKernel, packBackwardKernel, unpackBackwardKernel;
+#endif
 };
 
 } // namespace OpenMM

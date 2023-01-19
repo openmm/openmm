@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,6 +36,52 @@
 
 using namespace OpenMM;
 using namespace std;
+
+#ifdef USE_VKFFT
+
+OpenCLFFT3D::OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize, bool realToComplex) :
+        context(context), xsize(xsize), ysize(ysize), zsize(zsize) {
+    app = {};
+    VkFFTConfiguration config = {};
+    config.FFTdim = 3;
+    config.size[0] = zsize;
+    config.size[1] = ysize;
+    config.size[2] = xsize;
+    config.performR2C = realToComplex;
+    config.doublePrecision = context.getUseDoublePrecision();
+    config.device = &context.getDevice()();
+    config.context = &context.getContext()();
+    config.inverseReturnToInputBuffer = true;
+    config.isInputFormatted = 1;
+    config.inputBufferStride[0] = zsize;
+    config.inputBufferStride[1] = ysize*zsize;
+    config.inputBufferStride[2] = xsize*ysize*zsize;
+    VkFFTResult result = initializeVkFFT(&app, config);
+    if (result != VKFFT_SUCCESS)
+        throw OpenMMException("Error initializing VkFFT: "+context.intToString(result));
+}
+
+OpenCLFFT3D::~OpenCLFFT3D() {
+    deleteVkFFT(&app);
+}
+
+void OpenCLFFT3D::execFFT(OpenCLArray& in, OpenCLArray& out, bool forward) {
+    VkFFTLaunchParams params = {};
+    if (forward) {
+        params.inputBuffer = &in.getDeviceBuffer()();
+        params.buffer = &out.getDeviceBuffer()();
+    }
+    else {
+        params.inputBuffer = &out.getDeviceBuffer()();
+        params.buffer = &in.getDeviceBuffer()();
+    }
+    params.commandQueue = &context.getQueue()();
+    VkFFTResult result = VkFFTAppend(&app, forward ? -1 : 1, &params);
+    if (result != VKFFT_SUCCESS)
+        throw OpenMMException("Error executing VkFFT: "+context.intToString(result));
+}
+
+#else
 
 OpenCLFFT3D::OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize, bool realToComplex) :
         context(context), xsize(xsize), ysize(ysize), zsize(zsize) {
@@ -139,23 +185,6 @@ void OpenCLFFT3D::execFFT(OpenCLArray& in, OpenCLArray& out, bool forward) {
         kernel3.setArg<cl::Buffer>(0, in.getDeviceBuffer());
         kernel3.setArg<cl::Buffer>(1, out.getDeviceBuffer());
         context.executeKernel(kernel3, xsize*ysize*zsize, ythreads);
-    }
-}
-
-int OpenCLFFT3D::findLegalDimension(int minimum) {
-    if (minimum < 1)
-        return 1;
-    while (true) {
-        // Attempt to factor the current value.
-
-        int unfactored = minimum;
-        for (int factor = 2; factor < 8; factor++) {
-            while (unfactored > 1 && unfactored%factor == 0)
-                unfactored /= factor;
-        }
-        if (unfactored == 1)
-            return minimum;
-        minimum++;
     }
 }
 
@@ -365,5 +394,29 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int& threa
         kernel.setArg(3, bufferSize, NULL);
         kernel.setArg(4, bufferSize, NULL);
         return kernel;
+    }
+}
+
+#endif
+
+int OpenCLFFT3D::findLegalDimension(int minimum) {
+    if (minimum < 1)
+        return 1;
+#ifdef USE_VKFFT
+    const int maxFactor = 13;
+#else
+    const int maxFactor = 7;
+#endif
+    while (true) {
+        // Attempt to factor the current value.
+
+        int unfactored = minimum;
+        for (int factor = 2; factor <= maxFactor; factor++) {
+            while (unfactored > 1 && unfactored%factor == 0)
+                unfactored /= factor;
+        }
+        if (unfactored == 1)
+            return minimum;
+        minimum++;
     }
 }
