@@ -32,7 +32,8 @@ from __future__ import absolute_import
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
-from openmm.app import PDBFile, PDBxFile
+from openmm.app import PDBFile, PDBxFile, Topology
+from openmm.unit import nanometers, Quantity
 
 class PDBReporter(object):
     """PDBReporter outputs a series of frames from a Simulation to a PDB file.
@@ -40,7 +41,7 @@ class PDBReporter(object):
     To use it, create a PDBReporter, then add it to the Simulation's list of reporters.
     """
 
-    def __init__(self, file, reportInterval, enforcePeriodicBox=None):
+    def __init__(self, file, reportInterval, enforcePeriodicBox=None, atomSubset=None):
         """Create a PDBReporter.
 
         Parameters
@@ -54,12 +55,15 @@ class PDBReporter(object):
             lies in the same periodic box.  If None (the default), it will automatically decide whether
             to translate molecules based on whether the system being simulated uses periodic boundary
             conditions.
+        atomSubset: list
+            Atom indices (zero indexed) of the particles to output. if None (the default), all particles will be output.
         """
         self._reportInterval = reportInterval
         self._enforcePeriodicBox = enforcePeriodicBox
         self._out = open(file, 'w')
         self._topology = None
         self._nextModel = 0
+        self._atomSubset = atomSubset
 
     def describeNextReport(self, simulation):
         """Get information about the next report this object will generate.
@@ -91,11 +95,27 @@ class PDBReporter(object):
         state : State
             The current state of the simulation
         """
+        if self._atomSubset is not None:
+            if not all(a==int(a) for a in self._atomSubset):
+                raise ValueError('all of the indices in atomSubset must be integers')
+            if min(self._atomSubset) < 0:
+                raise ValueError('The smallest allowed value in atomSubset is zero')
+            if max(self._atomSubset) >= simulation.topology.getNumAtoms():
+                raise ValueError('The maximum allowed value in atomSubset must be less than the total number of particles')
+            if len(set(self._atomSubset)) != len(self._atomSubset):
+                raise ValueError('atomSubset must contain unique indices')
+
+            topology = _subsetTopology(simulation.topology, self._atomSubset)
+            positions = _subsetPositions(state.getPositions(), self._atomSubset)
+        else:
+            topology = simulation.topology
+            positions = state.getPositions()
+
         if self._nextModel == 0:
-            PDBFile.writeHeader(simulation.topology, self._out)
-            self._topology = simulation.topology
+            PDBFile.writeHeader(topology, self._out)
+            self._topology = topology
             self._nextModel += 1
-        PDBFile.writeModel(simulation.topology, state.getPositions(), self._out, self._nextModel)
+        PDBFile.writeModel(topology, positions, self._out, self._nextModel)
         self._nextModel += 1
         if hasattr(self._out, 'flush') and callable(self._out.flush):
             self._out.flush()
@@ -131,3 +151,54 @@ class PDBxReporter(PDBReporter):
 
     def __del__(self):
         self._out.close()
+
+def _subsetPositions(positions, atomSubset):
+    """Create a subset of the positions
+
+    Parameters
+    ----------
+    positions : list
+        The positions
+    atomSubset : list
+        The list of atomic indices in the subset
+
+    Returns
+    -------
+    subsetPositions : list
+        A subset of the input positions that only contains the atoms
+        specified in atomSubset.
+    """
+
+    return Quantity([positions[i].value_in_unit(nanometers) for i in atomSubset], unit=nanometers)
+
+    
+def _subsetTopology(topology, atomSubset):
+    """Create a subset of an existing topology.
+
+    Parameters
+    ----------
+    topology : Topology
+        The Topology to create a subset from
+    atomSubset : list
+        The list of atomic indices in the subset
+
+    Returns
+    -------
+    subsetTopology : Topology
+        A new Topology copied from the input topology that only contains the atoms
+        specified in atomSubset.
+    """
+    subsetTopology = Topology()
+
+    posIndex = 0
+    for chain in topology.chains():
+        c = subsetTopology.addChain(chain.id)
+        residues = list(chain.residues())
+        for res in residues:
+            r = subsetTopology.addResidue(res.name,c,res.id,res.insertionCode)
+            for atom in res.atoms():
+                    if posIndex in atomSubset:
+                        atom = subsetTopology.addAtom(atom.name, atom.element, r, atom.id)
+                    posIndex += 1
+
+    return subsetTopology
