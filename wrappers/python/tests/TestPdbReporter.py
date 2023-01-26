@@ -28,6 +28,22 @@ class TestPDBReporter(unittest.TestCase):
             # check if the output out trajectory contains the expected number of atoms
             checkpdb = app.PDBFile(filename)
             self.assertEqual(len(checkpdb.positions), len(subset))
+
+    def testWriteAll(self):
+        """Test all atoms are written when atomSubset is not specified"""
+        
+        with tempfile.TemporaryDirectory() as tempdir:
+            filename = os.path.join(tempdir, 'temptraj.pdb')
+            simulation = app.Simulation(self.pdb.topology, self.system, mm.LangevinMiddleIntegrator(300*unit.kelvin, 1.0/unit.picosecond, 0.002*unit.picoseconds))
+            simulation.context.setPositions(self.pdb.positions)
+
+
+            simulation.reporters.append(app.PDBReporter(filename, 10))
+            simulation.step(10)
+
+            # check if the output out trajectory contains the expected number of atoms
+            checkpdb = app.PDBFile(filename)
+            self.assertEqual(len(checkpdb.positions), simulation.topology.getNumAtoms())
     
     def testInvalidSubsets(self):
         """Test that an exception is raised when the indices in atomSubset are invalid"""
@@ -35,7 +51,7 @@ class TestPDBReporter(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             filename = os.path.join(tempdir, 'temptraj.pdb')
 
-            for subset in [[-1,10], [0,99999], [0,0,0,1], [0.1,0.2]]:
+            for subset in [[-1,10], [0,99999], [0,0,0,1], [0.1,0.2], [5,10,0,9], ["C", "H"],[]]:
 
                 simulation = app.Simulation(self.pdb.topology, self.system, mm.LangevinMiddleIntegrator(300*unit.kelvin, 1.0/unit.picosecond, 0.002*unit.picoseconds))
                 simulation.context.setPositions(self.pdb.positions)
