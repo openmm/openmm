@@ -37,6 +37,21 @@
 
 namespace OpenMM {
 
+#ifdef USE_VKFFT
+/**
+ * This class performs three dimensional Fast Fourier Transforms.  It uses the
+ * VkFFT library (https://github.com/DTolm/VkFFT).
+ * <p>
+ * This class is most efficient when the size of each dimension is a product of
+ * small prime factors: 2, 3, 5, 7, 11, and 13.  You can call findLegalDimension()
+ * to determine the smallest size that satisfies this requirement and is greater
+ * than or equal to a specified minimum size.
+ * <p>
+ * Note that this class performs an unnormalized transform.  That means that if you perform
+ * a forward transform followed immediately by an inverse transform, the effect is to
+ * multiply every value of the original data set by the total number of data points.
+ */
+#else
 /**
  * This class performs three dimensional Fast Fourier Transforms.  It is based on the
  * mixed radix algorithm described in
@@ -57,6 +72,7 @@ namespace OpenMM {
  * a forward transform followed immediately by an inverse transform, the effect is to
  * multiply every value of the original data set by the total number of data points.
  */
+#endif
 
 class OPENMM_EXPORT_COMMON OpenCLFFT3D {
 public:
