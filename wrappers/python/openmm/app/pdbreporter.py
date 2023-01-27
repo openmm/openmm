@@ -33,7 +33,7 @@ __author__ = "Peter Eastman"
 __version__ = "1.0"
 
 from openmm.app import PDBFile, PDBxFile, Topology
-from openmm.unit import angstroms, Quantity
+from openmm.unit import angstroms
 
 class PDBReporter(object):
     """PDBReporter outputs a series of frames from a Simulation to a PDB file.
@@ -99,21 +99,6 @@ class PDBReporter(object):
         """
         if self._atomSubset is not None:
             if self._subsetTopology is None:
-                # check atomSubset is valid 
-                # TODO: move to constructor
-                if len(self._atomSubset)==0:
-                    raise ValueError('atomSubset cannot be an empty list')
-                if not all(a==int(a) for a in self._atomSubset):
-                    raise ValueError('all of the indices in atomSubset must be integers')
-                if len(set(self._atomSubset)) != len(self._atomSubset):
-                    raise ValueError('atomSubset must contain unique indices')
-                if sorted(self._atomSubset) != self._atomSubset:
-                    raise ValueError('atomSubset must be sorted in ascending order')
-                if self._atomSubset[0] < 0:
-                    raise ValueError('The smallest allowed value in atomSubset is zero')
-                if self._atomSubset[-1] >= simulation.topology.getNumAtoms():
-                    raise ValueError('The maximum allowed value in atomSubset must be less than the total number of particles')
-                
                 self._createSubsetTopology(simulation.topology)
 
             topology = self._subsetTopology
@@ -143,6 +128,21 @@ class PDBReporter(object):
         topology : Topology
             The Topology to create a subset from
         """
+        # check atomSubset is valid 
+        if len(self._atomSubset)==0:
+            raise ValueError('atomSubset cannot be an empty list')
+        if not all(a==int(a) for a in self._atomSubset):
+            raise ValueError('all of the indices in atomSubset must be integers')
+        if len(set(self._atomSubset)) != len(self._atomSubset):
+            raise ValueError('atomSubset must contain unique indices')
+        if sorted(self._atomSubset) != self._atomSubset:
+            raise ValueError('atomSubset must be sorted in ascending order')
+        if self._atomSubset[0] < 0:
+            raise ValueError('The smallest allowed value in atomSubset is zero')
+        if self._atomSubset[-1] >= topology.getNumAtoms():
+            raise ValueError('The maximum allowed value in atomSubset must be less than the total number of particles')
+        
+
         self._subsetTopology = Topology()
         
         # convert to set for fast look up
@@ -158,9 +158,10 @@ class PDBReporter(object):
                         if posIndex in atomSubsetSet:
                             atom = self._subsetTopology.addAtom(atom.name, atom.element, r, atom.id)
                         posIndex += 1
+
+        self._subsetTopology.setPeriodicBoxVectors(topology.getPeriodicBoxVectors())
+
         
-
-
     def __del__(self):
         if self._topology is not None:
             PDBFile.writeFooter(self._topology, self._out)
@@ -182,10 +183,25 @@ class PDBxReporter(PDBReporter):
         state : State
             The current state of the simulation
         """
+
+        if self._atomSubset is not None:
+            if self._subsetTopology is None:
+                self._createSubsetTopology(simulation.topology)
+
+            topology = self._subsetTopology
+
+            #PDBFile will convert to angstroms so do it here first instead
+            positions = state.getPositions().value_in_unit(angstroms) 
+            positions = [positions[i] for i in self._atomSubset]
+
+        else:
+            topology = simulation.topology
+            positions = state.getPositions()
+
         if self._nextModel == 0:
-            PDBxFile.writeHeader(simulation.topology, self._out)
+            PDBxFile.writeHeader(topology, self._out)
             self._nextModel += 1
-        PDBxFile.writeModel(simulation.topology, state.getPositions(), self._out, self._nextModel)
+        PDBxFile.writeModel(topology, positions, self._out, self._nextModel)
         self._nextModel += 1
         if hasattr(self._out, 'flush') and callable(self._out.flush):
             self._out.flush()
