@@ -255,10 +255,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                         // set instead of the VLIW instruction set. It therefore needs more thread blocks per
                         // compute unit to hide memory latency.
                         if (simdPerComputeUnit > 1) {
-                            if (simdWidth == 32)
-                                numThreadBlocksPerComputeUnit = 6*simdPerComputeUnit; // Navi seems to like more thread blocks than older GPUs
-                            else
-                                numThreadBlocksPerComputeUnit = 4*simdPerComputeUnit;
+                            numThreadBlocksPerComputeUnit = 4*simdPerComputeUnit;
                         }
 
                         // If the queries are supported then must be newer than SDK 2.4.
