@@ -59,6 +59,50 @@ class TestPDBReporter(unittest.TestCase):
                 simulation.reporters.append(app.PDBReporter(filename, 10, atomSubset=subset))
                 
                 self.assertRaises(ValueError, lambda: simulation.step(10))
+    
+    def testBondSubset(self):
+        """ Test that CONNECT records are output correctly when using atomSubset"""
+
+        # use a testcase that has CONNECT records in the input pdb file
+        ff = app.ForceField('amber14/protein.ff14SB.xml', 'amber14/GLYCAM_06j-1.xml','amber14/tip3pfb.xml')
+        pdb = app.PDBFile('systems/glycopeptide.pdb')
+
+        # add in water molecules
+        modeller = app.Modeller(pdb.topology, pdb.positions)
+        modeller.addSolvent(ff, padding=1.0*unit.nanometer)
+
+        system = ff.createSystem(modeller.topology)
+        
+        with tempfile.TemporaryDirectory() as tempdir:
+            filename = os.path.join(tempdir, 'temptraj.pdb')
+            simulation = app.Simulation(modeller.topology, system, mm.LangevinMiddleIntegrator(1.0*unit.kelvin, 1.0/unit.picosecond, 0.0000001*unit.picoseconds))
+            simulation.context.setPositions(modeller.positions)
+
+            simulation.minimizeEnergy(maxIterations=100)
+
+            # output just the glycopeptide atoms
+            atomSubset=list(range(pdb.topology.getNumAtoms()))
+            simulation.reporters.append(app.PDBReporter(filename,1, atomSubset=atomSubset))
+
+            simulation.step(1)
+
+            # clear reporters to ensure PDB output is closed and footer written.
+            simulation.reporters.clear()
+
+            validpdb = pdb
+            testpdb = app.PDBFile(filename)
+
+            validBonds = list(validpdb.topology.bonds())
+            testBonds = list(testpdb.topology.bonds())
+            
+            self.assertEqual(len(validBonds), len(testBonds))
+
+            for validBond, testBond in zip(validBonds, testBonds):
+                self.assertEqual(str(validBond), str(testBond))
+
+
+
+
 
 class TestPDBxReporter(unittest.TestCase):
     def setUp(self):
@@ -114,4 +158,47 @@ class TestPDBxReporter(unittest.TestCase):
                 simulation.reporters.append(app.PDBxReporter(filename, 10, atomSubset=subset))
                 
                 self.assertRaises(ValueError, lambda: simulation.step(10))
+
+
+    def testBondSubset(self):
+        """ Test that CONNECT records are output correctly when using atomSubset"""
+
+        # use a testcase that has CONNECT records in the input pdb file
+        ff = app.ForceField('amber14/protein.ff14SB.xml', 'amber14/GLYCAM_06j-1.xml','amber14/tip3pfb.xml')
+        pdb = app.PDBFile('systems/glycopeptide.pdb')
+
+        # add in water molecules
+        modeller = app.Modeller(pdb.topology, pdb.positions)
+        modeller.addSolvent(ff, padding=1.0*unit.nanometer)
+
+        system = ff.createSystem(modeller.topology)
+        
+        with tempfile.TemporaryDirectory() as tempdir:
+            filename = os.path.join(tempdir, 'temptraj.pdbx')
+            simulation = app.Simulation(modeller.topology, system, mm.LangevinMiddleIntegrator(1.0*unit.kelvin, 1.0/unit.picosecond, 0.0000001*unit.picoseconds))
+            simulation.context.setPositions(modeller.positions)
+
+            simulation.minimizeEnergy(maxIterations=100)
+
+            # output just the glycopeptide atoms
+            atomSubset=list(range(pdb.topology.getNumAtoms()))
+            simulation.reporters.append(app.PDBxReporter(filename,1, atomSubset=atomSubset))
+
+            simulation.step(1)
+
+            # clear reporters to ensure PDB output is closed and footer written.
+            simulation.reporters.clear()
+
+            validpdb = pdb
+            testpdb = app.PDBxFile(filename)
+
+            validBonds = list(validpdb.topology.bonds())
+            testBonds = list(testpdb.topology.bonds())
+            
+            self.assertEqual(len(validBonds), len(testBonds))
+
+            for validBond, testBond in zip(validBonds, testBonds):
+                self.assertEqual(str(validBond), str(testBond))
+
+
     

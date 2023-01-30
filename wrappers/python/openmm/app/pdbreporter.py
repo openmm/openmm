@@ -148,6 +148,9 @@ class PDBReporter(object):
         # convert to set for fast look up
         atomSubsetSet=set(self._atomSubset)
 
+        # store a map from posIndex to Atom object for when we add the bonds
+        indexToAtom = {}
+
         posIndex = 0
         for chain in topology.chains():
             c = self._subsetTopology.addChain(chain.id)
@@ -157,11 +160,18 @@ class PDBReporter(object):
                 for atom in res.atoms():
                         if posIndex in atomSubsetSet:
                             atom = self._subsetTopology.addAtom(atom.name, atom.element, r, atom.id)
+                            indexToAtom[posIndex] = atom
                         posIndex += 1
 
         self._subsetTopology.setPeriodicBoxVectors(topology.getPeriodicBoxVectors())
 
+        for bond in topology.bonds():
+            if bond[0].index in atomSubsetSet and bond[1].index in atomSubsetSet:
+                atom1 = indexToAtom[bond[0].index]
+                atom2 = indexToAtom[bond[1].index]
+                self._subsetTopology.addBond(atom1, atom2, bond.type, bond.order)
         
+
     def __del__(self):
         if self._topology is not None:
             PDBFile.writeFooter(self._topology, self._out)
