@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -497,23 +497,24 @@ void OpenCLContext::initialize() {
     bonded->initialize(system);
     numForceBuffers = std::max(numForceBuffers, (int) platformData.contexts.size());
     int energyBufferSize = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
+    int numComputeUnits = device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
     if (useDoublePrecision) {
         forceBuffers.initialize<mm_double4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
         force.initialize<mm_double4>(*this, &forceBuffers.getDeviceBuffer(), paddedNumAtoms, "force");
         energyBuffer.initialize<cl_double>(*this, energyBufferSize, "energyBuffer");
-        energySum.initialize<cl_double>(*this, 1, "energySum");
+        energySum.initialize<cl_double>(*this, numComputeUnits, "energySum");
     }
     else if (useMixedPrecision) {
         forceBuffers.initialize<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
         force.initialize<mm_float4>(*this, &forceBuffers.getDeviceBuffer(), paddedNumAtoms, "force");
         energyBuffer.initialize<cl_double>(*this, energyBufferSize, "energyBuffer");
-        energySum.initialize<cl_double>(*this, 1, "energySum");
+        energySum.initialize<cl_double>(*this, numComputeUnits, "energySum");
     }
     else {
         forceBuffers.initialize<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers");
         force.initialize<mm_float4>(*this, &forceBuffers.getDeviceBuffer(), paddedNumAtoms, "force");
         energyBuffer.initialize<cl_float>(*this, energyBufferSize, "energyBuffer");
-        energySum.initialize<cl_float>(*this, 1, "energySum");
+        energySum.initialize<cl_float>(*this, numComputeUnits, "energySum");
     }
     reduceForcesKernel.setArg<cl::Buffer>(0, longForceBuffer.getDeviceBuffer());
     reduceForcesKernel.setArg<cl::Buffer>(1, forceBuffers.getDeviceBuffer());
@@ -798,17 +799,18 @@ double OpenCLContext::reduceEnergy() {
     reduceEnergyKernel.setArg<cl_int>(2, energyBuffer.getSize());
     reduceEnergyKernel.setArg<cl_int>(3, workGroupSize);
     reduceEnergyKernel.setArg(4, workGroupSize*energyBuffer.getElementSize(), NULL);
-    executeKernel(reduceEnergyKernel, workGroupSize, workGroupSize);
+    executeKernel(reduceEnergyKernel, workGroupSize*energySum.getSize(), workGroupSize);
+    energySum.download(pinnedMemory);
+    double result = 0;
     if (getUseDoublePrecision() || getUseMixedPrecision()) {
-        double energy;
-        energySum.download(&energy);
-        return energy;
+        for (int i = 0; i < energySum.getSize(); i++)
+            result += ((double*) pinnedMemory)[i];
     }
     else {
-        float energy;
-        energySum.download(&energy);
-        return energy;
+        for (int i = 0; i < energySum.getSize(); i++)
+            result += ((float*) pinnedMemory)[i];
     }
+    return result;
 }
 
 void OpenCLContext::setCharges(const vector<double>& charges) {
