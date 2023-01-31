@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -96,15 +96,6 @@ static bool usesVariable(const Lepton::ParsedExpression& expression, const strin
 
 static pair<ExpressionTreeNode, string> makeVariable(const string& name, const string& value) {
     return make_pair(ExpressionTreeNode(new Operation::Variable(name)), value);
-}
-
-static void replaceFunctionsInExpression(map<string, CustomFunction*>& functions, ExpressionProgram& expression) {
-    for (int i = 0; i < expression.getNumOperations(); i++) {
-        if (expression.getOperation(i).getId() == Operation::CUSTOM) {
-            const Operation::Custom& op = dynamic_cast<const Operation::Custom&>(expression.getOperation(i));
-            expression.setOperation(i, new Operation::Custom(op.getName(), functions[op.getName()]->clone(), op.getDerivOrder()));
-        }
-    }
 }
 
 void CommonApplyConstraintsKernel::initialize(const System& system) {
@@ -5136,6 +5127,30 @@ private:
     ArrayInterface& invAtomOrder;
 };
 
+// This class allows us to update tabulated functions without having to recompile expressions
+// that use them.
+class CommonCalcCustomCVForceKernel::TabulatedFunctionWrapper : public CustomFunction {
+public:
+    TabulatedFunctionWrapper(vector<Lepton::CustomFunction*>& tabulatedFunctions, int index) :
+            tabulatedFunctions(tabulatedFunctions), index(index) {
+    }
+    int getNumArguments() const {
+        return tabulatedFunctions[index]->getNumArguments();
+    }
+    double evaluate(const double* arguments) const {
+        return tabulatedFunctions[index]->evaluate(arguments);
+    }
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
+        return tabulatedFunctions[index]->evaluateDerivative(arguments, derivOrder);
+    }
+    CustomFunction* clone() const {
+        return new TabulatedFunctionWrapper(tabulatedFunctions, index);
+    }
+private:
+    vector<Lepton::CustomFunction*>& tabulatedFunctions;    
+    int index;
+};
+
 void CommonCalcCustomCVForceKernel::initialize(const System& system, const CustomCVForce& force, ContextImpl& innerContext) {
     ContextSelector selector(cc);
     int numCVs = force.getNumCollectiveVariables();
@@ -5152,19 +5167,34 @@ void CommonCalcCustomCVForceKernel::initialize(const System& system, const Custo
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-    for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
-        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+    tabulatedFunctions.resize(force.getNumTabulatedFunctions(), NULL);
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        tabulatedFunctions[i] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+        functions[force.getTabulatedFunctionName(i)] = new TabulatedFunctionWrapper(tabulatedFunctions, i);
+    }
 
     // Create the expressions.
 
-    Lepton::ParsedExpression energyExpr = Lepton::Parser::parse(force.getEnergyFunction(), functions);
-    energyExpression = energyExpr.createProgram();
+    Lepton::ParsedExpression energyExpr = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
+    energyExpression = energyExpr.createCompiledExpression();
     variableDerivExpressions.clear();
     for (auto& name : variableNames)
-        variableDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
+        variableDerivExpressions.push_back(energyExpr.differentiate(name).createCompiledExpression());
     paramDerivExpressions.clear();
     for (auto& name : paramDerivNames)
-        paramDerivExpressions.push_back(energyExpr.differentiate(name).optimize().createProgram());
+        paramDerivExpressions.push_back(energyExpr.differentiate(name).createCompiledExpression());
+    globalValues.resize(globalParameterNames.size());
+    cvValues.resize(numCVs);
+    map<string, double*> variableLocations;
+    for (int i = 0; i < globalParameterNames.size(); i++)
+        variableLocations[globalParameterNames[i]] = &globalValues[i];
+    for (int i = 0; i < numCVs; i++)
+        variableLocations[variableNames[i]] = &cvValues[i];
+    energyExpression.setVariableLocations(variableLocations);
+    for (CompiledExpression& expr : variableDerivExpressions)
+        expr.setVariableLocations(variableLocations);
+    for (CompiledExpression& expr : paramDerivExpressions)
+        expr.setVariableLocations(variableLocations);
 
     // Delete the custom functions.
 
@@ -5229,15 +5259,20 @@ void CommonCalcCustomCVForceKernel::initialize(const System& system, const Custo
         cc.addForce(new ForceInfo(*info));
 }
 
+CommonCalcCustomCVForceKernel::~CommonCalcCustomCVForceKernel() {
+    for (int i = 0; i < tabulatedFunctions.size(); i++)
+        if (tabulatedFunctions[i] != NULL)
+            delete tabulatedFunctions[i];
+}
+
 double CommonCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl& innerContext, bool includeForces, bool includeEnergy) {
     copyState(context, innerContext);
     int numCVs = variableNames.size();
     int numAtoms = cc.getNumAtoms();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
-    vector<double> cvValues;
     vector<map<string, double> > cvDerivs(numCVs);
     for (int i = 0; i < numCVs; i++) {
-        cvValues.push_back(innerContext.calcForcesAndEnergy(true, true, 1<<i));
+        cvValues[i] = innerContext.calcForcesAndEnergy(true, true, 1<<i);
         ContextSelector selector(cc);
         copyForcesKernel->setArg(0, cvForces[i]);
         copyForcesKernel->execute(numAtoms);
@@ -5247,14 +5282,11 @@ double CommonCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl&
     // Compute the energy and forces.
 
     ContextSelector selector(cc);
-    map<string, double> variables;
-    for (auto& name : globalParameterNames)
-        variables[name] = context.getParameter(name);
-    for (int i = 0; i < numCVs; i++)
-        variables[variableNames[i]] = cvValues[i];
-    double energy = energyExpression.evaluate(variables);
+    for (int i = 0; i < globalParameterNames.size(); i++)
+        globalValues[i] = context.getParameter(globalParameterNames[i]);
+    double energy = energyExpression.evaluate();
     for (int i = 0; i < numCVs; i++) {
-        double dEdV = variableDerivExpressions[i].evaluate(variables);
+        double dEdV = variableDerivExpressions[i].evaluate();
         addForcesKernel->setArg(2*i+2, cvForces[i]);
         if (cc.getUseDoublePrecision())
             addForcesKernel->setArg(2*i+3, dEdV);
@@ -5262,16 +5294,18 @@ double CommonCalcCustomCVForceKernel::execute(ContextImpl& context, ContextImpl&
             addForcesKernel->setArg(2*i+3, (float) dEdV);
     }
     addForcesKernel->execute(numAtoms);
-    
+
     // Compute the energy parameter derivatives.
-    
-    map<string, double>& energyParamDerivs = cc.getEnergyParamDerivWorkspace();
-    for (int i = 0; i < paramDerivExpressions.size(); i++)
-        energyParamDerivs[paramDerivNames[i]] += paramDerivExpressions[i].evaluate(variables);
-    for (int i = 0; i < numCVs; i++) {
-        double dEdV = variableDerivExpressions[i].evaluate(variables);
-        for (auto& deriv : cvDerivs[i])
-            energyParamDerivs[deriv.first] += dEdV*deriv.second;
+
+    if (paramDerivExpressions.size() > 0) {
+        map<string, double>& energyParamDerivs = cc.getEnergyParamDerivWorkspace();
+        for (int i = 0; i < paramDerivExpressions.size(); i++)
+            energyParamDerivs[paramDerivNames[i]] += paramDerivExpressions[i].evaluate();
+        for (int i = 0; i < numCVs; i++) {
+            double dEdV = variableDerivExpressions[i].evaluate();
+            for (auto& deriv : cvDerivs[i])
+                energyParamDerivs[deriv.first] += dEdV*deriv.second;
+        }
     }
     return energy;
 }
@@ -5305,22 +5339,13 @@ void CommonCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl&
 void CommonCalcCustomCVForceKernel::copyParametersToContext(ContextImpl& context, const CustomCVForce& force) {
     // Create custom functions for the tabulated functions.
 
-    map<string, CustomFunction*> functions;
-    for (int i = 0; i < (int) force.getNumTabulatedFunctions(); i++)
-        functions[force.getTabulatedFunctionName(i)] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
-
-    // Replace tabulated functions in the expressions.
-
-    replaceFunctionsInExpression(functions, energyExpression);
-    for (auto& expression : variableDerivExpressions)
-        replaceFunctionsInExpression(functions, expression);
-    for (auto& expression : paramDerivExpressions)
-        replaceFunctionsInExpression(functions, expression);
-
-    // Delete the custom functions.
-
-    for (auto& function : functions)
-        delete function.second;
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        if (tabulatedFunctions[i] != NULL) {
+            delete tabulatedFunctions[i];
+            tabulatedFunctions[i] = NULL;
+        }
+        tabulatedFunctions[i] = createReferenceTabulatedFunction(force.getTabulatedFunction(i));
+    }
 }
 
 void CommonIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {

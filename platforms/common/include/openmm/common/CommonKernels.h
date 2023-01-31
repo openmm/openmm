@@ -909,6 +909,7 @@ public:
     CommonCalcCustomCVForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : CalcCustomCVForceKernel(name, platform),
             cc(cc), hasInitializedListeners(false) {
     }
+    ~CommonCalcCustomCVForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -948,13 +949,16 @@ public:
 private:
     class ForceInfo;
     class ReorderListener;
+    class TabulatedFunctionWrapper;
     ComputeContext& cc;
     bool hasInitializedListeners;
-    Lepton::ExpressionProgram energyExpression;
+    Lepton::CompiledExpression energyExpression;
     std::vector<std::string> variableNames, paramDerivNames, globalParameterNames;
-    std::vector<Lepton::ExpressionProgram> variableDerivExpressions;
-    std::vector<Lepton::ExpressionProgram> paramDerivExpressions;
+    std::vector<Lepton::CompiledExpression> variableDerivExpressions;
+    std::vector<Lepton::CompiledExpression> paramDerivExpressions;
     std::vector<ComputeArray> cvForces;
+    std::vector<double> globalValues, cvValues;
+    std::vector<Lepton::CustomFunction*> tabulatedFunctions;
     ComputeArray invAtomOrder;
     ComputeArray innerInvAtomOrder;
     ComputeKernel copyStateKernel, copyForcesKernel, addForcesKernel;
