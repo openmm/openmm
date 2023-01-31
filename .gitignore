@@ -1,3 +1,6 @@
 __pycache__
 build
 build?
+
+# macOS
+.DS_Store
