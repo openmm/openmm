@@ -141,7 +141,7 @@ The CPU Platform recognizes the following Platform-specific properties:
 Determinism
 ***********
 
-Whether a simulation is deterministic will depend on what plaform you run on in
+Whether a simulation is deterministic will depend on what platform you run on in
 addition to what settings/methods you use. For instance, as of this writing,
 using PME on the Reference, OpenCL, and double-precision CUDA will result in
 deterministic simulations. Single-precision CUDA and CPU platforms are not
