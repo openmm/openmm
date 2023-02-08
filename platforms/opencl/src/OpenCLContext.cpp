@@ -693,7 +693,7 @@ void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSi
     currentQueue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(blockSize), NULL, &event);
     profilingEvents.push_back(event);
     profilingKernelNames.push_back(kernel.getInfo<CL_KERNEL_FUNCTION_NAME>());
-    if (profilingEvents.size() >= 200)
+    if (profilingEvents.size() >= 500)
         printProfilingEvents();
 #else
         currentQueue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(blockSize));
@@ -717,7 +717,7 @@ void OpenCLContext::printProfilingEvents() {
             profileStartTime = start;
         else
             printf(",\n");
-        printf("{ \"pid\":1, \"tid\":1, \"ts\":%g, \"dur\":%g, \"ph\":\"X\", \"name\":\"%s\" }",
+        printf("{ \"pid\":1, \"tid\":1, \"ts\":%.6g, \"dur\":%g, \"ph\":\"X\", \"name\":\"%s\" }",
                 0.001*(start-profileStartTime), 0.001*(end-start), profilingKernelNames[i].c_str());
     }
     profilingEvents.clear();
