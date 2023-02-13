@@ -358,7 +358,7 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
 
     #if __APPLE__ && defined(__aarch64__)
     // Segment the command stream to avoid stalls later.
-    if (groupKernels[forceGroups].hasForces && useCutoff && numTiles > 0)
+    if (groupKernels[forceGroups].hasForces)
         context.getQueue().flush();
     #endif
 }
