@@ -354,7 +354,13 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     context.executeKernel(kernels.findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
     forceRebuildNeighborList = false;
     lastCutoff = kernels.cutoffDistance;
-    context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(int), pinnedCountMemory, NULL, &downloadCountEvent); 
+    context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(int), pinnedCountMemory, NULL, &downloadCountEvent);
+
+    #if __APPLE__ && defined(__aarch64__)
+    // Segment the command stream to avoid stalls later.
+    if (groupKernels[forceGroups].hasForces)
+        context.getQueue().flush();
+    #endif
 }
 
 void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
@@ -370,6 +376,11 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
         context.executeKernel(kernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     if (useCutoff && numTiles > 0) {
+        #if __APPLE__ && defined(__aarch64__)
+        // Ensure cached up work executes while you're waiting.
+        if (kernels.hasForces)
+            context.getQueue().flush();
+        #endif
         downloadCountEvent.wait();
         updateNeighborListSize();
     }
