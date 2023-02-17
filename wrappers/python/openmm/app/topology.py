@@ -230,8 +230,8 @@ class Topology(object):
                     yield atom
 
     def bonds(self):
-        """Iterate over all Bonds in the Topology.
-        A Bond can be treated as tuple of two Atoms.
+        """Iterate over all bonds in the Topology.
+        Each one is represented by a Bond object, which is a named tuple of two atoms.
         """
         return iter(self._bonds)
 
