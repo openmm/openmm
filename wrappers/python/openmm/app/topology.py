@@ -230,7 +230,9 @@ class Topology(object):
                     yield atom
 
     def bonds(self):
-        """Iterate over all bonds (each represented as a tuple of two Atoms) in the Topology."""
+        """Iterate over all Bonds in the Topology.
+        A Bond can be treated as tuple of two Atoms.
+        """
         return iter(self._bonds)
 
     def getPeriodicBoxVectors(self):
