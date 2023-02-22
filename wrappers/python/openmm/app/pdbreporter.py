@@ -129,9 +129,9 @@ class PDBReporter(object):
             The Topology to create a subset from
         """
         # check atomSubset is valid 
-        if len(self._atomSubset)==0:
+        if len(self._atomSubset) == 0:
             raise ValueError('atomSubset cannot be an empty list')
-        if not all(a==int(a) for a in self._atomSubset):
+        if not all(a == int(a) for a in self._atomSubset):
             raise ValueError('all of the indices in atomSubset must be integers')
         if len(set(self._atomSubset)) != len(self._atomSubset):
             raise ValueError('atomSubset must contain unique indices')
@@ -142,26 +142,21 @@ class PDBReporter(object):
         if self._atomSubset[-1] >= topology.getNumAtoms():
             raise ValueError('The maximum allowed value in atomSubset must be less than the total number of particles')
         
-
         self._subsetTopology = Topology()
         
         # convert to set for fast look up
-        atomSubsetSet=set(self._atomSubset)
+        atomSubsetSet = set(self._atomSubset)
 
         # store a map from posIndex to Atom object for when we add the bonds
         indexToAtom = {}
 
-        posIndex = 0
         for chain in topology.chains():
             c = self._subsetTopology.addChain(chain.id)
-            residues = list(chain.residues())
-            for res in residues:
-                r = self._subsetTopology.addResidue(res.name,c,res.id,res.insertionCode)
+            for res in chain.residues():
+                r = self._subsetTopology.addResidue(res.name, c, res.id, res.insertionCode)
                 for atom in res.atoms():
-                        if posIndex in atomSubsetSet:
-                            atom = self._subsetTopology.addAtom(atom.name, atom.element, r, atom.id)
-                            indexToAtom[posIndex] = atom
-                        posIndex += 1
+                    if atom.index in atomSubsetSet:
+                        indexToAtom[atom.index] = self._subsetTopology.addAtom(atom.name, atom.element, r, atom.id)
 
         self._subsetTopology.setPeriodicBoxVectors(topology.getPeriodicBoxVectors())
 

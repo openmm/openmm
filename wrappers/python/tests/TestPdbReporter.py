@@ -48,10 +48,9 @@ class TestPDBReporter(unittest.TestCase):
     def testInvalidSubsets(self):
         """Test that an exception is raised when the indices in atomSubset are invalid"""
     
-        with tempfile.TemporaryDirectory() as tempdir:
-            filename = os.path.join(tempdir, 'temptraj.pdb')
-
-            for subset in [[-1,10], [0,99999], [0,0,0,1], [0.1,0.2], [5,10,0,9], ["C", "H"],[]]:
+        for subset in [[-1,10], [0,99999], [0,0,0,1], [0.1,0.2], [5,10,0,9], ["C", "H"],[]]:
+            with tempfile.TemporaryDirectory() as tempdir:
+                filename = os.path.join(tempdir, 'temptraj.pdb')
 
                 simulation = app.Simulation(self.pdb.topology, self.system, mm.LangevinMiddleIntegrator(300*unit.kelvin, 1.0/unit.picosecond, 0.002*unit.picoseconds))
                 simulation.context.setPositions(self.pdb.positions)
@@ -77,8 +76,6 @@ class TestPDBReporter(unittest.TestCase):
             filename = os.path.join(tempdir, 'temptraj.pdb')
             simulation = app.Simulation(modeller.topology, system, mm.LangevinMiddleIntegrator(1.0*unit.kelvin, 1.0/unit.picosecond, 0.0000001*unit.picoseconds))
             simulation.context.setPositions(modeller.positions)
-
-            simulation.minimizeEnergy(maxIterations=100)
 
             # output just the glycopeptide atoms
             atomSubset=list(range(pdb.topology.getNumAtoms()))
@@ -136,7 +133,6 @@ class TestPDBxReporter(unittest.TestCase):
             simulation = app.Simulation(self.pdb.topology, self.system, mm.LangevinMiddleIntegrator(300*unit.kelvin, 1.0/unit.picosecond, 0.002*unit.picoseconds))
             simulation.context.setPositions(self.pdb.positions)
 
-
             simulation.reporters.append(app.PDBxReporter(filename, 10))
             simulation.step(10)
 
@@ -147,10 +143,9 @@ class TestPDBxReporter(unittest.TestCase):
     def testInvalidSubsets(self):
         """Test that an exception is raised when the indices in atomSubset are invalid"""
     
-        with tempfile.TemporaryDirectory() as tempdir:
-            filename = os.path.join(tempdir, 'temptraj.pdbx')
-
-            for subset in [[-1,10], [0,99999], [0,0,0,1], [0.1,0.2], [5,10,0,9], ["C", "H"],[]]:
+        for subset in [[-1,10], [0,99999], [0,0,0,1], [0.1,0.2], [5,10,0,9], ["C", "H"],[]]:
+            with tempfile.TemporaryDirectory() as tempdir:
+                filename = os.path.join(tempdir, 'temptraj.pdbx')
 
                 simulation = app.Simulation(self.pdb.topology, self.system, mm.LangevinMiddleIntegrator(300*unit.kelvin, 1.0/unit.picosecond, 0.002*unit.picoseconds))
                 simulation.context.setPositions(self.pdb.positions)
@@ -177,8 +172,6 @@ class TestPDBxReporter(unittest.TestCase):
             filename = os.path.join(tempdir, 'temptraj.pdbx')
             simulation = app.Simulation(modeller.topology, system, mm.LangevinMiddleIntegrator(1.0*unit.kelvin, 1.0/unit.picosecond, 0.0000001*unit.picoseconds))
             simulation.context.setPositions(modeller.positions)
-
-            simulation.minimizeEnergy(maxIterations=100)
 
             # output just the glycopeptide atoms
             atomSubset=list(range(pdb.topology.getNumAtoms()))
