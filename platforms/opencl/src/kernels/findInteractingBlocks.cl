@@ -79,6 +79,22 @@ __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global c
 
 #define BUFFER_SIZE 256
 
+#define FORCE_UNROLL_4(__expr, __start_index) \
+__expr(__start_index + 0); \
+__expr(__start_index + 1); \
+__expr(__start_index + 2); \
+__expr(__start_index + 3); \
+
+#define FORCE_UNROLL_32(__expr) \
+FORCE_UNROLL_4(__expr, 0); \
+FORCE_UNROLL_4(__expr, 4); \
+FORCE_UNROLL_4(__expr, 8); \
+FORCE_UNROLL_4(__expr, 12); \
+FORCE_UNROLL_4(__expr, 16); \
+FORCE_UNROLL_4(__expr, 20); \
+FORCE_UNROLL_4(__expr, 24); \
+FORCE_UNROLL_4(__expr, 28); \
+
 __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         __global unsigned int* restrict interactionCount, __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms,
         __global const real4* restrict posq, unsigned int maxTiles, unsigned int startBlockIndex, unsigned int numBlocks, __global real2* restrict sortedBlocks,
@@ -202,10 +218,20 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                         }
                         else {
 #endif
+#ifdef APPLE_GPU_FAMILY
+                            #define __findBlocksWithInteractions_loop1(j) \
+                            { \
+                                real3 delta = pos2-posBuffer[warpStart+j]; \
+                                interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED); \
+                            } \
+                            
+                            FORCE_UNROLL_32(__findBlocksWithInteractions_loop1)
+#else
                             for (int j = 0; j < TILE_SIZE; j++) {
                                 real3 delta = pos2-posBuffer[warpStart+j];
                                 interacts |= (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < PADDED_CUTOFF_SQUARED);
                             }
+#endif
 #ifdef USE_PERIODIC
                         }
 #endif
@@ -216,14 +242,22 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                     atomCountBuffer[get_local_id(0)].x = (interacts ? 1 : 0);
                     SYNC_WARPS;
                     int whichBuffer = 0;
-                    for (int offset = 1; offset < TILE_SIZE; offset *= 2) {
-                        if (whichBuffer == 0)
-                            atomCountBuffer[get_local_id(0)].y = (indexInWarp < offset ? atomCountBuffer[get_local_id(0)].x : atomCountBuffer[get_local_id(0)].x+atomCountBuffer[get_local_id(0)-offset].x);
-                        else
-                            atomCountBuffer[get_local_id(0)].x = (indexInWarp < offset ? atomCountBuffer[get_local_id(0)].y : atomCountBuffer[get_local_id(0)].y+atomCountBuffer[get_local_id(0)-offset].y);
-                        whichBuffer = 1-whichBuffer;
-                        SYNC_WARPS;
-                    }
+//                    for (int offset = 1; offset < TILE_SIZE; offset *= 2) {
+                    #define __findBlocksWithInteractions_loop2(offset) \
+                    { \
+                        if (whichBuffer == 0) \
+                            atomCountBuffer[get_local_id(0)].y = (indexInWarp < offset ? atomCountBuffer[get_local_id(0)].x : atomCountBuffer[get_local_id(0)].x+atomCountBuffer[get_local_id(0)-offset].x); \
+                        else \
+                            atomCountBuffer[get_local_id(0)].x = (indexInWarp < offset ? atomCountBuffer[get_local_id(0)].y : atomCountBuffer[get_local_id(0)].y+atomCountBuffer[get_local_id(0)-offset].y); \
+                        whichBuffer = 1-whichBuffer; \
+                        SYNC_WARPS; \
+                    } \
+                    
+                    __findBlocksWithInteractions_loop2(1);
+                    __findBlocksWithInteractions_loop2(2);
+                    __findBlocksWithInteractions_loop2(4);
+                    __findBlocksWithInteractions_loop2(8);
+                    __findBlocksWithInteractions_loop2(16);
                     
                     // Add any interacting atoms to the buffer.
 
@@ -277,6 +311,9 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0))
         oldPositions[i] = posq[i];
 }
+
+#undef FORCE_UNROLL_32
+#undef FORCE_UNROLL_4
 
 #else
 // This is the old implementation of finding interacting blocks.  It is quite a bit more complicated,
