@@ -356,7 +356,7 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     lastCutoff = kernels.cutoffDistance;
     context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(int), pinnedCountMemory, NULL, &downloadCountEvent);
 
-    #if WIN32 || __APPLE__ && defined(__aarch64__)
+    #if WIN32 || (__APPLE__ && defined(__aarch64__))
     // Segment the command stream to avoid stalls later.
     if (groupKernels[forceGroups].hasForces)
         context.getQueue().flush();
