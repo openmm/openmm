@@ -218,6 +218,9 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
       
         if (vendor.size() >= 5 && vendor.substr(0, 5) == "Apple") {
             simdWidth = 32;
+
+            // 768 threads per GPU core.
+            numThreadBlocksPerComputeUnit = 12;
         }
         else if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
             compilationDefines["WARPS_ARE_ATOMIC"] = "";
