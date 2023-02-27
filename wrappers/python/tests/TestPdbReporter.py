@@ -106,7 +106,7 @@ class TestPDBReporter(unittest.TestCase):
     def testBondSubset(self):
         """ Test that CONECT records are output correctly when using atomSubset"""
 
-        # use a testcase that has CONNECT records in the input pdb file
+        # use a testcase that has CONECT records in the input pdb file
         ff = app.ForceField('amber14/protein.ff14SB.xml', 'amber14/GLYCAM_06j-1.xml','amber14/tip3pfb.xml')
         pdb = app.PDBFile('systems/glycopeptide.pdb')
 
@@ -256,7 +256,7 @@ class TestPDBxReporter(unittest.TestCase):
     def testBondSubset(self):
         """ Test that struct_conn records are output correctly when using atomSubset"""
 
-        # use a testcase that has CONNECT records in the input pdb file
+        # use a testcase that has CONECT records in the input pdb file
         ff = app.ForceField('amber14/protein.ff14SB.xml', 'amber14/GLYCAM_06j-1.xml','amber14/tip3pfb.xml')
         pdb = app.PDBFile('systems/glycopeptide.pdb')
 
