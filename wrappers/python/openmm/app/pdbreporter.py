@@ -130,16 +130,22 @@ class PDBReporter(object):
         """
         # check atomSubset is valid 
         if len(self._atomSubset) == 0:
+            self._out.close()
             raise ValueError('atomSubset cannot be an empty list')
         if not all(a == int(a) for a in self._atomSubset):
+            self._out.close()
             raise ValueError('all of the indices in atomSubset must be integers')
         if len(set(self._atomSubset)) != len(self._atomSubset):
+            self._out.close()
             raise ValueError('atomSubset must contain unique indices')
         if sorted(self._atomSubset) != self._atomSubset:
+            self._out.close()
             raise ValueError('atomSubset must be sorted in ascending order')
         if self._atomSubset[0] < 0:
+            self._out.close()
             raise ValueError('The smallest allowed value in atomSubset is zero')
         if self._atomSubset[-1] >= topology.getNumAtoms():
+            self._out.close()
             raise ValueError('The maximum allowed value in atomSubset must be less than the total number of particles')
         
         self._subsetTopology = Topology()

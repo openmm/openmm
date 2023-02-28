@@ -7,6 +7,15 @@ from openmm.unit.unit_math import norm
 import os
 import gc
 
+def assertVecAlmostEqual(p1, p2, tol=1e-7):
+    unit = p1.unit
+    p1 = p1.value_in_unit(unit)
+    p2 = p2.value_in_unit(unit)
+    scale = max(1.0, norm(p1),)
+    for i in range(3):
+        diff = abs(p1[i]-p2[i])/scale
+        assert(diff < tol)
+
 
 class TestPDBReporter(unittest.TestCase):
     def setUp(self):
@@ -42,7 +51,7 @@ class TestPDBReporter(unittest.TestCase):
                 validPositions[i] = [round(validPositions[i][j]._value, 4) for j in (0, 1, 2)]*unit.nanometer
                 
             for (p1, p2) in zip(checkpdb.positions, validPositions):
-                self.assertVecAlmostEqual(p1, p2)
+                assertVecAlmostEqual(p1, p2)
 
             # check elements and residue names are correct
             validAtoms = [list(self.pdb.topology.atoms())[i] for i in subset]
@@ -77,7 +86,7 @@ class TestPDBReporter(unittest.TestCase):
                 validPositions[i] = [round(validPositions[i][j]._value, 4) for j in (0, 1, 2)]*unit.nanometer
 
             for (p1, p2) in zip(checkpdb.positions, validPositions):
-                self.assertVecAlmostEqual(p1, p2)
+                assertVecAlmostEqual(p1, p2)
 
             # check elements and residue names are correct
             validAtoms = list(self.pdb.topology.atoms())
@@ -92,7 +101,7 @@ class TestPDBReporter(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             for i, subset in enumerate([[-1,10], [0,99999], [0,0,0,1], [0.1,0.2], [5,10,0,9], ["C", "H"],[]]):
-                # give them different names to try and stop Windows complaining
+                
                 filename = os.path.join(tempdir, 'temptraj'+str(i)+'.pdb')
 
                 simulation = app.Simulation(self.pdb.topology, self.system, mm.LangevinMiddleIntegrator(300*unit.kelvin, 1.0/unit.picosecond, 0.002*unit.picoseconds))
@@ -146,18 +155,6 @@ class TestPDBReporter(unittest.TestCase):
                 self.assertEqual(str(validBond), str(testBond))
 
 
-    def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
-        unit = p1.unit
-        p1 = p1.value_in_unit(unit)
-        p2 = p2.value_in_unit(unit)
-        scale = max(1.0, norm(p1),)
-        for i in range(3):
-            diff = abs(p1[i]-p2[i])/scale
-            self.assertTrue(diff < tol)
-
-
-
-
 class TestPDBxReporter(unittest.TestCase):
     def setUp(self):
         self.pdb = app.PDBFile('systems/alanine-dipeptide-explicit.pdb')
@@ -192,7 +189,7 @@ class TestPDBxReporter(unittest.TestCase):
                 validPositions[i] = [round(validPositions[i][j]._value, 5) for j in (0, 1, 2)]*unit.nanometer
                 
             for (p1, p2) in zip(checkpdb.positions, validPositions):
-                self.assertVecAlmostEqual(p1, p2)
+                assertVecAlmostEqual(p1, p2)
 
             # check elements and residue names are correct
             validAtoms = [list(self.pdb.topology.atoms())[i] for i in subset]
@@ -227,7 +224,7 @@ class TestPDBxReporter(unittest.TestCase):
                 validPositions[i] = [round(validPositions[i][j]._value, 5) for j in (0, 1, 2)]*unit.nanometer
 
             for (p1, p2) in zip(checkpdb.positions, validPositions):
-                self.assertVecAlmostEqual(p1, p2)
+                assertVecAlmostEqual(p1, p2)
 
             # check elements and residue names are correct
             validAtoms = list(self.pdb.topology.atoms())
@@ -242,7 +239,7 @@ class TestPDBxReporter(unittest.TestCase):
     
         with tempfile.TemporaryDirectory() as tempdir:
             for i,subset in enumerate([[-1,10], [0,99999], [0,0,0,1], [0.1,0.2], [5,10,0,9], ["C", "H"],[]]):
-                # give them different names to try and stop Windows complaining
+                
                 filename = os.path.join(tempdir, 'temptraj'+str(i)+'.pdbx')
 
                 simulation = app.Simulation(self.pdb.topology, self.system, mm.LangevinMiddleIntegrator(300*unit.kelvin, 1.0/unit.picosecond, 0.002*unit.picoseconds))
@@ -290,16 +287,6 @@ class TestPDBxReporter(unittest.TestCase):
 
             for validBond, testBond in zip(validBonds, testBonds):
                 self.assertEqual(str(validBond), str(testBond))
-
-
-    def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
-        unit = p1.unit
-        p1 = p1.value_in_unit(unit)
-        p2 = p2.value_in_unit(unit)
-        scale = max(1.0, norm(p1),)
-        for i in range(3):
-            diff = abs(p1[i]-p2[i])/scale
-            self.assertTrue(diff < tol)
 
 
 
