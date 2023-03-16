@@ -14,6 +14,7 @@ __email__ = "peastman@stanford.edu"
 
 from .topology import Topology, Chain, Residue, Atom
 from .pdbfile import PDBFile
+from .xtcfile import XTCTrajectoryFile
 from .pdbxfile import PDBxFile
 from .forcefield import ForceField
 from .simulation import Simulation
@@ -53,4 +54,3 @@ Double = topology.Double
 Triple = topology.Triple
 Aromatic = topology.Aromatic
 Amide = topology.Amide
-

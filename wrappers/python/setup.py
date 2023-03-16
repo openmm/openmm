@@ -229,6 +229,22 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     setupKeywords["ext_modules"] = [Extension(**extensionArgs)]
     setupKeywords["ext_modules"] += cythonize('openmm/app/internal/*.pyx')
 
+    setupKeywords["ext_modules"] +=cythonize(Extension(
+        "openmm.app.internal.xtc_utils",
+        sources=[
+            "openmm/app/internal/xtc_utils/src/xdrfile_xtc.cpp",
+            "openmm/app/internal/xtc_utils/src/xdrfile.cpp",
+            "openmm/app/internal/xtc_utils/src/xtc.cpp",
+            "openmm/app/internal/xtc_utils/xtc.pyx",
+        ],
+        include_dirs=include_dirs +[
+            "openmm/app/internal/xtc_utils/include",
+            "openmm/app/internal/xtc_utils/",
+            numpy.get_include(),
+        ],
+        language="c++",
+    ))
+
     outputString = ''
     firstTab     = 40
     secondTab    = 60
