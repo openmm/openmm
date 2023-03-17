@@ -1,3 +1,26 @@
+# MIT License
+
+# Copyright (c) 2023 Accellera
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# Contributors: Stefan Doerr, Raul P. Pelaez
 
 import os
 import warnings
@@ -80,62 +103,20 @@ def read_xtc_frames(char* filename, int[:] frames):
         )
     return np.asarray(coords), np.asarray(box), np.asarray(time), np.asarray(step)
 
-
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False)  # turn off negative index wrapping for entire function
-def write_xtc(char* filename, float[:, :, :] coords, float[:, :] box, float[:] time, int[:] step):
+def xtc_write_frame(char * filename, float[:, :] coords, float[:] box, float time, int step):
     cdef int natoms = coords.shape[0]
-    cdef int nframes = coords.shape[2]
-    xtclib.xtc_write(
+    cdef int nframes = 1
+    err = xtclib.xtc_write(
         filename,
         natoms,
         nframes,
-        &step[0],
-        &time[0],
-        &coords[0, 0, 0],
-        &box[0, 0]
+        &step,
+        &time,
+        &coords[0, 0],
+        &box[0]
     )
-
-
-
-cdef class XTCFileDescriptor(object):
-    cdef xtclib.XDRFILE* xd
-
-    def __init__(self):
-        pass
-
-    def open_for_write(self,char* filename):
-        self.xd = xtclib.xtc_open_for_write(filename)
-    def close(self):
-        xtclib.xdrfile_close(self.xd)
-
-    cdef xtclib.XDRFILE* get(self):
-        return self.xd;
-
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)  # turn off negative index wrapping for entire function
-def xtc_open_for_write(char* filename):
-    file = XTCFileDescriptor
-    file.open_for_write(filename)
-    return file
-
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)  # turn off negative index wrapping for entire function
-def xdrfile_close(XTCFileDescriptor xd):
-    return xtclib.xdrfile_close(xd.get())
-
-
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)  # turn off negative index wrapping for entire function
-def xtc_write_frames(XTCFileDescriptor xd, float[:, :, :] coords, float[:, :] box, float[:] time, int[:] step):
-    cdef int natoms = coords.shape[0]
-    cdef int nframes = coords.shape[2]
-    xtclib.xtc_write_frames(
-        xd.get(),
-        natoms,
-        nframes,
-        &step[0],
-        &time[0],
-        &coords[0, 0, 0],
-        &box[0, 0]
-    )
+    #Throw if err is not 0
+    if err != 0:
+        raise IOError("Error writing frame to xtc file")
