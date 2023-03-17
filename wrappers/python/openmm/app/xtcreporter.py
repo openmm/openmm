@@ -1,12 +1,12 @@
 from sys import _current_frames
-from openmm.app import XTCTrajectoryFile, Topology
+from openmm.app import XTCFile, Topology
 from openmm.unit import nanometers, femtoseconds
 
 
 
 class XTCReporter(object):
     def __init__(self, file, reportInterval, enforcePeriodicBox=None):
-        self._file = XTCTrajectoryFile(file)
+        self._file = XTCFile(file)
         self._reportInterval = reportInterval
         self._enforcePeriodicBox = enforcePeriodicBox
         self._step = 0
