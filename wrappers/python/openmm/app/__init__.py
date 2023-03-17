@@ -14,7 +14,7 @@ __email__ = "peastman@stanford.edu"
 
 from .topology import Topology, Chain, Residue, Atom
 from .pdbfile import PDBFile
-from .xtcfile import XTCTrajectoryFile
+from .xtcfile import XTCFile
 from .pdbxfile import PDBxFile
 from .forcefield import ForceField
 from .simulation import Simulation
