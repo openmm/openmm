@@ -46,8 +46,4 @@ class XTCReporter(object):
         box = state.getPeriodicBoxVectors().value_in_unit(nanometers)
         time = state.getTime().value_in_unit(femtoseconds)
         step = self._step
-        self._file.write_frame(coords, box, time, step)
-
-
-    def __del__(self):
-        self._file.close()
+        self._file.writeFrame(coords, box, time, step)
