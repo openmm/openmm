@@ -71,6 +71,9 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
             // 1536 threads per GPU core.
             blocksPerComputeUnit = 6;
         }
+        else if (deviceIsAMDGpu()) {
+            blocksPerComputeUnit = 16;
+        }
         numForceThreadBlocks = blocksPerComputeUnit*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
         forceThreadBlockSize = 256;
     }
@@ -188,6 +191,13 @@ static bool compareInt2LargeSIMD(mm_int2 a, mm_int2 b) {
 }
 
 void OpenCLNonbondedUtilities::initialize(const System& system) {
+    if (deviceIsAMDGpu()) {
+        while (numForceThreadBlocks > context.getNumAtomBlocks()) {
+            numForceThreadBlocks /= 2;
+        }
+        numForceThreadBlocks = std::max(numForceThreadBlocks, (int) context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
+    }
+
     if (atomExclusions.size() == 0) {
         // No exclusions were specifically requested, so just mark every atom as not interacting with itself.
 
@@ -751,4 +761,9 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
 
 void OpenCLNonbondedUtilities::setKernelSource(const string& source) {
     kernelSource = source;
+}
+
+bool OpenCLNonbondedUtilities::deviceIsAMDGpu() {
+    string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
+    return !deviceIsCpu && (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.");
 }
