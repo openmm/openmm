@@ -25,7 +25,6 @@ class TestXTCReporter(unittest.TestCase):
         """Test all atoms are written for a single step"""
 
         with tempfile.TemporaryDirectory() as tempdir:
-            filename_pdb = os.path.join(tempdir, "temptraj.pdb")
             filename_xtc = os.path.join(tempdir, "temptraj.xtc")
             simulation = app.Simulation(
                 self.pdb.topology,
@@ -36,7 +35,6 @@ class TestXTCReporter(unittest.TestCase):
             )
             simulation.context.setPositions(self.pdb.positions)
 
-            simulation.reporters.append(app.PDBReporter(filename_pdb, 1))
             simulation.reporters.append(app.XTCReporter(filename_xtc, 1))
             simulation.step(1)
             # clear reporters to ensure PDBReporter calls writeFooter and file.close
@@ -57,7 +55,6 @@ class TestXTCReporter(unittest.TestCase):
         """Test that the reporter can write several steps"""
 
         with tempfile.TemporaryDirectory() as tempdir:
-            filename_pdb = os.path.join(tempdir, "temptraj.pdb")
             filename_xtc = os.path.join(tempdir, "temptraj.xtc")
             simulation = app.Simulation(
                 self.pdb.topology,
@@ -68,7 +65,6 @@ class TestXTCReporter(unittest.TestCase):
             )
             simulation.context.setPositions(self.pdb.positions)
 
-            simulation.reporters.append(app.PDBReporter(filename_pdb, 1))
             simulation.reporters.append(app.XTCReporter(filename_xtc, 1))
             simulation.step(10)
             # clear reporters to ensure PDBReporter calls writeFooter and file.close
