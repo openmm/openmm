@@ -104,4 +104,4 @@ class XTCFile(object):
         step : int
             The step of the frame.
         """
-        xtc_write_frame(self._filename.encode('utf-8'), np.array(coords), np.array(box), time, step)
+        xtc_write_frame(self._filename.encode('utf-8'), np.array(coords).astype(np.float32), np.array(box).astype(np.float32), time, step)
