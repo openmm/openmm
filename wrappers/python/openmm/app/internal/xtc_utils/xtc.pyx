@@ -43,11 +43,11 @@ ctypedef np.float64_t FLOAT64_t
 import cython
 
 
-cdef int get_xtc_nframes(char* filename):
+def get_xtc_nframes(char* filename):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     return xtclib.xtc_nframes(filename)
 
-cdef int get_xtc_natoms(char* filename):
+def get_xtc_natoms(char* filename):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     return xtclib.xtc_natoms(filename)
 
