@@ -19,6 +19,7 @@ from .pdbxfile import PDBxFile
 from .forcefield import ForceField
 from .simulation import Simulation
 from .pdbreporter import PDBReporter, PDBxReporter
+from .xtcreporter import XTCReporter
 from .amberprmtopfile import AmberPrmtopFile, HCT, OBC1, OBC2, GBn, GBn2
 from .amberinpcrdfile import AmberInpcrdFile
 from .dcdfile import DCDFile
