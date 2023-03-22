@@ -1,29 +1,34 @@
 __author__ = "Raul P. Pelaez"
 from openmm.app import XTCFile
-from openmm.unit import nanometers, femtoseconds
-import numpy as np
-
 
 class XTCReporter(object):
-    """Report simulation progress in the Gromacs XTC format.
+    """XTCReporter outputs a series of frames from a Simulation to a XTC file.
 
-    Parameters
-    ----------
-    file : str
-        The file to write to
-    reportInterval : int
-        The interval (in time steps) at which to write frames
-    enforcePeriodicBox: bool
+    To use it, create a XTCReporter, then add it to the Simulation's list of reporters.
+    """
+
+    def __init__(self, fileName, reportInterval, append=False, enforcePeriodicBox=None):
+        """Create a XTCReporter.
+
+        Parameters
+        ----------
+        fileName : string
+            The file to write to
+        reportInterval : int
+            The interval (in time steps) at which to write frames
+        append : bool=False
+            If True, open an existing XTC file to append to.  If False, create a new file.
+        enforcePeriodicBox: bool
             Specifies whether particle positions should be translated so the center of every molecule
             lies in the same periodic box.  If None (the default), it will automatically decide whether
             to translate molecules based on whether the system being simulated uses periodic boundary
             conditions.
-    """
-
-    def __init__(self, file, reportInterval, enforcePeriodicBox=None):
-        self._file = XTCFile(file)
+        """
         self._reportInterval = reportInterval
+        self._append = append
         self._enforcePeriodicBox = enforcePeriodicBox
+        self._fileName = fileName
+        self._xtc = None
 
     def describeNextReport(self, simulation):
         """Get information about the next report this object will generate.
@@ -47,8 +52,6 @@ class XTCReporter(object):
 
     def report(self, simulation, state):
         """Generate a report.
-        Stores the current positions, box vectors, time, and step number in the XTC file.
-        Positions are written in nanometers, box vectors in nanometers, time in femtoseconds, and step number as an integer.
 
         Parameters
         ----------
@@ -57,21 +60,16 @@ class XTCReporter(object):
         state : State
             The current state of the simulation
         """
-        step = simulation.currentStep
-        coords = state.getPositions().value_in_unit(nanometers)
-        box = state.getPeriodicBoxVectors().value_in_unit(nanometers)
-        if (
-            box[0][1] != 0
-            or box[0][2] != 0
-            or box[1][0] != 0
-            or box[1][2] != 0
-            or box[2][0] != 0
-            or box[2][1] != 0
-        ):
-            raise Exception("XTCReporter does not support triclinic boxes")
-        if box is None:
-            box = np.array([0, 0, 0], dtype=np.float32)
-        else:
-            box = np.array([box[0][0], box[1][1], box[2][2]], dtype=np.float32)
-        time = state.getTime().value_in_unit(femtoseconds)
-        self._file.writeFrame(coords, box, time, step)
+
+        if self._xtc is None:
+            self._xtc = XTCFile(
+                self._fileName,
+                simulation.topology,
+                simulation.integrator.getStepSize(),
+                simulation.currentStep,
+                self._reportInterval,
+                self._append,
+            )
+        self._xtc.writeModel(
+            state.getPositions(), periodicBoxVectors=state.getPeriodicBoxVectors()
+        )

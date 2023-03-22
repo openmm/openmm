@@ -1,11 +1,23 @@
-
 from __future__ import print_function, division, absolute_import
+
 __author__ = "Raul P. Pelaez"
 __version__ = "1.0"
 
-from openmm.app.internal.xtc_utils import read_xtc, read_xtc_frames, xtc_write_frame, get_xtc_nframes, get_xtc_natoms
+from openmm.app.internal.xtc_utils import (
+    read_xtc,
+    read_xtc_frames,
+    xtc_write_frame,
+    get_xtc_nframes,
+    get_xtc_natoms,
+)
 import numpy as np
 import os
+from openmm import Vec3
+from openmm.unit import nanometers, femtoseconds, is_quantity, norm
+import math
+import tempfile
+import shutil
+
 
 class XTCFile(object):
 
@@ -15,93 +27,143 @@ class XTCFile(object):
     file from a set of coordinates, box vectors, time and step.
     """
 
-    def __init__(self, filename):
-        """Create an XTCFile object.
+    def __init__(self, fileName, topology, dt, firstStep=0, interval=1, append=False):
+        """Create a XTC file, or open an existing file to append.
+
         Parameters
         ----------
-        filename : str
-            The name of the XTC file to open.
+        fileName : str
+            A file name to write to
+        topology : Topology
+            The Topology defining the molecular system being written
+        dt : time
+            The time step used in the trajectory
+        firstStep : int=0
+            The index of the first step in the trajectory
+        interval : int=1
+            The frequency (measured in time steps) at which states are written
+            to the trajectory
+        append : bool=False
+            If True, open an existing XTC file to append to.  If False, create a new file.
         """
-        self._filename = filename
+        if not isinstance(fileName, str):
+            raise TypeError("fileName must be a string")
+        self._filename = fileName
+        self._topology = topology
+        self._firstStep = firstStep
+        self._interval = interval
+        self._modelCount = 0
+        if is_quantity(dt):
+            dt = dt.value_in_unit(femtoseconds)
+        self._dt = dt
+        if append:
+            if not os.path.isfile(self._filename):
+                raise FileNotFoundError(f"The file '{self._filename}' does not exist.")
+            self._modelCount = get_xtc_nframes(self._filename.encode("utf-8"))
+            natoms = get_xtc_natoms(self._filename.encode("utf-8"))
+            if natoms != len(list(topology.atoms())):
+                raise ValueError(
+                    f"The number of atoms in the topology ({len(list(topology.atoms()))}) does not match the number of atoms in the XTC file ({natoms})"
+                )
+        else:
+            if os.path.isfile(self._filename) and os.path.getsize(self._filename) > 0:
+                raise FileExistsError(f"The file '{self._filename}' already exists.")
 
-    def getNumberOfFrames(self):
-        """Returns the number of frames in the XTC file.
-        Returns
-        -------
-        n_frames : int
-            The number of frames in the XTC file.
-        """
-        if not os.path.isfile(self._filename):
-            raise FileNotFoundError(f"The file '{self._filename}' does not exist.")
-        return get_xtc_nframes(self._filename.encode('utf-8'))
+    def _getNumFrames(self):
+        return get_xtc_nframes(self._filename.encode("utf-8"))
 
-    def getNumberOfAtoms(self):
-        """Returns the number of atoms in the XTC file.
-        Returns
-        -------
-        n_atoms : int
-            The number of atoms in the XTC file.
-        """
-        if not os.path.isfile(self._filename):
-            raise FileNotFoundError(f"The file '{self._filename}' does not exist.")
-        return get_xtc_natoms(self._filename.encode('utf-8'))
+    def writeModel(self, positions, unitCellDimensions=None, periodicBoxVectors=None):
+        """Write out a model to the XTC file.
 
-    def read(self):
-        """Reads the XTC file and returns the coordinates, box vectors,
-        time and step of each frame.
-        Returns
-        -------
-        coords : np.array
-            The coordinates of the atoms in the frame. Shape (n_frames, n_atoms, 3)
-        box : np.array
-            The box vectors of the frame. Shape (n_frames, 3)
-        time : np.array
-            The time of the frame. Shape (n_frames,)
-        step : np.array
-            The step of the frame. Shape (n_frames,)
-        """
-        if not os.path.isfile(self._filename):
-            raise FileNotFoundError(f"The file '{self._filename}' does not exist.")
-        _coords, _box, _time, _step = read_xtc(self._filename.encode('utf-8'))
-        return _coords, _box, _time, _step
+        The periodic box can be specified either by the unit cell dimensions
+        (for a rectangular box), or the full set of box vectors (for an
+        arbitrary triclinic box).  If neither is specified, the box vectors
+        specified in the Topology will be used. Regardless of the value
+        specified, no dimensions will be written if the Topology does not
+        represent a periodic system.
 
-    def readFrames(self, frames):
-        """Reads a list of frames from an XTC file and returns the coordinates, box vectors,
-            time and step for those frames.
         Parameters
         ----------
-        frames : np.array
-            The frames to read. Shape (n_frames,)
-
-        Returns
-        -------
-        coords : np.array
-            The coordinates of the atoms in the frame. Shape (nframes, n_atoms, 3)
-        box : np.array
-            The box vectors of the frame. Shape (nframes, 3)
-        time : Float
-            The time of the frame. Shape (nframes,)
-        step : Int
-            The step of the frame. Shape (nframes,)
+        positions : list
+            The list of atomic positions to write
+        unitCellDimensions : Vec3=None
+            The dimensions of the crystallographic unit cell.
+        periodicBoxVectors : tuple of Vec3=None
+            The vectors defining the periodic box.
         """
-        if not os.path.isfile(self._filename):
-            raise FileNotFoundError(f"The file '{self._filename}' does not exist.")
-        _coords, _box, _time, _step = read_xtc_frames(self._filename.encode('utf-8'), np.array(frames).astype(np.int32))
-        return _coords, _box, _time, _step
+        if len(list(self._topology.atoms())) != len(positions):
+            raise ValueError("The number of positions must match the number of atoms")
+        if is_quantity(positions):
+            positions = positions.value_in_unit(nanometers)
+        if any(math.isnan(norm(pos)) for pos in positions):
+            raise ValueError(
+                "Particle position is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan"
+            )
+        if any(math.isinf(norm(pos)) for pos in positions):
+            raise ValueError(
+                "Particle position is infinite.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan"
+            )
 
-
-
-    def writeFrame(self, coords, box, time, step):
-        """Writes a new frame into the XTC file.
-        Parameters
-        ----------
-        coords : np.array
-            The coordinates of the atoms in the frame. Shape (n_atoms, 3)
-        box : np.array
-            The box vectors of the frame. Shape (3,)
-        time : float
-            The time of the frame.
-        step : int
-            The step of the frame.
-        """
-        xtc_write_frame(self._filename.encode('utf-8'), np.array(coords).astype(np.float32), np.array(box).astype(np.float32), time, step)
+        self._modelCount += 1
+        if (
+            self._interval > 1
+            and self._firstStep + self._modelCount * self._interval > 1 << 31
+        ):
+            # This will exceed the range of a 32 bit integer.  To avoid crashing or producing a corrupt file,
+            # update the file to say the trajectory consisted of a smaller number of larger steps (so the
+            # total trajectory length remains correct).
+            self._firstStep //= self._interval
+            self._dt *= self._interval
+            self._interval = 1
+            with tempfile.NamedTemporaryFile() as temp:
+                nframes = self._getNumFrames()
+                for i in range(nframes):
+                    read_frame = np.array([i]).astype(np.int32)
+                    _coords, _box, _time, _step = read_xtc_frames(
+                        self._filename.encode("utf-8"), read_frame
+                    )
+                    _step = self._firstStep + i * self._interval
+                    _time = _step * self._dt
+                    xtc_write_frame(
+                        temp.name.encode("utf-8"),
+                        _coords[:, :, 0],
+                        _box[:, 0],
+                        _time,
+                        _step,
+                    )
+                shutil.copyfile(temp.name, self._filename)
+        boxVectors = self._topology.getPeriodicBoxVectors()
+        if boxVectors is not None:
+            if periodicBoxVectors is not None:
+                boxVectors = periodicBoxVectors
+            if (
+                boxVectors[0][1] != 0
+                or boxVectors[0][2] != 0
+                or boxVectors[1][0] != 0
+                or boxVectors[1][2] != 0
+                or boxVectors[2][0] != 0
+                or boxVectors[2][1] != 0
+            ):
+                raise Exception("XTCReporter does not support triclinic boxes")
+            elif unitCellDimensions is not None:
+                if is_quantity(unitCellDimensions):
+                    unitCellDimensions = unitCellDimensions.value_in_unit(nanometers)
+                boxVectors = (
+                    Vec3(unitCellDimensions[0], 0, 0),
+                    Vec3(0, unitCellDimensions[1], 0),
+                    Vec3(0, 0, unitCellDimensions[2]),
+                ) * nanometers
+            boxVectors = np.array(
+                [boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]]
+            ).astype(np.float32)
+        else:
+            boxVectors = np.array([0, 0, 0]).astype(np.float32)
+        step = self._modelCount * self._interval + self._firstStep
+        time = step * self._dt
+        xtc_write_frame(
+            self._filename.encode("utf-8"),
+            np.array(positions).astype(np.float32),
+            boxVectors,
+            np.float32(time),
+            np.int32(step),
+        )
