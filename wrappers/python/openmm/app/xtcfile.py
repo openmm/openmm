@@ -136,8 +136,10 @@ class XTCFile(object):
         if boxVectors is not None:
             if periodicBoxVectors is not None:
                 boxVectors = periodicBoxVectors
+            if is_quantity(boxVectors):
+                boxVectors = boxVectors.value_in_unit(nanometers)
             if (
-                boxVectors[0][1] != 0
+                   boxVectors[0][1] != 0
                 or boxVectors[0][2] != 0
                 or boxVectors[1][0] != 0
                 or boxVectors[1][2] != 0
@@ -149,13 +151,14 @@ class XTCFile(object):
                 if is_quantity(unitCellDimensions):
                     unitCellDimensions = unitCellDimensions.value_in_unit(nanometers)
                 boxVectors = (
-                    Vec3(unitCellDimensions[0], 0, 0),
-                    Vec3(0, unitCellDimensions[1], 0),
-                    Vec3(0, 0, unitCellDimensions[2]),
-                ) * nanometers
+                    [unitCellDimensions[0], 0, 0],
+                    [0, unitCellDimensions[1], 0],
+                    [0, 0, unitCellDimensions[2]],
+                )
+            #Convert to numpy array
             boxVectors = np.array(
-                [boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]]
-            ).astype(np.float32)
+                [boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]],
+                dtype=np.float32)
         else:
             boxVectors = np.array([0, 0, 0]).astype(np.float32)
         step = self._modelCount * self._interval + self._firstStep
