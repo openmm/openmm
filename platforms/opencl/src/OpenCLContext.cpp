@@ -147,10 +147,11 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                 }
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
                 int processingElementsPerComputeUnit = 8;
+                string deviceVendor = devices[i].getInfo<CL_DEVICE_VENDOR>();
                 if (devices[i].getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {
                     processingElementsPerComputeUnit = 1;
                 }
-                else if (vendor.size() >= 5 && vendor.substr(0, 5) == "Apple") {
+                else if (deviceVendor.size() >= 5 && deviceVendor.substr(0, 5) == "Apple") {
                   processingElementsPerComputeUnit = 4 * 32;
                 }
                 else if (devices[i].getInfo<CL_DEVICE_EXTENSIONS>().find("cl_nv_device_attribute_query") != string::npos) {
@@ -183,8 +184,8 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
 #if __APPLE__
                 // macOS doesn't have the APP SDK or `cl_amd_device_attribute_query`.
                 // macOS also labels AMD GPUs as "AMD" instead of "Advanced Micro Devices".
-                else if ((vendor.size() >= 3 && vendor.substr(0, 3) == "AMD") ||
-                         (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.")) {
+                else if ((deviceVendor.size() >= 3 && deviceVendor.substr(0, 3) == "AMD") ||
+                         (deviceVendor.size() >= 28 && deviceVendor.substr(0, 28) == "Advanced Micro Devices, Inc.")) {
                   // On RDNA, macOS reports single CUs; Windows reports dual CUs.
                   // GCN single CU: 4 * 16 = 64
                   // RDNA single CU: 2 * 32 = 64
