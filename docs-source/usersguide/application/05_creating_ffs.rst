@@ -172,7 +172,8 @@ Each :code:`<VirtualSite>` tag indicates an atom in the residue that should
 be represented with a virtual site.  The :code:`type` attribute may equal
 :code:`"average2"`\ , :code:`"average3"`\ , :code:`"outOfPlane"`\ , or
 :code:`"localCoords"`\ , which correspond to the TwoParticleAverageSite, ThreeParticleAverageSite,
-OutOfPlaneSite, and LocalCoordinatesSite classes respectively.  The :code:`siteName`
+OutOfPlaneSite, and LocalCoordinatesSite classes respectively.  See Section
+:numref:`virtual-sites` for descriptions of how the virtual site classes work.  The :code:`siteName`
 attribute gives the name of the atom to represent with a virtual site.  The atoms
 it is calculated based on are specified by :code:`atomName1`\ , :code:`atomName2`\ , etc.
 (Some old force fields use the deprecated tags :code:`index`, :code:`atom1`,
@@ -956,6 +957,58 @@ must include an attribute called :code:`radius`\ .
 CustomManyParticleForce also allows you to define tabulated functions.  See Section
 :numref:`tabulated-functions` for details.
 
+<LennardJonesForce>
+===================
+
+The :code:`<LennardJonesForce>` tag provides an alternative to :code:`<NonbondedForce>`
+for implementing Lennard-Jones nonbonded interactions.  It instead implements
+them with a CustomNonbondedForce, and if necessary a CustomBondForce for 1-4
+interactions.  The advantage of using this tag is that it provides more flexibility
+in how the sigma and epsilon parameters are determined.  The disadvantage is
+that it tends to run slightly slower, so when the extra flexibility is not
+needed, it is better to use :code:`<NonbondedForce>` intead.
+
+To use it, include a tag that looks like this:
+
+.. code-block:: xml
+
+    <LennardJonesForce lj14scale="1.0" useDispersionCorrection="True">
+     <Atom epsilon="0.192464" sigma="0.040001" type="H"/>
+     <Atom epsilon="0.192464" sigma="0.040001" type="HC"/>
+     <Atom epsilon="0.092048" sigma="0.235197" type="HA"/>
+     ...
+     <NBFixPair epsilon="0.134306" sigma="0.29845" type1="CRL1" type2="HAL2"/>
+     <NBFixPair epsilon="0.150205" sigma="0.23876" type1="HAL2" type2="HGA1"/>
+     ...
+    </LennardJonesForce>
+
+The :code:`<LennardJonesForce>` tag has two attributes: :code:`lj14scale` specifies
+the scale factor between pairs of atoms separated by three bonds, and
+:code:`useDispersionCorrection` specifies whether to include a long range
+dispersion correction.
+
+Each :code:`<Atom>` tag specifies the nonbonded parameters for one atom type
+(specified with the :code:`type` attribute) or atom class (specified with
+the :code:`class` attribute).  It is fine to mix these two methods, having
+some tags specify a type and others specify a class.  However you do it, you
+must make sure that a unique set of parameters is defined for every atom type.
+:code:`sigma` is in nm, and :code:`epsilon` is in kJ/mole.
+
+An :code:`<Atom>` tag can optionally include two other attributes: :code:`sigma14`
+and :code:`epsilon14`.  If they are present, they are used in place of the
+standard sigma and epsilon parameters when computing 1-4 interactions.
+
+Each :code:`<NBFixPair>` tag specifies a pair of atom types (:code:`type1` and
+:code:`type2`) or classes (:code:`class1` and :code:`class2`) whose interaction
+should be computed differently.  Instead of using the standard Lorentz-Berthelot
+combining rules to determine sigma and epsilon based on the parameters for the
+individual atoms, the tag specifies different values to use.
+
+Because this tag only computes Lennard-Jones interactions, it usually is used together
+with a :code:`<NonbondedForce>` to compute the Coulomb interactions.  In that
+case, the NonbondedForce should specify :code:`epsilon="0"` for every atom so it
+does not also compute the Lennard-Jones interactions.
+
 Writing Custom Expressions
 ==========================
 
@@ -1107,24 +1160,48 @@ Using Multiple Files
 ********************
 
 If multiple XML files are specified when a ForceField is created, their
-definitions are combined as follows.
+definitions must be combined into a single force field.  This process involves
+a few steps.
 
-* A file may refer to atom types and classes that it defines, as well as those
-  defined in previous files.  It may not refer to ones defined in later files.
-  This means that the order in which files are listed when calling the ForceField
-  constructor is potentially significant.
-* Forces that involve per-atom parameters (such as NonbondedForce or
-  GBSAOBCForce) require parameter values to be defined for every atom type.  It
-  does not matter which file those types are defined in.  For example, files that
-  define explicit water models generally define a small number of atom types, as
-  well as nonbonded parameters for those types.  In contrast, files that define
-  implicit solvent models do not define any new atom types, but provide parameters
-  for all the atom types that were defined in the main force field file.
-* For other forces, the files are effectively independent.  For example, if two
-  files each include a :code:`<HarmonicBondForce>` tag, bonds will be created
-  based on the rules in the first file, and then more bonds will be created based
-  on the rules in the second file.  This means you could potentially end up with
-  multiple bonds between a single pair of atoms.
+The first step is to load the atom type definitions from all files.  Because this
+happens before any residue template or force definitions are loaded, it is
+possible for the residue templates and forces in one file to refer to atom types
+or classes defined in a different file.
+
+Next the residue and patch definitions are loaded, and finally the forces.
+Special care is needed when two files each define a force of the same type.
+
+For standard forces like HarmonicBondForce or NonbondedForce, the definitions
+are combined into a single definition.  For example, if two files each contain
+a :code:`<HarmonicBondForce>` tag, only a single HarmonicBondForce will be added
+to the system, containing bonds based on the definitions from both files.  An
+important consequence is that only a single bond will be added for any pair of
+atoms.  If each file contains a :code:`<Bond>` tag that matches the same pair of
+atoms, and if those tags specify different parameters, no guarantee is made about
+which parameters will end up being used.  It is generally best to avoid doing
+this.
+
+Combining of standard forces is especially important for forces that involve
+per-atom parameters, such as NonbondedForce or GBSAOBCForce.  These forces
+require parameter values to be defined for every atom type.  Because the
+definitions are combined, it does not matter which file each type is defined in.
+For example, files that define explicit water models generally define a small
+number of atom types, as well as nonbonded parameters for those types.  They are
+combined with the parameters from the main force field to create a single
+NonbondedForce.  In contrast, files that define implicit solvent models do not
+define any new atom types, but provide parameters for the atom types that were
+defined in the main force field file.
+
+In contrast to standard forces, custom forces do not get combined since two
+objects of the same class may still represent different potential functions.
+For example, if there are two :code:`<CustomBondForce>` tags, two separate
+CustomBondForces are added to the System, each containing bonds based only on
+the definitions in that tag.
+
+A consequence is that custom forces requiring per-atom parameters, such as
+CustomNonbondedForce or CustomGBForce, cannot be split between files.  A single
+tag must define parameters for all atom types.  There is no way for a second
+file to define parameters for additional atom types.
 
 
 Extending ForceField

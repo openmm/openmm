@@ -672,6 +672,7 @@ public:
     void finishQueue();
 private:
     OpenCLPlatform::PlatformData& platformData;
+    void printProfilingEvents();
     int deviceIndex;
     int platformIndex;
     int contextIndex;
@@ -714,6 +715,9 @@ private:
     std::map<std::string, double> energyParamDerivWorkspace;
     std::vector<cl::Memory*> autoclearBuffers;
     std::vector<size_t> autoclearBufferSizes;
+    std::vector<cl::Event> profilingEvents;
+    std::vector<std::string> profilingKernelNames;
+    cl_ulong profileStartTime;
     OpenCLIntegrationUtilities* integration;
     OpenCLExpressionUtilities* expression;
     OpenCLBondedUtilities* bonded;

@@ -17,7 +17,7 @@
   </Residue>
  </Residues>
  <HarmonicBondForce>
-  <Bond class1="OW" class2="HW" length="0.978882" k="502416.0"/>
+  <Bond class1="OW" class2="HW" length="0.0978882" k="502416.0"/>
  </HarmonicBondForce>
  <HarmonicAngleForce>
   <!-- angle = arccos(1 - (1.598507**2 / (2*0.978882**2))) -->

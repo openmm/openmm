@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -435,21 +435,23 @@ void CudaContext::initialize() {
     ContextSelector selector(*this);
     string errorMessage = "Error initializing Context";
     int numEnergyBuffers = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
+    int multiprocessors;
+    CHECK_RESULT2(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device), "Error checking GPU properties");
     if (useDoublePrecision) {
         energyBuffer.initialize<double>(*this, numEnergyBuffers, "energyBuffer");
-        energySum.initialize<double>(*this, 1, "energySum");
+        energySum.initialize<double>(*this, multiprocessors, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }
     else if (useMixedPrecision) {
         energyBuffer.initialize<double>(*this, numEnergyBuffers, "energyBuffer");
-        energySum.initialize<double>(*this, 1, "energySum");
+        energySum.initialize<double>(*this, multiprocessors, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
     }
     else {
         energyBuffer.initialize<float>(*this, numEnergyBuffers, "energyBuffer");
-        energySum.initialize<float>(*this, 1, "energySum");
+        energySum.initialize<float>(*this, multiprocessors, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*6, numEnergyBuffers);
         CHECK_RESULT(cuMemHostAlloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), 0));
     }
@@ -820,12 +822,18 @@ double CudaContext::reduceEnergy() {
     int bufferSize = energyBuffer.getSize();
     int workGroupSize  = 512;
     void* args[] = {&energyBuffer.getDevicePointer(), &energySum.getDevicePointer(), &bufferSize, &workGroupSize};
-    executeKernel(reduceEnergyKernel, args, workGroupSize, workGroupSize, workGroupSize*energyBuffer.getElementSize());
+    executeKernel(reduceEnergyKernel, args, workGroupSize*energySum.getSize(), workGroupSize, workGroupSize*energyBuffer.getElementSize());
     energySum.download(pinnedBuffer);
-    if (getUseDoublePrecision() || getUseMixedPrecision())
-        return *((double*) pinnedBuffer);
-    else
-        return *((float*) pinnedBuffer);
+    double result = 0;
+    if (getUseDoublePrecision() || getUseMixedPrecision()) {
+        for (int i = 0; i < energySum.getSize(); i++)
+            result += ((double*) pinnedBuffer)[i];
+    }
+    else {
+        for (int i = 0; i < energySum.getSize(); i++)
+            result += ((float*) pinnedBuffer)[i];
+    }
+    return result;
 }
 
 void CudaContext::setCharges(const vector<double>& charges) {

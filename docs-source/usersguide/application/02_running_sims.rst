@@ -505,6 +505,8 @@ File                                 Parameters
 :file:`amber14/tip4pew.xml`          TIP4P-Ew water model\ :cite:`Horn2004` and ions
 :file:`amber14/tip4pfb.xml`          TIP4P-FB water model\ :cite:`Wang2014` and ions
 :file:`amber14/spce.xml`             SPC/E water model\ :cite:`Berendsen1987` and ions
+:code:`amber14/opc.xml`              OPC water model\ :cite:`Izadi2014` and ions
+:code:`amber14/opc3.xml`             OPC3 water model\ :cite:`Izadi2016` and ions
 ===================================  ============================================
 
 As a convenience, the file :file:`amber14-all.xml` can be used as a shortcut to include
@@ -523,7 +525,7 @@ carbohydrates, include that file as well:
     forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml', 'amber14/GLYCAM_06j-1.xml')
 
 Be aware that GLYCAM works somewhat differently from most force fields.  It uses
-its own nonstandard `naming convention <http://legacy.glycam.org/docs/forcefield/glycam-naming-2/index.html>`_
+its own nonstandard `naming convention <http://glycam.org/docs/forcefield/glycam-naming-2>`_
 for carbohydrates, and requires your input file to follow it.  If any residues have
 names different from what it expects, GLYCAM will be unable to assign parameters
 to them.

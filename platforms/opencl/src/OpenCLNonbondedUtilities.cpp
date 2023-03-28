@@ -56,7 +56,7 @@ private:
 };
 
 OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
-        blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0) {
+        blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0), tilesAfterReorder(0) {
     // Decide how many thread blocks and force buffers to use.
 
     deviceIsCpu = (context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
@@ -65,8 +65,14 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
         forceThreadBlockSize = 1;
     }
     else if (context.getSIMDWidth() == 32) {
-            numForceThreadBlocks = 4*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
-            forceThreadBlockSize = 256;
+        int blocksPerComputeUnit = 4;
+        std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
+        if (vendor.size() >= 5 && vendor.substr(0, 5) == "Apple") {
+            // 1536 threads per GPU core.
+            blocksPerComputeUnit = 6;
+        }
+        numForceThreadBlocks = blocksPerComputeUnit*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+        forceThreadBlockSize = 256;
     }
     else {
         numForceThreadBlocks = context.getNumThreadBlocks();
@@ -360,6 +366,12 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     forceRebuildNeighborList = false;
     lastCutoff = kernels.cutoffDistance;
     context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, context.getSupports64BitGlobalAtomics() ? sizeof(cl_long) : sizeof(cl_int), pinnedCountMemory, NULL, &downloadCountEvent);
+
+    #if __APPLE__ && defined(__aarch64__)
+    // Segment the command stream to avoid stalls later.
+    if (groupKernels[forceGroups].hasForces)
+        context.getQueue().flush();
+    #endif
 }
 
 void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
@@ -375,6 +387,11 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
         context.executeKernel(kernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     if (useCutoff && numTiles > 0) {
+        #if __APPLE__ && defined(__aarch64__)
+        // Ensure cached up work executes while you're waiting.
+        if (kernels.hasForces)
+            context.getQueue().flush();
+        #endif
         downloadCountEvent.wait();
         updateNeighborListSize();
     }
@@ -384,7 +401,7 @@ bool OpenCLNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
     long long numInteractions = context.getSupports64BitGlobalAtomics() ? *(cl_long*)pinnedCountMemory : *(cl_int*)pinnedCountMemory;
-    if (context.getStepsSinceReorder() == 0)
+    if (context.getStepsSinceReorder() == 0 || tilesAfterReorder == 0)
         tilesAfterReorder = numInteractions;
     else if (context.getStepsSinceReorder() > 25 && numInteractions > 1.1*tilesAfterReorder)
         context.forceReorder();
