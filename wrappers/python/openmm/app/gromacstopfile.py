@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2022 Stanford University and the Authors.
+Portions copyright (c) 2012-2023 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -318,8 +318,8 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 3:
             raise ValueError('Too few fields in [ bonds ] line: '+line)
-        if fields[2] != '1':
-            raise ValueError('Unsupported function type in [ bonds ] line: '+line)
+        if fields[2] not in ('1', '2'):
+                raise ValueError('Unsupported function type in [ bonds ] line: '+line)
         self._currentMoleculeType.bonds.append(fields)
 
     def _processAngle(self, line):
@@ -329,8 +329,8 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 4:
             raise ValueError('Too few fields in [ angles ] line: '+line)
-        if fields[3] not in ('1', '5'):
-            raise ValueError('Unsupported function type in [ angles ] line: '+line)
+        if fields[3] not in ('1', '2', '5'):
+                raise ValueError('Unsupported function type in [ angles ] line: '+line)
         self._currentMoleculeType.angles.append(fields)
 
     def _processDihedral(self, line):
@@ -405,22 +405,28 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 5:
             raise ValueError('Too few fields in [ bondtypes ] line: '+line)
-        if fields[2] != '1':
+        if fields[2] not in ('1', '2'):
             raise ValueError('Unsupported function type in [ bondtypes ] line: '+line)
-        self._bondTypes[tuple(fields[:2])] = fields
+        self._bondTypes[tuple(fields[:3])] = fields
 
     def _processAngleType(self, line):
         """Process a line in the [ angletypes ] category."""
         fields = line.split()
         if len(fields) < 6:
             raise ValueError('Too few fields in [ angletypes ] line: '+line)
-        if fields[3] not in ('1', '5'):
+        if fields[3] not in ('1', '2', '5'):
             raise ValueError('Unsupported function type in [ angletypes ] line: '+line)
         self._angleTypes[tuple(fields[:3])] = fields
 
     def _processDihedralType(self, line):
         """Process a line in the [ dihedraltypes ] category."""
         fields = line.split()
+        if len(fields) < 7:
+            # If only two atom types are specified, interpret them as the two inner ones.  This should usually
+            # work correctly, but the syntax for it is poorly defined.  The expected number of fields depends
+            # on the function type, but you can't determine the function type until you know how many atom
+            # types are specified, and you can't determine that until you know the expected number of fields!
+            fields = ['X', fields[0], fields[1], 'X']+fields[2:]
         if len(fields) < 7:
             raise ValueError('Too few fields in [ dihedraltypes ] line: '+line)
         if fields[4] not in ('1', '2', '3', '4', '5', '9'):
@@ -677,8 +683,8 @@ class GromacsTopFile(object):
             nb.setReactionFieldDielectric(1.0)
         elif implicitSolvent is not None:
             raise ValueError('Illegal value for implicitSolvent')
-        bonds = None
-        angles = None
+        bonds = {}
+        angles = {}
         periodic = None
         rb = None
         harmonicTorsion = None
@@ -758,12 +764,15 @@ class GromacsTopFile(object):
                 for fields in moleculeType.bonds:
                     atoms = [int(x)-1 for x in fields[:2]]
                     types = tuple(bondedTypes[i] for i in atoms)
+                    bondType = fields[2]
+                    reversedTypes = types[::-1]+(bondType,)
+                    types = types+(bondType,)
                     if len(fields) >= 5:
                         params = fields[3:5]
                     elif types in self._bondTypes:
                         params = self._bondTypes[types][3:5]
-                    elif types[::-1] in self._bondTypes:
-                        params = self._bondTypes[types[::-1]][3:5]
+                    elif reversedTypes in self._bondTypes:
+                        params = self._bondTypes[reversedTypes][3:5]
                     else:
                         raise ValueError('No parameters specified for bond: '+fields[0]+', '+fields[1])
                     # Decide whether to use a constraint or a bond.
@@ -780,11 +789,20 @@ class GromacsTopFile(object):
                     length = float(params[0])
                     if useConstraint:
                         sys.addConstraint(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], length)
+                    elif bondType == '1':
+                        if bondType not in bonds:
+                            bonds[bondType] = mm.HarmonicBondForce()
+                            sys.addForce(bonds[bondType])
+                        bonds[bondType].addBond(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], length, float(params[1]))
+                    elif bondType == '2':
+                        if bondType not in bonds:
+                            bonds[bondType] = mm.CustomBondForce('0.25*k*(r^2-r0^2)^2')
+                            bonds[bondType].addPerBondParameter('r0')
+                            bonds[bondType].addPerBondParameter('k')
+                            sys.addForce(bonds[bondType])
+                        bonds[bondType].addBond(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], (length, float(params[1])))
                     else:
-                        if bonds is None:
-                            bonds = mm.HarmonicBondForce()
-                            sys.addForce(bonds)
-                        bonds.addBond(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], length, float(params[1]))
+                        raise ValueError('Internal error: bondType has unexpected value: '+bondType)
                     # Record information that will be needed for constraining angles.
                     atomBonds[atoms[0]][atoms[1]] = length
                     atomBonds[atoms[1]][atoms[0]] = length
@@ -795,6 +813,7 @@ class GromacsTopFile(object):
                 for fields in moleculeType.angles:
                     atoms = [int(x)-1 for x in fields[:3]]
                     types = tuple(bondedTypes[i] for i in atoms)
+                    angleType = fields[3]
                     if len(fields) >= 6:
                         params = fields[4:]
                     elif types in self._angleTypes:
@@ -823,18 +842,28 @@ class GromacsTopFile(object):
                             length = math.sqrt(l1*l1 + l2*l2 - 2*l1*l2*math.cos(theta))
                             sys.addConstraint(baseAtomIndex+atoms[0], baseAtomIndex+atoms[2], length)
                     else:
-                        if angles is None:
-                            angles = mm.HarmonicAngleForce()
-                            sys.addForce(angles)
-                        angles.addAngle(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], theta, float(params[1]))
-                        if fields[3] == '5':
-                            # This is a Urey-Bradley term, so add the bond.
-                            if bonds is None:
-                                bonds = mm.HarmonicBondForce()
-                                sys.addForce(bonds)
-                            k = float(params[3])
-                            if k != 0:
-                                bonds.addBond(baseAtomIndex+atoms[0], baseAtomIndex+atoms[2], float(params[2]), k)
+                        if angleType in ('1', '5'):
+                            if angleType not in angles:
+                                angles[angleType] = mm.HarmonicAngleForce()
+                                sys.addForce(angles[angleType])
+                            angles[angleType].addAngle(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], theta, float(params[1]))
+                            if angleType == '5':
+                                # This is a Urey-Bradley term, so also add the bond.
+                                if '1':
+                                    bonds['1'] = mm.HarmonicBondForce()
+                                    sys.addForce(bonds['1'])
+                                k = float(params[3])
+                                if k != 0:
+                                    bonds['1'].addBond(baseAtomIndex + atoms[0], baseAtomIndex + atoms[2], float(params[2]), k)
+                        elif angleType == '2':
+                            if angleType not in angles:
+                                angles[angleType] = mm.CustomAngleForce('0.5*k*(cos(theta)-cos(theta0))^2')
+                                angles[angleType].addPerAngleParameter('theta0')
+                                angles[angleType].addPerAngleParameter('k')
+                                sys.addForce(angles[angleType])
+                            angles[angleType].addAngle(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], (theta, float(params[1])))
+                        else:
+                            raise ValueError('Internal error: angleType has unexpected value: '+angleType)
 
                 # Add torsions.
 
