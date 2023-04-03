@@ -660,6 +660,17 @@ class GromacsTopFile(object):
         System
              the newly created System
         """
+
+        # Build a list of atom types for NBFIX
+
+        atom_types = []
+        for moleculeName, moleculeCount in self._molecules:
+            moleculeType = self._moleculeTypes[moleculeName]
+            for _ in range(moleculeCount):
+                for atom in moleculeType.atoms:
+                    atom_types.append(atom[1])
+        has_nbfix_terms = any([pair in self._nonbondTypes for pair in combinations_with_replacement(sorted(set(atom_types)), 2)])
+
         # Create the System.
 
         sys = mm.System()
@@ -670,7 +681,12 @@ class GromacsTopFile(object):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
         nb = mm.NonbondedForce()
         sys.addForce(nb)
-        if self._defaults[1] in ('1', '3'):
+        lj = None
+        if has_nbfix_terms:
+            lj = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r^6; a=acoef(type1, type2); b=bcoef(type1, type2)')
+            lj.addPerParticleParameter('type')
+            sys.addForce(lj)
+        elif self._defaults[1] in ('1', '3'):
             lj = mm.CustomNonbondedForce('A1*A2/r^12-C1*C2/r^6')
             lj.addPerParticleParameter('C')
             lj.addPerParticleParameter('A')
@@ -714,16 +730,6 @@ class GromacsTopFile(object):
                 wildcardDihedralTypes.append(key)
                 for types in dihedralTypeTable.values():
                     types.append(key)
-
-        # NBFIX
-
-        atom_types = []
-        for moleculeName, moleculeCount in self._molecules:
-            moleculeType = self._moleculeTypes[moleculeName]
-            for _ in range(moleculeCount):
-                for atom in moleculeType.atoms:
-                    atom_types.append(atom[1])
-        has_nbfix_terms = any([pair in self._nonbondTypes for pair in combinations_with_replacement(sorted(set(atom_types)), 2)])
 
         if has_nbfix_terms:
             # Build a lookup table and angle/dihedral indices list to
@@ -963,10 +969,9 @@ class GromacsTopFile(object):
                         q = float(params[4])
 
                     if has_nbfix_terms:
-                        if self._defaults[1] != '2':
-                            raise NotImplementedError('NBFIX terms with LB combination rule is not yet supported')
                         nb.addParticle(q, 1.0, 0.0)
                         atom_charges.append(q)
+                        lj.addParticle([0])
                     else:
                         if self._defaults[1] == '1':
                             nb.addParticle(q, 1.0, 0.0)
@@ -1088,9 +1093,12 @@ class GromacsTopFile(object):
                 rmin4 = float(params4[6])
                 eps4 = float(params4[7])
 
-                charge_prod = (q1*q4)
-                epsilon = (math.sqrt(abs(eps1 * eps4)))
-                rmin14 = (rmin1 + rmin4) / 2
+                charge_prod = q1*q4
+                epsilon = math.sqrt(abs(eps1 * eps4))
+                if self._defaults[1] == '2':
+                   rmin14 = (rmin1 + rmin4) / 2
+                else:
+                   rmin14 = math.sqrt(rmin1 * rmin4)
                 nb.addException(tor[0], tor[3], charge_prod, rmin14, epsilon)
                 excluded_atom_pairs.add(key)
 
@@ -1116,7 +1124,7 @@ class GromacsTopFile(object):
         for exclusion in exclusions:
             nb.addException(exclusion[0], exclusion[1], 0.0, 1.0, 0.0, True)
 
-        if self._defaults[1] in ('1', '3'):
+        if lj is not None:
             # We're using a CustomNonbondedForce for LJ interactions, so also create a CustomBondForce
             # to handle the exceptions.
 
@@ -1124,15 +1132,12 @@ class GromacsTopFile(object):
             pair_bond.addPerBondParameter('C')
             pair_bond.addPerBondParameter('A')
             sys.addForce(pair_bond)
-            lj.createExclusionsFromBonds(bondIndices, 3)
             for pair in pairs:
                 nb.addException(pair[0], pair[1], pair[2], 1.0, 0.0, True)
                 pair_bond.addBond(pair[0], pair[1], [pair[3], pair[4]])
-            existing = set(tuple(lj.getExclusionParticles(i)) for i in range(lj.getNumExclusions()))
-            for exclusion in exclusions:
-                if exclusion not in existing and tuple(reversed(exclusion)) not in existing:
-                    lj.addExclusion(exclusion[0], exclusion[1])
-                    existing.add(exclusion)
+            for i in range(nb.getNumExceptions()):
+                ii, jj, q, eps, sig = nb.getExceptionParameters(i)
+                lj.addExclusion(ii, jj)
         elif self._defaults[1] == '2':
             for pair in pairs:
                 nb.addException(pair[0], pair[1], pair[2], pair[3], pair[4], True)
@@ -1151,7 +1156,7 @@ class GromacsTopFile(object):
         if switchDistance is not None:
             nb.setUseSwitchingFunction(True)
             nb.setSwitchingDistance(switchDistance)
-        if self._defaults[1] in ('1', '3'):
+        if lj is not None:
             methodMap = {ff.NoCutoff:mm.CustomNonbondedForce.NoCutoff,
                          ff.CutoffNonPeriodic:mm.CustomNonbondedForce.CutoffNonPeriodic,
                          ff.CutoffPeriodic:mm.CustomNonbondedForce.CutoffPeriodic,
@@ -1160,14 +1165,13 @@ class GromacsTopFile(object):
                          ff.LJPME:mm.CustomNonbondedForce.CutoffPeriodic}
             lj.setNonbondedMethod(methodMap[nonbondedMethod])
             lj.setCutoffDistance(nonbondedCutoff)
+            if nonbondedMethod in (ff.PME, ff.LJPME, ff.Ewald, ff.CutoffPeriodic):
+                lj.setUseLongRangeCorrection(True)
             if switchDistance is not None:
                 lj.setUseSwitchingFunction(True)
                 lj.setSwitchingDistance(switchDistance)
 
         if has_nbfix_terms:
-            if self._defaults[1] != '2':
-                raise NotImplementedError('NBFIX terms with LB combination rule is not yet supported')
-
             atom_nbfix_types = set([])
             for pair in self._nonbondTypes:
                 atom_nbfix_types.add(pair[0])
@@ -1215,39 +1219,17 @@ class GromacsTopFile(object):
                         rij = float(params[3])
                         wdij = float(params[4])
                     except KeyError:
-                        rij = (lj_radii[i] + lj_radii[j]) / 2
+                        if self._defaults[1] == '2':
+                            rij = (lj_radii[i] + lj_radii[j]) / 2
+                        else:
+                            rij = math.sqrt(lj_radii[i] * lj_radii[j])
                         wdij = math.sqrt(lj_depths[i] * lj_depths[j])
                     acoef[i+num_lj_types*j] = 2 * math.sqrt(wdij) * rij**6
                     bcoef[i+num_lj_types*j] = 4 * wdij * rij**6
-            cforce = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r^6;'
-                                             'a=acoef(type1, type2);'
-                                             'b=bcoef(type1, type2)')
-            cforce.addTabulatedFunction('acoef',
-                    mm.Discrete2DFunction(num_lj_types, num_lj_types, acoef))
-            cforce.addTabulatedFunction('bcoef',
-                    mm.Discrete2DFunction(num_lj_types, num_lj_types, bcoef))
-            cforce.addPerParticleParameter('type')
-            if (nonbondedMethod in (ff.PME, ff.LJPME, ff.Ewald, ff.CutoffPeriodic)):
-                cforce.setNonbondedMethod(cforce.CutoffPeriodic)
-                cforce.setCutoffDistance(nonbondedCutoff)
-                cforce.setUseLongRangeCorrection(True)
-            elif nonbondedMethod is ff.NoCutoff:
-                cforce.setNonbondedMethod(cforce.NoCutoff)
-            elif nonbondedMethod is ff.CutoffNonPeriodic:
-                cforce.setNonbondedMethod(cforce.CutoffNonPeriodic)
-                cforce.setCutoffDistance(nonbondedCutoff)
-            else:
-                raise ValueError('Unrecognized nonbonded method')
-            if switchDistance is not None:
-                cforce.setUseSwitchingFunction(True)
-                cforce.setSwitchingDistance(switchDistance)
-            for i in lj_idx_list:
-                cforce.addParticle((i - 1,)) # adjust for indexing from 0
-
-            for i in range(nb.getNumExceptions()):
-                ii, jj, q, eps, sig = nb.getExceptionParameters(i)
-                cforce.addExclusion(ii, jj)
-            sys.addForce(cforce)
+            lj.addTabulatedFunction('acoef', mm.Discrete2DFunction(num_lj_types, num_lj_types, acoef))
+            lj.addTabulatedFunction('bcoef', mm.Discrete2DFunction(num_lj_types, num_lj_types, bcoef))
+            for i, idx in enumerate(lj_idx_list):
+                lj.setParticleParameters(i, [idx-1]) # adjust for indexing from 0
 
         # Adjust masses.
 
