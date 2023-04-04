@@ -15,7 +15,7 @@ else:
 
 
 class TestXtcFile(unittest.TestCase):
-    def test_xtc(self):
+    def test_xtc_triclinic(self):
         """Test the XTC file by writing a trajectory and reading it back."""
         with tempfile.NamedTemporaryFile() as temp:
             fname = temp.name
@@ -29,18 +29,49 @@ class TestXtcFile(unittest.TestCase):
             box = []
             for i in range(nframes):
                 coords.append([mm.Vec3(random(), random(), random()) for j in range(natom)]* unit.nanometers)
-                box.append([random(), random(), random()]* unit.nanometers)
-                xtc.writeModel(coords[i],unitCellDimensions=box[i])
+                box.append(np.random.rand(3,3) * unit.nanometers)
+                xtc.writeModel(coords[i],periodicBoxVectors=box[i])
             #The  XTCFile class  does not  provide a  way to  read the
             #trajectory back, but the underlying XTC library does
             coords_read, box_read, time, step = read_xtc(fname.encode("utf-8"))
             self.assertEqual(coords_read.shape, (natom,3,nframes))
-            self.assertEqual(box_read.shape, (3,nframes))
+            self.assertEqual(box_read.shape, (3,3,nframes))
             self.assertEqual(len(time), nframes)
             self.assertEqual(len(step), nframes)
             coords = np.array([c.value_in_unit(unit.nanometers) for c in coords]).transpose(1,2,0)
             self.assertTrue(np.allclose(coords_read, coords, atol=1e-3))
-            box = np.array([b.value_in_unit(unit.nanometers) for b in box]).transpose(1,0)
+            box = np.array([b.value_in_unit(unit.nanometers) for b in box]).transpose(1,2,0)
+            self.assertTrue(np.allclose(box_read, box, atol=1e-3))
+            self.assertTrue(np.allclose(time, np.arange(1, nframes+1)*0.001, atol=1e-5))
+            self.assertTrue(np.allclose(step, np.arange(1, nframes+1), atol=1e-5))
+
+    def test_xtc_cubic(self):
+        """Test the XTC file by writing a trajectory and reading it back."""
+        with tempfile.NamedTemporaryFile() as temp:
+            fname = temp.name
+            pdbfile = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
+            #Set some arbitrary size for the unit cell so that a box is included in the trajectory
+            pdbfile.topology.setUnitCellDimensions([10,10,10])
+            natom = len(list(pdbfile.topology.atoms()))
+            nframes=20
+            xtc = app.XTCFile(fname, pdbfile.topology, 0.001)
+            coords = []
+            box = []
+            for i in range(nframes):
+                coords.append([mm.Vec3(random(), random(), random()) for j in range(natom)]* unit.nanometers)
+                box_i = np.random.rand(3)
+                box.append(np.diag(box_i)*unit.nanometers)
+                xtc.writeModel(coords[i], unitCellDimensions=box_i)
+            #The  XTCFile class  does not  provide a  way to  read the
+            #trajectory back, but the underlying XTC library does
+            coords_read, box_read, time, step = read_xtc(fname.encode("utf-8"))
+            self.assertEqual(coords_read.shape, (natom,3,nframes))
+            self.assertEqual(box_read.shape, (3,3,nframes))
+            self.assertEqual(len(time), nframes)
+            self.assertEqual(len(step), nframes)
+            coords = np.array([c.value_in_unit(unit.nanometers) for c in coords]).transpose(1,2,0)
+            self.assertTrue(np.allclose(coords_read, coords, atol=1e-3))
+            box = np.array([b.value_in_unit(unit.nanometers) for b in box]).transpose(1,2,0)
             self.assertTrue(np.allclose(box_read, box, atol=1e-3))
             self.assertTrue(np.allclose(time, np.arange(1, nframes+1)*0.001, atol=1e-5))
             self.assertTrue(np.allclose(step, np.arange(1, nframes+1), atol=1e-5))
