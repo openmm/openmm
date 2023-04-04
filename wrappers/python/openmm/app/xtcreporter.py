@@ -62,8 +62,12 @@ class XTCReporter(object):
         """
 
         if self._xtc is None:
+            if self._append:
+                mode = 'r+b'
+            else:
+                mode = 'wb'
             self._xtc = XTCFile(
-                self._fileName,
+                open(self._fileName, mode),
                 simulation.topology,
                 simulation.integrator.getStepSize(),
                 simulation.currentStep,
