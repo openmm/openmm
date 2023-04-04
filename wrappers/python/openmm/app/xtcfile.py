@@ -127,7 +127,7 @@ class XTCFile(object):
                     xtc_write_frame(
                         temp.name.encode("utf-8"),
                         _coords[:, :, 0],
-                        _box[:, 0],
+                        _box[:, :, 0],
                         _time,
                         _step,
                     )
@@ -136,31 +136,18 @@ class XTCFile(object):
         if boxVectors is not None:
             if periodicBoxVectors is not None:
                 boxVectors = periodicBoxVectors
-            if is_quantity(boxVectors):
-                boxVectors = boxVectors.value_in_unit(nanometers)
-            if (
-                   boxVectors[0][1] != 0
-                or boxVectors[0][2] != 0
-                or boxVectors[1][0] != 0
-                or boxVectors[1][2] != 0
-                or boxVectors[2][0] != 0
-                or boxVectors[2][1] != 0
-            ):
-                raise Exception("XTCReporter does not support triclinic boxes")
+                if is_quantity(boxVectors):
+                   boxVectors = boxVectors.value_in_unit(nanometers)
             elif unitCellDimensions is not None:
                 if is_quantity(unitCellDimensions):
                     unitCellDimensions = unitCellDimensions.value_in_unit(nanometers)
-                boxVectors = (
-                    [unitCellDimensions[0], 0, 0],
-                    [0, unitCellDimensions[1], 0],
-                    [0, 0, unitCellDimensions[2]],
-                )
+                boxVectors = np.diag(unitCellDimensions)
             #Convert to numpy array
             boxVectors = np.array(
-                [boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]],
+                boxVectors,
                 dtype=np.float32)
         else:
-            boxVectors = np.array([0, 0, 0]).astype(np.float32)
+            boxVectors = np.zeros((3,3)).astype(np.float32)
         step = self._modelCount * self._interval + self._firstStep
         time = step * self._dt
         xtc_write_frame(

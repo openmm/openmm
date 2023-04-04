@@ -45,7 +45,7 @@ void xtc_read_frame(char* filename, float* coords_arr, float* box_arr, float* ti
 int xtc_write(char* filename, int natoms, int nframes, int* step, float* timex, float* pos, float* box);
 
 struct XTC_frame {
-    float box[3];
+    float box[9];
     int natoms;
     unsigned long step;
     double time;
