@@ -5,6 +5,7 @@ from openmm import *
 from openmm.unit import *
 from openmm.app.gromacstopfile import _defaultGromacsIncludeDir
 import openmm.app.element as elem
+from numpy.testing import assert_allclose
 
 GROMACS_INCLUDE = _defaultGromacsIncludeDir()
 
@@ -226,6 +227,30 @@ class TestGromacsTopFile(unittest.TestCase):
         self.assertAlmostEqual(0.786646558, vs.getWeight(0))
         self.assertAlmostEqual(0.106676721, vs.getWeight(1))
         self.assertAlmostEqual(0.106676721, vs.getWeight(2))
+
+    def test_GROMOS(self):
+        """Test a system using the GROMOS 54a7 force field."""
+
+        top = GromacsTopFile('systems/1ppt.top')
+        gro = GromacsGroFile('systems/1ppt.gro')
+        system = top.createSystem()
+        for i, f in enumerate(system.getForces()):
+            f.setForceGroup(i)
+
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatformByName('Reference'))
+        context.setPositions(gro.positions)
+        energy = {}
+        for i, f in enumerate(system.getForces()):
+            energy[f.getName()] = context.getState(getEnergy=True, groups={i}).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(1.12797e+03, energy['GROMOSBondForce'], rtol=1e-4)
+        assert_allclose(5.59066e+02, energy['GROMOSAngleForce'], rtol=1e-4)
+        assert_allclose(3.80152e+02, energy['PeriodicTorsionForce'], rtol=1e-4)
+        assert_allclose(9.59178e+01, energy['HarmonicTorsionForce'], rtol=1e-4)
+        assert_allclose(2.75306e+02, energy['LennardJonesExceptions'], rtol=1e-4)
+        assert_allclose(-7.53474e+02, energy['LennardJonesForce'], rtol=1e-4)
+        assert_allclose(-6.34673e+03+4.36880e+03, energy['NonbondedForce'], rtol=1e-4)
+        total = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
+        assert_allclose(-2.92989e+02, total, rtol=1e-4)
 
 if __name__ == '__main__':
     unittest.main()

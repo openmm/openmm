@@ -805,6 +805,7 @@ class GromacsTopFile(object):
                             bonds[bondType] = mm.CustomBondForce('0.25*k*(r^2-r0^2)^2')
                             bonds[bondType].addPerBondParameter('r0')
                             bonds[bondType].addPerBondParameter('k')
+                            bonds[bondType].setName('GROMOSBondForce')
                             sys.addForce(bonds[bondType])
                         bonds[bondType].addBond(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], (length, float(params[1])))
                     else:
@@ -866,6 +867,7 @@ class GromacsTopFile(object):
                                 angles[angleType] = mm.CustomAngleForce('0.5*k*(cos(theta)-cos(theta0))^2')
                                 angles[angleType].addPerAngleParameter('theta0')
                                 angles[angleType].addPerAngleParameter('k')
+                                angles[angleType].setName('GROMOSAngleForce')
                                 sys.addForce(angles[angleType])
                             angles[angleType].addAngle(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], (theta, float(params[1])))
                         else:
@@ -913,6 +915,7 @@ class GromacsTopFile(object):
                                     harmonicTorsion = mm.CustomTorsionForce('0.5*k*(thetap-theta0)^2; thetap = step(-(theta-theta0+pi))*2*pi+theta+step(theta-theta0-pi)*(-2*pi); pi = %.15g' % math.pi)
                                     harmonicTorsion.addPerTorsionParameter('theta0')
                                     harmonicTorsion.addPerTorsionParameter('k')
+                                    harmonicTorsion.setName('HarmonicTorsionForce')
                                     sys.addForce(harmonicTorsion)
                                 # map phi0 into correct space
                                 phi0 = phi0 - 360 if phi0 > 180 else phi0
@@ -1131,6 +1134,7 @@ class GromacsTopFile(object):
             pair_bond = mm.CustomBondForce('-C/r^6+A/r^12')
             pair_bond.addPerBondParameter('C')
             pair_bond.addPerBondParameter('A')
+            pair_bond.setName('LennardJonesExceptions')
             sys.addForce(pair_bond)
             for pair in pairs:
                 nb.addException(pair[0], pair[1], pair[2], 1.0, 0.0, True)
@@ -1170,6 +1174,7 @@ class GromacsTopFile(object):
             if switchDistance is not None:
                 lj.setUseSwitchingFunction(True)
                 lj.setSwitchingDistance(switchDistance)
+            lj.setName('LennardJonesForce')
 
         if has_nbfix_terms:
             atom_nbfix_types = set([])
@@ -1179,30 +1184,26 @@ class GromacsTopFile(object):
 
             lj_idx_list = [0 for _ in atom_types]
             lj_radii, lj_depths = [], []
+            atom_params = []
             num_lj_types = 0
             lj_type_list = []
             for i,atom_type in enumerate(atom_types):
                 atom = self._atomTypes[atom_type]
                 if lj_idx_list[i]: continue # already assigned
-                atom_rmin = atom[6]
-                atom_epsilon = atom[7]
+                ljtype = (float(atom[6]), float(atom[7]))
+                atom_params.append(ljtype)
                 num_lj_types += 1
                 lj_idx_list[i] = num_lj_types
-                ljtype = (atom_rmin, atom_epsilon)
                 lj_type_list.append(atom)
-                lj_radii.append(float(atom_rmin))
-                lj_depths.append(float(atom_epsilon))
                 for j in range(i+1, len(atom_types)):
                     atom_type2 = atom_types[j]
                     if lj_idx_list[j] > 0: continue # already assigned
                     atom2 = self._atomTypes[atom_type2]
-                    atom2_rmin = atom2[6]
-                    atom2_epsilon = atom2[7]
+                    ljtype2 = (float(atom2[6]), float(atom2[7]))
                     if atom2 is atom:
                         lj_idx_list[j] = num_lj_types
                     elif atom_type not in atom_nbfix_types:
                         # Only non-NBFIXed atom types can be compressed
-                        ljtype2 = (atom2_rmin, atom2_epsilon)
                         if ljtype == ljtype2:
                             lj_idx_list[j] = num_lj_types
 
@@ -1215,17 +1216,30 @@ class GromacsTopFile(object):
                 for j in range(num_lj_types):
                     namej = lj_type_list[j][0]
                     try:
-                        params = self._nonbondTypes[tuple(sorted((namei, namej)))]
-                        rij = float(params[3])
-                        wdij = float(params[4])
-                    except KeyError:
+                        types = self._nonbondTypes[tuple(sorted((namei, namej)))]
+                        params = (float(types[3]), float(types[4]))
                         if self._defaults[1] == '2':
-                            rij = (lj_radii[i] + lj_radii[j]) / 2
+                            c6 = 4 * params[1] * params[0]**6
+                            c12 = 4 * params[1] * params[0]**12
                         else:
-                            rij = math.sqrt(lj_radii[i] * lj_radii[j])
-                        wdij = math.sqrt(lj_depths[i] * lj_depths[j])
-                    acoef[i+num_lj_types*j] = 2 * math.sqrt(wdij) * rij**6
-                    bcoef[i+num_lj_types*j] = 4 * wdij * rij**6
+                            c6 = params[0]
+                            c12 = params[1]
+                    except KeyError:
+                        params1 = atom_params[i]
+                        params2 = atom_params[j]
+                        if self._defaults[1] == '1':
+                            c6 = math.sqrt(params1[0]*params2[0])
+                            c12 = math.sqrt(params1[1]*params2[1])
+                        else:
+                            if self._defaults[1] == '2':
+                                sigma = (params1[0] + params2[0]) / 2
+                            else:
+                                sigma = math.sqrt(params1[0] + params2[0])
+                            epsilon = math.sqrt(params1[1] * params2[1])
+                            c6 = 4 * epsilon * sigma**6
+                            c12 = 4 * epsilon * sigma**12
+                    acoef[i+num_lj_types*j] = math.sqrt(c12)
+                    bcoef[i+num_lj_types*j] = c6
             lj.addTabulatedFunction('acoef', mm.Discrete2DFunction(num_lj_types, num_lj_types, acoef))
             lj.addTabulatedFunction('bcoef', mm.Discrete2DFunction(num_lj_types, num_lj_types, bcoef))
             for i, idx in enumerate(lj_idx_list):
