@@ -296,28 +296,28 @@ void xtc_read_frame(char* filename, float* coords_arr, float* box_arr, float* ti
     frames = xtc_read(filename, &garbage_natoms, &traj_nframes, &dt, &dstep);
     int xidx, yidx, zidx, aidx;
     if (frame < traj_nframes) {
-      for (i = 0; i < traj_nframes; i++) {
-	if (i != frame) {
-	  free(frames[i].pos);
-	}
-      }
-      time_arr[fidx] = frames[frame].time;
-      step_arr[fidx] = frames[frame].step;
-      for(int i= 0; i<9; i++){
-	box_arr[fidx + i*nframes] = frames[frame].box[i];
-      }
-      for (aidx = 0; aidx < natoms; aidx++) {
-	xidx = Xf(aidx, fidx, nframes);
-	yidx = Yf(xidx, nframes);
-	zidx = Zf(yidx, nframes);
-	coords_arr[xidx] = frames[frame].pos[aidx * 3 + 0];
-	coords_arr[yidx] = frames[frame].pos[aidx * 3 + 1];
-	coords_arr[zidx] = frames[frame].pos[aidx * 3 + 2];
-      }
-      if (!frames) {
-	fprintf(stderr, "xtc_read_frame(): failure to read file (whole file path)\n");
-      }
-      return;
+        for (i = 0; i < traj_nframes; i++) {
+            if (i != frame) {
+                free(frames[i].pos);
+            }
+        }
+        time_arr[fidx] = frames[frame].time;
+        step_arr[fidx] = frames[frame].step;
+        for (int i = 0; i < 9; i++) {
+            box_arr[fidx + i * nframes] = frames[frame].box[i];
+        }
+        for (aidx = 0; aidx < natoms; aidx++) {
+            xidx = Xf(aidx, fidx, nframes);
+            yidx = Yf(xidx, nframes);
+            zidx = Zf(yidx, nframes);
+            coords_arr[xidx] = frames[frame].pos[aidx * 3 + 0];
+            coords_arr[yidx] = frames[frame].pos[aidx * 3 + 1];
+            coords_arr[zidx] = frames[frame].pos[aidx * 3 + 2];
+        }
+        if (!frames) {
+            fprintf(stderr, "xtc_read_frame(): failure to read file (whole file path)\n");
+        }
+        return;
     }
     condfree((void*)p);
     p = NULL;
