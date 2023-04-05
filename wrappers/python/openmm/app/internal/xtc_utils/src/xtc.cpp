@@ -23,12 +23,6 @@ SOFTWARE.
 
 Contributors: Stefan Doerr, Raul P. Pelaez
 */
-#ifdef PLATFORM_Linux
-    #if defined(__i386__) || defined(__x86_64__)
-__asm__(".symver memcpy,memcpy@GLIBC_2.2.5");
-    #endif
-#endif
-
 #include "xtc.h"
 #include "xdrfile.h"
 #include "xdrfile_xtc.h"
@@ -59,14 +53,6 @@ static void* condfree(void* p) {
 #define Yf(xidx, nframes) xidx + nframes
 #define Zf(yidx, nframes) yidx + nframes
 
-void get_index_file(char* filename, char* index_file) {
-    std::string str(filename);
-    std::size_t found = str.find_last_of("/\\");
-    std::string dirname = str.substr(0, found);
-    std::string fname = str.substr(found + 1);
-    sprintf(index_file, "%s/.%s", dirname.c_str(), fname.c_str());
-}
-
 int xtc_natoms(char* filename) {
     int natoms = 0;
     if (exdrOK != read_xtc_natoms(filename, &natoms)) {
@@ -77,21 +63,6 @@ int xtc_natoms(char* filename) {
 }
 
 int xtc_nframes(char* filename) {
-    char index_file[PATH_MAX + 1];
-    get_index_file(filename, index_file);
-
-    struct stat st_index_file, st_traj_file;
-    if ((stat(index_file, &st_index_file) == 0) && (stat(filename, &st_traj_file) == 0)) {
-        // If the index file is older than the trajectory file rewrite it
-        // If the index file is size 0 rewrite it
-        if ((st_index_file.st_size > 0) && (st_index_file.st_mtime > st_traj_file.st_mtime)) {
-            // The index file exists. Get numframes from it's size
-            return (st_index_file.st_size) / sizeof(uint64_t);
-        } else {
-            remove(index_file);
-        }
-    }
-
     int natoms = 0;
     int nframes = 0;
     rvec* p = NULL;
@@ -100,10 +71,6 @@ int xtc_nframes(char* filename) {
     int step;
     float prec;
     matrix box;
-    FILE* indexfn = NULL;
-
-    int writing_index = 0;
-
     if (exdrOK != read_xtc_natoms(filename, &natoms)) {
         fprintf(stderr, "xtc_read(): could not get natoms\n");
         return -1;
@@ -112,62 +79,25 @@ int xtc_nframes(char* filename) {
         fprintf(stderr, "xtc_read(): natoms is 0\n");
         return -1;
     }
-
     xd = xdrfile_open(filename, "r");
-
     if (NULL == xd) {
         fprintf(stderr, "xtc_read(): could not open file\n");
         return -1;
     }
-
     p = (rvec*)malloc(sizeof(rvec) * natoms);
-
-    indexfn = fopen(index_file, "r");
-
-    if (!indexfn) {
-        indexfn = fopen(index_file, "w");
-        if (indexfn) {
-            if (getenv("DEBUG"))
-                fprintf(stderr, "xtc_read(): writing index [%s]\n", index_file);
-            writing_index = 1;
-        }
-    }
-
     int retval = 0;
     uint64_t offset = 0;
-
     while (exdrOK == (retval = read_xtc(xd, natoms, &step, &time, box, p, &prec))) {
-        if (writing_index) {
-            fwrite(&(offset), sizeof(uint64_t), 1, indexfn);
-        }
-
         nframes++;
         offset = ftell(xd->fp);
     }
-
     condfree((void*)p);
     p = NULL;
-
     xdrfile_close(xd);
-
     if (retval == exdr3DX) {
         fprintf(stderr, "xtc_read(): XTC file is corrupt\n");
-        if (indexfn)
-            fclose(indexfn);
         return -1;
     }
-
-    if (indexfn)
-        fclose(indexfn);
-
-    if (indexfn) {
-        // Always try to make the index file globally readable
-        // so bob can read alice's indices
-#ifndef _WIN32
-        chmod(index_file, 0644);
-#endif
-    }
-
     return nframes;
 }
 
@@ -179,21 +109,16 @@ void xtc_read_new(char* filename, float* coords_arr, float* box_arr, float* time
     float prec;
     matrix box;
     int nf3 = nframes * 3; // Precalculate 3 * nframes for the coordinate lookup macro
-
     if (!natoms) {
         fprintf(stderr, "xtc_read(): natoms is 0\n");
         return;
     }
-
     xd = xdrfile_open(filename, "r");
-
     if (NULL == xd) {
         fprintf(stderr, "xtc_read(): could not open file\n");
         return;
     }
-
     p = (rvec*)malloc(sizeof(rvec) * natoms);
-
     int retval = 0;
     int fidx = 0;
     int _natoms_garbage = 0;
@@ -201,12 +126,11 @@ void xtc_read_new(char* filename, float* coords_arr, float* box_arr, float* time
     while (exdrOK == (retval = read_xtc(xd, _natoms_garbage, &step, &time, box, p, &prec))) {
         time_arr[fidx] = time;
         step_arr[fidx] = step;
-
-	for(int i=0; i<3; i++) {
-	  for(int j=0; j<3; j++) {
-	    box_arr[fidx + (3*i+j)*nframes] = box[i][j];
-	  }
-	}
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                box_arr[fidx + (3 * i + j) * nframes] = box[i][j];
+            }
+        }
         for (aidx = 0; aidx < natoms; aidx++) {
             xidx = Xf(aidx, fidx, nframes);
             yidx = Yf(xidx, nframes);
@@ -215,15 +139,11 @@ void xtc_read_new(char* filename, float* coords_arr, float* box_arr, float* time
             coords_arr[yidx] = p[aidx][1];
             coords_arr[zidx] = p[aidx][2];
         }
-
         fidx++;
     }
-
     condfree((void*)p);
     p = NULL;
-
     xdrfile_close(xd);
-
     if (retval == exdr3DX) {
         fprintf(stderr, "xtc_read(): XTC file is corrupt\n");
     }
@@ -240,13 +160,6 @@ struct XTC_frame* xtc_read(char* filename, int* natoms, int* nframes, double* dt
     float prec;
     matrix box;
     int i;
-    FILE* indexfn = NULL;
-
-    char index_file[PATH_MAX + 1];
-    int writing_index = 0;
-
-    get_index_file(filename, index_file);
-
     if (exdrOK != read_xtc_natoms(filename, natoms)) {
         fprintf(stderr, "xtc_read(): could not get natoms\n");
         return NULL;
@@ -255,118 +168,64 @@ struct XTC_frame* xtc_read(char* filename, int* natoms, int* nframes, double* dt
         fprintf(stderr, "xtc_read(): natoms is 0\n");
         return NULL;
     }
-
     xd = xdrfile_open(filename, "r");
-
     if (NULL == xd) {
         fprintf(stderr, "xtc_read(): could not open file\n");
         return NULL;
     }
-
     p = (rvec*)malloc(sizeof(rvec) * *natoms);
-
-    indexfn = fopen(index_file, "r");
-
-    if (!indexfn) {
-        indexfn = fopen(index_file, "w");
-        if (indexfn) {
-            if (getenv("DEBUG"))
-                fprintf(stderr, "xtc_read(): writing index [%s]\n", index_file);
-            writing_index = 1;
-        }
-    }
-
     int retval = 0;
     uint64_t offset = 0;
-
     while (exdrOK == (retval = read_xtc(xd, *natoms, &step, &time, box, p, &prec))) {
         frames = (struct XTC_frame*)realloc(frames, sizeof(struct XTC_frame) * (*nframes + 1));
-
-        if (writing_index) {
-            fwrite(&(offset), sizeof(uint64_t), 1, indexfn);
-        }
-
         if (!(frames)) {
             fprintf(stderr, "xtc_read(): Allocation error in xtc.c (1). nframes=%d natoms=%d\n", *nframes, *natoms);
-            if (indexfn)
-                fclose(indexfn);
             return NULL;
         }
         frames[*nframes].time = time;
         frames[*nframes].step = step;
-	for(int i=0;i<3;i++){
-	  for(int j=0;j<3;j++){
-	    frames[*nframes].box[3*i+j] = box[i][j];
-	  }
-	}
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                frames[*nframes].box[3 * i + j] = box[i][j];
+            }
+        }
         frames[*nframes].pos = (float*)malloc(sizeof(float) * 3 * *natoms);
-
         if (!(frames[*nframes].pos)) {
             fprintf(stderr, "xtc_read(): Allocation error in xtc.c (2). nframes=%d natoms=%d\n", *nframes, *natoms);
-            if (indexfn)
-                fclose(indexfn);
             return NULL;
         }
-
         float* pp = frames[*nframes].pos;
-
         for (i = 0; i < *natoms; i++) {
             pp[i * 3 + 0] = p[i][0];
             pp[i * 3 + 1] = p[i][1];
             pp[i * 3 + 2] = p[i][2];
         }
-
         (*nframes)++;
         offset = ftell(xd->fp);
     }
-
     *dt = 0.;
     *dstep = 0;
     if (*nframes >= 2) {
         *dt = frames[1].time - frames[0].time;
         *dstep = frames[1].step - frames[0].step;
     }
-
     condfree((void*)p);
     p = NULL;
-
     xdrfile_close(xd);
-
     if (retval == exdr3DX) {
         fprintf(stderr, "xtc_read(): XTC file is corrupt\n");
         condfree((void*)frames);
         frames = NULL;
-        if (indexfn)
-            fclose(indexfn);
         return (NULL);
     }
-
-    if (indexfn)
-        fclose(indexfn);
-
     if (!frames) {
         fprintf(stderr, "xtc_read(): no frames read\n");
     }
-
-    if (indexfn) {
-        // Always try to make the index file globally readable
-        // so bob can read alice's indices
-#ifndef _WIN32
-        chmod(index_file, 0644);
-#endif
-    }
-
     return frames;
 }
 
 XDRFILE* xtc_open_for_write(char* filename) {
     XDRFILE* xd = NULL;
-    // Invalidate any index file
-    char index_file[PATH_MAX + 1];
-
-    get_index_file(filename, index_file);
-    remove(index_file);
-
     xd = xdrfile_open(filename, "a");
     return xd;
 }
@@ -381,11 +240,11 @@ int xtc_write_frames(XDRFILE* xd, int natoms, int nframes, int* step, float* tim
     for (f = 0; f < nframes; f++) {
         p = (rvec*)malloc(sizeof(rvec) * natoms * 3);
 
-	for(int i = 0; i < 3; i++) {
-	  for(int j = 0; j < 3; j++) {
-	    b[i][j] = box[(3*i+j) * nframes + f];
-	  }
-	}
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                b[i][j] = box[(3 * i + j) * nframes + f];
+            }
+        }
 
         for (i = 0; i < natoms; i++) {
             xidx = Xf(i, f, nframes);
@@ -425,141 +284,43 @@ void xtc_read_frame(char* filename, float* coords_arr, float* box_arr, float* ti
     float prec;
     matrix box;
     int i;
-    FILE* indexfn = NULL;
-
-    char index_file[PATH_MAX + 1];
-
-    int reading_index = 0;
-    int writing_index = 0;
-
     if (frame < 0) {
         fprintf(stderr, "xtc_read_frame(): Frame <0\n");
         return;
     }
-
-    get_index_file(filename, index_file);
-
-    if (getenv("DEBUG")) {
-        fprintf(stderr, "Looking for index file [%s]\n", index_file);
+    // REAd the whole thing and return the selected frame
+    int traj_nframes;
+    double dt;
+    int dstep;
+    int garbage_natoms;
+    frames = xtc_read(filename, &garbage_natoms, &traj_nframes, &dt, &dstep);
+    int xidx, yidx, zidx, aidx;
+    if (frame < traj_nframes) {
+      for (i = 0; i < traj_nframes; i++) {
+	if (i != frame) {
+	  free(frames[i].pos);
+	}
+      }
+      time_arr[fidx] = frames[frame].time;
+      step_arr[fidx] = frames[frame].step;
+      for(int i= 0; i<9; i++){
+	box_arr[fidx + i*nframes] = frames[frame].box[i];
+      }
+      for (aidx = 0; aidx < natoms; aidx++) {
+	xidx = Xf(aidx, fidx, nframes);
+	yidx = Yf(xidx, nframes);
+	zidx = Zf(yidx, nframes);
+	coords_arr[xidx] = frames[frame].pos[aidx * 3 + 0];
+	coords_arr[yidx] = frames[frame].pos[aidx * 3 + 1];
+	coords_arr[zidx] = frames[frame].pos[aidx * 3 + 2];
+      }
+      if (!frames) {
+	fprintf(stderr, "xtc_read_frame(): failure to read file (whole file path)\n");
+      }
+      return;
     }
-
-    {
-        struct stat st;
-        if (stat(index_file, &st) == 0) {
-            if (0 == st.st_size) { // The index file exists  but is zero length. Delete it
-                remove(index_file);
-            }
-        }
-    }
-
-    indexfn = fopen(index_file, "r");
-
-    if (!indexfn) {
-        if (getenv("DEBUG"))
-            fprintf(stderr, "xtc_read_frame():Reading using whole file\n");
-
-        // REAd the whole thing and return the selected frame
-        int traj_nframes;
-        double dt;
-        int dstep;
-        int* garbage_natoms;
-
-        //	printf("reading whole file\n" );
-        frames = xtc_read(filename, garbage_natoms, &traj_nframes, &dt, &dstep);
-        int xidx, yidx, zidx, aidx;
-        if (frame < traj_nframes) {
-            for (i = 0; i < traj_nframes; i++) {
-                if (i != frame) {
-                    free(frames[i].pos);
-                }
-            }
-            time_arr[fidx] = frames[frame].time;
-            step_arr[fidx] = frames[frame].step;
-	    for(int i= 0; i<9; i++){
-	      box_arr[fidx + i*nframes] = frames[frame].box[i];
-	    }
-            for (aidx = 0; aidx < natoms; aidx++) {
-                xidx = Xf(aidx, fidx, nframes);
-                yidx = Yf(xidx, nframes);
-                zidx = Zf(yidx, nframes);
-                coords_arr[xidx] = frames[frame].pos[aidx * 3 + 0];
-                coords_arr[yidx] = frames[frame].pos[aidx * 3 + 1];
-                coords_arr[zidx] = frames[frame].pos[aidx * 3 + 2];
-            }
-
-            if (!frames) {
-                fprintf(stderr, "xtc_read_frame(): failure to read file (whole file path)\n");
-            }
-            return;
-        }
-    } else {
-        uint64_t len;
-        if (getenv("DEBUG"))
-            fprintf(stderr, "xtc_read_frame():Reading using index\n");
-
-        if (exdrOK != read_xtc_natoms(filename, &natoms)) {
-            fprintf(stderr,
-                    "xtc_read_frame(): failed to call read_xtc_natoms (index path) "
-                    "[%s]\n",
-                    filename);
-            return;
-        }
-        if (!natoms) {
-            fprintf(stderr, "xtc_read_frame(): natoms invalid (index path)\n");
-            return;
-        }
-
-        fseek(indexfn, frame * sizeof(uint64_t), SEEK_SET);
-        int ret = fread(&len, sizeof(uint64_t), 1, indexfn);
-        if (1 != ret) {
-            fclose(indexfn);
-            fprintf(stderr,
-                    "xtc_read_frame(): Could not read index [%d] of index file "
-                    "(index path) ret=%d errno=%d\n",
-                    frame, ret, errno);
-            // Maybe the index is corrupted? remove it, to be safe
-            remove(index_file);
-            return;
-        }
-        fclose(indexfn);
-
-        xd = xdrfile_open(filename, "r");
-        if (NULL == xd) {
-            fprintf(stderr, "xtc_read_frame(): Could not open file [%s] (index path)\n", filename);
-            return;
-        }
-
-        // MOve to offest of the single frame
-        if (0 != fseek(xd->fp, len, SEEK_SET)) {
-            fprintf(stderr, "xtc_read_frame(): Failed to seek: errno=%d\n", errno);
-        }
-
-        p = (rvec*)malloc(sizeof(rvec) * natoms);
-
-        int xidx, yidx, zidx, aidx;
-        if (exdrOK == (read_xtc(xd, natoms, &step, &time, box, p, &prec))) {
-            time_arr[fidx] = time;
-            step_arr[fidx] = step;
-	    for(int i= 0; i<3; i++){
-	      for(int j= 0; j<3; j++){
-   	        box_arr[fidx + (3*i+j)*nframes] = box[i][j];
-	      }
-	    }
-            for (aidx = 0; aidx < natoms; aidx++) {
-                xidx = Xf(aidx, fidx, nframes);
-                yidx = Yf(xidx, nframes);
-                zidx = Zf(yidx, nframes);
-                coords_arr[xidx] = p[aidx][0];
-                coords_arr[yidx] = p[aidx][1];
-                coords_arr[zidx] = p[aidx][2];
-            }
-        }
-    }
-
     condfree((void*)p);
     p = NULL;
-
     xdrfile_close(xd);
-
     return;
 }

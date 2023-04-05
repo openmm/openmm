@@ -23,11 +23,6 @@ SOFTWARE.
 
 Contributors: Stefan Doerr, Raul P. Pelaez
 */
-#ifdef PLATFORM_Linux
-    #if defined(__i386__) || defined(__x86_64__)
-__asm__(".symver memcpy,memcpy@GLIBC_2.2.5");
-    #endif
-#endif
 #ifndef XTC
     #define XTC 1
     #include "xdrfile.h"

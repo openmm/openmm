@@ -14,11 +14,6 @@
 
 /* Get HAVE_RPC_XDR_H, F77_FUNC from config.h if available */
 #include <string.h>
-#ifdef PLATFORM_Linux
-#if defined(__i386__) || defined(__x86_64__)
-__asm__(".symver memcpy,memcpy@GLIBC_2.2.5");
-#endif
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
