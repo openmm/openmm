@@ -21,10 +21,8 @@ import shutil
 
 class XTCFile(object):
 
-    """Parses an XTC file and provides access to the coordinates, box
-    vectors, time and step of each  frame.
-    This class also provides a method  to write new frames into an XTC
-    file from a set of coordinates, box vectors, time and step.
+    """XTCFile provides methods for creating XTC files.
+    To use this class, create a XTCFile object, then call writeModel() once for each model in the file.
     """
 
     def __init__(self, file, topology, dt, firstStep=0, interval=1, append=False):
