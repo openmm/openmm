@@ -25,13 +25,13 @@ class XTCFile(object):
     To use this class, create a XTCFile object, then call writeModel() once for each model in the file.
     """
 
-    def __init__(self, file, topology, dt, firstStep=0, interval=1, append=False):
+    def __init__(self, fileName, topology, dt, firstStep=0, interval=1, append=False):
         """Create a XTC file, or open an existing file to append.
 
         Parameters
         ----------
-        file : file
-            A file to write to
+        fileName : str
+            A file name to write to
         topology : Topology
             The Topology defining the molecular system being written
         dt : time
@@ -44,8 +44,9 @@ class XTCFile(object):
         append : bool=False
             If True, open an existing XTC file to append to.  If False, create a new file.
         """
-        self._filename = file.name
-        file.close()
+        if not isinstance(fileName, str):
+            raise TypeError("fileName must be a string")
+        self._filename = fileName
         self._topology = topology
         self._firstStep = firstStep
         self._interval = interval
@@ -54,12 +55,17 @@ class XTCFile(object):
             dt = dt.value_in_unit(femtoseconds)
         self._dt = dt
         if append:
+            if not os.path.isfile(self._filename):
+                raise FileNotFoundError(f"The file '{self._filename}' does not exist.")
             self._modelCount = get_xtc_nframes(self._filename.encode("utf-8"))
             natoms = get_xtc_natoms(self._filename.encode("utf-8"))
             if natoms != len(list(topology.atoms())):
                 raise ValueError(
                     f"The number of atoms in the topology ({len(list(topology.atoms()))}) does not match the number of atoms in the XTC file ({natoms})"
                 )
+        else:
+            if os.path.isfile(self._filename) and os.path.getsize(self._filename) > 0:
+                raise FileExistsError(f"The file '{self._filename}' already exists.")
 
     def _getNumFrames(self):
         return get_xtc_nframes(self._filename.encode("utf-8"))

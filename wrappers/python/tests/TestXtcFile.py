@@ -19,12 +19,13 @@ class TestXtcFile(unittest.TestCase):
     def test_xtc_triclinic(self):
         """Test the XTC file by writing a trajectory and reading it back. Using a triclinic box"""
         with tempfile.NamedTemporaryFile() as temp:
+            fname = temp.name
             pdbfile = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
             # Set some arbitrary size for the unit cell so that a box is included in the trajectory
             pdbfile.topology.setUnitCellDimensions([10, 10, 10])
             natom = len(list(pdbfile.topology.atoms()))
             nframes = 20
-            xtc = app.XTCFile(temp, pdbfile.topology, 0.001)
+            xtc = app.XTCFile(fname, pdbfile.topology, 0.001)
             coords = []
             box = []
             for i in range(nframes):
@@ -41,7 +42,7 @@ class TestXtcFile(unittest.TestCase):
                 xtc.writeModel(coords[i], periodicBoxVectors=box_i)
             # The  XTCFile class  does not  provide a  way to  read the
             # trajectory back, but the underlying XTC library does
-            coords_read, box_read, time, step = read_xtc(temp.name.encode("utf-8"))
+            coords_read, box_read, time, step = read_xtc(fname.encode("utf-8"))
             self.assertEqual(coords_read.shape, (natom, 3, nframes))
             self.assertEqual(box_read.shape, (3, 3, nframes))
             self.assertEqual(len(time), nframes)
@@ -60,12 +61,13 @@ class TestXtcFile(unittest.TestCase):
     def test_xtc_cubic(self):
         """Test the XTC file by writing a trajectory and reading it back. Using a cubic box"""
         with tempfile.NamedTemporaryFile() as temp:
+            fname = temp.name
             pdbfile = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
             # Set some arbitrary size for the unit cell so that a box is included in the trajectory
             pdbfile.topology.setUnitCellDimensions([10, 10, 10])
             natom = len(list(pdbfile.topology.atoms()))
-            nframes = 20
-            xtc = app.XTCFile(temp, pdbfile.topology, 0.001)
+            nframes=20
+            xtc = app.XTCFile(fname, pdbfile.topology, 0.001)
             coords = []
             box = []
             for i in range(nframes):
@@ -76,11 +78,11 @@ class TestXtcFile(unittest.TestCase):
                 box_i = mm.Vec3(random(), random(), random()) * unit.nanometers
                 box.append(np.diag(box_i[:3].value_in_unit(unit.nanometers)))
                 xtc.writeModel(coords[i], unitCellDimensions=box_i)
-            # The  XTCFile class  does not  provide a  way to  read the
-            # trajectory back, but the underlying XTC library does
-            coords_read, box_read, time, step = read_xtc(temp.name.encode("utf-8"))
-            self.assertEqual(coords_read.shape, (natom, 3, nframes))
-            self.assertEqual(box_read.shape, (3, 3, nframes))
+            #The  XTCFile class  does not  provide a  way to  read the
+            #trajectory back, but the underlying XTC library does
+            coords_read, box_read, time, step = read_xtc(fname.encode("utf-8"))
+            self.assertEqual(coords_read.shape, (natom,3,nframes))
+            self.assertEqual(box_read.shape, (3,3,nframes))
             self.assertEqual(len(time), nframes)
             self.assertEqual(len(step), nframes)
             coords = np.array(
@@ -140,9 +142,10 @@ class TestXtcFile(unittest.TestCase):
     def testLongTrajectory(self):
         """Test writing a trajectory that has more than 2^31 steps."""
         with tempfile.NamedTemporaryFile() as temp:
+            fname = temp.name
             pdbfile = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
             natom = len(list(pdbfile.topology.atoms()))
-            xtc = app.XTCFile(temp, pdbfile.topology, 0.001, interval=1000000000)
+            xtc = app.XTCFile(fname, pdbfile.topology, 0.001, interval=1000000000)
             for i in range(5):
                 xtc.writeModel(
                     [mm.Vec3(random(), random(), random()) for j in range(natom)]
