@@ -105,7 +105,7 @@ class TestXtcFile(unittest.TestCase):
             pdbfile.topology.setUnitCellDimensions(unitCell)
             natom = len(list(pdbfile.topology.atoms()))
             nframes = 20
-            xtc = app.XTCFile(temp, pdbfile.topology, 0.001)
+            xtc = app.XTCFile(temp.name, pdbfile.topology, 0.001)
             coords = []
             for i in range(nframes):
                 coords.append(
