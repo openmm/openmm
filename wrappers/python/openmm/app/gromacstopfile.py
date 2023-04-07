@@ -45,6 +45,7 @@ import re
 import distutils.spawn
 from collections import OrderedDict, defaultdict
 from itertools import combinations, combinations_with_replacement
+from copy import deepcopy
 
 HBonds = ff.HBonds
 AllBonds = ff.AllBonds
@@ -108,7 +109,9 @@ class GromacsTopFile(object):
 
     class _MoleculeType(object):
         """Inner class to store information about a molecule type."""
-        def __init__(self):
+        def __init__(self, name, nrexcl):
+            self.name = name
+            self.nrexcl = nrexcl
             self.atoms = []
             self.bonds = []
             self.angles = []
@@ -121,6 +124,41 @@ class GromacsTopFile(object):
             self.vsites3 = []
             self.has_virtual_sites = False
             self.has_nbfix_terms = False
+
+        def findExclusionsFromBonds(self, genpairs):
+            """Find exclusions between atoms separated by up to nrexcl bonds if genpairs is false,
+               or up to 2 bonds if genpairs is true.
+            """
+            bondedTo = [set() for i in range(len(self.atoms))]
+            for fields in self.bonds:
+                i = int(fields[0])-1
+                j = int(fields[1])-1
+                bondedTo[i].add(j)
+                bondedTo[j].add(i)
+
+            # Identify all neighbors of each atom with each separation.
+
+            bondedWithSeparation = [bondedTo]
+            maxBonds = self.nrexcl
+            if genpairs:
+                maxBonds = min(maxBonds, 2)
+            for i in range(maxBonds-1):
+                lastBonds = bondedWithSeparation[-1]
+                newBonds = deepcopy(lastBonds)
+                for atom in range(len(self.atoms)):
+                    for a1 in lastBonds[atom]:
+                        for a2 in bondedTo[a1]:
+                            newBonds[atom].add(a2)
+                bondedWithSeparation.append(newBonds)
+
+            # Build the list of pairs.
+
+            pairs = []
+            for atom in range(len(self.atoms)):
+                for otherAtom in bondedWithSeparation[-1][atom]:
+                    if otherAtom > atom:
+                        pairs.append((atom, otherAtom))
+            return pairs
 
     def _processFile(self, file):
         append = ''
@@ -291,7 +329,7 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 1:
             raise ValueError('Too few fields in [ moleculetypes ] line: '+line)
-        type = GromacsTopFile._MoleculeType()
+        type = GromacsTopFile._MoleculeType(fields[0], int(fields[1]))
         self._moleculeTypes[fields[0]] = type
         self._currentMoleculeType = type
 
@@ -743,6 +781,7 @@ class GromacsTopFile(object):
 
         for moleculeName, moleculeCount in self._molecules:
             moleculeType = self._moleculeTypes[moleculeName]
+            exclusionsFromBonds = moleculeType.findExclusionsFromBonds(self._genpairs)
             for i in range(moleculeCount):
 
                 # Record the types of all atoms.
@@ -856,7 +895,7 @@ class GromacsTopFile(object):
                             angles[angleType].addAngle(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], theta, float(params[1]))
                             if angleType == '5':
                                 # This is a Urey-Bradley term, so also add the bond.
-                                if '1':
+                                if '1' not in bonds:
                                     bonds['1'] = mm.HarmonicBondForce()
                                     sys.addForce(bonds['1'])
                                 k = float(params[3])
@@ -1050,6 +1089,8 @@ class GromacsTopFile(object):
                     atoms = [int(x)-1 for x in fields]
                     for atom in atoms[1:]:
                         exclusions.append((baseAtomIndex+atoms[0], baseAtomIndex+atom))
+                for atoms in exclusionsFromBonds:
+                    exclusions.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1]))
 
                 # Record virtual sites
 
@@ -1096,7 +1137,7 @@ class GromacsTopFile(object):
                 rmin4 = float(params4[6])
                 eps4 = float(params4[7])
 
-                charge_prod = q1*q4
+                charge_prod = fudgeQQ*q1*q4
                 epsilon = math.sqrt(abs(eps1 * eps4))
                 if self._defaults[1] == '2':
                    rmin14 = (rmin1 + rmin4) / 2
