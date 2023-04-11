@@ -115,19 +115,16 @@ class XTCFile(object):
             self._interval = 1
             with tempfile.NamedTemporaryFile() as temp:
                 nframes = self._getNumFrames()
+                coords, box, time, step = read_xtc(self._filename.encode("utf-8"))
                 for i in range(nframes):
-                    read_frame = np.array([i]).astype(np.int32)
-                    _coords, _box, _time, _step = read_xtc_frames(
-                        self._filename.encode("utf-8"), read_frame
-                    )
-                    _step = self._firstStep + i * self._interval
-                    _time = _step * self._dt
+                    step[i] = self._firstStep + i * self._interval
+                    time[i] = step[i] * self._dt
                     xtc_write_frame(
                         temp.name.encode("utf-8"),
-                        _coords[:, :, 0],
-                        _box[:, :, 0],
-                        _time,
-                        _step,
+                        coords[:, :, i],
+                        box[:, :, i],
+                        time[i],
+                        step[i],
                     )
                 shutil.copyfile(temp.name, self._filename)
         boxVectors = self._topology.getPeriodicBoxVectors()
