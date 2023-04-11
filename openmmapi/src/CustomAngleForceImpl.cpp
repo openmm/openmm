@@ -44,6 +44,7 @@ using std::string;
 using std::stringstream;
 
 CustomAngleForceImpl::CustomAngleForceImpl(const CustomAngleForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
 }
 
 CustomAngleForceImpl::~CustomAngleForceImpl() {
@@ -78,7 +79,7 @@ void CustomAngleForceImpl::initialize(ContextImpl& context) {
 }
 
 double CustomAngleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcCustomAngleForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }

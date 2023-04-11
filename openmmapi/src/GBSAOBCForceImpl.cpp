@@ -40,6 +40,7 @@ using namespace OpenMM;
 using std::vector;
 
 GBSAOBCForceImpl::GBSAOBCForceImpl(const GBSAOBCForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
 }
 
 void GBSAOBCForceImpl::initialize(ContextImpl& context) {
@@ -65,7 +66,7 @@ void GBSAOBCForceImpl::initialize(ContextImpl& context) {
 }
 
 double GBSAOBCForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcGBSAOBCForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
