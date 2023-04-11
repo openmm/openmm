@@ -42,16 +42,15 @@ ctypedef np.float64_t FLOAT64_t
 
 import cython
 
-
-def get_xtc_nframes(char* filename):
+def get_xtc_nframes(const char* filename):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     return xtclib.xtc_nframes(filename)
 
-def get_xtc_natoms(char* filename):
+def get_xtc_natoms(const char* filename):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     return xtclib.xtc_natoms(filename)
 
-def read_xtc(char* filename):
+def read_xtc(const char* filename):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     cdef int natoms = get_xtc_natoms(filename)
     cdef int nframes = get_xtc_nframes(filename)
@@ -61,7 +60,7 @@ def read_xtc(char* filename):
     cdef FLOAT32_t[::1] time = np.zeros(nframes, dtype=np.float32)
     cdef int[::1] step = np.zeros(nframes, dtype=np.int32)
 
-    xtclib.xtc_read_new(
+    xtclib.xtc_read(
         filename,
         &coords[0, 0, 0],
         &box[0, 0, 0],
@@ -72,33 +71,8 @@ def read_xtc(char* filename):
     )
     return np.asarray(coords), np.asarray(box), np.asarray(time), np.asarray(step)
 
-def read_xtc_frames(char* filename, int[:] frames):
+def xtc_write_frame(const char * filename, float[:, :] coords, float[:, :] box, float time, int step):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
-    cdef int traj_natoms = get_xtc_natoms(filename)
-    cdef int traj_nframes = get_xtc_nframes(filename)
-    cdef int nframes = frames.shape[0]
-    cdef int f = 0
-
-    cdef FLOAT32_t[:, :, ::1] coords = np.zeros((traj_natoms, 3, nframes), dtype=np.float32)
-    cdef FLOAT32_t[:, :, ::1] box = np.zeros((3,3, nframes), dtype=np.float32)
-    cdef FLOAT32_t[::1] time = np.zeros(nframes, dtype=np.float32)
-    cdef int[::1] step = np.zeros(nframes, dtype=np.int32)
-
-    for f in range(nframes):
-        xtclib.xtc_read_frame(
-            filename,
-            &coords[0, 0, 0],
-            &box[0, 0, 0],
-            &time[0],
-            &step[0],
-            traj_natoms,
-            frames[f],
-            nframes,
-            f
-        )
-    return np.asarray(coords), np.asarray(box), np.asarray(time), np.asarray(step)
-
-def xtc_write_frame(char * filename, float[:, :] coords, float[:, :] box, float time, int step):
     cdef int natoms = coords.shape[0]
     cdef int nframes = 1
     err = xtclib.xtc_write(

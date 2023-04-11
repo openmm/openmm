@@ -5,7 +5,6 @@ __version__ = "1.0"
 
 from openmm.app.internal.xtc_utils import (
     read_xtc,
-    read_xtc_frames,
     xtc_write_frame,
     get_xtc_nframes,
     get_xtc_natoms,
