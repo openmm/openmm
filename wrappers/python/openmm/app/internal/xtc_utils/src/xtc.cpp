@@ -93,19 +93,18 @@ int xtc_nframes(const char* filename) {
 }
 
 void xtc_read(const char* filename, float* coords_arr, float* box_arr, float* time_arr, int* step_arr, int natoms, int nframes) {
-    std::vector<float> p;
-    float time;
-    int step;
-    float prec;
-    matrix box;
     if (natoms == 0) {
         throw std::runtime_error("xtc_read(): natoms is 0\n");
     }
     XDRFILE_RAII xd(filename, "r");
+    std::vector<float> p(3 * natoms);
+    float time;
+    int step;
+    float prec;
+    matrix box;
     int retval = 0;
     int fidx = 0;
     int natoms_garbage = 0;
-    p.resize(3 * natoms);
     auto* p_ptr = reinterpret_cast<rvec*>(p.data());
     while (exdrOK == (retval = read_xtc(xd, natoms_garbage, &step, &time, box, p_ptr, &prec))) {
         time_arr[fidx] = time;
