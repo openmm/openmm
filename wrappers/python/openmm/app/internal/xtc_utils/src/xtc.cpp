@@ -83,7 +83,11 @@ struct XTCFrame {
   int readNextFrame(XDRFILE* xd) {
     float prec;
     auto* p_ptr = reinterpret_cast<rvec*>(positions.data());
-    return read_xtc(xd, natoms, &step, &time, box, p_ptr, &prec);
+    int status = read_xtc(xd, natoms, &step, &time, box, p_ptr, &prec);
+    if (status == exdr3DX) {
+      throw std::runtime_error("xtc_read(): XTC file is corrupt\n");
+    }
+    return status;
   }
 };
 
@@ -95,12 +99,8 @@ int xtc_nframes(const char* filename) {
     }
     XDRFILE_RAII xd(filename, "r");
     XTCFrame frame(natoms);
-    int status = 0;
-    while (exdrOK == (status = frame.readNextFrame(xd))) {
+    while (exdrOK == frame.readNextFrame(xd)) {
         nframes++;
-    }
-    if (status == exdr3DX) {
-      throw std::runtime_error("xtc_read(): XTC file is corrupt\n");
     }
     return nframes;
 }
@@ -110,10 +110,9 @@ void xtc_read(const char* filename, float* coords_arr, float* box_arr, float* ti
         throw std::runtime_error("xtc_read(): natoms is 0\n");
     }
     XDRFILE_RAII xd(filename, "r");
-    int retval = 0;
     int fidx = 0;
     XTCFrame frame(natoms);
-    while (exdrOK == (retval = frame.readNextFrame(xd))) {
+    while (exdrOK == frame.readNextFrame(xd)) {
         time_arr[fidx] = frame.time;
         step_arr[fidx] = frame.step;
         for (int i = 0; i < 3; i++) {
@@ -130,9 +129,6 @@ void xtc_read(const char* filename, float* coords_arr, float* box_arr, float* ti
             coords_arr[zidx] = frame.positions[3 * aidx + 2];
         }
         fidx++;
-    }
-    if (retval == exdr3DX) {
-        throw std::runtime_error("xtc_read(): XTC file is corrupt\n");
     }
 }
 
