@@ -27,7 +27,7 @@ class XTCReporter(object):
         self._reportInterval = reportInterval
         self._append = append
         self._enforcePeriodicBox = enforcePeriodicBox
-        self._fileName = fileName
+        self._fileName = file
         self._xtc = None
 
     def describeNextReport(self, simulation):
