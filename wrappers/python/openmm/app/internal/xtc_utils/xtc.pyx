@@ -51,9 +51,6 @@ def get_xtc_natoms(char* filename):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     return xtclib.xtc_natoms(filename)
 
-
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)  # turn off negative index wrapping for entire function
 def read_xtc(char* filename):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     cdef int natoms = get_xtc_natoms(filename)
@@ -75,8 +72,6 @@ def read_xtc(char* filename):
     )
     return np.asarray(coords), np.asarray(box), np.asarray(time), np.asarray(step)
 
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)  # turn off negative index wrapping for entire function
 def read_xtc_frames(char* filename, int[:] frames):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     cdef int traj_natoms = get_xtc_natoms(filename)
@@ -103,8 +98,6 @@ def read_xtc_frames(char* filename, int[:] frames):
         )
     return np.asarray(coords), np.asarray(box), np.asarray(time), np.asarray(step)
 
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False)  # turn off negative index wrapping for entire function
 def xtc_write_frame(char * filename, float[:, :] coords, float[:, :] box, float time, int step):
     cdef int natoms = coords.shape[0]
     cdef int nframes = 1
