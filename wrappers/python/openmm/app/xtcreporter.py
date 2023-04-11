@@ -7,12 +7,12 @@ class XTCReporter(object):
     To use it, create a XTCReporter, then add it to the Simulation's list of reporters.
     """
 
-    def __init__(self, fileName, reportInterval, append=False, enforcePeriodicBox=None):
+    def __init__(self, file, reportInterval, append=False, enforcePeriodicBox=None):
         """Create a XTCReporter.
 
         Parameters
         ----------
-        fileName : string
+        file : string
             The file to write to
         reportInterval : int
             The interval (in time steps) at which to write frames
