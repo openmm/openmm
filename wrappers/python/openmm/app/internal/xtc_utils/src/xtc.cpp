@@ -69,25 +69,38 @@ int xtc_natoms(const char* filename) {
     return natoms;
 }
 
+
+struct XTCFrame {
+  int step;
+  float time;
+  matrix box;
+  std::vector<float> positions;
+  int natoms;
+
+  XTCFrame(int natoms) : positions(3*natoms), natoms(natoms) {}
+
+  // Read the next frame from the XTC file and store it in this object
+  int readNextFrame(XDRFILE* xd) {
+    float prec;
+    auto* p_ptr = reinterpret_cast<rvec*>(positions.data());
+    return read_xtc(xd, natoms, &step, &time, box, p_ptr, &prec);
+  }
+};
+
 int xtc_nframes(const char* filename) {
     int nframes = 0;
-    float time;
-    int step;
-    float prec;
-    matrix box;
     int natoms = xtc_natoms(filename);
     if (!natoms) {
         throw std::runtime_error("xtc_read(): natoms is 0\n");
     }
     XDRFILE_RAII xd(filename, "r");
-    std::vector<float> p(3 * natoms);
-    auto* p_ptr = reinterpret_cast<rvec*>(p.data());
-    int retval = 0;
-    while (exdrOK == (retval = read_xtc(xd, natoms, &step, &time, box, p_ptr, &prec))) {
+    XTCFrame frame(natoms);
+    int status = 0;
+    while (exdrOK == (status = frame.readNextFrame(xd))) {
         nframes++;
     }
-    if (retval == exdr3DX) {
-        throw std::runtime_error("xtc_read(): XTC file is corrupt\n");
+    if (status == exdr3DX) {
+      throw std::runtime_error("xtc_read(): XTC file is corrupt\n");
     }
     return nframes;
 }
@@ -97,30 +110,24 @@ void xtc_read(const char* filename, float* coords_arr, float* box_arr, float* ti
         throw std::runtime_error("xtc_read(): natoms is 0\n");
     }
     XDRFILE_RAII xd(filename, "r");
-    std::vector<float> p(3 * natoms);
-    float time;
-    int step;
-    float prec;
-    matrix box;
     int retval = 0;
     int fidx = 0;
-    int natoms_garbage = 0;
-    auto* p_ptr = reinterpret_cast<rvec*>(p.data());
-    while (exdrOK == (retval = read_xtc(xd, natoms_garbage, &step, &time, box, p_ptr, &prec))) {
-        time_arr[fidx] = time;
-        step_arr[fidx] = step;
+    XTCFrame frame(natoms);
+    while (exdrOK == (retval = frame.readNextFrame(xd))) {
+        time_arr[fidx] = frame.time;
+        step_arr[fidx] = frame.step;
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                box_arr[fidx + (3 * i + j) * nframes] = box[i][j];
+                box_arr[fidx + (3 * i + j) * nframes] = frame.box[i][j];
             }
         }
         for (int aidx = 0; aidx < natoms; aidx++) {
             int xidx = Xf(aidx, fidx, nframes);
             int yidx = Yf(xidx, nframes);
             int zidx = Zf(yidx, nframes);
-            coords_arr[xidx] = p[3 * aidx + 0];
-            coords_arr[yidx] = p[3 * aidx + 1];
-            coords_arr[zidx] = p[3 * aidx + 2];
+            coords_arr[xidx] = frame.positions[3 * aidx + 0];
+            coords_arr[yidx] = frame.positions[3 * aidx + 1];
+            coords_arr[zidx] = frame.positions[3 * aidx + 2];
         }
         fidx++;
     }
@@ -129,31 +136,34 @@ void xtc_read(const char* filename, float* coords_arr, float* box_arr, float* ti
     }
 }
 
+static void box_from_array(matrix matrix_box, float* box, int frame, int nframes) {
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      matrix_box[i][j] = box[(3 * i + j) * nframes + frame];
+    }
+  }
+}
+
 int xtc_write(const char* filename, int natoms, int nframes, int* step, float* timex, float* pos, float* box) {
     XDRFILE_RAII xd(filename, "a");
     std::vector<float> p(natoms * 3);
-    matrix b;
     int err = 0;
     constexpr float prec = 1000;
     for (int f = 0; f < nframes; f++) {
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                b[i][j] = box[(3 * i + j) * nframes + f];
-            }
-        }
-        for (int i = 0; i < natoms; i++) {
-            int xidx = Xf(i, f, nframes);
-            int yidx = Yf(xidx, nframes);
-            int zidx = Zf(yidx, nframes);
-            p[3 * i + 0] = pos[xidx];
-            p[3 * i + 1] = pos[yidx];
-            p[3 * i + 2] = pos[zidx];
-        }
-        auto* p_ptr = reinterpret_cast<rvec*>(p.data());
-        int err = write_xtc(xd, natoms, (unsigned int)step[f], (float)timex[f], b, p_ptr, prec);
-        if (err != 0) {
-            throw std::runtime_error("Error writing frame to xtc file\n");
-        }
+      matrix b; box_from_array(b, box, f, nframes);
+      for (int i = 0; i < natoms; i++) {
+	int xidx = Xf(i, f, nframes);
+	int yidx = Yf(xidx, nframes);
+	int zidx = Zf(yidx, nframes);
+	p[3 * i + 0] = pos[xidx];
+	p[3 * i + 1] = pos[yidx];
+	p[3 * i + 2] = pos[zidx];
+      }
+      auto* p_ptr = reinterpret_cast<rvec*>(p.data());
+      int err = write_xtc(xd, natoms, (unsigned int)step[f], (float)timex[f], b, p_ptr, prec);
+      if (err != 0) {
+	throw std::runtime_error("Error writing frame to xtc file\n");
+      }
     }
     return err;
 }
