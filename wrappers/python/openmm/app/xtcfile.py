@@ -144,7 +144,7 @@ class XTCFile(object):
         time = step * self._dt
         xtc_write_frame(
             self._filename.encode("utf-8"),
-            np.array(positions).astype(np.float32),
+            np.array(positions, dtype=np.float32),
             boxVectors,
             np.float32(time),
             np.int32(step),
