@@ -42,6 +42,7 @@ using namespace std;
 
 CustomCVForceImpl::CustomCVForceImpl(const CustomCVForce& owner) : owner(owner), innerIntegrator(1.0),
         innerContext(NULL) {
+    forceGroup = owner.getForceGroup();
 }
 
 CustomCVForceImpl::~CustomCVForceImpl() {
@@ -80,7 +81,7 @@ void CustomCVForceImpl::initialize(ContextImpl& context) {
 }
 
 double CustomCVForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcCustomCVForceKernel>().execute(context, getContextImpl(*innerContext), includeForces, includeEnergy);
     return 0.0;
 }

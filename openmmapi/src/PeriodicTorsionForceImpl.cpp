@@ -39,6 +39,7 @@ using namespace OpenMM;
 using namespace std;
 
 PeriodicTorsionForceImpl::PeriodicTorsionForceImpl(const PeriodicTorsionForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
 }
 
 PeriodicTorsionForceImpl::~PeriodicTorsionForceImpl() {
@@ -66,7 +67,7 @@ void PeriodicTorsionForceImpl::initialize(ContextImpl& context) {
 }
 
 double PeriodicTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcPeriodicTorsionForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
