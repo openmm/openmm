@@ -9,12 +9,6 @@ import openmm as mm
 import numpy as np
 from openmm.app.internal.xtc_utils import read_xtc
 
-if sys.version_info >= (3, 0):
-    from io import StringIO
-else:
-    from cStringIO import StringIO
-
-
 class TestXtcFile(unittest.TestCase):
     def test_xtc_triclinic(self):
         """Test the XTC file by writing a trajectory and reading it back. Using a triclinic box"""
