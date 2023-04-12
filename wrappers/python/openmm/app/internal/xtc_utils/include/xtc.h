@@ -40,4 +40,9 @@ void xtc_read(const char* filename, float* coords_arr, float* box_arr, float* ti
 // Appends a trajectory to a file.
 void xtc_write(const char* filename, int natoms, int nframes, int* step, float* timex, float* pos, float* box);
 
+// Rewrites a trajectory file with a new timestep and starting step number.
+// Useful when the step number is larger than 2^32.
+//
+void xtc_rewrite_with_new_timestep(const char* filename_in, const char* filename_out,
+				  int first_step, int interval, float dt);
 #endif

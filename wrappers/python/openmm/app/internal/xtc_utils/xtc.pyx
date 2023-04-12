@@ -84,3 +84,8 @@ def xtc_write_frame(const char * filename, float[:, :] coords, float[:, :] box, 
         &coords[0, 0],
         &box[0, 0]
     )
+
+
+def xtc_rewrite_with_new_timestep(const char* filename_in, const char* filename_out,
+				  int first_step, int interval, float dt):
+    xtclib.xtc_rewrite_with_new_timestep(filename_in, filename_out, first_step, interval, dt)

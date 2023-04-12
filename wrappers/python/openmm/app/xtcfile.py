@@ -4,7 +4,7 @@ __author__ = "Raul P. Pelaez"
 __version__ = "1.0"
 
 from openmm.app.internal.xtc_utils import (
-    read_xtc,
+    xtc_rewrite_with_new_timestep,
     xtc_write_frame,
     get_xtc_nframes,
     get_xtc_natoms,
@@ -113,18 +113,13 @@ class XTCFile(object):
             self._dt *= self._interval
             self._interval = 1
             with tempfile.NamedTemporaryFile() as temp:
-                nframes = self._getNumFrames()
-                coords, box, time, step = read_xtc(self._filename.encode("utf-8"))
-                for i in range(nframes):
-                    step[i] = self._firstStep + i * self._interval
-                    time[i] = step[i] * self._dt
-                    xtc_write_frame(
-                        temp.name.encode("utf-8"),
-                        coords[:, :, i],
-                        box[:, :, i],
-                        time[i],
-                        step[i],
-                    )
+                xtc_rewrite_with_new_timestep(
+                    self._filename.encode("utf-8"),
+                    temp.name.encode("utf-8"),
+                    self._firstStep,
+                    self._interval,
+                    self._dt,
+                )
                 shutil.copyfile(temp.name, self._filename)
         boxVectors = self._topology.getPeriodicBoxVectors()
         if boxVectors is not None:

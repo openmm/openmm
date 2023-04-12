@@ -172,4 +172,22 @@ void xtc_write(const char* filename, int natoms, int nframes, int* step, float* 
     }
 }
 
+
+void xtc_rewrite_with_new_timestep(const char* filename_in, const char* filename_out,
+				  int first_step, int interval, float dt){
+  int natoms = xtc_natoms(filename_in);
+  if (natoms == 0) {
+    throw std::runtime_error("xtc_read(): natoms is 0\n");
+  }
+  XDRFILE_RAII xd_in(filename_in, "r");
+  XDRFILE_RAII xd_out(filename_out, "a");
+  XTCFrame frame(natoms);
+  int i = 0;
+  while (exdrOK == frame.readNextFrame(xd_in)) {
+    frame.step = first_step + i * interval;
+    frame.time = frame.step * dt;
+    frame.appendFrameToFile(xd_out);
+    i++;
+  }
+
 }
