@@ -77,13 +77,17 @@ struct XTCFrame {
   std::vector<float> positions;
   int natoms;
 
+  const float prec = 1000.0;
   XTCFrame(int natoms) : positions(3*natoms), natoms(natoms) {}
 
   // Read the next frame from the XTC file and store it in this object
   int readNextFrame(XDRFILE* xd) {
-    float prec;
+    float in_prec;
     auto* p_ptr = reinterpret_cast<rvec*>(positions.data());
-    int status = read_xtc(xd, natoms, &step, &time, box, p_ptr, &prec);
+    int status = read_xtc(xd, natoms, &step, &time, box, p_ptr, &in_prec);
+    if(prec != in_prec){
+      throw std::runtime_error("xtc_read(): precision mismatch\n");
+    }
     if (status == exdr3DX) {
       throw std::runtime_error("xtc_read(): XTC file is corrupt\n");
     }
