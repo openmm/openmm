@@ -144,7 +144,7 @@ int xtc_write(const char* filename, int natoms, int nframes, int* step, float* t
     XDRFILE_RAII xd(filename, "a");
     std::vector<float> p(natoms * 3);
     int err = 0;
-    constexpr float prec = 1000;
+    const float prec = 1000;
     for (int f = 0; f < nframes; f++) {
       matrix b; box_from_array(b, box, f, nframes);
       for (int i = 0; i < natoms; i++) {
