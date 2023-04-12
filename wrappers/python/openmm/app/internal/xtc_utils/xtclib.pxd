@@ -30,4 +30,4 @@ cdef extern from "include/xtc.h":
     int xtc_nframes(const char *filename)
     int xtc_natoms(const char *filename)
     void xtc_read(const char *filename, float *coords_arr, float *box_arr, float *time_arr, int *step_arr, int natoms, int nframes)
-    int xtc_write(const char *filename, int natoms, int nframes, int *step, float *timex, float *pos, float *box)
+    void xtc_write(const char *filename, int natoms, int nframes, int *step, float *timex, float *pos, float *box)

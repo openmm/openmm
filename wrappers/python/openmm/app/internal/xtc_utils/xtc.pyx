@@ -75,7 +75,7 @@ def xtc_write_frame(const char * filename, float[:, :] coords, float[:, :] box, 
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     cdef int natoms = coords.shape[0]
     cdef int nframes = 1
-    err = xtclib.xtc_write(
+    xtclib.xtc_write(
         filename,
         natoms,
         nframes,
@@ -84,6 +84,3 @@ def xtc_write_frame(const char * filename, float[:, :] coords, float[:, :] box, 
         &coords[0, 0],
         &box[0, 0]
     )
-    #Throw if err is not 0
-    if err != 0:
-        raise IOError("Error writing frame to xtc file")

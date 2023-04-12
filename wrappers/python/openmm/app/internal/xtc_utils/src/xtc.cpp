@@ -76,7 +76,6 @@ struct XTCFrame {
   matrix box;
   std::vector<float> positions;
   int natoms;
-
   const float prec = 1000.0;
   XTCFrame(int natoms) : positions(3*natoms), natoms(natoms) {}
 
@@ -92,6 +91,16 @@ struct XTCFrame {
       throw std::runtime_error("xtc_read(): XTC file is corrupt\n");
     }
     return status;
+  }
+
+  // Write the current frame to the XTC file
+  int appendFrameToFile(XDRFILE* xd) {
+    auto* p_ptr = reinterpret_cast<rvec*>(positions.data());
+    int err = write_xtc(xd, natoms, step, time, box, p_ptr, prec);
+    if (err != exdrOK) {
+      throw std::runtime_error("xtc_write(): could not write frame\n");
+    }
+    return err;
   }
 };
 
@@ -144,26 +153,23 @@ static void box_from_array(matrix matrix_box, float* box, int frame, int nframes
   }
 }
 
-int xtc_write(const char* filename, int natoms, int nframes, int* step, float* timex, float* pos, float* box) {
+void xtc_write(const char* filename, int natoms, int nframes, int* step, float* timex, float* pos, float* box) {
     XDRFILE_RAII xd(filename, "a");
-    std::vector<float> p(natoms * 3);
-    int err = 0;
-    const float prec = 1000;
+    XTCFrame frame(natoms);
     for (int f = 0; f < nframes; f++) {
-      matrix b; box_from_array(b, box, f, nframes);
+      box_from_array(frame.box, box, f, nframes);
       for (int i = 0; i < natoms; i++) {
 	int xidx = Xf(i, f, nframes);
 	int yidx = Yf(xidx, nframes);
 	int zidx = Zf(yidx, nframes);
-	p[3 * i + 0] = pos[xidx];
-	p[3 * i + 1] = pos[yidx];
-	p[3 * i + 2] = pos[zidx];
+	frame.positions[3 * i + 0] = pos[xidx];
+	frame.positions[3 * i + 1] = pos[yidx];
+	frame.positions[3 * i + 2] = pos[zidx];
       }
-      auto* p_ptr = reinterpret_cast<rvec*>(p.data());
-      int err = write_xtc(xd, natoms, (unsigned int)step[f], (float)timex[f], b, p_ptr, prec);
-      if (err != 0) {
-	throw std::runtime_error("Error writing frame to xtc file\n");
-      }
+      frame.step = step[f];
+      frame.time = timex[f];
+      frame.appendFrameToFile(xd);
     }
-    return err;
+}
+
 }
