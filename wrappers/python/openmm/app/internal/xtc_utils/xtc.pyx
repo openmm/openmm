@@ -22,25 +22,10 @@
 
 # Contributors: Stefan Doerr, Raul P. Pelaez
 
-import os
-import warnings
 import numpy as np
 cimport numpy as np
-
 cimport xtclib
-
-from libc.stdio cimport SEEK_SET, SEEK_CUR
-from libc.math cimport ceil
-
-ctypedef np.npy_int64   int64_t
-ctypedef np.npy_float32 float32_t
-ctypedef np.int32_t INT32_t
-ctypedef np.int64_t INT64_t
-ctypedef np.uint32_t UINT32_t
 ctypedef np.float32_t FLOAT32_t
-ctypedef np.float64_t FLOAT64_t
-
-import cython
 
 def get_xtc_nframes(const char* filename):
     """ You need to pass the string with filename.encode("UTF-8") to this function """

@@ -22,10 +22,6 @@
 
 # Contributors: Stefan Doerr, Raul P. Pelaez
 
-cimport numpy as np
-ctypedef np.npy_int64 int64_t
-ctypedef np.npy_float32 float32_t
-
 cdef extern from "include/xtc.h":
     int xtc_nframes(const char *filename)
     int xtc_natoms(const char *filename)
