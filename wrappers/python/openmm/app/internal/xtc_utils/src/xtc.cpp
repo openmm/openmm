@@ -26,6 +26,7 @@ Contributors: Stefan Doerr, Raul P. Pelaez
 #include "xtc.h"
 #include "xdrfile_xtc.h"
 #include <vector>
+#include <string>
 #include <stdexcept>
 
 // Helper functions to convert between atom/frame and x/y/z indices
@@ -44,7 +45,7 @@ static size_t Zf(size_t yidx, size_t nframes) {
 // Helper struct to manage the XDRFILE pointer
 struct XDRFILE_RAII {
     XDRFILE* xd;
-    XDRFILE_RAII(const char* filename, const char* mode) : xd(xdrfile_open(filename, mode)) {
+    XDRFILE_RAII(std::string filename, std::string mode) : xd(xdrfile_open(filename.data(), mode.data())) {
         if (!xd) {
             throw std::runtime_error("xtc file: Could not open file");
         }
@@ -60,10 +61,9 @@ struct XDRFILE_RAII {
     }
 };
 
-int xtc_natoms(const char* filename) {
+int xtc_natoms(std::string filename) {
     int natoms = 0;
-    char* filename_c = const_cast<char*>(filename);
-    if (exdrOK != read_xtc_natoms(filename_c, &natoms)) {
+    if (exdrOK != read_xtc_natoms(filename.data(), &natoms)) {
         throw std::runtime_error("xtc_read(): could not get natoms\n");
     }
     return natoms;
@@ -104,7 +104,7 @@ struct XTCFrame {
     }
 };
 
-int xtc_nframes(const char* filename) {
+int xtc_nframes(std::string filename) {
     int nframes = 0;
     int natoms = xtc_natoms(filename);
     if (!natoms) {
@@ -118,7 +118,7 @@ int xtc_nframes(const char* filename) {
     return nframes;
 }
 
-void xtc_read(const char* filename, float* coords_arr, float* box_arr, float* time_arr, int* step_arr, int natoms, int nframes) {
+void xtc_read(std::string filename, float* coords_arr, float* box_arr, float* time_arr, int* step_arr, int natoms, int nframes) {
     if (natoms == 0) {
         throw std::runtime_error("xtc_read(): natoms is 0\n");
     }
@@ -153,7 +153,7 @@ static void box_from_array(matrix& matrix_box, float* box, int frame, int nframe
     }
 }
 
-void xtc_write(const char* filename, int natoms, int nframes, int* step, float* timex, float* pos, float* box) {
+void xtc_write(std::string filename, int natoms, int nframes, int* step, float* timex, float* pos, float* box) {
     XDRFILE_RAII xd(filename, "a");
     XTCFrame frame(natoms);
     for (int f = 0; f < nframes; f++) {
@@ -172,7 +172,7 @@ void xtc_write(const char* filename, int natoms, int nframes, int* step, float* 
     }
 }
 
-void xtc_rewrite_with_new_timestep(const char* filename_in, const char* filename_out, int first_step, int interval, float dt) {
+void xtc_rewrite_with_new_timestep(std::string filename_in, std::string filename_out, int first_step, int interval, float dt) {
     int natoms = xtc_natoms(filename_in);
     if (natoms == 0) {
         throw std::runtime_error("xtc_read(): natoms is 0\n");

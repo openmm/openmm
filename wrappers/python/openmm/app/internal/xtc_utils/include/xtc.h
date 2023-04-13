@@ -26,22 +26,22 @@ Contributors: Stefan Doerr, Raul P. Pelaez
 #ifndef XTC
 #define XTC
 #include "xdrfile.h"
-
+#include<string>
 // Get the number of frames in a trajectory file
-int xtc_nframes(const char* filename);
+int xtc_nframes(std::string filename);
 
 // Get the number of atoms in a trajectory file
-int xtc_natoms(const char* filename);
+int xtc_natoms(std::string filename);
 
 // Reads nframes from  an xtc file, fills the arrays  in the input with
 // the data. Each array must be allocated with the correct size.
-void xtc_read(const char* filename, float* coords_arr, float* box_arr, float* time_arr, int* step_arr, int natoms, int nframes);
+void xtc_read(std::string filename, float* coords_arr, float* box_arr, float* time_arr, int* step_arr, int natoms, int nframes);
 
 // Appends a trajectory to a file.
-void xtc_write(const char* filename, int natoms, int nframes, int* step, float* timex, float* pos, float* box);
+void xtc_write(std::string filename, int natoms, int nframes, int* step, float* timex, float* pos, float* box);
 
 // Rewrites a trajectory file with a new timestep and starting step number.
 // Useful when the step number is larger than 2^32.
 //
-void xtc_rewrite_with_new_timestep(const char* filename_in, const char* filename_out, int first_step, int interval, float dt);
+void xtc_rewrite_with_new_timestep(std::string filename_in, std::string filename_out, int first_step, int interval, float dt);
 #endif

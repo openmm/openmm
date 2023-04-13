@@ -25,17 +25,18 @@
 import numpy as np
 cimport numpy as np
 cimport xtclib
+from libcpp.string cimport string
 ctypedef np.float32_t FLOAT32_t
 
-def get_xtc_nframes(const char* filename):
+def get_xtc_nframes(string filename):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     return xtclib.xtc_nframes(filename)
 
-def get_xtc_natoms(const char* filename):
+def get_xtc_natoms(string filename):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     return xtclib.xtc_natoms(filename)
 
-def read_xtc(const char* filename):
+def read_xtc(string filename):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     cdef int natoms = get_xtc_natoms(filename)
     cdef int nframes = get_xtc_nframes(filename)
@@ -56,7 +57,7 @@ def read_xtc(const char* filename):
     )
     return np.asarray(coords), np.asarray(box), np.asarray(time), np.asarray(step)
 
-def xtc_write_frame(const char * filename, float[:, :] coords, float[:, :] box, float time, int step):
+def xtc_write_frame(string filename, float[:, :] coords, float[:, :] box, float time, int step):
     """ You need to pass the string with filename.encode("UTF-8") to this function """
     cdef int natoms = coords.shape[0]
     cdef int nframes = 1
@@ -71,6 +72,6 @@ def xtc_write_frame(const char * filename, float[:, :] coords, float[:, :] box, 
     )
 
 
-def xtc_rewrite_with_new_timestep(const char* filename_in, const char* filename_out,
+def xtc_rewrite_with_new_timestep(string filename_in, string filename_out,
 				  int first_step, int interval, float dt):
     xtclib.xtc_rewrite_with_new_timestep(filename_in, filename_out, first_step, interval, dt)
