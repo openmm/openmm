@@ -69,39 +69,39 @@ int xtc_natoms(const char* filename) {
     return natoms;
 }
 
-
 struct XTCFrame {
-  int step;
-  float time;
-  matrix box;
-  std::vector<float> positions;
-  int natoms;
-  const float prec = 1000.0;
-  XTCFrame(int natoms) : positions(3*natoms), natoms(natoms) {}
+    int step;
+    float time;
+    matrix box;
+    std::vector<float> positions;
+    int natoms;
+    const float prec = 1000.0;
+    XTCFrame(int natoms) : positions(3 * natoms), natoms(natoms) {
+    }
 
-  // Read the next frame from the XTC file and store it in this object
-  int readNextFrame(XDRFILE* xd) {
-    float in_prec;
-    auto* p_ptr = reinterpret_cast<rvec*>(positions.data());
-    int status = read_xtc(xd, natoms, &step, &time, box, p_ptr, &in_prec);
-    if(prec != in_prec){
-      throw std::runtime_error("xtc_read(): precision mismatch\n");
+    // Read the next frame from the XTC file and store it in this object
+    int readNextFrame(XDRFILE* xd) {
+        float in_prec;
+        auto* p_ptr = reinterpret_cast<rvec*>(positions.data());
+        int status = read_xtc(xd, natoms, &step, &time, box, p_ptr, &in_prec);
+        if (prec != in_prec) {
+            throw std::runtime_error("xtc_read(): precision mismatch\n");
+        }
+        if (status == exdr3DX) {
+            throw std::runtime_error("xtc_read(): XTC file is corrupt\n");
+        }
+        return status;
     }
-    if (status == exdr3DX) {
-      throw std::runtime_error("xtc_read(): XTC file is corrupt\n");
-    }
-    return status;
-  }
 
-  // Write the current frame to the XTC file
-  int appendFrameToFile(XDRFILE* xd) {
-    auto* p_ptr = reinterpret_cast<rvec*>(positions.data());
-    int err = write_xtc(xd, natoms, step, time, box, p_ptr, prec);
-    if (err != exdrOK) {
-      throw std::runtime_error("xtc_write(): could not write frame\n");
+    // Write the current frame to the XTC file
+    int appendFrameToFile(XDRFILE* xd) {
+        auto* p_ptr = reinterpret_cast<rvec*>(positions.data());
+        int err = write_xtc(xd, natoms, step, time, box, p_ptr, prec);
+        if (err != exdrOK) {
+            throw std::runtime_error("xtc_write(): could not write frame\n");
+        }
+        return err;
     }
-    return err;
-  }
 };
 
 int xtc_nframes(const char* filename) {
@@ -145,49 +145,46 @@ void xtc_read(const char* filename, float* coords_arr, float* box_arr, float* ti
     }
 }
 
-static void box_from_array(matrix &matrix_box, float* box, int frame, int nframes) {
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < 3; j++) {
-      matrix_box[i][j] = box[(3 * i + j) * nframes + frame];
+static void box_from_array(matrix& matrix_box, float* box, int frame, int nframes) {
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            matrix_box[i][j] = box[(3 * i + j) * nframes + frame];
+        }
     }
-  }
 }
 
 void xtc_write(const char* filename, int natoms, int nframes, int* step, float* timex, float* pos, float* box) {
     XDRFILE_RAII xd(filename, "a");
     XTCFrame frame(natoms);
     for (int f = 0; f < nframes; f++) {
-      box_from_array(frame.box, box, f, nframes);
-      for (int i = 0; i < natoms; i++) {
-	int xidx = Xf(i, f, nframes);
-	int yidx = Yf(xidx, nframes);
-	int zidx = Zf(yidx, nframes);
-	frame.positions[3 * i + 0] = pos[xidx];
-	frame.positions[3 * i + 1] = pos[yidx];
-	frame.positions[3 * i + 2] = pos[zidx];
-      }
-      frame.step = step[f];
-      frame.time = timex[f];
-      frame.appendFrameToFile(xd);
+        box_from_array(frame.box, box, f, nframes);
+        for (int i = 0; i < natoms; i++) {
+            int xidx = Xf(i, f, nframes);
+            int yidx = Yf(xidx, nframes);
+            int zidx = Zf(yidx, nframes);
+            frame.positions[3 * i + 0] = pos[xidx];
+            frame.positions[3 * i + 1] = pos[yidx];
+            frame.positions[3 * i + 2] = pos[zidx];
+        }
+        frame.step = step[f];
+        frame.time = timex[f];
+        frame.appendFrameToFile(xd);
     }
 }
 
-
-void xtc_rewrite_with_new_timestep(const char* filename_in, const char* filename_out,
-				  int first_step, int interval, float dt){
-  int natoms = xtc_natoms(filename_in);
-  if (natoms == 0) {
-    throw std::runtime_error("xtc_read(): natoms is 0\n");
-  }
-  XDRFILE_RAII xd_in(filename_in, "r");
-  XDRFILE_RAII xd_out(filename_out, "a");
-  XTCFrame frame(natoms);
-  int i = 0;
-  while (exdrOK == frame.readNextFrame(xd_in)) {
-    frame.step = first_step + i * interval;
-    frame.time = frame.step * dt;
-    frame.appendFrameToFile(xd_out);
-    i++;
-  }
-
+void xtc_rewrite_with_new_timestep(const char* filename_in, const char* filename_out, int first_step, int interval, float dt) {
+    int natoms = xtc_natoms(filename_in);
+    if (natoms == 0) {
+        throw std::runtime_error("xtc_read(): natoms is 0\n");
+    }
+    XDRFILE_RAII xd_in(filename_in, "r");
+    XDRFILE_RAII xd_out(filename_out, "a");
+    XTCFrame frame(natoms);
+    int i = 0;
+    while (exdrOK == frame.readNextFrame(xd_in)) {
+        frame.step = first_step + i * interval;
+        frame.time = frame.step * dt;
+        frame.appendFrameToFile(xd_out);
+        i++;
+    }
 }
