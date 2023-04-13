@@ -145,7 +145,7 @@ void xtc_read(const char* filename, float* coords_arr, float* box_arr, float* ti
     }
 }
 
-static void box_from_array(matrix matrix_box, float* box, int frame, int nframes) {
+static void box_from_array(matrix &matrix_box, float* box, int frame, int nframes) {
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
       matrix_box[i][j] = box[(3 * i + j) * nframes + frame];
