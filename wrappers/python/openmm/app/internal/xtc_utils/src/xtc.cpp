@@ -45,7 +45,7 @@ static size_t Zf(size_t yidx, size_t nframes) {
 // Helper struct to manage the XDRFILE pointer
 struct XDRFILE_RAII {
     XDRFILE* xd;
-    XDRFILE_RAII(std::string filename, std::string mode) : xd(xdrfile_open(filename.data(), mode.data())) {
+    XDRFILE_RAII(std::string filename, std::string mode) : xd(xdrfile_open(filename.c_str(), mode.c_str())) {
         if (!xd) {
             throw std::runtime_error("xtc file: Could not open file");
         }
@@ -63,7 +63,7 @@ struct XDRFILE_RAII {
 
 int xtc_natoms(std::string filename) {
     int natoms = 0;
-    if (exdrOK != read_xtc_natoms(filename.data(), &natoms)) {
+    if (exdrOK != read_xtc_natoms(const_cast<char*>(filename.c_str()), &natoms)) {
         throw std::runtime_error("xtc_read(): could not get natoms\n");
     }
     return natoms;
