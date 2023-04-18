@@ -84,7 +84,7 @@ struct XTCFrame {
         float in_prec;
         auto* p_ptr = reinterpret_cast<rvec*>(positions.data());
         int status = read_xtc(xd, natoms, &step, &time, box, p_ptr, &in_prec);
-        if (prec != in_prec) {
+        if (status == exdrOK && prec != in_prec) {
             throw std::runtime_error("xtc_read(): precision mismatch\n");
         }
         if (status == exdr3DX) {
