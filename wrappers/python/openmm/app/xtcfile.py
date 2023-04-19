@@ -65,7 +65,8 @@ class XTCFile(object):
         else:
             if os.path.isfile(self._filename) and os.path.getsize(self._filename) > 0:
                 raise FileExistsError(f"The file '{self._filename}' already exists.")
-
+            #XTC requires the file to exist before writing
+            open(self._filename, "a").close()
     def _getNumFrames(self):
         return get_xtc_nframes(self._filename.encode("utf-8"))
 

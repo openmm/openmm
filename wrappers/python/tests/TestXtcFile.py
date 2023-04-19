@@ -1,5 +1,6 @@
 __author__ = "Raul P. Pelaez"
 import sys
+import os
 import unittest
 from openmm import unit
 import tempfile
@@ -12,8 +13,8 @@ from openmm.app.internal.xtc_utils import read_xtc
 class TestXtcFile(unittest.TestCase):
     def test_xtc_triclinic(self):
         """Test the XTC file by writing a trajectory and reading it back. Using a triclinic box"""
-        with tempfile.NamedTemporaryFile() as temp:
-            fname = temp.name
+        with tempfile.TemporaryDirectory() as temp:
+            fname = os.path.join(temp, 'traj.xtc')
             pdbfile = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
             # Set some arbitrary size for the unit cell so that a box is included in the trajectory
             pdbfile.topology.setUnitCellDimensions([10, 10, 10])
@@ -54,8 +55,8 @@ class TestXtcFile(unittest.TestCase):
 
     def test_xtc_cubic(self):
         """Test the XTC file by writing a trajectory and reading it back. Using a cubic box"""
-        with tempfile.NamedTemporaryFile() as temp:
-            fname = temp.name
+        with tempfile.TemporaryDirectory() as temp:
+            fname = os.path.join(temp, 'traj.xtc')
             pdbfile = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
             # Set some arbitrary size for the unit cell so that a box is included in the trajectory
             pdbfile.topology.setUnitCellDimensions([10, 10, 10])
@@ -92,14 +93,15 @@ class TestXtcFile(unittest.TestCase):
 
     def test_xtc_box_from_topology(self):
         """Test the XTC file by writing a trajectory and reading it back. Letting the box be set from the topology"""
-        with tempfile.NamedTemporaryFile() as temp:
+        with tempfile.TemporaryDirectory() as temp:
+            fname = os.path.join(temp, 'traj.xtc')
             pdbfile = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
             # Set some arbitrary size for the unit cell so that a box is included in the trajectory
             unitCell = mm.Vec3(random(), random(), random()) * unit.nanometers
             pdbfile.topology.setUnitCellDimensions(unitCell)
             natom = len(list(pdbfile.topology.atoms()))
             nframes = 20
-            xtc = app.XTCFile(temp.name, pdbfile.topology, 0.001)
+            xtc = app.XTCFile(fname, pdbfile.topology, 0.001)
             coords = []
             for i in range(nframes):
                 coords.append(
@@ -109,7 +111,7 @@ class TestXtcFile(unittest.TestCase):
                 xtc.writeModel(coords[i])
             # The  XTCFile class  does not  provide a  way to  read the
             # trajectory back, but the underlying XTC library does
-            coords_read, box_read, time, step = read_xtc(temp.name.encode("utf-8"))
+            coords_read, box_read, time, step = read_xtc(fname.encode("utf-8"))
             self.assertEqual(coords_read.shape, (natom, 3, nframes))
             self.assertEqual(box_read.shape, (3, 3, nframes))
             self.assertEqual(len(time), nframes)
@@ -135,8 +137,8 @@ class TestXtcFile(unittest.TestCase):
 
     def testLongTrajectory(self):
         """Test writing a trajectory that has more than 2^31 steps."""
-        with tempfile.NamedTemporaryFile() as temp:
-            fname = temp.name
+        with tempfile.TemporaryDirectory() as temp:
+            fname = os.path.join(temp, 'traj.xtc')
             pdbfile = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
             natom = len(list(pdbfile.topology.atoms()))
             xtc = app.XTCFile(fname, pdbfile.topology, 0.001, interval=1000000000)
@@ -148,8 +150,8 @@ class TestXtcFile(unittest.TestCase):
 
     def testAppend(self):
         """Test appending to an existing trajectory."""
-        with tempfile.NamedTemporaryFile() as temp:
-            fname = temp.name
+        with tempfile.TemporaryDirectory() as temp:
+            fname = os.path.join(temp, 'traj.xtc')
             pdb = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
             ff = app.ForceField("amber99sb.xml", "tip3p.xml")
             system = ff.createSystem(pdb.topology)
