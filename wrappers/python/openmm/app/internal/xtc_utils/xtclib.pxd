@@ -23,9 +23,9 @@
 # Contributors: Stefan Doerr, Raul P. Pelaez
 from libcpp.string cimport string
 cdef extern from "include/xtc.h":
-    int xtc_nframes(string filename)
-    int xtc_natoms(string filename)
-    void xtc_read(string filename, float *coords_arr, float *box_arr, float *time_arr, int *step_arr, int natoms, int nframes)
-    void xtc_write(string filename, int natoms, int nframes, int *step, float *timex, float *pos, float *box)
-    void xtc_rewrite_with_new_timestep(string filename_in, string filename_out,
-				  int first_step, int interval, float dt)
+    cdef int xtc_nframes(string filename) except +
+    cdef int xtc_natoms(string filename) except +
+    cdef void xtc_read(string filename, float *coords_arr, float *box_arr, float *time_arr, int *step_arr, int natoms, int nframes) except +
+    cdef void xtc_write(string filename, int natoms, int nframes, int *step, float *timex, float *pos, float *box) except +
+    cdef void xtc_rewrite_with_new_timestep(string filename_in, string filename_out,
+				  int first_step, int interval, float dt) except +
