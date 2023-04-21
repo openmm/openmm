@@ -112,15 +112,16 @@ class XTCFile(object):
             self._firstStep //= self._interval
             self._dt *= self._interval
             self._interval = 1
-            with tempfile.NamedTemporaryFile() as temp:
+            with tempfile.TemporaryDirectory() as temp:
+                fname = os.path.join(temp, "temp.xtc")
                 xtc_rewrite_with_new_timestep(
                     self._filename.encode("utf-8"),
-                    temp.name.encode("utf-8"),
+                    fname.encode("utf-8"),
                     self._firstStep,
                     self._interval,
                     self._dt,
                 )
-                shutil.copyfile(temp.name, self._filename)
+                shutil.copyfile(fname, self._filename)
         boxVectors = self._topology.getPeriodicBoxVectors()
         if boxVectors is not None:
             if periodicBoxVectors is not None:
