@@ -44,6 +44,7 @@ using std::string;
 using std::stringstream;
 
 CustomTorsionForceImpl::CustomTorsionForceImpl(const CustomTorsionForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
 }
 
 CustomTorsionForceImpl::~CustomTorsionForceImpl() {
@@ -79,7 +80,7 @@ void CustomTorsionForceImpl::initialize(ContextImpl& context) {
 }
 
 double CustomTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcCustomTorsionForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }

@@ -43,6 +43,7 @@ using namespace OpenMM;
 using namespace std;
 
 CMAPTorsionForceImpl::CMAPTorsionForceImpl(const CMAPTorsionForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
 }
 
 CMAPTorsionForceImpl::~CMAPTorsionForceImpl() {
@@ -73,7 +74,7 @@ void CMAPTorsionForceImpl::initialize(ContextImpl& context) {
 }
 
 double CMAPTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcCMAPTorsionForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }

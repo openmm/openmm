@@ -51,7 +51,7 @@ struct MinimizerData {
     Context* cpuContext;
     MinimizerData(Context& context, double k) : context(context), k(k), cpuIntegrator(1.0), cpuContext(NULL) {
         string platformName = context.getPlatform().getName();
-        checkLargeForces = (platformName == "CUDA" || platformName == "OpenCL" || platformName == "HIP");
+        checkLargeForces = (platformName == "CUDA" || platformName == "OpenCL" || platformName == "HIP" || platformName == "Metal");
     }
     ~MinimizerData() {
         if (cpuContext != NULL)

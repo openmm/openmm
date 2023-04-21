@@ -237,7 +237,7 @@
   <Atom name="H2" alt1="2H" alt2="2HA" alt3="HT2" alt4="HH32" alt5="2HH3"/>
   <Atom name="H3" alt1="3H" alt2="3HA" alt3="HT3" alt4="HH33" alt5="3HH3"/>
  </Residue>
- <Residue name="NH2" type="Protein">
+ <Residue name="NH2" alt1="NHE" type="Protein">
   <Atom name="N" alt1="NT"/>
   <Atom name="HN1" alt1="1H" alt2="HT1" alt3="H1"/>
   <Atom name="HN2" alt1="2H" alt2="HT2" alt3="H2"/>

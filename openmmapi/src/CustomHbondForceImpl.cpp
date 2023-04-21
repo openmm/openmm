@@ -73,6 +73,7 @@ public:
 };
 
 CustomHbondForceImpl::CustomHbondForceImpl(const CustomHbondForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
 }
 
 CustomHbondForceImpl::~CustomHbondForceImpl() {
@@ -180,7 +181,7 @@ void CustomHbondForceImpl::initialize(ContextImpl& context) {
 }
 
 double CustomHbondForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcCustomHbondForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
