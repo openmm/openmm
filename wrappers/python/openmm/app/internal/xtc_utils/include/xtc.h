@@ -42,6 +42,5 @@ void xtc_write(std::string filename, int natoms, int nframes, int* step, float* 
 
 // Rewrites a trajectory file with a new timestep and starting step number.
 // Useful when the step number is larger than 2^32.
-//
 void xtc_rewrite_with_new_timestep(std::string filename_in, std::string filename_out, int first_step, int interval, float dt);
 #endif

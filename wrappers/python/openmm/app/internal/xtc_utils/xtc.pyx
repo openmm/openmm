@@ -29,15 +29,52 @@ from libcpp.string cimport string
 ctypedef np.float32_t FLOAT32_t
 
 def get_xtc_nframes(string filename):
-    """ You need to pass the string with filename.encode("UTF-8") to this function """
+    """
+    Get the number of frames in a xtc file.
+    Parameters
+    ----------
+    filename: string
+        The filename of the xtc file. You need to pass the string with filename.encode("UTF-8") to this function
+    Returns
+    -------
+    nframes: int
+        The number of frames in the xtc file
+    """
     return xtclib.xtc_nframes(filename)
 
 def get_xtc_natoms(string filename):
-    """ You need to pass the string with filename.encode("UTF-8") to this function """
+    """
+    Get the number of atoms in a xtc file.
+    Parameters
+    ----------
+    filename: string
+        The filename of the xtc file. You need to pass the string with filename.encode("UTF-8") to this function
+    Returns
+    -------
+    natoms: int
+        The number of atoms in the xtc file
+    """
     return xtclib.xtc_natoms(filename)
 
 def read_xtc(string filename):
-    """ You need to pass the string with filename.encode("UTF-8") to this function """
+    """
+    Reads a xtc file and return its contents.
+
+    Parameters
+    ----------
+    filename: string
+        The filename of the xtc file. You need to pass the string with filename.encode("UTF-8") to this function
+    Returns
+    -------
+    coords: np.ndarray
+        The coordinates of the atoms in the xtc file. Shape: (n_atoms, 3, n_frames)
+    box: np.ndarray
+        The box vectors of the xtc file. Shape: (3, 3, n_frames)
+    time: np.ndarray
+        The time of each frame. Shape: (n_frames,)
+    step: np.ndarray
+        The step of each frame. Shape: (n_frames,)
+    """
     cdef int natoms = get_xtc_natoms(filename)
     cdef int nframes = get_xtc_nframes(filename)
 
@@ -58,7 +95,21 @@ def read_xtc(string filename):
     return np.asarray(coords), np.asarray(box), np.asarray(time), np.asarray(step)
 
 def xtc_write_frame(string filename, float[:, :] coords, float[:, :] box, float time, int step):
-    """ You need to pass the string with filename.encode("UTF-8") to this function """
+    """
+    Appends a single frame to a xtc file (if the file does not exist it is created by this function).
+    Parameters
+    ----------
+    filename: string
+        The filename of the xtc file. You need to pass the string with filename.encode("UTF-8") to this function
+    coords: np.ndarray
+        The coordinates of the atoms in the frame. Shape: (n_atoms, 3)
+    box: np.ndarray
+        The box vectors of the frame. Shape: (3, 3)
+    time: float
+        The time of the frame
+    step: int
+        The step of the frame
+    """
     cdef int natoms = coords.shape[0]
     cdef int nframes = 1
     xtclib.xtc_write(
@@ -74,4 +125,19 @@ def xtc_write_frame(string filename, float[:, :] coords, float[:, :] box, float 
 
 def xtc_rewrite_with_new_timestep(string filename_in, string filename_out,
 				  int first_step, int interval, float dt):
+    """
+    Rewrites a trajectory file with a new timestep and starting step number.
+    Parameters
+    ----------
+    filename_in: string
+        The filename of the input xtc file. You need to pass the string with filename.encode("UTF-8") to this function
+    filename_out: string
+        The filename of the output xtc file. You need to pass the string with filename.encode("UTF-8") to this function
+    first_step: int
+        The first step to be written to the output file
+    interval: int
+        The interval between steps to be written to the output file
+    dt: float
+        The timestep of the output file
+    """
     xtclib.xtc_rewrite_with_new_timestep(filename_in, filename_out, first_step, interval, dt)
