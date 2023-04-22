@@ -1,6 +1,3 @@
-#include <string.h>
-
-
 /* -*- mode: c; tab-width: 4; indent-tabs-mode: t; c-basic-offset: 4 -*-
  *
  * $Id: xdrfile_xtc.c,v 1.5 2009/05/18 09:06:38 spoel Exp $
