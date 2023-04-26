@@ -7217,7 +7217,7 @@ void CommonIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             energy = savedEnergy[forceGroups];
         if (needsGlobals[step] && !deviceGlobalsAreCurrent) {
             // Upload the global values to the device.
-            
+
             globalValues.upload(localGlobalValues, true);
             deviceGlobalsAreCurrent = true;
         }
@@ -7781,13 +7781,13 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     cc.getLongForceBuffer().copyTo(savedLongForces);
     if (savedFloatForces.isInitialized())
         cc.getFloatForceBuffer().copyTo(savedFloatForces);
+    lastPosCellOffsets = cc.getPosCellOffsets();
     kernel->setArg(0, (float) scaleX);
     kernel->setArg(1, (float) scaleY);
     kernel->setArg(2, (float) scaleZ);
     setPeriodicBoxArgs(cc, kernel, 4);
     kernel->execute(cc.getNumAtoms());
     lastAtomOrder = cc.getAtomIndex();
-    lastPosCellOffsets = cc.getPosCellOffsets();
 }
 
 void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {

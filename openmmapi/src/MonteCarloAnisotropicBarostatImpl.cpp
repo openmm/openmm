@@ -111,7 +111,7 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     context.getOwner().setPeriodicBoxVectors(Vec3(box[0][0]*lengthScale[0], box[0][1]*lengthScale[1], box[0][2]*lengthScale[2]),
                                              Vec3(box[1][0]*lengthScale[0], box[1][1]*lengthScale[1], box[1][2]*lengthScale[2]),
                                              Vec3(box[2][0]*lengthScale[0], box[2][1]*lengthScale[1], box[2][2]*lengthScale[2]));
-    
+
     // Compute the energy of the modified system.
     
     double finalEnergy = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
@@ -120,8 +120,8 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > exp(-w/kT)) {
         // Reject the step.
         
-        kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
         context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
+        kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
     }
     else
         numAccepted[axis]++;
