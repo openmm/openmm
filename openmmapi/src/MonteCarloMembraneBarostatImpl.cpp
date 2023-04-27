@@ -62,7 +62,7 @@ void MonteCarloMembraneBarostatImpl::initialize(ContextImpl& context) {
     SimTKOpenMMUtilities::setRandomNumberSeed(owner.getRandomNumberSeed());
 }
 
-void MonteCarloMembraneBarostatImpl::updateContextState(ContextImpl& context) {
+void MonteCarloMembraneBarostatImpl::updateContextState(ContextImpl& context, bool& forcesInvalid) {
     if (++step < owner.getFrequency() || owner.getFrequency() == 0)
         return;
     step = 0;
@@ -124,8 +124,10 @@ void MonteCarloMembraneBarostatImpl::updateContextState(ContextImpl& context) {
         context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
         kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
     }
-    else
+    else {
         numAccepted[axis]++;
+        forcesInvalid = true;
+    }
     numAttempted[axis]++;
     if (numAttempted[axis] >= 10) {
         if (numAccepted[axis] < 0.25*numAttempted[axis]) {
