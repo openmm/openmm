@@ -40,24 +40,36 @@ inline DEVICE real4 computeCross(real4 vec1, real4 vec2) {
     return make_real4(cp.x, cp.y, cp.z, cp.x*cp.x+cp.y*cp.y+cp.z*cp.z);
 }
 
+typedef struct {
+    real4 pos1, pos2, pos3;
+    real3 f1, f2, f3;
+} AcceptorData;
+
 /**
- * Compute forces on donors.
+ * Compute forces on donors and acceptors.
  */
-KERNEL void computeDonorForces(
+KERNEL void computeForces(
 	GLOBAL mm_ulong* RESTRICT force,
 	GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT exclusions,
         GLOBAL const int4* RESTRICT donorAtoms, GLOBAL const int4* RESTRICT acceptorAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
         PARAMETER_ARGUMENTS) {
-    LOCAL real4 posBuffer[3*THREAD_BLOCK_SIZE];
+    const unsigned int totalWarps = GLOBAL_SIZE/32;
+    const unsigned int warp = GLOBAL_ID/32;
+    const int indexInWarp = GLOBAL_ID%32;
+    const int tbx = LOCAL_ID-indexInWarp;
+    LOCAL AcceptorData localData[THREAD_BLOCK_SIZE];
     mixed energy = 0;
-    real3 f1 = make_real3(0);
-    real3 f2 = make_real3(0);
-    real3 f3 = make_real3(0);
-    for (int donorStart = 0; donorStart < NUM_DONORS; donorStart += GLOBAL_SIZE) {
+    for (int tile = warp; tile < NUM_DONOR_BLOCKS*NUM_ACCEPTOR_BLOCKS; tile += totalWarps) {
+        int donorStart = (tile/NUM_ACCEPTOR_BLOCKS)*32;
+        int acceptorStart = (tile%NUM_ACCEPTOR_BLOCKS)*32;
+
         // Load information about the donor this thread will compute forces on.
 
-        int donorIndex = donorStart+GLOBAL_ID;
+        real3 f1 = make_real3(0);
+        real3 f2 = make_real3(0);
+        real3 f3 = make_real3(0);
+        int donorIndex = donorStart+indexInWarp;
         int4 atoms, exclusionIndices;
         real4 d1, d2, d3;
         if (donorIndex < NUM_DONORS) {
@@ -71,39 +83,45 @@ KERNEL void computeDonorForces(
         }
         else
             atoms = make_int4(-1, -1, -1, -1);
-        for (int acceptorStart = 0; acceptorStart < NUM_ACCEPTORS; acceptorStart += LOCAL_SIZE) {
-            // Load the next block of acceptors into local memory.
 
-            SYNC_THREADS;
-            int blockSize = min((int) LOCAL_SIZE, NUM_ACCEPTORS-acceptorStart);
-            if (LOCAL_ID < blockSize) {
-                int4 atoms2 = acceptorAtoms[acceptorStart+LOCAL_ID];
-                posBuffer[3*LOCAL_ID] = (atoms2.x > -1 ? posq[atoms2.x] : make_real4(0));
-                posBuffer[3*LOCAL_ID+1] = (atoms2.y > -1 ? posq[atoms2.y] : make_real4(0));
-                posBuffer[3*LOCAL_ID+2] = (atoms2.z > -1 ? posq[atoms2.z] : make_real4(0));
-            }
-            SYNC_THREADS;
-            if (donorIndex < NUM_DONORS) {
-                for (int index = 0; index < blockSize; index++) {
-                    int acceptorIndex = acceptorStart+index;
+        // Load information about the acceptors into local memory.
+
+        SYNC_WARPS;
+        localData[LOCAL_ID].f1 = make_real3(0);
+        localData[LOCAL_ID].f2 = make_real3(0);
+        localData[LOCAL_ID].f3 = make_real3(0);
+        int blockSize = min(32, NUM_ACCEPTORS-acceptorStart);
+        int4 atoms2 = (indexInWarp < blockSize ? acceptorAtoms[acceptorStart+indexInWarp] : make_int4(-1));
+        if (indexInWarp < blockSize) {
+            localData[LOCAL_ID].pos1 = (atoms2.x > -1 ? posq[atoms2.x] : make_real4(0));
+            localData[LOCAL_ID].pos2 = (atoms2.y > -1 ? posq[atoms2.y] : make_real4(0));
+            localData[LOCAL_ID].pos3 = (atoms2.z > -1 ? posq[atoms2.z] : make_real4(0));
+        }
+        SYNC_WARPS;
+        if (donorIndex < NUM_DONORS) {
+            int index = indexInWarp;
+            for (int j = 0; j < 32; j++) {
+                int acceptorIndex = acceptorStart+index;
 #ifdef USE_EXCLUSIONS
-                    if (acceptorIndex == exclusionIndices.x || acceptorIndex == exclusionIndices.y || acceptorIndex == exclusionIndices.z || acceptorIndex == exclusionIndices.w)
-                        continue;
+                if (acceptorIndex < NUM_ACCEPTORS && acceptorIndex != exclusionIndices.x && acceptorIndex != exclusionIndices.y && acceptorIndex != exclusionIndices.z && acceptorIndex != exclusionIndices.w) {
+#else
+                if (acceptorIndex < NUM_ACCEPTORS) {
 #endif
                     // Compute the interaction between a donor and an acceptor.
 
-                    real4 a1 = posBuffer[3*index];
-                    real4 a2 = posBuffer[3*index+1];
-                    real4 a3 = posBuffer[3*index+2];
+                    real4 a1 = localData[tbx+index].pos1;
+                    real4 a2 = localData[tbx+index].pos2;
+                    real4 a3 = localData[tbx+index].pos3;
                     real4 deltaD1A1 = delta(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
 #ifdef USE_CUTOFF
                     if (deltaD1A1.w < CUTOFF_SQUARED) {
 #endif
-                        COMPUTE_DONOR_FORCE
+                        COMPUTE_FORCE
 #ifdef USE_CUTOFF
                     }
 #endif
                 }
+                index = (index+1)%32;
             }
         }
 
@@ -129,96 +147,27 @@ KERNEL void computeDonorForces(
                 MEM_FENCE;
             }
         }
+        if (atoms2.x > -1) {
+            real3 f = localData[LOCAL_ID].f1;
+            ATOMIC_ADD(&force[atoms2.x], (mm_ulong) realToFixedPoint(f.x));
+            ATOMIC_ADD(&force[atoms2.x+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.y));
+            ATOMIC_ADD(&force[atoms2.x+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.z));
+            MEM_FENCE;
+        }
+        if (atoms2.y > -1) {
+            real3 f = localData[LOCAL_ID].f2;
+            ATOMIC_ADD(&force[atoms2.y], (mm_ulong) realToFixedPoint(f.x));
+            ATOMIC_ADD(&force[atoms2.y+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.y));
+            ATOMIC_ADD(&force[atoms2.y+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.z));
+            MEM_FENCE;
+        }
+        if (atoms2.z > -1) {
+            real3 f = localData[LOCAL_ID].f3;
+            ATOMIC_ADD(&force[atoms2.z], (mm_ulong) realToFixedPoint(f.x));
+            ATOMIC_ADD(&force[atoms2.z+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.y));
+            ATOMIC_ADD(&force[atoms2.z+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.z));
+            MEM_FENCE;
+        }
     }
     energyBuffer[GLOBAL_ID] += energy;
-}
-/**
- * Compute forces on acceptors.
- */
-KERNEL void computeAcceptorForces(
-	GLOBAL mm_ulong* RESTRICT force,
-        GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT exclusions,
-        GLOBAL const int4* RESTRICT donorAtoms, GLOBAL const int4* RESTRICT acceptorAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
-        PARAMETER_ARGUMENTS) {
-    LOCAL real4 posBuffer[3*THREAD_BLOCK_SIZE];
-    real3 f1 = make_real3(0);
-    real3 f2 = make_real3(0);
-    real3 f3 = make_real3(0);
-    for (int acceptorStart = 0; acceptorStart < NUM_ACCEPTORS; acceptorStart += GLOBAL_SIZE) {
-        // Load information about the acceptor this thread will compute forces on.
-
-        int acceptorIndex = acceptorStart+GLOBAL_ID;
-        int4 atoms, exclusionIndices;
-        real4 a1, a2, a3;
-        if (acceptorIndex < NUM_ACCEPTORS) {
-            atoms = acceptorAtoms[acceptorIndex];
-            a1 = (atoms.x > -1 ? posq[atoms.x] : make_real4(0));
-            a2 = (atoms.y > -1 ? posq[atoms.y] : make_real4(0));
-            a3 = (atoms.z > -1 ? posq[atoms.z] : make_real4(0));
-#ifdef USE_EXCLUSIONS
-            exclusionIndices = exclusions[acceptorIndex];
-#endif
-        }
-        else
-            atoms = make_int4(-1, -1, -1, -1);
-        for (int donorStart = 0; donorStart < NUM_DONORS; donorStart += LOCAL_SIZE) {
-            // Load the next block of donors into local memory.
-
-            SYNC_THREADS;
-            int blockSize = min((int) LOCAL_SIZE, NUM_DONORS-donorStart);
-            if (LOCAL_ID < blockSize) {
-                int4 atoms2 = donorAtoms[donorStart+LOCAL_ID];
-                posBuffer[3*LOCAL_ID] = (atoms2.x > -1 ? posq[atoms2.x] : make_real4(0));
-                posBuffer[3*LOCAL_ID+1] = (atoms2.y > -1 ? posq[atoms2.y] : make_real4(0));
-                posBuffer[3*LOCAL_ID+2] = (atoms2.z > -1 ? posq[atoms2.z] : make_real4(0));
-            }
-            SYNC_THREADS;
-            if (acceptorIndex < NUM_ACCEPTORS) {
-                for (int index = 0; index < blockSize; index++) {
-                    int donorIndex = donorStart+index;
-#ifdef USE_EXCLUSIONS
-                    if (donorIndex == exclusionIndices.x || donorIndex == exclusionIndices.y || donorIndex == exclusionIndices.z || donorIndex == exclusionIndices.w)
-                        continue;
-#endif
-                    // Compute the interaction between a donor and an acceptor.
-
-                    real4 d1 = posBuffer[3*index];
-                    real4 d2 = posBuffer[3*index+1];
-                    real4 d3 = posBuffer[3*index+2];
-                    real4 deltaD1A1 = delta(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
-#ifdef USE_CUTOFF
-                    if (deltaD1A1.w < CUTOFF_SQUARED) {
-#endif
-                        COMPUTE_ACCEPTOR_FORCE
-#ifdef USE_CUTOFF
-                    }
-#endif
-                }
-            }
-        }
-
-        // Write results
-
-        if (acceptorIndex < NUM_ACCEPTORS) {
-            if (atoms.x > -1) {
-                ATOMIC_ADD(&force[atoms.x], (mm_ulong) realToFixedPoint(f1.x));
-                ATOMIC_ADD(&force[atoms.x+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f1.y));
-                ATOMIC_ADD(&force[atoms.x+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f1.z));
-                MEM_FENCE;
-            }
-            if (atoms.y > -1) {
-                ATOMIC_ADD(&force[atoms.y], (mm_ulong) realToFixedPoint(f2.x));
-                ATOMIC_ADD(&force[atoms.y+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f2.y));
-                ATOMIC_ADD(&force[atoms.y+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f2.z));
-                MEM_FENCE;
-            }
-            if (atoms.z > -1) {
-                ATOMIC_ADD(&force[atoms.z], (mm_ulong) realToFixedPoint(f3.x));
-                ATOMIC_ADD(&force[atoms.z+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f3.y));
-                ATOMIC_ADD(&force[atoms.z+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f3.z));
-                MEM_FENCE;
-            }
-        }
-    }
 }

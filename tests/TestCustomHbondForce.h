@@ -309,6 +309,43 @@ void testParameters() {
     ASSERT_EQUAL_TOL(2*(2*1.8+2.1)+2*(2*1.5+2.1), state.getPotentialEnergy(), TOL);
 }
 
+void testLargeSystem() {
+    int numParticles = 5000;
+    System system;
+    CustomHbondForce* custom = new CustomHbondForce("distance(d1,a1)^2");
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        if (i%2 == 0)
+            custom->addDonor(i, -1, -1);
+        else
+            custom->addAcceptor(i, -1, -1);
+        positions[i] = Vec3(3.0*genrand_real2(sfmt), 3.0*genrand_real2(sfmt), 3.0*genrand_real2(sfmt));
+    }
+    system.addForce(custom);
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    State state = context.getState(State::Energy | State::Forces);
+    double expectedEnergy = 0;
+    for (int i = 0; i < numParticles; i += 2) {
+        for (int j = 1; j < numParticles; j += 2) {
+            Vec3 d = positions[i]-positions[j];
+            double r = sqrt(d.dot(d));
+            expectedEnergy += r*r;
+        }
+    }
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numParticles; i += 2) {
+        Vec3 expectedForce;
+        for (int j = 1; j < numParticles; j += 2)
+            expectedForce += 2*(positions[j]-positions[i]);
+        ASSERT_EQUAL_VEC(expectedForce, state.getForces()[i], 1e-5);
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -321,6 +358,7 @@ int main(int argc, char* argv[]) {
         test2DFunction();
         testIllegalVariable();
         testParameters();
+        testLargeSystem();
         runPlatformTests();
     }
     catch(const exception& e) {
