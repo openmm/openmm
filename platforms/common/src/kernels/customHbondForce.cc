@@ -2,7 +2,7 @@
  * Compute the difference between two vectors, optionally taking periodic boundary conditions into account
  * and setting the fourth component to the squared magnitude.
  */
-inline DEVICE real4 delta(real4 vec1, real4 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
+inline DEVICE real4 delta(real3 vec1, real3 vec2, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     real4 result = make_real4(vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0);
 #ifdef USE_PERIODIC
     APPLY_PERIODIC_TO_DELTA(result)
@@ -41,14 +41,14 @@ inline DEVICE real4 computeCross(real4 vec1, real4 vec2) {
 }
 
 typedef struct {
-    real4 pos1, pos2, pos3;
+    real3 pos1, pos2, pos3;
     real3 f1, f2, f3;
 } AcceptorData;
 
 /**
  * Compute forces on donors and acceptors.
  */
-KERNEL void computeForces(
+KERNEL void computeHbondForces(
 	GLOBAL mm_ulong* RESTRICT force,
 	GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT exclusions,
         GLOBAL const int4* RESTRICT donorAtoms, GLOBAL const int4* RESTRICT acceptorAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize,
@@ -71,12 +71,12 @@ KERNEL void computeForces(
         real3 f3 = make_real3(0);
         int donorIndex = donorStart+indexInWarp;
         int4 atoms, exclusionIndices;
-        real4 d1, d2, d3;
+        real3 d1, d2, d3;
         if (donorIndex < NUM_DONORS) {
             atoms = donorAtoms[donorIndex];
-            d1 = (atoms.x > -1 ? posq[atoms.x] : make_real4(0));
-            d2 = (atoms.y > -1 ? posq[atoms.y] : make_real4(0));
-            d3 = (atoms.z > -1 ? posq[atoms.z] : make_real4(0));
+            d1 = (atoms.x > -1 ? trimTo3(posq[atoms.x]) : make_real3(0));
+            d2 = (atoms.y > -1 ? trimTo3(posq[atoms.y]) : make_real3(0));
+            d3 = (atoms.z > -1 ? trimTo3(posq[atoms.z]) : make_real3(0));
 #ifdef USE_EXCLUSIONS
             exclusionIndices = exclusions[donorIndex];
 #endif
@@ -93,9 +93,9 @@ KERNEL void computeForces(
         int blockSize = min(32, NUM_ACCEPTORS-acceptorStart);
         int4 atoms2 = (indexInWarp < blockSize ? acceptorAtoms[acceptorStart+indexInWarp] : make_int4(-1));
         if (indexInWarp < blockSize) {
-            localData[LOCAL_ID].pos1 = (atoms2.x > -1 ? posq[atoms2.x] : make_real4(0));
-            localData[LOCAL_ID].pos2 = (atoms2.y > -1 ? posq[atoms2.y] : make_real4(0));
-            localData[LOCAL_ID].pos3 = (atoms2.z > -1 ? posq[atoms2.z] : make_real4(0));
+            localData[LOCAL_ID].pos1 = (atoms2.x > -1 ? trimTo3(posq[atoms2.x]) : make_real3(0));
+            localData[LOCAL_ID].pos2 = (atoms2.y > -1 ? trimTo3(posq[atoms2.y]) : make_real3(0));
+            localData[LOCAL_ID].pos3 = (atoms2.z > -1 ? trimTo3(posq[atoms2.z]) : make_real3(0));
         }
         SYNC_WARPS;
         if (donorIndex < NUM_DONORS) {
@@ -109,9 +109,9 @@ KERNEL void computeForces(
 #endif
                     // Compute the interaction between a donor and an acceptor.
 
-                    real4 a1 = localData[tbx+index].pos1;
-                    real4 a2 = localData[tbx+index].pos2;
-                    real4 a3 = localData[tbx+index].pos3;
+                    real3 a1 = localData[tbx+index].pos1;
+                    real3 a2 = localData[tbx+index].pos2;
+                    real3 a3 = localData[tbx+index].pos3;
                     real4 deltaD1A1 = delta(d1, a1, periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
 #ifdef USE_CUTOFF
                     if (deltaD1A1.w < CUTOFF_SQUARED) {

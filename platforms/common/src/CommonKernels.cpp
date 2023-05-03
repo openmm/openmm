@@ -4074,7 +4074,7 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     if (force.getNumExclusions() > 0)
         defines["USE_EXCLUSIONS"] = "1";
     ComputeProgram program = cc.compileProgram(cc.replaceStrings(CommonKernelSources::customHbondForce, replacements), defines);
-    kernel = program->createKernel("computeForces");
+    kernel = program->createKernel("computeHbondForces");
 }
 
 double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
