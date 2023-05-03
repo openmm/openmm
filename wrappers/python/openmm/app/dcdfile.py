@@ -117,7 +117,7 @@ class DCDFile(object):
         periodicBoxVectors : tuple of Vec3=None
             The vectors defining the periodic box.
         """
-        if len(list(self._topology.atoms())) != len(positions):
+        if self._topology.getNumAtoms() != len(positions):
             raise ValueError('The number of positions must match the number of atoms')
         if is_quantity(positions):
             positions = positions.value_in_unit(nanometers)

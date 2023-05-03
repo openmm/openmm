@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1309,7 +1309,7 @@ class CommonIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
     enum GlobalTargetType {DT, VARIABLE, PARAMETER};
     CommonIntegrateCustomStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateCustomStepKernel(name, platform), cc(cc),
-            hasInitializedKernels(false), needsEnergyParamDerivs(false) {
+            hasInitializedKernels(false), deviceGlobalsAreCurrent(false), needsEnergyParamDerivs(false) {
     }
     /**
      * Initialize the kernel.
@@ -1577,6 +1577,7 @@ private:
     ComputeArray moleculeStartIndex;
     ComputeKernel kernel;
     std::vector<int> lastAtomOrder;
+    std::vector<mm_int4> lastPosCellOffsets;
 };
 
 } // namespace OpenMM

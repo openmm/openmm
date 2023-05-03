@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -396,6 +396,12 @@ public:
      */
     std::vector<mm_int4>& getPosCellOffsets() {
         return posCellOffsets;
+    }
+    /**
+     * Set the number of cells by which the positions are offset.
+     */
+    void setPosCellOffsets(std::vector<mm_int4>& offsets) {
+        posCellOffsets = offsets;
     }
     /**
      * Replace all occurrences of a list of substrings.

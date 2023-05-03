@@ -1379,13 +1379,14 @@ Writing Trajectories
 ====================
 
 
-OpenMM can save simulation trajectories to disk in three formats: PDB_,
-`PDBx/mmCIF`_, and DCD_.  All of these are widely supported formats, so you
+OpenMM can save simulation trajectories to disk in four formats: PDB_,
+`PDBx/mmCIF`_, DCD_ and XTC_.  All of these are widely supported formats, so you
 should be able to read them into most analysis and visualization programs.
 
 .. _PDB: http://www.wwpdb.org/documentation/format33/v3.3.html
 .. _PDBx/mmCIF: http://mmcif.wwpdb.org
 .. _DCD: http://www.ks.uiuc.edu/Research/vmd/plugins/molfile/dcdplugin.html
+.. _XTC: https://manual.gromacs.org/archive/5.0.4/online/xtc.html
 
 To save a trajectory, just add a “reporter” to the simulation, as shown in the
 example scripts above:
@@ -1394,9 +1395,9 @@ example scripts above:
     simulation.reporters.append(PDBReporter('output.pdb', 1000))
 
 The two parameters of the :class:`PDBReporter` are the output filename and how often (in
-number of time steps) output structures should be written.  To use PDBx/mmCIF or
-DCD format, just replace :class:`PDBReporter` with :class:`PDBxReporter` or
-:class:`DCDReporter`.  The parameters represent the same values:
+number of time steps) output structures should be written.  To use PDBx/mmCIF,
+DCD or XTC format, just replace :class:`PDBReporter` with :class:`PDBxReporter`, 
+:class:`DCDReporter` or :class:`XTCReporter`.  The parameters represent the same values:
 ::
 
     simulation.reporters.append(DCDReporter('output.dcd', 1000))
