@@ -40,6 +40,21 @@ inline DEVICE real4 computeCross(real4 vec1, real4 vec2) {
     return make_real4(cp.x, cp.y, cp.z, cp.x*cp.x+cp.y*cp.y+cp.z*cp.z);
 }
 
+/**
+ * Write the force on an atom to global memory.
+ */
+inline DEVICE void applyForce(int atom, real3 f, GLOBAL mm_ulong* force) {
+    if (atom > -1) {
+        if (f.x != 0)
+            ATOMIC_ADD(&force[atom], (mm_ulong) realToFixedPoint(f.x));
+        if (f.y != 0)
+            ATOMIC_ADD(&force[atom+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.y));
+        if (f.z != 0)
+            ATOMIC_ADD(&force[atom+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.z));
+        MEM_FENCE;
+    }
+}
+
 typedef struct {
     real3 pos1, pos2, pos3;
     real3 f1, f2, f3;
@@ -128,46 +143,13 @@ KERNEL void computeHbondForces(
         // Write results
 
         if (donorIndex < NUM_DONORS) {
-            if (atoms.x > -1) {
-                ATOMIC_ADD(&force[atoms.x], (mm_ulong) realToFixedPoint(f1.x));
-                ATOMIC_ADD(&force[atoms.x+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f1.y));
-                ATOMIC_ADD(&force[atoms.x+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f1.z));
-                MEM_FENCE;
-            }
-            if (atoms.y > -1) {
-                ATOMIC_ADD(&force[atoms.y], (mm_ulong) realToFixedPoint(f2.x));
-                ATOMIC_ADD(&force[atoms.y+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f2.y));
-                ATOMIC_ADD(&force[atoms.y+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f2.z));
-                MEM_FENCE;
-            }
-            if (atoms.z > -1) {
-                ATOMIC_ADD(&force[atoms.z], (mm_ulong) realToFixedPoint(f3.x));
-                ATOMIC_ADD(&force[atoms.z+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f3.y));
-                ATOMIC_ADD(&force[atoms.z+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f3.z));
-                MEM_FENCE;
-            }
+            applyForce(atoms.x, f1, force);
+            applyForce(atoms.y, f2, force);
+            applyForce(atoms.z, f3, force);
         }
-        if (atoms2.x > -1) {
-            real3 f = localData[LOCAL_ID].f1;
-            ATOMIC_ADD(&force[atoms2.x], (mm_ulong) realToFixedPoint(f.x));
-            ATOMIC_ADD(&force[atoms2.x+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.y));
-            ATOMIC_ADD(&force[atoms2.x+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.z));
-            MEM_FENCE;
-        }
-        if (atoms2.y > -1) {
-            real3 f = localData[LOCAL_ID].f2;
-            ATOMIC_ADD(&force[atoms2.y], (mm_ulong) realToFixedPoint(f.x));
-            ATOMIC_ADD(&force[atoms2.y+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.y));
-            ATOMIC_ADD(&force[atoms2.y+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.z));
-            MEM_FENCE;
-        }
-        if (atoms2.z > -1) {
-            real3 f = localData[LOCAL_ID].f3;
-            ATOMIC_ADD(&force[atoms2.z], (mm_ulong) realToFixedPoint(f.x));
-            ATOMIC_ADD(&force[atoms2.z+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.y));
-            ATOMIC_ADD(&force[atoms2.z+2*PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(f.z));
-            MEM_FENCE;
-        }
+        applyForce(atoms2.x, localData[LOCAL_ID].f1, force);
+        applyForce(atoms2.y, localData[LOCAL_ID].f2, force);
+        applyForce(atoms2.z, localData[LOCAL_ID].f3, force);
     }
     energyBuffer[GLOBAL_ID] += energy;
 }
