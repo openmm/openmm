@@ -86,7 +86,7 @@ ReferenceCustomCVForce::ReferenceCustomCVForce(const CustomCVForce& force) {
     paramDerivExpressions.clear();
     for (auto& name : paramDerivNames)
         paramDerivExpressions.push_back(energyExpr.differentiate(name).createCompiledExpression());
-    globalValues.resize(variableNames.size());
+    globalValues.resize(globalParameterNames.size());
     cvValues.resize(numCVs);
     map<string, double*> variableLocations;
     for (int i = 0; i < globalParameterNames.size(); i++)
