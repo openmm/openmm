@@ -21,15 +21,15 @@ __device__ float __half2float(const __half h) {
     return f;
 }
 struct half3 {
-    __device__ half3(float3 f) {
+    __device__ half3(real3 f) {
         // Round up so we'll err on the side of making the box a little too large.
         // This ensures interactions will never be missed.
-        v[0] = __float2half_ru(f.x);
-        v[1] = __float2half_ru(f.y);
-        v[2] = __float2half_ru(f.z);
+        v[0] = __float2half_ru((float) f.x);
+        v[1] = __float2half_ru((float) f.y);
+        v[2] = __float2half_ru((float) f.z);
     }
-    __device__ float3 toFloat3() const {
-        return make_float3(__half2float(v[0]), __half2float(v[1]), __half2float(v[2]));
+    __device__ real3 toReal3() const {
+        return make_real3(__half2float(v[0]), __half2float(v[1]), __half2float(v[2]));
     }
 private:
     __half v[3];
@@ -247,7 +247,7 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
         real2 sortedKey = sortedBlocks[block1];
         int x = (int) sortedKey.y;
         real4 blockCenterX = sortedBlockCenter[block1];
-        real3 blockSizeX = sortedBlockBoundingBox[block1].toFloat3();
+        real3 blockSizeX = sortedBlockBoundingBox[block1].toReal3();
         int neighborsInBuffer = 0;
         real4 pos1 = posq[x*TILE_SIZE+indexInWarp];
 #ifdef USE_PERIODIC
@@ -284,7 +284,7 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
             bool forceInclude = false;
             if (includeBlock2) {
                 real4 blockCenterY = sortedBlockCenter[block2];
-                real3 blockSizeY = sortedBlockBoundingBox[block2].toFloat3();
+                real3 blockSizeY = sortedBlockBoundingBox[block2].toReal3();
                 real4 blockDelta = blockCenterX-blockCenterY;
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(blockDelta)
