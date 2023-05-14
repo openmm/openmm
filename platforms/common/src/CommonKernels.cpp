@@ -1992,7 +1992,7 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     if (force.getNumInteractionGroups() > 0)
         initInteractionGroups(force, source, tableTypes);
     else {
-        cc.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
+        cc.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), numParticles > 2000);
         for (int i = 0; i < paramBuffers.size(); i++)
             cc.getNonbondedUtilities().addParameter(ComputeParameterInfo(paramBuffers[i].getArray(), prefix+"params"+cc.intToString(i+1),
                     paramBuffers[i].getComponentType(), paramBuffers[i].getNumComponents()));
