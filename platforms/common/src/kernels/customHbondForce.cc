@@ -147,6 +147,7 @@ KERNEL void computeHbondForces(
             applyForce(atoms.y, f2, force);
             applyForce(atoms.z, f3, force);
         }
+        SYNC_WARPS;
         applyForce(atoms2.x, localData[LOCAL_ID].f1, force);
         applyForce(atoms2.y, localData[LOCAL_ID].f2, force);
         applyForce(atoms2.z, localData[LOCAL_ID].f3, force);
