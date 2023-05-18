@@ -793,7 +793,7 @@ private:
     std::vector<ComputeArray> tabulatedFunctionArrays;
     std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;
-    ComputeKernel donorKernel, acceptorKernel;
+    ComputeKernel kernel;
 };
 
 /**
