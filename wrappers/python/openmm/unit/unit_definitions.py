@@ -7,7 +7,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2020 Stanford University and the Authors.
+Portions copyright (c) 2012-2023 Stanford University and the Authors.
 Authors: Christopher M. Bruns
 Contributors: Peter Eastman
 
@@ -241,6 +241,8 @@ erg_base_unit = ScaledUnit(1.0, dyne * centimeter, "erg", "erg")
 erg = ergs = Unit({erg_base_unit: 1.0})
 hartree_base_unit = ScaledUnit(4.3597447222071e-18, joule, "hartree", "Ha")
 hartree = hartrees = Unit({hartree_base_unit: 1.0})
+ev_base_unit = ScaledUnit(1.602176634e-19, joule, "electron volt", "eV")
+ev = Unit({ev_base_unit: 1.0})
 
 # In molecular simulations, "kilojoules" are in microscopic units
 # And you really only want to use kilojoules/mole.
