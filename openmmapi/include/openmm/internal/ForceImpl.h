@@ -119,6 +119,7 @@ protected:
     ContextImpl& getContextImpl(Context& context) const {
         return context.getImpl();
     }
+    int forceGroup;
 };
 
 } // namespace OpenMM

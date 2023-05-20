@@ -39,6 +39,7 @@ using namespace OpenMM;
 using namespace std;
 
 RBTorsionForceImpl::RBTorsionForceImpl(const RBTorsionForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
 }
 
 RBTorsionForceImpl::~RBTorsionForceImpl() {
@@ -64,7 +65,7 @@ void RBTorsionForceImpl::initialize(ContextImpl& context) {
 }
 
 double RBTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcRBTorsionForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }

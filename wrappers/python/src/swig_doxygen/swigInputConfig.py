@@ -506,4 +506,5 @@ UNITS = {
 ("NoseHooverIntegrator", "setMaximumPairDistance") : (None, ("unit.nanometer",)),
 ("DrudeNoseHooverIntegrator", "getMaxDrudeDistance") : ("unit.nanometer", ()),
 ("DrudeNoseHooverIntegrator", "setMaxDrudeDistance") : (None, ("unit.nanometer",)),
+("LocalEnergyMinimizer", "minimize") : (None, (None, "unit.kilojoules_per_mole/unit.nanometer", None)),
 }

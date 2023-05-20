@@ -86,6 +86,8 @@ private:
     static double evalIntegral(double r, double rs, double rc, double sigma);
     const NonbondedForce& owner;
     Kernel kernel;
+    int recipForceGroup;
+    bool includeDirectSpace;
 };
 
 } // namespace OpenMM

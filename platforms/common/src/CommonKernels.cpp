@@ -3767,18 +3767,13 @@ CommonCalcCustomHbondForceKernel::~CommonCalcCustomHbondForceKernel() {
         delete acceptorParams;
 }
 
-static void addDonorAndAcceptorCode(stringstream& computeDonor, stringstream& computeAcceptor, const string& value) {
-    computeDonor << value;
-    computeAcceptor << value;
-}
-
-static void applyDonorAndAcceptorForces(stringstream& applyToDonor, stringstream& applyToAcceptor, int atom, const string& value, bool trim=true) {
+static void applyDonorAndAcceptorForces(stringstream& apply, int atom, const string& value, bool trim=true) {
     string forceNames[] = {"f1", "f2", "f3"};
     string toAdd = (trim ? "trimTo3("+value+")" : value);
     if (atom < 3)
-        applyToAcceptor << forceNames[atom]<<" += "<<toAdd<<";\n";
+        apply << "localData[tbx+index]." << forceNames[atom]<<" += "<<toAdd<<";\n";
     else
-        applyToDonor << forceNames[atom-3]<<" += "<<toAdd<<";\n";
+        apply << forceNames[atom-3]<<" += "<<toAdd<<";\n";
 }
 
 void CommonCalcCustomHbondForceKernel::initialize(const System& system, const CustomHbondForce& force) {
@@ -3920,16 +3915,16 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     computedDeltas.insert("D1A1");
     string atomNames[] = {"A1", "A2", "A3", "D1", "D2", "D3"};
     string atomNamesLower[] = {"a1", "a2", "a3", "d1", "d2", "d3"};
-    stringstream computeDonor, computeAcceptor, extraArgs;
+    stringstream compute, extraArgs;
     int index = 0;
     for (auto& distance : distances) {
         const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         if (computedDeltas.count(deltaName) == 0) {
-            addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 delta"+deltaName+" = delta("+atomNamesLower[atoms[0]]+", "+atomNamesLower[atoms[1]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n");
+            compute << "real4 delta"+deltaName+" = delta("+atomNamesLower[atoms[0]]+", "+atomNamesLower[atoms[1]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName);
         }
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real r_"+deltaName+" = SQRT(delta"+deltaName+".w);\n");
+        compute << "real r_"+deltaName+" = SQRT(delta"+deltaName+".w);\n";
         variables[distance.first] = "r_"+deltaName;
         forceExpressions["real dEdDistance"+cc.intToString(index)+" = "] = energyExpression.differentiate(distance.first).optimize();
         index++;
@@ -3941,14 +3936,14 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
         string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
         if (computedDeltas.count(deltaName1) == 0) {
-            addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 delta"+deltaName1+" = delta("+atomNamesLower[atoms[1]]+", "+atomNamesLower[atoms[0]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n");
+            compute << "real4 delta"+deltaName1+" = delta("+atomNamesLower[atoms[1]]+", "+atomNamesLower[atoms[0]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName1);
         }
         if (computedDeltas.count(deltaName2) == 0) {
-            addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 delta"+deltaName2+" = delta("+atomNamesLower[atoms[1]]+", "+atomNamesLower[atoms[2]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n");
+            compute << "real4 delta"+deltaName2+" = delta("+atomNamesLower[atoms[1]]+", "+atomNamesLower[atoms[2]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName2);
         }
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real "+angleName+" = computeAngle(delta"+deltaName1+", delta"+deltaName2+");\n");
+        compute << "real "+angleName+" = computeAngle(delta"+deltaName1+", delta"+deltaName2+");\n";
         variables[angle.first] = angleName;
         forceExpressions["real dEdAngle"+cc.intToString(index)+" = "] = energyExpression.differentiate(angle.first).optimize();
         index++;
@@ -3963,21 +3958,21 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
         string dihedralName = "dihedral_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]]+atomNames[atoms[3]];
         if (computedDeltas.count(deltaName1) == 0) {
-            addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 delta"+deltaName1+" = delta("+atomNamesLower[atoms[0]]+", "+atomNamesLower[atoms[1]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n");
+            compute << "real4 delta"+deltaName1+" = delta("+atomNamesLower[atoms[0]]+", "+atomNamesLower[atoms[1]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName1);
         }
         if (computedDeltas.count(deltaName2) == 0) {
-            addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 delta"+deltaName2+" = delta("+atomNamesLower[atoms[2]]+", "+atomNamesLower[atoms[1]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n");
+            compute << "real4 delta"+deltaName2+" = delta("+atomNamesLower[atoms[2]]+", "+atomNamesLower[atoms[1]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName2);
         }
         if (computedDeltas.count(deltaName3) == 0) {
-            addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 delta"+deltaName3+" = delta("+atomNamesLower[atoms[2]]+", "+atomNamesLower[atoms[3]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n");
+            compute << "real4 delta"+deltaName3+" = delta("+atomNamesLower[atoms[2]]+", "+atomNamesLower[atoms[3]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName3);
         }
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 "+crossName1+" = computeCross(delta"+deltaName1+", delta"+deltaName2+");\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 "+crossName2+" = computeCross(delta"+deltaName2+", delta"+deltaName3+");\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real "+dihedralName+" = computeAngle("+crossName1+", "+crossName2+");\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, dihedralName+" *= (delta"+deltaName1+".x*"+crossName2+".x + delta"+deltaName1+".y*"+crossName2+".y + delta"+deltaName1+".z*"+crossName2+".z < 0 ? -1 : 1);\n");
+        compute << "real4 "+crossName1+" = computeCross(delta"+deltaName1+", delta"+deltaName2+");\n";
+        compute << "real4 "+crossName2+" = computeCross(delta"+deltaName2+", delta"+deltaName3+");\n";
+        compute << "real "+dihedralName+" = computeAngle("+crossName1+", "+crossName2+");\n";
+        compute << dihedralName+" *= (delta"+deltaName1+".x*"+crossName2+".x + delta"+deltaName1+".y*"+crossName2+".y + delta"+deltaName1+".z*"+crossName2+".z < 0 ? -1 : 1);\n";
         variables[dihedral.first] = dihedralName;
         forceExpressions["real dEdDihedral"+cc.intToString(index)+" = "] = energyExpression.differentiate(dihedral.first).optimize();
         index++;
@@ -3990,19 +3985,18 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     for (int i = 0; i < (int) donorParams->getParameterInfos().size(); i++) {
         ComputeParameterInfo& parameter = donorParams->getParameterInfos()[i];
         extraArgs << ", GLOBAL const "+parameter.getType()+"* RESTRICT donor"+parameter.getName();
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, parameter.getType()+" donorParams"+cc.intToString(i+1)+" = donor"+parameter.getName()+"[donorIndex];\n");
+        compute << parameter.getType()+" donorParams"+cc.intToString(i+1)+" = donor"+parameter.getName()+"[donorIndex];\n";
     }
     for (int i = 0; i < (int) acceptorParams->getParameterInfos().size(); i++) {
         ComputeParameterInfo& parameter = acceptorParams->getParameterInfos()[i];
         extraArgs << ", GLOBAL const "+parameter.getType()+"* RESTRICT acceptor"+parameter.getName();
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, parameter.getType()+" acceptorParams"+cc.intToString(i+1)+" = acceptor"+parameter.getName()+"[acceptorIndex];\n");
+        compute << parameter.getType()+" acceptorParams"+cc.intToString(i+1)+" = acceptor"+parameter.getName()+"[acceptorIndex];\n";
     }
 
     // Now evaluate the expressions.
 
-    computeAcceptor << cc.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
     forceExpressions["energy += "] = energyExpression;
-    computeDonor << cc.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
+    compute << cc.getExpressionUtilities().createExpressions(forceExpressions, variables, functionList, functionDefinitions, "temp");
 
     // Finally, apply forces to atoms.
 
@@ -4011,8 +4005,8 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         const vector<int>& atoms = distance.second;
         string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
         string value = "(dEdDistance"+cc.intToString(index)+"/r_"+deltaName+")*delta"+deltaName;
-        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[0], "-"+value);
-        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[1], value);
+        applyDonorAndAcceptorForces(compute, atoms[0], "-"+value);
+        applyDonorAndAcceptorForces(compute, atoms[1], value);
         index++;
     }
     index = 0;
@@ -4020,16 +4014,16 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         const vector<int>& atoms = angle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
         string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "{\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real3 crossProd = trimTo3(cross(delta"+deltaName2+", delta"+deltaName1+"));\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real lengthCross = max(SQRT(dot(crossProd,crossProd)), (real) 1e-6f);\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real3 deltaCross0 = -cross(trimTo3(delta"+deltaName1+"), crossProd)*dEdAngle"+cc.intToString(index)+"/(delta"+deltaName1+".w*lengthCross);\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real3 deltaCross2 = cross(trimTo3(delta"+deltaName2+"), crossProd)*dEdAngle"+cc.intToString(index)+"/(delta"+deltaName2+".w*lengthCross);\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real3 deltaCross1 = -(deltaCross0+deltaCross2);\n");
-        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[0], "deltaCross0", false);
-        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[1], "deltaCross1", false);
-        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[2], "deltaCross2", false);
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "}\n");
+        compute << "{\n";
+        compute << "real3 crossProd = trimTo3(cross(delta"+deltaName2+", delta"+deltaName1+"));\n";
+        compute << "real lengthCross = max(SQRT(dot(crossProd,crossProd)), (real) 1e-6f);\n";
+        compute << "real3 deltaCross0 = -cross(trimTo3(delta"+deltaName1+"), crossProd)*dEdAngle"+cc.intToString(index)+"/(delta"+deltaName1+".w*lengthCross);\n";
+        compute << "real3 deltaCross2 = cross(trimTo3(delta"+deltaName2+"), crossProd)*dEdAngle"+cc.intToString(index)+"/(delta"+deltaName2+".w*lengthCross);\n";
+        compute << "real3 deltaCross1 = -(deltaCross0+deltaCross2);\n";
+        applyDonorAndAcceptorForces(compute, atoms[0], "deltaCross0", false);
+        applyDonorAndAcceptorForces(compute, atoms[1], "deltaCross1", false);
+        applyDonorAndAcceptorForces(compute, atoms[2], "deltaCross2", false);
+        compute << "}\n";
         index++;
     }
     index = 0;
@@ -4040,34 +4034,35 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
         string crossName1 = "cross_"+deltaName1+"_"+deltaName2;
         string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "{\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real r = SQRT(delta"+deltaName2+".w);\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 ff;\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "ff.x = (-dEdDihedral"+cc.intToString(index)+"*r)/"+crossName1+".w;\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "ff.y = (delta"+deltaName1+".x*delta"+deltaName2+".x + delta"+deltaName1+".y*delta"+deltaName2+".y + delta"+deltaName1+".z*delta"+deltaName2+".z)/delta"+deltaName2+".w;\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "ff.z = (delta"+deltaName3+".x*delta"+deltaName2+".x + delta"+deltaName3+".y*delta"+deltaName2+".y + delta"+deltaName3+".z*delta"+deltaName2+".z)/delta"+deltaName2+".w;\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "ff.w = (dEdDihedral"+cc.intToString(index)+"*r)/"+crossName2+".w;\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 internalF0 = ff.x*"+crossName1+";\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 internalF3 = ff.w*"+crossName2+";\n");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "real4 s = ff.y*internalF0 - ff.z*internalF3;\n");
-        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[0], "internalF0");
-        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[1], "s-internalF0");
-        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[2], "-s-internalF3");
-        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[3], "internalF3");
-        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "}\n");
+        compute << "{\n";
+        compute << "real r = SQRT(delta"+deltaName2+".w);\n";
+        compute << "real4 ff;\n";
+        compute << "ff.x = (-dEdDihedral"+cc.intToString(index)+"*r)/"+crossName1+".w;\n";
+        compute << "ff.y = (delta"+deltaName1+".x*delta"+deltaName2+".x + delta"+deltaName1+".y*delta"+deltaName2+".y + delta"+deltaName1+".z*delta"+deltaName2+".z)/delta"+deltaName2+".w;\n";
+        compute << "ff.z = (delta"+deltaName3+".x*delta"+deltaName2+".x + delta"+deltaName3+".y*delta"+deltaName2+".y + delta"+deltaName3+".z*delta"+deltaName2+".z)/delta"+deltaName2+".w;\n";
+        compute << "ff.w = (dEdDihedral"+cc.intToString(index)+"*r)/"+crossName2+".w;\n";
+        compute << "real4 internalF0 = ff.x*"+crossName1+";\n";
+        compute << "real4 internalF3 = ff.w*"+crossName2+";\n";
+        compute << "real4 s = ff.y*internalF0 - ff.z*internalF3;\n";
+        applyDonorAndAcceptorForces(compute, atoms[0], "internalF0");
+        applyDonorAndAcceptorForces(compute, atoms[1], "s-internalF0");
+        applyDonorAndAcceptorForces(compute, atoms[2], "-s-internalF3");
+        applyDonorAndAcceptorForces(compute, atoms[3], "internalF3");
+        compute << "}\n";
         index++;
     }
 
     // Generate the kernels.
 
     map<string, string> replacements;
-    replacements["COMPUTE_DONOR_FORCE"] = computeDonor.str();
-    replacements["COMPUTE_ACCEPTOR_FORCE"] = computeAcceptor.str();
+    replacements["COMPUTE_FORCE"] = compute.str();
     replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
     map<string, string> defines;
     defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
     defines["NUM_DONORS"] = cc.intToString(numDonors);
     defines["NUM_ACCEPTORS"] = cc.intToString(numAcceptors);
+    defines["NUM_DONOR_BLOCKS"] = cc.intToString((numDonors+31)/32);
+    defines["NUM_ACCEPTOR_BLOCKS"] = cc.intToString((numAcceptors+31)/32);
     defines["M_PI"] = cc.doubleToString(M_PI);
     defines["THREAD_BLOCK_SIZE"] = "64";
     if (force.getNonbondedMethod() != CustomHbondForce::NoCutoff) {
@@ -4079,8 +4074,7 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     if (force.getNumExclusions() > 0)
         defines["USE_EXCLUSIONS"] = "1";
     ComputeProgram program = cc.compileProgram(cc.replaceStrings(CommonKernelSources::customHbondForce, replacements), defines);
-    donorKernel = program->createKernel("computeDonorForces");
-    acceptorKernel = program->createKernel("computeAcceptorForces");
+    kernel = program->createKernel("computeHbondForces");
 }
 
 double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -4100,43 +4094,27 @@ double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
     }
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
-        donorKernel->addArg(cc.getLongForceBuffer());
-        donorKernel->addArg(cc.getEnergyBuffer());
-        donorKernel->addArg(cc.getPosq());
-        donorKernel->addArg(donorExclusions);
-        donorKernel->addArg(donors);
-        donorKernel->addArg(acceptors);
+        kernel->addArg(cc.getLongForceBuffer());
+        kernel->addArg(cc.getEnergyBuffer());
+        kernel->addArg(cc.getPosq());
+        kernel->addArg(donorExclusions);
+        kernel->addArg(donors);
+        kernel->addArg(acceptors);
         for (int i = 0; i < 5; i++)
-            donorKernel->addArg(); // Periodic box size arguments are set when the kernel is executed.
+            kernel->addArg(); // Periodic box size arguments are set when the kernel is executed.
         if (globals.isInitialized())
-            donorKernel->addArg(globals);
+            kernel->addArg(globals);
         for (auto& parameter : donorParams->getParameterInfos())
-            donorKernel->addArg(parameter.getArray());
+            kernel->addArg(parameter.getArray());
         for (auto& parameter : acceptorParams->getParameterInfos())
-            donorKernel->addArg(parameter.getArray());
+            kernel->addArg(parameter.getArray());
         for (auto& function : tabulatedFunctionArrays)
-            donorKernel->addArg(function);
-        acceptorKernel->addArg(cc.getLongForceBuffer());
-        acceptorKernel->addArg(cc.getEnergyBuffer());
-        acceptorKernel->addArg(cc.getPosq());
-        acceptorKernel->addArg(acceptorExclusions);
-        acceptorKernel->addArg(donors);
-        acceptorKernel->addArg(acceptors);
-        for (int i = 0; i < 5; i++)
-            acceptorKernel->addArg(); // Periodic box size arguments are set when the kernel is executed.
-        if (globals.isInitialized())
-            acceptorKernel->addArg(globals);
-        for (auto& parameter : donorParams->getParameterInfos())
-            acceptorKernel->addArg(parameter.getArray());
-        for (auto& parameter : acceptorParams->getParameterInfos())
-            acceptorKernel->addArg(parameter.getArray());
-        for (auto& function : tabulatedFunctionArrays)
-            acceptorKernel->addArg(function);
+            kernel->addArg(function);
     }
-    setPeriodicBoxArgs(cc, donorKernel, 6);
-    donorKernel->execute(max(numDonors, numAcceptors), 64);
-    setPeriodicBoxArgs(cc, acceptorKernel, 6);
-    acceptorKernel->execute(max(numDonors, numAcceptors), 64);
+    setPeriodicBoxArgs(cc, kernel, 6);
+    int numDonorBlocks = (numDonors+31)/32;
+    int numAcceptorBlocks = (numAcceptors+31)/32;
+    kernel->execute(numDonorBlocks*numAcceptorBlocks*32, cc.getIsCPU() ? 32 : 64);
     return 0.0;
 }
 
@@ -7217,7 +7195,7 @@ void CommonIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
             energy = savedEnergy[forceGroups];
         if (needsGlobals[step] && !deviceGlobalsAreCurrent) {
             // Upload the global values to the device.
-            
+
             globalValues.upload(localGlobalValues, true);
             deviceGlobalsAreCurrent = true;
         }
@@ -7781,6 +7759,7 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     cc.getLongForceBuffer().copyTo(savedLongForces);
     if (savedFloatForces.isInitialized())
         cc.getFloatForceBuffer().copyTo(savedFloatForces);
+    lastPosCellOffsets = cc.getPosCellOffsets();
     kernel->setArg(0, (float) scaleX);
     kernel->setArg(1, (float) scaleY);
     kernel->setArg(2, (float) scaleZ);
@@ -7793,6 +7772,7 @@ void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& contex
     ContextSelector selector(cc);
     savedPositions.copyTo(cc.getPosq());
     savedLongForces.copyTo(cc.getLongForceBuffer());
+    cc.setPosCellOffsets(lastPosCellOffsets);
     if (savedFloatForces.isInitialized())
         savedFloatForces.copyTo(cc.getFloatForceBuffer());
 }
