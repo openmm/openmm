@@ -55,7 +55,7 @@ private:
     bool useDouble;
 };
 
-OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), useCutoff(false), usePeriodic(false), anyExclusions(false), usePadding(true),
+OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
         blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0), tilesAfterReorder(0) {
     // Decide how many thread blocks and force buffers to use.
 
@@ -90,7 +90,7 @@ OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
         delete pinnedCountBuffer;
 }
 
-void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup) {
+void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup, bool useNeighborList) {
     if (groupCutoff.size() > 0) {
         if (usesCutoff != useCutoff)
             throw OpenMMException("All Forces must agree on whether to use a cutoff");
@@ -103,6 +103,7 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
         requestExclusions(exclusionList);
     useCutoff = usesCutoff;
     usePeriodic = usesPeriodic;
+    this->useNeighborList |= ((useNeighborList || deviceIsCpu) && useCutoff);
     groupCutoff[forceGroup] = cutoffDistance;
     groupFlags |= 1<<forceGroup;
     if (kernel.size() > 0) {
@@ -335,17 +336,17 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
         return;
     if (groupKernels.find(forceGroups) == groupKernels.end())
         createKernelsForGroups(forceGroups);
-    if (!useCutoff)
-        return;
-    if (numTiles == 0)
-        return;
     KernelSet& kernels = groupKernels[forceGroups];
-    if (usePeriodic) {
+    if (useCutoff && usePeriodic) {
         mm_float4 box = context.getPeriodicBoxSize();
         double minAllowedSize = 1.999999*kernels.cutoffDistance;
         if (box.x < minAllowedSize || box.y < minAllowedSize || box.z < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
     }
+    if (!useNeighborList)
+        return;
+    if (numTiles == 0)
+        return;
 
     // Compute the neighbor list.
 
@@ -381,7 +382,7 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
             setPeriodicBoxArgs(context, kernel, 9);
         context.executeKernel(kernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
-    if (useCutoff && numTiles > 0) {
+    if (useNeighborList && numTiles > 0) {
         #if __APPLE__ && defined(__aarch64__)
         // Ensure cached up work executes while you're waiting.
         if (kernels.hasForces)
@@ -687,6 +688,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         defines["USE_EXCLUSIONS"] = "1";
     if (isSymmetric)
         defines["USE_SYMMETRIC"] = "1";
+    if (useNeighborList)
+        defines["USE_NEIGHBOR_LIST"] = "1";
     if (useCutoff && context.getSIMDWidth() < 32)
         defines["PRUNE_BY_CUTOFF"] = "1";
     if (includeForces)
