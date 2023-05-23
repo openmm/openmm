@@ -414,8 +414,10 @@ public:
     /**
      * Convert a number to a string in a format suitable for including in a kernel.
      * This takes into account whether the context uses single or double precision.
+     * If mixedIsDouble is true, a double precision constant will also be produced
+     * in mixed precision mode.
      */
-    std::string doubleToString(double value) const;
+    std::string doubleToString(double value, bool mixedIsDouble=false) const;
     /**
      * Convert a number to a string in a format suitable for including in a kernel.
      */

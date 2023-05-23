@@ -5577,7 +5577,7 @@ void CommonIntegrateNoseHooverStepKernel::initialize(const System& system, const
     ContextSelector selector(cc);
     bool useDouble = cc.getUseDoublePrecision() || cc.getUseMixedPrecision();
     map<string, string> defines;
-    defines["BOLTZ"] = cc.doubleToString(BOLTZ);
+    defines["BOLTZ"] = cc.doubleToString(BOLTZ, true);
     ComputeProgram program = cc.compileProgram(CommonKernelSources::noseHooverIntegrator, defines);
     kernel1 = program->createKernel("integrateNoseHooverMiddlePart1");
     kernel2 = program->createKernel("integrateNoseHooverMiddlePart2");
