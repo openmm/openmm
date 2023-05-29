@@ -494,14 +494,7 @@ class Modeller(object):
                 center = 0.5*(minRange+maxRange)
                 radius = max(unit.norm(center-pos) for pos in positions)
             width = max(2*radius+padding, 2*padding)
-            if boxShape == 'cube':
-                vectors = (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0, 0, width))
-            elif boxShape == 'dodecahedron':
-                vectors = (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0.5, 0.5, 0.5*sqrt(2))*width)
-            elif boxShape == 'octahedron':
-                vectors = (Vec3(width, 0, 0), Vec3(1/3, 2*sqrt(2)/3, 0)*width, Vec3(-1/3, sqrt(2)/3, sqrt(6)/3)*width)
-            else:
-                raise ValueError(f'Illegal box shape: {boxShape}')
+            vectors = self._computeBoxVectors(width, boxShape)
             box = Vec3(vectors[0][0], vectors[1][1], vectors[2][2])
         else:
             box = self.topology.getUnitCellDimensions().value_in_unit(nanometer)
@@ -601,7 +594,7 @@ class Modeller(object):
 
             maxSize = max(max((pos[i] for index, pos in addedWaters))-min((pos[i] for index, pos in addedWaters)) for i in range(3))
             maxSize += 0.1  # Add padding to reduce clashes at the edge.
-            newTopology.setUnitCellDimensions(Vec3(maxSize, maxSize, maxSize))
+            newTopology.setPeriodicBoxVectors(self._computeBoxVectors(maxSize, boxShape))
         else:
             # There could be clashes between water molecules at the box edges.  Find ones to remove.
 
@@ -660,6 +653,17 @@ class Modeller(object):
 
         # Add ions to neutralize the system.
         self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
+
+    def _computeBoxVectors(self, width, boxShape):
+        """Compute the periodic box vectors given a box width and shape."""
+        if boxShape == 'cube':
+            return (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0, 0, width))
+        elif boxShape == 'dodecahedron':
+            return (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0.5, 0.5, 0.5*sqrt(2))*width)
+        elif boxShape == 'octahedron':
+            return (Vec3(width, 0, 0), Vec3(1/3, 2*sqrt(2)/3, 0)*width, Vec3(-1/3, sqrt(2)/3, sqrt(6)/3)*width)
+        else:
+            raise ValueError(f'Illegal box shape: {boxShape}')
 
     class _ResidueData:
         """Inner class used to encapsulate data about the hydrogens for a residue."""
