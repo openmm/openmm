@@ -572,7 +572,7 @@ string CommonIntegrateRPMDStepKernel::createFFT(int size, const string& variable
     if (stage%2 == 1) {
         source<<"real0[indexInBlock] = real1[indexInBlock];\n";
         source<<"imag0[indexInBlock] = imag1[indexInBlock];\n";
-        source<<"SYNC_WARPS;\n";
+        source<<"SYNC_THREADS;\n";
     }
     source<<"}\n";
     return source.str();
