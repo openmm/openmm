@@ -58,6 +58,16 @@ class ReferenceMonteCarloBarostat {
 
       /**---------------------------------------------------------------------------------------
 
+         Save the positions before applying the barostat.
+
+         @param atomPositions      atom positions
+
+         --------------------------------------------------------------------------------------- */
+
+      void savePositions(std::vector<OpenMM::Vec3>& atomPositions);
+
+      /**---------------------------------------------------------------------------------------
+
          Apply the barostat at the start of a time step, scaling x, y, and z coordinates independently.
 
          @param atomPositions      atom positions
