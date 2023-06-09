@@ -619,10 +619,9 @@ class Modeller(object):
             addedWaters = filteredWaters
 
         # Add the water molecules.
-        newIds = set()
+        waterPos = {}
         for index, pos in addedWaters:
             newResidue = newTopology.addResidue(residue.name, newChain)
-            newIds.add(newResidue.id)
             residue = pdbResidues[index]
             oxygen = [atom for atom in residue.atoms() if atom.element == elem.oxygen][0]
             oPos = pdbPositions[oxygen.index]
@@ -630,6 +629,8 @@ class Modeller(object):
             for atom in residue.atoms():
                 molAtoms.append(newTopology.addAtom(atom.name, atom.element, newResidue))
                 newPositions.append((pos+pdbPositions[atom.index]-oPos)*nanometer)
+                if atom.element == elem.oxygen:
+                    waterPos[newResidue] = newPositions[-1]
             for atom1 in molAtoms:
                 if atom1.element == elem.oxygen:
                     for atom2 in molAtoms:
@@ -639,19 +640,8 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-        # Convert water list to dictionary (residue:position)
-        waterPos = {}
-        numTotalWaters = 0  # Total number of waters in the box (includes preexisting)
-        _oxygen = elem.oxygen
-        for chain in newTopology.chains():
-            for residue in chain.residues():
-                if residue.name == 'HOH':
-                    numTotalWaters += 1
-                    if residue.id not in newIds:  # only consider added waters
-                        continue
-                    for atom in residue.atoms():
-                        if atom.element == _oxygen:
-                            waterPos[residue] = newPositions[atom.index]
+        # Total number of waters in the box
+        numTotalWaters = len(waterPos)
 
         # Add ions to neutralize the system.
         self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
