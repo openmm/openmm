@@ -7714,6 +7714,7 @@ void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const
 }
 
 void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) {
+    ContextSelector selector(cc);
     cc.getPosq().copyTo(savedPositions);
     cc.getLongForceBuffer().copyTo(savedLongForces);
     if (savedFloatForces.isInitialized())
