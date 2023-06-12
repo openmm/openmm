@@ -7713,6 +7713,15 @@ void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const
     kernel = program->createKernel("scalePositions");
 }
 
+void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) {
+    ContextSelector selector(cc);
+    cc.getPosq().copyTo(savedPositions);
+    cc.getLongForceBuffer().copyTo(savedLongForces);
+    if (savedFloatForces.isInitialized())
+        cc.getFloatForceBuffer().copyTo(savedFloatForces);
+    lastPosCellOffsets = cc.getPosCellOffsets();
+}
+
 void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
     ContextSelector selector(cc);
     if (!hasInitializedKernels) {
@@ -7755,11 +7764,6 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
         kernel->addArg(moleculeAtoms);
         kernel->addArg(moleculeStartIndex);
     }
-    cc.getPosq().copyTo(savedPositions);
-    cc.getLongForceBuffer().copyTo(savedLongForces);
-    if (savedFloatForces.isInitialized())
-        cc.getFloatForceBuffer().copyTo(savedFloatForces);
-    lastPosCellOffsets = cc.getPosCellOffsets();
     kernel->setArg(0, (float) scaleX);
     kernel->setArg(1, (float) scaleY);
     kernel->setArg(2, (float) scaleZ);

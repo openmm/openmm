@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -107,8 +107,9 @@ void RPMDMonteCarloBarostatImpl::updateRPMDState(ContextImpl& context) {
     double newVolume = volume+deltaVolume;
     double lengthScale = std::pow(newVolume/volume, 1.0/3.0);
     context.setPositions(centroid);
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale, lengthScale, lengthScale);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
     context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale, lengthScale, lengthScale);
     State scaledState = context.getOwner().getState(State::Positions);
 
     // Now apply the same offset to all the copies.

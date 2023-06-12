@@ -1548,6 +1548,13 @@ public:
      */
     void initialize(const System& system, const Force& barostat, bool rigidMolecules=true);
     /**
+     * Save the coordinates before attempting a Monte Carlo step.  This allows us to restore them
+     * if the step is rejected.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void saveCoordinates(ContextImpl& context);
+    /**
      * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
      * This version scales the x, y, and z positions independently.
      * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
@@ -1561,8 +1568,8 @@ public:
      */
     void scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ);
     /**
-     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were before
-     * scaleCoordinates() was last called.
+     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were when
+     * saveCoordinates() was last called.
      *
      * @param context    the context in which to execute this kernel
      */
