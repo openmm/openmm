@@ -117,7 +117,7 @@ class Modeller(object):
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
-            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
 
         # Add the new model
 
@@ -131,7 +131,7 @@ class Modeller(object):
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(addPositions[atom.index]))
         for bond in addTopology.bonds():
-            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
         self.topology = newTopology
         self.positions = newPositions
 
