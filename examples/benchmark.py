@@ -312,31 +312,38 @@ def runOneTest(testName, options):
     
     # Create the integrator
     temperature = 300*unit.kelvin
+
+    # have an option to force a specific timestep
+    if options.force_timestep is not None:
+        dt_force = float(options.force_timestep) * unit.femtoseconds
+    else:
+        dt_force = None
+
     if explicit:
         friction = 1*(1/unit.picoseconds)
     else:
         friction = 91*(1/unit.picoseconds)
     if amoeba:
-        dt = 0.002*unit.picoseconds
+        dt = dt_force if dt_force else 0.002*unit.picoseconds 
         if options.ensemble == 'NVE':
             integ = mm.MTSIntegrator(dt, [(0,2), (1,1)])
         else:
             integ = mm.MTSLangevinIntegrator(temperature, friction, dt, [(0,2), (1,1)])
     elif amber:
-        dt = 0.004*unit.picoseconds
+        dt = dt_force if dt_force else 0.004*unit.picoseconds
         if options.ensemble == 'NVE':
             integ = mm.VerletIntegrator(dt)
         else:
             integ = mm.LangevinMiddleIntegrator(temperature, friction, dt)
     else:
         if options.bond_constraints == 'hbonds':
-            dt = 0.004*unit.picoseconds
+            dt = dt_force if dt_force else 0.004*unit.picoseconds
             if options.ensemble == 'NVE':
                 integ = mm.VerletIntegrator(dt)
             else:
                 integ = mm.LangevinMiddleIntegrator(temperature, friction, dt)
         elif options.bond_constraints == 'allbonds':
-            dt = 0.005*unit.picoseconds
+            dt = dt_force if dt_force else 0.005*unit.picoseconds
             if options.ensemble == 'NVE':
                 integ = mm.VerletIntegrator(dt)
             else:
@@ -484,6 +491,7 @@ parser.add_argument('--precision', default='single', dest='precision', help=f'pr
 parser.add_argument('--style', default='simple', dest='style', choices=STYLES, help=f'output style: {STYLES} [default: simple]')
 parser.add_argument('--outfile', default=None, dest='outfile', help='output filename for benchmark logging (must end with .yaml or .json)')
 parser.add_argument('--serialize', default=None, dest='serialize', help='if specified, output serialized test systems for Folding@home or other uses')
+parser.add_argument('--force-timestep', default=None, dest='force_timestep', help='if specified, the timestep to use for all tests (in fs)')
 parser.add_argument('--verbose', default=False, action='store_true', dest='verbose', help='if specified, print verbose output')
 args = parser.parse_args()
 if args.platform is None:
@@ -556,6 +564,7 @@ elif args.style == 'table':
     print('Test              Precision   Constraints   H mass (amu)   dt (fs)   Ensemble   Platform   ns/day')
     for (test, args.bond_constraints, args.ensemble, args.precision) in product(tests, bond_constraints, ensembles, precisions):
         try:
+            print(args)
             runOneTest(test, args)
         except OpenMMException as e:
             if args.verbose:
