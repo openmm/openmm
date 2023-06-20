@@ -7720,6 +7720,7 @@ void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) 
     if (savedFloatForces.isInitialized())
         cc.getFloatForceBuffer().copyTo(savedFloatForces);
     lastPosCellOffsets = cc.getPosCellOffsets();
+    lastAtomOrder = cc.getAtomIndex();
 }
 
 void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
@@ -7769,7 +7770,6 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     kernel->setArg(2, (float) scaleZ);
     setPeriodicBoxArgs(cc, kernel, 4);
     kernel->execute(cc.getNumAtoms());
-    lastAtomOrder = cc.getAtomIndex();
 }
 
 void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
@@ -7779,4 +7779,5 @@ void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& contex
     cc.setPosCellOffsets(lastPosCellOffsets);
     if (savedFloatForces.isInitialized())
         savedFloatForces.copyTo(cc.getFloatForceBuffer());
+    cc.setAtomIndex(lastAtomOrder);
 }
