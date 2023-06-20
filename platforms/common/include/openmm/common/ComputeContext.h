@@ -388,11 +388,9 @@ public:
         return atomIndex;
     }
     /**
-     * Set the host-side vector which contains the index of each atom.
+     * Set the vector which contains the index of each atom.
      */
-    void setAtomIndex(std::vector<int>& index){
-        atomIndex = index;
-    }
+    void setAtomIndex(std::vector<int>& index);
     /**
      * Get the array which contains the index of each atom.
      */
