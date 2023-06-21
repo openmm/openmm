@@ -368,7 +368,7 @@ class GromacsTopFile(object):
         if len(fields) < 4:
             raise ValueError('Too few fields in [ angles ] line: '+line)
         if fields[3] not in ('1', '2', '5'):
-                raise ValueError('Unsupported function type in [ angles ] line: '+line)
+            raise ValueError('Unsupported function type in [ angles ] line: '+line)
         self._currentMoleculeType.angles.append(fields)
 
     def _processDihedral(self, line):
