@@ -459,11 +459,9 @@ class GromacsTopFile(object):
     def _processDihedralType(self, line):
         """Process a line in the [ dihedraltypes ] category."""
         fields = line.split()
-        if len(fields) < 7:
-            # If only two atom types are specified, interpret them as the two inner ones.  This should usually
-            # work correctly, but the syntax for it is poorly defined.  The expected number of fields depends
-            # on the function type, but you can't determine the function type until you know how many atom
-            # types are specified, and you can't determine that until you know the expected number of fields!
+        if len(fields[2]) == 1 and fields[2].isdigit():
+            # The third field contains the function type, meaning only two atom types are specified.
+            # Interpret them as the two inner ones.
             fields = ['X', fields[0], fields[1], 'X']+fields[2:]
         if len(fields) < 7:
             raise ValueError('Too few fields in [ dihedraltypes ] line: '+line)
