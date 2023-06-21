@@ -7725,6 +7725,10 @@ void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) 
 
 void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
     ContextSelector selector(cc);
+
+    // check if atoms were reordered from energy evaluation before scaling
+    atomsWereReordered = cc.getAtomsWereReordered();
+
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
 
@@ -7779,5 +7783,8 @@ void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& contex
     cc.setPosCellOffsets(lastPosCellOffsets);
     if (savedFloatForces.isInitialized())
         savedFloatForces.copyTo(cc.getFloatForceBuffer());
-    cc.setAtomIndex(lastAtomOrder);
+
+    // check if atoms were reordered from energy evaluation before or after scaling
+    if (atomsWereReordered || cc.getAtomsWereReordered())
+        cc.setAtomIndex(lastAtomOrder);
 }
