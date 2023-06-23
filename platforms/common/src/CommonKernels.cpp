@@ -7720,10 +7720,15 @@ void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) 
     if (savedFloatForces.isInitialized())
         cc.getFloatForceBuffer().copyTo(savedFloatForces);
     lastPosCellOffsets = cc.getPosCellOffsets();
+    lastAtomOrder = cc.getAtomIndex();
 }
 
 void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
     ContextSelector selector(cc);
+
+    // check if atoms were reordered from energy evaluation before scaling
+    atomsWereReordered = cc.getAtomsWereReordered();
+
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
 
@@ -7769,7 +7774,6 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     kernel->setArg(2, (float) scaleZ);
     setPeriodicBoxArgs(cc, kernel, 4);
     kernel->execute(cc.getNumAtoms());
-    lastAtomOrder = cc.getAtomIndex();
 }
 
 void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
@@ -7779,4 +7783,8 @@ void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& contex
     cc.setPosCellOffsets(lastPosCellOffsets);
     if (savedFloatForces.isInitialized())
         savedFloatForces.copyTo(cc.getFloatForceBuffer());
+
+    // check if atoms were reordered from energy evaluation before or after scaling
+    if (atomsWereReordered || cc.getAtomsWereReordered())
+        cc.setAtomIndex(lastAtomOrder);
 }
