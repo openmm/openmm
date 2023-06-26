@@ -160,7 +160,7 @@ public:
     /**
      * return the force from index
      */
-    Force& getForce(int index){
+    Force& getForce(int index) const {
       ASSERT_VALID_INDEX(index, forces); 
       return *forces[index];
     }

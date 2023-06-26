@@ -219,11 +219,6 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
     omm->system = new OpenMM::System();
     OpenMM::NonbondedForce* nonbond = new OpenMM::NonbondedForce();
     OpenMM::GBSAOBCForce*   gbsa    = new OpenMM::GBSAOBCForce();
-    omm->system->addForce(nonbond);
-    omm->system->addForce(gbsa);
-    nonbond->setForceGroup(1);
-    gbsa->setForceGroup(1);
-    
     
     // Specify dielectrics for GBSA implicit solvation.
     gbsa->setSolventDielectric(solventDielectric);
@@ -240,9 +235,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
     double ubcore = 100.0;
     double acore = 0.062500;
     double direction = 1.0;
-    omm->atm = new OpenMM::ATMForce(lambda1, lambda2, alpha, u0, w0, umsc, ubcore, acore, direction, atmvariableforcegroups);
-    omm->system->addForce(omm->atm);
-    omm->atm->setForceGroup(2);
+    omm->atm = new OpenMM::ATMForce(lambda1, lambda2, alpha, u0, w0, umsc, ubcore, acore, direction);
     
     // Specify the atoms and their properties:
     //  (1) System needs to know the masses.
@@ -272,7 +265,10 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
                            atom.initPosInAng[2] * OpenMM::NmPerAngstrom);
         initialPosInNm.push_back(posInNm);
     }
- 
+    omm->system->addForce(omm->atm);
+    omm->atm->addForce(nonbond);
+    omm->atm->addForce(gbsa);
+
     std::vector<double> displacement(3, 2.0);
     omm->atm->setParticleParameters(0, 0, displacement[0], displacement[1], displacement[2]);
 
@@ -283,9 +279,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
     // have been set here.
     omm->integrator = new OpenMM::LangevinMiddleIntegrator(temperature, frictionInPs, 
                                                      stepSizeInFs * OpenMM::PsPerFs);
-    int forcegroups = 5; //2 and 0
-    omm->integrator->setIntegrationForceGroups(forcegroups);
-    OpenMM::Platform& platform = OpenMM::Platform::getPlatformByName("OpenCL");
+    OpenMM::Platform& platform = OpenMM::Platform::getPlatformByName("Reference");
     omm->context    = new OpenMM::Context(*omm->system, *omm->integrator,platform);
     omm->context->setPositions(initialPosInNm);
       
