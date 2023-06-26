@@ -1576,7 +1576,7 @@ public:
     void restoreCoordinates(ContextImpl& context);
 private:
     ComputeContext& cc;
-    bool hasInitializedKernels, rigidMolecules;
+    bool hasInitializedKernels, rigidMolecules, atomsWereReordered;
     int numMolecules;
     ComputeArray savedPositions, savedFloatForces, savedLongForces;
     ComputeArray moleculeAtoms;

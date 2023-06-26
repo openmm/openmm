@@ -57,6 +57,13 @@ void ComputeContext::addForce(ComputeForceInfo* force) {
     forces.push_back(force);
 }
 
+void ComputeContext::setAtomIndex(std::vector<int>& index){
+    atomIndex = index;
+    getAtomIndexArray().upload(atomIndex);
+    for (auto listener : reorderListeners)
+        listener->execute();
+}
+
 string ComputeContext::replaceStrings(const string& input, const std::map<std::string, std::string>& replacements) const {
     static set<char> symbolChars;
     if (symbolChars.size() == 0) {
