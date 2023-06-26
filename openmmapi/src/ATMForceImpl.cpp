@@ -48,18 +48,14 @@ void ATMForceImpl::copysystem(const OpenMM::System& system, OpenMM::System& inne
 
   //add system forces other than those belonging to the ATMMetaForce group to the inner contexts
   int atmforcegroup = owner.getForceGroup();
-  int numforces = system.getNumForces();
+  int numforces = owner.getNumForces();
   for (int i=0; i<numforces; i++){
-    const Force &force = system.getForce(i);
-    int group = force.getForceGroup();
-    if (group != atmforcegroup){
-      Force* newforce = XmlSerializer::clone<Force>(force);
-      newforce->setForceGroup(group);
-      NonbondedForce* nonbonded = dynamic_cast<NonbondedForce*>(newforce);
-      if (nonbonded != NULL)
-	nonbonded->setReciprocalSpaceForceGroup(-1);
-      innerSystem.addForce(newforce);
-    }
+    const Force &force = owner.getForce(i);
+    Force* newforce = XmlSerializer::clone<Force>(force);
+    NonbondedForce* nonbonded = dynamic_cast<NonbondedForce*>(newforce);
+    if (nonbonded != NULL)
+      nonbonded->setReciprocalSpaceForceGroup(-1);
+    innerSystem.addForce(newforce);
   }
 
 }
@@ -67,17 +63,6 @@ void ATMForceImpl::copysystem(const OpenMM::System& system, OpenMM::System& inne
 void ATMForceImpl::initialize(ContextImpl& context) {
   const OpenMM::System& system = context.getSystem();
 
-  int atmforcegroup = owner.getForceGroup();
-
-  // only forces in designated force groups are evaluated in the inner contexts
-  variable_force_groups_mask = 0;
-  vector<int> varforcegroups = owner.getVariableForceGroups();
-  for (int i=0; i<varforcegroups.size() ; i++){
-    if(varforcegroups[i] == atmforcegroup)
-      throw OpenMMException("The ATM Meta Force group cannot be one of the variable force groups.");
-    variable_force_groups_mask += 1<<varforcegroups[i];
-  }
-  
   copysystem(system, innerSystem1);
   copysystem(system, innerSystem2);
 

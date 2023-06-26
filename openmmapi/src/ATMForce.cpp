@@ -32,13 +32,11 @@ void ATMForce::setParticleParameters(int index, int particle, double dx, double 
     particles[index].dz = dz;
 }
 
-/* TO DO
 int ATMForce::addForce(Force* force){
   Force* newforce = XmlSerializer::clone<Force>(*force);
   forces.push_back(newforce);
   return forces.size()-1;
 }
-*/
 
 ForceImpl* ATMForce::createImpl() const {
     return new ATMForceImpl(*this);

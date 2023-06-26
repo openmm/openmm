@@ -77,8 +77,6 @@ public:
      * @param ubcore     the uc      parameter of the softcore perturbation energy  (kJ/mol)
      * @param acore      the a       parameter of the softcore perturbation energy  (dimensionless)
      *
-     * @param VariableForceGroups  the list of force groups managed by the ATMForce
-     *
      * The parameters provided in this constructor are added to OpenMM's Context as global parameters.
      * Their values can be changed by calling setParameter() on the Context using the parameter
      * names defined by the Lambda1(), Lambda2(), etc. methods below. 
@@ -86,10 +84,9 @@ public:
      *
      * @return An ATMForce object
      */
-  ATMForce(double lambda1, double lambda2, double alpha, double u0, double w0, double umax, double ubcore, double acore, double direction,
-	   const std::vector<int>& VariableForceGroups): 
-     defaultLambda1(lambda1), defaultLambda2(lambda2), defaultAlpha(alpha), defaultU0(u0), defaultW0(w0),
-       defaultUmax(umax), defaultUbcore(ubcore), defaultAcore(acore), defaultDirection(direction), VariableForceGroups(VariableForceGroups) {
+  ATMForce(double lambda1, double lambda2, double alpha, double u0, double w0, double umax, double ubcore, double acore, double direction): 
+    defaultLambda1(lambda1), defaultLambda2(lambda2), defaultAlpha(alpha), defaultU0(u0), defaultW0(w0),
+    defaultUmax(umax), defaultUbcore(ubcore), defaultAcore(acore), defaultDirection(direction)  {
      }
 
      /**
@@ -144,11 +141,10 @@ public:
     
     /**
      * return the number of Forces included in the ATM Force
-
+     */
     int getNumForces() const {
       return forces.size();
     }
-     */
     
     /**
      * add a Force to the ATM Force.
@@ -158,22 +154,17 @@ public:
      *               It is the responsibility of the caller to delete this Force if it is not
      *               needed.
      * @return       The index within ATMForce of the force that was added
-
-    int addForce(Force* force);
-
      */
+    int addForce(Force* force);
 
     /**
      * return the force from index
-
+     */
     Force& getForce(int index){
       ASSERT_VALID_INDEX(index, forces); 
       return *forces[index];
     }
 
-     */
-
-    
     /**
      * Always returns False. Included for compatibility.
      */
@@ -325,17 +316,11 @@ public:
         return defaultDirection;
     }
 
-    /**
-     *  Get the list of the group ids of the Forces managed by the ATMForce 
-     */
-    const std::vector<int>& getVariableForceGroups() const {
-      return VariableForceGroups;
-    }
-
 protected:
   OpenMM::ForceImpl* createImpl() const;
 private:
-    //  std::vector<Force *> forces;
+    //the forces that are recalculated after the coordinate transformation
+    std::vector<Force *> forces;
 
     class ParticleInfo;
     std::vector<ParticleInfo> particles;
@@ -346,10 +331,6 @@ private:
     double defaultUmax, defaultUbcore, defaultAcore;
     //alchemical direction parameter
     double defaultDirection;
-
-    //the forces that are recalculated after the coordinate transformation
-    std::vector<int> VariableForceGroups;
-
 };
 
 /**
