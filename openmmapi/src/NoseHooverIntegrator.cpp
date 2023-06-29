@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2023 Stanford University and the Authors.      *
  * Authors: Andreas Krämer and Andrew C. Simmonett                            *
  * Contributors: Peter Eastman                                                *
  *                                                                            *
@@ -178,18 +178,26 @@ void NoseHooverIntegrator::initializeThermostats(const System &system) {
             }
         }
 
-        // remove 3 degrees of freedom from thermostats that act on absolute motions
-        int numForces = system.getNumForces();
-        if (thermostatedPairs.size() == 0){
-            for (int forceNum = 0; forceNum < numForces; ++forceNum) {
-                if (dynamic_cast<const CMMotionRemover*>(&system.getForce(forceNum))) nDOF -= 3;
-            }
-        }
-
         // set number of DoFs for chain 
         thermostat.setNumDegreesOfFreedom(nDOF);
     }
 
+    // If there is a CMMotionRemover, remove 3 degrees of freedom from the largest thermostat.
+    for (int force = 0; force < system.getNumForces(); ++force) {
+        if (dynamic_cast<const CMMotionRemover*>(&system.getForce(force))) {
+            int largest = 0;
+            int largestSize = noseHooverChains[0].getThermostatedAtoms().size() + noseHooverChains[0].getThermostatedPairs().size();
+            for (int chain = 1; chain < noseHooverChains.size(); chain++) {
+                int size = noseHooverChains[chain].getThermostatedAtoms().size() + noseHooverChains[chain].getThermostatedPairs().size();
+                if (size > largestSize) {
+                    largest = chain;
+                    largestSize = size;
+                }
+            }
+            noseHooverChains[largest].setNumDegreesOfFreedom(noseHooverChains[largest].getNumDegreesOfFreedom()-3);
+            break;
+        }
+    }
 
     for (int chain1 = 0; chain1 < noseHooverChains.size(); ++chain1){
         const auto& nhc = noseHooverChains[chain1];
