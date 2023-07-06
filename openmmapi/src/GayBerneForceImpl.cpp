@@ -41,6 +41,7 @@ using namespace OpenMM;
 using namespace std;
 
 GayBerneForceImpl::GayBerneForceImpl(const GayBerneForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
 }
 
 GayBerneForceImpl::~GayBerneForceImpl() {
@@ -122,7 +123,7 @@ void GayBerneForceImpl::initialize(ContextImpl& context) {
 }
 
 double GayBerneForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcGayBerneForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }

@@ -43,8 +43,6 @@ MonteCarloAnisotropicBarostat::MonteCarloAnisotropicBarostat(const Vec3& default
 }
 
 void MonteCarloAnisotropicBarostat::setDefaultPressure(const Vec3& pressure) {
-    if (pressure[0] < 0 || pressure[1] < 0 || pressure[2] < 0)
-        throw OpenMMException("All components of pressure must be non-negative");
     defaultPressure = pressure;
 }
 

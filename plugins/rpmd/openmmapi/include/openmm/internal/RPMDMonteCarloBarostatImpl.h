@@ -54,7 +54,7 @@ public:
         return owner;
     }
     void updateRPMDState(ContextImpl& context);
-    void updateContextState(ContextImpl& context) {
+    void updateContextState(ContextImpl& context, bool& forcesInvalid) {
         // This is unused, since the updating is done in updateRPMDState().
     }
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {

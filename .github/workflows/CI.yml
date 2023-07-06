@@ -130,8 +130,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux CPU Pypy 3.7
-            python-version: "3.7.*=*pypy*"
+          - name: Linux CPU Pypy
+            python-version: "pypy"
             os: ubuntu-latest
             OPENCL: false
             cuda-version: ""
@@ -148,15 +148,15 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS M1 CPU arm64 Python 3.11
-            python-version: "3.11"
-            os: M1-arm64
-            OPENCL: false
-            cuda-version: ""
-            compilers: conda-forge
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_LIB=ON \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+          #- name: MacOS M1 CPU arm64 Python 3.11
+          #  python-version: "3.11"
+          #  os: M1-arm64
+          #  OPENCL: false
+          #  cuda-version: ""
+          #  compilers: conda-forge
+          #  CMAKE_FLAGS: |
+          #    -DOPENMM_BUILD_OPENCL_LIB=ON \
+          #    -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
 
     steps:
@@ -174,12 +174,24 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v2
         name: "Prepare base dependencies"
-        if: matrix.os != 'M1-arm64'
+        if: matrix.python-version == 'pypy'
+        with:
+          activate-environment: build
+          environment-file: devtools/ci/gh-actions/conda-envs/build-ubuntu-pypy.yml
+          auto-activate-base: false
+          miniforge-variant: Mambaforge-pypy3
+          use-mamba: true
+
+      - uses: conda-incubator/setup-miniconda@v2
+        name: "Prepare base dependencies"
+        if: matrix.os != 'M1-arm64' && matrix.python-version != 'pypy'
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
           auto-activate-base: false
+          miniforge-variant: Mambaforge
+          use-mamba: true
 
       - name: "Install CUDA on Ubuntu (if needed)"
         if: matrix.cuda-version != '' && startsWith(matrix.os, 'ubuntu')
@@ -564,6 +576,7 @@ jobs:
         run: |
           set -x
           echo 'APT::Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update
           sudo apt-get install -y \
             latexmk \
             texlive-latex-recommended \

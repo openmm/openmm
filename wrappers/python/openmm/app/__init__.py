@@ -14,10 +14,12 @@ __email__ = "peastman@stanford.edu"
 
 from .topology import Topology, Chain, Residue, Atom
 from .pdbfile import PDBFile
+from .xtcfile import XTCFile
 from .pdbxfile import PDBxFile
 from .forcefield import ForceField
 from .simulation import Simulation
 from .pdbreporter import PDBReporter, PDBxReporter
+from .xtcreporter import XTCReporter
 from .amberprmtopfile import AmberPrmtopFile, HCT, OBC1, OBC2, GBn, GBn2
 from .amberinpcrdfile import AmberInpcrdFile
 from .dcdfile import DCDFile
@@ -53,4 +55,3 @@ Double = topology.Double
 Triple = topology.Triple
 Aromatic = topology.Aromatic
 Amide = topology.Amide
-

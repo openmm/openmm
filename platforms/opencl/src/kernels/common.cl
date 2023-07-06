@@ -7,7 +7,7 @@
 #ifdef cl_khr_int64_base_atomics
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #else
-void atom_add(volatile __global unsigned long* p, long unsigned val) {
+__attribute__((overloadable)) unsigned long atom_add(volatile __global unsigned long* p, unsigned long val) {
     volatile __global unsigned int* word = (volatile __global unsigned int*) p;
 #ifdef __ENDIAN_LITTLE__
     int lowIndex = 0;
@@ -21,6 +21,7 @@ void atom_add(volatile __global unsigned long* p, long unsigned val) {
     upper += carry;
     if (upper != 0)
         atomic_add(&word[1-lowIndex], upper);
+    return 0;
 }
 #endif
 

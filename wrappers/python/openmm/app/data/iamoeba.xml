@@ -23,7 +23,7 @@
  </AmoebaOutOfPlaneBendForce>
   <AmoebaVdwForce type="BUFFERED-14-7" radiusrule="CUBIC-MEAN" radiustype="R-MIN" radiussize="DIAMETER" epsilonrule="HHG" vdw-13-scale="0.0" vdw-14-scale="1.0" vdw-15-scale="1.0">
    <Vdw class="73" sigma="3.645297e-01" epsilon="8.2348e-01" reduction="1.0"/> 
-   <Vdw class="74" sigma="0.0" epsilon="0.0" reduction="1.0"/> 
+   <Vdw class="74" sigma="1.0" epsilon="0.0" reduction="1.0"/> 
  </AmoebaVdwForce>
   <AmoebaMultipoleForce direct11Scale="0.0" direct12Scale="1.0" direct13Scale="1.0" direct14Scale="1.0" mpole12Scale="0.0" mpole13Scale="0.0" mpole14Scale="0.4" mpole15Scale="0.8" mutual11Scale="1.0" mutual12Scale="1.0" mutual13Scale="1.0" mutual14Scale="1.0" polar12Scale="0.0" polar13Scale="0.0" polar14Intra="0.5" polar14Scale="1.0" polar15Scale="1.0"> 
    <Multipole type="380" kz="-381" kx="-381" c0="-5.94024e-01" d1="0.0" d2="0.0" d3="4.682021361460e-03" q11="2.111247211390e-04" q21="0.0" q22="-3.009710770960e-04" q31="0.0" q32="0.0" q33="8.984635595700e-05"/>

@@ -243,7 +243,6 @@ void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec
         cl.getVelm().download(velm);
         for (int i = 0; i < numParticles; ++i) {
             mm_double4 vel = velm[i];
-            mm_int4 offset = cl.getPosCellOffsets()[i];
             velocities[order[i]] = Vec3(vel.x, vel.y, vel.z);
         }
     }
@@ -252,7 +251,6 @@ void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec
         cl.getVelm().download(velm);
         for (int i = 0; i < numParticles; ++i) {
             mm_float4 vel = velm[i];
-            mm_int4 offset = cl.getPosCellOffsets()[i];
             velocities[order[i]] = Vec3(vel.x, vel.y, vel.z);
         }
     }
@@ -976,7 +974,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     }
     source = cl.replaceStrings(source, replacements);
     if (force.getIncludeDirectSpace())
-        cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup());
+        cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), numParticles > 3000);
 
     // Initialize the exceptions.
 

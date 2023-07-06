@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -95,17 +95,17 @@ class CudaParallelCalcForcesAndEnergyKernel::FinishComputationTask : public Cuda
 public:
     FinishComputationTask(ContextImpl& context, CudaContext& cu, CudaCalcForcesAndEnergyKernel& kernel,
             bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, long long* pinnedMemory, CudaArray& contextForces,
-            bool& valid, int2& interactionCount, CUstream stream, CUevent event, CUevent localEvent) :
+            bool& valid, int2& interactionCount, CUstream stream, CUevent event, CUevent localEvent, bool loadBalance) :
             context(context), cu(cu), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
             completionTime(completionTime), pinnedMemory(pinnedMemory), contextForces(contextForces), valid(valid), interactionCount(interactionCount),
-            stream(stream), event(event), localEvent(localEvent) {
+            stream(stream), event(event), localEvent(localEvent), loadBalance(loadBalance) {
     }
     void execute() {
         // Execute the kernel, then download forces.
         
         ContextSelector selector(cu);
         energy += kernel.finishComputation(context, includeForce, includeEnergy, groups, valid);
-        if (cu.getComputeForceCount() < 200) {
+        if (loadBalance) {
             // Record timing information for load balancing.  Since this takes time, only do it at the start of the simulation.
 
             CHECK_RESULT(cuCtxSynchronize(), "Error synchronizing CUDA context");
@@ -137,7 +137,7 @@ private:
     ContextImpl& context;
     CudaContext& cu;
     CudaCalcForcesAndEnergyKernel& kernel;
-    bool includeForce, includeEnergy;
+    bool includeForce, includeEnergy, loadBalance;
     int groups;
     double& energy;
     long long& completionTime;
@@ -182,8 +182,11 @@ void CudaParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
     int numContexts = data.contexts.size();
     for (int i = 0; i < numContexts; i++)
         getKernel(i).initialize(system);
-    for (int i = 0; i < numContexts; i++)
-        contextNonbondedFractions[i] = 1/(double) numContexts;
+    for (int i = 0; i < contextNonbondedFractions.size(); i++) {
+        double x0 = i/(double) contextNonbondedFractions.size();
+        double x1 = (i+1)/(double) contextNonbondedFractions.size();
+        contextNonbondedFractions[i] = x1*x1 - x0*x0;
+    }
     CHECK_RESULT(cuEventCreate(&event, cu.getEventFlags()), "Error creating event");
     peerCopyEvent.resize(numContexts);
     peerCopyEventLocal.resize(numContexts);
@@ -208,6 +211,7 @@ void CudaParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& contex
         CHECK_RESULT(cuMemHostAlloc((void**) &pinnedForceBuffer, 3*(data.contexts.size()-1)*cu.getPaddedNumAtoms()*sizeof(long long), CU_MEMHOSTALLOC_PORTABLE), "Error allocating pinned memory");
         CHECK_RESULT(cuMemHostAlloc(&pinnedPositionBuffer, cu.getPaddedNumAtoms()*(cu.getUseDoublePrecision() ? sizeof(double4) : sizeof(float4)), CU_MEMHOSTALLOC_PORTABLE), "Error allocating pinned memory");
     }
+    loadBalance = (cu.getComputeForceCount() < 200 || cu.getComputeForceCount()%30 == 0);
 
     // Copy coordinates over to each device and execute the kernel.
     
@@ -239,7 +243,7 @@ double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& con
         CudaContext& cu = *data.contexts[i];
         ComputeContext::WorkThread& thread = cu.getWorkThread();
         thread.addTask(new FinishComputationTask(context, cu, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i],
-                pinnedForceBuffer, contextForces, valid, interactionCounts[i], peerCopyStream[i], peerCopyEvent[i], peerCopyEventLocal[i]));
+                pinnedForceBuffer, contextForces, valid, interactionCounts[i], peerCopyStream[i], peerCopyEvent[i], peerCopyEventLocal[i], loadBalance));
     }
     data.syncContexts();
     CudaContext& cu = *data.contexts[0];
@@ -263,7 +267,7 @@ double CudaParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& con
         // Balance work between the contexts by transferring a little nonbonded work from the context that
         // finished last to the one that finished first.
         
-        if (cu.getComputeForceCount() < 200) {
+        if (loadBalance) {
             int firstIndex = 0, lastIndex = 0;
             for (int i = 0; i < (int) completionTimes.size(); i++) {
                 if (completionTimes[i] < completionTimes[firstIndex])

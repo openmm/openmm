@@ -72,6 +72,7 @@ public:
 };
 
 CustomCompoundBondForceImpl::CustomCompoundBondForceImpl(const CustomCompoundBondForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
 }
 
 CustomCompoundBondForceImpl::~CustomCompoundBondForceImpl() {
@@ -106,7 +107,7 @@ void CustomCompoundBondForceImpl::initialize(ContextImpl& context) {
 }
 
 double CustomCompoundBondForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcCustomCompoundBondForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
