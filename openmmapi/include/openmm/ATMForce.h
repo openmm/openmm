@@ -35,9 +35,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/Force.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/internal/AssertionUtilities.h"
+#include "Force.h"
+#include "internal/AssertionUtilities.h"
 #include <vector>
 #include <string>
 #include "internal/windowsExport.h"
@@ -140,7 +139,7 @@ public:
      * The only information this method updates is the values of per-particle parameters.  The number of particles
      * cannot be changed.
      */
-    void updateParametersInContext(OpenMM::Context& context);
+    void updateParametersInContext(Context& context);
 
 
     /* TO DO */
@@ -184,7 +183,7 @@ public:
      * The perturbation energy is U2(x) - U1(x) (for direction = 1) or U1(x) - U2(x) (for direction = -1),
      * as further modified by the soft-core function.
      */
-    double getPerturbationEnergy(const OpenMM::Context& context) const;
+    double getPerturbationEnergy(const Context& context) const;
 
 
     /**
@@ -323,7 +322,7 @@ public:
     }
 
 protected:
-  OpenMM::ForceImpl* createImpl() const;
+  ForceImpl* createImpl() const;
 private:
     //the forces that are recalculated after the coordinate transformation
     std::vector<Force *> forces;
