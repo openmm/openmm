@@ -107,8 +107,6 @@ SKIP_METHODS = [('State', 'getPositions'),
                 ('LocalCoordinatesSite',  'getYWeights', 0),
                 ("NoseHooverIntegrator", "getAllThermostatedIndividualParticles"),
                 ("NoseHooverIntegrator", "getAllThermostatedPairs"),
-                ("ATMForce", ),
-
 ]
 
 
@@ -511,17 +509,15 @@ UNITS = {
 ("DrudeNoseHooverIntegrator", "getMaxDrudeDistance") : ("unit.nanometer", ()),
 ("DrudeNoseHooverIntegrator", "setMaxDrudeDistance") : (None, ("unit.nanometer",)),
 ("LocalEnergyMinimizer", "minimize") : (None, (None, "unit.kilojoules_per_mole/unit.nanometer", None)),
+("ATMForce", "getForce") : (None, ()),
+("ATMForce", "getPerturbationEnergy") :  ('unit.kilojoule_per_mole', ()),
+("ATMForce", "getDefaultLambda1") :  (None, ()),
+("ATMForce", "getDefaultLambda2") :  (None, ()),
+("ATMForce", "getDefaultAlpha") :  ('unit.kilojoule_per_mole**-1', ()),
+("ATMForce", "getDefaultU0") :  ('unit.kilojoule_per_mole', ()),
+("ATMForce", "getDefaultW0") :  ('unit.kilojoule_per_mole', ()),
+("ATMForce", "getDefaultDirection") :  (None, ()),
+("ATMForce", "getDefaultUmax") :  ('unit.kilojoule_per_mole', ()),
+("ATMForce", "getDefaultUbcore") :  ('unit.kilojoule_per_mole', ()),
+("ATMForce", "getDefaultAcore") :  (None, ()),
 }
-
-
-#("ATMForce",                            "getPerturbationEnergy")                         :  ( 'unit.kilojoule_per_mole',()),
-#("ATMForce",                            "getDefaultLambda1")                             :  ( None ,()),
-#("ATMForce",                            "getDefaultLambda2")                             :  ( None,()),
-#("ATMForce",                            "getDefaultAlpha")                               :  ( None,()),
-#("ATMForce",                            "getDefaultU0")                                  :  ( None,()),
-#("ATMForce",                            "getDefaultW0")                                  :  ( None,()),
-#("ATMForce",                            "getDefaultUmax")                                :  ( None,()),
-#("ATMForce",                            "getDefaultUbcore")                              :  ( None,()),
-#("ATMForce",                            "getDefaultAcore")                               :  ( None,()),
-#("ATMForce",                            "getDefaultDirection")                           :  ( None,()),
-#("ATMForce",                            "getVariableForceGroups")                        :  ( None,()),

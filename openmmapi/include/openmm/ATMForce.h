@@ -105,7 +105,9 @@ public:
      * in the same order as they appear in the System.
      *
      * @param particle    the index of the particle
-     * @param dx, dy, dz  the displacement vector in nm
+     * @param dx          the x component of the displacement vector in nm
+     * @param dy          the y component of the displacement vector in nm
+     * @param dz          the z component of the displacement vector in nm
      * @return the index of the particle that was added
      */
     int addParticle(int particle, double dx, double dy, double dz);
@@ -115,7 +117,9 @@ public:
      * 
      * @param index      the index in the force for the particle for which to get parameters
      * @param particle   the index of the particle
-     * @param dx, dy, dz the coordinates of the displacement vector in nm
+     * @param dx         the x component of the displacement vector in nm
+     * @param dy         the y component of the displacement vector in nm
+     * @param dz         the z component of the displacement vector in nm
      */
     void getParticleParameters(int index, int& particle, double& dx, double &dy, double &dz) const;
 
@@ -124,7 +128,9 @@ public:
      * 
      * @param index      the index in the force of the particle for which to set parameters
      * @param particle   the particle associated with this index
-     * @param dx, dy, dz the coordinates of the displacement vector in nm
+     * @param dx         the x component of the displacement vector in nm
+     * @param dy         the y component of the displacement vector in nm
+     * @param dz         the z component of the displacement vector in nm
      */
     void setParticleParameters(int index, int particle, double dx, double dy, double dz);
     
