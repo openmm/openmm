@@ -107,7 +107,12 @@ SKIP_METHODS = [('State', 'getPositions'),
                 ('LocalCoordinatesSite',  'getYWeights', 0),
                 ("NoseHooverIntegrator", "getAllThermostatedIndividualParticles"),
                 ("NoseHooverIntegrator", "getAllThermostatedPairs"),
+                ("ATMForce", ),
+
 ]
+
+
+
 
 # The build script assumes method args that are non-const references are
 # used to output values. This list gives excpetions to this rule.
@@ -319,8 +324,7 @@ UNITS = {
                                                                                                        None, None, None, None, None, None, None, None, None, None, None, None)),
 ("HippoNonbondedForce",                 "getInducedDipoles")                             :  ( None, ()),
 ("HippoNonbondedForce",                 "getLabFramePermanentDipoles")                   :  ( None, ()),
-
-
+    
 ("Context", "getParameter") : (None, ()),
 ("Context", "getParameters") : (None, ()),
 ("Context", "getMolecules") : (None, ()),
@@ -508,3 +512,16 @@ UNITS = {
 ("DrudeNoseHooverIntegrator", "setMaxDrudeDistance") : (None, ("unit.nanometer",)),
 ("LocalEnergyMinimizer", "minimize") : (None, (None, "unit.kilojoules_per_mole/unit.nanometer", None)),
 }
+
+
+#("ATMForce",                            "getPerturbationEnergy")                         :  ( 'unit.kilojoule_per_mole',()),
+#("ATMForce",                            "getDefaultLambda1")                             :  ( None ,()),
+#("ATMForce",                            "getDefaultLambda2")                             :  ( None,()),
+#("ATMForce",                            "getDefaultAlpha")                               :  ( None,()),
+#("ATMForce",                            "getDefaultU0")                                  :  ( None,()),
+#("ATMForce",                            "getDefaultW0")                                  :  ( None,()),
+#("ATMForce",                            "getDefaultUmax")                                :  ( None,()),
+#("ATMForce",                            "getDefaultUbcore")                              :  ( None,()),
+#("ATMForce",                            "getDefaultAcore")                               :  ( None,()),
+#("ATMForce",                            "getDefaultDirection")                           :  ( None,()),
+#("ATMForce",                            "getVariableForceGroups")                        :  ( None,()),

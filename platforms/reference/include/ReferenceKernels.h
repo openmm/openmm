@@ -1633,6 +1633,60 @@ private:
     int frequency;
 };
 
+/**
+ * This kernel is invoked by ATMForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcATMForceKernel : public CalcATMForceKernel {
+public:
+    ReferenceCalcATMForceKernel(std::string name, const OpenMM::Platform& platform) : CalcATMForceKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the ATMForce this kernel will be used for
+     */
+    void initialize(const OpenMM::System& system, const ATMForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(OpenMM::ContextImpl& context, OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2,
+		   double State1Energy, double State2Energy,
+		   bool includeForces, bool includeEnergy);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the ATMForce to copy the parameters from
+     */
+    void copyParametersToContext(OpenMM::ContextImpl& context, const ATMForce& force);
+
+    /**
+     * Copy state information to the inner context.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext   the context created by the ATM Meta Force for computing displaced energy
+     */
+    void copyState(OpenMM::ContextImpl& context, OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2);
+
+
+    double getPerturbationEnergy(void) {
+      return PerturbationEnergy;
+    }
+      
+ private:
+    int numParticles;
+    std::vector<int> particles;
+    std::vector<OpenMM::Vec3> displ;
+    double PerturbationEnergy;
+
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_REFERENCEKERNELS_H_*/
