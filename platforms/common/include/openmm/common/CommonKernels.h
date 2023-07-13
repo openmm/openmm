@@ -1591,7 +1591,7 @@ private:
  */
 class CommonCalcATMForceKernel : public CalcATMForceKernel {
 public:
-    CommonCalcATMForceKernel(std::string name, const OpenMM::Platform& platform, OpenMM::ComputeContext& cc): CalcATMForceKernel(name, platform), hasInitializedKernel(false), cc(cc) {
+    CommonCalcATMForceKernel(std::string name, const Platform& platform, ComputeContext& cc): CalcATMForceKernel(name, platform), hasInitializedKernel(false), cc(cc) {
     }
 
     ~CommonCalcATMForceKernel();
@@ -1601,7 +1601,7 @@ public:
      * @param system     the System this kernel will be applied to
      * @param force      the ATMForce this kernel will be used for
      */
-    void initialize(const OpenMM::System& system, const ATMForce& force);
+    void initialize(const System& system, const ATMForce& force);
     /**
      * Execute the kernel to calculate the forces and/or energy.
      *
@@ -1610,8 +1610,8 @@ public:
      * @param includeEnergy  true if the energy should be calculated
      * @return the potential energy due to the force
      */
-    double execute(OpenMM::ContextImpl& context,
-		   OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2,
+    double execute(ContextImpl& context,
+		   ContextImpl& innerContext1, ContextImpl& innerContext2,
 		   double State1Energy, double State2Energy,
 		   bool includeForces, bool includeEnergy);
     /**
@@ -1620,20 +1620,21 @@ public:
      * @param context    the context to copy parameters to
      * @param force      the ATMForce to copy the parameters from
      */
-    void copyParametersToContext(OpenMM::ContextImpl& context, const ATMForce& force);
-
+    void copyParametersToContext(ContextImpl& context, const ATMForce& force);
     /**
-     * Copy state information to the inner context.
+     * Copy state information to the inner contexts.
      *
      * @param context        the context in which to execute this kernel
+     * @param innerContext1  the first context created by the ATMForce for computing displaced energy
+     * @param innerContext2  the second context created by the ATMForce for computing displaced energy
      */
-    void copyState(OpenMM::ContextImpl& context, OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2);
-
-
+    void copyState(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2);
+    /**
+     * Get the perturbation energy calculated in the most recent call to execute().
+     */
     double getPerturbationEnergy(void) {
-      return PerturbationEnergy;
+        return perturbationEnergy;
     }
-    
     /**
      * Get the ComputeContext corresponding to the inner Context.
      */
@@ -1643,21 +1644,20 @@ private:
     class ForceInfo;
     class ReorderListener;
     
-    void initkernels(OpenMM::ContextImpl& context, OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2);
+    void initKernels(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2);
     
     bool hasInitializedKernel;
-    OpenMM::ComputeContext& cc;
-    //const OpenMM::System& system;
+    ComputeContext& cc;
 
     //a copy of the displacement vectors stored in the force
     std::vector<mm_float4> displVector;
     
-    OpenMM::ComputeArray displ;
-    ComputeKernel CopyStateKernel;
-    ComputeKernel HybridForceKernel;
+    ComputeArray displ;
+    ComputeKernel copyStateKernel;
+    ComputeKernel hybridForceKernel;
 
     int numParticles;
-    double PerturbationEnergy;
+    double perturbationEnergy;
 };
 
   

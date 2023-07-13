@@ -20,39 +20,35 @@ namespace OpenMM {
  * This is the internal implementation of ATMForce.
  */
 
-//class OPENMM_EXPORT_ATMFORCE ATMForceImpl : public OpenMM::ForceImpl {
-class OPENMM_EXPORT ATMForceImpl : public OpenMM::ForceImpl {
+class OPENMM_EXPORT ATMForceImpl : public ForceImpl {
 public:
     ATMForceImpl(const ATMForce& owner);
     ~ATMForceImpl();
-    void initialize(OpenMM::ContextImpl& context);
+    void initialize(ContextImpl& context);
     const ATMForce& getOwner() const {
         return owner;
     }
-    void updateContextState(OpenMM::ContextImpl& context, bool& forcesInvalid) {
+    void updateContextState(ContextImpl& context, bool& forcesInvalid) {
         // This force field doesn't update the state directly.
     }
-    double calcForcesAndEnergy(OpenMM::ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
     std::map<std::string, double> getDefaultParameters();
-    //{
-    //    return std::map<std::string, double>(); // This force field doesn't define any parameters.
-    //}
     std::vector<std::string> getKernelNames();
-    void updateParametersInContext(OpenMM::ContextImpl& context);
+    void updateParametersInContext(ContextImpl& context);
     double getPerturbationEnergy() const {
-       return PerturbationEnergy;
+        return perturbationEnergy;
     }
 
 private:
     const ATMForce& owner;
-    OpenMM::Kernel kernel;
-    OpenMM::System innerSystem1, innerSystem2;
-    OpenMM::VerletIntegrator innerIntegrator1, innerIntegrator2;
-    OpenMM::Context *innerContext1, *innerContext2;
-    double PerturbationEnergy;
+    Kernel kernel;
+    System innerSystem1, innerSystem2;
+    VerletIntegrator innerIntegrator1, innerIntegrator2;
+    Context *innerContext1, *innerContext2;
+    double perturbationEnergy;
     bool hasInitializedInnerContexts;
-    int variable_force_groups_mask;
-    void copysystem(const OpenMM::System& system, OpenMM::System& innerSystem);
+    int variableForceGroupsMask;
+    void copySystem(const System& system, System& innerSystem);
 };
 
 } // namespace OpenMM

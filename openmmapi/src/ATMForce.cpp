@@ -1,3 +1,36 @@
+/* -------------------------------------------------------------------------- *
+ *                    OpenMM's Alchemical Transfer Force                      *
+ * -------------------------------------------------------------------------- *
+ * This is a Force of the OpenMM molecular simulation toolkit                 *
+ * that implements the Alchemical Transfer Potential                          *
+ * for absolute and relative binding free energy estimation                   *
+ * (https://doi.org/10.1021/acs.jcim.1c01129). The code is derived from the   *
+ * ATMMetaForce plugin                                                        *
+ * https://github.com/Gallicchio-Lab/openmm-atmmetaforce-plugin               *
+ * with support from the National Science Foundation CAREER 1750511           *
+ *                                                                            *
+ * Portions copyright (c) 2021-2023 by the Authors                            *
+ * Authors: Emilio Gallicchio                                                 *
+ * Contributors: Peter Eastman                                                *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
 
 #include "openmm/ATMForce.h"
 #include "openmm/Force.h"
@@ -21,10 +54,9 @@ void ATMForce::getParticleParameters(int index, int& particle, double& dx, doubl
     dx = particles[index].dx;
     dy = particles[index].dy;
     dz = particles[index].dz;
-
 }
 
-void ATMForce::setParticleParameters(int index, int particle, double dx, double dy, double dz){
+void ATMForce::setParticleParameters(int index, int particle, double dx, double dy, double dz) {
     ASSERT_VALID_INDEX(index, particles);
     particles[index].particle = particle;
     particles[index].dx = dx;
@@ -32,10 +64,10 @@ void ATMForce::setParticleParameters(int index, int particle, double dx, double 
     particles[index].dz = dz;
 }
 
-int ATMForce::addForce(Force* force){
-  Force* newforce = XmlSerializer::clone<Force>(*force);
-  forces.push_back(newforce);
-  return forces.size()-1;
+int ATMForce::addForce(Force* force) {
+    Force* newforce = XmlSerializer::clone<Force>(*force);
+    forces.push_back(newforce);
+    return forces.size()-1;
 }
 
 ForceImpl* ATMForce::createImpl() const {
@@ -43,10 +75,10 @@ ForceImpl* ATMForce::createImpl() const {
 }
 
 void ATMForce::updateParametersInContext(OpenMM::Context& context) {
-  dynamic_cast<ATMForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+    dynamic_cast<ATMForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
 
-double ATMForce::getPerturbationEnergy(const OpenMM::Context& context)  const {
-  return dynamic_cast<const ATMForceImpl&>(getImplInContext(context)).getPerturbationEnergy(); 
+double ATMForce::getPerturbationEnergy(const OpenMM::Context& context) const {
+    return dynamic_cast<const ATMForceImpl&>(getImplInContext(context)).getPerturbationEnergy();
 }
 

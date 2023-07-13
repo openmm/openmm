@@ -3020,15 +3020,15 @@ double ReferenceCalcATMForceKernel::execute(ContextImpl& context, ContextImpl& i
     double fp;
     double u  = alchemical_direction > 0 ?  State2Energy - State1Energy : State1Energy - State2Energy;
     double e0 = alchemical_direction > 0 ?  State1Energy                : State2Energy;
-    PerturbationEnergy = SoftCoreF(u, umax, acore, ubcore, fp);
+    perturbationEnergy = SoftCoreF(u, umax, acore, ubcore, fp);
 
     //softplus function
     double ebias = 0.0;
-    double ee = 1.0 + exp(-alpha*(PerturbationEnergy  - u0));
+    double ee = 1.0 + exp(-alpha*(perturbationEnergy  - u0));
     if(alpha > 0){
       ebias = ((lambda2 - lambda1)/alpha) * log(ee);
     }
-    ebias += lambda2 * PerturbationEnergy  + w0;
+    ebias += lambda2 * perturbationEnergy  + w0;
     double bfp = (lambda2 - lambda1)/ee + lambda1;
 
     //alchemical potential energy

@@ -7790,17 +7790,17 @@ void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& contex
 }
 
 /* soft core function used by ATMForce */
-static double SoftCoreF(double u, double umax, double a, double ub, double& fp){
-  if(u <= ub){
-    fp = 1.;
-    return u;
-  }
-  double gu = (u-ub)/(a*(umax-ub)); //this is y/alpha
-  double zeta = 1. + 2.*gu*(gu + 1.) ;
-  double zetap = pow( zeta , a );
-  double s = 4.*(2.*gu + 1.)/zeta;
-  fp = s*zetap/pow(1.+zetap,2);
-  return (umax-ub)*(zetap - 1.)/(zetap + 1.) + ub;
+static double SoftCoreF(double u, double umax, double a, double ub, double& fp) {
+    if (u <= ub) {
+        fp = 1.;
+        return u;
+    }
+    double gu = (u - ub) / (a * (umax - ub)); //this is y/alpha
+    double zeta = 1. + 2. * gu * (gu + 1.);
+    double zetap = pow(zeta, a);
+    double s = 4. * (2. * gu + 1.) / zeta;
+    fp = s * zetap / pow(1. + zetap, 2);
+    return (umax - ub)*(zetap - 1.) / (zetap + 1.) + ub;
 }
 
 class CommonCalcATMForceKernel::ForceInfo : public ComputeForceInfo {
@@ -7823,203 +7823,199 @@ private:
     ComputeForceInfo& force;
 };
 
-
 class CommonCalcATMForceKernel::ReorderListener : public ComputeContext::ReorderListener {
 public:
-  ReorderListener(ComputeContext&  cc, vector<mm_float4>& displVector, ArrayInterface& displ) :
-    cc(cc), displVector(displVector), displ(displ)  {
+    ReorderListener(ComputeContext& cc, vector<mm_float4>& displVector, ArrayInterface& displ) :
+    cc(cc), displVector(displVector), displ(displ) {
     }
     void execute() {
         const vector<int>& id = cc.getAtomIndex();
-	vector<mm_float4> newDisplVectorContext(cc.getPaddedNumAtoms());
-	for (int i = 0; i < cc.getNumAtoms(); i++){
-	  newDisplVectorContext[i] = displVector[id[i]];
-	}
-	displ.upload(newDisplVectorContext);
+        vector<mm_float4> newDisplVectorContext(cc.getPaddedNumAtoms());
+        for (int i = 0; i < cc.getNumAtoms(); i++) {
+            newDisplVectorContext[i] = displVector[id[i]];
+        }
+        displ.upload(newDisplVectorContext);
     }
 private:
     ComputeContext& cc;
     ArrayInterface& displ;
     std::vector<mm_float4> displVector;
-  
-  
-};
 
+
+};
 
 CommonCalcATMForceKernel::~CommonCalcATMForceKernel() {
 }
 
 void CommonCalcATMForceKernel::initialize(const System& system, const ATMForce& force) {
-  ContextSelector selector(cc); //requires OpenMM 7.7+
-  numParticles = force.getNumParticles();
-  if (numParticles == 0)
-    return;
-  displVector.resize(cc.getPaddedNumAtoms());
-  vector<mm_float4> displVectorContext(cc.getPaddedNumAtoms());
-  for (int i = 0; i < cc.getPaddedNumAtoms(); i++){
-    displVector[i].x = displVectorContext[i].x = 0;
-    displVector[i].y = displVectorContext[i].y = 0;
-    displVector[i].z = displVectorContext[i].z = 0;
-    displVector[i].w = displVectorContext[i].w = 0;
-  }
-  for (int i = 0; i < numParticles; i++){
-    int particle;
-    double dx, dy, dz;
-    force.getParticleParameters(i, particle, dx, dy, dz);
-    displVector[i].x = dx;
-    displVector[i].y = dy;
-    displVector[i].z = dz;
-    displVector[i].w = 0;
-  }
-  const vector<int>& id = cc.getAtomIndex();
-  for (int i = 0; i < numParticles; i++){
-    displVectorContext[i] = displVector[id[i]];
-  }
-  displ = ComputeArray();
-  displ.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ");
-  displ.upload(displVectorContext);
-
-  cc.addForce(new ComputeForceInfo());
-}
-
-void CommonCalcATMForceKernel::initkernels(OpenMM::ContextImpl& context, OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2){
-  if(! hasInitializedKernel) {
-    hasInitializedKernel = true;
-
-    //inner contexts
-    ComputeContext& cc1 = getInnerComputeContext(innerContext1);
-    ComputeContext& cc2 = getInnerComputeContext(innerContext2);
-
-    //initialize the listener, this reorders the displacement vectors
-    ReorderListener* listener = new ReorderListener(cc, displVector, displ );
-    cc.addReorderListener(listener);
-    listener->execute();
-
-    //create CopyState kernel
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::atmforce);
-    CopyStateKernel = program->createKernel("CopyState");
-    CopyStateKernel->addArg(numParticles);
-    CopyStateKernel->addArg( cc.getPosq());
-    CopyStateKernel->addArg(cc1.getPosq());
-    CopyStateKernel->addArg(cc2.getPosq());
-    CopyStateKernel->addArg(displ);
-    if(cc.getUseMixedPrecision()){
-      CopyStateKernel->addArg( cc.getPosqCorrection());
-      CopyStateKernel->addArg(cc1.getPosqCorrection());
-      CopyStateKernel->addArg(cc2.getPosqCorrection());
+    ContextSelector selector(cc);
+    numParticles = force.getNumParticles();
+    if (numParticles == 0)
+        return;
+    displVector.resize(cc.getPaddedNumAtoms());
+    vector<mm_float4> displVectorContext(cc.getPaddedNumAtoms());
+    for (int i = 0; i < cc.getPaddedNumAtoms(); i++) {
+        displVector[i].x = displVectorContext[i].x = 0;
+        displVector[i].y = displVectorContext[i].y = 0;
+        displVector[i].z = displVectorContext[i].z = 0;
+        displVector[i].w = displVectorContext[i].w = 0;
     }
+    for (int i = 0; i < numParticles; i++) {
+        int particle;
+        double dx, dy, dz;
+        force.getParticleParameters(i, particle, dx, dy, dz);
+        displVector[i].x = dx;
+        displVector[i].y = dy;
+        displVector[i].z = dz;
+        displVector[i].w = 0;
+    }
+    const vector<int>& id = cc.getAtomIndex();
+    for (int i = 0; i < numParticles; i++) {
+        displVectorContext[i] = displVector[id[i]];
+    }
+    displ = ComputeArray();
+    displ.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ");
+    displ.upload(displVectorContext);
 
-    //create the HybridForce kernel
-    float sp = 0;
-    HybridForceKernel = program->createKernel("HybridForce");
-    HybridForceKernel->addArg(numParticles);
-    HybridForceKernel->addArg(cc.getPaddedNumAtoms());
-    HybridForceKernel->addArg( cc.getLongForceBuffer());
-    HybridForceKernel->addArg(cc1.getLongForceBuffer());
-    HybridForceKernel->addArg(cc2.getLongForceBuffer());
-    HybridForceKernel->addArg(sp);//argument 5 (sp) is set in execute()
-
-    cc1.addForce(new ComputeForceInfo());
-    cc2.addForce(new ComputeForceInfo());
-    
-  }
+    cc.addForce(new ComputeForceInfo());
 }
 
-double CommonCalcATMForceKernel::execute(OpenMM::ContextImpl& context,
-					     OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2,
-					     double State1Energy, double State2Energy,
-					     bool includeForces, bool includeEnergy ) {
-  ContextSelector selector(cc); // requires OpenMM 7.7+
-  //cc.setAsCurrent(); //OpenMM 7.6
+void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2) {
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
 
-  initkernels(context, innerContext1, innerContext2);
+        //inner contexts
+        ComputeContext& cc1 = getInnerComputeContext(innerContext1);
+        ComputeContext& cc2 = getInnerComputeContext(innerContext2);
 
-  //softplus parameters
-  double lambda1 = context.getParameter(ATMForce::Lambda1());
-  double lambda2 = context.getParameter(ATMForce::Lambda2());
-  double alpha   = context.getParameter(ATMForce::Alpha());
-  double u0      = context.getParameter(ATMForce::U0());
-  double w0      = context.getParameter(ATMForce::W0());
+        //initialize the listener, this reorders the displacement vectors
+        ReorderListener* listener = new ReorderListener(cc, displVector, displ);
+        cc.addReorderListener(listener);
+        listener->execute();
 
-  //softcore parameters
-  double umax = context.getParameter(ATMForce::Umax());
-  double ubcore = context.getParameter(ATMForce::Ubcore());
-  double acore = context.getParameter(ATMForce::Acore());
+        //create CopyState kernel
+        ComputeProgram program = cc.compileProgram(CommonKernelSources::atmforce);
+        copyStateKernel = program->createKernel("copyState");
+        copyStateKernel->addArg(numParticles);
+        copyStateKernel->addArg(cc.getPosq());
+        copyStateKernel->addArg(cc1.getPosq());
+        copyStateKernel->addArg(cc2.getPosq());
+        copyStateKernel->addArg(displ);
+        if (cc.getUseMixedPrecision()) {
+            copyStateKernel->addArg(cc.getPosqCorrection());
+            copyStateKernel->addArg(cc1.getPosqCorrection());
+            copyStateKernel->addArg(cc2.getPosqCorrection());
+        }
 
-  //alchemical direction
-  // 1 = from RA  (reference) to R+A (displaced)
-  //-1 = from R+A (displaced) to RA  (reference)
-  double alchemical_direction = context.getParameter(ATMForce::Direction());
+        //create the HybridForce kernel
+        float sp = 0;
+        hybridForceKernel = program->createKernel("hybridForce");
+        hybridForceKernel->addArg(numParticles);
+        hybridForceKernel->addArg(cc.getPaddedNumAtoms());
+        hybridForceKernel->addArg(cc.getLongForceBuffer());
+        hybridForceKernel->addArg(cc1.getLongForceBuffer());
+        hybridForceKernel->addArg(cc2.getLongForceBuffer());
+        hybridForceKernel->addArg(sp); //argument 5 (sp) is set in execute()
 
-  //soft-core perturbation energy
-  double fp;
-  double u  = alchemical_direction > 0 ?  State2Energy - State1Energy : State1Energy - State2Energy;
-  double e0 = alchemical_direction > 0 ?  State1Energy                : State2Energy;
-  PerturbationEnergy = SoftCoreF(u, umax, acore, ubcore, fp);
+        cc1.addForce(new ComputeForceInfo());
+        cc2.addForce(new ComputeForceInfo());
 
-  //softplus function
-  double ebias = 0.0;
-  double ee = 1.0 + exp(-alpha*(PerturbationEnergy  - u0));
-  if(alpha > 0){
-    ebias = ((lambda2 - lambda1)/alpha) * log(ee);
-  }
-  ebias += lambda2 * PerturbationEnergy  + w0;
-  double bfp = (lambda2 - lambda1)/ee + lambda1;
-
-  //alchemical potential energy
-  double energy = e0 + ebias;
-
-  //hybridize forces and add them to the system's forces
-  float sp = alchemical_direction > 0 ? bfp*fp : 1. - bfp*fp;
-  HybridForceKernel->setArg(5, sp);
-  HybridForceKernel->execute(numParticles);
-  
-  return (includeEnergy ? energy : 0.0);
+    }
 }
 
-void CommonCalcATMForceKernel::copyState(OpenMM::ContextImpl& context,
-					     OpenMM::ContextImpl& innerContext1, OpenMM::ContextImpl& innerContext2) {
-  ContextSelector selector(cc); // requires OpenMM 7.7
+double CommonCalcATMForceKernel::execute(ContextImpl& context,
+        ContextImpl& innerContext1, ContextImpl& innerContext2,
+        double State1Energy, double State2Energy,
+        bool includeForces, bool includeEnergy) {
+    ContextSelector selector(cc);
 
-  initkernels(context, innerContext1, innerContext2);
+    initKernels(context, innerContext1, innerContext2);
 
-  CopyStateKernel->execute(numParticles);
-  
-  Vec3 a, b, c;
-  context.getPeriodicBoxVectors(a, b, c);
-  innerContext1.setPeriodicBoxVectors(a, b, c);
-  innerContext1.setTime(context.getTime());
-  innerContext2.setPeriodicBoxVectors(a, b, c);
-  innerContext2.setTime(context.getTime());
-  map<string, double> innerParameters1 = innerContext1.getParameters();
-  for (auto& param : innerParameters1)
-    innerContext1.setParameter(param.first, context.getParameter(param.first));
-  map<string, double> innerParameters2 = innerContext2.getParameters();
-  for (auto& param : innerParameters2)
-    innerContext2.setParameter(param.first, context.getParameter(param.first));
+    //softplus parameters
+    double lambda1 = context.getParameter(ATMForce::Lambda1());
+    double lambda2 = context.getParameter(ATMForce::Lambda2());
+    double alpha = context.getParameter(ATMForce::Alpha());
+    double u0 = context.getParameter(ATMForce::U0());
+    double w0 = context.getParameter(ATMForce::W0());
+
+    //softcore parameters
+    double umax = context.getParameter(ATMForce::Umax());
+    double ubcore = context.getParameter(ATMForce::Ubcore());
+    double acore = context.getParameter(ATMForce::Acore());
+
+    //alchemical direction
+    // 1 = from RA  (reference) to R+A (displaced)
+    //-1 = from R+A (displaced) to RA  (reference)
+    double alchemical_direction = context.getParameter(ATMForce::Direction());
+
+    //soft-core perturbation energy
+    double fp;
+    double u = alchemical_direction > 0 ? State2Energy - State1Energy : State1Energy - State2Energy;
+    double e0 = alchemical_direction > 0 ? State1Energy : State2Energy;
+    perturbationEnergy = SoftCoreF(u, umax, acore, ubcore, fp);
+
+    //softplus function
+    double ebias = 0.0;
+    double ee = 1.0 + exp(-alpha * (perturbationEnergy - u0));
+    if (alpha > 0) {
+        ebias = ((lambda2 - lambda1) / alpha) * log(ee);
+    }
+    ebias += lambda2 * perturbationEnergy + w0;
+    double bfp = (lambda2 - lambda1) / ee + lambda1;
+
+    //alchemical potential energy
+    double energy = e0 + ebias;
+
+    //hybridize forces and add them to the system's forces
+    float sp = alchemical_direction > 0 ? bfp * fp : 1. - bfp*fp;
+    hybridForceKernel->setArg(5, sp);
+    hybridForceKernel->execute(numParticles);
+
+    return (includeEnergy ? energy : 0.0);
 }
 
+void CommonCalcATMForceKernel::copyState(ContextImpl& context,
+        ContextImpl& innerContext1, ContextImpl& innerContext2) {
+    ContextSelector selector(cc);
+
+    initKernels(context, innerContext1, innerContext2);
+
+    copyStateKernel->execute(numParticles);
+
+    Vec3 a, b, c;
+    context.getPeriodicBoxVectors(a, b, c);
+    innerContext1.setPeriodicBoxVectors(a, b, c);
+    innerContext1.setTime(context.getTime());
+    innerContext2.setPeriodicBoxVectors(a, b, c);
+    innerContext2.setTime(context.getTime());
+    map<string, double> innerParameters1 = innerContext1.getParameters();
+    for (auto& param : innerParameters1)
+        innerContext1.setParameter(param.first, context.getParameter(param.first));
+    map<string, double> innerParameters2 = innerContext2.getParameters();
+    for (auto& param : innerParameters2)
+        innerContext2.setParameter(param.first, context.getParameter(param.first));
+}
 
 void CommonCalcATMForceKernel::copyParametersToContext(ContextImpl& context, const ATMForce& force) {
-  for (int i = 0; i < numParticles; i++){
-    int particle;
-    double dx, dy, dz;
-    force.getParticleParameters(i, particle, dx, dy, dz);
-    displVector[i].x = dx;
-    displVector[i].y = dy;
-    displVector[i].z = dz;
-    displVector[i].w = 0;
-  }
-  const vector<int>& id = cc.getAtomIndex();
-  vector<mm_float4> displVectorContext(displVector);
-  for (int i = 0; i < cc.getPaddedNumAtoms(); i++){
-    displVectorContext[i].x = 0;
-    displVectorContext[i].y = 0;
-    displVectorContext[i].z = 0;
-    displVectorContext[i].w = 0;
-  }
-  for (int i = 0; i < numParticles; i++){
-    displVectorContext[i] = displVector[id[i]];
-  }
-  displ.upload(displVectorContext);
+    for (int i = 0; i < numParticles; i++) {
+        int particle;
+        double dx, dy, dz;
+        force.getParticleParameters(i, particle, dx, dy, dz);
+        displVector[i].x = dx;
+        displVector[i].y = dy;
+        displVector[i].z = dz;
+        displVector[i].w = 0;
+    }
+    const vector<int>& id = cc.getAtomIndex();
+    vector<mm_float4> displVectorContext(displVector);
+    for (int i = 0; i < cc.getPaddedNumAtoms(); i++) {
+        displVectorContext[i].x = 0;
+        displVectorContext[i].y = 0;
+        displVectorContext[i].z = 0;
+        displVectorContext[i].w = 0;
+    }
+    for (int i = 0; i < numParticles; i++) {
+        displVectorContext[i] = displVector[id[i]];
+    }
+    displ.upload(displVectorContext);
 }

@@ -2,7 +2,7 @@
 #define OPENMM_ATMFORCE_H_
 
 /* -------------------------------------------------------------------------- *
- *                    OpenMM's Alchemical Tranfer Force                       *
+ *                    OpenMM's Alchemical Transfer Force                      *
  * -------------------------------------------------------------------------- *
  * This is a Force of the OpenMM molecular simulation toolkit                 *
  * that implements the Alchemical Transfer Potential                          *
