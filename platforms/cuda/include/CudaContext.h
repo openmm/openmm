@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -75,8 +75,7 @@ public:
     static const int ThreadBlockSize;
     static const int TileSize;
     CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const std::string& precision,
-            const std::string& compiler, const std::string& tempDir, const std::string& hostCompiler, bool allowRuntimeCompiler,
-            CudaPlatform::PlatformData& platformData, CudaContext* originalContext);
+            const std::string& tempDir, CudaPlatform::PlatformData& platformData, CudaContext* originalContext);
     ~CudaContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system
@@ -558,9 +557,9 @@ private:
     int numAtomBlocks;
     int numThreadBlocks;
     int gpuArchitecture;
-    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, boxIsTriclinic, hasCompilerKernel, isNvccAvailable, hasAssignedPosqCharges;
+    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, boxIsTriclinic, hasAssignedPosqCharges;
     bool isLinkedContext;
-    std::string compiler, tempDir, cacheDir;
+    std::string tempDir, cacheDir;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;
     std::string defaultOptimizationOptions;
