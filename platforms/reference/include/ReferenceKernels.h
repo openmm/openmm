@@ -1656,7 +1656,7 @@ public:
      * @return the potential energy due to the force
      */
     double execute(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2,
-		   double State1Energy, double State2Energy,
+		   double state1Energy, double state2Energy,
 		   bool includeForces, bool includeEnergy);
     /**
      * Copy changed parameters over to a context.
