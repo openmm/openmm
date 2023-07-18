@@ -260,7 +260,9 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
     propertyValues[CudaPlatform::CudaUseBlockingSync()] = blocking ? "true" : "false";
     propertyValues[CudaPlatform::CudaPrecision()] = precisionProperty;
     propertyValues[CudaPlatform::CudaUseCpuPme()] = useCpuPme ? "true" : "false";
+    propertyValues[CudaPlatform::CudaCompiler()] = "";
     propertyValues[CudaPlatform::CudaTempDirectory()] = tempProperty;
+    propertyValues[CudaPlatform::CudaHostCompiler()] = "";
     propertyValues[CudaPlatform::CudaDisablePmeStream()] = disablePmeStream ? "true" : "false";
     propertyValues[CudaPlatform::CudaDeterministicForces()] = deterministicForces ? "true" : "false";
     contextEnergy.resize(contexts.size());
