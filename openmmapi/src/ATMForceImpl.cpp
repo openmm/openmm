@@ -125,10 +125,10 @@ double ATMForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForce
     kernel.getAs<CalcATMForceKernel>().copyState(context, innerContextImpl1, innerContextImpl2);
 
     //evaluate variable energy and forces for original system
-    double state1Energy = innerContextImpl1.calcForcesAndEnergy(true, true, variableForceGroupsMask);
+    double state1Energy = innerContextImpl1.calcForcesAndEnergy(true, true);
 
     //evaluate variable energy and force for the displaced system
-    double state2Energy = innerContextImpl2.calcForcesAndEnergy(true, true, variableForceGroupsMask);
+    double state2Energy = innerContextImpl2.calcForcesAndEnergy(true, true);
 
     //evaluate the alchemical energy
     double energy = kernel.getAs<CalcATMForceKernel>().execute(context,

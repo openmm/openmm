@@ -279,7 +279,8 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
     // have been set here.
     omm->integrator = new OpenMM::LangevinMiddleIntegrator(temperature, frictionInPs, 
                                                      stepSizeInFs * OpenMM::PsPerFs);
-    OpenMM::Platform& platform = OpenMM::Platform::getPlatformByName("Reference");
+    //OpenMM::Platform& platform = OpenMM::Platform::getPlatformByName("Reference");
+    OpenMM::Platform& platform = OpenMM::Platform::getPlatformByName("OpenCL");
     omm->context    = new OpenMM::Context(*omm->system, *omm->integrator,platform);
     omm->context->setPositions(initialPosInNm);
       
