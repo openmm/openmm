@@ -11,6 +11,7 @@
 #   libOpenMM.so
 #   libOpenMM_static.a
 #----------------------------------------------------
+CMAKE_MINIMUM_REQUIRED(VERSION 3.17)
 
 find_package(PythonInterp)
 mark_as_advanced(CLEAR PYTHON_EXECUTABLE)
@@ -21,7 +22,6 @@ IF( NOT PROJECT_NAME )
     PROJECT (OpenMM)
 ENDIF( NOT PROJECT_NAME )
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.17)
 CMAKE_POLICY(SET CMP0042 OLD)
 CMAKE_POLICY(SET CMP0003 NEW)
 CMAKE_POLICY(SET CMP0005 NEW)
