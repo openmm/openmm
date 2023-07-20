@@ -192,9 +192,9 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(blockDelta)
 #endif
-                    blockDelta.x = max(0.0f, fabs(blockDelta.x)-blockSizeX.x-largeSize.x);
-                    blockDelta.y = max(0.0f, fabs(blockDelta.y)-blockSizeX.y-largeSize.y);
-                    blockDelta.z = max(0.0f, fabs(blockDelta.z)-blockSizeX.z-largeSize.z);
+                    blockDelta.x = max((real) 0, fabs(blockDelta.x)-blockSizeX.x-largeSize.x);
+                    blockDelta.y = max((real) 0, fabs(blockDelta.y)-blockSizeX.y-largeSize.y);
+                    blockDelta.z = max((real) 0, fabs(blockDelta.z)-blockSizeX.z-largeSize.z);
                     includeLargeBlock = (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < PADDED_CUTOFF_SQUARED);
                 }
                 largeBlockFlags[get_local_id(0)] = includeLargeBlock;
