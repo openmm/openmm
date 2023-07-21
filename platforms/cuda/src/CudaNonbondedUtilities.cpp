@@ -74,7 +74,13 @@ CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(c
     CHECK_RESULT(cuMemHostAlloc((void**) &pinnedCountBuffer, 2*sizeof(unsigned int), CU_MEMHOSTALLOC_PORTABLE));
     numForceThreadBlocks = 4*multiprocessors;
     forceThreadBlockSize = (context.getComputeCapability() < 2.0 ? 128 : 256);
-    useLargeBlocks = true;
+    
+    // When building the neighbor list, we can optionally use large blocks (1024 atoms) to
+    // accelerate the process.  This makes building the neighbor list faster, but it prevents
+    // us from sorting atom blocks by size, which leads to a slightly less efficient neighbor
+    // list.  We guess based on system size which will be faster.
+
+    useLargeBlocks = (context.getNumAtoms() > 90000);
     setKernelSource(CudaKernelSources::nonbonded);
 }
 

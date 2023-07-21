@@ -80,7 +80,13 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
     }
     pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(unsigned int));
     pinnedCountMemory = (unsigned int*) context.getQueue().enqueueMapBuffer(*pinnedCountBuffer, CL_TRUE, CL_MAP_READ, 0, sizeof(int));
-    useLargeBlocks = true;
+    
+    // When building the neighbor list, we can optionally use large blocks (1024 atoms) to
+    // accelerate the process.  This makes building the neighbor list faster, but it prevents
+    // us from sorting atom blocks by size, which leads to a slightly less efficient neighbor
+    // list.  We guess based on system size which will be faster.
+
+    useLargeBlocks = (context.getNumAtoms() > 100000);
     setKernelSource(deviceIsCpu ? OpenCLKernelSources::nonbonded_cpu : OpenCLKernelSources::nonbonded);
 }
 
