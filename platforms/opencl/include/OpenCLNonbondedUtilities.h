@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -319,6 +319,8 @@ private:
     OpenCLArray sortedBlocks;
     OpenCLArray sortedBlockCenter;
     OpenCLArray sortedBlockBoundingBox;
+    OpenCLArray largeBlockCenter;
+    OpenCLArray largeBlockBoundingBox;
     OpenCLArray oldPositions;
     OpenCLArray rebuildNeighborList;
     OpenCLSort* blockSorter;
@@ -332,7 +334,7 @@ private:
     std::map<int, double> groupCutoff;
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
-    bool useCutoff, usePeriodic, deviceIsCpu, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList;
+    bool useCutoff, usePeriodic, deviceIsCpu, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, useLargeBlocks;
     int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
     int forceThreadBlockSize, interactingBlocksThreadBlockSize, groupFlags;
     unsigned int tilesAfterReorder;

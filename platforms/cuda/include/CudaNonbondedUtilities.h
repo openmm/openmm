@@ -338,6 +338,8 @@ private:
     CudaArray sortedBlocks;
     CudaArray sortedBlockCenter;
     CudaArray sortedBlockBoundingBox;
+    CudaArray largeBlockCenter;
+    CudaArray largeBlockBoundingBox;
     CudaArray oldPositions;
     CudaArray rebuildNeighborList;
     CudaSort* blockSorter;
@@ -351,7 +353,7 @@ private:
     std::map<int, double> groupCutoff;
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
-    bool useCutoff, usePeriodic, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, canUsePairList;
+    bool useCutoff, usePeriodic, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, canUsePairList, useLargeBlocks;
     int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
     unsigned int maxTiles, maxSinglePairs, tilesAfterReorder;
     long long numTiles;
