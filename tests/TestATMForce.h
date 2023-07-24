@@ -42,6 +42,7 @@
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "sfmt/SFMT.h"
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
