@@ -83,12 +83,10 @@ public:
      *
      * @return An ATMForce object
      */
-  ATMForce(double lambda1, double lambda2, double alpha, double u0, double w0, double umax, double ubcore, double acore, double direction): 
-    defaultLambda1(lambda1), defaultLambda2(lambda2), defaultAlpha(alpha), defaultU0(u0), defaultW0(w0),
-    defaultUmax(umax), defaultUbcore(ubcore), defaultAcore(acore), defaultDirection(direction)  {
-     }
+    ATMForce(double lambda1, double lambda2, double alpha, double u0, double w0, double umax, double ubcore, double acore, double direction);
+    ~ATMForce();
 
-     /**
+    /**
      * Get the number of particles managed by ATMForce
      *
      * This should be the same number of particles as the OpenMM's System
@@ -148,16 +146,15 @@ public:
      * return the number of Forces included in the ATM Force
      */
     int getNumForces() const {
-      return forces.size();
+        return forces.size();
     }
     
     /**
-     * add a Force to the ATM Force.
+     * Add a Force that will be computed by the ATM Force.
      *
-     * @param Force  The Force to the be added. ATMForce internally uses a copy of this Force.
-     *               Subsequent modifications of the force will have no effect on the ATMForce.
-     *               It is the responsibility of the caller to delete this Force if it is not
-     *               needed.
+     * @param force  the Force to the be added, which should have been created on the heap with the
+     *               "new" operator.  The ATMForce takes over ownership of it, and deletes the Force when the
+     *               ATMForce itself is deleted.
      * @return       The index within ATMForce of the force that was added
      */
     int addForce(Force* force);
@@ -165,16 +162,13 @@ public:
     /**
      * return the force from index
      */
-    Force& getForce(int index) const {
-      ASSERT_VALID_INDEX(index, forces); 
-      return *forces[index];
-    }
+    Force& getForce(int index) const;
 
     /**
      * Always returns False. Included for compatibility.
      */
     bool usesPeriodicBoundaryConditions() const {
-      return false; //the non-bonded force with PBC is in the system so it would be queried correctly
+        return false; //the non-bonded force with PBC is in the system so it would be queried correctly
     }
 
     /**

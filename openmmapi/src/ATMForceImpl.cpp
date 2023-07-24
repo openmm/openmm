@@ -54,67 +54,50 @@
 using namespace OpenMM;
 using namespace std;
 
-ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrator1(1.0), innerIntegrator2(1.0), hasInitializedInnerContexts(false) {
+ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrator1(1.0), innerIntegrator2(1.0) {
 }
 
 ATMForceImpl::~ATMForceImpl() {
 }
 
-void ATMForceImpl::copySystem(const OpenMM::System& system, OpenMM::System& innerSystem) {
+void ATMForceImpl::copySystem(ContextImpl& context, const OpenMM::System& system, OpenMM::System& innerSystem) {
     //copy particles
     for (int i = 0; i < system.getNumParticles(); i++)
         innerSystem.addParticle(system.getParticleMass(i));
-
-    //copy constraints
-    for (int i = 0; i < system.getNumConstraints(); i++) {
-        int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(i, particle1, particle2, distance);
-        innerSystem.addConstraint(particle1, particle2, distance);
-    }
 
     //copy periodic box dimensions
     Vec3 a, b, c;
     system.getDefaultPeriodicBoxVectors(a, b, c);
     innerSystem.setDefaultPeriodicBoxVectors(a, b, c);
 
-    //add system forces other than those belonging to the ATMMetaForce group to the inner contexts
-    int atmforcegroup = owner.getForceGroup();
-    int numforces = owner.getNumForces();
-    for (int i = 0; i < numforces; i++) {
+    // Add forces to the inner contexts
+    for (int i = 0; i < owner.getNumForces(); i++) {
         const Force &force = owner.getForce(i);
-        Force* newforce = XmlSerializer::clone<Force>(force);
-        NonbondedForce* nonbonded = dynamic_cast<NonbondedForce*> (newforce);
-        if (nonbonded != NULL)
-            nonbonded->setReciprocalSpaceForceGroup(-1);
-        innerSystem.addForce(newforce);
+        innerSystem.addForce(XmlSerializer::clone<Force>(force));
     }
-
 }
 
 void ATMForceImpl::initialize(ContextImpl& context) {
     const OpenMM::System& system = context.getSystem();
 
-    copySystem(system, innerSystem1);
-    copySystem(system, innerSystem2);
+    copySystem(context, system, innerSystem1);
+    copySystem(context, system, innerSystem2);
+
+    // Create the inner context.
+
+    innerContext1 = context.createLinkedContext(innerSystem1, innerIntegrator1);
+    innerContext2 = context.createLinkedContext(innerSystem2, innerIntegrator2);
+    vector<Vec3> positions(system.getNumParticles(), Vec3());
+    innerContext1->setPositions(positions);
+    innerContext2->setPositions(positions);
+
+    // Create the kernel.
 
     kernel = context.getPlatform().createKernel(CalcATMForceKernel::Name(), context);
     kernel.getAs<CalcATMForceKernel>().initialize(context.getSystem(), owner);
 }
 
 double ATMForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if (!hasInitializedInnerContexts) {
-        hasInitializedInnerContexts = true;
-
-        innerContext1 = context.createLinkedContext(innerSystem1, innerIntegrator1);
-        innerContext2 = context.createLinkedContext(innerSystem2, innerIntegrator2);
-
-        vector<Vec3> pos;
-        context.getPositions(pos);
-        innerContext1->setPositions(pos);
-        innerContext2->setPositions(pos);
-    }
-
     if ((groups & (1 << owner.getForceGroup())) == 0)
         return 0.0;
 
@@ -160,6 +143,16 @@ std::vector<std::string> ATMForceImpl::getKernelNames() {
     std::vector<std::string> names;
     names.push_back(CalcATMForceKernel::Name());
     return names;
+}
+
+vector<pair<int, int> > ATMForceImpl::getBondedParticles() const {
+    vector<pair<int, int> > bonds;
+    const ContextImpl& innerContextImpl = getContextImpl(*innerContext1);
+    for (auto& impl : innerContextImpl.getForceImpls()) {
+        for (auto& bond : impl->getBondedParticles())
+            bonds.push_back(bond);
+    }
+    return bonds;
 }
 
 void ATMForceImpl::updateParametersInContext(ContextImpl& context) {

@@ -34,6 +34,7 @@ public:
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
+    std::vector<std::pair<int, int> > getBondedParticles() const;
     void updateParametersInContext(ContextImpl& context);
     double getPerturbationEnergy() const {
         return perturbationEnergy;
@@ -46,9 +47,7 @@ private:
     VerletIntegrator innerIntegrator1, innerIntegrator2;
     Context *innerContext1, *innerContext2;
     double perturbationEnergy;
-    bool hasInitializedInnerContexts;
-    int variableForceGroupsMask;
-    void copySystem(const System& system, System& innerSystem);
+    void copySystem(ContextImpl& context, const System& system, System& innerSystem);
 };
 
 } // namespace OpenMM

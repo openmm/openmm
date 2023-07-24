@@ -43,6 +43,16 @@
 using namespace OpenMM;
 using namespace std;
 
+ATMForce::ATMForce(double lambda1, double lambda2, double alpha, double u0, double w0, double umax, double ubcore, double acore, double direction):
+    defaultLambda1(lambda1), defaultLambda2(lambda2), defaultAlpha(alpha), defaultU0(u0), defaultW0(w0),
+    defaultUmax(umax), defaultUbcore(ubcore), defaultAcore(acore), defaultDirection(direction) {
+}
+
+ATMForce::~ATMForce() {
+    for (Force* force : forces)
+        delete force;
+}
+
 int ATMForce::addParticle(int particle, double dx, double dy, double dz) {
     particles.push_back(ParticleInfo(particle, dx, dy, dz));
     return particles.size()-1;
@@ -65,9 +75,13 @@ void ATMForce::setParticleParameters(int index, int particle, double dx, double 
 }
 
 int ATMForce::addForce(Force* force) {
-    Force* newforce = XmlSerializer::clone<Force>(*force);
-    forces.push_back(newforce);
+    forces.push_back(force);
     return forces.size()-1;
+}
+
+Force& ATMForce::getForce(int index) const {
+    ASSERT_VALID_INDEX(index, forces);
+    return *forces[index];
 }
 
 ForceImpl* ATMForce::createImpl() const {
