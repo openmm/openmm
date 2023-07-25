@@ -161,11 +161,11 @@ try:
    from pymbar import MBAR
 except:
    raise ImportError("pymbar [https://pymbar.readthedocs.io/] must be installed to complete analysis of free energies.")
-
    
 # =============================================================================
 # Subsample correlated samples to generate uncorrelated subsample.
 # =============================================================================
+
 print("Subsampling data to remove correlation...")
 K = nlambda # number of states
 N_k = nprod_iterations*numpy.ones([K], numpy.int32) # N_k[k] is the number of uncorrelated samples at state k
