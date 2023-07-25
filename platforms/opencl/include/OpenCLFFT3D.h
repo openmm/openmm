@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,10 +27,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#define USE_VKFFT
+
+#ifdef USE_VKFFT
+#define VKFFT_BACKEND 3
+#include "vkFFT.h"
+#endif
 #include "OpenCLArray.h"
 
 namespace OpenMM {
 
+#ifdef USE_VKFFT
+/**
+ * This class performs three dimensional Fast Fourier Transforms.  It uses the
+ * VkFFT library (https://github.com/DTolm/VkFFT).
+ * <p>
+ * This class is most efficient when the size of each dimension is a product of
+ * small prime factors: 2, 3, 5, 7, 11, and 13.  You can call findLegalDimension()
+ * to determine the smallest size that satisfies this requirement and is greater
+ * than or equal to a specified minimum size.
+ * <p>
+ * Note that this class performs an unnormalized transform.  That means that if you perform
+ * a forward transform followed immediately by an inverse transform, the effect is to
+ * multiply every value of the original data set by the total number of data points.
+ */
+#else
 /**
  * This class performs three dimensional Fast Fourier Transforms.  It is based on the
  * mixed radix algorithm described in
@@ -51,6 +72,7 @@ namespace OpenMM {
  * a forward transform followed immediately by an inverse transform, the effect is to
  * multiply every value of the original data set by the total number of data points.
  */
+#endif
 
 class OPENMM_EXPORT_COMMON OpenCLFFT3D {
 public:
@@ -64,6 +86,9 @@ public:
      * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
      */
     OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize, bool realToComplex=false);
+#ifdef USE_VKFFT
+    ~OpenCLFFT3D();
+#endif
     /**
      * Perform a Fourier transform.  The transform cannot be done in-place: the input and output
      * arrays must be different.  Also, the input array is used as workspace, so its contents
@@ -86,14 +111,18 @@ public:
      */
     static int findLegalDimension(int minimum);
 private:
-    cl::Kernel createKernel(int xsize, int ysize, int zsize, int& threads, int axis, bool forward, bool inputIsReal);
     int xsize, ysize, zsize;
     int xthreads, ythreads, zthreads;
     bool packRealAsComplex;
     OpenCLContext& context;
+#ifdef USE_VKFFT
+    VkFFTApplication app;
+#else
+    cl::Kernel createKernel(int xsize, int ysize, int zsize, int& threads, int axis, bool forward, bool inputIsReal);
     cl::Kernel xkernel, ykernel, zkernel;
     cl::Kernel invxkernel, invykernel, invzkernel;
     cl::Kernel packForwardKernel, unpackForwardKernel, packBackwardKernel, unpackBackwardKernel;
+#endif
 };
 
 } // namespace OpenMM

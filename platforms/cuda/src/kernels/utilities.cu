@@ -80,7 +80,7 @@ __global__ void reduceEnergy(const mixed* __restrict__ energyBuffer, mixed* __re
     extern __shared__ mixed tempBuffer[];
     const unsigned int thread = threadIdx.x;
     mixed sum = 0;
-    for (unsigned int index = thread; index < bufferSize; index += blockDim.x)
+    for (unsigned int index = blockDim.x*blockIdx.x+threadIdx.x; index < bufferSize; index += blockDim.x*gridDim.x)
         sum += energyBuffer[index];
     tempBuffer[thread] = sum;
     for (int i = 1; i < workGroupSize; i *= 2) {
@@ -89,7 +89,7 @@ __global__ void reduceEnergy(const mixed* __restrict__ energyBuffer, mixed* __re
             tempBuffer[thread] += tempBuffer[thread+i];
     }
     if (thread == 0)
-        *result = tempBuffer[0];
+        result[blockIdx.x] = tempBuffer[0];
 }
 
 /**

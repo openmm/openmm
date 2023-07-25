@@ -1,0 +1,14 @@
+name: openmm-8-beta-linux
+
+channels:
+  - conda-forge/label/openmm_rc
+  - conda-forge/label/openmm-torch_rc
+  - conda-forge
+
+dependencies:
+  - openmm==8.0.0beta
+  - openmm-ml==1.0beta
+  - openmm-torch==1.0beta1
+  - nnpops==0.2
+  - torchani==2.2.2
+  - pytest

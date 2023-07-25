@@ -51,7 +51,7 @@ struct MinimizerData {
     Context* cpuContext;
     MinimizerData(Context& context, double k) : context(context), k(k), cpuIntegrator(1.0), cpuContext(NULL) {
         string platformName = context.getPlatform().getName();
-        checkLargeForces = (platformName == "CUDA" || platformName == "OpenCL" || platformName == "HIP");
+        checkLargeForces = (platformName == "CUDA" || platformName == "OpenCL" || platformName == "HIP" || platformName == "Metal");
     }
     ~MinimizerData() {
         if (cpuContext != NULL)
@@ -137,12 +137,16 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
         double dr = r-distance;
         double kdr = k*dr;
         energy += 0.5*kdr*dr;
-        g[3*particle1] -= kdr*delta[0];
-        g[3*particle1+1] -= kdr*delta[1];
-        g[3*particle1+2] -= kdr*delta[2];
-        g[3*particle2] += kdr*delta[0];
-        g[3*particle2+1] += kdr*delta[1];
-        g[3*particle2+2] += kdr*delta[2];
+        if (system.getParticleMass(particle1) != 0) {
+            g[3*particle1] -= kdr*delta[0];
+            g[3*particle1+1] -= kdr*delta[1];
+            g[3*particle1+2] -= kdr*delta[2];
+        }
+        if (system.getParticleMass(particle2) != 0) {
+            g[3*particle2] += kdr*delta[0];
+            g[3*particle2+1] += kdr*delta[1];
+            g[3*particle2+2] += kdr*delta[2];
+        }
     }
     return energy;
 }

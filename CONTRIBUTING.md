@@ -15,7 +15,7 @@ For larger features, feel free to create the pull request even before the implem
 finished so as to get early feedback on the code.  When doing this, put the letters "WIP" at
 the start of the title of the pull request to indicate it is still a work in progress.
 
-For new features, consult the [New Feature Checklist](https://github.com/openmm/openmm/wiki/Checklist-when-adding-a-new-feature),
+For new features, consult the [New Feature Checklist](https://github.com/openmm/openmm/wiki/Checklist-for-Adding-a-New-Feature),
 which lists various items that need to be included before the feature can be merged (documentation,
 tests, serialization, support for all APIs, etc.).  Not every item is necessarily applicable to
 every new feature, but usually at least some of them are.
@@ -24,4 +24,4 @@ The core developers will review the pull request and may suggest changes.  Simpl
 changes to the branch that is being pulled from, and they will automatically be added to the
 pull request.  In addition, the full test suite is automatically run on every pull request,
 and rerun every time a change is added.  Once the tests are passing and everyone is satisfied
-with the code, the pull request will be merged.  Congratulations on a succesful contribution!
+with the code, the pull request will be merged.  Congratulations on a successful contribution!

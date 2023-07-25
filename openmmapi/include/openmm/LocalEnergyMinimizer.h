@@ -58,7 +58,7 @@ public:
      * @param context        a Context specifying the System to minimize and the initial particle positions
      * @param tolerance      this specifies how precisely the energy minimum must be located.  Minimization
      *                       will be halted once the root-mean-square value of all force components reaches
-     *                       this tolerance.  The default value is 10.
+     *                       this tolerance (in kJ/mol/nm).  The default value is 10.
      * @param maxIterations  the maximum number of iterations to perform.  If this is 0, minimation is continued
      *                       until the results converge without regard to how many iterations it takes.  The
      *                       default value is 0.

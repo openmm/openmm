@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1459,6 +1459,13 @@ public:
      */
     virtual void initialize(const System& system, const Force& barostat, bool rigidMolecules=true) = 0;
     /**
+     * Save the coordinates before attempting a Monte Carlo step.  This allows us to restore them
+     * if the step is rejected.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void saveCoordinates(ContextImpl& context) = 0;
+    /**
      * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
      * This version scales the x, y, and z positions independently.
      * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
@@ -1472,8 +1479,8 @@ public:
      */
     virtual void scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) = 0;
     /**
-     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were before
-     * scaleCoordinates() was last called.
+     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were when
+     * saveCoordinates() was last called.
      *
      * @param context    the context in which to execute this kernel
      */

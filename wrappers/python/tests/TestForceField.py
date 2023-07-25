@@ -1325,6 +1325,13 @@ self.scriptExecuted = True
         # -2532.4862082354407
         self.assertTrue(abs(energy1 - energy_amber) < energy_tolerance)
 
+        context.applyConstraints(1e-12)
+        state = context.getState(getEnergy=True)
+        energy2 = state.getPotentialEnergy().value_in_unit(kilocalorie_per_mole)
+        self.assertTrue(abs(energy1 - energy_amber) < energy_tolerance)
+        self.assertTrue(abs(energy1 - energy2) < energy_tolerance)
+
+
 class AmoebaTestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method with the AMOEBA forcefield."""
 

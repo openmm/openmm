@@ -106,7 +106,7 @@ void OpenCLBondedUtilities::initialize(const System& system) {
     stringstream s;
     for (int i = 0; i < (int) prefixCode.size(); i++)
         s<<prefixCode[i];
-    s<<"__kernel void computeBondedForces(__global long* restrict forceBuffers, __global mixed* restrict energyBuffer, __global const real4* restrict posq, int groups, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ";
+    s<<"__kernel void computeBondedForces(__global unsigned long* restrict forceBuffers, __global mixed* restrict energyBuffer, __global const real4* restrict posq, int groups, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ";
     for (int force = 0; force < numForces; force++) {
         string indexType = "uint"+(indexWidth[force] == 1 ? "" : context.intToString(indexWidth[force]));
         s<<", __global const "<<indexType<<"* restrict atomIndices"<<force;

@@ -6,9 +6,9 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2022 Stanford University and the Authors.
+Portions copyright (c) 2012-2023 Stanford University and the Authors.
 Authors: Peter Eastman
-Contributors:
+Contributors: 
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -117,7 +117,7 @@ class Modeller(object):
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
-            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
 
         # Add the new model
 
@@ -131,7 +131,7 @@ class Modeller(object):
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(addPositions[atom.index]))
         for bond in addTopology.bonds():
-            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
         self.topology = newTopology
         self.positions = newPositions
 
@@ -404,11 +404,11 @@ class Modeller(object):
         between periodic copies to be achieved with a smaller box.  The most compact option is a rhombic dodecahedron,
         for which the box volume is 70.7% the volume of a cubic box with the same amount of padding.
 
-        There exist many different water models, many of which are very similar to each other. This method creates 
-        preequilibrated water boxes for a limited set of water models. In most cases, they work equally well for other models 
-        that involve the same number of particles. For example, to simulate a box of TIP3P-FB water, use this method to 
-        create a box of TIP3P water, construct a System using TIP3P-FB parameters, and perform a local energy minimization 
-        to correct for the small differences between the models. Likewise, a box of TIP4P-Ew water can be used for most 
+        There exist many different water models, many of which are very similar to each other. This method creates
+        preequilibrated water boxes for a limited set of water models. In most cases, they work equally well for other models
+        that involve the same number of particles. For example, to simulate a box of TIP3P-FB water, use this method to
+        create a box of TIP3P water, construct a System using TIP3P-FB parameters, and perform a local energy minimization
+        to correct for the small differences between the models. Likewise, a box of TIP4P-Ew water can be used for most
         four site water models.
 
         Parameters
@@ -416,7 +416,7 @@ class Modeller(object):
         forcefield : ForceField
             the ForceField to use for determining van der Waals radii and atomic charges
         model : str='tip3p'
-            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', and 'tip5p'. 
+            the water model to use.  Supported values are 'tip3p', 'spce', 'tip4pew', 'tip5p', and 'swm4ndp' (polarizable).
         boxSize : Vec3=None
             the size of the box to fill with water
         boxVectors : tuple of Vec3=None
@@ -454,6 +454,8 @@ class Modeller(object):
             waterRadius = 0.315365*vdwRadiusPerSigma
         elif model == 'tip5p':
             waterRadius = 0.312*vdwRadiusPerSigma
+        elif model == 'swm4ndp':
+            waterRadius = 0.318395*vdwRadiusPerSigma
         else:
             raise ValueError('Unknown water model: %s' % model)
         pdb = PDBFile(os.path.join(os.path.dirname(__file__), 'data', model+'.pdb'))
@@ -492,14 +494,7 @@ class Modeller(object):
                 center = 0.5*(minRange+maxRange)
                 radius = max(unit.norm(center-pos) for pos in positions)
             width = max(2*radius+padding, 2*padding)
-            if boxShape == 'cube':
-                vectors = (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0, 0, width))
-            elif boxShape == 'dodecahedron':
-                vectors = (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0.5, 0.5, 0.5*sqrt(2))*width)
-            elif boxShape == 'octahedron':
-                vectors = (Vec3(width, 0, 0), Vec3(1/3, 2*sqrt(2)/3, 0)*width, Vec3(-1/3, sqrt(2)/3, sqrt(6)/3)*width)
-            else:
-                raise ValueError(f'Illegal box shape: {boxShape}')
+            vectors = self._computeBoxVectors(width, boxShape)
             box = Vec3(vectors[0][0], vectors[1][1], vectors[2][2])
         else:
             box = self.topology.getUnitCellDimensions().value_in_unit(nanometer)
@@ -599,7 +594,7 @@ class Modeller(object):
 
             maxSize = max(max((pos[i] for index, pos in addedWaters))-min((pos[i] for index, pos in addedWaters)) for i in range(3))
             maxSize += 0.1  # Add padding to reduce clashes at the edge.
-            newTopology.setUnitCellDimensions(Vec3(maxSize, maxSize, maxSize))
+            newTopology.setPeriodicBoxVectors(self._computeBoxVectors(maxSize, boxShape))
         else:
             # There could be clashes between water molecules at the box edges.  Find ones to remove.
 
@@ -624,7 +619,7 @@ class Modeller(object):
             addedWaters = filteredWaters
 
         # Add the water molecules.
-
+        waterPos = {}
         for index, pos in addedWaters:
             newResidue = newTopology.addResidue(residue.name, newChain)
             residue = pdbResidues[index]
@@ -634,6 +629,8 @@ class Modeller(object):
             for atom in residue.atoms():
                 molAtoms.append(newTopology.addAtom(atom.name, atom.element, newResidue))
                 newPositions.append((pos+pdbPositions[atom.index]-oPos)*nanometer)
+                if atom.element == elem.oxygen:
+                    waterPos[newResidue] = newPositions[-1]
             for atom1 in molAtoms:
                 if atom1.element == elem.oxygen:
                     for atom2 in molAtoms:
@@ -643,21 +640,22 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-        # Convert water list to dictionary (residue:position)
-        waterPos = {}
-        _oxygen = elem.oxygen
-        for chain in newTopology.chains():
-            for residue in chain.residues():
-                if residue.name == 'HOH':
-                    for atom in residue.atoms():
-                        if atom.element == _oxygen:
-                            waterPos[residue] = newPositions[atom.index]
-
         # Total number of waters in the box
         numTotalWaters = len(waterPos)
 
         # Add ions to neutralize the system.
         self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
+
+    def _computeBoxVectors(self, width, boxShape):
+        """Compute the periodic box vectors given a box width and shape."""
+        if boxShape == 'cube':
+            return (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0, 0, width))
+        elif boxShape == 'dodecahedron':
+            return (Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0.5, 0.5, 0.5*sqrt(2))*width)
+        elif boxShape == 'octahedron':
+            return (Vec3(width, 0, 0), Vec3(1/3, 2*sqrt(2)/3, 0)*width, Vec3(-1/3, sqrt(2)/3, sqrt(6)/3)*width)
+        else:
+            raise ValueError(f'Illegal box shape: {boxShape}')
 
     class _ResidueData:
         """Inner class used to encapsulate data about the hydrogens for a residue."""
@@ -1468,6 +1466,12 @@ class Modeller(object):
                     for j in scaledProteinCells.neighbors(scaledProteinPos[i]):
                         if j < i:
                             f1.addException(i+numMembraneParticles, j+numMembraneParticles, 0.0, 1.0, 0.0)
+            elif isinstance(f1, CustomNonbondedForce):
+                for i in range(numProteinParticles):
+                    f1.addParticle(f2.getParticleParameters(i))
+                    for j in scaledProteinCells.neighbors(scaledProteinPos[i]):
+                        if j < i:
+                            f1.addExclusion(i + numMembraneParticles, j + numMembraneParticles)
         if nonbonded is None:
             raise ValueError('The ForceField does not specify a NonbondedForce')
         mergedPositions = membranePos+scaledProteinPos
@@ -1619,11 +1623,13 @@ class _CellList(object):
         return tuple((int(floor(pos[j]/self.cellSize[j]))%self.numCells[j] for j in range(3)))
 
     def neighbors(self, pos):
+        processedCells = set()
         offsets = (-1, 0, 1)
         for i in offsets:
             for j in offsets:
                 for k in offsets:
                     cell = self.cellForPosition(Vec3(pos[0]+i*self.cellSize[0], pos[1]+j*self.cellSize[1], pos[2]+k*self.cellSize[2]))
-                    if cell in self.cells:
+                    if cell in self.cells and cell not in processedCells:
+                        processedCells.add(cell)
                         for atom in self.cells[cell]:
                             yield atom

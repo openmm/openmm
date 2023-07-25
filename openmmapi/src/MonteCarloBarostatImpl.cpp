@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -78,8 +78,9 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context, bool& forc
     double deltaVolume = volumeScale*2*(SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber()-0.5);
     double newVolume = volume+deltaVolume;
     double lengthScale = pow(newVolume/volume, 1.0/3.0);
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale, lengthScale, lengthScale);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
     context.getOwner().setPeriodicBoxVectors(box[0]*lengthScale, box[1]*lengthScale, box[2]*lengthScale);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale, lengthScale, lengthScale);
 
     // Compute the energy of the modified system.
     
@@ -90,8 +91,8 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context, bool& forc
     if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > exp(-w/kT)) {
         // Reject the step.
 
-        kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
         context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
+        kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
     }
     else {
         numAccepted++;

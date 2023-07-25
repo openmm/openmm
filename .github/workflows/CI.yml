@@ -121,8 +121,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux CPU Python 3.10
-            python-version: "3.10"
+          - name: Linux CPU Python 3.11
+            python-version: "3.11"
             os: ubuntu-latest
             OPENCL: false
             cuda-version: ""
@@ -130,8 +130,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux CPU Pypy 3.7
-            python-version: "3.7.*=*pypy*"
+          - name: Linux CPU Pypy
+            python-version: "pypy"
             os: ubuntu-latest
             OPENCL: false
             cuda-version: ""
@@ -139,8 +139,8 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS Intel CPU/OpenCL Python 3.10
-            python-version: "3.10"
+          - name: MacOS Intel CPU/OpenCL Python 3.11
+            python-version: "3.11"
             os: macos-latest
             OPENCL: false
             cuda-version: ""
@@ -148,15 +148,15 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS M1 CPU arm64 Python 3.10
-            python-version: "3.10"
-            os: M1-arm64
-            OPENCL: false
-            cuda-version: ""
-            compilers: conda-forge
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_LIB=ON \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+          #- name: MacOS M1 CPU arm64 Python 3.11
+          #  python-version: "3.11"
+          #  os: M1-arm64
+          #  OPENCL: false
+          #  cuda-version: ""
+          #  compilers: conda-forge
+          #  CMAKE_FLAGS: |
+          #    -DOPENMM_BUILD_OPENCL_LIB=ON \
+          #    -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
 
     steps:
@@ -174,12 +174,24 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v2
         name: "Prepare base dependencies"
-        if: matrix.os != 'M1-arm64'
+        if: matrix.python-version == 'pypy'
+        with:
+          activate-environment: build
+          environment-file: devtools/ci/gh-actions/conda-envs/build-ubuntu-pypy.yml
+          auto-activate-base: false
+          miniforge-variant: Mambaforge-pypy3
+          use-mamba: true
+
+      - uses: conda-incubator/setup-miniconda@v2
+        name: "Prepare base dependencies"
+        if: matrix.os != 'M1-arm64' && matrix.python-version != 'pypy'
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
           auto-activate-base: false
+          miniforge-variant: Mambaforge
+          use-mamba: true
 
       - name: "Install CUDA on Ubuntu (if needed)"
         if: matrix.cuda-version != '' && startsWith(matrix.os, 'ubuntu')
@@ -277,8 +289,6 @@ jobs:
           # With CUDA, we _expect_ CUDA plugins :)
           if [[ "${{ matrix.cuda-version }}" != "" ]]; then
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCUDA.$SHLIB
-            # TODO: Check with Peter why this is not there. Maybe we need an extra flag?
-            # test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCudaCompiler.$SHLIB
           fi
           # OpenCL should also be there for CUDA and, well, OpenCL
           if [[ "${{ matrix.cuda-version }}" != "" || ${{ matrix.OPENCL }} == true ]]; then
@@ -322,8 +332,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Windows CUDA 11.2 Python 3.10
-            python-version: "3.10"
+          - name: Windows CUDA 11.2 Python 3.11
+            python-version: "3.11"
             cuda-version: "11.2"
             CMAKE_FLAGS: |
               -DCUDA_TOOLKIT_ROOT_DIR="%CUDA_TOOLKIT_ROOT_DIR%" ^
@@ -435,7 +445,6 @@ jobs:
           if not "${{ matrix.cuda-version }}" == "" (
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCUDA.lib exit 1
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMOpenCL.lib exit 1
-            if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCudaCompiler.lib exit 1
           ) else (
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCPU.lib exit 1
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMPME.lib exit 1
@@ -458,19 +467,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: PowerPC CPU/CUDA 10.2 Python 3.10 with condaforge compilers
+          - name: PowerPC CPU/CUDA 10.2 Python 3.11 with condaforge compilers
             docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:10.2
-            python-version: "3.10"
+            python-version: "3.11"
             compilers: compilers
 
-          - name: PowerPC CPU Python 3.10 devtoolset-7 compilers
+          - name: PowerPC CPU Python 3.11 devtoolset-7 compilers
             docker-image: quay.io/condaforge/linux-anvil-ppc64le
-            python-version: "3.10"
+            python-version: "3.11"
             compilers: devtoolset-7
 
-          - name: ARM CPU Python 3.10 with condaforge compilers
+          - name: ARM CPU Python 3.11 with condaforge compilers
             docker-image: quay.io/condaforge/linux-anvil-aarch64
-            python-version: "3.10"
+            python-version: "3.11"
             compilers: compilers
 
 
@@ -564,6 +573,7 @@ jobs:
         run: |
           set -x
           echo 'APT::Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update
           sudo apt-get install -y \
             latexmk \
             texlive-latex-recommended \

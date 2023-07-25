@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -793,7 +793,7 @@ private:
     std::vector<ComputeArray> tabulatedFunctionArrays;
     std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;
-    ComputeKernel donorKernel, acceptorKernel;
+    ComputeKernel kernel;
 };
 
 /**
@@ -909,6 +909,7 @@ public:
     CommonCalcCustomCVForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : CalcCustomCVForceKernel(name, platform),
             cc(cc), hasInitializedListeners(false) {
     }
+    ~CommonCalcCustomCVForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -948,13 +949,16 @@ public:
 private:
     class ForceInfo;
     class ReorderListener;
+    class TabulatedFunctionWrapper;
     ComputeContext& cc;
     bool hasInitializedListeners;
-    Lepton::ExpressionProgram energyExpression;
+    Lepton::CompiledExpression energyExpression;
     std::vector<std::string> variableNames, paramDerivNames, globalParameterNames;
-    std::vector<Lepton::ExpressionProgram> variableDerivExpressions;
-    std::vector<Lepton::ExpressionProgram> paramDerivExpressions;
+    std::vector<Lepton::CompiledExpression> variableDerivExpressions;
+    std::vector<Lepton::CompiledExpression> paramDerivExpressions;
     std::vector<ComputeArray> cvForces;
+    std::vector<double> globalValues, cvValues;
+    std::vector<Lepton::CustomFunction*> tabulatedFunctions;
     ComputeArray invAtomOrder;
     ComputeArray innerInvAtomOrder;
     ComputeKernel copyStateKernel, copyForcesKernel, addForcesKernel;
@@ -1304,7 +1308,7 @@ class CommonIntegrateCustomStepKernel : public IntegrateCustomStepKernel {
 public:
     enum GlobalTargetType {DT, VARIABLE, PARAMETER};
     CommonIntegrateCustomStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateCustomStepKernel(name, platform), cc(cc),
-            hasInitializedKernels(false), needsEnergyParamDerivs(false) {
+            hasInitializedKernels(false), deviceGlobalsAreCurrent(false), needsEnergyParamDerivs(false) {
     }
     /**
      * Initialize the kernel.
@@ -1544,6 +1548,13 @@ public:
      */
     void initialize(const System& system, const Force& barostat, bool rigidMolecules=true);
     /**
+     * Save the coordinates before attempting a Monte Carlo step.  This allows us to restore them
+     * if the step is rejected.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void saveCoordinates(ContextImpl& context);
+    /**
      * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
      * This version scales the x, y, and z positions independently.
      * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
@@ -1557,21 +1568,22 @@ public:
      */
     void scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ);
     /**
-     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were before
-     * scaleCoordinates() was last called.
+     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were when
+     * saveCoordinates() was last called.
      *
      * @param context    the context in which to execute this kernel
      */
     void restoreCoordinates(ContextImpl& context);
 private:
     ComputeContext& cc;
-    bool hasInitializedKernels, rigidMolecules;
+    bool hasInitializedKernels, rigidMolecules, atomsWereReordered;
     int numMolecules;
     ComputeArray savedPositions, savedFloatForces, savedLongForces;
     ComputeArray moleculeAtoms;
     ComputeArray moleculeStartIndex;
     ComputeKernel kernel;
     std::vector<int> lastAtomOrder;
+    std::vector<mm_int4> lastPosCellOffsets;
 };
 
 } // namespace OpenMM

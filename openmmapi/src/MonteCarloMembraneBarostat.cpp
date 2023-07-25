@@ -44,8 +44,6 @@ MonteCarloMembraneBarostat::MonteCarloMembraneBarostat(double defaultPressure, d
 }
 
 void MonteCarloMembraneBarostat::setDefaultPressure(double pressure) {
-    if (pressure < 0)
-        throw OpenMMException("Pressure cannot be negative");
     defaultPressure = pressure;
 }
 

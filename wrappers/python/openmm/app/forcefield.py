@@ -3495,14 +3495,11 @@ class AmoebaAngleGenerator(object):
                 angleList = []
                 angleList.append(float(angle.attrib['angle1']))
 
-                try:
+                if 'angle2' in angle.attrib:
                     angleList.append(float(angle.attrib['angle2']))
-                    try:
-                        angleList.append(float(angle.attrib['angle3']))
-                    except:
-                        pass
-                except:
-                    pass
+                if 'angle3' in angle.attrib:
+                    angleList.append(float(angle.attrib['angle3']))
+
                 generator.angle.append(angleList)
                 generator.k.append(float(angle.attrib['k']))
                 if 'inPlane' in angle.attrib:
@@ -4967,11 +4964,7 @@ class AmoebaMultipoleGenerator(object):
 
                 kStrings = [ 'kz', 'kx', 'ky' ]
                 for kString in kStrings:
-                    try:
-                        if (atom.attrib[kString]):
-                             kIndices.append(int(atom.attrib[kString]))
-                    except:
-                        pass
+                    kIndices.append(int(atom.attrib.get(kString,0)))
 
                 # set axis type based on k-Indices
 

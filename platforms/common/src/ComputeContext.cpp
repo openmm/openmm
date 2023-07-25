@@ -57,6 +57,13 @@ void ComputeContext::addForce(ComputeForceInfo* force) {
     forces.push_back(force);
 }
 
+void ComputeContext::setAtomIndex(std::vector<int>& index){
+    atomIndex = index;
+    getAtomIndexArray().upload(atomIndex);
+    for (auto listener : reorderListeners)
+        listener->execute();
+}
+
 string ComputeContext::replaceStrings(const string& input, const std::map<std::string, std::string>& replacements) const {
     static set<char> symbolChars;
     if (symbolChars.size() == 0) {
@@ -102,11 +109,12 @@ string ComputeContext::replaceStrings(const string& input, const std::map<std::s
     return result;
 }
 
-string ComputeContext::doubleToString(double value) const {
+string ComputeContext::doubleToString(double value, bool mixedIsDouble) const {
     stringstream s;
-    s.precision(getUseDoublePrecision() ? 16 : 8);
+    bool useDouble = (getUseDoublePrecision() || (mixedIsDouble && getUseMixedPrecision()));
+    s.precision(useDouble ? 16 : 8);
     s << scientific << value;
-    if (!getUseDoublePrecision())
+    if (!useDouble)
         s << "f";
     return s.str();
 }
@@ -376,6 +384,13 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
     // atoms to their original order, rebuild the list of identical molecules, and sort them
     // again.
 
+    resetAtomOrder();
+    findMoleculeGroups();
+    reorderAtoms();
+    return true;
+}
+
+void ComputeContext::resetAtomOrder() {
     ContextSelector selector(*this);
     vector<mm_int4> newCellOffsets(numAtoms);
     if (getUseDoublePrecision()) {
@@ -436,12 +451,25 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
         posCellOffsets[i] = newCellOffsets[i];
     }
     getAtomIndexArray().upload(atomIndex);
-    findMoleculeGroups();
     for (auto listener : reorderListeners)
         listener->execute();
     forceNextReorder = true;
-    reorderAtoms();
-    return true;
+}
+
+void ComputeContext::validateAtomOrder() {
+    for (auto& mol : moleculeGroups) {
+        for (int atom : mol.atoms) {
+            set<int> identical;
+            for (int offset : mol.offsets)
+                identical.insert(atom+offset);
+            for (int i : identical)
+                if (identical.find(atomIndex[i]) == identical.end()) {
+                    resetAtomOrder();
+                    reorderAtoms();
+                    return;
+                }
+        }
+    }
 }
 
 void ComputeContext::forceReorder() {

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
  * Authors:                                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -53,6 +53,24 @@ void AmoebaVdwForceImpl::initialize(ContextImpl& context) {
 
     if (owner.getNumParticles() != system.getNumParticles())
         throw OpenMMException("AmoebaVdwForce must have exactly as many particles as the System it belongs to.");
+    for (int i = 0; i < owner.getNumParticles(); i++) {
+        int parentIndex, typeIndex;
+        double sigma, epsilon, reductionFactor;
+        bool isAlchemical;
+        owner.getParticleParameters(i, parentIndex, sigma, epsilon, reductionFactor, isAlchemical, typeIndex);
+        if (sigma < 0)
+            throw OpenMMException("AmoebaVdwForce: sigma for a particle cannot be negative");
+        if (owner.getPotentialFunction() == AmoebaVdwForce::Buffered147 && sigma == 0)
+            throw OpenMMException("AmoebaVdwForce: sigma for a particle cannot be zero");
+    }
+    for (int i = 0; i < owner.getNumParticleTypes(); i++) {
+        double sigma, epsilon;
+        owner.getParticleTypeParameters(i, sigma, epsilon);
+        if (sigma < 0)
+            throw OpenMMException("AmoebaVdwForce: sigma for a particle type cannot be negative");
+        if (owner.getPotentialFunction() == AmoebaVdwForce::Buffered147 && sigma == 0)
+            throw OpenMMException("AmoebaVdwForce: sigma for a particle type cannot be zero");
+    }
 
     // check that cutoff < 0.5*boxSize
 

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,7 +35,6 @@
 #include "ReferenceAngleBondIxn.h"
 #include "ReferenceBondForce.h"
 #include "ReferenceBrownianDynamics.h"
-#include "ReferenceCCMAAlgorithm.h"
 #include "ReferenceCMAPTorsionIxn.h"
 #include "ReferenceConstraints.h"
 #include "ReferenceCustomAngleIxn.h"
@@ -2897,7 +2896,7 @@ void ReferenceApplyMonteCarloBarostatKernel::initialize(const System& system, co
     this->rigidMolecules = rigidMolecules;
 }
 
-void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
+void ReferenceApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) {
     if (barostat == NULL) {
         if (rigidMolecules)
             barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), context.getMolecules());
@@ -2908,6 +2907,11 @@ void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& conte
             barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), molecules);
         }
     }
+    vector<Vec3>& posData = extractPositions(context);
+    barostat->savePositions(posData);
+}
+
+void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ) {
     vector<Vec3>& posData = extractPositions(context);
     Vec3* boxVectors = extractBoxVectors(context);
     barostat->applyBarostat(posData, boxVectors, scaleX, scaleY, scaleZ);

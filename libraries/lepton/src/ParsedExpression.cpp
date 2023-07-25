@@ -155,7 +155,7 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
     
     // Collect some info on constant expressions in children
     bool first_const = children.size() > 0 && isConstant(children[0]); // is first child constant?
-    bool second_const = children.size() > 1 && isConstant(children[1]); ; // is second child constant?   
+    bool second_const = children.size() > 1 && isConstant(children[1]); // is second child constant?   
     double first, second; // if yes, value of first and second child
     if (first_const)
         first = getConstantValue(children[0]);
@@ -319,11 +319,19 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
         {
             if (children[0].getOperation().getId() == Operation::SQUARE) // sqrt(square(x)) = abs(x)
                 return ExpressionTreeNode(new Operation::Abs(), children[0].getChildren()[0]);
+            break;
         }
         case Operation::SQUARE:
         {
             if (children[0].getOperation().getId() == Operation::SQRT) // square(sqrt(x)) = x
                 return children[0].getChildren()[0];
+            break;
+        }
+        case Operation::SELECT:
+        {
+            if (children[1] == children[2]) // Select between two identical values
+                return children[1];
+            break;
         }
         default:
         {

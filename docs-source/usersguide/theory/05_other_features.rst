@@ -116,6 +116,8 @@ call :code:`setIntegrationForceGroups()` on the :class:`Integrator`.  Any groups
 omitted will be ignored during simulation, but can be queried at any time by
 calling :code:`getState()`.
 
+.. _virtual-sites:
+
 Virtual Sites
 *************
 
