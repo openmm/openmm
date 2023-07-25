@@ -190,7 +190,7 @@ Using AMBER Files
 OpenMM can build a system in several different ways.  One option, as shown
 above, is to start with a PDB file and then select a force field with which to
 model it.  Alternatively, you can use AmberTools_ to model your system.  In that
-case, you provide a :class:`prmtop` file and an :class:`inpcrd` file.  OpenMM loads the files and
+case, you provide a :file:`prmtop` file and an :file:`inpcrd` file.  OpenMM loads the files and
 creates a :class:`System` from them.  This is illustrated in the following script.  It can be
 found in OpenMM’s :file:`examples` folder with the name :file:`simulateAmber.py`.
 
@@ -202,15 +202,13 @@ found in OpenMM’s :file:`examples` folder with the name :file:`simulateAmber.p
         from openmm.unit import *
         from sys import stdout
 
-        prmtop = AmberPrmtopFile('input.prmtop')
         inpcrd = AmberInpcrdFile('input.inpcrd')
+        prmtop = AmberPrmtopFile('input.prmtop', periodicBoxVectors=inpcrd.boxVectors)
         system = prmtop.createSystem(nonbondedMethod=PME, nonbondedCutoff=1*nanometer,
                 constraints=HBonds)
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
         simulation = Simulation(prmtop.topology, system, integrator)
         simulation.context.setPositions(inpcrd.positions)
-        if inpcrd.boxVectors is not None:
-            simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
         simulation.minimizeEnergy()
         simulation.reporters.append(PDBReporter('output.pdb', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
@@ -225,12 +223,12 @@ This script is very similar to the previous one.  There are just a few
 significant differences:
 ::
 
-    prmtop = AmberPrmtopFile('input.prmtop')
     inpcrd = AmberInpcrdFile('input.inpcrd')
+    prmtop = AmberPrmtopFile('input.prmtop', periodicBoxVectors=inpcrd.boxVectors)
 
-In these lines, we load the prmtop file and inpcrd file.  More precisely, we
-create :class:`AmberPrmtopFile` and :class:`AmberInpcrdFile` objects and assign them to the
-variables :code:`prmtop` and :code:`inpcrd`\ , respectively.  As before,
+In these lines, we load the :file:`inpcrd` file and :file:`prmtop` file.  More precisely, we
+create :class:`AmberInpcrdFile` and :class:`AmberPrmtopFile` objects and assign them to the
+variables :code:`inpcrd` and :code:`prmtop`\ , respectively.  As before,
 you can change these lines to specify any files you want.  Be sure to include
 the single quotes around the file names.
 
@@ -240,6 +238,19 @@ the single quotes around the file names.
     :file:`prmtop` files introduced in AMBER 7. The AMBER distribution still contains a number of
     example files that are in the "old-style" :file:`prmtop` format. These "old-style" files will
     not run in OpenMM.
+
+Notice that when we load the :file:`prmtop` file we include the argument :code:`periodicBoxVectors=inpcrd.boxVectors`\ .
+AMBER stores information about the periodic box in the :file:`inpcrd` file.  To let
+:class:`AmberPrmtopFile` create a :class:`Topology` object, we therefore need to
+tell it the periodic box vectors that were loaded from the :file:`inpcrd` file.  You
+only need to do this if you are simulating a periodic system.  For implicit
+solvent simulations, it usually can be omitted.
+
+.. note::
+
+    For historical reasons, :file:`prmtop` files also have the ability to store
+    periodic box information, but it is deprecated.  It is always better to get
+    the box vectors from the :file:`inpcrd` file instead.
 
 Next, the :class:`System` object is created in a different way:
 ::
@@ -259,22 +270,7 @@ directly.
 
 Notice that we now get the topology from the :file:`prmtop` file and the atom positions
 from the :file:`inpcrd` file.  In the previous section, both of these came from a PDB
-file, but AMBER puts the topology and positions in separate files.  We also add the
-following lines:
-::
-
-    if inpcrd.boxVectors is not None:
-        simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
-
-For periodic systems, the :file:`prmtop` file specifies the periodic box vectors, just
-as a PDB file does.  When we call :meth:`createSystem`, it sets those as the default
-periodic box vectors, to be used automatically for all simulations.  However, the
-:file:`inpcrd` may *also* specify periodic box vectors,
-and if so we want to use those ones instead.  For example, if the system has been
-equilibrated with a barostat, the box vectors may have changed during equilibration.
-We therefore check to see if the :file:`inpcrd` file contained box vectors.  If so,
-we call :meth:`setPeriodicBoxVectors` to tell it to use those ones, overriding the
-default ones provided by the :class:`System`.
+file, but AMBER puts the topology and positions in separate files.
 
 .. _using_gromacs_files:
 
@@ -315,16 +311,10 @@ with the name :file:`simulateGromacs.py`.
 
 This script is nearly identical to the previous one, just replacing
 :class:`AmberInpcrdFile` and :class:`AmberPrmtopFile` with :class:`GromacsGroFile` and :class:`GromacsTopFile`.
-Note that when we create the :class:`GromacsTopFile`, we specify values for two extra
-options.  First, we specify
-:code:`periodicBoxVectors=gro.getPeriodicBoxVectors()`\ .  Unlike OpenMM and
-AMBER, which can store periodic unit cell information with the topology, Gromacs
-only stores it with the coordinates.  To let :class:`GromacsTopFile` create a :class:`Topology`
-object, we therefore need to tell it the periodic box vectors that were loaded
-from the :file:`gro` file.  You only need to do this if you are simulating a periodic
-system.  For implicit solvent simulations, it usually can be omitted.
-
-Second, we specify :code:`includeDir='/usr/local/gromacs/share/gromacs/top'`\ .  Unlike AMBER,
+As with AMBER files, when we create the :class:`GromacsTopFile` we specify
+:code:`periodicBoxVectors=gro.getPeriodicBoxVectors()` to tell it the periodic
+box vectors that were loaded from the :file:`gro` file.  In addition, we specify
+:code:`includeDir='/usr/local/gromacs/share/gromacs/top'`\ .  Unlike AMBER,
 which stores all the force field parameters directly in a :file:`prmtop` file, Gromacs just stores
 references to force field definition files that are installed with the Gromacs
 application.  OpenMM needs to know where to find these files, so the
@@ -505,6 +495,8 @@ File                                 Parameters
 :file:`amber14/tip4pew.xml`          TIP4P-Ew water model\ :cite:`Horn2004` and ions
 :file:`amber14/tip4pfb.xml`          TIP4P-FB water model\ :cite:`Wang2014` and ions
 :file:`amber14/spce.xml`             SPC/E water model\ :cite:`Berendsen1987` and ions
+:code:`amber14/opc.xml`              OPC water model\ :cite:`Izadi2014` and ions
+:code:`amber14/opc3.xml`             OPC3 water model\ :cite:`Izadi2016` and ions
 ===================================  ============================================
 
 As a convenience, the file :file:`amber14-all.xml` can be used as a shortcut to include
@@ -523,7 +515,7 @@ carbohydrates, include that file as well:
     forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml', 'amber14/GLYCAM_06j-1.xml')
 
 Be aware that GLYCAM works somewhat differently from most force fields.  It uses
-its own nonstandard `naming convention <http://legacy.glycam.org/docs/forcefield/glycam-naming-2/index.html>`_
+its own nonstandard `naming convention <http://glycam.org/docs/forcefield/glycam-naming-2>`_
 for carbohydrates, and requires your input file to follow it.  If any residues have
 names different from what it expects, GLYCAM will be unable to assign parameters
 to them.
@@ -1377,13 +1369,14 @@ Writing Trajectories
 ====================
 
 
-OpenMM can save simulation trajectories to disk in three formats: PDB_,
-`PDBx/mmCIF`_, and DCD_.  All of these are widely supported formats, so you
+OpenMM can save simulation trajectories to disk in four formats: PDB_,
+`PDBx/mmCIF`_, DCD_ and XTC_.  All of these are widely supported formats, so you
 should be able to read them into most analysis and visualization programs.
 
 .. _PDB: http://www.wwpdb.org/documentation/format33/v3.3.html
 .. _PDBx/mmCIF: http://mmcif.wwpdb.org
 .. _DCD: http://www.ks.uiuc.edu/Research/vmd/plugins/molfile/dcdplugin.html
+.. _XTC: https://manual.gromacs.org/archive/5.0.4/online/xtc.html
 
 To save a trajectory, just add a “reporter” to the simulation, as shown in the
 example scripts above:
@@ -1392,9 +1385,9 @@ example scripts above:
     simulation.reporters.append(PDBReporter('output.pdb', 1000))
 
 The two parameters of the :class:`PDBReporter` are the output filename and how often (in
-number of time steps) output structures should be written.  To use PDBx/mmCIF or
-DCD format, just replace :class:`PDBReporter` with :class:`PDBxReporter` or
-:class:`DCDReporter`.  The parameters represent the same values:
+number of time steps) output structures should be written.  To use PDBx/mmCIF,
+DCD or XTC format, just replace :class:`PDBReporter` with :class:`PDBxReporter`, 
+:class:`DCDReporter` or :class:`XTCReporter`.  The parameters represent the same values:
 ::
 
     simulation.reporters.append(DCDReporter('output.dcd', 1000))

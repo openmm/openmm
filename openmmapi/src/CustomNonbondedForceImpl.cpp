@@ -51,6 +51,7 @@ using namespace OpenMM;
 using namespace std;
 
 CustomNonbondedForceImpl::CustomNonbondedForceImpl(const CustomNonbondedForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
 }
 
 CustomNonbondedForceImpl::~CustomNonbondedForceImpl() {
@@ -139,7 +140,7 @@ void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
 }
 
 double CustomNonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcCustomNonbondedForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }

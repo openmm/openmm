@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2020 Stanford University and the Authors.
+Portions copyright (c) 2012-2023 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -73,7 +73,8 @@ class Simulation(object):
             If not None, the OpenMM Platform to use
         platformProperties : map=None
             If not None, a set of platform-specific properties to pass to the
-            Context's constructor
+            Context's constructor.  This argument may only be used if a specific
+            Platform is specified.
         state : XML file name=None
             The name of an XML file containing a serialized State. If not None,
             the information stored in state will be transferred to the generated
@@ -95,6 +96,8 @@ class Simulation(object):
         ## A list of reporters to invoke during the simulation
         self.reporters = []
         if platform is None:
+            if platformProperties is not None:
+                raise ValueError('Cannot specify platform-specific properties, because the Platform is not specified')
             ## The Context containing the current state of the simulation
             self.context = mm.Context(self.system, self.integrator)
         elif platformProperties is None:

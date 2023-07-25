@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Lee-Ping Wang                                      *
  * Contributors:                                                              *
  *                                                                            *
@@ -62,7 +62,7 @@ void MonteCarloAnisotropicBarostatImpl::initialize(ContextImpl& context) {
     SimTKOpenMMUtilities::setRandomNumberSeed(owner.getRandomNumberSeed());
 }
 
-void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context) {
+void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context, bool& forcesInvalid) {
     if (++step < owner.getFrequency() || owner.getFrequency() == 0)
         return;
     if (!owner.getScaleX() && !owner.getScaleY() && !owner.getScaleZ())
@@ -107,11 +107,12 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     double newVolume = volume+deltaVolume;
     Vec3 lengthScale(1.0, 1.0, 1.0);
     lengthScale[axis] = newVolume/volume;
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale[0], lengthScale[1], lengthScale[2]);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
     context.getOwner().setPeriodicBoxVectors(Vec3(box[0][0]*lengthScale[0], box[0][1]*lengthScale[1], box[0][2]*lengthScale[2]),
                                              Vec3(box[1][0]*lengthScale[0], box[1][1]*lengthScale[1], box[1][2]*lengthScale[2]),
                                              Vec3(box[2][0]*lengthScale[0], box[2][1]*lengthScale[1], box[2][2]*lengthScale[2]));
-    
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale[0], lengthScale[1], lengthScale[2]);
+
     // Compute the energy of the modified system.
     
     double finalEnergy = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
@@ -120,11 +121,13 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context)
     if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > exp(-w/kT)) {
         // Reject the step.
         
-        kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
         context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
+        kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
     }
-    else
+    else {
         numAccepted[axis]++;
+        forcesInvalid = true;
+    }
     numAttempted[axis]++;
     if (numAttempted[axis] >= 10) {
         if (numAccepted[axis] < 0.25*numAttempted[axis]) {

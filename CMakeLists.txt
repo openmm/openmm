@@ -88,7 +88,7 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 libraries/pocketfft platforms/reference serialization libraries/irrxml)
+SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton libraries/sfmt libraries/lbfgs libraries/hilbert libraries/csha1 libraries/pocketfft libraries/vkfft platforms/reference serialization libraries/irrxml)
 IF(X86 OR ARM)
     SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} libraries/vecmath)
 ENDIF()
@@ -163,8 +163,8 @@ ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
 # and make it available to the code so it can be built into the binaries.
 
 SET(OPENMM_LIBRARY_NAME OpenMM)
-SET(OPENMM_MAJOR_VERSION 7)
-SET(OPENMM_MINOR_VERSION 7)
+SET(OPENMM_MAJOR_VERSION 8)
+SET(OPENMM_MINOR_VERSION 0)
 SET(OPENMM_BUILD_VERSION 0)
 
 ADD_DEFINITIONS(-DOPENMM_LIBRARY_NAME=${OPENMM_LIBRARY_NAME}
@@ -400,21 +400,6 @@ IF(OPENMM_BUILD_PME_PLUGIN)
    SET(OPENMM_BUILD_PME_PATH ${CMAKE_CURRENT_SOURCE_DIR}/plugins/cpupme)
    ADD_SUBDIRECTORY(plugins/cpupme)
 ENDIF(OPENMM_BUILD_PME_PLUGIN)
-
-# CUDA compiler plugin
-
-GET_FILENAME_COMPONENT(CUDA_LIB_DIR "${CUDA_cufft_LIBRARY}" PATH)
-FIND_LIBRARY(CUDA_nvrtc_LIBRARY nvrtc "${CUDA_LIB_DIR}")
-IF(CUDA_nvrtc_LIBRARY)
-    SET(OPENMM_BUILD_CUDA_COMPILER_PLUGIN ON CACHE BOOL "Build CUDA runtime compiler plugin")
-ELSE(CUDA_nvrtc_LIBRARY)
-    SET(OPENMM_BUILD_CUDA_COMPILER_PLUGIN OFF CACHE BOOL "Build CUDA runtime compiler plugin")
-ENDIF(CUDA_nvrtc_LIBRARY)
-SET(OPENMM_BUILD_CUDACOMPILER_PATH)
-IF(OPENMM_BUILD_CUDA_COMPILER_PLUGIN)
-   SET(OPENMM_BUILD_CUDACOMPILER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/plugins/cudacompiler)
-   ADD_SUBDIRECTORY(plugins/cudacompiler)
-ENDIF(OPENMM_BUILD_CUDA_COMPILER_PLUGIN)
 
 IF(OPENMM_BUILD_SHARED_LIB)
     INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${SHARED_TARGET})

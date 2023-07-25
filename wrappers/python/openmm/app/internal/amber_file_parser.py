@@ -12,7 +12,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2022 Stanford University and the Authors.
+Portions copyright (c) 2012-2023 Stanford University and the Authors.
 Authors: Randall J. Radmer, John D. Chodera, Peter Eastman
 Contributors: Christoph Klein, Michael R. Shirts, Jason Swails, Kye Won Wang
 
@@ -890,7 +890,7 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
     # Add nonbonded interactions.
     if verbose: print("Adding nonbonded interactions...")
     force = mm.NonbondedForce()
-    if (prmtop.getIfBox() == 0):
+    if topology.getPeriodicBoxVectors() is None and prmtop.getIfBox() == 0:
         # System is non-periodic.
         if nonbondedMethod == 'NoCutoff':
             force.setNonbondedMethod(mm.NonbondedForce.NoCutoff)
@@ -904,9 +904,12 @@ def readAmberSystem(topology, prmtop_filename=None, prmtop_loader=None, shake=No
     else:
         # System is periodic.
         # Set periodic box vectors for periodic system
-        (boxBeta, boxX, boxY, boxZ) = prmtop.getBoxBetaAndDimensions()
-        xVec, yVec, zVec = computePeriodicBoxVectors(boxX, boxY, boxZ, boxBeta, boxBeta, boxBeta)
-        system.setDefaultPeriodicBoxVectors(xVec, yVec, zVec)
+        if topology.getPeriodicBoxVectors() is None:
+            (boxBeta, boxX, boxY, boxZ) = prmtop.getBoxBetaAndDimensions()
+            xVec, yVec, zVec = computePeriodicBoxVectors(boxX, boxY, boxZ, boxBeta, boxBeta, boxBeta)
+            system.setDefaultPeriodicBoxVectors(xVec, yVec, zVec)
+        else:
+            system.setDefaultPeriodicBoxVectors(*topology.getPeriodicBoxVectors())
 
         # Set cutoff.
         if nonbondedCutoff is None:

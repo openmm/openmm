@@ -24,6 +24,7 @@ sudo apt-get install -y \
     cuda-drivers cuda-driver-dev-${CUDA_APT} \
     cuda-cudart-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} \
     ${CUFFT}-${CUDA_APT} ${CUFFT}-dev-${CUDA_APT} \
+    cuda-nvrtc-${CUDA_APT} cuda-nvrtc-dev-${CUDA_APT} \
     cuda-nvprof-${CUDA_APT}
 sudo apt-get clean
 

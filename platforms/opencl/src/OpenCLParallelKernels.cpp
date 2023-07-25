@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -133,8 +133,11 @@ OpenCLParallelCalcForcesAndEnergyKernel::~OpenCLParallelCalcForcesAndEnergyKerne
 void OpenCLParallelCalcForcesAndEnergyKernel::initialize(const System& system) {
     for (int i = 0; i < (int) kernels.size(); i++)
         getKernel(i).initialize(system);
-    for (int i = 0; i < (int) contextNonbondedFractions.size(); i++)
-        contextNonbondedFractions[i] = 1/(double) contextNonbondedFractions.size();
+    for (int i = 0; i < contextNonbondedFractions.size(); i++) {
+        double x0 = i/(double) contextNonbondedFractions.size();
+        double x1 = (i+1)/(double) contextNonbondedFractions.size();
+        contextNonbondedFractions[i] = x1*x1 - x0*x0;
+    }
 }
 
 void OpenCLParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForce, bool includeEnergy, int groups) {
@@ -184,7 +187,7 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
         // Balance work between the contexts by transferring a little nonbonded work from the context that
         // finished last to the one that finished first.
         
-        if (cl.getComputeForceCount() < 200) {
+        if (cl.getComputeForceCount() < 200 || cl.getComputeForceCount()%30 == 0) {
             int firstIndex = 0, lastIndex = 0;
             for (int i = 0; i < (int) completionTimes.size(); i++) {
                 if (completionTimes[i] < completionTimes[firstIndex])

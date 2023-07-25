@@ -455,10 +455,10 @@ void testTriclinic() {
 }
 
 void testLargeSystem() {
-    const int numMolecules = 600;
+    const int numMolecules = 1600;
     const int numParticles = numMolecules*2;
     const double cutoff = 2.0;
-    const double boxSize = 20.0;
+    const double boxSize = 40.0;
     const double tol = 2e-3;
     ReferencePlatform reference;
     System system;

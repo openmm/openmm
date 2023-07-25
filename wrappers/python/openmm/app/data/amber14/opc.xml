@@ -1,0 +1,341 @@
+<ForceField>
+ <Info>
+  <Reference>Izadi S, Anandakrishnan R, Onufriev AV. Building Water Models: A Different Approach. The Journal of Physical Chemistry Letters. 2014 Nov 6;5(21):3863-71. DOI:10.1021/jz501780a</Reference>
+     <!-- Li/Merz ion parameters of atomic ions for the OPC water model (12-6 set) -->
+    <DateGenerated>2022-09-28T04:59:42.378081</DateGenerated>
+    <Source Source="parm/frcmod.ionslm_126_opc" md5hash="61ee47ec99a7ebf66cf09e899a8f0581" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ionslm_126_opc</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+ <AtomTypes>
+  <Type name="opc-O" class="OW" element="O" mass="16.00000"/>
+  <Type name="opc-H" class="HW" element="H" mass="1.00800"/>
+  <Type name="opc-M" class="MW" mass="0"/>
+     <Type class="ionslm_126_opc-Li+" element="Li" mass="6.94" name="ionslm_126_opc-Li+"/>
+    <Type class="ionslm_126_opc-Na+" element="Na" mass="22.99" name="ionslm_126_opc-Na+"/>
+    <Type class="ionslm_126_opc-K+" element="K" mass="39.10" name="ionslm_126_opc-K+"/>
+    <Type class="ionslm_126_opc-Rb+" element="Rb" mass="85.47" name="ionslm_126_opc-Rb+"/>
+    <Type class="ionslm_126_opc-Cs+" element="Cs" mass="132.91" name="ionslm_126_opc-Cs+"/>
+    <Type class="ionslm_126_opc-Tl+" element="Tl" mass="204.38" name="ionslm_126_opc-Tl+"/>
+    <Type class="ionslm_126_opc-Cu+" element="Cu" mass="63.55" name="ionslm_126_opc-Cu+"/>
+    <Type class="ionslm_126_opc-Ag+" element="Ag" mass="107.87" name="ionslm_126_opc-Ag+"/>
+    <Type class="ionslm_126_opc-F-" element="F" mass="19.00" name="ionslm_126_opc-F-"/>
+    <Type class="ionslm_126_opc-Cl-" element="Cl" mass="35.45" name="ionslm_126_opc-Cl-"/>
+    <Type class="ionslm_126_opc-Br-" element="Br" mass="79.90" name="ionslm_126_opc-Br-"/>
+    <Type class="ionslm_126_opc-I-" element="I" mass="126.9" name="ionslm_126_opc-I-"/>
+    <Type class="ionslm_126_opc-Be2+" element="Be" mass="9.01" name="ionslm_126_opc-Be2+"/>
+    <Type class="ionslm_126_opc-Cu2+" element="Cu" mass="63.55" name="ionslm_126_opc-Cu2+"/>
+    <Type class="ionslm_126_opc-Ni2+" element="Ni" mass="58.69" name="ionslm_126_opc-Ni2+"/>
+    <Type class="ionslm_126_opc-Pt2+" element="Pt" mass="195.08" name="ionslm_126_opc-Pt2+"/>
+    <Type class="ionslm_126_opc-Zn2+" element="Zn" mass="65.4" name="ionslm_126_opc-Zn2+"/>
+    <Type class="ionslm_126_opc-Co2+" element="Co" mass="58.93" name="ionslm_126_opc-Co2+"/>
+    <Type class="ionslm_126_opc-Pd2+" element="Pd" mass="106.42" name="ionslm_126_opc-Pd2+"/>
+    <Type class="ionslm_126_opc-Ag2+" element="Ag" mass="107.87" name="ionslm_126_opc-Ag2+"/>
+    <Type class="ionslm_126_opc-Cr2+" element="Cr" mass="52.00" name="ionslm_126_opc-Cr2+"/>
+    <Type class="ionslm_126_opc-Fe2+" element="Fe" mass="55.85" name="ionslm_126_opc-Fe2+"/>
+    <Type class="ionslm_126_opc-Mg2+" element="Mg" mass="24.305" name="ionslm_126_opc-Mg2+"/>
+    <Type class="ionslm_126_opc-V2+" element="V" mass="50.94" name="ionslm_126_opc-V2+"/>
+    <Type class="ionslm_126_opc-Mn2+" element="Mn" mass="54.94" name="ionslm_126_opc-Mn2+"/>
+    <Type class="ionslm_126_opc-Hg2+" element="Hg" mass="200.59" name="ionslm_126_opc-Hg2+"/>
+    <Type class="ionslm_126_opc-Cd2+" element="Cd" mass="112.41" name="ionslm_126_opc-Cd2+"/>
+    <Type class="ionslm_126_opc-Yb2+" element="Yb" mass="173.05" name="ionslm_126_opc-Yb2+"/>
+    <Type class="ionslm_126_opc-Ca2+" element="Ca" mass="40.08" name="ionslm_126_opc-Ca2+"/>
+    <Type class="ionslm_126_opc-Sn2+" element="Sn" mass="118.71" name="ionslm_126_opc-Sn2+"/>
+    <Type class="ionslm_126_opc-Pb2+" element="Pb" mass="207.2" name="ionslm_126_opc-Pb2+"/>
+    <Type class="ionslm_126_opc-Eu2+" element="Eu" mass="151.96" name="ionslm_126_opc-Eu2+"/>
+    <Type class="ionslm_126_opc-Sr2+" element="Sr" mass="87.62" name="ionslm_126_opc-Sr2+"/>
+    <Type class="ionslm_126_opc-Sm2+" element="Sm" mass="150.36" name="ionslm_126_opc-Sm2+"/>
+    <Type class="ionslm_126_opc-Ba2+" element="Ba" mass="137.33" name="ionslm_126_opc-Ba2+"/>
+    <Type class="ionslm_126_opc-Ra2+" element="Ra" mass="226.03" name="ionslm_126_opc-Ra2+"/>
+    <Type class="ionslm_126_opc-Al3+" element="Al" mass="26.98" name="ionslm_126_opc-Al3+"/>
+    <Type class="ionslm_126_opc-Fe3+" element="Fe" mass="55.85" name="ionslm_126_opc-Fe3+"/>
+    <Type class="ionslm_126_opc-Cr3+" element="Cr" mass="52.00" name="ionslm_126_opc-Cr3+"/>
+    <Type class="ionslm_126_opc-In3+" element="In" mass="114.82" name="ionslm_126_opc-In3+"/>
+    <Type class="ionslm_126_opc-Tl3+" element="Tl" mass="204.38" name="ionslm_126_opc-Tl3+"/>
+    <Type class="ionslm_126_opc-Y3+" element="Y" mass="88.91" name="ionslm_126_opc-Y3+"/>
+    <Type class="ionslm_126_opc-La3+" element="La" mass="138.91" name="ionslm_126_opc-La3+"/>
+    <Type class="ionslm_126_opc-Ce3+" element="Ce" mass="140.12" name="ionslm_126_opc-Ce3+"/>
+    <Type class="ionslm_126_opc-Pr3+" element="Pr" mass="140.91" name="ionslm_126_opc-Pr3+"/>
+    <Type class="ionslm_126_opc-Nd3+" element="Nd" mass="144.24" name="ionslm_126_opc-Nd3+"/>
+    <Type class="ionslm_126_opc-Sm3+" element="Sm" mass="150.36" name="ionslm_126_opc-Sm3+"/>
+    <Type class="ionslm_126_opc-Eu3+" element="Eu" mass="151.96" name="ionslm_126_opc-Eu3+"/>
+    <Type class="ionslm_126_opc-Gd3+" element="Gd" mass="157.25" name="ionslm_126_opc-Gd3+"/>
+    <Type class="ionslm_126_opc-Tb3+" element="Tb" mass="158.93" name="ionslm_126_opc-Tb3+"/>
+    <Type class="ionslm_126_opc-Dy3+" element="Dy" mass="162.5" name="ionslm_126_opc-Dy3+"/>
+    <Type class="ionslm_126_opc-Er3+" element="Er" mass="167.26" name="ionslm_126_opc-Er3+"/>
+    <Type class="ionslm_126_opc-Tm3+" element="Tm" mass="168.93" name="ionslm_126_opc-Tm3+"/>
+    <Type class="ionslm_126_opc-Lu3+" element="Lu" mass="174.97" name="ionslm_126_opc-Lu3+"/>
+    <Type class="ionslm_126_opc-Hf4+" element="Hf" mass="178.49" name="ionslm_126_opc-Hf4+"/>
+    <Type class="ionslm_126_opc-Zr4+" element="Zr" mass="91.22" name="ionslm_126_opc-Zr4+"/>
+    <Type class="ionslm_126_opc-Ce4+" element="Ce" mass="140.12" name="ionslm_126_opc-Ce4+"/>
+    <Type class="ionslm_126_opc-U4+" element="U" mass="238.03" name="ionslm_126_opc-U4+"/>
+    <Type class="ionslm_126_opc-Pu4+" element="Pu" mass="244.06" name="ionslm_126_opc-Pu4+"/>
+    <Type class="ionslm_126_opc-Th4+" element="Th" mass="232.04" name="ionslm_126_opc-Th4+"/>
+  </AtomTypes>
+ <Residues>
+  <Residue name="HOH">
+   <Atom name="O" type="opc-O" charge="0"/>
+   <Atom name="H1" type="opc-H" charge="0.679142"/>
+   <Atom name="H2" type="opc-H" charge="0.679142"/>
+   <Atom name="M" type="opc-M" charge="-1.358284"/>
+   <!-- weight2 = 0.15939833/(2*(cos(angle/2) * 0.87243313)) -->
+   <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.7045587810585758" weight2="0.1477206094707121" weight3="0.1477206094707121"/>
+   <Bond from="0" to="1"/>
+   <Bond from="0" to="2"/>
+  </Residue>
+     <Residue name="AG1">
+      <Atom charge="1.0" name="AG1" type="ionslm_126_opc-Ag+"/>
+    </Residue>
+    <Residue name="Ag">
+      <Atom charge="2.0" name="Ag" type="ionslm_126_opc-Ag2+"/>
+    </Residue>
+    <Residue name="AL">
+      <Atom charge="3.0" name="AL" type="ionslm_126_opc-Al3+"/>
+    </Residue>
+    <Residue name="BA">
+      <Atom charge="2.0" name="BA" type="ionslm_126_opc-Ba2+"/>
+    </Residue>
+    <Residue name="Be">
+      <Atom charge="2.0" name="Be" type="ionslm_126_opc-Be2+"/>
+    </Residue>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="ionslm_126_opc-Br-"/>
+    </Residue>
+    <Residue name="CA">
+      <Atom charge="2.0" name="CA" type="ionslm_126_opc-Ca2+"/>
+    </Residue>
+    <Residue name="CD">
+      <Atom charge="2.0" name="CD" type="ionslm_126_opc-Cd2+"/>
+    </Residue>
+    <Residue name="CE">
+      <Atom charge="3.0" name="CE" type="ionslm_126_opc-Ce3+"/>
+    </Residue>
+    <Residue name="Ce">
+      <Atom charge="4.0" name="Ce" type="ionslm_126_opc-Ce4+"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="ionslm_126_opc-Cl-"/>
+    </Residue>
+    <Residue name="CO">
+      <Atom charge="2.0" name="CO" type="ionslm_126_opc-Co2+"/>
+    </Residue>
+    <Residue name="Cr">
+      <Atom charge="2.0" name="Cr" type="ionslm_126_opc-Cr2+"/>
+    </Residue>
+    <Residue name="CR">
+      <Atom charge="3.0" name="CR" type="ionslm_126_opc-Cr3+"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="ionslm_126_opc-Cs+"/>
+    </Residue>
+    <Residue name="CU1">
+      <Atom charge="1.0" name="CU1" type="ionslm_126_opc-Cu+"/>
+    </Residue>
+    <Residue name="CU">
+      <Atom charge="2.0" name="CU" type="ionslm_126_opc-Cu2+"/>
+    </Residue>
+    <Residue name="Dy">
+      <Atom charge="3.0" name="Dy" type="ionslm_126_opc-Dy3+"/>
+    </Residue>
+    <Residue name="Er">
+      <Atom charge="3.0" name="Er" type="ionslm_126_opc-Er3+"/>
+    </Residue>
+    <Residue name="EU">
+      <Atom charge="2.0" name="EU" type="ionslm_126_opc-Eu2+"/>
+    </Residue>
+    <Residue name="EU3">
+      <Atom charge="3.0" name="EU3" type="ionslm_126_opc-Eu3+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="ionslm_126_opc-F-"/>
+    </Residue>
+    <Residue name="FE2">
+      <Atom charge="2.0" name="FE2" type="ionslm_126_opc-Fe2+"/>
+    </Residue>
+    <Residue name="FE">
+      <Atom charge="3.0" name="FE" type="ionslm_126_opc-Fe3+"/>
+    </Residue>
+    <Residue name="GD3">
+      <Atom charge="3.0" name="GD" type="ionslm_126_opc-Gd3+"/>
+    </Residue>
+    <Residue name="Hf">
+      <Atom charge="4.0" name="Hf" type="ionslm_126_opc-Hf4+"/>
+    </Residue>
+    <Residue name="HG">
+      <Atom charge="2.0" name="HG" type="ionslm_126_opc-Hg2+"/>
+    </Residue>
+    <Residue name="IOD">
+      <Atom charge="-1.0" name="I" type="ionslm_126_opc-I-"/>
+    </Residue>
+    <Residue name="IN">
+      <Atom charge="3.0" name="IN" type="ionslm_126_opc-In3+"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="ionslm_126_opc-K+"/>
+    </Residue>
+    <Residue name="LA">
+      <Atom charge="3.0" name="LA" type="ionslm_126_opc-La3+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="ionslm_126_opc-Li+"/>
+    </Residue>
+    <Residue name="LU">
+      <Atom charge="3.0" name="LU" type="ionslm_126_opc-Lu3+"/>
+    </Residue>
+    <Residue name="MG">
+      <Atom charge="2.0" name="MG" type="ionslm_126_opc-Mg2+"/>
+    </Residue>
+    <Residue name="MN">
+      <Atom charge="2.0" name="MN" type="ionslm_126_opc-Mn2+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="ionslm_126_opc-Na+"/>
+    </Residue>
+    <Residue name="Nd">
+      <Atom charge="3.0" name="Nd" type="ionslm_126_opc-Nd3+"/>
+    </Residue>
+    <Residue name="NI">
+      <Atom charge="2.0" name="NI" type="ionslm_126_opc-Ni2+"/>
+    </Residue>
+    <Residue name="PB">
+      <Atom charge="2.0" name="PB" type="ionslm_126_opc-Pb2+"/>
+    </Residue>
+    <Residue name="PD">
+      <Atom charge="2.0" name="PD" type="ionslm_126_opc-Pd2+"/>
+    </Residue>
+    <Residue name="PR">
+      <Atom charge="3.0" name="PR" type="ionslm_126_opc-Pr3+"/>
+    </Residue>
+    <Residue name="PT">
+      <Atom charge="2.0" name="PT" type="ionslm_126_opc-Pt2+"/>
+    </Residue>
+    <Residue name="Pu">
+      <Atom charge="4.0" name="Pu" type="ionslm_126_opc-Pu4+"/>
+    </Residue>
+    <Residue name="Ra">
+      <Atom charge="2.0" name="Ra" type="ionslm_126_opc-Ra2+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="ionslm_126_opc-Rb+"/>
+    </Residue>
+    <Residue name="Sm">
+      <Atom charge="2.0" name="Sm" type="ionslm_126_opc-Sm2+"/>
+    </Residue>
+    <Residue name="SM">
+      <Atom charge="3.0" name="SM" type="ionslm_126_opc-Sm3+"/>
+    </Residue>
+    <Residue name="Sn">
+      <Atom charge="2.0" name="Sn" type="ionslm_126_opc-Sn2+"/>
+    </Residue>
+    <Residue name="SR">
+      <Atom charge="2.0" name="SR" type="ionslm_126_opc-Sr2+"/>
+    </Residue>
+    <Residue name="TB">
+      <Atom charge="3.0" name="TB" type="ionslm_126_opc-Tb3+"/>
+    </Residue>
+    <Residue name="Th">
+      <Atom charge="4.0" name="Th" type="ionslm_126_opc-Th4+"/>
+    </Residue>
+    <Residue name="TL1">
+      <Atom charge="1.0" name="TL1" type="ionslm_126_opc-Tl+"/>
+    </Residue>
+    <Residue name="Tl">
+      <Atom charge="3.0" name="Tl" type="ionslm_126_opc-Tl3+"/>
+    </Residue>
+    <Residue name="Tm">
+      <Atom charge="3.0" name="Tm" type="ionslm_126_opc-Tm3+"/>
+    </Residue>
+    <Residue name="U4+">
+      <Atom charge="4.0" name="U" type="ionslm_126_opc-U4+"/>
+    </Residue>
+    <Residue name="V2+">
+      <Atom charge="2.0" name="V2+" type="ionslm_126_opc-V2+"/>
+    </Residue>
+    <Residue name="Y">
+      <Atom charge="3.0" name="Y" type="ionslm_126_opc-Y3+"/>
+    </Residue>
+    <Residue name="YB2">
+      <Atom charge="2.0" name="YB2" type="ionslm_126_opc-Yb2+"/>
+    </Residue>
+    <Residue name="ZN">
+      <Atom charge="2.0" name="ZN" type="ionslm_126_opc-Zn2+"/>
+    </Residue>
+    <Residue name="Zr">
+      <Atom charge="4.0" name="Zr" type="ionslm_126_opc-Zr4+"/>
+    </Residue>
+  </Residues>
+ <HarmonicBondForce>
+  <Bond class1="OW" class2="HW" length="0.087243313" k="502416.0"/>
+ </HarmonicBondForce>
+ <HarmonicAngleForce>
+  <!-- angle = arccos(1 - (1.37120510**2 / (2*0.87243313**2))) -->
+  <Angle class1="HW" class2="OW" class3="HW" angle="1.8081424254418306" k="628.02"/>
+ </HarmonicAngleForce>
+ <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">
+     <UseAttributeFromResidue name="charge"/>
+  <!-- sigma = (1.777167268 * 2 / (2**(1/6)))*unit.angstrom/unit.nanometer -->
+  <!-- epsilon = (0.2128008130*unit.kilocalorie)/(unit.kilojoule) -->
+  <Atom type="opc-O" sigma="0.3166552081964338" epsilon="0.8903586015920001"/>
+  <Atom type="opc-H" sigma="0.08908987181403394" epsilon="0"/>
+  <Atom type="opc-M" sigma="0.08908987181403394" epsilon="0"/>
+    <Atom epsilon="0.009039866720000001" sigma="0.2212992415860603" type="ionslm_126_opc-Li+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.12386075112" sigma="0.2613896839023756" type="ionslm_126_opc-Na+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.58382766144" sigma="0.3032619236549715" type="ionslm_126_opc-K+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.9537620464000001" sigma="0.3239307739158274" type="ionslm_126_opc-Rb+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="1.47731805816" sigma="0.349232297511013" type="ionslm_126_opc-Cs+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.47070573208000005" sigma="0.29577837442259264" type="ionslm_126_opc-Tl+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.0032724319200000004" sigma="0.21025209748112006" type="ionslm_126_opc-Cu+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.025210566480000002" sigma="0.23448454261453733" type="ionslm_126_opc-Ag+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="1.0313754556" sigma="0.3278507282756449" type="ionslm_126_opc-F-"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="2.8400519208" sigma="0.4205041949622401" type="ionslm_126_opc-Cl-"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="3.17863094952" sigma="0.4452711793265416" type="ionslm_126_opc-Br-"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="3.77817463544" sigma="0.5167212565213968" type="ionslm_126_opc-I-"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="5.35552e-06" sigma="0.16410354388145051" type="ionslm_126_opc-Be2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.0031585016" sigma="0.20989573799386393" type="ionslm_126_opc-Cu2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00439211216" sigma="0.21328115312279727" type="ionslm_126_opc-Ni2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00631378152" sigma="0.21720110748261476" type="ionslm_126_opc-Pt2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00631378152" sigma="0.21720110748261476" type="ionslm_126_opc-Zn2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.012329536720000001" sigma="0.2250410162022497" type="ionslm_126_opc-Co2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.013433485120000001" sigma="0.2261100946640181" type="ionslm_126_opc-Pd2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.0218984284" sigma="0.23252456543462854" type="ionslm_126_opc-Ag2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.025210566480000002" sigma="0.23448454261453733" type="ionslm_126_opc-Cr2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.027520218160000002" sigma="0.23573180081993375" type="ionslm_126_opc-Fe2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.0299963512" sigma="0.23697905902533029" type="ionslm_126_opc-Mg2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.03148911872" sigma="0.23769177799984254" type="ionslm_126_opc-V2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.053825486400000004" sigma="0.2460662259503617" type="ionslm_126_opc-Mn2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.053825486400000004" sigma="0.2460662259503617" type="ionslm_126_opc-Hg2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.05861307024" sigma="0.24749166389938626" type="ionslm_126_opc-Cd2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.33615222504000003" sigma="0.2854439492921647" type="ionslm_126_opc-Yb2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.34886028824000004" sigma="0.2865130277539331" type="ionslm_126_opc-Ca2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.38639884336" sigma="0.2895420833956103" type="ionslm_126_opc-Sn2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.59811815528" sigma="0.30415282237311186" type="ionslm_126_opc-Pb2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.73715046696" sigma="0.312349090580003" type="ionslm_126_opc-Eu2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.77874118424" sigma="0.31466542724716784" type="ionslm_126_opc-Sr2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.77874118424" sigma="0.31466542724716784" type="ionslm_126_opc-Sm2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="1.47731805816" sigma="0.349232297511013" type="ionslm_126_opc-Ba2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="1.47731805816" sigma="0.349232297511013" type="ionslm_126_opc-Ra2+"/><!--     CM set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.010193772080000002" sigma="0.22272467953508485" type="ionslm_126_opc-Al3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.06572013816000001" sigma="0.249451641079295" type="ionslm_126_opc-Fe3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.032257342960000004" sigma="0.2380481374870987" type="ionslm_126_opc-Cr3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.09715545064" sigma="0.2565788308244177" type="ionslm_126_opc-In3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.14196839183999999" sigma="0.26424055980042466" type="ionslm_126_opc-Tl3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.28247819944" sigma="0.2806330962142069" type="ionslm_126_opc-Y3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.5781589690400001" sigma="0.30290556416771536" type="ionslm_126_opc-La3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.65093680392" sigma="0.30736005775841707" type="ionslm_126_opc-Ce3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.62720034432" sigma="0.30593461980939257" type="ionslm_126_opc-Pr3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.47580293192" sigma="0.29613473390984874" type="ionslm_126_opc-Nd3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.41662062848000003" sigma="0.2918584200627751" type="ionslm_126_opc-Sm3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.43586389048" sigma="0.2932838580117997" type="ionslm_126_opc-Eu3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.33197918711999996" sigma="0.2850875898049086" type="ionslm_126_opc-Gd3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.34886028824000004" sigma="0.2865130277539331" type="ionslm_126_opc-Tb3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.29778189072" sigma="0.2820585341632314" type="ionslm_126_opc-Dy3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.28247819944" sigma="0.2806330962142069" type="ionslm_126_opc-Er3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.28247819944" sigma="0.2806330962142069" type="ionslm_126_opc-Tm3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.25163082264000003" sigma="0.27760404057252974" type="ionslm_126_opc-Lu3+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.11751709584" sigma="0.26032060544060714" type="ionslm_126_opc-Hf4+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.14799067408" sigma="0.265131458518565" type="ionslm_126_opc-Zr4+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.5310938643199999" sigma="0.2998765085260382" type="ionslm_126_opc-Ce4+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.5310938643199999" sigma="0.2998765085260382" type="ionslm_126_opc-U4+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.46563832232" sigma="0.29542201493533654" type="ionslm_126_opc-Pu4+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.58952354984" sigma="0.3036182831422276" type="ionslm_126_opc-Th4+"/><!--     IOD set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+  </NonbondedForce>
+</ForceField>

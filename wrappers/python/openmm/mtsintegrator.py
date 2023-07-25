@@ -167,8 +167,9 @@ class MTSLangevinIntegrator(CustomIntegrator):
         self.temperature = temperature
         self.friction = friction
         import math
-        self.addGlobalVariable("a", math.exp(-friction*dt))
-        self.addGlobalVariable("b", math.sqrt(1-math.exp(-2*friction*dt)))
+        total_substeps = groups[-1][1]
+        self.addGlobalVariable("a", math.exp(-friction*dt / total_substeps))
+        self.addGlobalVariable("b", math.sqrt(1-math.exp(-2*friction*dt / total_substeps)))
         from openmm.unit import MOLAR_GAS_CONSTANT_R
         self.addGlobalVariable('kT', MOLAR_GAS_CONSTANT_R*temperature)
         self.addPerDofVariable("x1", 0)
