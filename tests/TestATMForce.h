@@ -36,11 +36,13 @@
 #include "openmm/ATMForce.h"
 #include "openmm/Context.h"
 #include "openmm/CustomBondForce.h"
+#include "openmm/NonbondedForce.h"
 #include "openmm/CustomExternalForce.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
+#include "openmm/serialization/XmlSerializer.h"
 #include "sfmt/SFMT.h"
 #include <algorithm>
 #include <iostream>
@@ -93,7 +95,7 @@ void test2Particles() {
         context.setParameter(ATMForce::Lambda2(), lmbd);
         State state = context.getState(State::Energy | State::Forces);
         double epot = state.getPotentialEnergy();
-        double epert = atm->getPerturbationEnergy(context);
+	double epert = atm->getPerturbationEnergy(context);
 
         ASSERT_EQUAL_TOL(lmbd, context.getParameter(atm->Lambda1()), 1e-6);
         ASSERT_EQUAL_TOL(lmbd, context.getParameter(atm->Lambda2()), 1e-6);
@@ -101,6 +103,46 @@ void test2Particles() {
         ASSERT_EQUAL_TOL(0.5*displx*displx, epert, 1e-6);
         ASSERT_EQUAL_VEC(Vec3(-lmbd*displx, 0.0, 0.0), state.getForces()[1], 1e-6);
     }
+}
+
+void test2ParticlesNonbonded() {
+
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+
+    NonbondedForce* nbforce = new NonbondedForce();
+    nbforce->addParticle( 1.0, 1.0, 1.0);
+    nbforce->addParticle(-1.0, 1.0, 1.0);
+
+    system.addForce(nbforce);
+
+    ATMForce* atm = new ATMForce(0.0, 0.0, 0.0, 0.0, 0.0, 1e6, 5e5, 1.0/16, 1.0);
+    atm->addParticle(0, 0., 0., 0. );
+    atm->addParticle(1, 1., 0., 0. );
+    //atm->addForce(nbforce);
+    atm->addForce(XmlSerializer::clone<Force>(*nbforce));
+    system.removeForce(0);
+    system.addForce(atm);
+
+    vector<Vec3> positions;
+    positions.push_back(Vec3(0., 0., 0.));
+    positions.push_back(Vec3(1., 0., 0.));
+
+    VerletIntegrator integrator(1.0);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    double lambda = 0.5;
+    context.setParameter(ATMForce::Lambda1(), lambda);
+    context.setParameter(ATMForce::Lambda2(), lambda);
+    State state = context.getState( State::Energy );
+    double epot = state.getPotentialEnergy();
+    double epert = atm->getPerturbationEnergy(context);
+    ASSERT_EQUAL_TOL(-104.2320, epot,  1e-3);
+    ASSERT_EQUAL_TOL(  69.4062, epert, 1e-3);
+    // std::cout << "Nonbonded: epot = " << epot << std::endl;
+    // std::cout << "Nonbonded: epert = " << epert << std::endl;
 }
 
 void testLargeSystem() {
@@ -187,6 +229,7 @@ int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         test2Particles();
+	test2ParticlesNonbonded();
         testLargeSystem();
         testMolecules();
         runPlatformTests();
