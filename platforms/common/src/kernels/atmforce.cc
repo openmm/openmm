@@ -19,8 +19,7 @@ KERNEL void copyState(int numParticles,
                       GLOBAL real4* RESTRICT posq,
                       GLOBAL real4* RESTRICT posq1,
                       GLOBAL real4* RESTRICT posq2,
-                      GLOBAL float4* RESTRICT displ,
-		      GLOBAL float4* RESTRICT displ0
+                      GLOBAL float4* RESTRICT displ
 #ifdef USE_MIXED_PRECISION
                       ,
                       GLOBAL real4* RESTRICT posqCorrection,
@@ -32,12 +31,11 @@ KERNEL void copyState(int numParticles,
     //set the coordinates of the context for state 1
     int i = GLOBAL_ID;
     while (i < numParticles) {
-         real4 d = make_real4((real)displ0[i].x, (real)displ0[i].y, (real)displ0[i].z, 0);
-         posq1[i] = posq[i] + d;
+        posq1[i] = posq[i];
 #ifdef USE_MIXED_PRECISION
-	 posq1Correction[i] = posqCorrection[i];
+        posq1Correction[i] = posqCorrection[i];
 #endif
-	 i += GLOBAL_SIZE;
+        i += GLOBAL_SIZE;
     }
 
     //set the coordinates of the context for state 2

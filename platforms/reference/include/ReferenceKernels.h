@@ -1683,7 +1683,6 @@ private:
     int numParticles;
     std::vector<int> particles;
     std::vector<Vec3> displ;
-    std::vector<Vec3> displ0;
     double perturbationEnergy;
 };
 

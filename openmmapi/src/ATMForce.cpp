@@ -53,66 +53,25 @@ ATMForce::~ATMForce() {
         delete force;
 }
 
-int ATMForce::addParticle(const std::vector<double>& displacement) {
-    double dx, dy, dz, dx0, dy0, dz0;
-    if ( displacement.size() == 3 ) {
-      dx = displacement[0];
-      dy = displacement[1];
-      dz = displacement[2];
-      dx0 = 0;
-      dy0 = 0;
-      dz0 = 0;
-    } else if ( displacement.size() == 6 ){
-      dx = displacement[0];
-      dy = displacement[1];
-      dz = displacement[2];
-      dx0 = displacement[3];
-      dy0 = displacement[4];
-      dz0 = displacement[5];
-    } else {
-      throw OpenMMException("ATMForce::addParticle(): the displacement vector must have either 3 or 6 elements");
-    }
-    particles.push_back(ParticleInfo(particles.size(), dx, dy, dz, dx0, dy0, dz0 ));
+int ATMForce::addParticle(int particle, double dx, double dy, double dz) {
+    particles.push_back(ParticleInfo(particle, dx, dy, dz));
     return particles.size()-1;
 }
 
-void ATMForce::getParticleParameters(int index, std::vector<double>& displacement) const {
+void ATMForce::getParticleParameters(int index, int& particle, double& dx, double &dy, double &dz) const {
     ASSERT_VALID_INDEX(index, particles);
-    displacement.resize(6);
-    displacement[0] = particles[index].dx;
-    displacement[1] = particles[index].dy;
-    displacement[2] = particles[index].dz;
-    displacement[3] = particles[index].dx0;
-    displacement[4] = particles[index].dy0;
-    displacement[5] = particles[index].dz0;
+    particle = particles[index].particle;
+    dx = particles[index].dx;
+    dy = particles[index].dy;
+    dz = particles[index].dz;
 }
 
-void ATMForce::setParticleParameters(int index, const std::vector<double>& displacement) {
+void ATMForce::setParticleParameters(int index, int particle, double dx, double dy, double dz) {
     ASSERT_VALID_INDEX(index, particles);
-    double dx, dy, dz, dx0, dy0, dz0;
-    if ( displacement.size() == 3 ) {
-      dx = displacement[0];
-      dy = displacement[1];
-      dz = displacement[2];
-      dx0 = 0;
-      dy0 = 0;
-      dz0 = 0;
-    } else if ( displacement.size() == 6 ){
-      dx = displacement[0];
-      dy = displacement[1];
-      dz = displacement[2];
-      dx0 = displacement[3];
-      dy0 = displacement[4];
-      dz0 = displacement[5];
-    } else {
-      throw OpenMMException("ATMForce::setParticleParameters(): the displacement vector must have either 3 or 6 elements");
-    }
+    particles[index].particle = particle;
     particles[index].dx = dx;
     particles[index].dy = dy;
     particles[index].dz = dz;
-    particles[index].dx0 = dx0;
-    particles[index].dy0 = dy0;
-    particles[index].dz0 = dz0;
 }
 
 int ATMForce::addForce(Force* force) {

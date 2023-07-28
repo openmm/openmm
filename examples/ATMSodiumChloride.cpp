@@ -257,8 +257,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
                           atom.gbsaRadiusInAng * OpenMM::NmPerAngstrom,
                           atom.gbsaScaleFactor);
 
-	std::vector<double> zerodisplacement({0., 0., 0.});
-	omm->atm->addParticle(zerodisplacement);
+	omm->atm->addParticle(n, 0., 0., 0.);
 
         // Convert the initial position to nm and append to the array.
         const Vec3 posInNm(atom.initPosInAng[0] * OpenMM::NmPerAngstrom,
@@ -271,7 +270,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
     omm->atm->addForce(gbsa);
 
     std::vector<double> displacement(3, 2.0);
-    omm->atm->setParticleParameters(0, displacement);
+    omm->atm->setParticleParameters(0, 0, displacement[0], displacement[1], displacement[2]);
 
     // Choose an Integrator for advancing time, and a Context connecting the
     // System with the Integrator for simulation. Let the Context choose the

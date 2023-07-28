@@ -7825,29 +7825,23 @@ private:
 
 class CommonCalcATMForceKernel::ReorderListener : public ComputeContext::ReorderListener {
 public:
-    ReorderListener(ComputeContext& cc,
-		    vector<mm_float4>& displVector, ArrayInterface& displ,
-		    vector<mm_float4>& displVector0, ArrayInterface& displ0
-		    ) :
-      cc(cc), displVector(displVector), displ(displ),  displVector0(displVector0), displ0(displ0) {
+    ReorderListener(ComputeContext& cc, vector<mm_float4>& displVector, ArrayInterface& displ) :
+    cc(cc), displVector(displVector), displ(displ) {
     }
     void execute() {
         const vector<int>& id = cc.getAtomIndex();
         vector<mm_float4> newDisplVectorContext(cc.getPaddedNumAtoms());
-	vector<mm_float4> newDisplVectorContext0(cc.getPaddedNumAtoms());
         for (int i = 0; i < cc.getNumAtoms(); i++) {
             newDisplVectorContext[i] = displVector[id[i]];
-	    newDisplVectorContext0[i] = displVector0[id[i]];
         }
         displ.upload(newDisplVectorContext);
-	displ0.upload(newDisplVectorContext0);
     }
 private:
     ComputeContext& cc;
     ArrayInterface& displ;
-    ArrayInterface& displ0;
     std::vector<mm_float4> displVector;
-    std::vector<mm_float4> displVector0;
+
+
 };
 
 CommonCalcATMForceKernel::~CommonCalcATMForceKernel() {
@@ -7859,26 +7853,21 @@ void CommonCalcATMForceKernel::initialize(const System& system, const ATMForce& 
     if (numParticles == 0)
         return;
     displVector.resize(cc.getPaddedNumAtoms());
-    displVector0.resize(cc.getPaddedNumAtoms());
     vector<mm_float4> displVectorContext(cc.getPaddedNumAtoms());
-    vector<mm_float4> displVectorContext0(cc.getPaddedNumAtoms());
     for (int i = 0; i < cc.getPaddedNumAtoms(); i++) {
-        displVector[i].x = displVectorContext[i].x = displVectorContext0[i].x = 0;
-        displVector[i].y = displVectorContext[i].y = displVectorContext0[i].y = 0;
-        displVector[i].z = displVectorContext[i].z = displVectorContext0[i].z = 0;
-        displVector[i].w = displVectorContext[i].w = displVectorContext0[i].w = 0;
+        displVector[i].x = displVectorContext[i].x = 0;
+        displVector[i].y = displVectorContext[i].y = 0;
+        displVector[i].z = displVectorContext[i].z = 0;
+        displVector[i].w = displVectorContext[i].w = 0;
     }
     for (int i = 0; i < numParticles; i++) {
-        vector<double> displacement;
-        force.getParticleParameters(i, displacement );
-        displVector[i].x = displacement[0];
-        displVector[i].y = displacement[1];
-        displVector[i].z = displacement[2];
+        int particle;
+        double dx, dy, dz;
+        force.getParticleParameters(i, particle, dx, dy, dz);
+        displVector[i].x = dx;
+        displVector[i].y = dy;
+        displVector[i].z = dz;
         displVector[i].w = 0;
-	displVector0[i].x = displacement[3];
-	displVector0[i].y = displacement[4];
-	displVector0[i].z = displacement[5];
-	displVector0[i].w = 0;
     }
     const vector<int>& id = cc.getAtomIndex();
     for (int i = 0; i < numParticles; i++) {
@@ -7887,14 +7876,6 @@ void CommonCalcATMForceKernel::initialize(const System& system, const ATMForce& 
     displ = ComputeArray();
     displ.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ");
     displ.upload(displVectorContext);
-
-    for (int i = 0; i < numParticles; i++) {
-        displVectorContext0[i] = displVector0[id[i]];
-    }
-    displ0 = ComputeArray();
-    displ0.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ0");
-    displ0.upload(displVectorContext0);
-    
 
     cc.addForce(new ComputeForceInfo());
 }
@@ -7908,7 +7889,7 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
         ComputeContext& cc2 = getInnerComputeContext(innerContext2);
 
         //initialize the listener, this reorders the displacement vectors
-        ReorderListener* listener = new ReorderListener(cc, displVector, displ, displVector0, displ0);
+        ReorderListener* listener = new ReorderListener(cc, displVector, displ);
         cc.addReorderListener(listener);
         listener->execute();
 
@@ -7920,7 +7901,6 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
         copyStateKernel->addArg(cc1.getPosq());
         copyStateKernel->addArg(cc2.getPosq());
         copyStateKernel->addArg(displ);
-	copyStateKernel->addArg(displ0);
         if (cc.getUseMixedPrecision()) {
             copyStateKernel->addArg(cc.getPosqCorrection());
             copyStateKernel->addArg(cc1.getPosqCorrection());
@@ -8017,39 +7997,25 @@ void CommonCalcATMForceKernel::copyState(ContextImpl& context,
 }
 
 void CommonCalcATMForceKernel::copyParametersToContext(ContextImpl& context, const ATMForce& force) {
-    if (force.getNumParticles() != numParticles)
-        throw OpenMMException("copyParametersToContext: The number of ATMMetaForce particles has changed");
-    displVector.resize(cc.getPaddedNumAtoms());
-    displVector0.resize(cc.getPaddedNumAtoms());
     for (int i = 0; i < numParticles; i++) {
-        vector<double> displacement;
-        force.getParticleParameters(i, displacement );
-        displVector[i].x = displacement[0];
-        displVector[i].y = displacement[1];
-        displVector[i].z = displacement[2];
+        int particle;
+        double dx, dy, dz;
+        force.getParticleParameters(i, particle, dx, dy, dz);
+        displVector[i].x = dx;
+        displVector[i].y = dy;
+        displVector[i].z = dz;
         displVector[i].w = 0;
-	displVector0[i].x = displacement[3];
-	displVector0[i].y = displacement[4];
-	displVector0[i].z = displacement[5];
-	displVector0[i].w = 0;
     }
     const vector<int>& id = cc.getAtomIndex();
-    vector<mm_float4> displVectorContext(cc.getPaddedNumAtoms());
-    vector<mm_float4> displVectorContext0(cc.getPaddedNumAtoms());
+    vector<mm_float4> displVectorContext(displVector);
     for (int i = 0; i < cc.getPaddedNumAtoms(); i++) {
         displVectorContext[i].x = 0;
         displVectorContext[i].y = 0;
         displVectorContext[i].z = 0;
         displVectorContext[i].w = 0;
-	displVectorContext0[i].x = 0;
-	displVectorContext0[i].y = 0;
-	displVectorContext0[i].z = 0;
-	displVectorContext0[i].w = 0;
     }
     for (int i = 0; i < numParticles; i++) {
         displVectorContext[i] = displVector[id[i]];
-	displVectorContext0[i] = displVector0[id[i]];
     }
     displ.upload(displVectorContext);
-    displ0.upload(displVectorContext0);
 }
