@@ -2959,20 +2959,6 @@ void ReferenceRemoveCMMotionKernel::execute(ContextImpl& context) {
     }
 }
 
-/* soft core function for ATMForce */
-static double softCoreF(double u, double umax, double a, double ub, double& fp) {
-    if (u <= ub) {
-        fp = 1.;
-        return u;
-    }
-    double gu = (u - ub) / (a * (umax - ub)); //this is y/alpha
-    double zeta = 1. + 2. * gu * (gu + 1.);
-    double zetap = pow(zeta, a);
-    double s = 4. * (2. * gu + 1.) / zeta;
-    fp = s * zetap / pow(1. + zetap, 2);
-    return (umax - ub)*(zetap - 1.) / (zetap + 1.) + ub;
-}
-
 void ReferenceCalcATMForceKernel::initialize(const System& system, const ATMForce& force) {
     int numParticles = force.getNumParticles();
     particles.resize(numParticles);
@@ -2986,64 +2972,13 @@ void ReferenceCalcATMForceKernel::initialize(const System& system, const ATMForc
     }
 }
 
-double ReferenceCalcATMForceKernel::execute(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2,
-        double state1Energy, double state2Energy,
-        bool includeForces, bool includeEnergy) {
-    vector<Vec3>& pos = extractPositions(context);
+void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2,
+        double dEdu0, double dEdu1) {
     vector<Vec3>& force = extractForces(context);
     vector<Vec3>& force1 = extractForces(innerContext1);
     vector<Vec3>& force2 = extractForces(innerContext2);
-    int numParticles = particles.size();
-
-    //softplus parameters
-    double lambda1 = context.getParameter(ATMForce::Lambda1());
-    double lambda2 = context.getParameter(ATMForce::Lambda2());
-    double alpha = context.getParameter(ATMForce::Alpha());
-    double u0 = context.getParameter(ATMForce::U0());
-    double w0 = context.getParameter(ATMForce::W0());
-
-    //softcore parameters
-    double umax = context.getParameter(ATMForce::Umax());
-    double ubcore = context.getParameter(ATMForce::Ubcore());
-    double acore = context.getParameter(ATMForce::Acore());
-
-    //alchemical direction
-    // 1 = from RA  (reference) to R+A (displaced)
-    //-1 = from R+A (displaced) to RA  (reference)
-    double alchemical_direction = context.getParameter(ATMForce::Direction());
-
-    //soft-core perturbation energy
-    double fp;
-    double u = alchemical_direction > 0 ? state2Energy - state1Energy : state1Energy - state2Energy;
-    double e0 = alchemical_direction > 0 ? state1Energy : state2Energy;
-    perturbationEnergy = softCoreF(u, umax, acore, ubcore, fp);
-
-    //softplus function
-    double ebias = 0.0;
-    double ee = 1.0 + exp(-alpha * (perturbationEnergy - u0));
-    if (alpha > 0) {
-        ebias = ((lambda2 - lambda1) / alpha) * log(ee);
-    }
-    ebias += lambda2 * perturbationEnergy + w0;
-    double bfp = (lambda2 - lambda1) / ee + lambda1;
-
-    //alchemical potential energy
-    double energy = e0 + ebias;
-
-    //hybridize forces and add them to the system's forces
-    double sp = bfp*fp;
-    if (alchemical_direction > 0) {
-        for (int i = 0; i < numParticles; i++) {
-            force[i] += sp * force2[i] + (1. - sp) * force1[i];
-        }
-    }
-    else {
-        for (int i = 0; i < numParticles; i++) {
-            force[i] += sp * force1[i] + (1. - sp) * force2[i];
-        }
-    }
-
-    return (includeEnergy ? energy : 0.0);
+    for (int i = 0; i < force.size(); i++)
+        force[i] += dEdu0*force1[i] + dEdu1*force2[i];
 }
 
 void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2) {

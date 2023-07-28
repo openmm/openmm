@@ -1648,16 +1648,16 @@ public:
      */
     void initialize(const System& system, const ATMForce& force);
     /**
-     * Execute the kernel to calculate the forces and/or energy.
+     * Scale the forces from the inner contexts and apply them to the main context.
      *
      * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
+     * @param innerContext1  the first inner context
+     * @param innerContext2  the second inner context
+     * @param dEdu0          the derivative of the final energy with respect to the first inner context's energy
+     * @param dEdu1          the derivative of the final energy with respect to the second inner context's energy
      */
-    double execute(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2,
-		   double state1Energy, double state2Energy,
-		   bool includeForces, bool includeEnergy);
+    void applyForces(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2,
+                     double dEdu0, double dEdu1);
     /**
      * Copy changed parameters over to a context.
      *

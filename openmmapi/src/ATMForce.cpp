@@ -43,14 +43,39 @@
 using namespace OpenMM;
 using namespace std;
 
-ATMForce::ATMForce(double lambda1, double lambda2, double alpha, double u0, double w0, double umax, double ubcore, double acore, double direction):
-    defaultLambda1(lambda1), defaultLambda2(lambda2), defaultAlpha(alpha), defaultU0(u0), defaultW0(w0),
-    defaultUmax(umax), defaultUbcore(ubcore), defaultAcore(acore), defaultDirection(direction) {
+ATMForce::ATMForce(const string& energy) : energyExpression(energy) {
+}
+
+ATMForce::ATMForce(double lambda1, double lambda2, double alpha, double u0, double w0, double umax, double ubcore, double acore, double direction) {
+    setEnergyFunction(
+            "select(step(direction), u0, u1) - ((Lambda2-Lambda1)/Alpha)*log(1+exp(-Alpha*(usc-U0))) + Lambda2*usc + W0;"
+                      "usc = select(step(u-Ubcore), (Umax-Ubcore)*fsc+Ubcore, u);"
+                      "fsc = (z^Acore-1)/(z^Acore+1);"
+                      "z = 1 + 2*(y/Acore) + 2*(y/Acore)^2;"
+                      "y = (u-Ubcore)/(Umax-Ubcore);"
+                      "u = Direction*(u1-u0)");
+    addGlobalParameter(Lambda1(), lambda1);
+    addGlobalParameter(Lambda2(), lambda2);
+    addGlobalParameter(Alpha(), alpha);
+    addGlobalParameter(U0(), u0);
+    addGlobalParameter(W0(), w0);
+    addGlobalParameter(Umax(), umax);
+    addGlobalParameter(Ubcore(), ubcore);
+    addGlobalParameter(Acore(), acore);
+    addGlobalParameter(Direction(), direction);
 }
 
 ATMForce::~ATMForce() {
     for (Force* force : forces)
         delete force;
+}
+
+const string& ATMForce::getEnergyFunction() const {
+    return energyExpression;
+}
+
+void ATMForce::setEnergyFunction(const std::string& energy) {
+    energyExpression = energy;
 }
 
 int ATMForce::addParticle(int particle, double dx, double dy, double dz) {
@@ -84,6 +109,31 @@ Force& ATMForce::getForce(int index) const {
     return *forces[index];
 }
 
+int ATMForce::addGlobalParameter(const string& name, double defaultValue) {
+    globalParameters.push_back(GlobalParameterInfo(name, defaultValue));
+    return globalParameters.size()-1;
+}
+
+const string& ATMForce::getGlobalParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    return globalParameters[index].name;
+}
+
+void ATMForce::setGlobalParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    globalParameters[index].name = name;
+}
+
+double ATMForce::getGlobalParameterDefaultValue(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    return globalParameters[index].defaultValue;
+}
+
+void ATMForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    globalParameters[index].defaultValue = defaultValue;
+}
+
 ForceImpl* ATMForce::createImpl() const {
     return new ATMForceImpl(*this);
 }
@@ -92,7 +142,7 @@ void ATMForce::updateParametersInContext(OpenMM::Context& context) {
     dynamic_cast<ATMForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
 
-double ATMForce::getPerturbationEnergy(const OpenMM::Context& context) const {
-    return dynamic_cast<const ATMForceImpl&>(getImplInContext(context)).getPerturbationEnergy();
+void ATMForce::getPerturbationEnergy(const OpenMM::Context& context, double& u0, double& u1, double& energy) const {
+    dynamic_cast<const ATMForceImpl&>(getImplInContext(context)).getPerturbationEnergy(u0, u1, energy);
 }
 

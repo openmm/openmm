@@ -8,13 +8,12 @@
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "openmm/internal/windowsExport.h"
+#include "lepton/CompiledExpression.h"
 #include <utility>
 #include <set>
 #include <string>
 
 namespace OpenMM {
-
-//class System;
 
 /**
  * This is the internal implementation of ATMForce.
@@ -36,9 +35,7 @@ public:
     std::vector<std::string> getKernelNames();
     std::vector<std::pair<int, int> > getBondedParticles() const;
     void updateParametersInContext(ContextImpl& context);
-    double getPerturbationEnergy() const {
-        return perturbationEnergy;
-    }
+    void getPerturbationEnergy(double& u0, double& u1, double& energy) const;
 
 private:
     const ATMForce& owner;
@@ -46,7 +43,10 @@ private:
     System innerSystem1, innerSystem2;
     VerletIntegrator innerIntegrator1, innerIntegrator2;
     Context *innerContext1, *innerContext2;
-    double perturbationEnergy;
+    Lepton::CompiledExpression energyExpression, u0DerivExpression, u1DerivExpression;
+    double state1Energy, state2Energy, combinedEnergy;
+    std::vector<std::string> globalParameterNames;
+    std::vector<double> globalValues;
     void copySystem(ContextImpl& context, const System& system, System& innerSystem);
 };
 

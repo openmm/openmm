@@ -65,6 +65,13 @@ public:
     /**
      * Create an ATMForce object. 
      *
+     * @param energy   an algebraic expression giving the energy of the system as a function
+     *                 of u0 and u1
+     */
+    explicit ATMForce(const std::string& energy);
+    /**
+     * Create an ATMForce object. 
+     *
      * @param lambda1    the lambda1 parameter of the softplus alchemical potential (dimensionless)
      * @param lambda2    the lambda2 parameter of the softplus alchemical potential (dimensionless)
      * @param alpha      the alpha   parameter of the softplus alchemical potential (kJ/mol)^-1
@@ -89,12 +96,44 @@ public:
     /**
      * Get the number of particles managed by ATMForce
      *
-     * This should be the same number of particles as the OpenMM's System
+     * This should be the same number of particles as the System
      */
     int getNumParticles() const {
         return particles.size();
     }
-    
+    /**
+     * Get the number of Forces included in the ATMForce.
+     */
+    int getNumForces() const {
+        return forces.size();
+    }
+    /**
+     * Get the number of global parameters that the interaction depends on.
+     */
+    int getNumGlobalParameters() const {
+        return globalParameters.size();
+    }
+    /**
+     * Get the algebraic expression that gives the energy of the system
+     */
+    const std::string& getEnergyFunction() const;
+    /**
+     * Set the algebraic expression that gives the energy of the system
+     */
+    void setEnergyFunction(const std::string& energy);
+    /**
+     * Add a Force that will be computed by the ATM orce.
+     *
+     * @param force  the Force to the be added, which should have been created on the heap with the
+     *               "new" operator.  The ATMForce takes over ownership of it, and deletes the Force when the
+     *               ATMForce itself is deleted.
+     * @return       The index within ATMForce of the force that was added
+     */
+    int addForce(Force* force);
+    /**
+     * return the force from index
+     */
+    Force& getForce(int index) const;
     /**
      * Add a particle to the force.
      *
@@ -108,7 +147,6 @@ public:
      * @return the index of the particle that was added
      */
     int addParticle(int particle, double dx, double dy, double dz);
-
     /**
      * Get the parameters for a particle
      * 
@@ -119,7 +157,6 @@ public:
      * @param dz         the z component of the displacement vector in nm
      */
     void getParticleParameters(int index, int& particle, double& dx, double &dy, double &dz) const;
-
     /**
      * Set the parameters for a particle
      * 
@@ -130,7 +167,44 @@ public:
      * @param dz         the z component of the displacement vector in nm
      */
     void setParticleParameters(int index, int particle, double dx, double dy, double dz);
-    
+    /**
+     * Add a new global parameter that the interaction may depend on.  The default value provided to
+     * this method is the initial value of the parameter in newly created Contexts.  You can change
+     * the value at any time by calling setParameter() on the Context.
+     *
+     * @param name             the name of the parameter
+     * @param defaultValue     the default value of the parameter
+     * @return the index of the parameter that was added
+     */
+    int addGlobalParameter(const std::string& name, double defaultValue);
+    /**
+     * Get the name of a global parameter.
+     *
+     * @param index     the index of the parameter for which to get the name
+     * @return the parameter name
+     */
+    const std::string& getGlobalParameterName(int index) const;
+    /**
+     * Set the name of a global parameter.
+     *
+     * @param index          the index of the parameter for which to set the name
+     * @param name           the name of the parameter
+     */
+    void setGlobalParameterName(int index, const std::string& name);
+    /**
+     * Get the default value of a global parameter.
+     *
+     * @param index     the index of the parameter for which to get the default value
+     * @return the parameter default value
+     */
+    double getGlobalParameterDefaultValue(int index) const;
+    /**
+     * Set the default value of a global parameter.
+     *
+     * @param index          the index of the parameter for which to set the default value
+     * @param defaultValue   the default value of the parameter
+     */
+    void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
      * Update the per-particle parameters in a Context to match those stored in this Force object.  This method 
      * should be called after updating parameters with setParticleParameters() to copy them over to the Context.
@@ -138,53 +212,24 @@ public:
      * cannot be changed.
      */
     void updateParametersInContext(Context& context);
-
-
-    /* TO DO */
-    
-    /**
-     * return the number of Forces included in the ATM Force
-     */
-    int getNumForces() const {
-        return forces.size();
-    }
-    
-    /**
-     * Add a Force that will be computed by the ATM Force.
-     *
-     * @param force  the Force to the be added, which should have been created on the heap with the
-     *               "new" operator.  The ATMForce takes over ownership of it, and deletes the Force when the
-     *               ATMForce itself is deleted.
-     * @return       The index within ATMForce of the force that was added
-     */
-    int addForce(Force* force);
-
-    /**
-     * return the force from index
-     */
-    Force& getForce(int index) const;
-
     /**
      * Always returns False. Included for compatibility.
      */
     bool usesPeriodicBoundaryConditions() const {
         return false; //the non-bonded force with PBC is in the system so it would be queried correctly
     }
-
     /**
      * Returns the current perturbation energy calculated by the ATMForce
      *
      * The perturbation energy is U2(x) - U1(x) (for direction = 1) or U1(x) - U2(x) (for direction = -1),
      * as further modified by the soft-core function.
      */
-    double getPerturbationEnergy(const Context& context) const;
-
-
+    void getPerturbationEnergy(const Context& context, double& u0, double& u1, double& energy) const;
     /**
      * Returns the name of the global parameter corresponding to lambda1
      */
     static const std::string& Lambda1() {
-        static const std::string key = "ATMLambda1";
+        static const std::string key = "Lambda1";
         return key;
     }
 
@@ -192,7 +237,7 @@ public:
      * Returns the name of the global parameter corresponding to lambda2
      */
     static const std::string& Lambda2() {
-        static const std::string key = "ATMLambda2";
+        static const std::string key = "Lambda2";
         return key;
     }
 
@@ -200,7 +245,7 @@ public:
      * Returns the name of the global parameter corresponding to lambda2
      */
     static const std::string& Alpha() {
-        static const std::string key = "ATMAlpha";
+        static const std::string key = "Alpha";
         return key;
     }
 
@@ -208,7 +253,7 @@ public:
      * Returns the name of the global parameter corresponding to u0
      */
     static const std::string& U0() {
-        static const std::string key = "ATMU0";
+        static const std::string key = "U0";
         return key;
     }
 
@@ -216,7 +261,7 @@ public:
      * Returns the name of the global parameter corresponding to w0
      */
     static const std::string& W0() {
-        static const std::string key = "ATMW0";
+        static const std::string key = "W0";
         return key;
     }
 
@@ -224,7 +269,7 @@ public:
      * Returns the name of the global parameter corresponding to umax
      */
     static const std::string& Umax() {
-        static const std::string key = "ATMUmax";
+        static const std::string key = "Umax";
         return key;
     }
 
@@ -232,7 +277,7 @@ public:
      * Returns the name of the global parameter corresponding to ubcore
      */
     static const std::string& Ubcore() {
-        static const std::string key = "ATMUbcore";
+        static const std::string key = "Ubcore";
         return key;
     }
 
@@ -240,7 +285,7 @@ public:
      * Returns the name of the global parameter corresponding to acore
      */
     static const std::string& Acore() {
-        static const std::string key = "ATMAcore";
+        static const std::string key = "Acore";
         return key;
     }
 
@@ -248,88 +293,19 @@ public:
      * Returns the name of the global parameter corresponding to direction
      */
     static const std::string& Direction() {
-        static const std::string key = "ATMDirection";
+        static const std::string key = "Direction";
         return key;
-    }
-
-    /**
-     *  Get the value of the lambda1 parameter passed in the constructor
-     */
-    double getDefaultLambda1() const {
-        return defaultLambda1;
-    }
-
-    /**
-     *  Get the value of the lambda2 parameter passed in the constructor
-     */
-    double getDefaultLambda2() const {
-        return defaultLambda2;
-    }
-
-    /**
-     *  Get the value of the alpha parameter passed in the constructor
-     */
-    double getDefaultAlpha() const {
-        return defaultAlpha;
-    }
-
-    /**
-     *  Get the value of the u0 parameter passed in the constructor
-     */
-    double getDefaultU0() const {
-        return defaultU0;
-    }
-
-    /**
-     *  Get the value of the w0 parameter passed in the constructor
-     */
-    double getDefaultW0() const {
-        return defaultW0;
-    }
-
-    /**
-     *  Get the value of the umax parameter passed in the constructor
-     */
-    double getDefaultUmax() const {
-        return defaultUmax;
-    }
-
-    /**
-     *  Get the value of the ubcore parameter passed in the constructor
-     */
-    double getDefaultUbcore() const {
-        return defaultUbcore;
-    }
-
-    /**
-     *  Get the value of the acore parameter passed in the constructor
-     */
-    double getDefaultAcore() const {
-        return defaultAcore;
-    }
-
-    /**
-     *  Get the value of the direction parameter passed in the constructor
-     */
-    double getDefaultDirection() const {
-        return defaultDirection;
     }
 
 protected:
   ForceImpl* createImpl() const;
 private:
-    //the forces that are recalculated after the coordinate transformation
-    std::vector<Force *> forces;
-
     class ParticleInfo;
+    class GlobalParameterInfo;
+    std::string energyExpression;
+    std::vector<GlobalParameterInfo> globalParameters;
+    std::vector<Force *> forces;
     std::vector<ParticleInfo> particles;
-
-    //softplus parameters
-    double defaultLambda1, defaultLambda2, defaultAlpha, defaultU0, defaultW0;
-    //soft core parameters
-    double defaultUmax, defaultUbcore, defaultAcore;
-    //alchemical direction parameter
-    double defaultDirection;
 };
 
 /**
@@ -350,7 +326,21 @@ class ATMForce::ParticleInfo {
   ParticleInfo(int particle, double dx, double dy, double dz) : particle(particle), dx(dx), dy(dy), dz(dz) {
   }
 };
- 
+
+/**
+ * This is an internal class used to record information about a global parameter.
+ * @private
+ */
+class ATMForce::GlobalParameterInfo {
+public:
+    std::string name;
+    double defaultValue;
+    GlobalParameterInfo() {
+    }
+    GlobalParameterInfo(const std::string& name, double defaultValue) : name(name), defaultValue(defaultValue) {
+    }
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_ATMFORCE_H_*/

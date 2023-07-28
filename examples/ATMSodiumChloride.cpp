@@ -321,7 +321,7 @@ myGetOpenMMState(MyOpenMMData* omm, bool wantEnergy,
     if (wantEnergy) { 
       energyInKcal = (state.getPotentialEnergy() + state.getKineticEnergy())
                         * OpenMM::KcalPerKJ;
-      pertenergyInKcal = omm->atm->getPerturbationEnergy(*(omm->context));
+//      pertenergyInKcal = omm->atm->getPerturbationEnergy(*(omm->context));
     }
     
 }

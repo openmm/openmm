@@ -44,6 +44,8 @@
 
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
+#include "lepton/ParsedExpression.h"
+#include "lepton/Parser.h"
 #include <cmath>
 #include <map>
 #include <set>
@@ -55,6 +57,21 @@ using namespace OpenMM;
 using namespace std;
 
 ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrator1(1.0), innerIntegrator2(1.0) {
+    Lepton::ParsedExpression expr = Lepton::Parser::parse(owner.getEnergyFunction()).optimize();
+    energyExpression = expr.createCompiledExpression();
+    u0DerivExpression = expr.differentiate("u0").createCompiledExpression();
+    u1DerivExpression = expr.differentiate("u1").createCompiledExpression();
+    for (int i = 0; i < owner.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(owner.getGlobalParameterName(i));
+    globalValues.resize(globalParameterNames.size());
+    map<string, double*> variableLocations;
+    variableLocations["u0"] = &state1Energy;
+    variableLocations["u1"] = &state2Energy;
+    for (int i = 0; i < globalParameterNames.size(); i++)
+        variableLocations[globalParameterNames[i]] = &globalValues[i];
+    energyExpression.setVariableLocations(variableLocations);
+    u0DerivExpression.setVariableLocations(variableLocations);
+    u1DerivExpression.setVariableLocations(variableLocations);
 }
 
 ATMForceImpl::~ATMForceImpl() {
@@ -108,34 +125,28 @@ double ATMForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForce
     kernel.getAs<CalcATMForceKernel>().copyState(context, innerContextImpl1, innerContextImpl2);
 
     //evaluate variable energy and forces for original system
-    double state1Energy = innerContextImpl1.calcForcesAndEnergy(true, true);
+    state1Energy = innerContextImpl1.calcForcesAndEnergy(true, true);
 
     //evaluate variable energy and force for the displaced system
-    double state2Energy = innerContextImpl2.calcForcesAndEnergy(true, true);
+    state2Energy = innerContextImpl2.calcForcesAndEnergy(true, true);
+
+    for (int i = 0; i < globalParameterNames.size(); i++)
+        globalValues[i] = context.getParameter(globalParameterNames[i]);
+    combinedEnergy = energyExpression.evaluate();
+    double dEdu0 = u0DerivExpression.evaluate();
+    double dEdu1 = u1DerivExpression.evaluate();
 
     //evaluate the alchemical energy
-    double energy = kernel.getAs<CalcATMForceKernel>().execute(context,
-            innerContextImpl1, innerContextImpl2,
-            state1Energy, state2Energy,
-            includeForces, includeEnergy);
+    kernel.getAs<CalcATMForceKernel>().applyForces(context, innerContextImpl1, innerContextImpl2, dEdu0, dEdu1);
 
-    //retrieve the perturbation energy
-    perturbationEnergy = kernel.getAs<CalcATMForceKernel>().getPerturbationEnergy();
-
-    return (includeEnergy ? energy : 0.0);
+    return (includeEnergy ? combinedEnergy : 0.0);
 }
 
 std::map<std::string, double> ATMForceImpl::getDefaultParameters() {
-    std::map<std::string, double> parameters;
-    parameters[ATMForce::Lambda1()] = getOwner().getDefaultLambda1();
-    parameters[ATMForce::Lambda2()] = getOwner().getDefaultLambda2();
-    parameters[ATMForce::Alpha()] = getOwner().getDefaultAlpha();
-    parameters[ATMForce::U0()] = getOwner().getDefaultU0();
-    parameters[ATMForce::W0()] = getOwner().getDefaultW0();
-    parameters[ATMForce::Umax()] = getOwner().getDefaultUmax();
-    parameters[ATMForce::Ubcore()] = getOwner().getDefaultUbcore();
-    parameters[ATMForce::Acore()] = getOwner().getDefaultAcore();
-    parameters[ATMForce::Direction()] = getOwner().getDefaultDirection();
+    map<string, double> parameters;
+    parameters.insert(innerContext1->getParameters().begin(), innerContext1->getParameters().end());
+    for (int i = 0; i < owner.getNumGlobalParameters(); i++)
+        parameters[owner.getGlobalParameterName(i)] = owner.getGlobalParameterDefaultValue(i);
     return parameters;
 }
 
@@ -157,4 +168,10 @@ vector<pair<int, int> > ATMForceImpl::getBondedParticles() const {
 
 void ATMForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcATMForceKernel>().copyParametersToContext(context, owner);
+}
+
+void ATMForceImpl::getPerturbationEnergy(double& u0, double& u1, double& energy) const {
+    u0 = state1Energy;
+    u1 = state2Energy;
+    energy = combinedEnergy;
 }

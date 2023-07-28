@@ -1,17 +1,14 @@
 KERNEL void hybridForce(int numParticles,
                         int paddedNumParticles,
                         GLOBAL mm_long* RESTRICT force,
-                        GLOBAL mm_long* RESTRICT force_state1,
-                        GLOBAL mm_long* RESTRICT force_state2,
-                        float sp) {
-    int i = GLOBAL_ID;
-    real lmb = sp;
-    real lmb1 = 1.0f - sp;
-    while (i < numParticles) {
-        force[i] += (mm_long) (lmb*force_state2[i] + lmb1*force_state1[i]);
-        force[i+paddedNumParticles] += (mm_long) (lmb*force_state2[i+paddedNumParticles] + lmb1*force_state1[i+paddedNumParticles]);
-        force[i+paddedNumParticles*2] += (mm_long) (lmb*force_state2[i+paddedNumParticles*2] + lmb1*force_state1[i+paddedNumParticles*2]);
-        i += GLOBAL_SIZE;
+                        GLOBAL mm_long* RESTRICT force1,
+                        GLOBAL mm_long* RESTRICT force2,
+                        real dEdu0,
+                        real dEdu1) {
+    for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
+        force[i] += (mm_long) (dEdu0*force1[i] + dEdu1*force2[i]);
+        force[i+paddedNumParticles] += (mm_long) (dEdu0*force1[i+paddedNumParticles] + dEdu1*force2[i+paddedNumParticles]);
+        force[i+paddedNumParticles*2] += (mm_long) (dEdu0*force1[i+paddedNumParticles*2] + dEdu1*force2[i+paddedNumParticles*2]);
     }
 }
 
@@ -27,26 +24,14 @@ KERNEL void copyState(int numParticles,
                       GLOBAL real4* RESTRICT posq2Correction
 #endif
                     ) {
-
-    //set the coordinates of the context for state 1
-    int i = GLOBAL_ID;
-    while (i < numParticles) {
-        posq1[i] = posq[i];
-#ifdef USE_MIXED_PRECISION
-        posq1Correction[i] = posqCorrection[i];
-#endif
-        i += GLOBAL_SIZE;
-    }
-
-    //set the coordinates of the context for state 2
-    i = GLOBAL_ID;
-    while (i < numParticles) {
+    for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
         real4 d = make_real4((real) displ[i].x, (real) displ[i].y, (real) displ[i].z, 0);
+        posq1[i] = posq[i];
         posq2[i] = posq[i] + d;
 #ifdef USE_MIXED_PRECISION
+        posq1Correction[i] = posqCorrection[i];
         posq2Correction[i] = posqCorrection[i];
 #endif
-        i += GLOBAL_SIZE;
     }
 }
 

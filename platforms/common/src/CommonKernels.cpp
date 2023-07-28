@@ -7789,20 +7789,6 @@ void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& contex
         cc.setAtomIndex(lastAtomOrder);
 }
 
-/* soft core function used by ATMForce */
-static double SoftCoreF(double u, double umax, double a, double ub, double& fp) {
-    if (u <= ub) {
-        fp = 1.;
-        return u;
-    }
-    double gu = (u - ub) / (a * (umax - ub)); //this is y/alpha
-    double zeta = 1. + 2. * gu * (gu + 1.);
-    double zetap = pow(zeta, a);
-    double s = 4. * (2. * gu + 1.) / zeta;
-    fp = s * zetap / pow(1. + zetap, 2);
-    return (umax - ub)*(zetap - 1.) / (zetap + 1.) + ub;
-}
-
 class CommonCalcATMForceKernel::ForceInfo : public ComputeForceInfo {
 public:
     ForceInfo(ComputeForceInfo& force) : force(force) {
@@ -7908,14 +7894,14 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
         }
 
         //create the HybridForce kernel
-        float sp = 0;
         hybridForceKernel = program->createKernel("hybridForce");
         hybridForceKernel->addArg(numParticles);
         hybridForceKernel->addArg(cc.getPaddedNumAtoms());
         hybridForceKernel->addArg(cc.getLongForceBuffer());
         hybridForceKernel->addArg(cc1.getLongForceBuffer());
         hybridForceKernel->addArg(cc2.getLongForceBuffer());
-        hybridForceKernel->addArg(sp); //argument 5 (sp) is set in execute()
+        hybridForceKernel->addArg();
+        hybridForceKernel->addArg();
 
         cc1.addForce(new ComputeForceInfo());
         cc2.addForce(new ComputeForceInfo());
@@ -7923,55 +7909,19 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
     }
 }
 
-double CommonCalcATMForceKernel::execute(ContextImpl& context,
-        ContextImpl& innerContext1, ContextImpl& innerContext2,
-        double State1Energy, double State2Energy,
-        bool includeForces, bool includeEnergy) {
+void CommonCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2,
+        double dEdu0, double dEdu1) {
     ContextSelector selector(cc);
-
     initKernels(context, innerContext1, innerContext2);
-
-    //softplus parameters
-    double lambda1 = context.getParameter(ATMForce::Lambda1());
-    double lambda2 = context.getParameter(ATMForce::Lambda2());
-    double alpha = context.getParameter(ATMForce::Alpha());
-    double u0 = context.getParameter(ATMForce::U0());
-    double w0 = context.getParameter(ATMForce::W0());
-
-    //softcore parameters
-    double umax = context.getParameter(ATMForce::Umax());
-    double ubcore = context.getParameter(ATMForce::Ubcore());
-    double acore = context.getParameter(ATMForce::Acore());
-
-    //alchemical direction
-    // 1 = from RA  (reference) to R+A (displaced)
-    //-1 = from R+A (displaced) to RA  (reference)
-    double alchemical_direction = context.getParameter(ATMForce::Direction());
-
-    //soft-core perturbation energy
-    double fp;
-    double u = alchemical_direction > 0 ? State2Energy - State1Energy : State1Energy - State2Energy;
-    double e0 = alchemical_direction > 0 ? State1Energy : State2Energy;
-    perturbationEnergy = SoftCoreF(u, umax, acore, ubcore, fp);
-
-    //softplus function
-    double ebias = 0.0;
-    double ee = 1.0 + exp(-alpha * (perturbationEnergy - u0));
-    if (alpha > 0) {
-        ebias = ((lambda2 - lambda1) / alpha) * log(ee);
+    if (cc.getUseDoublePrecision()) {
+        hybridForceKernel->setArg(5, dEdu0);
+        hybridForceKernel->setArg(6, dEdu1);
     }
-    ebias += lambda2 * perturbationEnergy + w0;
-    double bfp = (lambda2 - lambda1) / ee + lambda1;
-
-    //alchemical potential energy
-    double energy = e0 + ebias;
-
-    //hybridize forces and add them to the system's forces
-    float sp = alchemical_direction > 0 ? bfp * fp : 1. - bfp*fp;
-    hybridForceKernel->setArg(5, sp);
+    else {
+        hybridForceKernel->setArg(5, (float) dEdu0);
+        hybridForceKernel->setArg(6, (float) dEdu1);
+    }
     hybridForceKernel->execute(numParticles);
-
-    return (includeEnergy ? energy : 0.0);
 }
 
 void CommonCalcATMForceKernel::copyState(ContextImpl& context,
