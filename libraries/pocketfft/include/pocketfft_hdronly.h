@@ -53,6 +53,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cmath>
 #include <cstdlib>
+#include <cstddef>
 #include <stdexcept>
 #include <memory>
 #include <vector>
