@@ -69,17 +69,21 @@ void ATMForceImpl::copySystem(ContextImpl& context, const OpenMM::System& system
     Vec3 a, b, c;
     system.getDefaultPeriodicBoxVectors(a, b, c);
     innerSystem.setDefaultPeriodicBoxVectors(a, b, c);
-
     // Add forces to the inner contexts
     for (int i = 0; i < owner.getNumForces(); i++) {
         const Force &force = owner.getForce(i);
-        innerSystem.addForce(XmlSerializer::clone<Force>(force));
+	innerSystem.addForce(XmlSerializer::clone<Force>(force));
     }
 }
 
 void ATMForceImpl::initialize(ContextImpl& context) {
     const OpenMM::System& system = context.getSystem();
 
+    if ( owner.getNumParticles() != system.getNumParticles() ){
+      std::cout << owner.getNumParticles() << " " << system.getNumParticles() << std::endl;
+      throw OpenMMException("ATMForceImpl::initialize(): The number of atoms added to ATMForce is different from the number of atoms of the System");
+    }
+    
     copySystem(context, system, innerSystem1);
     copySystem(context, system, innerSystem2);
 

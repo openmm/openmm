@@ -1651,8 +1651,10 @@ private:
 
     //a copy of the displacement vectors stored in the force
     std::vector<mm_float4> displVector;
+    std::vector<mm_float4> displVector0;
     
     ComputeArray displ;
+    ComputeArray displ0;
     ComputeKernel copyStateKernel;
     ComputeKernel hybridForceKernel;
 

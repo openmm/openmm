@@ -2974,15 +2974,16 @@ static double softCoreF(double u, double umax, double a, double ub, double& fp) 
 }
 
 void ReferenceCalcATMForceKernel::initialize(const System& system, const ATMForce& force) {
-    int numParticles = force.getNumParticles();
-    particles.resize(numParticles);
+    numParticles = force.getNumParticles();
 
     //displacement map
     displ.resize(numParticles);
+    displ0.resize(numParticles);
     for (int i = 0; i < numParticles; i++) {
-        double dx, dy, dz;
-        force.getParticleParameters(i, particles[i], dx, dy, dz);
-        displ[i] = OpenMM::Vec3(dx, dy, dz);
+        vector<double> displacement;
+        force.getParticleParameters(i, displacement);
+        displ[i] = OpenMM::Vec3(displacement[0], displacement[1], displacement[2]);
+	displ0[i] = OpenMM::Vec3(displacement[3], displacement[4], displacement[5]);
     }
 }
 
@@ -2993,7 +2994,6 @@ double ReferenceCalcATMForceKernel::execute(ContextImpl& context, ContextImpl& i
     vector<Vec3>& force = extractForces(context);
     vector<Vec3>& force1 = extractForces(innerContext1);
     vector<Vec3>& force2 = extractForces(innerContext2);
-    int numParticles = particles.size();
 
     //softplus parameters
     double lambda1 = context.getParameter(ATMForce::Lambda1());
@@ -3048,8 +3048,15 @@ double ReferenceCalcATMForceKernel::execute(ContextImpl& context, ContextImpl& i
 
 void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2) {
     vector<Vec3>& pos = extractPositions(context);
-    extractPositions(innerContext1) = pos;
 
+    //in state 0, particles are displaced by displ0
+    vector<Vec3> pos1(pos);
+    for(int i=0; i < pos1.size(); i++){
+      pos1[i] += displ0[i];
+    }
+    extractPositions(innerContext1) = pos1;
+
+    //in state 1, particles are displaced by displ
     vector<Vec3> pos2(pos);
     for (int i = 0; i < pos2.size(); i++) {
         pos2[i] += displ[i];
@@ -3077,15 +3084,15 @@ void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& i
 }
 
 void ReferenceCalcATMForceKernel::copyParametersToContext(ContextImpl& context, const ATMForce& force) {
-    if (force.getNumParticles() != particles.size())
+    if (force.getNumParticles() != numParticles)
         throw OpenMMException("copyParametersToContext: The number of ATMForce particles has changed");
-    for (int i = 0; i < force.getNumParticles(); i++) {
-        int p;
-        double dx, dy, dz;
-        force.getParticleParameters(i, p, dx, dy, dz);
-        if (p != particles[i])
-            throw OpenMMException("ReferenceCalcATMForceKernel::copyParametersToContext: A particle index has changed");
-        displ.push_back(OpenMM::Vec3(dx, dy, dz));
+    displ.resize(numParticles);
+    displ0.resize(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        vector<double> displacement;
+        force.getParticleParameters(i, displacement );
+        displ[i] = OpenMM::Vec3(displacement[0], displacement[1], displacement[2]);
+	displ0[i] = OpenMM::Vec3(displacement[3], displacement[4], displacement[5]);
     }
 }
 

@@ -101,35 +101,46 @@ public:
      * Normally, all of the particles in the OpenMM's System should be added to the ATMForce
      * in the same order as they appear in the System.
      *
-     * @param particle    the index of the particle
-     * @param dx          the x component of the displacement vector in nm
-     * @param dy          the y component of the displacement vector in nm
-     * @param dz          the z component of the displacement vector in nm
+     * @param displacement  the displacement vector in nm
      * @return the index of the particle that was added
+     *
+     * The displacement vector can have 3 or 6 elements. A displacement with 3 elements
+     * specifies the x, y, z coordinates of the displacement for the target state and 
+     * the particle is not displaced in the initial state (most common).
+     *
+     * If the displacement has 6 elements, the first 3 specify the x, y, z coordinates of 
+     * the displacement for the target state as above, and the last 3 elements specify the coordinates 
+     * of the displacement for the initial state.
      */
-    int addParticle(int particle, double dx, double dy, double dz);
+    int addParticle(const std::vector<double>& displacement=std::vector<double>());
 
     /**
-     * Get the parameters for a particle
+     * Get the parameters for a particle.
      * 
-     * @param index      the index in the force for the particle for which to get parameters
-     * @param particle   the index of the particle
-     * @param dx         the x component of the displacement vector in nm
-     * @param dy         the y component of the displacement vector in nm
-     * @param dz         the z component of the displacement vector in nm
+     * @param index          the index in the force for the particle for which to get parameters
+     * @param displacement   the displacement vector of the particle
+     *
+     * The displacement vector has 6 elements. The first 3 elements specify the coordinates
+     * of the displacement in the target state and the last 3 elements specify the coordinates
+     * of the displacement in the initial state.
      */
-    void getParticleParameters(int index, int& particle, double& dx, double &dy, double &dz) const;
+    void getParticleParameters(int index, std::vector<double>& displacement ) const;
 
     /**
-     * Set the parameters for a particle
+     * Set the parameters for a particle.
      * 
-     * @param index      the index in the force of the particle for which to set parameters
-     * @param particle   the particle associated with this index
-     * @param dx         the x component of the displacement vector in nm
-     * @param dy         the y component of the displacement vector in nm
-     * @param dz         the z component of the displacement vector in nm
+     * @param index        the index in the force of the particle for which to set parameters
+     * @param dislacement  the displacement vector in nm
+     *
+     * The displacement vector can have 3 or 6 elements. A displacement with 3 elements
+     * specifies the x, y, z coordinates of the displacement for the target state. 
+     * In this case, the particle is not displaced in the initial state (most common).
+     *
+     * If the displacement has 6 elements, the first 3 specify the x, y, z coordinates of 
+     * the displacement for the target state as above, and the last 3 elements specify the coordinates 
+     * of the displacement for the initial state.
      */
-    void setParticleParameters(int index, int particle, double dx, double dy, double dz);
+    void setParticleParameters(int index, const std::vector<double>& displacement);
     
     /**
      * Update the per-particle parameters in a Context to match those stored in this Force object.  This method 
@@ -138,9 +149,6 @@ public:
      * cannot be changed.
      */
     void updateParametersInContext(Context& context);
-
-
-    /* TO DO */
     
     /**
      * return the number of Forces included in the ATM Force
@@ -338,16 +346,20 @@ private:
  */
 class ATMForce::ParticleInfo {
  public:
-  int particle;
+  int index;
   double dx, dy, dz;
+  double dx0, dy0, dz0;
   ParticleInfo() {
-    particle = -1;
+    index = -1;
     dx = dy = dz = 0.0;
+    dx0 = dy0 = dz0 = 0.0;
   }
-  ParticleInfo(int particle) : particle(particle) {
+  ParticleInfo(int index) : index(index) {
     dx = dy = dz = 0.0;
+    dx0 = dy0 = dz0 = 0.0;
   }
-  ParticleInfo(int particle, double dx, double dy, double dz) : particle(particle), dx(dx), dy(dy), dz(dz) {
+  ParticleInfo(int index, double dx, double dy, double dz, double dx0, double dy0, double dz0) :
+    index(index), dx(dx), dy(dy), dz(dz), dx0(dx0), dy0(dy0), dz0(dz0) {
   }
 };
  
