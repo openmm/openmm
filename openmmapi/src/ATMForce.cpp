@@ -78,25 +78,21 @@ void ATMForce::setEnergyFunction(const std::string& energy) {
     energyExpression = energy;
 }
 
-int ATMForce::addParticle(int particle, double dx, double dy, double dz) {
-    particles.push_back(ParticleInfo(particle, dx, dy, dz));
+int ATMForce::addParticle( Vec3 displacement1, Vec3 displacement0  ) {
+    particles.push_back(ParticleInfo(particles.size(), displacement1, displacement0));
     return particles.size()-1;
 }
 
-void ATMForce::getParticleParameters(int index, int& particle, double& dx, double &dy, double &dz) const {
+void ATMForce::getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0 ) const {
     ASSERT_VALID_INDEX(index, particles);
-    particle = particles[index].particle;
-    dx = particles[index].dx;
-    dy = particles[index].dy;
-    dz = particles[index].dz;
+    displacement1 = particles[index].displacement1;
+    displacement0 = particles[index].displacement0;
 }
 
-void ATMForce::setParticleParameters(int index, int particle, double dx, double dy, double dz) {
+void ATMForce::setParticleParameters(int index, Vec3 displacement1, Vec3 displacement0 ) {
     ASSERT_VALID_INDEX(index, particles);
-    particles[index].particle = particle;
-    particles[index].dx = dx;
-    particles[index].dy = dy;
-    particles[index].dz = dz;
+    particles[index].displacement1 = displacement1;
+    particles[index].displacement0 = displacement0;
 }
 
 int ATMForce::addForce(Force* force) {

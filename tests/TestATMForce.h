@@ -59,19 +59,11 @@ void test2Particles() {
     system.addParticle(1.0);
     system.addParticle(1.0);
 
-    double lambda1 = 0.5;
-    double lambda2 = 0.5;
-    double alpha = 0.1;
-    double u0 = 0.0;
-    double w0 = 0.0;
+    double lmbd = 0.5;
     double umax = 1.e6;
     double ubcore= 0.5*1.e6;
     double acore = 1./16.;
     double direction = 1.0;
-
-    double displx = 1.0;
-    double disply = 0.;
-    double displz = 0.;
 
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
@@ -80,9 +72,11 @@ void test2Particles() {
     CustomBondForce* bond = new CustomBondForce("0.5*r^2");
     bond->addBond(0, 1);
 
-    ATMForce* atm = new ATMForce(lambda1, lambda2, alpha, u0, w0, umax, ubcore, acore, direction);
-    atm->addParticle(0, 0., 0., 0.);
-    atm->addParticle(1, displx, disply, displz);
+    ATMForce* atm = new ATMForce(lmbd, lmbd, 0.1, 0, 0, umax, ubcore, acore, direction);
+    Vec3 nodispl = Vec3(0., 0., 0.);
+    Vec3   displ = Vec3(1., 0., 0.);
+    atm->addParticle( nodispl );
+    atm->addParticle(   displ );
     atm->addForce(bond);
     system.addForce(atm);
 
@@ -90,22 +84,93 @@ void test2Particles() {
     Context context(system, integrator, platform);
     context.setPositions(positions);
 
-    for (double lmbd : {0.0, 0.5, 1.0}) {
-        context.setParameter(ATMForce::Lambda1(), lmbd);
-        context.setParameter(ATMForce::Lambda2(), lmbd);
+    for (double lm : {0.0, 0.5, 1.0}) {
+        context.setParameter(ATMForce::Lambda1(), lm);
+        context.setParameter(ATMForce::Lambda2(), lm);
         State state = context.getState(State::Energy | State::Forces);
         double epot = state.getPotentialEnergy();
         double u0, u1, energy;
         atm->getPerturbationEnergy(context, u0, u1, energy);
-        ASSERT_EQUAL_TOL(lmbd, context.getParameter(atm->Lambda1()), 1e-6);
-        ASSERT_EQUAL_TOL(lmbd, context.getParameter(atm->Lambda2()), 1e-6);
+	double epert = u1 - u0;
+        ASSERT_EQUAL_TOL(lm, context.getParameter(atm->Lambda1()), 1e-6);
+        ASSERT_EQUAL_TOL(lm, context.getParameter(atm->Lambda2()), 1e-6);
         ASSERT_EQUAL_TOL(energy, epot, 1e-6);
-        ASSERT_EQUAL_TOL(lmbd*0.5*displx*displx, epot, 1e-6);
+        ASSERT_EQUAL_TOL(lm*0.5*displ[0]*displ[0], epot, 1e-6);
         ASSERT_EQUAL_TOL(0.0, u0, 1e-6);
-        ASSERT_EQUAL_TOL(0.5*displx*displx, u1, 1e-6);
-        ASSERT_EQUAL_VEC(Vec3(-lmbd*displx, 0.0, 0.0), state.getForces()[1], 1e-6);
+        ASSERT_EQUAL_TOL(0.5*displ[0]*displ[0], u1, 1e-6);
+	ASSERT_EQUAL_TOL(0.5*displ[0]*displ[0], epert, 1e-6);
+        ASSERT_EQUAL_VEC(Vec3(-lm*displ[0], 0.0, 0.0), state.getForces()[1], 1e-6);
     }
 }
+
+
+void test2Particles2Displacement0() {
+    // A pair of particles tethered by an harmonic bond. 
+    // Displace the second one to test energy and forces at different lambda values
+    // In this version the second particle is displaced in both the initial and final states
+    // by different amounts.
+  
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+
+    double lmbd = 0.5;
+    double umax = 1.e6;
+    double ubcore= 0.5*1.e6;
+    double acore = 1./16.;
+    double direction = 1.0;
+
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 0, 0);
+
+    CustomBondForce* bond = new CustomBondForce("0.5*r^2");
+    bond->addBond(0, 1);
+    
+    ATMForce* atm = new ATMForce(lmbd, lmbd, 0.1, 0., 0., umax, ubcore, acore, direction);
+    //first particle is not displaced at either state
+    Vec3 nodispl = Vec3(0., 0., 0.);
+    atm->addParticle( nodispl );
+    //second particle is displaced at both states but by the same amount (1,0,0)
+    Vec3 displ0 = Vec3(1., 0., 0.);
+    atm->addParticle( displ0, displ0 );
+    atm->addForce(bond);
+    system.addForce(atm);
+
+    VerletIntegrator integrator(1.0);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    State state;
+    double epot, epert;
+    double u0, u1, energy;
+    
+    // U = U0 + lambda*epert; epert = U1 - U0
+
+    // When the second particle is displaced by the same amount at each state,
+    // the perturbation energy should be zero since the second particle
+    // is at the same position in the target and initial states,
+    // and the potential energy should be U0, the energy of the bond with the
+    // second particle displaced
+    state = context.getState(State::Energy | State::Forces);
+    epot = state.getPotentialEnergy();
+    atm->getPerturbationEnergy(context, u0, u1, energy);
+    epert = u1 - u0;
+    ASSERT_EQUAL_TOL(0.5*displ0[0]*displ0[0], epot, 1e-6);
+    ASSERT_EQUAL_TOL(0.0, epert, 1e-6);
+
+    //Displace the second particle further in the target state
+    Vec3 displ1 = Vec3(2., 0., 0.);
+    atm->setParticleParameters(1, displ1, displ0 );
+    atm->updateParametersInContext(context);
+    state = context.getState(State::Energy | State::Forces);
+    epot = state.getPotentialEnergy();
+    atm->getPerturbationEnergy(context, u0, u1, energy);
+    epert = u1 - u0;
+    ASSERT_EQUAL_TOL(0.5*displ1[0]*displ1[0] - 0.5*displ0[0]*displ0[0], epert, 1e-6);
+    ASSERT_EQUAL_TOL(0.5*displ0[0]*displ0[0] + lmbd*epert, epot, 1e-6);
+}
+
 
 void test2ParticlesNonbonded() {
 
@@ -120,9 +185,10 @@ void test2ParticlesNonbonded() {
     system.addForce(nbforce);
 
     ATMForce* atm = new ATMForce(0.0, 0.0, 0.1, 0.0, 0.0, 1e6, 5e5, 1.0/16, 1.0);
-    atm->addParticle(0, 0., 0., 0. );
-    atm->addParticle(1, 1., 0., 0. );
-    //atm->addForce(nbforce);
+    Vec3 nodispl = Vec3(0., 0., 0.);
+    Vec3   displ = Vec3(1., 0., 0.);
+    atm->addParticle( nodispl );
+    atm->addParticle(   displ );
     atm->addForce(XmlSerializer::clone<Force>(*nbforce));
     system.removeForce(0);
     system.addForce(atm);
@@ -140,9 +206,11 @@ void test2ParticlesNonbonded() {
     context.setParameter(ATMForce::Lambda2(), lambda);
     State state = context.getState( State::Energy );
     double epot = state.getPotentialEnergy();
-//    double epert = atm->getPerturbationEnergy(context);
+    double u0, u1, energy;
+    atm->getPerturbationEnergy(context, u0, u1, energy);
+    double epert = u1 - u0;
     ASSERT_EQUAL_TOL(-104.2320, epot,  1e-3);
-//    ASSERT_EQUAL_TOL(  69.4062, epert, 1e-3);
+    ASSERT_EQUAL_TOL(  69.4062, epert, 1e-3);
     // std::cout << "Nonbonded: epot = " << epot << std::endl;
     // std::cout << "Nonbonded: epert = " << epert << std::endl;
 }
@@ -165,7 +233,7 @@ void testLargeSystem() {
         Vec3 d(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
         displacements.push_back(d);
         external->addParticle(i);
-        atm->addParticle(i, d[0], d[1], d[2]);
+        atm->addParticle(d);
     }
 
     // Also add a nonbonded force to trigger atom reordering on the GPU.
@@ -231,6 +299,7 @@ int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         test2Particles();
+	test2Particles2Displacement0();
 	test2ParticlesNonbonded();
         testLargeSystem();
         testMolecules();

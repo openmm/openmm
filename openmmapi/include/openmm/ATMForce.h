@@ -37,6 +37,7 @@
 
 #include "Force.h"
 #include "internal/AssertionUtilities.h"
+#include <openmm/Vec3.h>
 #include <vector>
 #include <string>
 #include "internal/windowsExport.h"
@@ -66,7 +67,7 @@ public:
      * Create an ATMForce object. 
      *
      * @param energy   an algebraic expression giving the energy of the system as a function
-     *                 of u0 and u1
+     *                 of u0 and u1, the energies before and after displacement
      */
     explicit ATMForce(const std::string& energy);
     /**
@@ -140,33 +141,27 @@ public:
      * Normally, all of the particles in the OpenMM's System should be added to the ATMForce
      * in the same order as they appear in the System.
      *
-     * @param particle    the index of the particle
-     * @param dx          the x component of the displacement vector in nm
-     * @param dy          the y component of the displacement vector in nm
-     * @param dz          the z component of the displacement vector in nm
-     * @return the index of the particle that was added
+     * @param displacement1    the displacement of the particle for the target state in nm
+     * @param displacement0    the displacement of the particle for the initial state in nm
+     * @return                 the index of the particle that was added
      */
-    int addParticle(int particle, double dx, double dy, double dz);
+    int addParticle( Vec3 displacement1, Vec3 displacement0=Vec3());
     /**
      * Get the parameters for a particle
      * 
-     * @param index      the index in the force for the particle for which to get parameters
-     * @param particle   the index of the particle
-     * @param dx         the x component of the displacement vector in nm
-     * @param dy         the y component of the displacement vector in nm
-     * @param dz         the z component of the displacement vector in nm
+     * @param index           the index in the force for the particle for which to get parameters
+     * @param displacement1   the the displacement of the particle for the target state in nm
+     * @param displacement0   the the displacement of the particle for the initial state in nm
      */
-    void getParticleParameters(int index, int& particle, double& dx, double &dy, double &dz) const;
+    void getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0) const;
     /**
      * Set the parameters for a particle
      * 
-     * @param index      the index in the force of the particle for which to set parameters
-     * @param particle   the particle associated with this index
-     * @param dx         the x component of the displacement vector in nm
-     * @param dy         the y component of the displacement vector in nm
-     * @param dz         the z component of the displacement vector in nm
+     * @param index           the index in the force of the particle for which to set parameters
+     * @param displacement1   the displacement of the particle for the target state in nm
+     * @param displacement0   the displacement of the particle for the initial state in nm
      */
-    void setParticleParameters(int index, int particle, double dx, double dy, double dz);
+    void setParticleParameters(int index, Vec3 displacement1, Vec3 displacement0=Vec3());
     /**
      * Add a new global parameter that the interaction may depend on.  The default value provided to
      * this method is the initial value of the parameter in newly created Contexts.  You can change
@@ -314,16 +309,20 @@ private:
  */
 class ATMForce::ParticleInfo {
  public:
-  int particle;
-  double dx, dy, dz;
+  int index;
+  Vec3 displacement1;
+  Vec3 displacement0;
   ParticleInfo() {
-    particle = -1;
-    dx = dy = dz = 0.0;
+    index = -1;
+    displacement1 = Vec3();
+    displacement0 = Vec3();
   }
-  ParticleInfo(int particle) : particle(particle) {
-    dx = dy = dz = 0.0;
+  ParticleInfo( int index ) : index(index) {
+    displacement1 = Vec3();
+    displacement0 = Vec3();
   }
-  ParticleInfo(int particle, double dx, double dy, double dz) : particle(particle), dx(dx), dy(dy), dz(dz) {
+  ParticleInfo(int index, Vec3 displacement1, Vec3 displacement0) :
+    index(index), displacement1(displacement1), displacement0(displacement0) {
   }
 };
 

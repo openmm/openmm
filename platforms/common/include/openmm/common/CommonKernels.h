@@ -1649,9 +1649,11 @@ private:
     ComputeContext& cc;
 
     //a copy of the displacement vectors stored in the force
-    std::vector<mm_float4> displVector;
-    
-    ComputeArray displ;
+    std::vector<mm_float4> displVector1;
+    std::vector<mm_float4> displVector0;
+
+    ComputeArray displ1;
+    ComputeArray displ0;
     ComputeKernel copyStateKernel;
     ComputeKernel hybridForceKernel;
 
