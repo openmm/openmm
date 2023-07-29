@@ -145,7 +145,7 @@ public:
      * @param displacement0    the displacement of the particle for the initial state in nm
      * @return                 the index of the particle that was added
      */
-    int addParticle( Vec3 displacement1, Vec3 displacement0=Vec3());
+    int addParticle(const Vec3& displacement1, const Vec3& displacement0=Vec3());
     /**
      * Get the parameters for a particle
      * 
@@ -161,7 +161,7 @@ public:
      * @param displacement1   the displacement of the particle for the target state in nm
      * @param displacement0   the displacement of the particle for the initial state in nm
      */
-    void setParticleParameters(int index, Vec3 displacement1, Vec3 displacement0=Vec3());
+    void setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0=Vec3());
     /**
      * Add a new global parameter that the interaction may depend on.  The default value provided to
      * this method is the initial value of the parameter in newly created Contexts.  You can change
