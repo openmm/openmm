@@ -76,7 +76,7 @@ public:
      * @param lambda1    the lambda1 parameter of the softplus alchemical potential (dimensionless)
      * @param lambda2    the lambda2 parameter of the softplus alchemical potential (dimensionless)
      * @param alpha      the alpha   parameter of the softplus alchemical potential (kJ/mol)^-1
-     * @param u0         the u0      parameter of the softplus alchemical potential (kJ/mol)
+     * @param uh         the uh      parameter of the softplus alchemical potential (kJ/mol)
      * @param w0         the w0      parameter of the softplus alchemical potential (kJ/mol)
      * @param direction  the direction parameter (dimensionless)
      *
@@ -91,7 +91,7 @@ public:
      *
      * @return An ATMForce object
      */
-    ATMForce(double lambda1, double lambda2, double alpha, double u0, double w0, double umax, double ubcore, double acore, double direction);
+    ATMForce(double lambda1, double lambda2, double alpha, double uh, double w0, double umax, double ubcore, double acore, double direction);
     ~ATMForce();
 
     /**
@@ -245,10 +245,10 @@ public:
     }
 
     /**
-     * Returns the name of the global parameter corresponding to u0
+     * Returns the name of the global parameter corresponding to uh
      */
-    static const std::string& U0() {
-        static const std::string key = "U0";
+    static const std::string& Uh() {
+        static const std::string key = "Uh";
         return key;
     }
 

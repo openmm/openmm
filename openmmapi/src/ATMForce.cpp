@@ -39,6 +39,8 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/AssertionUtilities.h"
 #include <iostream>
+#include <cmath>
+#include <string>
 
 using namespace OpenMM;
 using namespace std;
@@ -46,22 +48,32 @@ using namespace std;
 ATMForce::ATMForce(const string& energy) : energyExpression(energy) {
 }
 
-ATMForce::ATMForce(double lambda1, double lambda2, double alpha, double u0, double w0, double umax, double ubcore, double acore, double direction) {
-    setEnergyFunction(
-            "select(step(direction), u0, u1) - ((Lambda2-Lambda1)/Alpha)*log(1+exp(-Alpha*(usc-U0))) + Lambda2*usc + W0;"
-                      "usc = select(step(u-Ubcore), (Umax-Ubcore)*fsc+Ubcore, u);"
-                      "fsc = (z^Acore-1)/(z^Acore+1);"
-                      "z = 1 + 2*(y/Acore) + 2*(y/Acore)^2;"
-                      "y = (u-Ubcore)/(Umax-Ubcore);"
-                      "u = Direction*(u1-u0)");
+ATMForce::ATMForce(double lambda1, double lambda2, double alpha, double uh, double w0, double umax, double ubcore, double acore, double direction) {
+    string referencePotExpression = "select(step(Direction), u0, u1) + ";
+    string alchemicalPotExpression = "select(Lambda2-Lambda1 , ((Lambda2-Lambda1)/Alpha)*log(1+exp(-Alpha*(usc-Uh))) + Lambda2*usc + W0, Lambda2*usc + W0);";
+    string softCoreExpression = "usc = select( acore, select(step(u-Ubcore), (Umax-Ubcore)*fsc+Ubcore, u), u);"
+                                "fsc = (z^Acore-1)/(z^Acore+1);"
+                                "z = 1 + 2*(y/Acore) + 2*(y/Acore)^2;"
+                                "y = (u-Ubcore)/(Umax-Ubcore);"
+	                        "u = Direction*(u1-u0)";
+    setEnergyFunction( referencePotExpression + alchemicalPotExpression + softCoreExpression);
+
+    double tol = 1.e-8;
     addGlobalParameter(Lambda1(), lambda1);
     addGlobalParameter(Lambda2(), lambda2);
+    ASSERT( alpha >= 0. );
+    if ( fabs(lambda2-lambda1) > tol ){
+      ASSERT( alpha > tol);
+    }
     addGlobalParameter(Alpha(), alpha);
-    addGlobalParameter(U0(), u0);
+    addGlobalParameter(Uh(), uh);
     addGlobalParameter(W0(), w0);
+    ASSERT( umax >= ubcore )
     addGlobalParameter(Umax(), umax);
     addGlobalParameter(Ubcore(), ubcore);
+    ASSERT( acore >= 0 )
     addGlobalParameter(Acore(), acore);
+    ASSERT_EQUAL_TOL( 1., fabs(direction), tol)
     addGlobalParameter(Direction(), direction);
 }
 

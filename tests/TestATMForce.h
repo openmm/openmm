@@ -60,9 +60,9 @@ void test2Particles() {
     system.addParticle(1.0);
 
     double lmbd = 0.5;
-    double umax = 1.e6;
-    double ubcore= 0.5*1.e6;
-    double acore = 1./16.;
+    double umax =  0.;
+    double ubcore= 0.;
+    double acore = 0.;
     double direction = 1.0;
 
     vector<Vec3> positions(2);
@@ -72,7 +72,7 @@ void test2Particles() {
     CustomBondForce* bond = new CustomBondForce("0.5*r^2");
     bond->addBond(0, 1);
 
-    ATMForce* atm = new ATMForce(lmbd, lmbd, 0.1, 0, 0, umax, ubcore, acore, direction);
+    ATMForce* atm = new ATMForce(lmbd, lmbd, 0., 0, 0, umax, ubcore, acore, direction);
     Vec3 nodispl = Vec3(0., 0., 0.);
     Vec3   displ = Vec3(1., 0., 0.);
     atm->addParticle( nodispl );
@@ -115,9 +115,9 @@ void test2Particles2Displacement0() {
     system.addParticle(1.0);
 
     double lmbd = 0.5;
-    double umax = 1.e6;
-    double ubcore= 0.5*1.e6;
-    double acore = 1./16.;
+    double umax = 0.;
+    double ubcore= 0.;
+    double acore = 0.;
     double direction = 1.0;
 
     vector<Vec3> positions(2);
@@ -127,7 +127,7 @@ void test2Particles2Displacement0() {
     CustomBondForce* bond = new CustomBondForce("0.5*r^2");
     bond->addBond(0, 1);
     
-    ATMForce* atm = new ATMForce(lmbd, lmbd, 0.1, 0., 0., umax, ubcore, acore, direction);
+    ATMForce* atm = new ATMForce(lmbd, lmbd, 0., 0., 0., umax, ubcore, acore, direction);
     //first particle is not displaced at either state
     Vec3 nodispl = Vec3(0., 0., 0.);
     atm->addParticle( nodispl );
@@ -184,7 +184,7 @@ void test2ParticlesNonbonded() {
 
     system.addForce(nbforce);
 
-    ATMForce* atm = new ATMForce(0.0, 0.0, 0.1, 0.0, 0.0, 1e6, 5e5, 1.0/16, 1.0);
+    ATMForce* atm = new ATMForce(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
     Vec3 nodispl = Vec3(0., 0., 0.);
     Vec3   displ = Vec3(1., 0., 0.);
     atm->addParticle( nodispl );
