@@ -51,7 +51,7 @@ ATMForce::ATMForce(const string& energy) : energyExpression(energy) {
 ATMForce::ATMForce(double lambda1, double lambda2, double alpha, double uh, double w0, double umax, double ubcore, double acore, double direction) {
     string referencePotExpression = "select(step(Direction), u0, u1) + ";
     string alchemicalPotExpression = "select(Lambda2-Lambda1 , ((Lambda2-Lambda1)/Alpha)*log(1+exp(-Alpha*(usc-Uh))) + Lambda2*usc + W0, Lambda2*usc + W0);";
-    string softCoreExpression = "usc = select( acore, select(step(u-Ubcore), (Umax-Ubcore)*fsc+Ubcore, u), u);"
+    string softCoreExpression = "usc = select( Acore, select(step(u-Ubcore), (Umax-Ubcore)*fsc+Ubcore, u), u);"
                                 "fsc = (z^Acore-1)/(z^Acore+1);"
                                 "z = 1 + 2*(y/Acore) + 2*(y/Acore)^2;"
                                 "y = (u-Ubcore)/(Umax-Ubcore);"

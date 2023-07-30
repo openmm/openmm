@@ -172,6 +172,68 @@ void test2Particles2Displacement0() {
 }
 
 
+double softCoreFunc(double u, double umax, double ub, double a, double &df){
+  double usc = u;
+  df = 1.;
+
+  if(u > ub){
+    double gu = (u-ub)/(a*(umax-ub)); //this is y/alpha
+    double zeta = 1. + 2.*gu*(gu + 1.) ;
+    double zetap = pow( zeta , a );
+    double s = 4.*(2.*gu + 1.)/zeta;
+    df = s*zetap/pow(1.+zetap,2);
+    usc = (umax-ub)*(zetap - 1.)/(zetap + 1.) + ub;
+  }
+  return usc;
+}
+
+void test2ParticlesSoftCore() {
+    // Similar to test2Particles() but employing a soft-core function
+
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+
+    double lmbd = 0.5;
+    double umax =  10.;
+    double ubcore= 3.;
+    double acore = 0.125;
+    double direction = 1.0;
+
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 0, 0);
+
+    CustomBondForce* bond = new CustomBondForce("0.5*r^2");
+    bond->addBond(0, 1);
+
+    ATMForce* atm = new ATMForce(lmbd, lmbd, 0., 0, 0, umax, ubcore, acore, direction);
+    Vec3 nodispl = Vec3(0., 0., 0.);
+    Vec3   displ = Vec3(5., 0., 0.);
+    atm->addParticle( nodispl );
+    atm->addParticle(   displ );
+    atm->addForce(bond);
+    system.addForce(atm);
+
+    VerletIntegrator integrator(1.0);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    State state = context.getState(State::Energy | State::Forces);
+    double epot = state.getPotentialEnergy();
+    double u0, u1, energy;
+    atm->getPerturbationEnergy(context, u1, u0, energy);
+    double epert = u1 - u0;
+    double ee = 0.5*displ[0]*displ[0];
+    double df;
+    ASSERT_EQUAL_TOL(energy, epot, 1e-6);
+    ASSERT_EQUAL_TOL(0.0, u0, 1e-6);
+    ASSERT_EQUAL_TOL(ee,  u1, 1e-6);
+    ASSERT_EQUAL_TOL(ee,  epert, 1e-6);
+    ASSERT_EQUAL_TOL(u0 + lmbd*softCoreFunc(epert, umax, ubcore, acore, df), epot, 1e-6);
+    ASSERT_EQUAL_VEC(Vec3(-lmbd*df*displ[0], 0.0, 0.0), state.getForces()[1], 1e-6);
+}
+
 void test2ParticlesNonbonded() {
 
     System system;
@@ -300,6 +362,7 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         test2Particles();
 	test2Particles2Displacement0();
+	test2ParticlesSoftCore();
 	test2ParticlesNonbonded();
         testLargeSystem();
         testMolecules();
