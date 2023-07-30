@@ -219,7 +219,7 @@ public:
      * The perturbation energy is U2(x) - U1(x) (for direction = 1) or U1(x) - U2(x) (for direction = -1),
      * as further modified by the soft-core function.
      */
-    void getPerturbationEnergy(const Context& context, double& u0, double& u1, double& energy) const;
+    void getPerturbationEnergy(const Context& context, double& u1, double& u0, double& energy) const;
     /**
      * Returns the name of the global parameter corresponding to lambda1
      */

@@ -1611,7 +1611,7 @@ public:
      * @param dEdu0          the derivative of the final energy with respect to the first inner context's energy
      * @param dEdu1          the derivative of the final energy with respect to the second inner context's energy
      */
-    void applyForces(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2,
+    void applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
                      double dEdu0, double dEdu1);
     /**
      * Copy changed parameters over to a context.
@@ -1629,12 +1629,6 @@ public:
      */
     void copyState(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2);
     /**
-     * Get the perturbation energy calculated in the most recent call to execute().
-     */
-    double getPerturbationEnergy(void) {
-        return perturbationEnergy;
-    }
-    /**
      * Get the ComputeContext corresponding to the inner Context.
      */
     virtual ComputeContext& getInnerComputeContext(ContextImpl& innerContext) = 0;
@@ -1643,12 +1637,11 @@ private:
     class ForceInfo;
     class ReorderListener;
     
-    void initKernels(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2);
+    void initKernels(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1);
     
     bool hasInitializedKernel;
     ComputeContext& cc;
 
-    //a copy of the displacement vectors stored in the force
     std::vector<mm_float4> displVector1;
     std::vector<mm_float4> displVector0;
 
@@ -1658,7 +1651,6 @@ private:
     ComputeKernel hybridForceKernel;
 
     int numParticles;
-    double perturbationEnergy;
 };
 
   

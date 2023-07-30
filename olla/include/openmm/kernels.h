@@ -1659,12 +1659,12 @@ public:
      * Scale the forces from the inner contexts and apply them to the main context.
      *
      * @param context        the context in which to execute this kernel
-     * @param innerContext1  the first inner context
-     * @param innerContext2  the second inner context
+     * @param innerContext0  the first inner context
+     * @param innerContext1  the second inner context
      * @param dEdu0          the derivative of the final energy with respect to the first inner context's energy
      * @param dEdu1          the derivative of the final energy with respect to the second inner context's energy
      */
-    virtual void applyForces(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2,
+    virtual void applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
                              double dEdu0, double dEdu1) = 0;
     /**
      * Copy changed parameters over to a context.
@@ -1677,15 +1677,10 @@ public:
      * Copy state information to the inner contexts.
      *
      * @param context        the context in which to execute this kernel
-     * @param innerContext1  the first context created by the ATMForce for computing displaced energy
-     * @param innerContext2  the second context created by the ATMForce for computing displaced energy
+     * @param innerContext0  the first context created by the ATMForce for computing displaced energy
+     * @param innerContext1  the second context created by the ATMForce for computing displaced energy
      */
-    virtual void copyState(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2) = 0;
-    /**
-     * Get the perturbation energy calculated in the most recent call to execute().
-     */
-    virtual double getPerturbationEnergy(void) = 0;
-
+    virtual void copyState(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1) = 0;
 };
 
   

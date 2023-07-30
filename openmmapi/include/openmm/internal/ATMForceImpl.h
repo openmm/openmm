@@ -35,16 +35,16 @@ public:
     std::vector<std::string> getKernelNames();
     std::vector<std::pair<int, int> > getBondedParticles() const;
     void updateParametersInContext(ContextImpl& context);
-    void getPerturbationEnergy(double& u0, double& u1, double& energy) const;
+    void getPerturbationEnergy(double& u1, double& u0, double& energy) const;
 
 private:
     const ATMForce& owner;
     Kernel kernel;
-    System innerSystem1, innerSystem2;
-    VerletIntegrator innerIntegrator1, innerIntegrator2;
-    Context *innerContext1, *innerContext2;
+    System innerSystem0, innerSystem1;
+    VerletIntegrator innerIntegrator0, innerIntegrator1;
+    Context *innerContext0, *innerContext1;
     Lepton::CompiledExpression energyExpression, u0DerivExpression, u1DerivExpression;
-    double state1Energy, state2Energy, combinedEnergy;
+    double state0Energy, state1Energy, combinedEnergy;
     std::vector<std::string> globalParameterNames;
     std::vector<double> globalValues;
     void copySystem(ContextImpl& context, const System& system, System& innerSystem);

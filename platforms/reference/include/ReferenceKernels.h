@@ -1656,7 +1656,7 @@ public:
      * @param dEdu0          the derivative of the final energy with respect to the first inner context's energy
      * @param dEdu1          the derivative of the final energy with respect to the second inner context's energy
      */
-    void applyForces(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2,
+    void applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
                      double dEdu0, double dEdu1);
     /**
      * Copy changed parameters over to a context.
@@ -1672,18 +1672,11 @@ public:
      * @param innerContext1  the first context created by the ATMForce for computing displaced energy
      * @param innerContext2  the second context created by the ATMForce for computing displaced energy
      */
-    void copyState(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2);
-    /**
-     * Get the perturbation energy calculated in the most recent call to execute().
-     */
-    double getPerturbationEnergy(void) {
-        return perturbationEnergy;
-    }
+    void copyState(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1);
 private:
     int numParticles;
     std::vector<Vec3> displ1;
     std::vector<Vec3> displ0;
-    double perturbationEnergy;
 };
 
 } // namespace OpenMM

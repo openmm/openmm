@@ -90,7 +90,7 @@ void test2Particles() {
         State state = context.getState(State::Energy | State::Forces);
         double epot = state.getPotentialEnergy();
         double u0, u1, energy;
-        atm->getPerturbationEnergy(context, u0, u1, energy);
+        atm->getPerturbationEnergy(context, u1, u0, energy);
 	double epert = u1 - u0;
         ASSERT_EQUAL_TOL(lm, context.getParameter(atm->Lambda1()), 1e-6);
         ASSERT_EQUAL_TOL(lm, context.getParameter(atm->Lambda2()), 1e-6);
@@ -154,7 +154,7 @@ void test2Particles2Displacement0() {
     // second particle displaced
     state = context.getState(State::Energy | State::Forces);
     epot = state.getPotentialEnergy();
-    atm->getPerturbationEnergy(context, u0, u1, energy);
+    atm->getPerturbationEnergy(context, u1, u0, energy);
     epert = u1 - u0;
     ASSERT_EQUAL_TOL(0.5*displ0[0]*displ0[0], epot, 1e-6);
     ASSERT_EQUAL_TOL(0.0, epert, 1e-6);
@@ -165,7 +165,7 @@ void test2Particles2Displacement0() {
     atm->updateParametersInContext(context);
     state = context.getState(State::Energy | State::Forces);
     epot = state.getPotentialEnergy();
-    atm->getPerturbationEnergy(context, u0, u1, energy);
+    atm->getPerturbationEnergy(context, u1, u0, energy);
     epert = u1 - u0;
     ASSERT_EQUAL_TOL(0.5*displ1[0]*displ1[0] - 0.5*displ0[0]*displ0[0], epert, 1e-6);
     ASSERT_EQUAL_TOL(0.5*displ0[0]*displ0[0] + lmbd*epert, epot, 1e-6);
@@ -207,7 +207,7 @@ void test2ParticlesNonbonded() {
     State state = context.getState( State::Energy );
     double epot = state.getPotentialEnergy();
     double u0, u1, energy;
-    atm->getPerturbationEnergy(context, u0, u1, energy);
+    atm->getPerturbationEnergy(context, u1, u0, energy);
     double epert = u1 - u0;
     ASSERT_EQUAL_TOL(-104.2320, epot,  1e-3);
     ASSERT_EQUAL_TOL(  69.4062, epert, 1e-3);

@@ -2973,16 +2973,16 @@ void ReferenceCalcATMForceKernel::initialize(const System& system, const ATMForc
     }
 }
 
-void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2,
+void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
         double dEdu0, double dEdu1) {
     vector<Vec3>& force = extractForces(context);
+    vector<Vec3>& force0 = extractForces(innerContext0);
     vector<Vec3>& force1 = extractForces(innerContext1);
-    vector<Vec3>& force2 = extractForces(innerContext2);
     for (int i = 0; i < force.size(); i++)
-        force[i] += dEdu0*force1[i] + dEdu1*force2[i];
+        force[i] += dEdu0*force0[i] + dEdu1*force1[i];
 }
 
-void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2) {
+void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1) {
     vector<Vec3>& pos = extractPositions(context);
 
     //in the initial state, particles are displaced by displ0
@@ -2990,32 +2990,32 @@ void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& i
     for(int i=0; i < pos0.size(); i++){
       pos0[i] += displ0[i];
     }
-    extractPositions(innerContext1) = pos0;
+    extractPositions(innerContext0) = pos0;
 
     //in the target state, particles are displaced by displ1
     vector<Vec3> pos1(pos);
     for (int i = 0; i < pos1.size(); i++) {
         pos1[i] += displ1[i];
     }
-    extractPositions(innerContext2) = pos1;
+    extractPositions(innerContext1) = pos1;
 
     Vec3 a, b, c;
     context.getPeriodicBoxVectors(a, b, c);
+    innerContext0.setPeriodicBoxVectors(a, b, c);
     innerContext1.setPeriodicBoxVectors(a, b, c);
-    innerContext2.setPeriodicBoxVectors(a, b, c);
 
+    innerContext0.setTime(context.getTime());
     innerContext1.setTime(context.getTime());
-    innerContext2.setTime(context.getTime());
 
     map<string, double> innerParameters;
+
+    innerParameters = innerContext0.getParameters();
+    for (auto& param : innerParameters)
+        innerContext0.setParameter(param.first, context.getParameter(param.first));
 
     innerParameters = innerContext1.getParameters();
     for (auto& param : innerParameters)
         innerContext1.setParameter(param.first, context.getParameter(param.first));
-
-    innerParameters = innerContext2.getParameters();
-    for (auto& param : innerParameters)
-        innerContext2.setParameter(param.first, context.getParameter(param.first));
 
 }
 
@@ -3031,4 +3031,3 @@ void ReferenceCalcATMForceKernel::copyParametersToContext(ContextImpl& context, 
 	displ0[i] = displacement0;
     }
 }
-

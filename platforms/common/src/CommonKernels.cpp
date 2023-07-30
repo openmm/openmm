@@ -7886,13 +7886,13 @@ void CommonCalcATMForceKernel::initialize(const System& system, const ATMForce& 
     cc.addForce(new ComputeForceInfo());
 }
 
-void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2) {
+void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1) {
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
 
         //inner contexts
+        ComputeContext& cc0 = getInnerComputeContext(innerContext0);
         ComputeContext& cc1 = getInnerComputeContext(innerContext1);
-        ComputeContext& cc2 = getInnerComputeContext(innerContext2);
 
         //initialize the listener, this reorders the displacement vectors
         ReorderListener* listener = new ReorderListener(cc, displVector1, displ1, displVector0, displ0);
@@ -7904,14 +7904,14 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
         copyStateKernel = program->createKernel("copyState");
         copyStateKernel->addArg(numParticles);
         copyStateKernel->addArg(cc.getPosq());
+        copyStateKernel->addArg(cc0.getPosq());
         copyStateKernel->addArg(cc1.getPosq());
-        copyStateKernel->addArg(cc2.getPosq());
-        copyStateKernel->addArg(displ1);
-	copyStateKernel->addArg(displ0);
+        copyStateKernel->addArg(displ0);
+	copyStateKernel->addArg(displ1);
         if (cc.getUseMixedPrecision()) {
             copyStateKernel->addArg(cc.getPosqCorrection());
+            copyStateKernel->addArg(cc0.getPosqCorrection());
             copyStateKernel->addArg(cc1.getPosqCorrection());
-            copyStateKernel->addArg(cc2.getPosqCorrection());
         }
 
         //create the HybridForce kernel
@@ -7919,21 +7919,21 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
         hybridForceKernel->addArg(numParticles);
         hybridForceKernel->addArg(cc.getPaddedNumAtoms());
         hybridForceKernel->addArg(cc.getLongForceBuffer());
+        hybridForceKernel->addArg(cc0.getLongForceBuffer());
         hybridForceKernel->addArg(cc1.getLongForceBuffer());
-        hybridForceKernel->addArg(cc2.getLongForceBuffer());
         hybridForceKernel->addArg();
         hybridForceKernel->addArg();
 
+        cc0.addForce(new ComputeForceInfo());
         cc1.addForce(new ComputeForceInfo());
-        cc2.addForce(new ComputeForceInfo());
 
     }
 }
 
-void CommonCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& innerContext1, ContextImpl& innerContext2,
+void CommonCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
         double dEdu0, double dEdu1) {
     ContextSelector selector(cc);
-    initKernels(context, innerContext1, innerContext2);
+    initKernels(context, innerContext0, innerContext1);
     if (cc.getUseDoublePrecision()) {
         hybridForceKernel->setArg(5, dEdu0);
         hybridForceKernel->setArg(6, dEdu1);
@@ -7946,25 +7946,25 @@ void CommonCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& in
 }
 
 void CommonCalcATMForceKernel::copyState(ContextImpl& context,
-        ContextImpl& innerContext1, ContextImpl& innerContext2) {
+        ContextImpl& innerContext0, ContextImpl& innerContext1) {
     ContextSelector selector(cc);
 
-    initKernels(context, innerContext1, innerContext2);
+    initKernels(context, innerContext0, innerContext1);
 
     copyStateKernel->execute(numParticles);
 
     Vec3 a, b, c;
     context.getPeriodicBoxVectors(a, b, c);
+    innerContext0.setPeriodicBoxVectors(a, b, c);
+    innerContext0.setTime(context.getTime());
     innerContext1.setPeriodicBoxVectors(a, b, c);
     innerContext1.setTime(context.getTime());
-    innerContext2.setPeriodicBoxVectors(a, b, c);
-    innerContext2.setTime(context.getTime());
+    map<string, double> innerParameters0 = innerContext0.getParameters();
+    for (auto& param : innerParameters0)
+        innerContext0.setParameter(param.first, context.getParameter(param.first));
     map<string, double> innerParameters1 = innerContext1.getParameters();
     for (auto& param : innerParameters1)
         innerContext1.setParameter(param.first, context.getParameter(param.first));
-    map<string, double> innerParameters2 = innerContext2.getParameters();
-    for (auto& param : innerParameters2)
-        innerContext2.setParameter(param.first, context.getParameter(param.first));
 }
 
 void CommonCalcATMForceKernel::copyParametersToContext(ContextImpl& context, const ATMForce& force) {

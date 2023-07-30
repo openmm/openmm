@@ -56,7 +56,7 @@
 using namespace OpenMM;
 using namespace std;
 
-ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrator1(1.0), innerIntegrator2(1.0) {
+ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrator0(1.0), innerIntegrator1(1.0) {
     Lepton::ParsedExpression expr = Lepton::Parser::parse(owner.getEnergyFunction()).optimize();
     energyExpression = expr.createCompiledExpression();
     u0DerivExpression = expr.differentiate("u0").createCompiledExpression();
@@ -65,8 +65,8 @@ ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrato
         globalParameterNames.push_back(owner.getGlobalParameterName(i));
     globalValues.resize(globalParameterNames.size());
     map<string, double*> variableLocations;
-    variableLocations["u0"] = &state1Energy;
-    variableLocations["u1"] = &state2Energy;
+    variableLocations["u0"] = &state0Energy;
+    variableLocations["u1"] = &state1Energy;
     for (int i = 0; i < globalParameterNames.size(); i++)
         variableLocations[globalParameterNames[i]] = &globalValues[i];
     energyExpression.setVariableLocations(variableLocations);
@@ -97,16 +97,16 @@ void ATMForceImpl::copySystem(ContextImpl& context, const OpenMM::System& system
 void ATMForceImpl::initialize(ContextImpl& context) {
     const OpenMM::System& system = context.getSystem();
 
+    copySystem(context, system, innerSystem0);
     copySystem(context, system, innerSystem1);
-    copySystem(context, system, innerSystem2);
 
     // Create the inner context.
 
+    innerContext0 = context.createLinkedContext(innerSystem0, innerIntegrator0);
     innerContext1 = context.createLinkedContext(innerSystem1, innerIntegrator1);
-    innerContext2 = context.createLinkedContext(innerSystem2, innerIntegrator2);
     vector<Vec3> positions(system.getNumParticles(), Vec3());
+    innerContext0->setPositions(positions);
     innerContext1->setPositions(positions);
-    innerContext2->setPositions(positions);
 
     // Create the kernel.
 
@@ -118,17 +118,17 @@ double ATMForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForce
     if ((groups & (1 << owner.getForceGroup())) == 0)
         return 0.0;
 
+    ContextImpl& innerContextImpl0 = getContextImpl(*innerContext0);
     ContextImpl& innerContextImpl1 = getContextImpl(*innerContext1);
-    ContextImpl& innerContextImpl2 = getContextImpl(*innerContext2);
 
     //copies the coordinates etc. from the context to the inner contexts
-    kernel.getAs<CalcATMForceKernel>().copyState(context, innerContextImpl1, innerContextImpl2);
+    kernel.getAs<CalcATMForceKernel>().copyState(context, innerContextImpl0, innerContextImpl1);
 
     //evaluate variable energy and forces for original system
-    state1Energy = innerContextImpl1.calcForcesAndEnergy(true, true);
+    state0Energy = innerContextImpl0.calcForcesAndEnergy(true, true);
 
     //evaluate variable energy and force for the displaced system
-    state2Energy = innerContextImpl2.calcForcesAndEnergy(true, true);
+    state1Energy = innerContextImpl1.calcForcesAndEnergy(true, true);
 
     for (int i = 0; i < globalParameterNames.size(); i++)
         globalValues[i] = context.getParameter(globalParameterNames[i]);
@@ -137,14 +137,14 @@ double ATMForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForce
     double dEdu1 = u1DerivExpression.evaluate();
 
     //evaluate the alchemical energy
-    kernel.getAs<CalcATMForceKernel>().applyForces(context, innerContextImpl1, innerContextImpl2, dEdu0, dEdu1);
+    kernel.getAs<CalcATMForceKernel>().applyForces(context, innerContextImpl0, innerContextImpl1, dEdu0, dEdu1);
 
     return (includeEnergy ? combinedEnergy : 0.0);
 }
 
 std::map<std::string, double> ATMForceImpl::getDefaultParameters() {
     map<string, double> parameters;
-    parameters.insert(innerContext1->getParameters().begin(), innerContext1->getParameters().end());
+    parameters.insert(innerContext0->getParameters().begin(), innerContext0->getParameters().end());
     for (int i = 0; i < owner.getNumGlobalParameters(); i++)
         parameters[owner.getGlobalParameterName(i)] = owner.getGlobalParameterDefaultValue(i);
     return parameters;
@@ -158,7 +158,7 @@ std::vector<std::string> ATMForceImpl::getKernelNames() {
 
 vector<pair<int, int> > ATMForceImpl::getBondedParticles() const {
     vector<pair<int, int> > bonds;
-    const ContextImpl& innerContextImpl = getContextImpl(*innerContext1);
+    const ContextImpl& innerContextImpl = getContextImpl(*innerContext0);
     for (auto& impl : innerContextImpl.getForceImpls()) {
         for (auto& bond : impl->getBondedParticles())
             bonds.push_back(bond);
@@ -170,8 +170,8 @@ void ATMForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcATMForceKernel>().copyParametersToContext(context, owner);
 }
 
-void ATMForceImpl::getPerturbationEnergy(double& u0, double& u1, double& energy) const {
-    u0 = state1Energy;
-    u1 = state2Energy;
+void ATMForceImpl::getPerturbationEnergy(double& u1, double& u0, double& energy) const {
+    u0 = state0Energy;
+    u1 = state1Energy;
     energy = combinedEnergy;
 }
