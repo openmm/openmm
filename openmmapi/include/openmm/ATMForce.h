@@ -46,7 +46,7 @@ namespace OpenMM {
 
 /**
  * 
- * The ATMForce class implements the Alchemical Transfer Method (ATM) for OpenMM
+ * The ATMForce class implements the Alchemical Transfer Method (ATM) for OpenMM.
  * ATM is used to compute
  * the binding free energies of molecular complexes and of other equilibrium processes.
  * ATM and its implementation are described in the open access article:
@@ -58,6 +58,65 @@ namespace OpenMM {
  *
  * Refer to the publication above for a detailed description of the ATM method and the parameters used in this API 
  * and please cite it to support our work if you use this software in your research.
+ *
+ * The ATMForce implements an arbitrary potential energy function that depends on the potential
+ * energies (u0 and u1) of the system before and after a set of atoms are displaced by a specified amount.
+ * For example, to displace a molecule from the solvent bulk to a receptor binding site to simulate 
+ * a binding process.
+ * The potential energy function typically depends on one or more parameters that are dialed to implement
+ * alchemical transformations.
+ *
+ * To use this class, create a ATMForce object, passing an algebraic expression to the
+ * constructor that defines the potential energy. This expression can be any combination
+ * of the variables u0 and u1. Then call addGlobalParameter() to define the parameters on which the potential energy expression depends.
+ * The values of global parameters may be modified during a simulation by calling Context::setParameter().
+ * Next, call addForce() to add Force objects that define the terms of the potential energy function
+ * that change upon displacement. Finally, call addParticle() to specify the displacement applied to
+ * each particle. Displacements can be changed by calling setParticleParameters(). As any per-particle parameters, 
+ * changes in displacements take effect only after calling updateParametersInContext().
+ *
+ * As an example, the following code creates a ATMForce based on the change in energy of
+ * two particles when the second particle is displaced by 1 nm in the x direction.
+ * The energy change is dialed using an alchemical parameter Lambda, which in this case is set to 1/2:
+ *
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    ATMForce *atmforce = new ATMForce("u0 + Lambda*(u1 - u0)");
+ *    atm->addGlobalParameter("Lambda", 0.5);
+ *    atm->addParticle( Vec3(0, 0, 0));
+ *    atm->addParticle( Vec3(1, 0, 0));
+ *    CustomBondForce* force = new CustomBondForce("0.5*r^2");
+ *    atm->addForce(force);
+ * \endverbatim
+ *
+ * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta,
+ * select.  All trigonometric functions
+ * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
+ * select(x,y,z) = z if x = 0, y otherwise.
+ *
+ * If instead of the energy expression the ATMForce constructor specifies the values of a series of parameters,
+ * the default energy expression is used:
+   \verbatim
+   select(step(Direction), u0, u1) + ((Lambda2-Lambda1)/Alpha)*log(1+exp(-Alpha*(usc-Uh))) + Lambda2*usc + W0;
+     usc = select(step(u-Ubcore), (Umax-Ubcore)*fsc+Ubcore, u), u);
+     fsc = (z^Acore-1)/(z^Acore+1);
+     z = 1 + 2*(y/Acore) + 2*(y/Acore)^2;
+     y = (u-Ubcore)/(Umax-Ubcore);
+     u = Direction*(u1-u0)"
+   \endverbatim
+ * which is the same as the soft-core softplus alchemical potential energy function in the Azimi et al. paper above.
+ *
+ * The ATMForce is then added to the System as any other Force
+ *
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *  system.addForce(atmforce);
+ * \endverbatim
+ *
+ * after which it will be used for energy/force evaluations for molecular dynamics and energy optimization.
  *
  */
 
@@ -71,18 +130,17 @@ public:
      */
     explicit ATMForce(const std::string& energy);
     /**
-     * Create an ATMForce object. 
+     * Create an ATMForce object with the default energy expression.
      *
-     * @param lambda1    the lambda1 parameter of the softplus alchemical potential (dimensionless)
-     * @param lambda2    the lambda2 parameter of the softplus alchemical potential (dimensionless)
-     * @param alpha      the alpha   parameter of the softplus alchemical potential (kJ/mol)^-1
-     * @param uh         the uh      parameter of the softplus alchemical potential (kJ/mol)
-     * @param w0         the w0      parameter of the softplus alchemical potential (kJ/mol)
-     * @param direction  the direction parameter (dimensionless)
-     *
-     * @param umax       the umax    parameter of the softcore perturbation energy  (kJ/mol)
-     * @param ubcore     the uc      parameter of the softcore perturbation energy  (kJ/mol)
-     * @param acore      the a       parameter of the softcore perturbation energy  (dimensionless)
+     * @param lambda1    the Lambda1 parameter of the softplus alchemical potential (dimensionless)
+     * @param lambda2    the Lambda2 parameter of the softplus alchemical potential (dimensionless)
+     * @param alpha      the Alpha   parameter of the softplus alchemical potential (kJ/mol)^-1
+     * @param uh         the Uh      parameter of the softplus alchemical potential (kJ/mol)
+     * @param w0         the W0      parameter of the softplus alchemical potential (kJ/mol)
+     * @param umax       the Umax    parameter of the softcore perturbation energy  (kJ/mol)
+     * @param ubcore     the Ubcore  parameter of the softcore perturbation energy  (kJ/mol)
+     * @param acore      the Acore   parameter of the softcore perturbation energy  (dimensionless)
+     * @param direction  the Direction parameter (dimensionless)
      *
      * The parameters provided in this constructor are added to OpenMM's Context as global parameters.
      * Their values can be changed by calling setParameter() on the Context using the parameter
