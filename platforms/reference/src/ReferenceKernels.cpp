@@ -2974,12 +2974,15 @@ void ReferenceCalcATMForceKernel::initialize(const System& system, const ATMForc
 }
 
 void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
-        double dEdu0, double dEdu1) {
+        double dEdu0, double dEdu1, const map<string, double>& energyParamDerivs) {
     vector<Vec3>& force = extractForces(context);
     vector<Vec3>& force0 = extractForces(innerContext0);
     vector<Vec3>& force1 = extractForces(innerContext1);
     for (int i = 0; i < force.size(); i++)
         force[i] += dEdu0*force0[i] + dEdu1*force1[i];
+    map<string, double>& derivs = extractEnergyParameterDerivatives(context);
+    for (auto deriv : energyParamDerivs)
+        derivs[deriv.first] += deriv.second;
 }
 
 void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1) {

@@ -1663,9 +1663,10 @@ public:
      * @param innerContext1  the second inner context
      * @param dEdu0          the derivative of the final energy with respect to the first inner context's energy
      * @param dEdu1          the derivative of the final energy with respect to the second inner context's energy
+     * @param energyParamDerivs  derivatives of the final energy with respect to global parameters
      */
     virtual void applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
-                             double dEdu0, double dEdu1) = 0;
+                             double dEdu0, double dEdu1, const std::map<std::string, double>& energyParamDerivs) = 0;
     /**
      * Copy changed parameters over to a context.
      *

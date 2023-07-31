@@ -115,6 +115,13 @@ public:
         return globalParameters.size();
     }
     /**
+     * Get the number of global parameters with respect to which the derivative of the energy
+     * should be computed.
+     */
+    int getNumEnergyParameterDerivatives() const {
+        return energyParameterDerivatives.size();
+    }
+    /**
      * Get the algebraic expression that gives the energy of the system
      */
     const std::string& getEnergyFunction() const;
@@ -200,6 +207,21 @@ public:
      * @param defaultValue   the default value of the parameter
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
+    /**
+     * Request that this Force compute the derivative of its energy with respect to a global parameter.
+     * The parameter must have already been added with addGlobalParameter().
+     *
+     * @param name      the name of the parameter
+     */
+    void addEnergyParameterDerivative(const std::string& name);
+    /**
+     * Get the name of a global parameter with respect to which this Force should compute the
+     * derivative of the energy.
+     *
+     * @param index     the index of the parameter derivative, between 0 and getNumEnergyParameterDerivatives()
+     * @return the parameter name
+     */
+    const std::string& getEnergyParameterDerivativeName(int index) const;
     /**
      * Update the per-particle parameters in a Context to match those stored in this Force object.  This method 
      * should be called after updating parameters with setParticleParameters() to copy them over to the Context.
@@ -301,6 +323,7 @@ private:
     std::vector<GlobalParameterInfo> globalParameters;
     std::vector<Force *> forces;
     std::vector<ParticleInfo> particles;
+    std::vector<int> energyParameterDerivatives;
 };
 
 /**

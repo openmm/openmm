@@ -7847,41 +7847,30 @@ void CommonCalcATMForceKernel::initialize(const System& system, const ATMForce& 
     vector<mm_float4> displVectorContext1(cc.getPaddedNumAtoms());
     vector<mm_float4> displVectorContext0(cc.getPaddedNumAtoms());
     for (int i = 0; i < cc.getPaddedNumAtoms(); i++) {
-        displVector1[i].x = displVector0[i].x = 0;
-        displVector1[i].y = displVector0[i].y = 0;
-        displVector1[i].z = displVector0[i].z = 0;
-        displVector1[i].w = displVector0[i].w = 0;
-        displVectorContext1[i].x = displVectorContext0[i].x = 0;
-        displVectorContext1[i].y = displVectorContext0[i].y = 0;
-        displVectorContext1[i].z = displVectorContext0[i].z = 0;
-        displVectorContext1[i].w = displVectorContext0[i].w = 0;
+        displVector1[i] = mm_float4(0, 0, 0, 0);
+        displVector0[i] = mm_float4(0, 0, 0, 0);
+        displVectorContext1[i] = mm_float4(0, 0, 0, 0);
+        displVectorContext0[i] = mm_float4(0, 0, 0, 0);
     }
     for (int i = 0; i < numParticles; i++) {
         Vec3 displacement1, displacement0;
         force.getParticleParameters(i, displacement1, displacement0);
-        displVector1[i].x = displacement1[0];
-        displVector1[i].y = displacement1[1];
-        displVector1[i].z = displacement1[2];
-        displVector1[i].w = 0;
-	displVector0[i].x = displacement0[0];
-        displVector0[i].y = displacement0[1];
-        displVector0[i].z = displacement0[2];
-        displVector0[i].w = 0;
+        displVector1[i] = mm_float4(displacement1[0], displacement1[1], displacement1[2], 0);
+        displVector0[i] = mm_float4(displacement0[0], displacement0[1], displacement0[2], 0);
     }
     const vector<int>& id = cc.getAtomIndex();
-    for (int i = 0; i < numParticles; i++) {
+    for (int i = 0; i < numParticles; i++)
         displVectorContext1[i] = displVector1[id[i]];
-    }
-    displ1 = ComputeArray();
     displ1.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ1");
     displ1.upload(displVectorContext1);
 
-    for (int i = 0; i < numParticles; i++) {
+    for (int i = 0; i < numParticles; i++)
         displVectorContext0[i] = displVector0[id[i]];
-    }
-    displ0 = ComputeArray();
     displ0.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ0");
     displ0.upload(displVectorContext0);
+
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
+        cc.addEnergyParameterDerivative(force.getEnergyParameterDerivativeName(i));
 
     cc.addForce(new ComputeForceInfo());
 }
@@ -7931,7 +7920,7 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
 }
 
 void CommonCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
-        double dEdu0, double dEdu1) {
+        double dEdu0, double dEdu1, const map<string, double>& energyParamDerivs) {
     ContextSelector selector(cc);
     initKernels(context, innerContext0, innerContext1);
     if (cc.getUseDoublePrecision()) {
@@ -7943,6 +7932,9 @@ void CommonCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& in
         hybridForceKernel->setArg(6, (float) dEdu1);
     }
     hybridForceKernel->execute(numParticles);
+    map<string, double>& derivs = cc.getEnergyParamDerivWorkspace();
+    for (auto deriv : energyParamDerivs)
+        derivs[deriv.first] += deriv.second;
 }
 
 void CommonCalcATMForceKernel::copyState(ContextImpl& context,

@@ -72,6 +72,12 @@ ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrato
     energyExpression.setVariableLocations(variableLocations);
     u0DerivExpression.setVariableLocations(variableLocations);
     u1DerivExpression.setVariableLocations(variableLocations);
+    for (int i = 0; i < owner.getNumEnergyParameterDerivatives(); i++) {
+        string name = owner.getEnergyParameterDerivativeName(i);
+        paramDerivNames.push_back(name);
+        paramDerivExpressions.push_back(expr.differentiate(name).createCompiledExpression());
+        paramDerivExpressions[i].setVariableLocations(variableLocations);
+    }
 }
 
 ATMForceImpl::~ATMForceImpl() {
@@ -121,24 +127,26 @@ double ATMForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForce
     ContextImpl& innerContextImpl0 = getContextImpl(*innerContext0);
     ContextImpl& innerContextImpl1 = getContextImpl(*innerContext1);
 
-    //copies the coordinates etc. from the context to the inner contexts
+    // Copy the coordinates etc. from the context to the inner contexts
+
     kernel.getAs<CalcATMForceKernel>().copyState(context, innerContextImpl0, innerContextImpl1);
 
-    //evaluate variable energy and forces for original system
-    state0Energy = innerContextImpl0.calcForcesAndEnergy(true, true);
+    // Evaluate energy and forces for the two systems
 
-    //evaluate variable energy and force for the displaced system
+    state0Energy = innerContextImpl0.calcForcesAndEnergy(true, true);
     state1Energy = innerContextImpl1.calcForcesAndEnergy(true, true);
+
+    // Compute the alchemical energy and forces.
 
     for (int i = 0; i < globalParameterNames.size(); i++)
         globalValues[i] = context.getParameter(globalParameterNames[i]);
     combinedEnergy = energyExpression.evaluate();
     double dEdu0 = u0DerivExpression.evaluate();
     double dEdu1 = u1DerivExpression.evaluate();
-
-    //evaluate the alchemical energy
-    kernel.getAs<CalcATMForceKernel>().applyForces(context, innerContextImpl0, innerContextImpl1, dEdu0, dEdu1);
-
+    map<string, double> energyParamDerivs;
+    for (int i = 0; i < paramDerivExpressions.size(); i++)
+        energyParamDerivs[paramDerivNames[i]] += paramDerivExpressions[i].evaluate();
+    kernel.getAs<CalcATMForceKernel>().applyForces(context, innerContextImpl0, innerContextImpl1, dEdu0, dEdu1, energyParamDerivs);
     return (includeEnergy ? combinedEnergy : 0.0);
 }
 

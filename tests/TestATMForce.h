@@ -78,6 +78,8 @@ void test2Particles() {
     atm->addParticle( nodispl );
     atm->addParticle(   displ );
     atm->addForce(bond);
+    atm->addEnergyParameterDerivative(ATMForce::Lambda1());
+    atm->addEnergyParameterDerivative(ATMForce::Lambda2());
     system.addForce(atm);
 
     VerletIntegrator integrator(1.0);
@@ -87,7 +89,7 @@ void test2Particles() {
     for (double lm : {0.0, 0.5, 1.0}) {
         context.setParameter(ATMForce::Lambda1(), lm);
         context.setParameter(ATMForce::Lambda2(), lm);
-        State state = context.getState(State::Energy | State::Forces);
+        State state = context.getState(State::Energy | State::Forces | State::ParameterDerivatives);
         double epot = state.getPotentialEnergy();
         double u0, u1, energy;
         atm->getPerturbationEnergy(context, u1, u0, energy);
@@ -100,6 +102,8 @@ void test2Particles() {
         ASSERT_EQUAL_TOL(0.5*displ[0]*displ[0], u1, 1e-6);
 	ASSERT_EQUAL_TOL(0.5*displ[0]*displ[0], epert, 1e-6);
         ASSERT_EQUAL_VEC(Vec3(-lm*displ[0], 0.0, 0.0), state.getForces()[1], 1e-6);
+        ASSERT_EQUAL_TOL(0.0, state.getEnergyParameterDerivatives().at(ATMForce::Lambda1()), 1e-6);
+        ASSERT_EQUAL_TOL(0.5*displ[0]*displ[0], state.getEnergyParameterDerivatives().at(ATMForce::Lambda2()), 1e-6);
     }
 }
 
@@ -172,19 +176,19 @@ void test2Particles2Displacement0() {
 }
 
 
-double softCoreFunc(double u, double umax, double ub, double a, double &df){
-  double usc = u;
-  df = 1.;
+double softCoreFunc(double u, double umax, double ub, double a, double& df) {
+    double usc = u;
+    df = 1.;
 
-  if(u > ub){
-    double gu = (u-ub)/(a*(umax-ub)); //this is y/alpha
-    double zeta = 1. + 2.*gu*(gu + 1.) ;
-    double zetap = pow( zeta , a );
-    double s = 4.*(2.*gu + 1.)/zeta;
-    df = s*zetap/pow(1.+zetap,2);
-    usc = (umax-ub)*(zetap - 1.)/(zetap + 1.) + ub;
-  }
-  return usc;
+    if(u > ub) {
+        double gu = (u-ub)/(a*(umax-ub)); //this is y/alpha
+        double zeta = 1. + 2.*gu*(gu + 1.) ;
+        double zetap = pow( zeta , a);
+        double s = 4.*(2.*gu + 1.)/zeta;
+        df = s*zetap/pow(1.+zetap,2);
+        usc = (umax-ub)*(zetap - 1.)/(zetap + 1.) + ub;
+    }
+    return usc;
 }
 
 void test2ParticlesSoftCore() {

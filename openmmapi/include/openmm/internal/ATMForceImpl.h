@@ -45,8 +45,9 @@ private:
     Context *innerContext0, *innerContext1;
     Lepton::CompiledExpression energyExpression, u0DerivExpression, u1DerivExpression;
     double state0Energy, state1Energy, combinedEnergy;
-    std::vector<std::string> globalParameterNames;
+    std::vector<std::string> globalParameterNames, paramDerivNames;
     std::vector<double> globalValues;
+    std::vector<Lepton::CompiledExpression> paramDerivExpressions;
     void copySystem(ContextImpl& context, const System& system, System& innerSystem);
 };
 

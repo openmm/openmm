@@ -142,6 +142,20 @@ void ATMForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
     globalParameters[index].defaultValue = defaultValue;
 }
 
+void ATMForce::addEnergyParameterDerivative(const string& name) {
+    for (int i = 0; i < globalParameters.size(); i++)
+        if (name == globalParameters[i].name) {
+            energyParameterDerivatives.push_back(i);
+            return;
+        }
+    throw OpenMMException(string("addEnergyParameterDerivative: Unknown global parameter '"+name+"'"));
+}
+
+const string& ATMForce::getEnergyParameterDerivativeName(int index) const {
+    ASSERT_VALID_INDEX(index, energyParameterDerivatives);
+    return globalParameters[energyParameterDerivatives[index]].name;
+}
+
 ForceImpl* ATMForce::createImpl() const {
     return new ATMForceImpl(*this);
 }
