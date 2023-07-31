@@ -277,6 +277,111 @@ void test2ParticlesNonbonded() {
     // std::cout << "Nonbonded: epert = " << epert << std::endl;
 }
 
+
+void testParticlesCustomExpressionLinear() {
+    // Similar to test2Particles() but employing a custom alchemical energy expression
+
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 0, 0);
+
+    CustomBondForce* bond = new CustomBondForce("0.5*r^2");
+    bond->addBond(0, 1);
+
+    double lmbd = 0.5;
+    ATMForce* atm = new ATMForce("u0 + Lambda*(u1 - u0)");
+    atm->addGlobalParameter("Lambda", lmbd);
+    Vec3 nodispl = Vec3(0., 0., 0.);
+    Vec3   displ = Vec3(5., 0., 0.);
+    atm->addParticle( nodispl );
+    atm->addParticle(   displ );
+    atm->addForce(bond);
+    system.addForce(atm);
+
+    VerletIntegrator integrator(1.0);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    State state = context.getState(State::Energy | State::Forces);
+    double epot = state.getPotentialEnergy();
+    double u0, u1, energy;
+    atm->getPerturbationEnergy(context, u1, u0, energy);
+    double epert = u1 - u0;
+    double ee = 0.5*displ[0]*displ[0];
+    ASSERT_EQUAL_TOL(energy, epot, 1e-6);
+    ASSERT_EQUAL_TOL(0.0, u0, 1e-6);
+    ASSERT_EQUAL_TOL(ee,  u1, 1e-6);
+    ASSERT_EQUAL_TOL(ee,  epert, 1e-6);
+    ASSERT_EQUAL_TOL(u0 + lmbd*epert, epot, 1e-6);
+    ASSERT_EQUAL_VEC(Vec3(-lmbd*displ[0], 0.0, 0.0), state.getForces()[1], 1e-6);
+}
+
+void testParticlesCustomExpressionSoftplus() {
+    // Similar to test2Particles() but employing a custom alchemical energy expression
+
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 0, 0);
+
+    Vec3 nodispl = Vec3(0., 0., 0.);
+    Vec3   displ = Vec3(2., 0., 0.);
+
+    CustomBondForce* bond = new CustomBondForce("0.5*r^2");
+    bond->addBond(0, 1);
+
+    ATMForce* atm = new ATMForce("u0 + ((Lambda2-Lambda1)/Alpha)*log(1.  + exp(-Alpha*((u1-u0) - Uh))) + Lambda2*(u1-u0) + W0");
+    double lambda1 = 0.2;
+    double lambda2 = 0.5;
+    double alpha = 0.1;
+    double uh = 0;
+    double w0 = 0;
+
+    atm->addGlobalParameter("Lambda1", lambda1);
+    atm->addGlobalParameter("Lambda2", lambda2);
+    atm->addGlobalParameter("Alpha", alpha);
+    atm->addGlobalParameter("Uh", uh);
+    atm->addGlobalParameter("W0", w0);
+
+    atm->addParticle( nodispl );
+    atm->addParticle(   displ );
+    atm->addForce(bond);
+    system.addForce(atm);
+
+    VerletIntegrator integrator(1.0);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    State state = context.getState(State::Energy | State::Forces);
+    double epot = state.getPotentialEnergy();
+    double u0, u1, energy;
+    atm->getPerturbationEnergy(context, u1, u0, energy);
+    double epert = u1 - u0;
+
+    double ebias = 0.0;
+    double ee = 1.0 + exp(-alpha*(epert  - uh));
+    if(alpha > 0){
+      ebias = ((lambda2 - lambda1)/alpha) * log(ee);
+    }
+    ebias += lambda2 * epert  + w0;
+    double bfp = (lambda2 - lambda1)/ee + lambda1;
+
+    double ep = 0.5*displ[0]*displ[0];
+    ASSERT_EQUAL_TOL(energy, epot, 1e-6);
+    ASSERT_EQUAL_TOL(0.0, u0, 1e-6);
+    ASSERT_EQUAL_TOL(ep,  u1, 1e-6);
+    ASSERT_EQUAL_TOL(ep,  epert, 1e-6);
+    ASSERT_EQUAL_TOL(u0 + ebias, epot, 1e-6);
+    ASSERT_EQUAL_VEC(Vec3(-bfp*displ[0], 0.0, 0.0), state.getForces()[1], 1e-6);
+}
+
 void testLargeSystem() {
     // Create a system with lots of particles, each displaced differently.
     
@@ -364,6 +469,8 @@ int main(int argc, char* argv[]) {
 	test2Particles2Displacement0();
 	test2ParticlesSoftCore();
 	test2ParticlesNonbonded();
+	testParticlesCustomExpressionLinear();
+	testParticlesCustomExpressionSoftplus();
         testLargeSystem();
         testMolecules();
         runPlatformTests();
