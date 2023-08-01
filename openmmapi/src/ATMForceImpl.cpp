@@ -133,20 +133,22 @@ double ATMForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForce
 
     // Evaluate energy and forces for the two systems
 
-    state0Energy = innerContextImpl0.calcForcesAndEnergy(true, true);
-    state1Energy = innerContextImpl1.calcForcesAndEnergy(true, true);
+    state0Energy = innerContextImpl0.calcForcesAndEnergy(includeForces, true);
+    state1Energy = innerContextImpl1.calcForcesAndEnergy(includeForces, true);
 
     // Compute the alchemical energy and forces.
 
     for (int i = 0; i < globalParameterNames.size(); i++)
         globalValues[i] = context.getParameter(globalParameterNames[i]);
     combinedEnergy = energyExpression.evaluate();
-    double dEdu0 = u0DerivExpression.evaluate();
-    double dEdu1 = u1DerivExpression.evaluate();
-    map<string, double> energyParamDerivs;
-    for (int i = 0; i < paramDerivExpressions.size(); i++)
-        energyParamDerivs[paramDerivNames[i]] += paramDerivExpressions[i].evaluate();
-    kernel.getAs<CalcATMForceKernel>().applyForces(context, innerContextImpl0, innerContextImpl1, dEdu0, dEdu1, energyParamDerivs);
+    if (includeForces) {
+        double dEdu0 = u0DerivExpression.evaluate();
+        double dEdu1 = u1DerivExpression.evaluate();
+        map<string, double> energyParamDerivs;
+        for (int i = 0; i < paramDerivExpressions.size(); i++)
+            energyParamDerivs[paramDerivNames[i]] += paramDerivExpressions[i].evaluate();
+        kernel.getAs<CalcATMForceKernel>().applyForces(context, innerContextImpl0, innerContextImpl1, dEdu0, dEdu1, energyParamDerivs);
+    }
     return (includeEnergy ? combinedEnergy : 0.0);
 }
 
@@ -178,7 +180,8 @@ void ATMForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcATMForceKernel>().copyParametersToContext(context, owner);
 }
 
-void ATMForceImpl::getPerturbationEnergy(double& u1, double& u0, double& energy) const {
+void ATMForceImpl::getPerturbationEnergy(ContextImpl& context, double& u1, double& u0, double& energy) {
+    calcForcesAndEnergy(context, false, true, -1);
     u0 = state0Energy;
     u1 = state1Energy;
     energy = combinedEnergy;

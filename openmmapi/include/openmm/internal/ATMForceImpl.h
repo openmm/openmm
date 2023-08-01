@@ -35,7 +35,7 @@ public:
     std::vector<std::string> getKernelNames();
     std::vector<std::pair<int, int> > getBondedParticles() const;
     void updateParametersInContext(ContextImpl& context);
-    void getPerturbationEnergy(double& u1, double& u0, double& energy) const;
+    void getPerturbationEnergy(ContextImpl& context, double& u1, double& u0, double& energy);
 
 private:
     const ATMForce& owner;

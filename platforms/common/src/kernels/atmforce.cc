@@ -26,12 +26,12 @@ KERNEL void copyState(int numParticles,
 #endif
                     ) {
     for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
-        //displacement for initial state
-        real4 d0 = make_real4((real) displ0[i].x, (real) displ0[i].y, (real) displ0[i].z, 0);
-	//displacement for target state
-        real4 d1 = make_real4((real) displ1[i].x, (real) displ1[i].y, (real) displ1[i].z, 0);
-        posq0[i] = posq[i] + d0;
-        posq1[i] = posq[i] + d1;
+        real4 p0 = posq[i] + make_real4((real) displ0[i].x, (real) displ0[i].y, (real) displ0[i].z, 0);
+        real4 p1 = posq[i] + make_real4((real) displ1[i].x, (real) displ1[i].y, (real) displ1[i].z, 0);
+        p0.w = posq0[i].w;
+        p1.w = posq1[i].w;
+        posq0[i] = p0;
+        posq1[i] = p1;
 #ifdef USE_MIXED_PRECISION
         posq0Correction[i] = posqCorrection[i];
         posq1Correction[i] = posqCorrection[i];

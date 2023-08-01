@@ -310,15 +310,14 @@ public:
      */
     bool usesPeriodicBoundaryConditions() const;
     /**
-     * Returns the current perturbation energy as calculated in the most recent force or
-     * energy evaluation.
+     * Returns the current perturbation energy.
      * 
      * @param context  the Context for which to return the energy
      * @param u1       on exit, the energy of the displaced state
      * @param u0       on exit, the energy of the non-displaced state
      * @param energy   on exit, the value of this force's energy function
      */
-    void getPerturbationEnergy(const Context& context, double& u1, double& u0, double& energy) const;
+    void getPerturbationEnergy(Context& context, double& u1, double& u0, double& energy);
     /**
      * Returns the name of the global parameter corresponding to lambda1.  The value assigned to this
      * parameter should be a number between 0 and 1.

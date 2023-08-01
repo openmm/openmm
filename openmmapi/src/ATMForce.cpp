@@ -172,7 +172,7 @@ bool ATMForce::usesPeriodicBoundaryConditions() const {
     return false;
 }
 
-void ATMForce::getPerturbationEnergy(const OpenMM::Context& context, double& u0, double& u1, double& energy) const {
-    dynamic_cast<const ATMForceImpl&>(getImplInContext(context)).getPerturbationEnergy(u0, u1, energy);
+void ATMForce::getPerturbationEnergy(OpenMM::Context& context, double& u0, double& u1, double& energy) {
+    dynamic_cast<ATMForceImpl&>(getImplInContext(context)).getPerturbationEnergy(getContextImpl(context), u0, u1, energy);
 }
 
