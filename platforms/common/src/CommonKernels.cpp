@@ -7977,18 +7977,8 @@ void CommonCalcATMForceKernel::copyParametersToContext(ContextImpl& context, con
         displVector0[i].w = 0;
     }
     const vector<int>& id = cc.getAtomIndex();
-    vector<mm_float4> displVectorContext1(cc.getPaddedNumAtoms());
-    vector<mm_float4> displVectorContext0(cc.getPaddedNumAtoms());
-    for (int i = 0; i < cc.getPaddedNumAtoms(); i++) {
-        displVectorContext1[i].x = 0;
-        displVectorContext1[i].y = 0;
-        displVectorContext1[i].z = 0;
-        displVectorContext1[i].w = 0;
-	displVectorContext0[i].x = 0;
-	displVectorContext0[i].y = 0;
-	displVectorContext0[i].z = 0;
-	displVectorContext0[i].w = 0;
-    }
+    vector<mm_float4> displVectorContext1(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_float4> displVectorContext0(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
     for (int i = 0; i < numParticles; i++) {
         displVectorContext1[i] = displVector1[id[i]];
 	displVectorContext0[i] = displVector0[id[i]];

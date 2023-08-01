@@ -49,31 +49,32 @@ ATMForce::ATMForce(const string& energy) : energyExpression(energy) {
 }
 
 ATMForce::ATMForce(double lambda1, double lambda2, double alpha, double uh, double w0, double umax, double ubcore, double acore, double direction) {
+    if (alpha < 0)
+        throw OpenMMException("ATMForce: alpha cannot be negative");
+    if (lambda1 != lambda2 && alpha == 0)
+        throw OpenMMException("ATMForce: alpha must be postive when lambda1 and lambda2 are different");
+    if (umax < ubcore)
+        throw OpenMMException("ATMForce: umax cannot be less than ubcore");
+    if (acore < 0)
+        throw OpenMMException("ATMForce: acore cannot be negative");
+    if (direction != 1.0 && direction != -1.0)
+        throw OpenMMException("ATMForce: direction must be either 1 or -1");
     string referencePotExpression = "select(step(Direction), u0, u1) + ";
     string alchemicalPotExpression = "select(Lambda2-Lambda1 , ((Lambda2-Lambda1)/Alpha)*log(1+exp(-Alpha*(usc-Uh))) + Lambda2*usc + W0, Lambda2*usc + W0);";
-    string softCoreExpression = "usc = select( Acore, select(step(u-Ubcore), (Umax-Ubcore)*fsc+Ubcore, u), u);"
+    string softCoreExpression = "usc = select(Acore, select(step(u-Ubcore), (Umax-Ubcore)*fsc+Ubcore, u), u);"
                                 "fsc = (z^Acore-1)/(z^Acore+1);"
                                 "z = 1 + 2*(y/Acore) + 2*(y/Acore)^2;"
                                 "y = (u-Ubcore)/(Umax-Ubcore);"
-	                        "u = Direction*(u1-u0)";
-    setEnergyFunction( referencePotExpression + alchemicalPotExpression + softCoreExpression);
-
-    double tol = 1.e-8;
+	                        "u = select(step(Direction), 1, -1)*(u1-u0)";
+    setEnergyFunction(referencePotExpression + alchemicalPotExpression + softCoreExpression);
     addGlobalParameter(Lambda1(), lambda1);
     addGlobalParameter(Lambda2(), lambda2);
-    ASSERT( alpha >= 0. );
-    if ( fabs(lambda2-lambda1) > tol ){
-      ASSERT( alpha > tol);
-    }
     addGlobalParameter(Alpha(), alpha);
     addGlobalParameter(Uh(), uh);
     addGlobalParameter(W0(), w0);
-    ASSERT( umax >= ubcore )
     addGlobalParameter(Umax(), umax);
     addGlobalParameter(Ubcore(), ubcore);
-    ASSERT( acore >= 0 )
     addGlobalParameter(Acore(), acore);
-    ASSERT_EQUAL_TOL( 1., fabs(direction), tol)
     addGlobalParameter(Direction(), direction);
 }
 
@@ -162,6 +163,13 @@ ForceImpl* ATMForce::createImpl() const {
 
 void ATMForce::updateParametersInContext(OpenMM::Context& context) {
     dynamic_cast<ATMForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+bool ATMForce::usesPeriodicBoundaryConditions() const {
+    for (auto& force : forces)
+        if (force->usesPeriodicBoundaryConditions())
+            return true;
+    return false;
 }
 
 void ATMForce::getPerturbationEnergy(const OpenMM::Context& context, double& u0, double& u1, double& energy) const {

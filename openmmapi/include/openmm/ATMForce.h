@@ -47,8 +47,7 @@ namespace OpenMM {
 /**
  * 
  * The ATMForce class implements the Alchemical Transfer Method (ATM) for OpenMM.
- * ATM is used to compute
- * the binding free energies of molecular complexes and of other equilibrium processes.
+ * ATM is used to compute the binding free energies of molecular complexes and of other equilibrium processes.
  * ATM and its implementation are described in the open access article:
  *
  *    Solmaz Azimi, Sheenam Khuttan, Joe Z. Wu, Rajat K. Pal, and Emilio  Gallicchio. 
@@ -61,12 +60,11 @@ namespace OpenMM {
  *
  * The ATMForce implements an arbitrary potential energy function that depends on the potential
  * energies (u0 and u1) of the system before and after a set of atoms are displaced by a specified amount.
- * For example, to displace a molecule from the solvent bulk to a receptor binding site to simulate 
- * a binding process.
- * The potential energy function typically depends on one or more parameters that are dialed to implement
- * alchemical transformations.
+ * For example, you might displace a molecule from the solvent bulk to a receptor binding site to simulate 
+ * a binding process.  The potential energy function typically also depends on one or more parameters that
+ * are dialed to implement alchemical transformations.
  *
- * To use this class, create a ATMForce object, passing an algebraic expression to the
+ * To use this class, create an ATMForce object, passing an algebraic expression to the
  * constructor that defines the potential energy. This expression can be any combination
  * of the variables u0 and u1. Then call addGlobalParameter() to define the parameters on which the potential energy expression depends.
  * The values of global parameters may be modified during a simulation by calling Context::setParameter().
@@ -75,7 +73,7 @@ namespace OpenMM {
  * each particle. Displacements can be changed by calling setParticleParameters(). As any per-particle parameters, 
  * changes in displacements take effect only after calling updateParametersInContext().
  *
- * As an example, the following code creates a ATMForce based on the change in energy of
+ * As an example, the following code creates an ATMForce based on the change in energy of
  * two particles when the second particle is displaced by 1 nm in the x direction.
  * The energy change is dialed using an alchemical parameter Lambda, which in this case is set to 1/2:
  *
@@ -84,8 +82,8 @@ namespace OpenMM {
  *
  *    ATMForce *atmforce = new ATMForce("u0 + Lambda*(u1 - u0)");
  *    atm->addGlobalParameter("Lambda", 0.5);
- *    atm->addParticle( Vec3(0, 0, 0));
- *    atm->addParticle( Vec3(1, 0, 0));
+ *    atm->addParticle(Vec3(0, 0, 0));
+ *    atm->addParticle(Vec3(1, 0, 0));
  *    CustomBondForce* force = new CustomBondForce("0.5*r^2");
  *    atm->addForce(force);
  * \endverbatim
@@ -98,14 +96,18 @@ namespace OpenMM {
  *
  * If instead of the energy expression the ATMForce constructor specifies the values of a series of parameters,
  * the default energy expression is used:
-   \verbatim
-   select(step(Direction), u0, u1) + ((Lambda2-Lambda1)/Alpha)*log(1+exp(-Alpha*(usc-Uh))) + Lambda2*usc + W0;
-     usc = select(step(u-Ubcore), (Umax-Ubcore)*fsc+Ubcore, u), u);
-     fsc = (z^Acore-1)/(z^Acore+1);
-     z = 1 + 2*(y/Acore) + 2*(y/Acore)^2;
-     y = (u-Ubcore)/(Umax-Ubcore);
-     u = Direction*(u1-u0)"
-   \endverbatim
+ * 
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block::
+ *
+ *    select(step(Direction), u0, u1) + ((Lambda2-Lambda1)/Alpha)*log(1+exp(-Alpha*(usc-Uh))) + Lambda2*usc + W0;
+ *    usc = select(step(u-Ubcore), (Umax-Ubcore)*fsc+Ubcore, u), u);
+ *    fsc = (z^Acore-1)/(z^Acore+1);
+ *    z = 1 + 2*(y/Acore) + 2*(y/Acore)^2;
+ *    y = (u-Ubcore)/(Umax-Ubcore);
+ *    u = select(step(Direction), 1, -1)*(u1-u0)
+ * \endverbatim
+ * 
  * which is the same as the soft-core softplus alchemical potential energy function in the Azimi et al. paper above.
  *
  * The ATMForce is then added to the System as any other Force
@@ -118,6 +120,23 @@ namespace OpenMM {
  *
  * after which it will be used for energy/force evaluations for molecular dynamics and energy optimization.
  *
+ * In most cases, particles are only displaced in one of the two states evaluated by this force.  It computes the
+ * change in energy between the current particle coordinates (as stored in the Context) and the displaced coordinates.
+ * In some cases, it is useful to apply displacements to both states.  You can do this by providing two displacement
+ * vectors to addParticle():
+ * 
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    atm->addParticle(Vec3(1, 0, 0), Vec3(-1, 0, 0));
+ * \endverbatim
+ * 
+ * In this case, u1 will be computed after displacing the particle in the positive x direction, and
+ * u0 will be computed after displacing it in the negative x direction.
+ * 
+ * This class also has the ability to compute derivatives of the potential energy with respect to global parameters.
+ * Call addEnergyParameterDerivative() to request that the derivative with respect to a particular parameter be
+ * computed.  You can then query its value in a Context by calling getState() on it.
  */
 
 class OPENMM_EXPORT ATMForce : public OpenMM::Force {
@@ -130,30 +149,29 @@ public:
      */
     explicit ATMForce(const std::string& energy);
     /**
-     * Create an ATMForce object with the default energy expression.
-     *
-     * @param lambda1    the Lambda1 parameter of the softplus alchemical potential (dimensionless)
-     * @param lambda2    the Lambda2 parameter of the softplus alchemical potential (dimensionless)
-     * @param alpha      the Alpha   parameter of the softplus alchemical potential (kJ/mol)^-1
-     * @param uh         the Uh      parameter of the softplus alchemical potential (kJ/mol)
-     * @param w0         the W0      parameter of the softplus alchemical potential (kJ/mol)
-     * @param umax       the Umax    parameter of the softcore perturbation energy  (kJ/mol)
-     * @param ubcore     the Ubcore  parameter of the softcore perturbation energy  (kJ/mol)
-     * @param acore      the Acore   parameter of the softcore perturbation energy  (dimensionless)
-     * @param direction  the Direction parameter (dimensionless)
-     *
-     * The parameters provided in this constructor are added to OpenMM's Context as global parameters.
+     * Create an ATMForce object with the default softplus energy expression.  The values passed to
+     * this constructor are the default values of the global parameters for newly created Contexts.
      * Their values can be changed by calling setParameter() on the Context using the parameter
      * names defined by the Lambda1(), Lambda2(), etc. methods below. 
-     * For example: Context.setParameter(ATMForce::Lambda1(), 1.0)
      *
-     * @return An ATMForce object
+     * @param lambda1    the default value of the Lambda1 parameter (dimensionless).  This should be
+     *                   a number between 0 and 1.
+     * @param lambda2    the default value of the Lambda2 parameter (dimensionless).  This should be
+     *                   a number between 0 and 1.
+     * @param alpha      the default value of the Alpha parameter (kJ/mol)^-1
+     * @param uh         the default value of the Uh parameter (kJ/mol)
+     * @param w0         the default value of the W0 parameter (kJ/mol)
+     * @param umax       the default value of the Umax parameter (kJ/mol)
+     * @param ubcore     the default value of the Ubcore parameter (kJ/mol)
+     * @param acore      the default value of the Acore parameter dimensionless)
+     * @param direction  the default value of the Direction parameter (dimensionless).  This should be
+     *                   either 1 for the forward simulation, or -1 for the backward simulation.
      */
     ATMForce(double lambda1, double lambda2, double alpha, double uh, double w0, double umax, double ubcore, double acore, double direction);
     ~ATMForce();
 
     /**
-     * Get the number of particles managed by ATMForce
+     * Get the number of particles managed by ATMForce.
      *
      * This should be the same number of particles as the System
      */
@@ -188,7 +206,7 @@ public:
      */
     void setEnergyFunction(const std::string& energy);
     /**
-     * Add a Force that will be computed by the ATM orce.
+     * Add a Force whose energy will be computed by the ATMForce.
      *
      * @param force  the Force to the be added, which should have been created on the heap with the
      *               "new" operator.  The ATMForce takes over ownership of it, and deletes the Force when the
@@ -203,8 +221,8 @@ public:
     /**
      * Add a particle to the force.
      *
-     * Normally, all of the particles in the OpenMM's System should be added to the ATMForce
-     * in the same order as they appear in the System.
+     * All of the particles in the System must be added to the ATMForce in the same order
+     * as they appear in the System.
      *
      * @param displacement1    the displacement of the particle for the target state in nm
      * @param displacement0    the displacement of the particle for the initial state in nm
@@ -288,20 +306,22 @@ public:
      */
     void updateParametersInContext(Context& context);
     /**
-     * Always returns False. Included for compatibility.
+     * Returns whether or not this force makes use of periodic boundary conditions.
      */
-    bool usesPeriodicBoundaryConditions() const {
-        return false; //the non-bonded force with PBC is in the system so it would be queried correctly
-    }
+    bool usesPeriodicBoundaryConditions() const;
     /**
-     * Returns the current perturbation energy calculated by the ATMForce
-     *
-     * The perturbation energy is U2(x) - U1(x) (for direction = 1) or U1(x) - U2(x) (for direction = -1),
-     * as further modified by the soft-core function.
+     * Returns the current perturbation energy as calculated in the most recent force or
+     * energy evaluation.
+     * 
+     * @param context  the Context for which to return the energy
+     * @param u1       on exit, the energy of the displaced state
+     * @param u0       on exit, the energy of the non-displaced state
+     * @param energy   on exit, the value of this force's energy function
      */
     void getPerturbationEnergy(const Context& context, double& u1, double& u0, double& energy) const;
     /**
-     * Returns the name of the global parameter corresponding to lambda1
+     * Returns the name of the global parameter corresponding to lambda1.  The value assigned to this
+     * parameter should be a number between 0 and 1.
      */
     static const std::string& Lambda1() {
         static const std::string key = "Lambda1";
@@ -309,7 +329,8 @@ public:
     }
 
     /**
-     * Returns the name of the global parameter corresponding to lambda2
+     * Returns the name of the global parameter corresponding to lambda2.  The value assigned to this
+     * parameter should be a number between 0 and 1.
      */
     static const std::string& Lambda2() {
         static const std::string key = "Lambda2";
@@ -317,7 +338,8 @@ public:
     }
 
     /**
-     * Returns the name of the global parameter corresponding to lambda2
+     * Returns the name of the global parameter corresponding to alpha.  The value assigned to this
+     * parameter should be in units of (kJ/mol)^-1.
      */
     static const std::string& Alpha() {
         static const std::string key = "Alpha";
@@ -325,7 +347,8 @@ public:
     }
 
     /**
-     * Returns the name of the global parameter corresponding to uh
+     * Returns the name of the global parameter corresponding to uh.  The value assigned to this
+     * parameter should be in units of (kJ/mol).
      */
     static const std::string& Uh() {
         static const std::string key = "Uh";
@@ -333,7 +356,8 @@ public:
     }
 
     /**
-     * Returns the name of the global parameter corresponding to w0
+     * Returns the name of the global parameter corresponding to w0.  The value assigned to this
+     * parameter should be in units of (kJ/mol).
      */
     static const std::string& W0() {
         static const std::string key = "W0";
@@ -341,7 +365,8 @@ public:
     }
 
     /**
-     * Returns the name of the global parameter corresponding to umax
+     * Returns the name of the global parameter corresponding to umax.  The value assigned to this
+     * parameter should be in units of (kJ/mol)^-1.
      */
     static const std::string& Umax() {
         static const std::string key = "Umax";
@@ -349,7 +374,8 @@ public:
     }
 
     /**
-     * Returns the name of the global parameter corresponding to ubcore
+     * Returns the name of the global parameter corresponding to ubcore.  The value assigned to this
+     * parameter should be in units of (kJ/mol)^-1.
      */
     static const std::string& Ubcore() {
         static const std::string key = "Ubcore";
@@ -357,7 +383,7 @@ public:
     }
 
     /**
-     * Returns the name of the global parameter corresponding to acore
+     * Returns the name of the global parameter corresponding to acore.
      */
     static const std::string& Acore() {
         static const std::string key = "Acore";
@@ -365,7 +391,8 @@ public:
     }
 
     /**
-     * Returns the name of the global parameter corresponding to direction
+     * Returns the name of the global parameter corresponding to direction.  The value assigned to
+     * this parameter should be either 1 for the forward simulation, or -1 for the backward simulation.
      */
     static const std::string& Direction() {
         static const std::string key = "Direction";
@@ -391,16 +418,10 @@ private:
 class ATMForce::ParticleInfo {
  public:
   int index;
-  Vec3 displacement1;
-  Vec3 displacement0;
-  ParticleInfo() {
-    index = -1;
-    displacement1 = Vec3();
-    displacement0 = Vec3();
+  Vec3 displacement1, displacement0;
+  ParticleInfo() : index(-1) {
   }
   ParticleInfo( int index ) : index(index) {
-    displacement1 = Vec3();
-    displacement0 = Vec3();
   }
   ParticleInfo(int index, Vec3 displacement1, Vec3 displacement0) :
     index(index), displacement1(displacement1), displacement0(displacement0) {

@@ -2990,16 +2990,14 @@ void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& i
 
     //in the initial state, particles are displaced by displ0
     vector<Vec3> pos0(pos);
-    for(int i=0; i < pos0.size(); i++){
-      pos0[i] += displ0[i];
-    }
+    for (int i = 0; i < pos0.size(); i++)
+        pos0[i] += displ0[i];
     extractPositions(innerContext0) = pos0;
 
     //in the target state, particles are displaced by displ1
     vector<Vec3> pos1(pos);
-    for (int i = 0; i < pos1.size(); i++) {
+    for (int i = 0; i < pos1.size(); i++)
         pos1[i] += displ1[i];
-    }
     extractPositions(innerContext1) = pos1;
 
     Vec3 a, b, c;
