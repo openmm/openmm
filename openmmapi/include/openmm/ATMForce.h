@@ -165,7 +165,7 @@ public:
      * @param ubcore     the default value of the Ubcore parameter (kJ/mol)
      * @param acore      the default value of the Acore parameter dimensionless)
      * @param direction  the default value of the Direction parameter (dimensionless).  This should be
-     *                   either 1 for the forward simulation, or -1 for the backward simulation.
+     *                   either 1 for the forward transfer, or -1 for the backward transfer.
      */
     ATMForce(double lambda1, double lambda2, double alpha, double uh, double w0, double umax, double ubcore, double acore, double direction);
     ~ATMForce();
@@ -366,7 +366,7 @@ public:
 
     /**
      * Returns the name of the global parameter corresponding to umax.  The value assigned to this
-     * parameter should be in units of (kJ/mol)^-1.
+     * parameter should be in units of (kJ/mol).
      */
     static const std::string& Umax() {
         static const std::string key = "Umax";
@@ -375,7 +375,7 @@ public:
 
     /**
      * Returns the name of the global parameter corresponding to ubcore.  The value assigned to this
-     * parameter should be in units of (kJ/mol)^-1.
+     * parameter should be in units of (kJ/mol).
      */
     static const std::string& Ubcore() {
         static const std::string key = "Ubcore";
@@ -392,7 +392,7 @@ public:
 
     /**
      * Returns the name of the global parameter corresponding to direction.  The value assigned to
-     * this parameter should be either 1 for the forward simulation, or -1 for the backward simulation.
+     * this parameter should be either 1 for the forward transfer, or -1 for the backward transfer.
      */
     static const std::string& Direction() {
         static const std::string key = "Direction";

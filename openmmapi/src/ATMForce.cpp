@@ -52,7 +52,7 @@ ATMForce::ATMForce(double lambda1, double lambda2, double alpha, double uh, doub
     if (alpha < 0)
         throw OpenMMException("ATMForce: alpha cannot be negative");
     if (lambda1 != lambda2 && alpha == 0)
-        throw OpenMMException("ATMForce: alpha must be postive when lambda1 and lambda2 are different");
+        throw OpenMMException("ATMForce: alpha must be positive when lambda1 and lambda2 are different");
     if (umax < ubcore)
         throw OpenMMException("ATMForce: umax cannot be less than ubcore");
     if (acore < 0)
