@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2021 Stanford University and the Authors.
+Portions copyright (c) 2012-2023 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -277,8 +277,8 @@ class PDBFile(object):
             The Topology defining the model to write
         positions : list
             The list of atomic positions to write
-        file : file=stdout
-            A file to write to
+        file : string or file
+            the name of the file to write.  Alternatively you can pass an open file object.
         keepIds : bool=False
             If True, keep the residue and chain IDs specified in the Topology
             rather than generating new ones.  Warning: It is up to the caller to
@@ -287,9 +287,13 @@ class PDBFile(object):
         extraParticleIdentifier : string='EP'
             String to write in the element column of the ATOM records for atoms whose element is None (extra particles)
         """
-        PDBFile.writeHeader(topology, file)
-        PDBFile.writeModel(topology, positions, file, keepIds=keepIds, extraParticleIdentifier=extraParticleIdentifier)
-        PDBFile.writeFooter(topology, file)
+        if isinstance(file, str):
+            with open(file, 'w') as output:
+                PDBFile.writeFile(topology, positions, output, keepIds, extraParticleIdentifier)
+        else:
+            PDBFile.writeHeader(topology, file)
+            PDBFile.writeModel(topology, positions, file, keepIds=keepIds, extraParticleIdentifier=extraParticleIdentifier)
+            PDBFile.writeFooter(topology, file)
 
     @staticmethod
     def writeHeader(topology, file=sys.stdout):
