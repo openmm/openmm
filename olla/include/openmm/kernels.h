@@ -66,6 +66,7 @@
 #include "openmm/VerletIntegrator.h"
 #include "openmm/NoseHooverIntegrator.h"
 #include "openmm/NoseHooverChain.h"
+#include "openmm/ATMForce.h"
 #include <iosfwd>
 #include <set>
 #include <string>
@@ -1636,6 +1637,55 @@ public:
      */
     virtual void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const = 0;
 };
+
+/**
+ * This kernel is invoked by ATMForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcATMForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcATMForce";
+    }
+    CalcATMForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the ATMForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const ATMForce& force) = 0;
+    /**
+     * Scale the forces from the inner contexts and apply them to the main context.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext0  the first inner context
+     * @param innerContext1  the second inner context
+     * @param dEdu0          the derivative of the final energy with respect to the first inner context's energy
+     * @param dEdu1          the derivative of the final energy with respect to the second inner context's energy
+     * @param energyParamDerivs  derivatives of the final energy with respect to global parameters
+     */
+    virtual void applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
+                             double dEdu0, double dEdu1, const std::map<std::string, double>& energyParamDerivs) = 0;
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the ATMForce to copy the parameters from
+     */
+    virtual void copyParametersToContext(ContextImpl& context, const ATMForce& force) = 0;
+    /**
+     * Copy state information to the inner contexts.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext0  the first context created by the ATMForce for computing displaced energy
+     * @param innerContext1  the second context created by the ATMForce for computing displaced energy
+     */
+    virtual void copyState(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1) = 0;
+};
+
+  
+
 
 } // namespace OpenMM
 

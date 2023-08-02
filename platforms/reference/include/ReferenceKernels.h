@@ -1633,6 +1633,53 @@ private:
     int frequency;
 };
 
+/**
+ * This kernel is invoked by ATMForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcATMForceKernel : public CalcATMForceKernel {
+public:
+    ReferenceCalcATMForceKernel(std::string name, const Platform& platform) : CalcATMForceKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the ATMForce this kernel will be used for
+     */
+    void initialize(const System& system, const ATMForce& force);
+    /**
+     * Scale the forces from the inner contexts and apply them to the main context.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext1  the first inner context
+     * @param innerContext2  the second inner context
+     * @param dEdu0          the derivative of the final energy with respect to the first inner context's energy
+     * @param dEdu1          the derivative of the final energy with respect to the second inner context's energy
+     * @param energyParamDerivs  derivatives of the final energy with respect to global parameters
+     */
+    void applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
+                     double dEdu0, double dEdu1, const std::map<std::string, double>& energyParamDerivs);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the ATMForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const ATMForce& force);
+    /**
+     * Copy state information to the inner contexts.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext1  the first context created by the ATMForce for computing displaced energy
+     * @param innerContext2  the second context created by the ATMForce for computing displaced energy
+     */
+    void copyState(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1);
+private:
+    int numParticles;
+    std::vector<Vec3> displ1;
+    std::vector<Vec3> displ0;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_REFERENCEKERNELS_H_*/

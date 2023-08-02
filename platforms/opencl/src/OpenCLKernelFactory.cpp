@@ -109,6 +109,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new CommonCalcCustomCompoundBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomCVForceKernel::Name())
         return new OpenCLCalcCustomCVForceKernel(name, platform, cl);
+    if (name == CalcATMForceKernel::Name())
+        return new OpenCLCalcATMForceKernel(name, platform, cl);    
     if (name == CalcRMSDForceKernel::Name())
         return new CommonCalcRMSDForceKernel(name, platform, cl);
     if (name == CalcCustomManyParticleForceKernel::Name())
