@@ -391,9 +391,11 @@ class ForceField(object):
                     for bond in patch.findall('RemoveExternalBond'):
                         atom = ForceField._PatchAtomData(bond.attrib['atomName'])
                         patchData.deletedExternalBonds.append(atom)
-                    atomIndices = dict((atom.name, i) for i, atom in enumerate(patchData.addedAtoms[atomDescription.residue]+patchData.changedAtoms[atomDescription.residue]))
+                    # The following three lines are only correct for single residue patches.  Multi-residue patches with
+                    # virtual sites currently don't work correctly.  See issue #2848.
+                    atomIndices = dict((atom.name, i) for i, atom in enumerate(patchData.addedAtoms[0]+patchData.changedAtoms[0]))
                     for site in patch.findall('VirtualSite'):
-                        patchData.virtualSites[atomDescription.residue].append(ForceField._VirtualSiteData(site, atomIndices))
+                        patchData.virtualSites[0].append(ForceField._VirtualSiteData(site, atomIndices))
                     for residue in patch.findall('ApplyToResidue'):
                         name = residue.attrib['name']
                         if ':' in name:
