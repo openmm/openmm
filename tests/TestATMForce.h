@@ -36,10 +36,12 @@
 #include "openmm/ATMForce.h"
 #include "openmm/Context.h"
 #include "openmm/CustomBondForce.h"
-#include "openmm/NonbondedForce.h"
 #include "openmm/CustomExternalForce.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/HarmonicBondForce.h"
+#include "openmm/LangevinMiddleIntegrator.h"
+#include "openmm/LocalEnergyMinimizer.h"
+#include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "openmm/serialization/XmlSerializer.h"
@@ -464,6 +466,52 @@ void testMolecules() {
     }
 }
 
+void testSimulation() {
+    // Create a box of Lennard-Jones spheres, including an ATMForce that displaces
+    // one particle to two different locations.
+    
+    int numParticles = 27;
+    double width = 2.0;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0, 0, width));
+    ATMForce* atm = new ATMForce("(u0+u1)/2");
+    system.addForce(atm);
+    NonbondedForce* nb = new NonbondedForce();
+    nb->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nb->setCutoffDistance(1.0);
+    atm->addForce(nb);
+    vector<Vec3> positions;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            for (int k = 0; k < 3; k++) {
+                system.addParticle(10.0);
+                positions.push_back(Vec3(0.6*i, 0.6*j, 0.6*k));
+                nb->addParticle(0, 0.3, 1.0);
+                atm->addParticle(Vec3());
+            }
+    atm->setParticleParameters(0, Vec3(0.3, 0, 0), Vec3(-0.3, 0, 0));
+
+    // Simulate it and make sure that the other particles avoid the displaced positions.
+
+    LangevinMiddleIntegrator integrator(300, 1.0, 0.004);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(300);
+    for (int i = 0; i < 100; i++) {
+        integrator.step(10);
+        vector<Vec3> pos = context.getState(State::Positions).getPositions();
+        for (int j = 1; j < numParticles; j++) {
+            for (double displacement : {-0.3, 0.3}) {
+                Vec3 d = pos[0]-pos[j];
+                d[0] += displacement;
+                for (int k = 0; k < 3; k++)
+                    d[k] -= round(d[k]/width)*width;
+                assert(sqrt(d.dot(d)) > 0.2);
+            }
+        }
+    }
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -477,6 +525,7 @@ int main(int argc, char* argv[]) {
 	testParticlesCustomExpressionSoftplus();
         testLargeSystem();
         testMolecules();
+        testSimulation();
         runPlatformTests();
     }
     catch(const exception& e) {
