@@ -7842,16 +7842,10 @@ void CommonCalcATMForceKernel::initialize(const System& system, const ATMForce& 
     numParticles = force.getNumParticles();
     if (numParticles == 0)
         return;
-    displVector1.resize(cc.getPaddedNumAtoms());
-    displVector0.resize(cc.getPaddedNumAtoms());
-    vector<mm_float4> displVectorContext1(cc.getPaddedNumAtoms());
-    vector<mm_float4> displVectorContext0(cc.getPaddedNumAtoms());
-    for (int i = 0; i < cc.getPaddedNumAtoms(); i++) {
-        displVector1[i] = mm_float4(0, 0, 0, 0);
-        displVector0[i] = mm_float4(0, 0, 0, 0);
-        displVectorContext1[i] = mm_float4(0, 0, 0, 0);
-        displVectorContext0[i] = mm_float4(0, 0, 0, 0);
-    }
+    displVector1.resize(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    displVector0.resize(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_float4> displVectorContext1(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_float4> displVectorContext0(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
     for (int i = 0; i < numParticles; i++) {
         Vec3 displacement1, displacement0;
         force.getParticleParameters(i, displacement1, displacement0);
@@ -7966,15 +7960,9 @@ void CommonCalcATMForceKernel::copyParametersToContext(ContextImpl& context, con
     displVector0.resize(cc.getPaddedNumAtoms());
     for (int i = 0; i < numParticles; i++) {
         Vec3 displacement1, displacement0;
-        force.getParticleParameters(i, displacement1, displacement0 );
-        displVector1[i].x = displacement1[0];
-        displVector1[i].y = displacement1[1];
-        displVector1[i].z = displacement1[2];
-        displVector1[i].w = 0;
-	displVector0[i].x = displacement0[0];
-        displVector0[i].y = displacement0[1];
-        displVector0[i].z = displacement0[2];
-        displVector0[i].w = 0;
+        force.getParticleParameters(i, displacement1, displacement0);
+        displVector1[i] = mm_float4(displacement1[0], displacement1[1], displacement1[2], 0);
+        displVector0[i] = mm_float4(displacement0[0], displacement0[1], displacement0[2], 0);
     }
     const vector<int>& id = cc.getAtomIndex();
     vector<mm_float4> displVectorContext1(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));

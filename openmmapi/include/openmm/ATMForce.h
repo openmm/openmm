@@ -119,6 +119,8 @@ namespace OpenMM {
  * \endverbatim
  *
  * after which it will be used for energy/force evaluations for molecular dynamics and energy optimization.
+ * You can call getPerturbationEnergy() to query the values of u0 and u1, which are needed for computing
+ * free energies.
  *
  * In most cases, particles are only displaced in one of the two states evaluated by this force.  It computes the
  * change in energy between the current particle coordinates (as stored in the Context) and the displaced coordinates.
@@ -233,8 +235,8 @@ public:
      * Get the parameters for a particle
      * 
      * @param index           the index in the force for the particle for which to get parameters
-     * @param displacement1   the the displacement of the particle for the target state in nm
-     * @param displacement0   the the displacement of the particle for the initial state in nm
+     * @param displacement1   the displacement of the particle for the target state in nm
+     * @param displacement0   the displacement of the particle for the initial state in nm
      */
     void getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0) const;
     /**
@@ -415,16 +417,16 @@ private:
  * @private
  */
 class ATMForce::ParticleInfo {
- public:
-  int index;
-  Vec3 displacement1, displacement0;
-  ParticleInfo() : index(-1) {
-  }
-  ParticleInfo( int index ) : index(index) {
-  }
-  ParticleInfo(int index, Vec3 displacement1, Vec3 displacement0) :
-    index(index), displacement1(displacement1), displacement0(displacement0) {
-  }
+public:
+    int index;
+    Vec3 displacement1, displacement0;
+    ParticleInfo() : index(-1) {
+    }
+    ParticleInfo(int index) : index(index) {
+    }
+    ParticleInfo(int index, Vec3 displacement1, Vec3 displacement0) :
+        index(index), displacement1(displacement1), displacement0(displacement0) {
+    }
 };
 
 /**
