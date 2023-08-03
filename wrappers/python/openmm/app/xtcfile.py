@@ -141,7 +141,7 @@ class XTCFile(object):
             )
         else:
             boxVectors = np.zeros((3, 3)).astype(np.float32)
-        step = self._modelCount * self._interval + self._firstStep
+        step = (self._modelCount - 1) * self._interval + self._firstStep
         time = step * self._dt
         xtc_write_frame(
             self._filename.encode("utf-8"),
