@@ -13,4 +13,4 @@ provides a combination of extreme flexibility (through custom forces and integra
 Getting Help
 ------------
 
-Need Help? Check out the [documentation](http://docs.openmm.org/) and [discussion forums](https://simtk.org/forums/viewforum.php?f=161).
+Need Help? Check out the [documentation](https://openmm.org/documentation) and [discussion forums](https://simtk.org/forums/viewforum.php?f=161).
