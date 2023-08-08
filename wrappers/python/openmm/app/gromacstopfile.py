@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2022 Stanford University and the Authors.
+Portions copyright (c) 2012-2023 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -45,6 +45,7 @@ import re
 import distutils.spawn
 from collections import OrderedDict, defaultdict
 from itertools import combinations, combinations_with_replacement
+from copy import deepcopy
 
 HBonds = ff.HBonds
 AllBonds = ff.AllBonds
@@ -108,7 +109,9 @@ class GromacsTopFile(object):
 
     class _MoleculeType(object):
         """Inner class to store information about a molecule type."""
-        def __init__(self):
+        def __init__(self, name, nrexcl):
+            self.name = name
+            self.nrexcl = nrexcl
             self.atoms = []
             self.bonds = []
             self.angles = []
@@ -121,6 +124,41 @@ class GromacsTopFile(object):
             self.vsites3 = []
             self.has_virtual_sites = False
             self.has_nbfix_terms = False
+
+        def findExclusionsFromBonds(self, genpairs):
+            """Find exclusions between atoms separated by up to nrexcl bonds if genpairs is false,
+               or up to 2 bonds if genpairs is true.
+            """
+            bondedTo = [set() for i in range(len(self.atoms))]
+            for fields in self.bonds:
+                i = int(fields[0])-1
+                j = int(fields[1])-1
+                bondedTo[i].add(j)
+                bondedTo[j].add(i)
+
+            # Identify all neighbors of each atom with each separation.
+
+            bondedWithSeparation = [bondedTo]
+            maxBonds = self.nrexcl
+            if genpairs:
+                maxBonds = min(maxBonds, 2)
+            for i in range(maxBonds-1):
+                lastBonds = bondedWithSeparation[-1]
+                newBonds = deepcopy(lastBonds)
+                for atom in range(len(self.atoms)):
+                    for a1 in lastBonds[atom]:
+                        for a2 in bondedTo[a1]:
+                            newBonds[atom].add(a2)
+                bondedWithSeparation.append(newBonds)
+
+            # Build the list of pairs.
+
+            pairs = []
+            for atom in range(len(self.atoms)):
+                for otherAtom in bondedWithSeparation[-1][atom]:
+                    if otherAtom > atom:
+                        pairs.append((atom, otherAtom))
+            return pairs
 
     def _processFile(self, file):
         append = ''
@@ -291,7 +329,7 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 1:
             raise ValueError('Too few fields in [ moleculetypes ] line: '+line)
-        type = GromacsTopFile._MoleculeType()
+        type = GromacsTopFile._MoleculeType(fields[0], int(fields[1]))
         self._moleculeTypes[fields[0]] = type
         self._currentMoleculeType = type
 
@@ -318,8 +356,8 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 3:
             raise ValueError('Too few fields in [ bonds ] line: '+line)
-        if fields[2] != '1':
-            raise ValueError('Unsupported function type in [ bonds ] line: '+line)
+        if fields[2] not in ('1', '2'):
+                raise ValueError('Unsupported function type in [ bonds ] line: '+line)
         self._currentMoleculeType.bonds.append(fields)
 
     def _processAngle(self, line):
@@ -329,7 +367,7 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 4:
             raise ValueError('Too few fields in [ angles ] line: '+line)
-        if fields[3] not in ('1', '5'):
+        if fields[3] not in ('1', '2', '5'):
             raise ValueError('Unsupported function type in [ angles ] line: '+line)
         self._currentMoleculeType.angles.append(fields)
 
@@ -405,22 +443,26 @@ class GromacsTopFile(object):
         fields = line.split()
         if len(fields) < 5:
             raise ValueError('Too few fields in [ bondtypes ] line: '+line)
-        if fields[2] != '1':
+        if fields[2] not in ('1', '2'):
             raise ValueError('Unsupported function type in [ bondtypes ] line: '+line)
-        self._bondTypes[tuple(fields[:2])] = fields
+        self._bondTypes[tuple(fields[:3])] = fields
 
     def _processAngleType(self, line):
         """Process a line in the [ angletypes ] category."""
         fields = line.split()
         if len(fields) < 6:
             raise ValueError('Too few fields in [ angletypes ] line: '+line)
-        if fields[3] not in ('1', '5'):
+        if fields[3] not in ('1', '2', '5'):
             raise ValueError('Unsupported function type in [ angletypes ] line: '+line)
         self._angleTypes[tuple(fields[:3])] = fields
 
     def _processDihedralType(self, line):
         """Process a line in the [ dihedraltypes ] category."""
         fields = line.split()
+        if len(fields[2]) == 1 and fields[2].isdigit():
+            # The third field contains the function type, meaning only two atom types are specified.
+            # Interpret them as the two inner ones.
+            fields = ['X', fields[0], fields[1], 'X']+fields[2:]
         if len(fields) < 7:
             raise ValueError('Too few fields in [ dihedraltypes ] line: '+line)
         if fields[4] not in ('1', '2', '3', '4', '5', '9'):
@@ -654,6 +696,17 @@ class GromacsTopFile(object):
         System
              the newly created System
         """
+
+        # Build a list of atom types for NBFIX
+
+        atom_types = []
+        for moleculeName, moleculeCount in self._molecules:
+            moleculeType = self._moleculeTypes[moleculeName]
+            for _ in range(moleculeCount):
+                for atom in moleculeType.atoms:
+                    atom_types.append(atom[1])
+        has_nbfix_terms = any([pair in self._nonbondTypes for pair in combinations_with_replacement(sorted(set(atom_types)), 2)])
+
         # Create the System.
 
         sys = mm.System()
@@ -664,7 +717,12 @@ class GromacsTopFile(object):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
         nb = mm.NonbondedForce()
         sys.addForce(nb)
-        if self._defaults[1] in ('1', '3'):
+        lj = None
+        if has_nbfix_terms:
+            lj = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r^6; a=acoef(type1, type2); b=bcoef(type1, type2)')
+            lj.addPerParticleParameter('type')
+            sys.addForce(lj)
+        elif self._defaults[1] in ('1', '3'):
             lj = mm.CustomNonbondedForce('A1*A2/r^12-C1*C2/r^6')
             lj.addPerParticleParameter('C')
             lj.addPerParticleParameter('A')
@@ -677,8 +735,8 @@ class GromacsTopFile(object):
             nb.setReactionFieldDielectric(1.0)
         elif implicitSolvent is not None:
             raise ValueError('Illegal value for implicitSolvent')
-        bonds = None
-        angles = None
+        bonds = {}
+        angles = {}
         periodic = None
         rb = None
         harmonicTorsion = None
@@ -709,16 +767,6 @@ class GromacsTopFile(object):
                 for types in dihedralTypeTable.values():
                     types.append(key)
 
-        # NBFIX
-
-        atom_types = []
-        for moleculeName, moleculeCount in self._molecules:
-            moleculeType = self._moleculeTypes[moleculeName]
-            for _ in range(moleculeCount):
-                for atom in moleculeType.atoms:
-                    atom_types.append(atom[1])
-        has_nbfix_terms = any([pair in self._nonbondTypes for pair in combinations_with_replacement(sorted(set(atom_types)), 2)])
-
         if has_nbfix_terms:
             # Build a lookup table and angle/dihedral indices list to
             # let us handle exclusion manually.
@@ -731,6 +779,7 @@ class GromacsTopFile(object):
 
         for moleculeName, moleculeCount in self._molecules:
             moleculeType = self._moleculeTypes[moleculeName]
+            exclusionsFromBonds = moleculeType.findExclusionsFromBonds(self._genpairs)
             for i in range(moleculeCount):
 
                 # Record the types of all atoms.
@@ -758,12 +807,15 @@ class GromacsTopFile(object):
                 for fields in moleculeType.bonds:
                     atoms = [int(x)-1 for x in fields[:2]]
                     types = tuple(bondedTypes[i] for i in atoms)
+                    bondType = fields[2]
+                    reversedTypes = types[::-1]+(bondType,)
+                    types = types+(bondType,)
                     if len(fields) >= 5:
                         params = fields[3:5]
                     elif types in self._bondTypes:
                         params = self._bondTypes[types][3:5]
-                    elif types[::-1] in self._bondTypes:
-                        params = self._bondTypes[types[::-1]][3:5]
+                    elif reversedTypes in self._bondTypes:
+                        params = self._bondTypes[reversedTypes][3:5]
                     else:
                         raise ValueError('No parameters specified for bond: '+fields[0]+', '+fields[1])
                     # Decide whether to use a constraint or a bond.
@@ -780,11 +832,21 @@ class GromacsTopFile(object):
                     length = float(params[0])
                     if useConstraint:
                         sys.addConstraint(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], length)
+                    elif bondType == '1':
+                        if bondType not in bonds:
+                            bonds[bondType] = mm.HarmonicBondForce()
+                            sys.addForce(bonds[bondType])
+                        bonds[bondType].addBond(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], length, float(params[1]))
+                    elif bondType == '2':
+                        if bondType not in bonds:
+                            bonds[bondType] = mm.CustomBondForce('0.25*k*(r^2-r0^2)^2')
+                            bonds[bondType].addPerBondParameter('r0')
+                            bonds[bondType].addPerBondParameter('k')
+                            bonds[bondType].setName('GROMOSBondForce')
+                            sys.addForce(bonds[bondType])
+                        bonds[bondType].addBond(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], (length, float(params[1])))
                     else:
-                        if bonds is None:
-                            bonds = mm.HarmonicBondForce()
-                            sys.addForce(bonds)
-                        bonds.addBond(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], length, float(params[1]))
+                        raise ValueError('Internal error: bondType has unexpected value: '+bondType)
                     # Record information that will be needed for constraining angles.
                     atomBonds[atoms[0]][atoms[1]] = length
                     atomBonds[atoms[1]][atoms[0]] = length
@@ -795,6 +857,7 @@ class GromacsTopFile(object):
                 for fields in moleculeType.angles:
                     atoms = [int(x)-1 for x in fields[:3]]
                     types = tuple(bondedTypes[i] for i in atoms)
+                    angleType = fields[3]
                     if len(fields) >= 6:
                         params = fields[4:]
                     elif types in self._angleTypes:
@@ -823,18 +886,29 @@ class GromacsTopFile(object):
                             length = math.sqrt(l1*l1 + l2*l2 - 2*l1*l2*math.cos(theta))
                             sys.addConstraint(baseAtomIndex+atoms[0], baseAtomIndex+atoms[2], length)
                     else:
-                        if angles is None:
-                            angles = mm.HarmonicAngleForce()
-                            sys.addForce(angles)
-                        angles.addAngle(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], theta, float(params[1]))
-                        if fields[3] == '5':
-                            # This is a Urey-Bradley term, so add the bond.
-                            if bonds is None:
-                                bonds = mm.HarmonicBondForce()
-                                sys.addForce(bonds)
-                            k = float(params[3])
-                            if k != 0:
-                                bonds.addBond(baseAtomIndex+atoms[0], baseAtomIndex+atoms[2], float(params[2]), k)
+                        if angleType in ('1', '5'):
+                            if angleType not in angles:
+                                angles[angleType] = mm.HarmonicAngleForce()
+                                sys.addForce(angles[angleType])
+                            angles[angleType].addAngle(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], theta, float(params[1]))
+                            if angleType == '5':
+                                # This is a Urey-Bradley term, so also add the bond.
+                                if '1' not in bonds:
+                                    bonds['1'] = mm.HarmonicBondForce()
+                                    sys.addForce(bonds['1'])
+                                k = float(params[3])
+                                if k != 0:
+                                    bonds['1'].addBond(baseAtomIndex + atoms[0], baseAtomIndex + atoms[2], float(params[2]), k)
+                        elif angleType == '2':
+                            if angleType not in angles:
+                                angles[angleType] = mm.CustomAngleForce('0.5*k*(cos(theta)-cos(theta0))^2')
+                                angles[angleType].addPerAngleParameter('theta0')
+                                angles[angleType].addPerAngleParameter('k')
+                                angles[angleType].setName('GROMOSAngleForce')
+                                sys.addForce(angles[angleType])
+                            angles[angleType].addAngle(baseAtomIndex+atoms[0], baseAtomIndex+atoms[1], baseAtomIndex+atoms[2], (theta, float(params[1])))
+                        else:
+                            raise ValueError('Internal error: angleType has unexpected value: '+angleType)
 
                 # Add torsions.
 
@@ -878,6 +952,7 @@ class GromacsTopFile(object):
                                     harmonicTorsion = mm.CustomTorsionForce('0.5*k*(thetap-theta0)^2; thetap = step(-(theta-theta0+pi))*2*pi+theta+step(theta-theta0-pi)*(-2*pi); pi = %.15g' % math.pi)
                                     harmonicTorsion.addPerTorsionParameter('theta0')
                                     harmonicTorsion.addPerTorsionParameter('k')
+                                    harmonicTorsion.setName('HarmonicTorsionForce')
                                     sys.addForce(harmonicTorsion)
                                 # map phi0 into correct space
                                 phi0 = phi0 - 360 if phi0 > 180 else phi0
@@ -934,10 +1009,9 @@ class GromacsTopFile(object):
                         q = float(params[4])
 
                     if has_nbfix_terms:
-                        if self._defaults[1] != '2':
-                            raise NotImplementedError('NBFIX terms with LB combination rule is not yet supported')
                         nb.addParticle(q, 1.0, 0.0)
                         atom_charges.append(q)
+                        lj.addParticle([0])
                     else:
                         if self._defaults[1] == '1':
                             nb.addParticle(q, 1.0, 0.0)
@@ -1013,6 +1087,8 @@ class GromacsTopFile(object):
                     atoms = [int(x)-1 for x in fields]
                     for atom in atoms[1:]:
                         exclusions.append((baseAtomIndex+atoms[0], baseAtomIndex+atom))
+                for atoms in exclusionsFromBonds:
+                    exclusions.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1]))
 
                 # Record virtual sites
 
@@ -1059,9 +1135,12 @@ class GromacsTopFile(object):
                 rmin4 = float(params4[6])
                 eps4 = float(params4[7])
 
-                charge_prod = (q1*q4)
-                epsilon = (math.sqrt(abs(eps1 * eps4)))
-                rmin14 = (rmin1 + rmin4) / 2
+                charge_prod = fudgeQQ*q1*q4
+                epsilon = math.sqrt(abs(eps1 * eps4))
+                if self._defaults[1] == '2':
+                   rmin14 = (rmin1 + rmin4) / 2
+                else:
+                   rmin14 = math.sqrt(rmin1 * rmin4)
                 nb.addException(tor[0], tor[3], charge_prod, rmin14, epsilon)
                 excluded_atom_pairs.add(key)
 
@@ -1087,23 +1166,21 @@ class GromacsTopFile(object):
         for exclusion in exclusions:
             nb.addException(exclusion[0], exclusion[1], 0.0, 1.0, 0.0, True)
 
-        if self._defaults[1] in ('1', '3'):
+        if lj is not None:
             # We're using a CustomNonbondedForce for LJ interactions, so also create a CustomBondForce
             # to handle the exceptions.
 
             pair_bond = mm.CustomBondForce('-C/r^6+A/r^12')
             pair_bond.addPerBondParameter('C')
             pair_bond.addPerBondParameter('A')
+            pair_bond.setName('LennardJonesExceptions')
             sys.addForce(pair_bond)
-            lj.createExclusionsFromBonds(bondIndices, 3)
             for pair in pairs:
                 nb.addException(pair[0], pair[1], pair[2], 1.0, 0.0, True)
                 pair_bond.addBond(pair[0], pair[1], [pair[3], pair[4]])
-            existing = set(tuple(lj.getExclusionParticles(i)) for i in range(lj.getNumExclusions()))
-            for exclusion in exclusions:
-                if exclusion not in existing and tuple(reversed(exclusion)) not in existing:
-                    lj.addExclusion(exclusion[0], exclusion[1])
-                    existing.add(exclusion)
+            for i in range(nb.getNumExceptions()):
+                ii, jj, q, eps, sig = nb.getExceptionParameters(i)
+                lj.addExclusion(ii, jj)
         elif self._defaults[1] == '2':
             for pair in pairs:
                 nb.addException(pair[0], pair[1], pair[2], pair[3], pair[4], True)
@@ -1122,7 +1199,7 @@ class GromacsTopFile(object):
         if switchDistance is not None:
             nb.setUseSwitchingFunction(True)
             nb.setSwitchingDistance(switchDistance)
-        if self._defaults[1] in ('1', '3'):
+        if lj is not None:
             methodMap = {ff.NoCutoff:mm.CustomNonbondedForce.NoCutoff,
                          ff.CutoffNonPeriodic:mm.CustomNonbondedForce.CutoffNonPeriodic,
                          ff.CutoffPeriodic:mm.CustomNonbondedForce.CutoffPeriodic,
@@ -1131,14 +1208,14 @@ class GromacsTopFile(object):
                          ff.LJPME:mm.CustomNonbondedForce.CutoffPeriodic}
             lj.setNonbondedMethod(methodMap[nonbondedMethod])
             lj.setCutoffDistance(nonbondedCutoff)
+            if nonbondedMethod in (ff.PME, ff.LJPME, ff.Ewald, ff.CutoffPeriodic):
+                lj.setUseLongRangeCorrection(True)
             if switchDistance is not None:
                 lj.setUseSwitchingFunction(True)
                 lj.setSwitchingDistance(switchDistance)
+            lj.setName('LennardJonesForce')
 
         if has_nbfix_terms:
-            if self._defaults[1] != '2':
-                raise NotImplementedError('NBFIX terms with LB combination rule is not yet supported')
-
             atom_nbfix_types = set([])
             for pair in self._nonbondTypes:
                 atom_nbfix_types.add(pair[0])
@@ -1146,30 +1223,26 @@ class GromacsTopFile(object):
 
             lj_idx_list = [0 for _ in atom_types]
             lj_radii, lj_depths = [], []
+            atom_params = []
             num_lj_types = 0
             lj_type_list = []
             for i,atom_type in enumerate(atom_types):
                 atom = self._atomTypes[atom_type]
                 if lj_idx_list[i]: continue # already assigned
-                atom_rmin = atom[6]
-                atom_epsilon = atom[7]
+                ljtype = (float(atom[6]), float(atom[7]))
+                atom_params.append(ljtype)
                 num_lj_types += 1
                 lj_idx_list[i] = num_lj_types
-                ljtype = (atom_rmin, atom_epsilon)
                 lj_type_list.append(atom)
-                lj_radii.append(float(atom_rmin))
-                lj_depths.append(float(atom_epsilon))
                 for j in range(i+1, len(atom_types)):
                     atom_type2 = atom_types[j]
                     if lj_idx_list[j] > 0: continue # already assigned
                     atom2 = self._atomTypes[atom_type2]
-                    atom2_rmin = atom2[6]
-                    atom2_epsilon = atom2[7]
+                    ljtype2 = (float(atom2[6]), float(atom2[7]))
                     if atom2 is atom:
                         lj_idx_list[j] = num_lj_types
                     elif atom_type not in atom_nbfix_types:
                         # Only non-NBFIXed atom types can be compressed
-                        ljtype2 = (atom2_rmin, atom2_epsilon)
                         if ljtype == ljtype2:
                             lj_idx_list[j] = num_lj_types
 
@@ -1182,43 +1255,34 @@ class GromacsTopFile(object):
                 for j in range(num_lj_types):
                     namej = lj_type_list[j][0]
                     try:
-                        params = self._nonbondTypes[tuple(sorted((namei, namej)))]
-                        rij = float(params[3])
-                        wdij = float(params[4])
+                        types = self._nonbondTypes[tuple(sorted((namei, namej)))]
+                        params = (float(types[3]), float(types[4]))
+                        if self._defaults[1] == '2':
+                            c6 = 4 * params[1] * params[0]**6
+                            c12 = 4 * params[1] * params[0]**12
+                        else:
+                            c6 = params[0]
+                            c12 = params[1]
                     except KeyError:
-                        rij = (lj_radii[i] + lj_radii[j]) / 2
-                        wdij = math.sqrt(lj_depths[i] * lj_depths[j])
-                    acoef[i+num_lj_types*j] = 2 * math.sqrt(wdij) * rij**6
-                    bcoef[i+num_lj_types*j] = 4 * wdij * rij**6
-            cforce = mm.CustomNonbondedForce('(a/r6)^2-b/r6; r6=r^6;'
-                                             'a=acoef(type1, type2);'
-                                             'b=bcoef(type1, type2)')
-            cforce.addTabulatedFunction('acoef',
-                    mm.Discrete2DFunction(num_lj_types, num_lj_types, acoef))
-            cforce.addTabulatedFunction('bcoef',
-                    mm.Discrete2DFunction(num_lj_types, num_lj_types, bcoef))
-            cforce.addPerParticleParameter('type')
-            if (nonbondedMethod in (ff.PME, ff.LJPME, ff.Ewald, ff.CutoffPeriodic)):
-                cforce.setNonbondedMethod(cforce.CutoffPeriodic)
-                cforce.setCutoffDistance(nonbondedCutoff)
-                cforce.setUseLongRangeCorrection(True)
-            elif nonbondedMethod is ff.NoCutoff:
-                cforce.setNonbondedMethod(cforce.NoCutoff)
-            elif nonbondedMethod is ff.CutoffNonPeriodic:
-                cforce.setNonbondedMethod(cforce.CutoffNonPeriodic)
-                cforce.setCutoffDistance(nonbondedCutoff)
-            else:
-                raise ValueError('Unrecognized nonbonded method')
-            if switchDistance is not None:
-                cforce.setUseSwitchingFunction(True)
-                cforce.setSwitchingDistance(switchDistance)
-            for i in lj_idx_list:
-                cforce.addParticle((i - 1,)) # adjust for indexing from 0
-
-            for i in range(nb.getNumExceptions()):
-                ii, jj, q, eps, sig = nb.getExceptionParameters(i)
-                cforce.addExclusion(ii, jj)
-            sys.addForce(cforce)
+                        params1 = atom_params[i]
+                        params2 = atom_params[j]
+                        if self._defaults[1] == '1':
+                            c6 = math.sqrt(params1[0]*params2[0])
+                            c12 = math.sqrt(params1[1]*params2[1])
+                        else:
+                            if self._defaults[1] == '2':
+                                sigma = (params1[0] + params2[0]) / 2
+                            else:
+                                sigma = math.sqrt(params1[0] + params2[0])
+                            epsilon = math.sqrt(params1[1] * params2[1])
+                            c6 = 4 * epsilon * sigma**6
+                            c12 = 4 * epsilon * sigma**12
+                    acoef[i+num_lj_types*j] = math.sqrt(c12)
+                    bcoef[i+num_lj_types*j] = c6
+            lj.addTabulatedFunction('acoef', mm.Discrete2DFunction(num_lj_types, num_lj_types, acoef))
+            lj.addTabulatedFunction('bcoef', mm.Discrete2DFunction(num_lj_types, num_lj_types, bcoef))
+            for i, idx in enumerate(lj_idx_list):
+                lj.setParticleParameters(i, [idx-1]) # adjust for indexing from 0
 
         # Adjust masses.
 
