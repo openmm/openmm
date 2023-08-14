@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1465,7 +1465,7 @@ void CpuIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langevi
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    dynamics->update(context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance());
+    dynamics->update(context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), extractBoxVectors(context));
     ReferencePlatform::PlatformData* refData = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     refData->time += stepSize;
     refData->stepCount++;
@@ -1505,7 +1505,7 @@ void CpuIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, const L
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance());
+    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance(), extractBoxVectors(context));
     ReferencePlatform::PlatformData* refData = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     refData->time += stepSize;
     refData->stepCount++;

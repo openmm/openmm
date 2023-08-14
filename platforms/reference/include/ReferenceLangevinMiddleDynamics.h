@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2023 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -80,11 +80,12 @@ class OPENMM_EXPORT ReferenceLangevinMiddleDynamics : public ReferenceDynamics {
          @param velocities          velocities
          @param masses              atom masses
          @param tolerance           the constraint tolerance
-      
+         @param boxVectors          the current periodic box vectors
+
          --------------------------------------------------------------------------------------- */
      
       void update(OpenMM::ContextImpl& context, std::vector<OpenMM::Vec3>& atomCoordinates,
-                  std::vector<OpenMM::Vec3>& velocities, std::vector<double>& masses, double tolerance);
+                  std::vector<OpenMM::Vec3>& velocities, std::vector<double>& masses, double tolerance, const Vec3* boxVectors);
      
       /**---------------------------------------------------------------------------------------
       

@@ -307,6 +307,75 @@ void testLocalCoordinates(int numSiteParticles) {
 }
 
 /**
+ * Test a SymmetrySite virtual site.
+ */
+void testSymmetry(bool useBoxVectors) {
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(5, 0, 0), Vec3(0, 10, 0), Vec3(0, 0, 15));
+    system.addParticle(1.0);
+    system.addParticle(0.0);
+    double ct = cos(1.1);
+    double st = sin(1.1);
+    Vec3 Rx(ct, -st, 0), Ry(st, ct, 0), Rz(0, 0, 1), v(1, 2, 3);
+    system.setVirtualSite(1, new SymmetrySite(0, Rx, Ry, Rz, v, useBoxVectors));
+    CustomExternalForce* forceField = new CustomExternalForce("2*x^2+3*y^2+4*z^2");
+    system.addForce(forceField);
+    forceField->addParticle(0);
+    forceField->addParticle(1);
+    LangevinIntegrator integrator(300.0, 0.1, 0.002);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0.5, 1.2, -2.3);
+    context.setPositions(positions);
+    context.applyConstraints(0.0001);
+    for (int i = 0; i < 1000; i++) {
+        State state = context.getState(State::Positions | State::Forces);
+        const vector<Vec3>& pos = state.getPositions();
+        Vec3 expectedPos;
+        if (useBoxVectors) {
+            Vec3 p(pos[0][0]/5, pos[0][1]/10, pos[0][2]/15);
+            expectedPos = Vec3(Rx.dot(p), Ry.dot(p), Rz.dot(p))+v;
+            expectedPos = Vec3(5*expectedPos[0], 10*expectedPos[1], 15*expectedPos[2]);
+        }
+        else
+            expectedPos = Vec3(Rx.dot(pos[0]), Ry.dot(pos[0]), Rz.dot(pos[0]))+v;
+        ASSERT_EQUAL_VEC(expectedPos, pos[1], 1e-5);
+        Vec3 f1(-4*pos[0][0], -6*pos[0][1], -8*pos[0][2]);
+        Vec3 f2(-4*pos[1][0], -6*pos[1][1], -8*pos[1][2]);
+        if (useBoxVectors)
+            f2 = Vec3(f2[0]*5, f2[1]*10, f2[2]*15);
+        f2 = Vec3(Rx[0]*f2[0] + Ry[0]*f2[1] + Rz[0]*f2[2],
+                  Rx[1]*f2[0] + Ry[1]*f2[1] + Rz[1]*f2[2],
+                  Rx[2]*f2[0] + Ry[2]*f2[1] + Rz[2]*f2[2]);
+        if (useBoxVectors)
+            f2 = Vec3(f2[0]/5, f2[1]/10, f2[2]/15);
+        ASSERT_EQUAL_VEC(f1+f2, state.getForces()[0], 1e-4);
+        integrator.step(1);
+    }
+
+    // Test the force against a finite difference approximation.
+
+    context.setPositions(positions);
+    context.applyConstraints(0.0001);
+    State state = context.getState(State::Forces);
+    Vec3 f0 = state.getForces()[0];
+    double norm = std::sqrt(f0.dot(f0));
+    const double delta = 1e-2;
+    double step = 0.5*delta/norm;
+    vector<Vec3> positions2 = positions;
+    vector<Vec3> positions3 = positions;
+    positions2[0] -= f0*step;
+    positions3[0] += f0*step;
+    context.setPositions(positions2);
+    context.applyConstraints(0.0001);
+    State state2 = context.getState(State::Energy);
+    context.setPositions(positions3);
+    context.applyConstraints(0.0001);
+    State state3 = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state3.getPotentialEnergy())/delta, 1e-3)
+}
+
+/**
  * Make sure that energy, linear momentum, and angular momentum are all conserved
  * when using virtual sites.
  */
@@ -494,6 +563,8 @@ int main(int argc, char* argv[]) {
         testLocalCoordinates(2);
         testLocalCoordinates(3);
         testLocalCoordinates(4);
+        testSymmetry(false);
+        testSymmetry(true);
         testConservationLaws();
         testOverlappingSites();
         runPlatformTests();

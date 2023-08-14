@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2033 Stanford University and Simbios.
  * Contributors: Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -96,7 +96,7 @@ void ReferenceVariableVerletDynamics::setAccuracy(double accuracy) {
 
 void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
                                           vector<Vec3>& velocities,
-                                          vector<Vec3>& forces, vector<double>& masses, double maxStepSize, double tolerance) {
+                                          vector<Vec3>& forces, vector<double>& masses, double maxStepSize, double tolerance, const Vec3* boxVectors) {
     // first-time-through initialization
 
     int numberOfAtoms = system.getNumParticles();
@@ -149,7 +149,7 @@ void ReferenceVariableVerletDynamics::update(const OpenMM::System& system, vecto
                atomCoordinates[i][j] = xPrime[i][j];
            }
    }
-   ReferenceVirtualSites::computePositions(system, atomCoordinates);
+   ReferenceVirtualSites::computePositions(system, atomCoordinates, boxVectors);
    incrementTimeStep();
 }
 

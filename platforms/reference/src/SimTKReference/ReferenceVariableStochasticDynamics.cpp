@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2023 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -208,7 +208,7 @@ void ReferenceVariableStochasticDynamics::updatePart2(int numberOfAtoms, vector<
 
 void ReferenceVariableStochasticDynamics::update(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
                                           vector<Vec3>& velocities,
-                                          vector<Vec3>& forces, vector<double>& masses, double maxStepSize, double tolerance) {
+                                          vector<Vec3>& forces, vector<double>& masses, double maxStepSize, double tolerance, const Vec3* boxVectors) {
 
    // 1st update
 
@@ -233,6 +233,6 @@ void ReferenceVariableStochasticDynamics::update(const OpenMM::System& system, v
        }
    }
 
-   ReferenceVirtualSites::computePositions(system, atomCoordinates);
+   ReferenceVirtualSites::computePositions(system, atomCoordinates, boxVectors);
    incrementTimeStep();
 }

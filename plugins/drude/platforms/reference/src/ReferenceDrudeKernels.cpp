@@ -56,6 +56,11 @@ static vector<Vec3>& extractForces(ContextImpl& context) {
     return *data->forces;
 }
 
+static Vec3* extractBoxVectors(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return data->periodicBoxVectors;
+}
+
 static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *data->constraints;
@@ -374,7 +379,7 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
             }
         }
     }
-    ReferenceVirtualSites::computePositions(context.getSystem(), pos);
+    ReferenceVirtualSites::computePositions(context.getSystem(), pos, extractBoxVectors(context));
     data.time += integrator.getStepSize();
     data.stepCount++;
 }
@@ -451,7 +456,7 @@ void ReferenceIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const D
     
     // Update the positions of virtual sites and Drude particles.
     
-    ReferenceVirtualSites::computePositions(context.getSystem(), pos);
+    ReferenceVirtualSites::computePositions(context.getSystem(), pos, extractBoxVectors(context));
     minimize(context, integrator.getMinimizationErrorTolerance());
     data.time += integrator.getStepSize();
     data.stepCount++;

@@ -256,6 +256,66 @@ private:
     Vec3 localPosition;
 };
 
+/**
+ * This is a VirtualSite that applies a rotation and translation to the position of
+ * a single other particle.  It is useful for creating multiple copies of a molecule
+ * that are symmetrically arranged either with respect to each other or to the
+ * periodic box.
+ * 
+ * The transformation is defined by a rotation matrix R (specified by its rows Rx, Ry, and Rz).
+ * and a translation vector v.  The position r' of the virtual site is computed from the
+ * position r of the original particle as
+ * 
+ * r'<sub>x</sub> = Rx<sub>x</sub>r<sub>x</sub> + Rx<sub>y</sub>r<sub>y</sub> + Rx<sub>z</sub>r<sub>z</sub> + v<sub>x</sub>
+ * 
+ * r'<sub>x</sub> = Ry<sub>y</sub>r<sub>x</sub> + Ry<sub>y</sub>r<sub>y</sub> + Ry<sub>z</sub>r<sub>z</sub> + v<sub>y</sub>
+ * 
+ * r'<sub>x</sub> = Rz<sub>z</sub>r<sub>x</sub> + Rz<sub>y</sub>r<sub>y</sub> + Rz<sub>z</sub>r<sub>z</sub> + v<sub>z</sub>
+ * 
+ * It can be applied in two different modes.  When useBoxVectors is false the transformation
+ * is performed in Cartesian coordinates.  When useBoxVectors is true it is performed in
+ * fractional coordinates as defined by the periodic box, which means that v acts as a set
+ * of scale factors for the periodic box vectors.  This latter mode is convenient for building
+ * crystallographic unit cells composed of multiple symmetric molecules.  It should be used
+ * with care: if R represents a rotation by any angle other than 0 or 180 degrees, performing
+ * the rotation in fractional coordinates can distort the molecule.
+ */
+class OPENMM_EXPORT SymmetrySite : public VirtualSite {
+public:
+    /**
+     * Create a new SymmetrySite virtual site.
+     * 
+     * The arguments Rx, Ry, and Rz must form an orthogonal matrix (its transpose is its inverse).
+     * 
+     * @param particle       the index of the particle the site depends on
+     * @param Rx             the first row of the rotation matrix
+     * @param Ry             the second row of the rotation matrix
+     * @param Rz             the third row of the rotation matrix
+     * @param v              the offset vector
+     * @param useBoxVectors  specifies whether the transformation is performed in Cartesian or fractional coordinates
+     */
+    SymmetrySite(int particle, const Vec3& Rx, const Vec3& Ry, const Vec3& Rz, const Vec3& v, bool useBoxVectors);
+    /**
+     * Get the rotation matrix.
+     * 
+     * @param Rx             the first row of the rotation matrix
+     * @param Ry             the second row of the rotation matrix
+     * @param Rz             the third row of the rotation matrix
+     */
+    void getRotationMatrix(Vec3& Rx, Vec3& Ry, Vec3& Rz) const;
+    /**
+     * Get the offset vector.
+     */
+    Vec3 getOffsetVector() const;
+    /**
+     * Get whether whether the transformation is performed in Cartesian or fractional coordinates.
+     */
+    bool getUseBoxVectors() const;
+private:
+    Vec3 Rx, Ry, Rz, v;
+    bool useBoxVectors;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_VIRTUALSITE_H_*/

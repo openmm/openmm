@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2023 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -90,7 +90,7 @@ void ReferenceLangevinMiddleDynamics::updatePart3(OpenMM::ContextImpl& context, 
 }
 
 void ReferenceLangevinMiddleDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordinates,
-                                    vector<Vec3>& velocities, vector<double>& masses, double tolerance) {
+                                    vector<Vec3>& velocities, vector<double>& masses, double tolerance, const Vec3* boxVectors) {
     int numberOfAtoms = context.getSystem().getNumParticles();
     ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
     if (getTimeStep() == 0) {
@@ -122,6 +122,6 @@ void ReferenceLangevinMiddleDynamics::update(ContextImpl& context, vector<Vec3>&
 
     updatePart3(context, numberOfAtoms, atomCoordinates, velocities, inverseMasses, xPrime);
 
-    ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates);
+    ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates, boxVectors);
     incrementTimeStep();
 }

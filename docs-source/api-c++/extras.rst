@@ -38,6 +38,7 @@ class that the other classes extend.
     generated/OutOfPlaneSite
     generated/ThreeParticleAverageSite
     generated/TwoParticleAverageSite
+    generated/SymmetrySite
 
 Serialization
 =============

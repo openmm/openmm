@@ -184,3 +184,29 @@ Vec3 LocalCoordinatesSite::getYWeights() const {
 const Vec3& LocalCoordinatesSite::getLocalPosition() const {
     return localPosition;
 }
+
+SymmetrySite::SymmetrySite(int particle, const Vec3& Rx, const Vec3& Ry, const Vec3& Rz, const Vec3& v, bool useBoxVectors) :
+        Rx(Rx), Ry(Ry), Rz(Rz), v(v), useBoxVectors(useBoxVectors) {
+    setParticles({particle});
+    Vec3 R[] = {Rx, Ry, Rz};
+    for (int i = 0; i < 3; i++)
+        for (int j = i; j < 3; j++) {
+            double dot = R[i].dot(R[j]);
+            if ((i == j && fabs(dot-1) > 1e-6) || (i != j && fabs(dot) > 1e-6))
+                throw OpenMMException("SymmetrySite: The rotation matrix must be orthogonal");
+        }
+}
+
+void SymmetrySite::getRotationMatrix(Vec3& Rx, Vec3& Ry, Vec3& Rz) const {
+    Rx = this->Rx;
+    Ry = this->Ry;
+    Rz = this->Rz;
+}
+
+Vec3 SymmetrySite::getOffsetVector() const {
+    return v;
+}
+
+bool SymmetrySite::getUseBoxVectors() const {
+    return useBoxVectors;
+}
