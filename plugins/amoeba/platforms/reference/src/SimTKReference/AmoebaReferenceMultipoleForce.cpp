@@ -24,6 +24,7 @@
 
 #include "AmoebaReferenceMultipoleForce.h"
 #include "SimTKOpenMMRealType.h"
+#include "ReferenceForce.h"
 #include "jama_svd.h"
 #include <algorithm>
 #ifdef _MSC_VER
@@ -4882,12 +4883,7 @@ void AmoebaReferencePmeMultipoleForce::setPeriodicBoxSize(OpenMM::Vec3* vectors)
     _periodicBoxVectors[0] = vectors[0];
     _periodicBoxVectors[1] = vectors[1];
     _periodicBoxVectors[2] = vectors[2];
-    double determinant = vectors[0][0]*vectors[1][1]*vectors[2][2];
-    assert(determinant > 0);
-    double scale = 1.0/determinant;
-    _recipBoxVectors[0] = Vec3(vectors[1][1]*vectors[2][2], 0, 0)*scale;
-    _recipBoxVectors[1] = Vec3(-vectors[1][0]*vectors[2][2], vectors[0][0]*vectors[2][2], 0)*scale;
-    _recipBoxVectors[2] = Vec3(vectors[1][0]*vectors[2][1]-vectors[1][1]*vectors[2][0], -vectors[0][0]*vectors[2][1], vectors[0][0]*vectors[1][1])*scale;
+    ReferenceForce::invertBoxVectors(vectors, _recipBoxVectors);
 };
 
 int compareInt2(const int2& v1, const int2& v2)

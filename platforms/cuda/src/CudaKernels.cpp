@@ -1205,14 +1205,8 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
 
         // Invert the periodic box vectors.
 
-        Vec3 boxVectors[3];
-        cu.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        double determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
-        double scale = 1.0/determinant;
-        double4 recipBoxVectors[3];
-        recipBoxVectors[0] = make_double4(boxVectors[1][1]*boxVectors[2][2]*scale, 0, 0, 0);
-        recipBoxVectors[1] = make_double4(-boxVectors[1][0]*boxVectors[2][2]*scale, boxVectors[0][0]*boxVectors[2][2]*scale, 0, 0);
-        recipBoxVectors[2] = make_double4((boxVectors[1][0]*boxVectors[2][1]-boxVectors[1][1]*boxVectors[2][0])*scale, -boxVectors[0][0]*boxVectors[2][1]*scale, boxVectors[0][0]*boxVectors[1][1]*scale, 0);
+        mm_double4 recipBoxVectors[3];
+        cu.computeReciprocalBoxVectors(recipBoxVectors);
         float4 recipBoxVectorsFloat[3];
         void* recipBoxVectorPointer[3];
         if (cu.getUseDoublePrecision()) {

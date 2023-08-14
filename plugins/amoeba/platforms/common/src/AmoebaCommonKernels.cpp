@@ -1101,12 +1101,8 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
         
         Vec3 a, b, c;
         cc.getPeriodicBoxVectors(a, b, c);
-        double determinant = a[0]*b[1]*c[2];
-        double scale = 1.0/determinant;
         mm_double4 recipBoxVectors[3];
-        recipBoxVectors[0] = mm_double4(b[1]*c[2]*scale, 0, 0, 0);
-        recipBoxVectors[1] = mm_double4(-b[0]*c[2]*scale, a[0]*c[2]*scale, 0, 0);
-        recipBoxVectors[2] = mm_double4((b[0]*c[1]-b[1]*c[0])*scale, -a[0]*c[1]*scale, a[0]*b[1]*scale, 0);
+        cc.computeReciprocalBoxVectors(recipBoxVectors);
         if (cc.getUseDoublePrecision()) {
             mm_double4 boxVectors[] = {mm_double4(a[0], a[1], a[2], 0), mm_double4(b[0], b[1], b[2], 0), mm_double4(c[0], c[1], c[2], 0)};
             pmeConvolutionKernel->setArg(4, mm_double4(a[0], b[1], c[2], 0));
@@ -3187,12 +3183,8 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
         
         Vec3 a, b, c;
         cc.getPeriodicBoxVectors(a, b, c);
-        double determinant = a[0]*b[1]*c[2];
-        double scale = 1.0/determinant;
         mm_double4 recipBoxVectors[3];
-        recipBoxVectors[0] = mm_double4(b[1]*c[2]*scale, 0, 0, 0);
-        recipBoxVectors[1] = mm_double4(-b[0]*c[2]*scale, a[0]*c[2]*scale, 0, 0);
-        recipBoxVectors[2] = mm_double4((b[0]*c[1]-b[1]*c[0])*scale, -a[0]*c[1]*scale, a[0]*b[1]*scale, 0);
+        cc.computeReciprocalBoxVectors(recipBoxVectors);
         if (cc.getUseDoublePrecision()) {
             mm_double4 boxVectors[] = {mm_double4(a[0], a[1], a[2], 0), mm_double4(b[0], b[1], b[2], 0), mm_double4(c[0], c[1], c[2], 0)};
             pmeConvolutionKernel->setArg(4, mm_double4(a[0], b[1], c[2], 0));
