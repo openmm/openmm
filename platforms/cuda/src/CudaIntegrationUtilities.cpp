@@ -135,6 +135,34 @@ void CudaIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, do
 void CudaIntegrationUtilities::distributeForcesFromVirtualSites() {
     ContextSelector selector(context);
     if (numVsites > 0) {
+        Vec3 boxVectors[3];
+        context.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        mm_double4 recipBoxVectorsDouble[3];
+        context.computeReciprocalBoxVectors(recipBoxVectorsDouble);
+        if (context.getUseDoublePrecision()) {
+            mm_double4 boxVectorsDouble[3];
+            for (int i = 0; i < 3; i++)
+                boxVectorsDouble[i] = mm_double4(boxVectors[i][0], boxVectors[i][1], boxVectors[i][2], 0);
+            vsiteForceKernel->setArg(18, boxVectorsDouble[0]);
+            vsiteForceKernel->setArg(19, boxVectorsDouble[1]);
+            vsiteForceKernel->setArg(20, boxVectorsDouble[2]);
+            vsiteForceKernel->setArg(21, recipBoxVectorsDouble[0]);
+            vsiteForceKernel->setArg(22, recipBoxVectorsDouble[1]);
+            vsiteForceKernel->setArg(23, recipBoxVectorsDouble[2]);
+        }
+        else {
+            mm_float4 boxVectorsFloat[3], recipBoxVectorsFloat[3];
+            for (int i = 0; i < 3; i++) {
+                boxVectorsFloat[i] = mm_float4((float) boxVectors[i][0], (float) boxVectors[i][1], (float) boxVectors[i][2], 0);
+                recipBoxVectorsFloat[i] = mm_float4((float) recipBoxVectorsDouble[i].x, (float) recipBoxVectorsDouble[i].y, (float) recipBoxVectorsDouble[i].z, 0);
+            }
+            vsiteForceKernel->setArg(18, boxVectorsFloat[0]);
+            vsiteForceKernel->setArg(19, boxVectorsFloat[1]);
+            vsiteForceKernel->setArg(20, boxVectorsFloat[2]);
+            vsiteForceKernel->setArg(21, recipBoxVectorsFloat[0]);
+            vsiteForceKernel->setArg(22, recipBoxVectorsFloat[1]);
+            vsiteForceKernel->setArg(23, recipBoxVectorsFloat[2]);
+        }
         vsiteForceKernel->setArg(2, context.getLongForceBuffer());
         vsiteForceKernel->execute(numVsites);
     }

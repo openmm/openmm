@@ -439,6 +439,10 @@ public:
      */
     virtual void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) = 0; 
     /**
+     * Compute the reciprocal space box vectors.
+     */
+    void computeReciprocalBoxVectors(mm_double4 recipBoxVectors[3]);
+    /**
      * Get the IntegrationUtilities for this context.
      */
     virtual IntegrationUtilities& getIntegrationUtilities() = 0;

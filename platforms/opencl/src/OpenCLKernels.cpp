@@ -1253,18 +1253,12 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         
         // Invert the periodic box vectors.
         
-        Vec3 boxVectors[3];
-        cl.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        double determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
-        double scale = 1.0/determinant;
         mm_double4 recipBoxVectors[3];
-        recipBoxVectors[0] = mm_double4(boxVectors[1][1]*boxVectors[2][2]*scale, 0, 0, 0);
-        recipBoxVectors[1] = mm_double4(-boxVectors[1][0]*boxVectors[2][2]*scale, boxVectors[0][0]*boxVectors[2][2]*scale, 0, 0);
-        recipBoxVectors[2] = mm_double4((boxVectors[1][0]*boxVectors[2][1]-boxVectors[1][1]*boxVectors[2][0])*scale, -boxVectors[0][0]*boxVectors[2][1]*scale, boxVectors[0][0]*boxVectors[1][1]*scale, 0);
+        cl.computeReciprocalBoxVectors(recipBoxVectors);
         mm_float4 recipBoxVectorsFloat[3];
         for (int i = 0; i < 3; i++)
             recipBoxVectorsFloat[i] = mm_float4((float) recipBoxVectors[i].x, (float) recipBoxVectors[i].y, (float) recipBoxVectors[i].z, 0);
-        
+
         // Execute the reciprocal space kernels.
 
         if (hasCoulomb) {

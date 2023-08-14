@@ -125,6 +125,17 @@ string ComputeContext::intToString(int value) const {
     return s.str();
 }
 
+void ComputeContext::computeReciprocalBoxVectors(mm_double4 recipBoxVectors[3]) {
+    Vec3 boxVectors[3];
+    getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    double determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
+    assert(determinant > 0);
+    double scale = 1.0/determinant;
+    recipBoxVectors[0] = mm_double4(boxVectors[1][1]*boxVectors[2][2]*scale, 0, 0, 0);
+    recipBoxVectors[1] = mm_double4(-boxVectors[1][0]*boxVectors[2][2]*scale, boxVectors[0][0]*boxVectors[2][2]*scale, 0, 0);
+    recipBoxVectors[2] = mm_double4((boxVectors[1][0]*boxVectors[2][1]-boxVectors[1][1]*boxVectors[2][0])*scale, -boxVectors[0][0]*boxVectors[2][1]*scale, boxVectors[0][0]*boxVectors[1][1]*scale, 0);
+}
+
 /**
  * This class ensures that atom reordering doesn't break virtual sites.
  */
