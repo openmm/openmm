@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -99,6 +99,17 @@ void compareSystems(System& system, System& system2) {
     ASSERT_EQUAL_CONTAINERS(woExpected, wo);
     ASSERT_EQUAL_CONTAINERS(wxExpected, wx);
     ASSERT_EQUAL_CONTAINERS(wyExpected, wy);
+    const SymmetrySite& site9 = dynamic_cast<const SymmetrySite&>(system2.getVirtualSite(9));
+    ASSERT_EQUAL(3, site9.getParticle(0));
+    Vec3 Rx, Ry, Rz;
+    site9.getRotationMatrix(Rx, Ry, Rz);
+    double ct = cos(1.1);
+    double st = sin(1.1);
+    ASSERT_EQUAL_VEC(Vec3(ct, 0, -st), Rx, 0);
+    ASSERT_EQUAL_VEC(Vec3(0, 1, 0), Ry, 0);
+    ASSERT_EQUAL_VEC(Vec3(st, 0, ct), Rz, 0);
+    ASSERT_EQUAL_VEC(Vec3(1, 2, 3), site9.getOffsetVector(), 0);
+    ASSERT(site9.getUseBoxVectors());
     ASSERT_EQUAL(system.getNumForces(), system2.getNumForces());
     for (int i = 0; i < system.getNumForces(); i++)
         ASSERT(typeid(system.getForce(i)) == typeid(system2.getForce(i)))
@@ -120,6 +131,10 @@ void testSerialization() {
     system.setVirtualSite(6, new ThreeParticleAverageSite(2, 4, 3, 0.5, 0.2, 0.3));
     system.setVirtualSite(7, new OutOfPlaneSite(0, 3, 1, 0.1, 0.2, 0.5));
     system.setVirtualSite(8, new LocalCoordinatesSite({4, 3, 2, 1}, {0.1, 0.2, 0.3, 0.4}, {-1.0, 0.4, 0.4, 0.2}, {0.3, 0.7, 0.0, -1.0}, Vec3(-0.5, 1.0, 1.5)));
+    double ct = cos(1.1);
+    double st = sin(1.1);
+    Vec3 Rx(ct, 0, -st), Ry(0, 1, 0), Rz(st, 0, ct), v(1, 2, 3);
+    system.setVirtualSite(9, new SymmetrySite(3, Rx, Ry, Rz, v, true));
     system.addForce(new HarmonicBondForce());
 
     // Serialize and then deserialize it, then make sure the systems are identical.
