@@ -218,6 +218,7 @@ class TestGromacsTopFile(unittest.TestCase):
         """Test a three particle virtual site."""
         top = GromacsTopFile('systems/tip4pew.top')
         system = top.createSystem()
+        self.assertEqual(3, system.getNumConstraints())
         self.assertTrue(system.isVirtualSite(3))
         vs = system.getVirtualSite(3)
         self.assertIsInstance(vs, ThreeParticleAverageSite)
