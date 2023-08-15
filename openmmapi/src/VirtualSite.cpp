@@ -203,7 +203,7 @@ void SymmetrySite::getRotationMatrix(Vec3& Rx, Vec3& Ry, Vec3& Rz) const {
     Rz = this->Rz;
 }
 
-Vec3 SymmetrySite::getOffsetVector() const {
+const Vec3& SymmetrySite::getOffsetVector() const {
     return v;
 }
 

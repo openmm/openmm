@@ -235,6 +235,7 @@ UNITS = {
 ("LocalCoordinatesSite", "getXWeights") : (None, ()),
 ("LocalCoordinatesSite", "getYWeights") : (None, ()),
 ("LocalCoordinatesSite", "getLocalPosition") : ("unit.nanometer", ()),
+("SymmetrySite", "getOffsetVector") : (None, ()),
 ("SerializationNode", "getChildren") : (None, ()),
 ("SerializationNode", "getChildNode") : (None, ()),
 ("SerializationNode", "getProperties") : (None, ()),

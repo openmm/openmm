@@ -306,7 +306,7 @@ public:
     /**
      * Get the offset vector.
      */
-    Vec3 getOffsetVector() const;
+    const Vec3& getOffsetVector() const;
     /**
      * Get whether whether the transformation is performed in Cartesian or fractional coordinates.
      */
