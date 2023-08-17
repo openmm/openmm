@@ -31,6 +31,7 @@
 
 #ifdef USE_VKFFT
 #define VKFFT_BACKEND 3
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #include "vkFFT.h"
 #endif
 #include "OpenCLArray.h"
