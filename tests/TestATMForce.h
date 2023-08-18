@@ -95,14 +95,14 @@ void test2Particles() {
         double epot = state.getPotentialEnergy();
         double u0, u1, energy;
         atm->getPerturbationEnergy(context, u1, u0, energy);
-	double epert = u1 - u0;
+        double epert = u1 - u0;
         ASSERT_EQUAL_TOL(lm, context.getParameter(atm->Lambda1()), 1e-6);
         ASSERT_EQUAL_TOL(lm, context.getParameter(atm->Lambda2()), 1e-6);
         ASSERT_EQUAL_TOL(energy, epot, 1e-6);
         ASSERT_EQUAL_TOL(lm*0.5*displ[0]*displ[0], epot, 1e-6);
         ASSERT_EQUAL_TOL(0.0, u0, 1e-6);
         ASSERT_EQUAL_TOL(0.5*displ[0]*displ[0], u1, 1e-6);
-	ASSERT_EQUAL_TOL(0.5*displ[0]*displ[0], epert, 1e-6);
+        ASSERT_EQUAL_TOL(0.5*displ[0]*displ[0], epert, 1e-6);
         ASSERT_EQUAL_VEC(Vec3(-lm*displ[0], 0.0, 0.0), state.getForces()[1], 1e-6);
         ASSERT_EQUAL_TOL(0.0, state.getEnergyParameterDerivatives().at(ATMForce::Lambda1()), 1e-6);
         ASSERT_EQUAL_TOL(0.5*displ[0]*displ[0], state.getEnergyParameterDerivatives().at(ATMForce::Lambda2()), 1e-6);
@@ -518,11 +518,11 @@ int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         test2Particles();
-	test2Particles2Displacement0();
-	test2ParticlesSoftCore();
-	test2ParticlesNonbonded();
-	testParticlesCustomExpressionLinear();
-	testParticlesCustomExpressionSoftplus();
+        test2Particles2Displacement0();
+        test2ParticlesSoftCore();
+        test2ParticlesNonbonded();
+        testParticlesCustomExpressionLinear();
+        testParticlesCustomExpressionSoftplus();
         testLargeSystem();
         testMolecules();
         testSimulation();

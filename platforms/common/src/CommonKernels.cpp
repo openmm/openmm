@@ -7812,19 +7812,19 @@ private:
 class CommonCalcATMForceKernel::ReorderListener : public ComputeContext::ReorderListener {
 public:
     ReorderListener(ComputeContext& cc, vector<mm_float4>& displVector1, ArrayInterface& displ1,
-		                        vector<mm_float4>& displVector0, ArrayInterface& displ0) :
+                                        vector<mm_float4>& displVector0, ArrayInterface& displ0) :
     cc(cc), displVector1(displVector1), displ1(displ1), displVector0(displVector0), displ0(displ0)  {
     }
     void execute() {
         const vector<int>& id = cc.getAtomIndex();
-	vector<mm_float4> newDisplVectorContext1(cc.getPaddedNumAtoms());
-	vector<mm_float4> newDisplVectorContext0(cc.getPaddedNumAtoms());
+        vector<mm_float4> newDisplVectorContext1(cc.getPaddedNumAtoms());
+        vector<mm_float4> newDisplVectorContext0(cc.getPaddedNumAtoms());
         for (int i = 0; i < cc.getNumAtoms(); i++) {
             newDisplVectorContext1[i] = displVector1[id[i]];
-	    newDisplVectorContext0[i] = displVector0[id[i]];
+            newDisplVectorContext0[i] = displVector0[id[i]];
         }
         displ1.upload(newDisplVectorContext1);
-	displ0.upload(newDisplVectorContext0);
+        displ0.upload(newDisplVectorContext0);
     }
 private:
     ComputeContext& cc;
@@ -7890,7 +7890,7 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
         copyStateKernel->addArg(cc0.getPosq());
         copyStateKernel->addArg(cc1.getPosq());
         copyStateKernel->addArg(displ0);
-	copyStateKernel->addArg(displ1);
+        copyStateKernel->addArg(displ1);
         if (cc.getUseMixedPrecision()) {
             copyStateKernel->addArg(cc.getPosqCorrection());
             copyStateKernel->addArg(cc0.getPosqCorrection());
@@ -7969,7 +7969,7 @@ void CommonCalcATMForceKernel::copyParametersToContext(ContextImpl& context, con
     vector<mm_float4> displVectorContext0(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
     for (int i = 0; i < numParticles; i++) {
         displVectorContext1[i] = displVector1[id[i]];
-	displVectorContext0[i] = displVector0[id[i]];
+        displVectorContext0[i] = displVector0[id[i]];
     }
     displ1.upload(displVectorContext1);
     displ0.upload(displVectorContext0);

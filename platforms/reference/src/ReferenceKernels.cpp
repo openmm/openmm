@@ -2969,7 +2969,7 @@ void ReferenceCalcATMForceKernel::initialize(const System& system, const ATMForc
         Vec3 displacement1, displacement0;
         force.getParticleParameters(i, displacement1, displacement0 );
         displ1[i] = displacement1;
-	displ0[i] = displacement0;
+        displ0[i] = displacement0;
     }
 }
 
@@ -3029,6 +3029,6 @@ void ReferenceCalcATMForceKernel::copyParametersToContext(ContextImpl& context, 
         Vec3 displacement1, displacement0;
         force.getParticleParameters(i, displacement1, displacement0 );
         displ1[i] = displacement1;
-	displ0[i] = displacement0;
+        displ0[i] = displacement0;
     }
 }
