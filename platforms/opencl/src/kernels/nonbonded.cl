@@ -185,7 +185,7 @@ __kernel void computeNonbonded(
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
     // of them (no cutoff).
 
-#ifdef USE_CUTOFF
+#ifdef USE_NEIGHBOR_LIST
     unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
@@ -210,7 +210,7 @@ __kernel void computeNonbonded(
 
         int x, y;
         bool singlePeriodicCopy = false;
-#ifdef USE_CUTOFF
+#ifdef USE_NEIGHBOR_LIST
         x = tiles[pos];
         real4 blockSizeX = blockSize[x];
         singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
@@ -250,7 +250,7 @@ __kernel void computeNonbonded(
 
             real4 posq1 = posq[atom1];
             LOAD_ATOM1_PARAMETERS
-#ifdef USE_CUTOFF
+#ifdef USE_NEIGHBOR_LIST
             unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
@@ -389,7 +389,7 @@ __kernel void computeNonbonded(
             // Write results.
 
 #ifdef INCLUDE_FORCES
-#ifdef USE_CUTOFF
+#ifdef USE_NEIGHBOR_LIST
             unsigned int atom2 = atomIndices[get_local_id(0)];
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;

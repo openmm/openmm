@@ -1,13 +1,10 @@
-import sys
+import tempfile
 import unittest
 from openmm.app import *
 from openmm import *
 from openmm.unit import *
 import openmm.app.element as elem
-if sys.version_info >= (3, 0):
-    from io import StringIO
-else:
-    from cStringIO import StringIO
+from io import StringIO
 
 
 class TestPdbFile(unittest.TestCase):
@@ -47,23 +44,37 @@ class TestPdbFile(unittest.TestCase):
 
     def test_WriteFile(self):
         """Write a file, read it back, and make sure it matches the original."""
+        def compareFiles(pdb1, pdb2):
+            self.assertEqual(len(pdb2.positions), 8)
+            for (p1, p2) in zip(pdb1.positions, pdb2.positions):
+                self.assertVecAlmostEqual(p1, p2)
+            for (v1, v2) in zip(pdb1.topology.getPeriodicBoxVectors(), pdb2.topology.getPeriodicBoxVectors()):
+                self.assertVecAlmostEqual(v1, v2, 1e-4)
+            self.assertVecAlmostEqual(pdb1.topology.getUnitCellDimensions(), pdb2.topology.getUnitCellDimensions(), 1e-4)
+            for atom1, atom2 in zip(pdb1.topology.atoms(), pdb2.topology.atoms()):
+                self.assertEqual(atom1.element, atom2.element)
+                self.assertEqual(atom1.name, atom2.name)
+                self.assertEqual(atom1.residue.name, atom2.residue.name)
+
         pdb1 = PDBFile('systems/triclinic.pdb')
+
+        # First try writing to an open file object.
+
         output = StringIO()
         PDBFile.writeFile(pdb1.topology, pdb1.positions, output)
         input = StringIO(output.getvalue())
         pdb2 = PDBFile(input)
-        output.close();
-        input.close();
-        self.assertEqual(len(pdb2.positions), 8)
-        for (p1, p2) in zip(pdb1.positions, pdb2.positions):
-            self.assertVecAlmostEqual(p1, p2)
-        for (v1, v2) in zip(pdb1.topology.getPeriodicBoxVectors(), pdb2.topology.getPeriodicBoxVectors()):
-            self.assertVecAlmostEqual(v1, v2, 1e-4)
-        self.assertVecAlmostEqual(pdb1.topology.getUnitCellDimensions(), pdb2.topology.getUnitCellDimensions(), 1e-4)
-        for atom1, atom2 in zip(pdb1.topology.atoms(), pdb2.topology.atoms()):
-            self.assertEqual(atom1.element, atom2.element)
-            self.assertEqual(atom1.name, atom2.name)
-            self.assertEqual(atom1.residue.name, atom2.residue.name)
+        output.close()
+        input.close()
+        compareFiles(pdb1, pdb2)
+
+        # Now try a filename.
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            filename = os.path.join(tempdir, 'temp.pdb')
+            PDBFile.writeFile(pdb1.topology, pdb1.positions, filename)
+            pdb2 = PDBFile(filename)
+            compareFiles(pdb1, pdb2)
 
     def test_BinaryStream(self):
         """Test reading a stream that was opened in binary mode."""

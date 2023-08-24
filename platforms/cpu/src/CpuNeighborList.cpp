@@ -157,7 +157,7 @@ public:
             yperiodic = location[1]-periodicBoxVectors[2][1]*scale2;
             zperiodic = location[2]-periodicBoxVectors[2][2]*scale2;
             float scale1 = floorf(yperiodic*recipBoxSize[1]);
-            yperiodic -= periodicBoxVectors[1][0]*scale1;
+            yperiodic -= periodicBoxVectors[1][1]*scale1;
         }
         int y = max(0, min(ny-1, int(floorf(yperiodic / voxelSizeY))));
         int z = max(0, min(nz-1, int(floorf(zperiodic / voxelSizeZ))));

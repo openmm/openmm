@@ -57,6 +57,13 @@ void ComputeContext::addForce(ComputeForceInfo* force) {
     forces.push_back(force);
 }
 
+void ComputeContext::setAtomIndex(std::vector<int>& index){
+    atomIndex = index;
+    getAtomIndexArray().upload(atomIndex);
+    for (auto listener : reorderListeners)
+        listener->execute();
+}
+
 string ComputeContext::replaceStrings(const string& input, const std::map<std::string, std::string>& replacements) const {
     static set<char> symbolChars;
     if (symbolChars.size() == 0) {
@@ -102,11 +109,12 @@ string ComputeContext::replaceStrings(const string& input, const std::map<std::s
     return result;
 }
 
-string ComputeContext::doubleToString(double value) const {
+string ComputeContext::doubleToString(double value, bool mixedIsDouble) const {
     stringstream s;
-    s.precision(getUseDoublePrecision() ? 16 : 8);
+    bool useDouble = (getUseDoublePrecision() || (mixedIsDouble && getUseMixedPrecision()));
+    s.precision(useDouble ? 16 : 8);
     s << scientific << value;
-    if (!getUseDoublePrecision())
+    if (!useDouble)
         s << "f";
     return s.str();
 }

@@ -109,6 +109,9 @@ SKIP_METHODS = [('State', 'getPositions'),
                 ("NoseHooverIntegrator", "getAllThermostatedPairs"),
 ]
 
+
+
+
 # The build script assumes method args that are non-const references are
 # used to output values. This list gives excpetions to this rule.
 NO_OUTPUT_ARGS = [('LocalEnergyMinimizer', 'minimize', 'context'),
@@ -137,6 +140,7 @@ NO_OUTPUT_ARGS = [('LocalEnergyMinimizer', 'minimize', 'context'),
 STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("System", "addForce") : [0],
                    ("System", "setVirtualSite") : [1],
+                   ("ATMForce", "addForce") : [0],
                    ("CustomNonbondedForce", "addTabulatedFunction") : [1],
                    ("CustomGBForce", "addTabulatedFunction") : [1],
                    ("CustomHbondForce", "addTabulatedFunction") : [1],
@@ -319,8 +323,7 @@ UNITS = {
                                                                                                        None, None, None, None, None, None, None, None, None, None, None, None)),
 ("HippoNonbondedForce",                 "getInducedDipoles")                             :  ( None, ()),
 ("HippoNonbondedForce",                 "getLabFramePermanentDipoles")                   :  ( None, ()),
-
-
+    
 ("Context", "getParameter") : (None, ()),
 ("Context", "getParameters") : (None, ()),
 ("Context", "getMolecules") : (None, ()),
@@ -506,4 +509,16 @@ UNITS = {
 ("NoseHooverIntegrator", "setMaximumPairDistance") : (None, ("unit.nanometer",)),
 ("DrudeNoseHooverIntegrator", "getMaxDrudeDistance") : ("unit.nanometer", ()),
 ("DrudeNoseHooverIntegrator", "setMaxDrudeDistance") : (None, ("unit.nanometer",)),
+("LocalEnergyMinimizer", "minimize") : (None, (None, "unit.kilojoules_per_mole/unit.nanometer", None)),
+("ATMForce", "getForce") : (None, ()),
+("ATMForce", "getPerturbationEnergy") :  ('unit.kilojoule_per_mole', ()),
+("ATMForce", "getDefaultLambda1") :  (None, ()),
+("ATMForce", "getDefaultLambda2") :  (None, ()),
+("ATMForce", "getDefaultAlpha") :  ('unit.kilojoule_per_mole**-1', ()),
+("ATMForce", "getDefaultU0") :  ('unit.kilojoule_per_mole', ()),
+("ATMForce", "getDefaultW0") :  ('unit.kilojoule_per_mole', ()),
+("ATMForce", "getDefaultDirection") :  (None, ()),
+("ATMForce", "getDefaultUmax") :  ('unit.kilojoule_per_mole', ()),
+("ATMForce", "getDefaultUbcore") :  ('unit.kilojoule_per_mole', ()),
+("ATMForce", "getDefaultAcore") :  (None, ()),
 }

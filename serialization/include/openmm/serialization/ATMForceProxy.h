@@ -1,5 +1,5 @@
-#ifndef OPENMM_CPUCUDACOMPILERKERNELFACTORY_H_
-#define OPENMM_CPUCUDACOMPILERKERNELFACTORY_H_
+#ifndef OPENMM_ATMFORCE_PROXY_H_
+#define OPENMM_ATMFORCE_PROXY_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
+ * Portions copyright (c) 2023 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,19 +32,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/KernelFactory.h"
+#include "openmm/internal/windowsExport.h"
+#include "openmm/serialization/SerializationProxy.h"
 
 namespace OpenMM {
 
-/**
- * This KernelFactory creates kernels for the CUDA runtime compiler.
- */
+    /**
+     * This is a proxy for serializing ATMForce objects.
+     */
 
-class CudaCompilerKernelFactory : public KernelFactory {
-public:
-    KernelImpl* createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const;
-};
+    class OPENMM_EXPORT ATMForceProxy : public SerializationProxy {
+    public:
+        ATMForceProxy();
+        void serialize(const void* object, SerializationNode& node) const;
+        void* deserialize(const SerializationNode& node) const;
+    };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CPUCUDACOMPILERKERNELFACTORY_H_*/
+#endif /*OPENMM_ATMFORCE_PROXY_H_*/

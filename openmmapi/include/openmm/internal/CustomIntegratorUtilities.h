@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2015-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -81,7 +81,7 @@ private:
     static bool usesVariable(const Lepton::ExpressionTreeNode& node, const std::string& variable);
     static void enumeratePaths(int firstStep, std::vector<int> steps, std::vector<int> jumps, const std::vector<int>& blockEnd,
             const std::vector<CustomIntegrator::ComputationType>& stepType, const std::vector<bool>& needsForces, const std::vector<bool>& needsEnergy,
-            const std::vector<bool>& invalidatesForces, const std::vector<int>& forceGroup, std::vector<bool>& computeBoth);
+            const std::vector<bool>& invalidatesForces, const std::vector<int>& forceGroup, std::vector<bool>& computeBoth, const std::vector<bool>& isSignificant);
     static void analyzeForceComputationsForPath(std::vector<int>& steps, const std::vector<bool>& needsForces, const std::vector<bool>& needsEnergy,
             const std::vector<bool>& invalidatesForces, const std::vector<int>& forceGroup, std::vector<bool>& computeBoth);
     static void validateDerivatives(const Lepton::ExpressionTreeNode& node, const std::vector<std::string>& derivNames);

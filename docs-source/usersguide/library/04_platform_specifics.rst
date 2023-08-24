@@ -73,19 +73,6 @@ The CUDA Platform recognizes the following Platform-specific properties:
 * UseCpuPme: This selects whether to use the CPU-based PME implementation.
   The allowed values are “true” or “false”.  Depending on your hardware, this
   might (or might not) improve performance.
-* CudaCompiler: This specifies the path to the CUDA kernel compiler.  Versions
-  of CUDA before 7.0 require a separate compiler executable.  If you do
-  not specify this, OpenMM will try to locate the compiler itself.  Specify this
-  only when you want to override the default location.  The logic used to pick the
-  default location depends on the operating system:
-
-  * Mac/Linux: It first looks for an environment variable called
-    OPENMM_CUDA_COMPILER.  If that is set, its value is used.  Otherwise, the
-    default location is set to /usr/local/cuda/bin/nvcc.
-  * Windows: It looks for an environment variable called CUDA_BIN_PATH, then
-    appends \nvcc.exe to it.  That environment variable is set by the CUDA
-    installer, so it usually is present.
-
 * TempDirectory: This specifies a directory where temporary files can be
   written while compiling kernels.  OpenMM usually can locate your operating
   system’s temp directory automatically (for example, by looking for the TEMP

@@ -368,6 +368,15 @@ public:
     }
 };
 
+class CudaCalcATMForceKernel : public CommonCalcATMForceKernel {
+public:
+    CudaCalcATMForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : CommonCalcATMForceKernel(name, platform, cc) {
+    }
+    ComputeContext& getInnerComputeContext(ContextImpl& innerContext) {
+        return *reinterpret_cast<CudaPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
+    }
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_CUDAKERNELS_H_*/

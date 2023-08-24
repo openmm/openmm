@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -388,6 +388,10 @@ public:
         return atomIndex;
     }
     /**
+     * Set the vector which contains the index of each atom.
+     */
+    void setAtomIndex(std::vector<int>& index);
+    /**
      * Get the array which contains the index of each atom.
      */
     virtual ArrayInterface& getAtomIndexArray() = 0;
@@ -396,6 +400,12 @@ public:
      */
     std::vector<mm_int4>& getPosCellOffsets() {
         return posCellOffsets;
+    }
+    /**
+     * Set the number of cells by which the positions are offset.
+     */
+    void setPosCellOffsets(std::vector<mm_int4>& offsets) {
+        posCellOffsets = offsets;
     }
     /**
      * Replace all occurrences of a list of substrings.
@@ -408,8 +418,10 @@ public:
     /**
      * Convert a number to a string in a format suitable for including in a kernel.
      * This takes into account whether the context uses single or double precision.
+     * If mixedIsDouble is true, a double precision constant will also be produced
+     * in mixed precision mode.
      */
-    std::string doubleToString(double value) const;
+    std::string doubleToString(double value, bool mixedIsDouble=false) const;
     /**
      * Convert a number to a string in a format suitable for including in a kernel.
      */

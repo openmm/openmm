@@ -137,9 +137,9 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
     defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
     defines["NUM_COPIES"] = cc.intToString(numCopies);
     defines["THREAD_BLOCK_SIZE"] = cc.intToString(workgroupSize);
-    defines["HBAR"] = cc.doubleToString(1.054571628e-34*AVOGADRO/(1000*1e-12));
-    defines["SCALE"] = cc.doubleToString(1.0/sqrt((double) numCopies));
-    defines["M_PI"] = cc.doubleToString(M_PI);
+    defines["HBAR"] = cc.doubleToString(1.054571628e-34*AVOGADRO/(1000*1e-12), true);
+    defines["SCALE"] = cc.doubleToString(1.0/sqrt((double) numCopies), true);
+    defines["M_PI"] = cc.doubleToString(M_PI, true);
     map<string, string> replacements;
     replacements["FFT_Q_FORWARD"] = createFFT(numCopies, "q", true);
     replacements["FFT_Q_BACKWARD"] = createFFT(numCopies, "q", false);
@@ -159,8 +159,8 @@ void CommonIntegrateRPMDStepKernel::initialize(const System& system, const RPMDI
         int copies = g.first;
         replacements.clear();
         replacements["NUM_CONTRACTED_COPIES"] = cc.intToString(copies);
-        replacements["POS_SCALE"] = cc.doubleToString(1.0/numCopies);
-        replacements["FORCE_SCALE"] = cc.doubleToString(0x100000000/(double) copies);
+        replacements["POS_SCALE"] = cc.doubleToString(1.0/numCopies, true);
+        replacements["FORCE_SCALE"] = cc.doubleToString(0x100000000/(double) copies, true);
         replacements["FFT_Q_FORWARD"] = createFFT(numCopies, "q", true);
         replacements["FFT_Q_BACKWARD"] = createFFT(copies, "q", false);
         replacements["FFT_F_FORWARD"] = createFFT(copies, "f", true);
@@ -474,21 +474,21 @@ string CommonIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             source<<"mixed3 d0i = c1i+c4i;\n";
             source<<"mixed3 d1r = c2r+c3r;\n";
             source<<"mixed3 d1i = c2i+c3i;\n";
-            source<<"mixed3 d2r = "<<cc.doubleToString(sin(0.4*M_PI))<<"*(c1r-c4r);\n";
-            source<<"mixed3 d2i = "<<cc.doubleToString(sin(0.4*M_PI))<<"*(c1i-c4i);\n";
-            source<<"mixed3 d3r = "<<cc.doubleToString(sin(0.4*M_PI))<<"*(c2r-c3r);\n";
-            source<<"mixed3 d3i = "<<cc.doubleToString(sin(0.4*M_PI))<<"*(c2i-c3i);\n";
+            source<<"mixed3 d2r = "<<cc.doubleToString(sin(0.4*M_PI), true)<<"*(c1r-c4r);\n";
+            source<<"mixed3 d2i = "<<cc.doubleToString(sin(0.4*M_PI), true)<<"*(c1i-c4i);\n";
+            source<<"mixed3 d3r = "<<cc.doubleToString(sin(0.4*M_PI), true)<<"*(c2r-c3r);\n";
+            source<<"mixed3 d3i = "<<cc.doubleToString(sin(0.4*M_PI), true)<<"*(c2i-c3i);\n";
             source<<"mixed3 d4r = d0r+d1r;\n";
             source<<"mixed3 d4i = d0i+d1i;\n";
-            source<<"mixed3 d5r = "<<cc.doubleToString(0.25*sqrt(5.0))<<"*(d0r-d1r);\n";
-            source<<"mixed3 d5i = "<<cc.doubleToString(0.25*sqrt(5.0))<<"*(d0i-d1i);\n";
+            source<<"mixed3 d5r = "<<cc.doubleToString(0.25*sqrt(5.0), true)<<"*(d0r-d1r);\n";
+            source<<"mixed3 d5i = "<<cc.doubleToString(0.25*sqrt(5.0), true)<<"*(d0i-d1i);\n";
             source<<"mixed3 d6r = c0r-0.25f*d4r;\n";
             source<<"mixed3 d6i = c0i-0.25f*d4i;\n";
             source<<"mixed3 d7r = d6r+d5r;\n";
             source<<"mixed3 d7i = d6i+d5i;\n";
             source<<"mixed3 d8r = d6r-d5r;\n";
             source<<"mixed3 d8i = d6i-d5i;\n";
-            string coeff = cc.doubleToString(sin(0.2*M_PI)/sin(0.4*M_PI));
+            string coeff = cc.doubleToString(sin(0.2*M_PI)/sin(0.4*M_PI), true);
             source<<"mixed3 d9r = "<<sign<<"*(d2i+"<<coeff<<"*d3i);\n";
             source<<"mixed3 d9i = "<<sign<<"*(-d2r-"<<coeff<<"*d3r);\n";
             source<<"mixed3 d10r = "<<sign<<"*("<<coeff<<"*d2i-d3i);\n";
@@ -541,8 +541,8 @@ string CommonIntegrateRPMDStepKernel::createFFT(int size, const string& variable
             source<<"mixed3 d0i = c1i+c2i;\n";
             source<<"mixed3 d1r = c0r-0.5f*d0r;\n";
             source<<"mixed3 d1i = c0i-0.5f*d0i;\n";
-            source<<"mixed3 d2r = "<<sign<<"*"<<cc.doubleToString(sin(M_PI/3.0))<<"*(c1i-c2i);\n";
-            source<<"mixed3 d2i = "<<sign<<"*"<<cc.doubleToString(sin(M_PI/3.0))<<"*(c2r-c1r);\n";
+            source<<"mixed3 d2r = "<<sign<<"*"<<cc.doubleToString(sin(M_PI/3.0), true)<<"*(c1i-c2i);\n";
+            source<<"mixed3 d2i = "<<sign<<"*"<<cc.doubleToString(sin(M_PI/3.0), true)<<"*(c2r-c1r);\n";
             source<<"real"<<output<<"[i+2*j*"<<m<<"] = c0r+d0r;\n";
             source<<"imag"<<output<<"[i+2*j*"<<m<<"] = c0i+d0i;\n";
             source<<"real"<<output<<"[i+(2*j+1)*"<<m<<"] = "<<multReal<<"(w[j*"<<size<<"/"<<(3*L)<<"], d1r+d2r, d1i+d2i);\n";
@@ -572,7 +572,7 @@ string CommonIntegrateRPMDStepKernel::createFFT(int size, const string& variable
     if (stage%2 == 1) {
         source<<"real0[indexInBlock] = real1[indexInBlock];\n";
         source<<"imag0[indexInBlock] = imag1[indexInBlock];\n";
-        source<<"SYNC_WARPS;\n";
+        source<<"SYNC_THREADS;\n";
     }
     source<<"}\n";
     return source.str();

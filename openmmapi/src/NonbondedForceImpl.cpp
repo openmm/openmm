@@ -46,6 +46,11 @@ using namespace OpenMM;
 using namespace std;
 
 NonbondedForceImpl::NonbondedForceImpl(const NonbondedForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
+    recipForceGroup = owner.getReciprocalSpaceForceGroup();
+    if (recipForceGroup < 0)
+        recipForceGroup = owner.getForceGroup();
+    includeDirectSpace = owner.getIncludeDirectSpace();
 }
 
 NonbondedForceImpl::~NonbondedForceImpl() {
@@ -136,11 +141,8 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
 }
 
 double NonbondedForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    bool includeDirect = (owner.getIncludeDirectSpace() && (groups&(1<<owner.getForceGroup())) != 0);
-    int reciprocalGroup = owner.getReciprocalSpaceForceGroup();
-    if (reciprocalGroup < 0)
-        reciprocalGroup = owner.getForceGroup();
-    bool includeReciprocal = ((groups&(1<<reciprocalGroup)) != 0);
+    bool includeDirect = (includeDirectSpace && (groups&(1<<forceGroup)) != 0);
+    bool includeReciprocal = ((groups&(1<<recipForceGroup)) != 0);
     return kernel.getAs<CalcNonbondedForceKernel>().execute(context, includeForces, includeEnergy, includeDirect, includeReciprocal);
 }
 

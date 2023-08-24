@@ -157,10 +157,10 @@ for (lambda_index, lambda_value) in enumerate(lambda_values):
 
 # Check to make sure pymbar is installed.
 try:
-   from timeseries import subsampleCorrelatedData
+   from pymbar.timeseries import subsample_correlated_data
    from pymbar import MBAR
 except:
-   raise ImportError("pymbar [https://simtk.org/home/pymbar] must be installed to complete analysis of free energies.")
+   raise ImportError("pymbar [https://pymbar.readthedocs.io/] must be installed to complete analysis of free energies.")
    
 # =============================================================================
 # Subsample correlated samples to generate uncorrelated subsample.
@@ -172,7 +172,7 @@ N_k = nprod_iterations*numpy.ones([K], numpy.int32) # N_k[k] is the number of un
 u_kln_subsampled = numpy.zeros([K,K,nprod_iterations], numpy.float64) # subsampled data
 for k in range(K):
    # Get indices of uncorrelated samples.
-   indices = subsampleCorrelatedData(u_kln[k,k,:])
+   indices = subsample_correlated_data(u_kln[k,k,:])
    # Store only uncorrelated data.
    N_k[k] = len(indices)
    for l in range(K):
@@ -186,7 +186,9 @@ print(N_k)
 
 print("Analyzing with MBAR...")
 mbar = MBAR(u_kln_subsampled, N_k)
-Deltaf_ij, dDeltaf_ij = mbar.getFreeEnergyDifferences()
+result = mbar.compute_free_energy_differences()
+Deltaf_ij = result['Delta_f']
+dDeltaf_ij = result['dDelta_f']
 print("Free energy differences (in kT)")
 print(Deltaf_ij)
 print("Statistical errors (in kT)")
@@ -197,4 +199,3 @@ print(dDeltaf_ij)
 # =============================================================================
 
 print("Free energy of inserting argon particle: %.3f +- %.3f kT" % (Deltaf_ij[0,K-1], dDeltaf_ij[0,K-1]))
-

@@ -267,7 +267,7 @@ extern "C" __global__ void computeNonbonded(
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
     // of them (no cutoff).
 
-#ifdef USE_CUTOFF
+#ifdef USE_NEIGHBOR_LIST
     const unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
@@ -293,7 +293,7 @@ extern "C" __global__ void computeNonbonded(
         // Extract the coordinates of this tile.
         int x, y;
         bool singlePeriodicCopy = false;
-#ifdef USE_CUTOFF
+#ifdef USE_NEIGHBOR_LIST
         x = tiles[pos];
         real4 blockSizeX = blockSize[x];
         singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
@@ -328,7 +328,7 @@ extern "C" __global__ void computeNonbonded(
             // Load atom data for this tile.
             real4 posq1 = posq[atom1];
             LOAD_ATOM1_PARAMETERS
-#ifdef USE_CUTOFF
+#ifdef USE_NEIGHBOR_LIST
             unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
@@ -459,7 +459,7 @@ extern "C" __global__ void computeNonbonded(
             atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>(realToFixedPoint(force.x)));
             atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.y)));
             atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.z)));
-#ifdef USE_CUTOFF
+#ifdef USE_NEIGHBOR_LIST
             unsigned int atom2 = atomIndices[threadIdx.x];
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
@@ -476,7 +476,7 @@ extern "C" __global__ void computeNonbonded(
     
     // Third loop: single pairs that aren't part of a tile.
     
-#if USE_CUTOFF
+#if USE_NEIGHBOR_LIST
     const unsigned int numPairs = interactionCount[1];
     if (numPairs > maxSinglePairs)
         return; // There wasn't enough memory for the neighbor list.

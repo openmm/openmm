@@ -45,6 +45,7 @@ using std::string;
 using std::stringstream;
 
 CustomGBForceImpl::CustomGBForceImpl(const CustomGBForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
 }
 
 CustomGBForceImpl::~CustomGBForceImpl() {
@@ -107,7 +108,7 @@ void CustomGBForceImpl::initialize(ContextImpl& context) {
 }
 
 double CustomGBForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcCustomGBForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }

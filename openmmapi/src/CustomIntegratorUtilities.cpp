@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2015-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -188,6 +188,20 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     if (blockStart.size() > 0)
         throw OpenMMException("CustomIntegrator: Missing EndBlock");
 
+    // Identify whether each block contains any operation that either invalidates forces,
+    // or requires forces or energy.  These are the ones that are significant for the
+    // analysis that follows.
+
+    vector<bool> isSignificant(numSteps, false);
+    for (int step = 0; step < numSteps; step++) {
+        if (stepType[step] == CustomIntegrator::IfBlockStart || stepType[step] == CustomIntegrator::WhileBlockStart)
+            for (int i = step; i < blockEnd[step]; i++)
+                if (needsForces[i] || needsEnergy[i] || invalidatesForces[i]) {
+                    isSignificant[step] = true;
+                    break;
+                }
+    }
+
     // If a step requires either forces or energy, and a later step will require the other one, it's most efficient
     // to compute both at the same time.  Figure out whether we should do that.  In principle it's easy: step through
     // the sequence of computations and see if the other one is used before the next time they get invalidated.
@@ -211,7 +225,7 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
     int numBlocks = blockEnd.size();
     for (int i = 0; i < numBlocks; i++)
         blockEnd.push_back(blockEnd[i]+numSteps);
-    enumeratePaths(0, stepsInPath, jumps, blockEnd, stepType, needsForces, needsEnergy, alwaysInvalidatesForces, forceGroup, computeBoth);
+    enumeratePaths(0, stepsInPath, jumps, blockEnd, stepType, needsForces, needsEnergy, alwaysInvalidatesForces, forceGroup, computeBoth, isSignificant);
     
     // Make sure calls to deriv() all valid.
     
@@ -224,7 +238,7 @@ void CustomIntegratorUtilities::analyzeComputations(const ContextImpl& context, 
 
 void CustomIntegratorUtilities::enumeratePaths(int firstStep, vector<int> steps, vector<int> jumps, const vector<int>& blockEnd,
             const vector<CustomIntegrator::ComputationType>& stepType, const vector<bool>& needsForces, const vector<bool>& needsEnergy,
-            const vector<bool>& invalidatesForces, const vector<int>& forceGroup, vector<bool>& computeBoth) {
+            const vector<bool>& invalidatesForces, const vector<int>& forceGroup, vector<bool>& computeBoth, const vector<bool>& isSignificant) {
     int step = firstStep;
     int numSteps = stepType.size();
     while (step < 2*numSteps) {
@@ -237,23 +251,23 @@ void CustomIntegratorUtilities::enumeratePaths(int firstStep, vector<int> steps,
             jumps[step] = -1;
             step = nextStep;
         }
-        else if (stepType[index] == CustomIntegrator::IfBlockStart) {
+        else if (stepType[index] == CustomIntegrator::IfBlockStart && isSignificant[index]) {
             // Consider skipping the block.
 
-            enumeratePaths(blockEnd[step]+1, steps, jumps, blockEnd, stepType, needsForces, needsEnergy, invalidatesForces, forceGroup, computeBoth);
+            enumeratePaths(blockEnd[step]+1, steps, jumps, blockEnd, stepType, needsForces, needsEnergy, invalidatesForces, forceGroup, computeBoth, isSignificant);
 
             // Continue on to execute the block.
 
             step++;
         }
-        else if (stepType[index] == CustomIntegrator::WhileBlockStart && jumps[step] != -2) {
+        else if (stepType[index] == CustomIntegrator::WhileBlockStart && jumps[step] != -2 && isSignificant[index]) {
             // Consider skipping the block.
 
-            enumeratePaths(blockEnd[step]+1, steps, jumps, blockEnd, stepType, needsForces, needsEnergy, invalidatesForces, forceGroup, computeBoth);
+            enumeratePaths(blockEnd[step]+1, steps, jumps, blockEnd, stepType, needsForces, needsEnergy, invalidatesForces, forceGroup, computeBoth, isSignificant);
 
             // Consider executing the block once.
 
-            enumeratePaths(step+1, steps, jumps, blockEnd, stepType, needsForces, needsEnergy, invalidatesForces, forceGroup, computeBoth);
+            enumeratePaths(step+1, steps, jumps, blockEnd, stepType, needsForces, needsEnergy, invalidatesForces, forceGroup, computeBoth, isSignificant);
 
             // Continue on to execute the block twice.
 

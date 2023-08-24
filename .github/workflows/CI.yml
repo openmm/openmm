@@ -148,15 +148,15 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS M1 CPU arm64 Python 3.11
-            python-version: "3.11"
-            os: M1-arm64
-            OPENCL: false
-            cuda-version: ""
-            compilers: conda-forge
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_LIB=ON \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+          #- name: MacOS M1 CPU arm64 Python 3.11
+          #  python-version: "3.11"
+          #  os: M1-arm64
+          #  OPENCL: false
+          #  cuda-version: ""
+          #  compilers: conda-forge
+          #  CMAKE_FLAGS: |
+          #    -DOPENMM_BUILD_OPENCL_LIB=ON \
+          #    -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
 
     steps:
@@ -289,8 +289,6 @@ jobs:
           # With CUDA, we _expect_ CUDA plugins :)
           if [[ "${{ matrix.cuda-version }}" != "" ]]; then
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCUDA.$SHLIB
-            # TODO: Check with Peter why this is not there. Maybe we need an extra flag?
-            # test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCudaCompiler.$SHLIB
           fi
           # OpenCL should also be there for CUDA and, well, OpenCL
           if [[ "${{ matrix.cuda-version }}" != "" || ${{ matrix.OPENCL }} == true ]]; then
@@ -447,7 +445,6 @@ jobs:
           if not "${{ matrix.cuda-version }}" == "" (
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCUDA.lib exit 1
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMOpenCL.lib exit 1
-            if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCudaCompiler.lib exit 1
           ) else (
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMCPU.lib exit 1
             if not exist %CONDA_PREFIX%/Library/lib/plugins/OpenMMPME.lib exit 1
@@ -576,6 +573,7 @@ jobs:
         run: |
           set -x
           echo 'APT::Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
+          sudo apt-get update
           sudo apt-get install -y \
             latexmk \
             texlive-latex-recommended \

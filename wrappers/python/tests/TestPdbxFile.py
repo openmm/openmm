@@ -1,13 +1,11 @@
+import tempfile
 import unittest
 from openmm.app import *
 from openmm import *
 from openmm.unit import *
 import openmm.app.element as elem
 import os
-if sys.version_info >= (3, 0):
-    from io import StringIO
-else:
-    from cStringIO import StringIO
+from io import StringIO
 
 class TestPdbxFile(unittest.TestCase):
     """Test the PDBx/mmCIF file parser"""
@@ -16,22 +14,13 @@ class TestPdbxFile(unittest.TestCase):
         """Test conversion from PDB to PDBx"""
 
         mol = PDBFile('systems/ala_ala_ala.pdb')
-
-        # Write to 'file'
-        output = StringIO()
-        PDBxFile.writeFile(mol.topology, mol.positions, output,
-                           keepIds=True)
-
-        # Read from 'file'
-        input = StringIO(output.getvalue())
-        try:
-            pdbx = PDBxFile(input)
-        except Exception:
-            self.fail('Parser failed to read PDBx/mmCIF file')
-
-        # Close file handles
-        output.close()
-        input.close()
+        with tempfile.TemporaryDirectory() as tempdir:
+            filename = os.path.join(tempdir, 'temp.pdbx')
+            PDBxFile.writeFile(mol.topology, mol.positions, filename, keepIds=True)
+            try:
+                pdbx = PDBxFile(filename)
+            except Exception:
+                self.fail('Parser failed to read PDBx/mmCIF file')
 
 
     def test_Triclinic(self):

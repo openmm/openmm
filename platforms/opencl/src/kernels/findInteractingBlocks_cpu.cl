@@ -44,7 +44,12 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
 __kernel void sortBoxData(__global const real2* restrict sortedBlock, __global const real4* restrict blockCenter,
         __global const real4* restrict blockBoundingBox, __global real4* restrict sortedBlockCenter,
         __global real4* restrict sortedBlockBoundingBox, __global const real4* restrict posq, __global const real4* restrict oldPositions,
-        __global unsigned int* restrict interactionCount, __global int* restrict rebuildNeighborList, int forceRebuild) {
+        __global unsigned int* restrict interactionCount, __global int* restrict rebuildNeighborList, int forceRebuild
+#ifdef USE_LARGE_BLOCKS
+        , __global real4* restrict largeBlockCenter, __global real4* restrict largeBlockBoundingBox, real4 periodicBoxSize,
+        real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
+#endif
+        ) {
     for (int i = get_global_id(0); i < NUM_BLOCKS; i += get_global_size(0)) {
         int index = (int) sortedBlock[i].y;
         sortedBlockCenter[i] = blockCenter[index];
@@ -164,7 +169,11 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
         __global const real4* restrict posq, unsigned int maxTiles, unsigned int startBlockIndex, unsigned int numBlocks, __global real2* restrict sortedBlocks,
         __global const real4* restrict sortedBlockCenter, __global const real4* restrict sortedBlockBoundingBox,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global real4* restrict oldPositions,
-        __global const int* restrict rebuildNeighborList) {
+        __global const int* restrict rebuildNeighborList
+#ifdef USE_LARGE_BLOCKS
+        , __global real4* restrict largeBlockCenter, __global real4* restrict largeBlockBoundingBox
+#endif
+        ) {
     if (rebuildNeighborList[0] == 0)
         return; // The neighbor list doesn't need to be rebuilt.
     int buffer[BUFFER_SIZE];

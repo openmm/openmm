@@ -40,6 +40,7 @@ using namespace OpenMM;
 using namespace std;
 
 RMSDForceImpl::RMSDForceImpl(const RMSDForce& owner) : owner(owner) {
+    forceGroup = owner.getForceGroup();
 }
 
 RMSDForceImpl::~RMSDForceImpl() {
@@ -73,7 +74,7 @@ void RMSDForceImpl::initialize(ContextImpl& context) {
 }
 
 double RMSDForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<owner.getForceGroup())) != 0)
+    if ((groups&(1<<forceGroup)) != 0)
         return kernel.getAs<CalcRMSDForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
