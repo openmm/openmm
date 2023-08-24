@@ -134,6 +134,11 @@ html_theme_options = {
             "relative": True,
         },
         {
+            "title": "Cookbook & Tutorials",
+            "uri": "https://openmm.github.io/openmm-cookbook/",
+            "relative": False,
+        },
+        {
             "title": "GitHub",
             "uri": "https://github.com/openmm",
             "relative": False,
