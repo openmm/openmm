@@ -51,9 +51,9 @@
         PyErr_SetString(openmm_exception, const_cast<char*>(e.what()));
         return NULL;
     }
-    PyErr_Restore(NULL, NULL, NULL);
     if (releaseGIL)
         PyEval_RestoreThread(_savePythonThreadState);
+    PyErr_Restore(NULL, NULL, NULL);
 }
 
 %exception OpenMM::Context::setVelocitiesToTemperature {
