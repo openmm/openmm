@@ -7087,6 +7087,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
     for (int i = 0; i < (int) parameterNames.size(); i++) {
         double value = context.getParameter(parameterNames[i]);
         if (value != localGlobalValues[parameterVariableIndex[i]]) {
+            expressionSet.setVariable(parameterVariableIndex[i], value);
             localGlobalValues[parameterVariableIndex[i]] = value;
             deviceGlobalsAreCurrent = false;
         }
