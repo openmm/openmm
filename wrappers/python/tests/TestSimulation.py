@@ -208,16 +208,20 @@ class TestSimulation(unittest.TestCase):
 
         class Reporter(MinimizationReporter):
             lastIteration = -1
+            error = False
 
             def report(self, iteration, x, grad, args):
-                assert iteration == self.lastIteration+1
+                if iteration != self.lastIteration+1:
+                    self.error = True
                 self.lastIteration = iteration
                 if iteration == 10:
                     raise ValueError('stop minimizing')
-                assert iteration < 11
+                if iteration > 10:
+                    self.error = True
 
         reporter = Reporter()
         simulation.minimizeEnergy(reporter=reporter)
+        assert not reporter.error
 
 
 if __name__ == '__main__':
