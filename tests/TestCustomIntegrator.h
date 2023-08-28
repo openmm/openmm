@@ -439,6 +439,10 @@ void testParameter() {
         integrator.step(1);
         ASSERT_EQUAL_TOL(context.getParameter("AndersenTemperature"), 0.1*(1<<(i+1)), 1e-10);
     }
+    context.setParameter("AndersenTemperature", -5.0);
+    integrator.step(1);
+    ASSERT_EQUAL(-5.0, integrator.getGlobalVariable(0));
+    ASSERT_EQUAL(-10.0, context.getParameter("AndersenTemperature"));
 }
 
 /**
