@@ -1,4 +1,4 @@
-%module openmm
+%module(directors="1") openmm
 %include "factory.i"
 
 %include "std_string.i"

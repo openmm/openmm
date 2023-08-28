@@ -76,12 +76,13 @@ public:
      * objective function with respect to them, and a set of useful statistics.  In particular,
      * args contains these values:
      * 
-     * <ul>
-     * <li>"system energy": the current potential energy of the system</li>
-     * <li>"restraint energy": the energy of the harmonic restraints</li>
-     * <li>"restraint strength": the force constant of the restraints (in kJ/mol/nm^2)</li>
-     * <li>"max constraint error": the maximum relative error in the length of any constraint</li>
-     * </ul>
+     * "system energy": the current potential energy of the system
+     * 
+     * "restraint energy": the energy of the harmonic restraints
+     * 
+     * "restraint strength": the force constant of the restraints (in kJ/mol/nm^2)
+     * 
+     * "max constraint error": the maximum relative error in the length of any constraint
      * 
      * If this function throws an exception, it will cause the L-BFGS optimizer to immediately
      * exit.  If all constrained distances are sufficiently close to their target values,
