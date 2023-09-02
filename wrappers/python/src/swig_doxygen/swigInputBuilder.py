@@ -261,10 +261,12 @@ class SwigInputBuilder:
                     baseName = getText("compoundname", baseNode)
                     if baseName == 'OpenMM::Force':
                         forceSubclassList.append(shortClassName)
-                    elif baseName == 'OpenMM::Integrator':
+                    elif baseName in ('OpenMM::Integrator', 'OpenMM::DrudeIntegrator'):
                         integratorSubclassList.append(shortClassName)
                     elif baseName == 'OpenMM::TabulatedFunction':
                         tabulatedFunctionSubclassList.append(shortClassName)
+        # We need to include subclasses of DrudeIntegrator, but not DrudeIntegrator itself.
+        integratorSubclassList.remove('DrudeIntegrator')
 
         self.fOut.write("%factory(OpenMM::Force& OpenMM::System::getForce")
         for name in sorted(forceSubclassList):

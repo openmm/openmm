@@ -52,8 +52,7 @@ the Langevin equation of motion:
 where :math:`\mathbf{v}_i` is the velocity of particle *i*\ , :math:`\mathbf{f}_i` is
 the force acting on it, :math:`m_i` is its mass, :math:`\gamma` is the friction
 coefficient, and :math:`\mathbf{R}_i` is an uncorrelated random force whose
-components are chosen from a normal distribution with mean zero and variance
-:math:`2m_i \gamma k_B T`\ , where *T* is the temperature of
+components are chosen from a normal distribution with mean zero and unit variance. *T* is the temperature of
 the heat bath.
 
 The integration is done using the Langevin leap-frog method. :cite:`Izaguirre2010`
@@ -61,7 +60,7 @@ In each step, the positions and velocities are updated as follows:
 
 
 .. math::
-   \mathbf{v}_{i}(t+\Delta t/2)=\mathbf{v}_{i}(t-\Delta t/2)\alpha+\mathbf{f}_{i}(t)(1-\alpha)/\gamma{m}_{i} + \sqrt{kT(1-\alpha^2)/m}R
+   \mathbf{v}_{i}(t+\Delta t/2)=\mathbf{v}_{i}(t-\Delta t/2)\alpha+\mathbf{f}_{i}(t)(1-\alpha)/(\gamma{m}_{i}) + \sqrt{{k}_{B}T(1-\alpha^2)/{m}_{i}}R
 
 
 .. math::

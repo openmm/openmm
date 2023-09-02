@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2023 Stanford University and the Authors.      *
  * Authors: Andreas Krämer and Andrew C. Simmonett                            *
  * Contributors: Peter Eastman                                                *
  *                                                                            *
@@ -115,9 +115,8 @@ void testWaterBox() {
     build_waterbox(system, gridSize, polarizability, positions);
 
     const int numMolecules = gridSize*gridSize*gridSize;
-    int numStandardDof = 3*3*numMolecules - system.getNumConstraints();
+    int numStandardDof = 3*3*numMolecules - system.getNumConstraints() - 3;
     int numDrudeDof = 3*numMolecules;
-    int numDof = numStandardDof+numDrudeDof;
     const double temperature = 300.0;
     const double temperatureDrude = 10.0;
 

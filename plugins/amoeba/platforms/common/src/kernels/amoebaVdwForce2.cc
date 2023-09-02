@@ -16,7 +16,7 @@
 #endif
 #if VDW_ALCHEMICAL_METHOD != 0
        real lambda = vdwLambda[0];
-       epsilon = epsilon * POW(lambda, VDW_SOFTCORE_POWER);
+       epsilon = epsilon * POW(lambda, (real) VDW_SOFTCORE_POWER);
        softcore = VDW_SOFTCORE_ALPHA * (1.0f - lambda) * (1.0f - lambda);
     }
 #endif
