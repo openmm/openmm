@@ -36,7 +36,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include <functional>
 #include <map>
 #include <set>
 
@@ -76,12 +75,13 @@ struct IntegrationUtilities::ShakeCluster {
     }
 };
 
-struct IntegrationUtilities::ConstraintOrderer : public binary_function<int, int, bool> {
+struct IntegrationUtilities::ConstraintOrderer {
     const vector<int>& atom1;
     const vector<int>& atom2;
     const vector<int>& constraints;
     ConstraintOrderer(const vector<int>& atom1, const vector<int>& atom2, const vector<int>& constraints) : atom1(atom1), atom2(atom2), constraints(constraints) {
     }
+    
     bool operator()(int x, int y) {
         int ix = constraints[x];
         int iy = constraints[y];
