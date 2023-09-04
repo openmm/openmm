@@ -1042,7 +1042,7 @@ class ForceField(object):
         bondedToAtom = [sorted(b) for b in bondedToAtom]
         return bondedToAtom
 
-    def getUnmatchedResidues(self, topology):
+    def getUnmatchedResidues(self, topology, residueTemplates=dict()):
         """Return a list of Residue objects from specified topology for which no forcefield templates are available.
 
         .. CAUTION:: This method is experimental, and its API is subject to change.
@@ -1051,6 +1051,12 @@ class ForceField(object):
         ----------
         topology : Topology
             The Topology whose residues are to be checked against the forcefield residue templates.
+        residueTemplates : dict=dict()
+            Specifies which template to use for particular residues.  The keys should be Residue
+            objects from the Topology, and the values should be the names of the templates to
+            use for them.  This is useful when a ForceField contains multiple templates that
+            can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
+            monoatomic iron ion in the Topology).
 
         Returns
         -------
@@ -1064,8 +1070,13 @@ class ForceField(object):
         bondedToAtom = self._buildBondedToAtomList(topology)
         unmatched_residues = list() # list of unmatched residues
         for res in topology.residues():
-            # Attempt to match one of the existing templates.
-            [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
+            if res in residueTemplates:
+                # Make sure the specified template matches.
+                template = self._templates[residueTemplates[res]]
+                matches = compiled.matchResidueToTemplate(res, template, bondedToAtom, False, False)
+            else:
+                # Attempt to match one of the existing templates.
+                [template, matches] = self._getResidueTemplateMatches(res, bondedToAtom)
             if matches is None:
                 # No existing templates match.
                 unmatched_residues.append(res)
@@ -1179,11 +1190,11 @@ class ForceField(object):
             their total mass the same.  If rigidWater is used to make water molecules
             rigid, then water hydrogens are not altered.
         residueTemplates : dict=dict()
-            Key: Topology Residue object
-            Value: string, name of _TemplateData residue template object to use for (Key) residue.
-            This allows user to specify which template to apply to particular Residues
-            in the event that multiple matching templates are available (e.g Fe2+ and Fe3+
-            templates in the ForceField for a monoatomic iron ion in the topology).
+            Specifies which template to use for particular residues.  The keys should be Residue
+            objects from the Topology, and the values should be the names of the templates to
+            use for them.  This is useful when a ForceField contains multiple templates that
+            can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
+            monoatomic iron ion in the Topology).
         ignoreExternalBonds : boolean=False
             If true, ignore external bonds when matching residues to templates.  This is
             useful when the Topology represents one piece of a larger molecule, so chains are
