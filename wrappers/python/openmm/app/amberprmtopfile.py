@@ -160,7 +160,13 @@ class AmberPrmtopFile(object):
 
         atoms = list(top.atoms())
         for bond in prmtop.getBondsWithH():
-            top.addBond(atoms[bond[0]], atoms[bond[1]])
+            a1 = atoms[bond[0]]
+            a2 = atoms[bond[1]]
+            if a1.residue.name == 'HOH' and a1.element == elem.hydrogen and a2.element == elem.hydrogen:
+                # Don't add the "bond" Amber lists between the two hydrogens of a water molecule.
+                pass
+            else:
+                top.addBond(a1, a2)
         for bond in prmtop.getBondsNoH():
             top.addBond(atoms[bond[0]], atoms[bond[1]])
 
