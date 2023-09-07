@@ -35,6 +35,7 @@
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
+#include "openmm/internal/timer.h"
 #include "CommonKernelSources.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
@@ -96,6 +97,19 @@ static bool usesVariable(const Lepton::ParsedExpression& expression, const strin
 
 static pair<ExpressionTreeNode, string> makeVariable(const string& name, const string& value) {
     return make_pair(ExpressionTreeNode(new Operation::Variable(name)), value);
+}
+
+static void flushPeriodically(ComputeContext& cc) {
+#ifdef WIN32
+    // When running on Windows, we periodically flush the queue to keep the UI responsive.
+
+    static double lastTime = getCurrentTime();
+    double currentTime = getCurrentTime();
+    if (currentTime-lastTime > 0.025) {
+        cc.flushQueue();
+        lastTime = currentTime;
+    }
+#endif
 }
 
 void CommonApplyConstraintsKernel::initialize(const System& system) {
@@ -5381,10 +5395,8 @@ void CommonIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
     cc.reorderAtoms();
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 }
 
 double CommonIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -5468,10 +5480,8 @@ void CommonIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
     cc.reorderAtoms();
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 }
 
 double CommonIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
@@ -5562,10 +5572,8 @@ void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, cons
     cc.reorderAtoms();
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 }
 
 double CommonIntegrateLangevinMiddleStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
@@ -5755,9 +5763,8 @@ void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const No
     cc.reorderAtoms();
 
     // Reduce UI lag.
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 }
 
 double CommonIntegrateNoseHooverStepKernel::computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) {
@@ -6318,10 +6325,8 @@ void CommonIntegrateBrownianStepKernel::execute(ContextImpl& context, const Brow
     cc.reorderAtoms();
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 }
 
 double CommonIntegrateBrownianStepKernel::computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator) {
@@ -6401,10 +6406,8 @@ double CommonIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
     integration.computeVirtualSites();
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 
     // Update the time and step count.
 
@@ -6510,10 +6513,8 @@ double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
     integration.computeVirtualSites();
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 
     // Update the time and step count.
 
@@ -7087,6 +7088,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
     for (int i = 0; i < (int) parameterNames.size(); i++) {
         double value = context.getParameter(parameterNames[i]);
         if (value != localGlobalValues[parameterVariableIndex[i]]) {
+            expressionSet.setVariable(parameterVariableIndex[i], value);
             localGlobalValues[parameterVariableIndex[i]] = value;
             deviceGlobalsAreCurrent = false;
         }
@@ -7287,10 +7289,8 @@ void CommonIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
     }
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 }
 
 bool CommonIntegrateCustomStepKernel::evaluateCondition(int step) {
