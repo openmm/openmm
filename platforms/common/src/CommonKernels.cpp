@@ -7974,3 +7974,111 @@ void CommonCalcATMForceKernel::copyParametersToContext(ContextImpl& context, con
     displ1.upload(displVectorContext1);
     displ0.upload(displVectorContext0);
 }
+
+class CommonCalcCustomCPPForceKernel::StartCalculationPreComputation : public ComputeContext::ForcePreComputation {
+public:
+    StartCalculationPreComputation(CommonCalcCustomCPPForceKernel& owner) : owner(owner) {
+    }
+    void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        owner.beginComputation(includeForces, includeEnergy, groups);
+    }
+    CommonCalcCustomCPPForceKernel& owner;
+};
+
+class CommonCalcCustomCPPForceKernel::ExecuteTask : public ComputeContext::WorkTask {
+public:
+    ExecuteTask(CommonCalcCustomCPPForceKernel& owner, bool includeForces) : owner(owner), includeForces(includeForces) {
+    }
+    void execute() {
+        owner.executeOnWorkerThread(includeForces);
+    }
+    CommonCalcCustomCPPForceKernel& owner;
+    bool includeForces;
+};
+
+class CommonCalcCustomCPPForceKernel::AddForcesPostComputation : public ComputeContext::ForcePostComputation {
+public:
+    AddForcesPostComputation(CommonCalcCustomCPPForceKernel& owner) : owner(owner) {
+    }
+    double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        return owner.addForces(includeForces, includeEnergy, groups);
+    }
+    CommonCalcCustomCPPForceKernel& owner;
+};
+
+void CommonCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPForceImpl& force) {
+    ContextSelector selector(cc);
+    this->force = &force;
+    int numParticles = system.getNumParticles();
+    forcesVec.resize(numParticles);
+    positionsVec.resize(numParticles);
+    floatForces.resize(3*numParticles);
+    int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    forcesArray.initialize(cc, 3*numParticles, elementSize, "forces");
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cc.intToString(numParticles);
+    defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::customCppForce, defines);
+    addForcesKernel = program->createKernel("addForces");
+    addForcesKernel->addArg(forcesArray);
+    addForcesKernel->addArg(cc.getLongForceBuffer());
+    addForcesKernel->addArg(cc.getAtomIndexArray());
+    forceGroupFlag = (1<<force.getOwner().getForceGroup());
+    cc.addPreComputation(new StartCalculationPreComputation(*this));
+    cc.addPostComputation(new AddForcesPostComputation(*this));
+}
+
+double CommonCalcCustomCPPForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    // This method does nothing.  The actual calculation is started by the pre-computation, continued on
+    // the worker thread, and finished by the post-computation.
+    
+    return 0;
+}
+
+void CommonCalcCustomCPPForceKernel::beginComputation(bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&forceGroupFlag) == 0)
+        return;
+    contextImpl.getPositions(positionsVec);
+    
+    // The actual force computation will be done on a different thread.
+    
+    cc.getWorkThread().addTask(new ExecuteTask(*this, includeForces));
+}
+
+void CommonCalcCustomCPPForceKernel::executeOnWorkerThread(bool includeForces) {
+    energy = force->computeForce(contextImpl, positionsVec, forcesVec);
+    if (includeForces) {
+        ContextSelector selector(cc);
+        int numParticles = cc.getNumAtoms();
+        if (cc.getUseDoublePrecision())
+            forcesArray.upload((double*) forcesVec.data());
+        else {
+            for (int i = 0; i < numParticles; i++) {
+                floatForces[3*i] = (float) forcesVec[i][0];
+                floatForces[3*i+1] = (float) forcesVec[i][1];
+                floatForces[3*i+2] = (float) forcesVec[i][2];
+            }
+            forcesArray.upload(floatForces);
+        }
+    }
+}
+
+double CommonCalcCustomCPPForceKernel::addForces(bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&forceGroupFlag) == 0)
+        return 0;
+
+    // Wait until executeOnWorkerThread() is finished.
+    
+    cc.getWorkThread().flush();
+
+    // Add in the forces.
+    
+    if (includeForces) {
+        ContextSelector selector(cc);
+        addForcesKernel->execute(cc.getNumAtoms());
+    }
+    
+    // Return the energy.
+    
+    return energy;
+}
