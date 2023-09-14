@@ -84,7 +84,7 @@ public:
      * 
      * "max constraint error": the maximum relative error in the length of any constraint
      * 
-     * If this function throws an exception, it will cause the L-BFGS optimizer to immediately
+     * If this function returns true, it will cause the L-BFGS optimizer to immediately
      * exit.  If all constrained distances are sufficiently close to their target values,
      * minimize() will return.  If any constraint error is unacceptably large, it will instead
      * cause the minimizer to immediately increase the strength of the harmonic restraints and
@@ -99,8 +99,10 @@ public:
      *                   restraint energy) with respect to the particle coordinates, in flattened
      *                   order
      * @param args       additional statistics described above about the current state of minimization
+     * @return whether to immediately stop minimization
      */
-    virtual void report(int iteration, const std::vector<double>& x, const std::vector<double>& grad, std::map<std::string, double>& args) {
+    virtual bool report(int iteration, const std::vector<double>& x, const std::vector<double>& grad, std::map<std::string, double>& args) {
+        return false;
     }
 };
 

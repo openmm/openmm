@@ -190,14 +190,8 @@ static int report(void *instance, const lbfgsfloatval_t *x, const lbfgsfloatval_
     // Invoke the reporter.
 
     MinimizationReporter* reporter = reinterpret_cast<MinimizationReporter*>(data->reporter);
-    try {
-        reporter->report(iteration-1, xout, gradout, args);
-    }
-    catch (...) {
-        // The reporter threw an exception.  Signal the minimizer to stop.
-
+    if (reporter->report(iteration-1, xout, gradout, args))
         return 1;
-    }
     return 0;
 }
 

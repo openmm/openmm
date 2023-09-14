@@ -215,9 +215,10 @@ class TestSimulation(unittest.TestCase):
                     self.error = True
                 self.lastIteration = iteration
                 if iteration == 10:
-                    raise ValueError('stop minimizing')
+                    return True
                 if iteration > 10:
                     self.error = True
+                return False
 
         reporter = Reporter()
         simulation.minimizeEnergy(reporter=reporter)

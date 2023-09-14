@@ -318,21 +318,22 @@ void testReporter() {
     public:
         int lastIter = 0;
         double lastK = 0, lastEnergy = 0;
-        bool threwException = false, success = true;
-        void report(int iteration, const vector<double>& x, const vector<double>& grad, map<string, double>& args) {
+        bool canceled = false, success = true;
+        bool report(int iteration, const vector<double>& x, const vector<double>& grad, map<string, double>& args) {
             double k = args["restraint strength"];
             if (iteration > 0)
                 success &= (iteration == lastIter+1 && k == lastK) | (iteration == 0 && k > lastK);
-            if (threwException)
+            if (canceled)
                 success &= (iteration == 0 && k > lastK);
             lastEnergy = args["system energy"];
             if (iteration > 300 && args["max constraint error"] > 1e-4) {
-                threwException = true;
-                throw OpenMMException("Stopping");
+                canceled = true;
+                return true;
             }
-            threwException = false;
+            canceled = false;
             lastIter = iteration;
             lastK = k;
+            return false;
         }
     };
 
