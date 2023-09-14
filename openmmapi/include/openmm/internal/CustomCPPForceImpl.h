@@ -57,7 +57,7 @@ namespace OpenMM {
  * used for all platforms.
  */
 
-class CustomCPPForceImpl : public ForceImpl {
+class OPENMM_EXPORT CustomCPPForceImpl : public ForceImpl {
 public:
     CustomCPPForceImpl(const Force& owner);
     void initialize(ContextImpl& context);
