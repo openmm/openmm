@@ -61,6 +61,7 @@ ReferencePlatform::ReferencePlatform() {
     registerKernelFactory(CalcCustomHbondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCentroidBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCompoundBondForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomCPPForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCVForceKernel::Name(), factory);
     registerKernelFactory(CalcATMForceKernel::Name(), factory);
     registerKernelFactory(CalcRMSDForceKernel::Name(), factory);
