@@ -197,6 +197,33 @@ class TestSimulation(unittest.TestCase):
         
         simulation.step(500)
 
+    def testMinimizationReporter(self):
+        """Test invoking a reporter during minimization."""
+        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        ff = ForceField('amber99sb.xml', 'tip3p.xml')
+        system = ff.createSystem(pdb.topology)
+        integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+        simulation = Simulation(pdb.topology, system, integrator)
+        simulation.context.setPositions(pdb.positions)
+
+        class Reporter(MinimizationReporter):
+            lastIteration = -1
+            error = False
+
+            def report(self, iteration, x, grad, args):
+                if iteration != self.lastIteration+1:
+                    self.error = True
+                self.lastIteration = iteration
+                if iteration == 10:
+                    return True
+                if iteration > 10:
+                    self.error = True
+                return False
+
+        reporter = Reporter()
+        simulation.minimizeEnergy(reporter=reporter)
+        assert not reporter.error
+
 
 if __name__ == '__main__':
     unittest.main()
