@@ -80,6 +80,10 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcCustomCompoundBondForceKernel(name, platform);
     if (name == CalcCustomCVForceKernel::Name())
         return new ReferenceCalcCustomCVForceKernel(name, platform);
+    if (name == CalcATMForceKernel::Name())
+        return new ReferenceCalcATMForceKernel(name, platform);
+    if (name == CalcCustomCPPForceKernel::Name())
+        return new ReferenceCalcCustomCPPForceKernel(name, platform);
     if (name == CalcRMSDForceKernel::Name())
         return new ReferenceCalcRMSDForceKernel(name, platform);
     if (name == CalcCustomManyParticleForceKernel::Name())

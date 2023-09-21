@@ -299,7 +299,7 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         prevDipolesPolar.initialize(cc, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevDipolesPolar");
         prevErrors.initialize(cc, 3*numMultipoles*MaxPrevDIISDipoles, elementSize, "prevErrors");
         diisMatrix.initialize(cc, MaxPrevDIISDipoles*MaxPrevDIISDipoles, elementSize, "diisMatrix");
-        diisCoefficients.initialize(cc, MaxPrevDIISDipoles+1, sizeof(float), "diisMatrix");
+        diisCoefficients.initialize(cc, MaxPrevDIISDipoles+1, sizeof(float), "diisCoefficients");
         syncEvent = cc.createEvent();
         hasCreatedEvent = true;
     }
@@ -1748,16 +1748,16 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     params.initialize<mm_float2>(cc, paddedNumAtoms, "amoebaGkParams");
-    bornRadii .initialize(cc, paddedNumAtoms, elementSize, "bornRadii");
-    field .initialize(cc, 3*paddedNumAtoms, sizeof(long long), "gkField");
+    bornRadii.initialize(cc, paddedNumAtoms, elementSize, "bornRadii");
+    field.initialize(cc, 3*paddedNumAtoms, sizeof(long long), "gkField");
     bornSum.initialize<long long>(cc, paddedNumAtoms, "bornSum");
     bornForce.initialize<long long>(cc, paddedNumAtoms, "bornForce");
-    inducedDipoleS .initialize(cc, 3*paddedNumAtoms, elementSize, "inducedDipoleS");
-    inducedDipolePolarS .initialize(cc, 3*paddedNumAtoms, elementSize, "inducedDipolePolarS");
+    inducedDipoleS.initialize(cc, 3*paddedNumAtoms, elementSize, "inducedDipoleS");
+    inducedDipolePolarS.initialize(cc, 3*paddedNumAtoms, elementSize, "inducedDipolePolarS");
     polarizationType = multipoles->getPolarizationType();
     if (polarizationType != AmoebaMultipoleForce::Direct) {
-        inducedField .initialize(cc, 3*paddedNumAtoms, sizeof(long long), "gkInducedField");
-        inducedFieldPolar .initialize(cc, 3*paddedNumAtoms, sizeof(long long), "gkInducedFieldPolar");
+        inducedField.initialize(cc, 3*paddedNumAtoms, sizeof(long long), "gkInducedField");
+        inducedFieldPolar.initialize(cc, 3*paddedNumAtoms, sizeof(long long), "gkInducedFieldPolar");
     }
     cc.addAutoclearBuffer(field);
     cc.addAutoclearBuffer(bornSum);

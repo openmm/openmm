@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -91,7 +91,9 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(CalcCustomHbondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCentroidBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCompoundBondForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomCPPForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomCVForceKernel::Name(), factory);
+    registerKernelFactory(CalcATMForceKernel::Name(), factory);
     registerKernelFactory(CalcRMSDForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomManyParticleForceKernel::Name(), factory);
     registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
@@ -123,27 +125,15 @@ CudaPlatform::CudaPlatform() {
     setPropertyDefaultValue(CudaUseCpuPme(), "false");
     setPropertyDefaultValue(CudaDisablePmeStream(), "false");
     setPropertyDefaultValue(CudaDeterministicForces(), "false");
+    setPropertyDefaultValue(CudaCompiler(), "");
+    setPropertyDefaultValue(CudaHostCompiler(), "");
 #ifdef _MSC_VER
-    char* bindir = getenv("CUDA_BIN_PATH");
-    string nvcc = (bindir == NULL ? "nvcc.exe" : string(bindir)+"\\nvcc.exe");
-    int length = GetShortPathName(nvcc.c_str(), NULL, 0);
-    if (length > 0) {
-        vector<char> shortName(length);
-        GetShortPathName(nvcc.c_str(), &shortName[0], length);
-        nvcc = string(&shortName[0]);
-    }
-    setPropertyDefaultValue(CudaCompiler(), nvcc);
     setPropertyDefaultValue(CudaTempDirectory(), string(getenv("TEMP")));
 #else
-    char* compiler = getenv("OPENMM_CUDA_COMPILER");
-    string nvcc = (compiler == NULL ? "/usr/local/cuda/bin/nvcc" : string(compiler));
-    setPropertyDefaultValue(CudaCompiler(), nvcc);
     char* tmpdir = getenv("TMPDIR");
     string tmp = (tmpdir == NULL ? string(P_tmpdir) : string(tmpdir));
     setPropertyDefaultValue(CudaTempDirectory(), tmp);
 #endif
-    char* hostCompiler = getenv("CUDA_HOST_COMPILER");
-    setPropertyDefaultValue(CudaHostCompiler(), (hostCompiler == NULL ? "" : string(hostCompiler)));
 }
 
 double CudaPlatform::getSpeed() const {
@@ -178,12 +168,8 @@ void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string
             getPropertyDefaultValue(CudaPrecision()) : properties.find(CudaPrecision())->second);
     string cpuPmePropValue = (properties.find(CudaUseCpuPme()) == properties.end() ?
             getPropertyDefaultValue(CudaUseCpuPme()) : properties.find(CudaUseCpuPme())->second);
-    const string& compilerPropValue = (properties.find(CudaCompiler()) == properties.end() ?
-            getPropertyDefaultValue(CudaCompiler()) : properties.find(CudaCompiler())->second);
     const string& tempPropValue = (properties.find(CudaTempDirectory()) == properties.end() ?
             getPropertyDefaultValue(CudaTempDirectory()) : properties.find(CudaTempDirectory())->second);
-    const string& hostCompilerPropValue = (properties.find(CudaHostCompiler()) == properties.end() ?
-            getPropertyDefaultValue(CudaHostCompiler()) : properties.find(CudaHostCompiler())->second);
     string pmeStreamPropValue = (properties.find(CudaDisablePmeStream()) == properties.end() ?
             getPropertyDefaultValue(CudaDisablePmeStream()) : properties.find(CudaDisablePmeStream())->second);
     string deterministicForcesValue = (properties.find(CudaDeterministicForces()) == properties.end() ?
@@ -201,10 +187,8 @@ void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string
     char* threadsEnv = getenv("OPENMM_CPU_THREADS");
     if (threadsEnv != NULL)
         stringstream(threadsEnv) >> threads;
-    char* compilerEnv = getenv("OPENMM_CUDA_COMPILER");
-    bool allowRuntimeCompiler = (compilerEnv == NULL && properties.find(CudaCompiler()) == properties.end());
-    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue,
-            hostCompilerPropValue, pmeStreamPropValue, deterministicForcesValue, threads, allowRuntimeCompiler, NULL));
+    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, tempPropValue,
+            pmeStreamPropValue, deterministicForcesValue, threads, NULL));
 }
 
 void CudaPlatform::linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const {
@@ -213,15 +197,12 @@ void CudaPlatform::linkedContextCreated(ContextImpl& context, ContextImpl& origi
     string blockingPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaUseBlockingSync());
     string precisionPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaPrecision());
     string cpuPmePropValue = platform.getPropertyValue(originalContext.getOwner(), CudaUseCpuPme());
-    string compilerPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaCompiler());
     string tempPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaTempDirectory());
-    string hostCompilerPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaHostCompiler());
     string pmeStreamPropValue = platform.getPropertyValue(originalContext.getOwner(), CudaDisablePmeStream());
     string deterministicForcesValue = platform.getPropertyValue(originalContext.getOwner(), CudaDeterministicForces());
     int threads = reinterpret_cast<PlatformData*>(originalContext.getPlatformData())->threads.getNumThreads();
-    bool allowRuntimeCompiler = reinterpret_cast<PlatformData*>(originalContext.getPlatformData())->allowRuntimeCompiler;
-    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue,
-            hostCompilerPropValue, pmeStreamPropValue, deterministicForcesValue, threads, allowRuntimeCompiler, &originalContext));
+    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, tempPropValue,
+            pmeStreamPropValue, deterministicForcesValue, threads, &originalContext));
 }
 
 void CudaPlatform::contextDestroyed(ContextImpl& context) const {
@@ -230,10 +211,9 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& system, const string& deviceIndexProperty, const string& blockingProperty, const string& precisionProperty,
-            const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty, const string& hostCompilerProperty, const string& pmeStreamProperty,
-            const string& deterministicForcesProperty, int numThreads, bool allowRuntimeCompiler, ContextImpl* originalContext) :
-                context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false),
-                threads(numThreads), allowRuntimeCompiler(allowRuntimeCompiler) {
+            const string& cpuPmeProperty, const string& tempProperty, const string& pmeStreamProperty, const string& deterministicForcesProperty,
+            int numThreads, ContextImpl* originalContext) : context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0),
+                hasInitializedContexts(false), threads(numThreads) {
     bool blocking = (blockingProperty == "true");
     vector<string> devices;
     size_t searchPos = 0, nextPos;
@@ -250,11 +230,11 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
             if (devices[i].length() > 0) {
                 int deviceIndex;
                 stringstream(devices[i]) >> deviceIndex;
-                contexts.push_back(new CudaContext(system, deviceIndex, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, allowRuntimeCompiler, *this, (originalData == NULL ? NULL : originalData->contexts[i])));
+                contexts.push_back(new CudaContext(system, deviceIndex, blocking, precisionProperty, tempProperty, *this, (originalData == NULL ? NULL : originalData->contexts[i])));
             }
         }
         if (contexts.size() == 0)
-            contexts.push_back(new CudaContext(system, -1, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, allowRuntimeCompiler, *this, (originalData == NULL ? NULL : originalData->contexts[0])));
+            contexts.push_back(new CudaContext(system, -1, blocking, precisionProperty, tempProperty, *this, (originalData == NULL ? NULL : originalData->contexts[0])));
     }
     catch (...) {
         // If an exception was thrown, do our best to clean up memory.
@@ -282,9 +262,9 @@ CudaPlatform::PlatformData::PlatformData(ContextImpl* context, const System& sys
     propertyValues[CudaPlatform::CudaUseBlockingSync()] = blocking ? "true" : "false";
     propertyValues[CudaPlatform::CudaPrecision()] = precisionProperty;
     propertyValues[CudaPlatform::CudaUseCpuPme()] = useCpuPme ? "true" : "false";
-    propertyValues[CudaPlatform::CudaCompiler()] = compilerProperty;
+    propertyValues[CudaPlatform::CudaCompiler()] = "";
     propertyValues[CudaPlatform::CudaTempDirectory()] = tempProperty;
-    propertyValues[CudaPlatform::CudaHostCompiler()] = hostCompilerProperty;
+    propertyValues[CudaPlatform::CudaHostCompiler()] = "";
     propertyValues[CudaPlatform::CudaDisablePmeStream()] = disablePmeStream ? "true" : "false";
     propertyValues[CudaPlatform::CudaDeterministicForces()] = deterministicForces ? "true" : "false";
     contextEnergy.resize(contexts.size());

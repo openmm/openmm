@@ -345,6 +345,19 @@ public:
     }
 };
 
+/**
+ * This kernel is invoked by ATMForce to calculate the forces acting on the system and the energy of the system.
+ */
+class OpenCLCalcATMForceKernel : public CommonCalcATMForceKernel {
+public:
+    OpenCLCalcATMForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : CommonCalcATMForceKernel(name, platform, cc) {
+    }
+    ComputeContext& getInnerComputeContext(ContextImpl& innerContext) {
+        return *reinterpret_cast<OpenCLPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
+    }
+};
+
+  
 } // namespace OpenMM
 
 #endif /*OPENMM_OPENCLKERNELS_H_*/

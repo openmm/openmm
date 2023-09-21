@@ -81,5 +81,6 @@
 #include "openmm/VirtualSite.h"
 #include "openmm/Platform.h"
 #include "openmm/serialization/XmlSerializer.h"
+#include "openmm/ATMForce.h"
 
 #endif /*OPENMM_H_*/

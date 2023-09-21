@@ -185,7 +185,7 @@ def retrieveTestSystem(testName, pme_cutoff=0.9, bond_constraints='hbonds', pola
         test_parameters['hydrogen_mass'] = '1'
     elif amber:
         dirname = downloadAmberSuite()
-        names = {'amber20-dhfr':'JAC', 'amber20-factorix':'FactorIX', 'amber20-cellulose':'Cellulose', 'amber20-stmv':'STMV'}
+        names = {'amber20-dhfr':'JAC', 'amber20-cellulose':'Cellulose', 'amber20-stmv':'STMV'}
         fileName = names[testName]
         prmtop = app.AmberPrmtopFile(os.path.join(dirname, f'PME/Topologies/{fileName}.prmtop'))
         inpcrd = app.AmberInpcrdFile(os.path.join(dirname, f'PME/Coordinates/{fileName}.inpcrd'))
@@ -449,7 +449,7 @@ def runOneTest(testName, options):
 
 platform_speeds = { mm.Platform.getPlatform(i).getName() : mm.Platform.getPlatform(i).getSpeed() for i in range(mm.Platform.getNumPlatforms()) }
 PLATFORMS = [platform for platform, speed in sorted(platform_speeds.items(), key=lambda item: item[1], reverse=True)]
-TESTS = ('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme', 'amber20-dhfr',  'amber20-factorix', 'amber20-cellulose', 'amber20-stmv')
+TESTS = ('gbsa', 'rf', 'pme', 'apoa1rf', 'apoa1pme', 'apoa1ljpme', 'amoebagk', 'amoebapme', 'amber20-dhfr', 'amber20-cellulose', 'amber20-stmv')
 ENSEMBLES = ('NVE', 'NVT', 'NPT')
 BOND_CONSTRAINTS = ('hbonds', 'allbonds')
 PRECISIONS = ('single', 'mixed', 'double')

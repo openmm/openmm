@@ -82,11 +82,26 @@ def _strip_optunit(thing, unit):
 class AmberPrmtopFile(object):
     """AmberPrmtopFile parses an AMBER prmtop file and constructs a Topology and (optionally) an OpenMM System from it."""
 
-    def __init__(self, file):
-        """Load a prmtop file."""
+    def __init__(self, file, periodicBoxVectors=None, unitCellDimensions=None):
+        """Load a prmtop file.
+
+        file : str
+            the name of the file to load
+        periodicBoxVectors : tuple of Vec3=None
+            the vectors defining the periodic box
+        unitCellDimensions : Vec3=None
+            the dimensions of the crystallographic unit cell.  For
+            non-rectangular unit cells, specify periodicBoxVectors instead.
+        """
         ## The Topology read from the prmtop file
         self.topology = top = Topology()
         self.elements = []
+        if periodicBoxVectors is not None:
+            if unitCellDimensions is not None:
+                raise ValueError("Specify either periodicBoxVectors or unitCellDimensions, but not both")
+            top.setPeriodicBoxVectors(periodicBoxVectors)
+        else:
+            top.setUnitCellDimensions(unitCellDimensions)
 
         # Load the prmtop file
 
@@ -145,13 +160,19 @@ class AmberPrmtopFile(object):
 
         atoms = list(top.atoms())
         for bond in prmtop.getBondsWithH():
-            top.addBond(atoms[bond[0]], atoms[bond[1]])
+            a1 = atoms[bond[0]]
+            a2 = atoms[bond[1]]
+            if a1.residue.name == 'HOH' and a1.element == elem.hydrogen and a2.element == elem.hydrogen:
+                # Don't add the "bond" Amber lists between the two hydrogens of a water molecule.
+                pass
+            else:
+                top.addBond(a1, a2)
         for bond in prmtop.getBondsNoH():
             top.addBond(atoms[bond[0]], atoms[bond[1]])
 
         # Set the periodic box size.
 
-        if prmtop.getIfBox():
+        if top.getPeriodicBoxVectors() is None and prmtop.getIfBox():
             box = prmtop.getBoxBetaAndDimensions()
             top.setPeriodicBoxVectors(computePeriodicBoxVectors(*(box[1:4] + box[0:1]*3)))
 

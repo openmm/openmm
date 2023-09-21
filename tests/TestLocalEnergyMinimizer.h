@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
+#include "openmm/CustomExternalForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/LocalEnergyMinimizer.h"
 #include "openmm/NonbondedForce.h"
@@ -295,6 +296,54 @@ void testMasslessParticles() {
     ASSERT_EQUAL_TOL(1.05, sqrt(delta.dot(delta)), 1e-4);
 }
 
+void testReporter() {
+    const int numParticles = 30;
+    System system;
+    CustomExternalForce* force = new CustomExternalForce("sin(5*x)+cos(2*y)*(sin(3*z)+1.5)");
+    system.addForce(force);
+    vector<Vec3> positions;
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        force->addParticle(i);
+        positions.push_back(Vec3(0.5*i, 0.3*sin(i), 0.2*cos(i)));
+        if (i > 0)
+            system.addConstraint(i-1, i, 1.0);
+    }
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.applyConstraints(1e-5);
+
+    class Reporter : public MinimizationReporter {
+    public:
+        int lastIter = 0;
+        double lastK = 0, lastEnergy = 0;
+        bool canceled = false, success = true;
+        bool report(int iteration, const vector<double>& x, const vector<double>& grad, map<string, double>& args) {
+            double k = args["restraint strength"];
+            if (iteration > 0)
+                success &= (iteration == lastIter+1 && k == lastK) | (iteration == 0 && k > lastK);
+            if (canceled)
+                success &= (iteration == 0 && k > lastK);
+            lastEnergy = args["system energy"];
+            if (iteration > 300 && args["max constraint error"] > 1e-4) {
+                canceled = true;
+                return true;
+            }
+            canceled = false;
+            lastIter = iteration;
+            lastK = k;
+            return false;
+        }
+    };
+
+    Reporter reporter;
+    LocalEnergyMinimizer::minimize(context, 1.0, 0, &reporter);
+    ASSERT(reporter.success);
+    State state = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(state.getPotentialEnergy(), reporter.lastEnergy, 1e-5);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -306,6 +355,7 @@ int main(int argc, char* argv[]) {
         testLargeForces();
         testForceGroups();
         testMasslessParticles();
+        testReporter();
         runPlatformTests();
     }
     catch(const exception& e) {

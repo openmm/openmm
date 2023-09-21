@@ -49,9 +49,9 @@ class TestXtcFile(unittest.TestCase):
             box = np.array(box).transpose(1, 2, 0)
             self.assertTrue(np.allclose(box_read, box, atol=1e-3))
             self.assertTrue(
-                np.allclose(time, np.arange(1, nframes + 1) * 0.001, atol=1e-5)
+                np.allclose(time, np.arange(0, nframes) * 0.001, atol=1e-5)
             )
-            self.assertTrue(np.allclose(step, np.arange(1, nframes + 1), atol=1e-5))
+            self.assertTrue(np.allclose(step, np.arange(0, nframes), atol=1e-5))
 
     def test_xtc_cubic(self):
         """Test the XTC file by writing a trajectory and reading it back. Using a cubic box"""
@@ -87,9 +87,9 @@ class TestXtcFile(unittest.TestCase):
             box = np.array(box).transpose(1, 2, 0)
             self.assertTrue(np.allclose(box_read, box, atol=1e-3))
             self.assertTrue(
-                np.allclose(time, np.arange(1, nframes + 1) * 0.001, atol=1e-5)
+                np.allclose(time, np.arange(0, nframes) * 0.001, atol=1e-5)
             )
-            self.assertTrue(np.allclose(step, np.arange(1, nframes + 1), atol=1e-5))
+            self.assertTrue(np.allclose(step, np.arange(0, nframes), atol=1e-5))
 
     def test_xtc_box_from_topology(self):
         """Test the XTC file by writing a trajectory and reading it back. Letting the box be set from the topology"""
@@ -131,9 +131,9 @@ class TestXtcFile(unittest.TestCase):
             box = np.array(np.tile(boxVectors, (nframes, 1, 1))).transpose(1, 2, 0)
             self.assertTrue(np.allclose(box_read, box, atol=1e-3))
             self.assertTrue(
-                np.allclose(time, np.arange(1, nframes + 1) * 0.001, atol=1e-5)
+                np.allclose(time, np.arange(0, nframes) * 0.001, atol=1e-5)
             )
-            self.assertTrue(np.allclose(step, np.arange(1, nframes + 1), atol=1e-5))
+            self.assertTrue(np.allclose(step, np.arange(0, nframes), atol=1e-5))
 
     def testLongTrajectory(self):
         """Test writing a trajectory that has more than 2^31 steps."""

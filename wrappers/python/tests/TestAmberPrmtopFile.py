@@ -7,16 +7,16 @@ from openmm import *
 from openmm.unit import *
 import openmm.app.element as elem
 
-prmtop1 = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
-prmtop2 = AmberPrmtopFile('systems/alanine-dipeptide-implicit.prmtop')
-prmtop3 = AmberPrmtopFile('systems/ff14ipq.parm7')
-prmtop4 = AmberPrmtopFile('systems/Mg_water.prmtop')
-prmtop5 = AmberPrmtopFile('systems/tz2.truncoct.parm7')
-prmtop6 = AmberPrmtopFile('systems/gaffwat.parm7')
-prmtop7 = AmberPrmtopFile('systems/18protein.parm7')
 inpcrd3 = AmberInpcrdFile('systems/ff14ipq.rst7')
 inpcrd4 = AmberInpcrdFile('systems/Mg_water.inpcrd')
 inpcrd7 = AmberInpcrdFile('systems/18protein.rst7')
+prmtop1 = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
+prmtop2 = AmberPrmtopFile('systems/alanine-dipeptide-implicit.prmtop')
+prmtop3 = AmberPrmtopFile('systems/ff14ipq.parm7', periodicBoxVectors=inpcrd3.boxVectors)
+prmtop4 = AmberPrmtopFile('systems/Mg_water.prmtop', periodicBoxVectors=inpcrd4.boxVectors)
+prmtop5 = AmberPrmtopFile('systems/tz2.truncoct.parm7')
+prmtop6 = AmberPrmtopFile('systems/gaffwat.parm7')
+prmtop7 = AmberPrmtopFile('systems/18protein.parm7', periodicBoxVectors=inpcrd7.boxVectors)
 
 class TestAmberPrmtopFile(unittest.TestCase):
 
@@ -78,12 +78,14 @@ class TestAmberPrmtopFile(unittest.TestCase):
         """Test all eight options for the constraints and rigidWater parameters."""
 
         topology = prmtop1.topology
-        for constraints_value in [None, HBonds, AllBonds, HAngles]:
-            for rigidWater_value in [True, False]:
-                system = prmtop1.createSystem(constraints=constraints_value,
-                                              rigidWater=rigidWater_value)
-                validateConstraints(self, topology, system,
-                                    constraints_value, rigidWater_value)
+        for constraints in [None, HBonds, AllBonds, HAngles]:
+            for rigidWater in [True, False]:
+                system = prmtop1.createSystem(constraints=constraints, rigidWater=rigidWater)
+                if constraints != None:
+                    # Amber adds an extra "bond" between water hydrogens, so any constraint
+                    # method except None is equivalent to rigidWater=True.
+                    rigidWater = True
+                validateConstraints(self, topology, system, constraints, rigidWater)
 
     def test_ImplicitSolvent(self):
         """Test the four types of implicit solvents using the implicitSolvent
@@ -177,7 +179,6 @@ class TestAmberPrmtopFile(unittest.TestCase):
         # 'working', and the system is plenty small so this won't be too slow
         sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatformByName('Reference'))
         # Check that the energy is about what we expect it to be
-        sim.context.setPeriodicBoxVectors(*inpcrd3.boxVectors)
         sim.context.setPositions(inpcrd3.positions)
         ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
         ene = ene.value_in_unit(kilocalories_per_mole)
@@ -208,7 +209,6 @@ class TestAmberPrmtopFile(unittest.TestCase):
         # 'working', and the system is plenty small so this won't be too slow
         sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatformByName('Reference'))
         # Check that the energy is about what we expect it to be
-        sim.context.setPeriodicBoxVectors(*inpcrd3.getBoxVectors())
         sim.context.setPositions(inpcrd3.getPositions())
         ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
         ene = ene.value_in_unit(kilocalories_per_mole)
@@ -254,12 +254,19 @@ class TestAmberPrmtopFile(unittest.TestCase):
         self.assertTrue(has_nonbond_force)
         self.assertTrue(has_custom_nonbond_force)
         self.assertEqual(nonbond_exceptions, custom_nonbond_exceptions)
+        # Make sure the periodic box vectors match the ones in the inpcrd file, which are different from
+        # the ones in the prmtop file.
+        systemBox = system.getDefaultPeriodicBoxVectors()
+        topologyBox = prmtop4.topology.getPeriodicBoxVectors()
+        for i in range(3):
+            for j in range(3):
+                self.assertEqual(inpcrd4.boxVectors[i][j], systemBox[i][j])
+                self.assertEqual(inpcrd4.boxVectors[i][j], topologyBox[i][j])
         integrator = VerletIntegrator(1.0*femtoseconds)
         # Use reference platform, since it should always be present and
         # 'working', and the system is plenty small so this won't be too slow
         sim = Simulation(prmtop4.topology, system, integrator, Platform.getPlatformByName('Reference'))
         # Check that the energy is about what we expect it to be
-        sim.context.setPeriodicBoxVectors(*inpcrd4.boxVectors)
         sim.context.setPositions(inpcrd4.positions)
         ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
         ene = ene.value_in_unit(kilocalories_per_mole)
@@ -358,7 +365,6 @@ class TestAmberPrmtopFile(unittest.TestCase):
 
         simulation = Simulation(prmtop.topology, system, integrator)
         simulation.context.setPositions(inpcrd.positions)
-        simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
 
         fname = tempfile.mktemp(suffix='.dcd')
         simulation.reporters.append(DCDReporter(fname, 1))  # This is an explicit test for the bugs in issue #850
@@ -435,8 +441,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
 
         simulation = Simulation(prmtop.topology, system, integrator)
         simulation.context.setPositions(inpcrd.positions)
-        simulation.context.setPeriodicBoxVectors(*inpcrd.boxVectors)
-        
+
         for i, force in enumerate(system.getForces()):
             force.setForceGroup(i)
             
@@ -456,6 +461,17 @@ class TestAmberPrmtopFile(unittest.TestCase):
             integrator = VerletIntegrator(0.001*picoseconds)
             # If a constraint was added to a massless particle, this will throw an exception.
             context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+
+    def testWaterBonds(self):
+        """Test that water molecules have the right set of bonds"""
+        top = prmtop1.topology
+        for residue in top.residues():
+            if residue.name == 'HOH':
+                bonds = list(residue.bonds())
+                self.assertEqual(2, len(bonds))
+                for a1, a2 in bonds:
+                    self.assertTrue(a1.element == elem.oxygen or a2.element == elem.oxygen)
+                    self.assertTrue(a1.element == elem.hydrogen or a2.element == elem.hydrogen)
 
 if __name__ == '__main__':
     unittest.main()

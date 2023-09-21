@@ -50,9 +50,10 @@ KERNEL void computeInteractionGroups(
     LOCAL AtomData localData[LOCAL_MEMORY_SIZE];
     LOCAL int reductionBuffer[LOCAL_MEMORY_SIZE];
 
-    const mm_long startTile = (useNeighborList ? warp*numGroupTiles[0]/totalWarps : FIRST_TILE+(mm_long)warp*(LAST_TILE-FIRST_TILE)/totalWarps);
-    const mm_long endTile = (useNeighborList ? (warp+1)*numGroupTiles[0]/totalWarps : FIRST_TILE+((mm_long)warp+1)*(LAST_TILE-FIRST_TILE)/totalWarps);
-    for (mm_long tile = startTile; tile < endTile; tile++) {
+    mm_ulong wl = warp;
+    const mm_ulong startTile = (useNeighborList ? wl*numGroupTiles[0]/totalWarps : FIRST_TILE+wl*(LAST_TILE-FIRST_TILE)/totalWarps);
+    const mm_ulong endTile = (useNeighborList ? (wl+1)*numGroupTiles[0]/totalWarps : FIRST_TILE+(wl+1)*(LAST_TILE-FIRST_TILE)/totalWarps);
+    for (mm_ulong tile = startTile; tile < endTile; tile++) {
         const int4 atomData = groupData[TILE_SIZE*tile+tgx];
         const int atom1 = atomData.x;
         const int atom2 = atomData.y;
@@ -155,8 +156,8 @@ KERNEL void buildNeighborList(GLOBAL int* RESTRICT rebuildNeighborList, GLOBAL T
     LOCAL volatile mm_long tileIndex[WARPS_IN_BLOCK];
     LOCAL int reductionBuffer[LOCAL_MEMORY_SIZE];
 
-    const mm_long startTile = (mm_long)warp*NUM_TILES/totalWarps;
-    const mm_long endTile = ((mm_long)warp+1)*NUM_TILES/totalWarps;
+    const mm_long startTile = (warp*(mm_ulong)NUM_TILES/totalWarps);
+    const mm_long endTile = ((warp+1)*(mm_ulong)NUM_TILES/totalWarps);
     for (mm_long tile = startTile; tile < endTile; tile++) {
         const int4 atomData = groupData[TILE_SIZE*tile+tgx];
         const int atom1 = atomData.x;

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 
 #include "ReferencePlatform.h"
 #include "openmm/kernels.h"
+#include "openmm/internal/CustomCPPForceImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "SimTKOpenMMRealType.h"
 #include "ReferenceNeighborList.h"
@@ -1576,6 +1577,13 @@ public:
      */
     void initialize(const System& system, const Force& barostat, bool rigidMolecules=true);
     /**
+     * Save the coordinates before attempting a Monte Carlo step.  This allows us to restore them
+     * if the step is rejected.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void saveCoordinates(ContextImpl& context);
+    /**
      * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
      * This version scales the x, y, and z positions independently.
      * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
@@ -1589,8 +1597,8 @@ public:
      */
     void scaleCoordinates(ContextImpl& context, double scaleX, double scaleY, double scaleZ);
     /**
-     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were before
-     * scaleCoordinates() was last called.
+     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were when
+     * saveCoordinates() was last called.
      *
      * @param context    the context in which to execute this kernel
      */
@@ -1624,6 +1632,81 @@ private:
     ReferencePlatform::PlatformData& data;
     std::vector<double> masses;
     int frequency;
+};
+
+/**
+ * This kernel is invoked by ATMForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcATMForceKernel : public CalcATMForceKernel {
+public:
+    ReferenceCalcATMForceKernel(std::string name, const Platform& platform) : CalcATMForceKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the ATMForce this kernel will be used for
+     */
+    void initialize(const System& system, const ATMForce& force);
+    /**
+     * Scale the forces from the inner contexts and apply them to the main context.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext1  the first inner context
+     * @param innerContext2  the second inner context
+     * @param dEdu0          the derivative of the final energy with respect to the first inner context's energy
+     * @param dEdu1          the derivative of the final energy with respect to the second inner context's energy
+     * @param energyParamDerivs  derivatives of the final energy with respect to global parameters
+     */
+    void applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
+                     double dEdu0, double dEdu1, const std::map<std::string, double>& energyParamDerivs);
+    /**
+     * Copy changed parameters over to a context.
+     *
+     * @param context    the context to copy parameters to
+     * @param force      the ATMForce to copy the parameters from
+     */
+    void copyParametersToContext(ContextImpl& context, const ATMForce& force);
+    /**
+     * Copy state information to the inner contexts.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param innerContext1  the first context created by the ATMForce for computing displaced energy
+     * @param innerContext2  the second context created by the ATMForce for computing displaced energy
+     */
+    void copyState(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1);
+private:
+    int numParticles;
+    std::vector<Vec3> displ1;
+    std::vector<Vec3> displ0;
+};
+
+/**
+ * This kernel is invoked by CustomCPPForceImpl to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcCustomCPPForceKernel : public CalcCustomCPPForceKernel {
+public:
+    ReferenceCalcCustomCPPForceKernel(std::string name, const Platform& platform) : CalcCustomCPPForceKernel(name, platform), force(NULL) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCPPForceImpl this kernel will be used for
+     */
+    void initialize(const System& system, CustomCPPForceImpl& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    CustomCPPForceImpl* force;
+    std::vector<Vec3> forces;
 };
 
 } // namespace OpenMM

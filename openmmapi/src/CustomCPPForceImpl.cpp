@@ -1,6 +1,3 @@
-#ifndef OPENMM_CPUCUDACOMPILERKERNELFACTORY_H_
-#define OPENMM_CPUCUDACOMPILERKERNELFACTORY_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,19 +29,30 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/KernelFactory.h"
+#include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/CustomCPPForceImpl.h"
+#include "openmm/kernels.h"
 
-namespace OpenMM {
+using namespace OpenMM;
+using namespace std;
 
-/**
- * This KernelFactory creates kernels for the CUDA runtime compiler.
- */
+CustomCPPForceImpl::CustomCPPForceImpl(const Force& owner) {
+    forceGroup = owner.getForceGroup();
+}
 
-class CudaCompilerKernelFactory : public KernelFactory {
-public:
-    KernelImpl* createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const;
-};
+void CustomCPPForceImpl::initialize(ContextImpl& context) {
+    kernel = context.getPlatform().createKernel(CalcCustomCPPForceKernel::Name(), context);
+    kernel.getAs<CalcCustomCPPForceKernel>().initialize(context.getSystem(), *this);
+}
 
-} // namespace OpenMM
+double CustomCPPForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&(1<<forceGroup)) != 0)
+        return kernel.getAs<CalcCustomCPPForceKernel>().execute(context, includeForces, includeEnergy);
+    return 0.0;
+}
 
-#endif /*OPENMM_CPUCUDACOMPILERKERNELFACTORY_H_*/
+vector<string> CustomCPPForceImpl::getKernelNames() {
+    vector<string> names;
+    names.push_back(CalcCustomCPPForceKernel::Name());
+    return names;
+}

@@ -413,6 +413,14 @@ be used as a collective variable.  The energy is then computed as
 where *f*\ (...) is a user supplied mathematical expression of the collective
 variables.  It also may depend on user defined global parameters.
 
+ATMForce
+********
+
+ATMForce implements the Alchemical Transfer Method for free energy calculations.\ :cite:`Azimi2022`
+It contains one or more :code:`Force` objects whose energy is evaluated twice,
+before and after displacing some particles to new positions.  The final energy
+is determined by a user supplied mathematical function of the two energies.  See
+the API documentation and the publication for more details.
 
 .. _writing-custom-expressions:
 
