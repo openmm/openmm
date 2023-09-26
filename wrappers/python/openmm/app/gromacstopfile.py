@@ -42,7 +42,7 @@ import openmm as mm
 import math
 import os
 import re
-import distutils.spawn
+import shutil
 from collections import OrderedDict, defaultdict
 from itertools import combinations, combinations_with_replacement
 from copy import deepcopy
@@ -1327,11 +1327,11 @@ def _defaultGromacsIncludeDir():
     if 'GMXBIN' in os.environ:
         return os.path.abspath(os.path.join(os.environ['GMXBIN'], '..', 'share', 'gromacs', 'top'))
 
-    pdb2gmx_path = distutils.spawn.find_executable('pdb2gmx')
+    pdb2gmx_path = shutil.which('pdb2gmx')
     if pdb2gmx_path is not None:
         return os.path.abspath(os.path.join(os.path.dirname(pdb2gmx_path), '..', 'share', 'gromacs', 'top'))
     else:
-        gmx_path = distutils.spawn.find_executable('gmx')
+        gmx_path = shutil.which('gmx')
         if gmx_path is not None:
             return os.path.abspath(os.path.join(os.path.dirname(gmx_path), '..', 'share', 'gromacs', 'top'))
 
