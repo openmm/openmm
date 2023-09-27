@@ -39,7 +39,7 @@ KERNEL void computeInteractionGroups(
         GLOBAL mm_ulong* RESTRICT forceBuffers,
         GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT groupData,
         GLOBAL const int* RESTRICT numGroupTiles, int useNeighborList,
-        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, int numDerivatives
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = GLOBAL_SIZE/TILE_SIZE;
     const unsigned int warp = GLOBAL_ID/TILE_SIZE; // global warpIndex
