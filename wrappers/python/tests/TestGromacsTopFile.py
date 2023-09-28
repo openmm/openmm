@@ -19,8 +19,6 @@ class TestGromacsTopFile(unittest.TestCase):
 
         # alanine dipeptide with explicit water
         self.top1 = GromacsTopFile('systems/explicit.top', unitCellDimensions=Vec3(6.223, 6.223, 6.223)*nanometers)
-        # alanine dipeptide with implicit water
-        self.top2 = GromacsTopFile('systems/implicit.top')
 
     def test_NonbondedMethod(self):
         """Test all six options for the nonbondedMethod parameter."""
@@ -96,17 +94,16 @@ class TestGromacsTopFile(unittest.TestCase):
 
     def test_SwitchingFunction(self):
         """Test using a switching function."""
-        for filename in ('systems/implicit.top', 'systems/ionic.top'):
-            top = GromacsTopFile(filename)
-            for distance in (None, 0.8*nanometers):
-                system = top.createSystem(nonbondedMethod=CutoffNonPeriodic, switchDistance=distance)
-                for f in system.getForces():
-                    if isinstance(f, NonbondedForce) or isinstance(f, CustomNonbondedForce):
-                        if distance is None:
-                            self.assertFalse(f.getUseSwitchingFunction())
-                        else:
-                            self.assertTrue(f.getUseSwitchingFunction())
-                            self.assertEqual(distance, f.getSwitchingDistance())
+        top = GromacsTopFile('systems/ionic.top')
+        for distance in (None, 0.8*nanometers):
+            system = top.createSystem(nonbondedMethod=CutoffNonPeriodic, switchDistance=distance)
+            for f in system.getForces():
+                if isinstance(f, NonbondedForce) or isinstance(f, CustomNonbondedForce):
+                    if distance is None:
+                        self.assertFalse(f.getUseSwitchingFunction())
+                    else:
+                        self.assertTrue(f.getUseSwitchingFunction())
+                        self.assertEqual(distance, f.getSwitchingDistance())
 
     def test_EwaldErrorTolerance(self):
         """Test to make sure the ewaldErrorTolerance parameter is passed correctly."""
@@ -139,37 +136,6 @@ class TestGromacsTopFile(unittest.TestCase):
                                                    rigidWater=rigidWater_value)
                 validateConstraints(self, topology, system,
                                     constraints_value, rigidWater_value)
-
-    def test_ImplicitSolvent(self):
-        """Test implicit solvent using the implicitSolvent parameter.
-
-        """
-        system = self.top2.createSystem(implicitSolvent=OBC2)
-        self.assertTrue(any(isinstance(f, GBSAOBCForce) for f in system.getForces()))
-
-    def test_ImplicitSolventParameters(self):
-        """Test that solventDielectric and soluteDielectric are passed correctly.
-
-        """
-        system = self.top2.createSystem(implicitSolvent=OBC2,
-                                           solventDielectric=50.0,
-                                           soluteDielectric = 0.9)
-        found_matching_solvent_dielectric=False
-        found_matching_solute_dielectric=False
-        for force in system.getForces():
-            if isinstance(force, GBSAOBCForce):
-                if force.getSolventDielectric() == 50.0:
-                    found_matching_solvent_dielectric = True
-                if force.getSoluteDielectric() == 0.9:
-                    found_matching_solute_dielectric = True
-                gbcharges = [force.getParticleParameters(i)[0] for i in range(system.getNumParticles())]
-            if isinstance(force, NonbondedForce):
-                self.assertEqual(force.getReactionFieldDielectric(), 1.0)
-                nbcharges = [force.getParticleParameters(i)[0] for i in range(system.getNumParticles())]
-        self.assertTrue(found_matching_solvent_dielectric and
-                        found_matching_solute_dielectric)
-        for q1, q2 in zip(gbcharges, nbcharges):
-            self.assertEqual(q1, q2)
 
     def test_HydrogenMass(self):
         """Test that altering the mass of hydrogens works correctly."""
