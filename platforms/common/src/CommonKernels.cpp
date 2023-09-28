@@ -2315,7 +2315,7 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         initDerivs<<"mixed "<<derivVariable<<" = 0;\n";
         for (int index = 0; index < numDerivs; index++)
             if (allParamDerivNames[index] == paramName)
-                saveDerivs<<"energyParamDerivs[GLOBAL_ID*"<<numDerivs<<"+"<<index<<"] += "<<derivVariable<<";\n";
+                saveDerivs<<"energyParamDerivs[GLOBAL_ID*numDerivatives+"<<index<<"] += "<<derivVariable<<";\n";
     }
     replacements["INIT_DERIVATIVES"] = initDerivs.str();
     replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
@@ -2391,6 +2391,7 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             interactionGroupKernel->addArg((int) useNeighborList);
             for (int i = 0; i < 5; i++)
                 interactionGroupKernel->addArg(); // Periodic box information will be set just before it is executed.
+            interactionGroupKernel->addArg((int) cc.getEnergyParamDerivNames().size());
             for (auto& buffer : paramBuffers)
                 interactionGroupKernel->addArg(buffer.getArray());
             for (auto& buffer : computedValueBuffers)
