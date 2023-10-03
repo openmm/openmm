@@ -14,4 +14,5 @@ Part I: The OpenMM Application Layer
    application/02_running_sims
    application/03_model_building_editing
    application/04_advanced_sim_examples
-   application/05_creating_ffs
+   application/05_add_on_packages
+   application/06_creating_ffs
