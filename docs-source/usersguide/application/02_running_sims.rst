@@ -752,6 +752,8 @@ File                 Water Model
 :code:`opc3.xml`     OPC3 water model\ :cite:`Izadi2016`
 ===================  ============================================
 
+.. _small-molecule-parameters:
+
 Small molecule parameters
 =========================
 
