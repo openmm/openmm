@@ -38,6 +38,7 @@
 #include <map>
 #include <sstream>
 #include <utility>
+#include <cstring>
 
 using namespace OpenMM;
 using std::map;
@@ -188,7 +189,15 @@ int CustomNonbondedForce::addParticle(const vector<double>& parameters) {
 
 void CustomNonbondedForce::getParticleParameters(int index, std::vector<double>& parameters) const {
     ASSERT_VALID_INDEX(index, particles);
-    parameters = particles[index].parameters;
+
+    const auto &params = particles[index].parameters;
+
+    // resize and copy into 'parameters` so that we can re-use its memory,
+    // rather than deallocating then reallocating with a copy.
+    if (parameters.size() != params.size())
+        parameters.resize(params.size());
+
+    std::memcpy(parameters.data(), params.data(), params.size()*sizeof(double));
 }
 
 void CustomNonbondedForce::setParticleParameters(int index, const vector<double>& parameters) {
@@ -331,4 +340,21 @@ ForceImpl* CustomNonbondedForce::createImpl() const {
 
 void CustomNonbondedForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomNonbondedForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+}
+
+bool CustomNonbondedForce::haveSameParameters(int index1, int index2) const {
+    ASSERT_VALID_INDEX(index1, particles);
+    ASSERT_VALID_INDEX(index2, particles);
+
+    // Check for parameter equivalence directly on the parameters
+    // array so we avoid the need to copy the parameters into
+    // temporary vectors.
+    const auto &params1 = particles[index1].parameters;
+    const auto &params2 = particles[index2].parameters;
+
+    for (int i = 0; i < params1.size(); i++)
+        if (params1[i] != params2[i])
+            return false;
+   
+    return true;
 }
