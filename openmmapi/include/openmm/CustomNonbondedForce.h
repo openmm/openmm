@@ -567,17 +567,6 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return nonbondedMethod == CustomNonbondedForce::CutoffPeriodic;
     }
-    /**
-     * Returns whether or the particles at indexes index1 and index2 
-     * have the same parameters.
-     *
-     * @param index1    the index of the first particle
-     * @param index2    the index of the second particle
-     * 
-     * @returns true if the parameters are the same and false otherwise
-     */
-    bool haveSameParameters(int index1, int index2) const;
-
 protected:
     ForceImpl* createImpl() const;
 private:

@@ -1778,13 +1778,13 @@ public:
         }
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        // call a function that checks for parameter equivalence on 
-        // the force's arrays directly, so we avoid the malloc/free
-        // of copying the parameters into temporary vectors
-        // for the comparison
-        if (not force.haveSameParameters(particle1, particle2))
-            return false;
-
+        vector<double> params1;
+        vector<double> params2;
+        force.getParticleParameters(particle1, params1);
+        force.getParticleParameters(particle2, params2);
+        for (int i = 0; i < (int) params1.size(); i++)
+            if (params1[i] != params2[i])
+                return false;
         if (groupsForParticle.size() > 0 && groupsForParticle[particle1] != groupsForParticle[particle2])
             return false;
         return true;
