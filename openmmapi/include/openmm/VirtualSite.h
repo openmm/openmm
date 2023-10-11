@@ -136,9 +136,8 @@ private:
  * r<sub>1</sub> + w<sub>12</sub>r<sub>12</sub> + w<sub>13</sub>r<sub>13</sub> + w<sub>cross</sub>(r<sub>12</sub> x r<sub>13</sub>)
  * 
  * The three weight factors are user-specified.  This allows the virtual site location
- * to be out of the plane of the three particles. Note that while
- * w<sub>12</sub> and w<sub>13</sub> are unitless and w<sub>cross</sub> has
- * units of inverse distance.
+ * to be out of the plane of the three particles. Note that while w<sub>12</sub> and
+ * w<sub>13</sub> are unitless, w<sub>cross</sub> has units of inverse distance.
  */
 class OPENMM_EXPORT OutOfPlaneSite : public VirtualSite {
 public:
