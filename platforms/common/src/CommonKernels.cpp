@@ -236,7 +236,7 @@ public:
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2;
-        vector<double> parameters;
+        thread_local static vector<double> parameters;
         force.getBondParameters(index, particle1, particle2, parameters);
         particles.resize(2);
         particles[0] = particle1;
@@ -244,7 +244,8 @@ public:
     }
     bool areGroupsIdentical(int group1, int group2) {
         int particle1, particle2;
-        vector<double> parameters1, parameters2;
+        thread_local static vector<double> parameters1;
+        thread_local static vector<double> parameters2;
         force.getBondParameters(group1, particle1, particle2, parameters1);
         force.getBondParameters(group2, particle1, particle2, parameters2);
         for (int i = 0; i < (int) parameters1.size(); i++)
@@ -474,7 +475,7 @@ public:
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2, particle3;
-        vector<double> parameters;
+        thread_local static vector<double> parameters;
         force.getAngleParameters(index, particle1, particle2, particle3, parameters);
         particles.resize(3);
         particles[0] = particle1;
@@ -483,7 +484,8 @@ public:
     }
     bool areGroupsIdentical(int group1, int group2) {
         int particle1, particle2, particle3;
-        vector<double> parameters1, parameters2;
+        thread_local static vector<double> parameters1; 
+        thread_local static vector<double> parameters2;
         force.getAngleParameters(group1, particle1, particle2, particle3, parameters1);
         force.getAngleParameters(group2, particle1, particle2, particle3, parameters2);
         for (int i = 0; i < (int) parameters1.size(); i++)
@@ -807,7 +809,7 @@ public:
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2, particle3, particle4;
-        vector<double> parameters;
+        thread_local static vector<double> parameters;
         force.getTorsionParameters(index, particle1, particle2, particle3, particle4, parameters);
         particles.resize(4);
         particles[0] = particle1;
@@ -817,7 +819,8 @@ public:
     }
     bool areGroupsIdentical(int group1, int group2) {
         int particle1, particle2, particle3, particle4;
-        vector<double> parameters1, parameters2;
+        thread_local static vector<double> parameters1;
+        thread_local static vector<double> parameters2;
         force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, parameters1);
         force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, parameters2);
         for (int i = 0; i < (int) parameters1.size(); i++)
@@ -1080,7 +1083,7 @@ void CommonCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& cont
 class CommonCalcCustomExternalForceKernel::ForceInfo : public ComputeForceInfo {
 public:
     ForceInfo(const CustomExternalForce& force, int numParticles) : force(force), indices(numParticles, -1) {
-        vector<double> params;
+        thread_local static vector<double> params;
         for (int i = 0; i < force.getNumParticles(); i++) {
             int particle;
             force.getParticleParameters(i, particle, params);
@@ -1095,8 +1098,8 @@ public:
         if (particle1 == -1 || particle2 == -1)
             return false;
         int temp;
-        vector<double> params1;
-        vector<double> params2;
+        thread_local static vector<double> params1;
+        thread_local static vector<double> params2;
         force.getParticleParameters(particle1, temp, params1);
         force.getParticleParameters(particle2, temp, params2);
         for (int i = 0; i < (int) params1.size(); i++)
@@ -1126,8 +1129,8 @@ void CommonCalcCustomExternalForceKernel::initialize(const System& system, const
     vector<vector<int> > atoms(numParticles, vector<int>(1));
     params = new ComputeParameterSet(cc, force.getNumPerParticleParameters(), numParticles, "customExternalParams");
     vector<vector<float> > paramVector(numParticles);
+    thread_local static vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
-        vector<double> parameters;
         force.getParticleParameters(startIndex+i, atoms[i][0], parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
@@ -1220,7 +1223,7 @@ void CommonCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& c
     // Record the per-particle parameters.
     
     vector<vector<float> > paramVector(numParticles);
-    vector<double> parameters;
+    thread_local static vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
         int particle;
         force.getParticleParameters(startIndex+i, particle, parameters);
@@ -1243,12 +1246,13 @@ public:
         return force.getNumBonds();
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
-        vector<double> parameters;
+        thread_local static vector<double> parameters;
         force.getBondParameters(index, particles, parameters);
     }
     bool areGroupsIdentical(int group1, int group2) {
-        vector<int> particles;
-        vector<double> parameters1, parameters2;
+        thread_local static vector<int> particles;
+        thread_local static vector<double> parameters1;
+        thread_local static vector<double> parameters2;
         force.getBondParameters(group1, particles, parameters1);
         force.getBondParameters(group2, particles, parameters2);
         for (int i = 0; i < (int) parameters1.size(); i++)
@@ -1442,8 +1446,8 @@ public:
         return force.getNumBonds();
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
-        vector<double> parameters;
-        vector<int> groups;
+        thread_local static vector<double> parameters;
+        thread_local static vector<int> groups;
         force.getBondParameters(index, groups, parameters);
         for (int group : groups) {
             vector<int> groupParticles;
@@ -1453,8 +1457,10 @@ public:
         }
     }
     bool areGroupsIdentical(int group1, int group2) {
-        vector<int> groups1, groups2;
-        vector<double> parameters1, parameters2;
+        thread_local static vector<int> groups1;
+        thread_local static vector<int> groups2;
+        thread_local static vector<double> parameters1; 
+        thread_local static vector<double> parameters2;
         force.getBondParameters(group1, groups1, parameters1);
         force.getBondParameters(group2, groups2, parameters2);
         for (int i = 0; i < (int) parameters1.size(); i++)
@@ -1778,8 +1784,8 @@ public:
         }
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        vector<double> params1;
-        vector<double> params2;
+        thread_local static vector<double> params1;
+        thread_local static vector<double> params2;
         force.getParticleParameters(particle1, params1);
         force.getParticleParameters(particle2, params2);
         for (int i = 0; i < (int) params1.size(); i++)
@@ -1878,8 +1884,8 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         globals.initialize<float>(cc, force.getNumGlobalParameters(), "customNonbondedGlobals");
     vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
     vector<vector<int> > exclusionList(numParticles);
+    thread_local static vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
-        vector<double> parameters;
         force.getParticleParameters(i, parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
@@ -2441,7 +2447,7 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
     int paddedNumParticles = cc.getPaddedNumAtoms();
     int numParams = force.getNumPerParticleParameters();
     vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
-    vector<double> parameters;
+    thread_local static vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
         force.getParticleParameters(i, parameters);
         paramVector[i].resize(parameters.size());
@@ -2683,8 +2689,8 @@ public:
     ForceInfo(const CustomGBForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        vector<double> params1;
-        vector<double> params2;
+        thread_local static vector<double> params1;
+        thread_local static vector<double> params2;
         force.getParticleParameters(particle1, params1);
         force.getParticleParameters(particle2, params2);
         for (int i = 0; i < (int) params1.size(); i++)
@@ -2761,8 +2767,8 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         globals.initialize<float>(cc, force.getNumGlobalParameters(), "customGBGlobals");
     vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
     vector<vector<int> > exclusionList(numParticles);
+    thread_local static vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
-        vector<double> parameters;
         force.getParticleParameters(i, parameters);
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (float) parameters[j];
@@ -3673,7 +3679,7 @@ void CommonCalcCustomGBForceKernel::copyParametersToContext(ContextImpl& context
     // Record the per-particle parameters.
 
     vector<vector<float> > paramVector(cc.getPaddedNumAtoms(), vector<float>(force.getNumPerParticleParameters(), 0));
-    vector<double> parameters;
+    thread_local static vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
         force.getParticleParameters(i, parameters);
         for (int j = 0; j < (int) parameters.size(); j++)
@@ -3710,7 +3716,7 @@ public:
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
         int p1, p2, p3;
-        vector<double> parameters;
+        thread_local static vector<double> parameters;
         if (index < force.getNumDonors()) {
             force.getDonorParameters(index, p1, p2, p3, parameters);
             particles.clear();
@@ -3751,7 +3757,8 @@ public:
     }
     bool areGroupsIdentical(int group1, int group2) {
         int p1, p2, p3;
-        vector<double> params1, params2;
+        thread_local static vector<double> params1;
+        thread_local static vector<double> params2;
         if (group1 < force.getNumDonors() && group2 < force.getNumDonors()) {
             force.getDonorParameters(group1, p1, p2, p3, params1);
             force.getDonorParameters(group2, p1, p2, p3, params2);
@@ -4195,7 +4202,8 @@ public:
     ForceInfo(const CustomManyParticleForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        vector<double> params1, params2;
+        thread_local static vector<double> params1;
+        thread_local static vector<double> params2;
         int type1, type2;
         force.getParticleParameters(particle1, params1, type1);
         force.getParticleParameters(particle2, params2, type2);
@@ -4242,8 +4250,8 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
     
     params = new ComputeParameterSet(cc, force.getNumPerParticleParameters(), numParticles, "customManyParticleParameters");
     vector<vector<float> > paramVector(numParticles);
+    thread_local static vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
-        vector<double> parameters;
         int type;
         force.getParticleParameters(i, parameters, type);
         paramVector[i].resize(parameters.size());
@@ -4680,7 +4688,7 @@ void CommonCalcCustomManyParticleForceKernel::copyParametersToContext(ContextImp
     // Record the per-particle parameters.
 
     vector<vector<float> > paramVector(numParticles);
-    vector<double> parameters;
+    thread_local static vector<double> parameters;
     int type;
     for (int i = 0; i < numParticles; i++) {
         force.getParticleParameters(i, parameters, type);

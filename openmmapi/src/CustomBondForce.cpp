@@ -118,7 +118,13 @@ void CustomBondForce::getBondParameters(int index, int& particle1, int& particle
     ASSERT_VALID_INDEX(index, bonds);
     particle1 = bonds[index].particle1;
     particle2 = bonds[index].particle2;
-    parameters = bonds[index].parameters;
+
+    const auto &p = bonds[index].parameters;
+
+    if (p.size() != parameters.size())
+        parameters.resize(p.size());
+
+    std::memcpy(parameters.data(), p.data(), p.size()*sizeof(double));
 }
 
 void CustomBondForce::setBondParameters(int index, int particle1, int particle2, const vector<double>& parameters) {
