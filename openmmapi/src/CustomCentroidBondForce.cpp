@@ -148,20 +148,8 @@ int CustomCentroidBondForce::addBond(const vector<int>& groups, const vector<dou
 
 void CustomCentroidBondForce::getBondParameters(int index, vector<int>& groups, std::vector<double>& parameters) const {
     ASSERT_VALID_INDEX(index, bonds);
-
-    const auto &g = bonds[index].groups;
-
-    if (g.size() != groups.size())
-        groups.resize(g.size());
-
-    std::memcpy(groups.data(), g.data(), g.size() * sizeof(int));
-
-    const auto &p = bonds[index].parameters;
-
-    if (p.size() != parameters.size())
-        parameters.resize(p.size());
-
-    std::memcpy(parameters.data(), p.data(), p.size() * sizeof(double));
+    groups = bonds[index].groups;
+    parameters = bonds[index].parameters;
 }
 
 void CustomCentroidBondForce::setBondParameters(int index, const vector<int>& groups, const vector<double>& parameters) {

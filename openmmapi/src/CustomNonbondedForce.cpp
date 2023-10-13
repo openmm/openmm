@@ -188,12 +188,7 @@ int CustomNonbondedForce::addParticle(const vector<double>& parameters) {
 
 void CustomNonbondedForce::getParticleParameters(int index, std::vector<double>& parameters) const {
     ASSERT_VALID_INDEX(index, particles);
-    const auto &p = particles[index].parameters;
-
-    if (p.size() != parameters.size())
-        parameters.resize(p.size());
-
-    std::memcpy(parameters.data(), p.data(), p.size() * sizeof(double));
+    parameters = particles[index].parameters;
 }
 
 void CustomNonbondedForce::setParticleParameters(int index, const vector<double>& parameters) {
