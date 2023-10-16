@@ -236,7 +236,7 @@ public:
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2;
-        vector<double> parameters;
+        thread_local static vector<double> parameters;
         force.getBondParameters(index, particle1, particle2, parameters);
         particles.resize(2);
         particles[0] = particle1;
@@ -244,7 +244,7 @@ public:
     }
     bool areGroupsIdentical(int group1, int group2) {
         int particle1, particle2;
-        vector<double> parameters1, parameters2;
+        thread_local static vector<double> parameters1, parameters2;
         force.getBondParameters(group1, particle1, particle2, parameters1);
         force.getBondParameters(group2, particle1, particle2, parameters2);
         for (int i = 0; i < (int) parameters1.size(); i++)
@@ -474,7 +474,7 @@ public:
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2, particle3;
-        vector<double> parameters;
+        thread_local static vector<double> parameters;
         force.getAngleParameters(index, particle1, particle2, particle3, parameters);
         particles.resize(3);
         particles[0] = particle1;
@@ -483,7 +483,7 @@ public:
     }
     bool areGroupsIdentical(int group1, int group2) {
         int particle1, particle2, particle3;
-        vector<double> parameters1, parameters2;
+        thread_local static vector<double> parameters1, parameters2;
         force.getAngleParameters(group1, particle1, particle2, particle3, parameters1);
         force.getAngleParameters(group2, particle1, particle2, particle3, parameters2);
         for (int i = 0; i < (int) parameters1.size(); i++)
@@ -807,7 +807,7 @@ public:
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
         int particle1, particle2, particle3, particle4;
-        vector<double> parameters;
+        thread_local static vector<double> parameters;
         force.getTorsionParameters(index, particle1, particle2, particle3, particle4, parameters);
         particles.resize(4);
         particles[0] = particle1;
@@ -817,7 +817,7 @@ public:
     }
     bool areGroupsIdentical(int group1, int group2) {
         int particle1, particle2, particle3, particle4;
-        vector<double> parameters1, parameters2;
+        thread_local static vector<double> parameters1, parameters2;
         force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, parameters1);
         force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, parameters2);
         for (int i = 0; i < (int) parameters1.size(); i++)
@@ -1095,8 +1095,7 @@ public:
         if (particle1 == -1 || particle2 == -1)
             return false;
         int temp;
-        vector<double> params1;
-        vector<double> params2;
+        thread_local static vector<double> params1, params2;
         force.getParticleParameters(particle1, temp, params1);
         force.getParticleParameters(particle2, temp, params2);
         for (int i = 0; i < (int) params1.size(); i++)
@@ -1243,12 +1242,12 @@ public:
         return force.getNumBonds();
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
-        vector<double> parameters;
+        thread_local static vector<double> parameters;
         force.getBondParameters(index, particles, parameters);
     }
     bool areGroupsIdentical(int group1, int group2) {
-        vector<int> particles;
-        vector<double> parameters1, parameters2;
+        thread_local static vector<int> particles;
+        thread_local static vector<double> parameters1, parameters2;
         force.getBondParameters(group1, particles, parameters1);
         force.getBondParameters(group2, particles, parameters2);
         for (int i = 0; i < (int) parameters1.size(); i++)
@@ -1442,8 +1441,8 @@ public:
         return force.getNumBonds();
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
-        vector<double> parameters;
-        vector<int> groups;
+        thread_local static vector<double> parameters;
+        thread_local static vector<int> groups;
         force.getBondParameters(index, groups, parameters);
         for (int group : groups) {
             vector<int> groupParticles;
@@ -1453,8 +1452,8 @@ public:
         }
     }
     bool areGroupsIdentical(int group1, int group2) {
-        vector<int> groups1, groups2;
-        vector<double> parameters1, parameters2;
+        thread_local static vector<int> groups1, groups2;
+        thread_local static vector<double> parameters1, parameters2;
         force.getBondParameters(group1, groups1, parameters1);
         force.getBondParameters(group2, groups2, parameters2);
         for (int i = 0; i < (int) parameters1.size(); i++)
@@ -1778,8 +1777,7 @@ public:
         }
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        vector<double> params1;
-        vector<double> params2;
+        thread_local static vector<double> params1, params2;
         force.getParticleParameters(particle1, params1);
         force.getParticleParameters(particle2, params2);
         for (int i = 0; i < (int) params1.size(); i++)
@@ -2683,8 +2681,7 @@ public:
     ForceInfo(const CustomGBForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        vector<double> params1;
-        vector<double> params2;
+        thread_local static vector<double> params1, params2;
         force.getParticleParameters(particle1, params1);
         force.getParticleParameters(particle2, params2);
         for (int i = 0; i < (int) params1.size(); i++)
@@ -3710,7 +3707,7 @@ public:
     }
     void getParticlesInGroup(int index, vector<int>& particles) {
         int p1, p2, p3;
-        vector<double> parameters;
+        thread_local static vector<double> parameters;
         if (index < force.getNumDonors()) {
             force.getDonorParameters(index, p1, p2, p3, parameters);
             particles.clear();
@@ -3751,7 +3748,7 @@ public:
     }
     bool areGroupsIdentical(int group1, int group2) {
         int p1, p2, p3;
-        vector<double> params1, params2;
+        thread_local static vector<double> params1, params2;
         if (group1 < force.getNumDonors() && group2 < force.getNumDonors()) {
             force.getDonorParameters(group1, p1, p2, p3, params1);
             force.getDonorParameters(group2, p1, p2, p3, params2);
@@ -4195,7 +4192,7 @@ public:
     ForceInfo(const CustomManyParticleForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        vector<double> params1, params2;
+        thread_local static vector<double> params1, params2;
         int type1, type2;
         force.getParticleParameters(particle1, params1, type1);
         force.getParticleParameters(particle2, params2, type2);
