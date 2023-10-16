@@ -1125,8 +1125,8 @@ void CommonCalcCustomExternalForceKernel::initialize(const System& system, const
     vector<vector<int> > atoms(numParticles, vector<int>(1));
     params = new ComputeParameterSet(cc, force.getNumPerParticleParameters(), numParticles, "customExternalParams");
     vector<vector<float> > paramVector(numParticles);
-    vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
+        vector<double> parameters;
         force.getParticleParameters(startIndex+i, atoms[i][0], parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
@@ -1876,8 +1876,8 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         globals.initialize<float>(cc, force.getNumGlobalParameters(), "customNonbondedGlobals");
     vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
     vector<vector<int> > exclusionList(numParticles);
-    vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
+        vector<double> parameters;
         force.getParticleParameters(i, parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
@@ -2758,8 +2758,8 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         globals.initialize<float>(cc, force.getNumGlobalParameters(), "customGBGlobals");
     vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
     vector<vector<int> > exclusionList(numParticles);
-    vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
+        vector<double> parameters;
         force.getParticleParameters(i, parameters);
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (float) parameters[j];
@@ -4239,8 +4239,8 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
     
     params = new ComputeParameterSet(cc, force.getNumPerParticleParameters(), numParticles, "customManyParticleParameters");
     vector<vector<float> > paramVector(numParticles);
-    vector<double> parameters;
     for (int i = 0; i < numParticles; i++) {
+        vector<double> parameters;
         int type;
         force.getParticleParameters(i, parameters, type);
         paramVector[i].resize(parameters.size());
