@@ -1080,7 +1080,7 @@ void CommonCalcCMAPTorsionForceKernel::copyParametersToContext(ContextImpl& cont
 class CommonCalcCustomExternalForceKernel::ForceInfo : public ComputeForceInfo {
 public:
     ForceInfo(const CustomExternalForce& force, int numParticles) : force(force), indices(numParticles, -1) {
-        thread_local static vector<double> params;
+        vector<double> params;
         for (int i = 0; i < force.getNumParticles(); i++) {
             int particle;
             force.getParticleParameters(i, particle, params);
