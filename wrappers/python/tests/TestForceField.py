@@ -439,7 +439,6 @@ class TestForceField(unittest.TestCase):
    <Atom name="H2" type="tip3p-H" charge="0.417"/>
    <Bond from="0" to="1"/>
    <Bond from="0" to="2"/>
-   <Bond from="1" to="2"/>
   </Residue>
   <Residue name="HOH2">
    <Atom name="O" type="tip3p-O" charge="0.834"/>
@@ -447,7 +446,6 @@ class TestForceField(unittest.TestCase):
    <Atom name="H2" type="tip3p-H" charge="-0.417"/>
    <Bond from="0" to="1"/>
    <Bond from="0" to="2"/>
-   <Bond from="1" to="2"/>
   </Residue>
  </Residues>
  <NonbondedForce coulomb14scale="0.833333" lj14scale="0.5">

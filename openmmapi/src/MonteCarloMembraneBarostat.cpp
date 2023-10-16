@@ -48,8 +48,6 @@ void MonteCarloMembraneBarostat::setDefaultPressure(double pressure) {
 }
 
 void MonteCarloMembraneBarostat::setDefaultSurfaceTension(double surfaceTension) {
-    if (surfaceTension < 0)
-        throw OpenMMException("Surface tension cannot be negative");
     defaultSurfaceTension = surfaceTension;
 }
 

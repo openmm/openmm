@@ -1,3 +1,6 @@
+#ifndef OPENMM_ATMFORCE_PROXY_H_
+#define OPENMM_ATMFORCE_PROXY_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2023 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,72 +32,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-/**
- * This tests using the CUDA runtime compiler plugin to compile kernels.
- */
+#include "openmm/internal/windowsExport.h"
+#include "openmm/serialization/SerializationProxy.h"
 
-#include "openmm/internal/AssertionUtilities.h"
-#include "openmm/Context.h"
-#include "CudaPlatform.h"
-#include "ReferencePlatform.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/System.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/internal/ContextImpl.h"
-#include "CudaArray.h"
-#include "CudaNonbondedUtilities.h"
-#include "SimTKOpenMMRealType.h"
-#include "sfmt/SFMT.h"
-#include <iostream>
-#include <vector>
+namespace OpenMM {
 
-using namespace OpenMM;
-using namespace std;
+    /**
+     * This is a proxy for serializing ATMForce objects.
+     */
 
-CudaPlatform platform;
+    class OPENMM_EXPORT ATMForceProxy : public SerializationProxy {
+    public:
+        ATMForceProxy();
+        void serialize(const void* object, SerializationNode& node) const;
+        void* deserialize(const SerializationNode& node) const;
+    };
 
-extern "C" void registerCudaCompilerKernelFactories();
+} // namespace OpenMM
 
-/**
- * A simple test taken from the NonbondedForce test suite.  Make sure it works as
- * expected when using the runtime compiler.
- */
-void testCoulomb() {
-    System system;
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    VerletIntegrator integrator(0.01);
-    NonbondedForce* forceField = new NonbondedForce();
-    forceField->addParticle(0.5, 1, 0);
-    forceField->addParticle(-1.5, 1, 0);
-    system.addForce(forceField);
-    Context context(system, integrator, platform);
-    vector<Vec3> positions(2);
-    positions[0] = Vec3(0, 0, 0);
-    positions[1] = Vec3(2, 0, 0);
-    context.setPositions(positions);
-    State state = context.getState(State::Forces | State::Energy);
-    const vector<Vec3>& forces = state.getForces();
-    double force = ONE_4PI_EPS0*(-0.75)/4.0;
-    ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], 1e-5);
-    ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], 1e-5);
-    ASSERT_EQUAL_TOL(ONE_4PI_EPS0*(-0.75)/2.0, state.getPotentialEnergy(), 1e-5);
-}
-
-int main(int argc, char* argv[]) {
-    try {
-        Platform::registerPlatform(&platform);
-        registerCudaCompilerKernelFactories();
-        // Ensure that we won't use cached kernels.
-        platform.setPropertyDefaultValue(CudaPlatform::CudaTempDirectory(), "this does not exist");
-        testCoulomb();
-    }
-    catch(const exception& e) {
-        cout << "exception: " << e.what() << endl;
-        return 1;
-    }
-    cout << "Done" << endl;
-    return 0;
-}
+#endif /*OPENMM_ATMFORCE_PROXY_H_*/

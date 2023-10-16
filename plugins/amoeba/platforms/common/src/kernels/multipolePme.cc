@@ -229,19 +229,19 @@ KERNEL void gridSpreadFixedMultipoles(GLOBAL const real4* RESTRICT posq, GLOBAL 
         // from global memory.
 
         real w = pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x;
-        real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
+        real fr = remainder(GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f), GRID_SIZE_X);
         int ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid1 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta1, w, array);
         w = pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y;
-        fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
+        fr = remainder(GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f), GRID_SIZE_Y);
         ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid2 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta2, w, array);
         w = pos.z*recipBoxVecZ.z;
-        fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
+        fr = remainder(GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f), GRID_SIZE_Z);
         ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid3 = ifr-PME_ORDER+1;
@@ -348,19 +348,19 @@ KERNEL void gridSpreadInducedDipoles(GLOBAL const real4* RESTRICT posq, GLOBAL c
         // from global memory.
 
         real w = pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x;
-        real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
+        real fr = remainder(GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f), GRID_SIZE_X);
         int ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid1 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta1, w, array);
         w = pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y;
-        fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
+        fr = remainder(GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f), GRID_SIZE_Y);
         ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid2 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta2, w, array);
         w = pos.z*recipBoxVecZ.z;
-        fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
+        fr = remainder(GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f), GRID_SIZE_Z);
         ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid3 = ifr-PME_ORDER+1;
@@ -521,19 +521,19 @@ KERNEL void computeFixedPotentialFromGrid(
         // from global memory.
 
         real w = pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x;
-        real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
+        real fr = remainder(GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f), GRID_SIZE_X);
         int ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid1 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta1, w, array);
         w = pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y;
-        fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
+        fr = remainder(GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f), GRID_SIZE_Y);
         ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid2 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta2, w, array);
         w = pos.z*recipBoxVecZ.z;
-        fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
+        fr = remainder(GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f), GRID_SIZE_Z);
         ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid3 = ifr-PME_ORDER+1;
@@ -692,19 +692,19 @@ KERNEL void computeInducedPotentialFromGrid(
         // from global memory.
 
         real w = pos.x*recipBoxVecX.x+pos.y*recipBoxVecY.x+pos.z*recipBoxVecZ.x;
-        real fr = GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f);
+        real fr = remainder(GRID_SIZE_X*(w-(int)(w+0.5f)+0.5f), GRID_SIZE_X);
         int ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid1 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta1, w, array);
         w = pos.y*recipBoxVecY.y+pos.z*recipBoxVecZ.y;
-        fr = GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f);
+        fr = remainder(GRID_SIZE_Y*(w-(int)(w+0.5f)+0.5f), GRID_SIZE_Y);
         ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid2 = ifr-PME_ORDER+1;
         computeBSplinePoint(theta2, w, array);
         w = pos.z*recipBoxVecZ.z;
-        fr = GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f);
+        fr = remainder(GRID_SIZE_Z*(w-(int)(w+0.5f)+0.5f), GRID_SIZE_Z);
         ifr = (int) floor(fr);
         w = fr - ifr;
         int igrid3 = ifr-PME_ORDER+1;

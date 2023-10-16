@@ -35,6 +35,7 @@
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
+#include "openmm/internal/timer.h"
 #include "CommonKernelSources.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
@@ -96,6 +97,19 @@ static bool usesVariable(const Lepton::ParsedExpression& expression, const strin
 
 static pair<ExpressionTreeNode, string> makeVariable(const string& name, const string& value) {
     return make_pair(ExpressionTreeNode(new Operation::Variable(name)), value);
+}
+
+static void flushPeriodically(ComputeContext& cc) {
+#ifdef WIN32
+    // When running on Windows, we periodically flush the queue to keep the UI responsive.
+
+    static double lastTime = getCurrentTime();
+    double currentTime = getCurrentTime();
+    if (currentTime-lastTime > 0.025) {
+        cc.flushQueue();
+        lastTime = currentTime;
+    }
+#endif
 }
 
 void CommonApplyConstraintsKernel::initialize(const System& system) {
@@ -2301,7 +2315,7 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         initDerivs<<"mixed "<<derivVariable<<" = 0;\n";
         for (int index = 0; index < numDerivs; index++)
             if (allParamDerivNames[index] == paramName)
-                saveDerivs<<"energyParamDerivs[GLOBAL_ID*"<<numDerivs<<"+"<<index<<"] += "<<derivVariable<<";\n";
+                saveDerivs<<"energyParamDerivs[GLOBAL_ID*numDerivatives+"<<index<<"] += "<<derivVariable<<";\n";
     }
     replacements["INIT_DERIVATIVES"] = initDerivs.str();
     replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
@@ -2377,6 +2391,7 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
             interactionGroupKernel->addArg((int) useNeighborList);
             for (int i = 0; i < 5; i++)
                 interactionGroupKernel->addArg(); // Periodic box information will be set just before it is executed.
+            interactionGroupKernel->addArg((int) cc.getEnergyParamDerivNames().size());
             for (auto& buffer : paramBuffers)
                 interactionGroupKernel->addArg(buffer.getArray());
             for (auto& buffer : computedValueBuffers)
@@ -5381,10 +5396,8 @@ void CommonIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
     cc.reorderAtoms();
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 }
 
 double CommonIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& context, const VerletIntegrator& integrator) {
@@ -5468,10 +5481,8 @@ void CommonIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
     cc.reorderAtoms();
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 }
 
 double CommonIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
@@ -5562,10 +5573,8 @@ void CommonIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, cons
     cc.reorderAtoms();
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 }
 
 double CommonIntegrateLangevinMiddleStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
@@ -5755,9 +5764,8 @@ void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const No
     cc.reorderAtoms();
 
     // Reduce UI lag.
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 }
 
 double CommonIntegrateNoseHooverStepKernel::computeKineticEnergy(ContextImpl& context, const NoseHooverIntegrator& integrator) {
@@ -6318,10 +6326,8 @@ void CommonIntegrateBrownianStepKernel::execute(ContextImpl& context, const Brow
     cc.reorderAtoms();
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 }
 
 double CommonIntegrateBrownianStepKernel::computeKineticEnergy(ContextImpl& context, const BrownianIntegrator& integrator) {
@@ -6401,10 +6407,8 @@ double CommonIntegrateVariableVerletStepKernel::execute(ContextImpl& context, co
     integration.computeVirtualSites();
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 
     // Update the time and step count.
 
@@ -6510,10 +6514,8 @@ double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
     integration.computeVirtualSites();
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 
     // Update the time and step count.
 
@@ -7087,6 +7089,7 @@ void CommonIntegrateCustomStepKernel::prepareForComputation(ContextImpl& context
     for (int i = 0; i < (int) parameterNames.size(); i++) {
         double value = context.getParameter(parameterNames[i]);
         if (value != localGlobalValues[parameterVariableIndex[i]]) {
+            expressionSet.setVariable(parameterVariableIndex[i], value);
             localGlobalValues[parameterVariableIndex[i]] = value;
             deviceGlobalsAreCurrent = false;
         }
@@ -7287,10 +7290,8 @@ void CommonIntegrateCustomStepKernel::execute(ContextImpl& context, CustomIntegr
     }
     
     // Reduce UI lag.
-    
-#ifdef WIN32
-    cc.flushQueue();
-#endif
+
+    flushPeriodically(cc);
 }
 
 bool CommonIntegrateCustomStepKernel::evaluateCondition(int step) {
@@ -7785,4 +7786,298 @@ void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& contex
     // check if atoms were reordered from energy evaluation before or after scaling
     if (atomsWereReordered || cc.getAtomsWereReordered())
         cc.setAtomIndex(lastAtomOrder);
+}
+
+class CommonCalcATMForceKernel::ForceInfo : public ComputeForceInfo {
+public:
+    ForceInfo(ComputeForceInfo& force) : force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        return force.areParticlesIdentical(particle1, particle2);
+    }
+    int getNumParticleGroups() {
+        return force.getNumParticleGroups();
+    }
+    void getParticlesInGroup(int index, vector<int>& particles) {
+        force.getParticlesInGroup(index, particles);
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        return force.areGroupsIdentical(group1, group2);
+    }
+private:
+    ComputeForceInfo& force;
+};
+
+class CommonCalcATMForceKernel::ReorderListener : public ComputeContext::ReorderListener {
+public:
+    ReorderListener(ComputeContext& cc, vector<mm_float4>& displVector1, ArrayInterface& displ1,
+                                        vector<mm_float4>& displVector0, ArrayInterface& displ0) :
+    cc(cc), displVector1(displVector1), displ1(displ1), displVector0(displVector0), displ0(displ0)  {
+    }
+    void execute() {
+        const vector<int>& id = cc.getAtomIndex();
+        vector<mm_float4> newDisplVectorContext1(cc.getPaddedNumAtoms());
+        vector<mm_float4> newDisplVectorContext0(cc.getPaddedNumAtoms());
+        for (int i = 0; i < cc.getNumAtoms(); i++) {
+            newDisplVectorContext1[i] = displVector1[id[i]];
+            newDisplVectorContext0[i] = displVector0[id[i]];
+        }
+        displ1.upload(newDisplVectorContext1);
+        displ0.upload(newDisplVectorContext0);
+    }
+private:
+    ComputeContext& cc;
+    ArrayInterface& displ1;
+    ArrayInterface& displ0;
+    std::vector<mm_float4> displVector1;
+    std::vector<mm_float4> displVector0;
+};
+
+CommonCalcATMForceKernel::~CommonCalcATMForceKernel() {
+}
+
+void CommonCalcATMForceKernel::initialize(const System& system, const ATMForce& force) {
+    ContextSelector selector(cc);
+    numParticles = force.getNumParticles();
+    if (numParticles == 0)
+        return;
+    displVector1.resize(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    displVector0.resize(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_float4> displVectorContext1(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_float4> displVectorContext0(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    for (int i = 0; i < numParticles; i++) {
+        Vec3 displacement1, displacement0;
+        force.getParticleParameters(i, displacement1, displacement0);
+        displVector1[i] = mm_float4(displacement1[0], displacement1[1], displacement1[2], 0);
+        displVector0[i] = mm_float4(displacement0[0], displacement0[1], displacement0[2], 0);
+    }
+    const vector<int>& id = cc.getAtomIndex();
+    for (int i = 0; i < numParticles; i++)
+        displVectorContext1[i] = displVector1[id[i]];
+    displ1.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ1");
+    displ1.upload(displVectorContext1);
+
+    for (int i = 0; i < numParticles; i++)
+        displVectorContext0[i] = displVector0[id[i]];
+    displ0.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ0");
+    displ0.upload(displVectorContext0);
+
+    for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
+        cc.addEnergyParameterDerivative(force.getEnergyParameterDerivativeName(i));
+
+    cc.addForce(new ComputeForceInfo());
+}
+
+void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1) {
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+
+        //inner contexts
+        ComputeContext& cc0 = getInnerComputeContext(innerContext0);
+        ComputeContext& cc1 = getInnerComputeContext(innerContext1);
+
+        //initialize the listener, this reorders the displacement vectors
+        ReorderListener* listener = new ReorderListener(cc, displVector1, displ1, displVector0, displ0);
+        cc.addReorderListener(listener);
+        listener->execute();
+
+        //create CopyState kernel
+        ComputeProgram program = cc.compileProgram(CommonKernelSources::atmforce);
+        copyStateKernel = program->createKernel("copyState");
+        copyStateKernel->addArg(numParticles);
+        copyStateKernel->addArg(cc.getPosq());
+        copyStateKernel->addArg(cc0.getPosq());
+        copyStateKernel->addArg(cc1.getPosq());
+        copyStateKernel->addArg(displ0);
+        copyStateKernel->addArg(displ1);
+        if (cc.getUseMixedPrecision()) {
+            copyStateKernel->addArg(cc.getPosqCorrection());
+            copyStateKernel->addArg(cc0.getPosqCorrection());
+            copyStateKernel->addArg(cc1.getPosqCorrection());
+        }
+
+        //create the HybridForce kernel
+        hybridForceKernel = program->createKernel("hybridForce");
+        hybridForceKernel->addArg(numParticles);
+        hybridForceKernel->addArg(cc.getPaddedNumAtoms());
+        hybridForceKernel->addArg(cc.getLongForceBuffer());
+        hybridForceKernel->addArg(cc0.getLongForceBuffer());
+        hybridForceKernel->addArg(cc1.getLongForceBuffer());
+        hybridForceKernel->addArg();
+        hybridForceKernel->addArg();
+
+        cc0.addForce(new ComputeForceInfo());
+        cc1.addForce(new ComputeForceInfo());
+
+    }
+}
+
+void CommonCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
+        double dEdu0, double dEdu1, const map<string, double>& energyParamDerivs) {
+    ContextSelector selector(cc);
+    initKernels(context, innerContext0, innerContext1);
+    if (cc.getUseDoublePrecision()) {
+        hybridForceKernel->setArg(5, dEdu0);
+        hybridForceKernel->setArg(6, dEdu1);
+    }
+    else {
+        hybridForceKernel->setArg(5, (float) dEdu0);
+        hybridForceKernel->setArg(6, (float) dEdu1);
+    }
+    hybridForceKernel->execute(numParticles);
+    map<string, double>& derivs = cc.getEnergyParamDerivWorkspace();
+    for (auto deriv : energyParamDerivs)
+        derivs[deriv.first] += deriv.second;
+}
+
+void CommonCalcATMForceKernel::copyState(ContextImpl& context,
+        ContextImpl& innerContext0, ContextImpl& innerContext1) {
+    ContextSelector selector(cc);
+
+    initKernels(context, innerContext0, innerContext1);
+
+    copyStateKernel->execute(numParticles);
+
+    Vec3 a, b, c;
+    context.getPeriodicBoxVectors(a, b, c);
+    innerContext0.setPeriodicBoxVectors(a, b, c);
+    innerContext0.setTime(context.getTime());
+    innerContext1.setPeriodicBoxVectors(a, b, c);
+    innerContext1.setTime(context.getTime());
+    map<string, double> innerParameters0 = innerContext0.getParameters();
+    for (auto& param : innerParameters0)
+        innerContext0.setParameter(param.first, context.getParameter(param.first));
+    map<string, double> innerParameters1 = innerContext1.getParameters();
+    for (auto& param : innerParameters1)
+        innerContext1.setParameter(param.first, context.getParameter(param.first));
+}
+
+void CommonCalcATMForceKernel::copyParametersToContext(ContextImpl& context, const ATMForce& force) {
+    if (force.getNumParticles() != numParticles)
+        throw OpenMMException("copyParametersToContext: The number of ATMMetaForce particles has changed");
+    displVector1.resize(cc.getPaddedNumAtoms());
+    displVector0.resize(cc.getPaddedNumAtoms());
+    for (int i = 0; i < numParticles; i++) {
+        Vec3 displacement1, displacement0;
+        force.getParticleParameters(i, displacement1, displacement0);
+        displVector1[i] = mm_float4(displacement1[0], displacement1[1], displacement1[2], 0);
+        displVector0[i] = mm_float4(displacement0[0], displacement0[1], displacement0[2], 0);
+    }
+    const vector<int>& id = cc.getAtomIndex();
+    vector<mm_float4> displVectorContext1(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_float4> displVectorContext0(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    for (int i = 0; i < numParticles; i++) {
+        displVectorContext1[i] = displVector1[id[i]];
+        displVectorContext0[i] = displVector0[id[i]];
+    }
+    displ1.upload(displVectorContext1);
+    displ0.upload(displVectorContext0);
+}
+
+class CommonCalcCustomCPPForceKernel::StartCalculationPreComputation : public ComputeContext::ForcePreComputation {
+public:
+    StartCalculationPreComputation(CommonCalcCustomCPPForceKernel& owner) : owner(owner) {
+    }
+    void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        owner.beginComputation(includeForces, includeEnergy, groups);
+    }
+    CommonCalcCustomCPPForceKernel& owner;
+};
+
+class CommonCalcCustomCPPForceKernel::ExecuteTask : public ComputeContext::WorkTask {
+public:
+    ExecuteTask(CommonCalcCustomCPPForceKernel& owner, bool includeForces) : owner(owner), includeForces(includeForces) {
+    }
+    void execute() {
+        owner.executeOnWorkerThread(includeForces);
+    }
+    CommonCalcCustomCPPForceKernel& owner;
+    bool includeForces;
+};
+
+class CommonCalcCustomCPPForceKernel::AddForcesPostComputation : public ComputeContext::ForcePostComputation {
+public:
+    AddForcesPostComputation(CommonCalcCustomCPPForceKernel& owner) : owner(owner) {
+    }
+    double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
+        return owner.addForces(includeForces, includeEnergy, groups);
+    }
+    CommonCalcCustomCPPForceKernel& owner;
+};
+
+void CommonCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPForceImpl& force) {
+    ContextSelector selector(cc);
+    this->force = &force;
+    int numParticles = system.getNumParticles();
+    forcesVec.resize(numParticles);
+    positionsVec.resize(numParticles);
+    floatForces.resize(3*numParticles);
+    int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+    forcesArray.initialize(cc, 3*numParticles, elementSize, "forces");
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = cc.intToString(numParticles);
+    defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::customCppForce, defines);
+    addForcesKernel = program->createKernel("addForces");
+    addForcesKernel->addArg(forcesArray);
+    addForcesKernel->addArg(cc.getLongForceBuffer());
+    addForcesKernel->addArg(cc.getAtomIndexArray());
+    forceGroupFlag = (1<<force.getOwner().getForceGroup());
+    cc.addPreComputation(new StartCalculationPreComputation(*this));
+    cc.addPostComputation(new AddForcesPostComputation(*this));
+}
+
+double CommonCalcCustomCPPForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    // This method does nothing.  The actual calculation is started by the pre-computation, continued on
+    // the worker thread, and finished by the post-computation.
+    
+    return 0;
+}
+
+void CommonCalcCustomCPPForceKernel::beginComputation(bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&forceGroupFlag) == 0)
+        return;
+    contextImpl.getPositions(positionsVec);
+    
+    // The actual force computation will be done on a different thread.
+    
+    cc.getWorkThread().addTask(new ExecuteTask(*this, includeForces));
+}
+
+void CommonCalcCustomCPPForceKernel::executeOnWorkerThread(bool includeForces) {
+    energy = force->computeForce(contextImpl, positionsVec, forcesVec);
+    if (includeForces) {
+        ContextSelector selector(cc);
+        int numParticles = cc.getNumAtoms();
+        if (cc.getUseDoublePrecision())
+            forcesArray.upload((double*) forcesVec.data());
+        else {
+            for (int i = 0; i < numParticles; i++) {
+                floatForces[3*i] = (float) forcesVec[i][0];
+                floatForces[3*i+1] = (float) forcesVec[i][1];
+                floatForces[3*i+2] = (float) forcesVec[i][2];
+            }
+            forcesArray.upload(floatForces);
+        }
+    }
+}
+
+double CommonCalcCustomCPPForceKernel::addForces(bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&forceGroupFlag) == 0)
+        return 0;
+
+    // Wait until executeOnWorkerThread() is finished.
+    
+    cc.getWorkThread().flush();
+
+    // Add in the forces.
+    
+    if (includeForces) {
+        ContextSelector selector(cc);
+        addForcesKernel->execute(cc.getNumAtoms());
+    }
+    
+    // Return the energy.
+    
+    return energy;
 }

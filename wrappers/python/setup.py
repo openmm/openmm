@@ -7,7 +7,7 @@ import os
 import sys
 import platform
 import numpy
-from distutils.core import setup
+from setuptools import setup
 from Cython.Build import cythonize
 
 MAJOR_VERSION_NUM='@OPENMM_MAJOR_VERSION@'
@@ -125,7 +125,7 @@ if not release:
 def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
                            minor_version_num=MINOR_VERSION_NUM,
                            build_info=BUILD_INFO):
-    from distutils.core import Extension
+    from setuptools import Extension
     setupKeywords = {}
     setupKeywords["name"]              = "OpenMM"
     setupKeywords["version"]           = "%s.%s.%s" % (major_version_num,

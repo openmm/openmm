@@ -17,7 +17,7 @@ SET(OpenMM_CWRAPPER "OpenMMCWrapper")
 SET(OpenMM_FWRAPPER "OpenMMFortranWrapper")
 SET(OpenMM_FMODULE  "OpenMMFortranModule")
 
-SET(CPP_EXAMPLES HelloArgon HelloSodiumChloride HelloEthane HelloWaterBox)
+SET(CPP_EXAMPLES HelloArgon HelloSodiumChloride HelloEthane HelloWaterBox )
 SET(C_EXAMPLES HelloArgonInC HelloSodiumChlorideInC)
 SET(F_EXAMPLES HelloArgonInFortran HelloSodiumChlorideInFortran)
 

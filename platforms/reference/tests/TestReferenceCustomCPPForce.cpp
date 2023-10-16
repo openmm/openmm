@@ -1,6 +1,3 @@
-#ifndef OPENMM_CUDACOMPILER_KERNELS_H_
-#define OPENMM_CUDACOMPILER_KERNELS_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2023 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,37 +29,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "internal/windowsExportCudaCompiler.h"
-#include "CudaKernels.h"
-#include <string>
 
-namespace OpenMM {
+#include "ReferenceTests.h"
+#include "TestCustomCPPForce.h"
 
-/**
- * This kernel is a compiler for CUDA kernels based on the runtime compilation feature
- * introduced in CUDA 7.
- */
-class OPENMM_EXPORT_CUDACOMPILER CudaRuntimeCompilerKernel : public CudaCompilerKernel {
-public:
-    CudaRuntimeCompilerKernel(const std::string& name, const Platform& platform);
-    /**
-     * Compile a kernel to PTX.
-     *
-     * @param source     the source code for the kernel
-     * @param options    the flags to be passed to the compiler
-     * @param cu         the CudaContext for which the kernel is being compiled
-     */
-    std::string createModule(const std::string& source, const std::string& flags, CudaContext& cu);
-    /**
-     * Get the maximum architecture version the compiler supports.
-     */
-    int getMaxSupportedArchitecture() const {
-        return maxSupportedArchitecture;
-    }
-private:
-    int maxSupportedArchitecture;
-};
-
-} // namespace OpenMM
-
-#endif /*OPENMM_CUDACOMPILER_KERNELS_H_*/
+void runPlatformTests() {
+}

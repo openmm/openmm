@@ -2955,3 +2955,92 @@ void ReferenceRemoveCMMotionKernel::execute(ContextImpl& context) {
         }
     }
 }
+
+void ReferenceCalcATMForceKernel::initialize(const System& system, const ATMForce& force) {
+    numParticles = force.getNumParticles();
+
+    //displacement map
+    displ1.resize(numParticles);
+    displ0.resize(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        Vec3 displacement1, displacement0;
+        force.getParticleParameters(i, displacement1, displacement0 );
+        displ1[i] = displacement1;
+        displ0[i] = displacement0;
+    }
+}
+
+void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
+        double dEdu0, double dEdu1, const map<string, double>& energyParamDerivs) {
+    vector<Vec3>& force = extractForces(context);
+    vector<Vec3>& force0 = extractForces(innerContext0);
+    vector<Vec3>& force1 = extractForces(innerContext1);
+    for (int i = 0; i < force.size(); i++)
+        force[i] += dEdu0*force0[i] + dEdu1*force1[i];
+    map<string, double>& derivs = extractEnergyParameterDerivatives(context);
+    for (auto deriv : energyParamDerivs)
+        derivs[deriv.first] += deriv.second;
+}
+
+void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1) {
+    vector<Vec3>& pos = extractPositions(context);
+
+    //in the initial state, particles are displaced by displ0
+    vector<Vec3> pos0(pos);
+    for (int i = 0; i < pos0.size(); i++)
+        pos0[i] += displ0[i];
+    extractPositions(innerContext0) = pos0;
+
+    //in the target state, particles are displaced by displ1
+    vector<Vec3> pos1(pos);
+    for (int i = 0; i < pos1.size(); i++)
+        pos1[i] += displ1[i];
+    extractPositions(innerContext1) = pos1;
+
+    Vec3 a, b, c;
+    context.getPeriodicBoxVectors(a, b, c);
+    innerContext0.setPeriodicBoxVectors(a, b, c);
+    innerContext1.setPeriodicBoxVectors(a, b, c);
+
+    innerContext0.setTime(context.getTime());
+    innerContext1.setTime(context.getTime());
+
+    map<string, double> innerParameters;
+
+    innerParameters = innerContext0.getParameters();
+    for (auto& param : innerParameters)
+        innerContext0.setParameter(param.first, context.getParameter(param.first));
+
+    innerParameters = innerContext1.getParameters();
+    for (auto& param : innerParameters)
+        innerContext1.setParameter(param.first, context.getParameter(param.first));
+
+}
+
+void ReferenceCalcATMForceKernel::copyParametersToContext(ContextImpl& context, const ATMForce& force) {
+    if (force.getNumParticles() != numParticles)
+          throw OpenMMException("copyParametersToContext: The number of ATMForce particles has changed");
+    displ1.resize(numParticles);
+    displ0.resize(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        Vec3 displacement1, displacement0;
+        force.getParticleParameters(i, displacement1, displacement0 );
+        displ1[i] = displacement1;
+        displ0[i] = displacement0;
+    }
+}
+
+void ReferenceCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPForceImpl& force) {
+    this->force = &force;
+    forces.resize(system.getNumParticles());
+}
+
+double ReferenceCalcCustomCPPForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    double energy = force->computeForce(context, posData, forces);
+    if (includeForces)
+        for (int i = 0; i < forces.size(); i++)
+            forceData[i] += forces[i];
+    return energy;
+}

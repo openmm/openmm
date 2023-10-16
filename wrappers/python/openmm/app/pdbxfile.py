@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2015-2020 Stanford University and the Authors.
+Portions copyright (c) 2015-2023 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -266,8 +266,8 @@ class PDBxFile(object):
             The Topology defining the model to write
         positions : list
             The list of atomic positions to write
-        file : file=stdout
-            A file to write to
+        file : string or file
+            the name of the file to write.  Alternatively you can pass an open file object.
         keepIds : bool=False
             If True, keep the residue and chain IDs specified in the Topology
             rather than generating new ones.  Warning: It is up to the caller to
@@ -276,8 +276,12 @@ class PDBxFile(object):
         entry : str=None
             The entry ID to assign to the CIF file
         """
-        PDBxFile.writeHeader(topology, file, entry, keepIds)
-        PDBxFile.writeModel(topology, positions, file, keepIds=keepIds)
+        if isinstance(file, str):
+            with open(file, 'w') as output:
+                PDBxFile.writeFile(topology, positions, output, keepIds, entry)
+        else:
+            PDBxFile.writeHeader(topology, file, entry, keepIds)
+            PDBxFile.writeModel(topology, positions, file, keepIds=keepIds)
 
     @staticmethod
     def writeHeader(topology, file=sys.stdout, entry=None, keepIds=False):
