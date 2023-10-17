@@ -164,7 +164,7 @@ public:
      * @param blocking if true, this call will block until the transfer is complete.  If false,
      *                 the source array  must be in page-locked memory.
      */
-    void uploadSubArray(const void* data, int offset, int elements, bool blocking=true);
+    void uploadSubArray(const void* data, size_t offset, size_t elements, bool blocking=true);
     /**
      * Copy the values in the device memory to an array.
      * 

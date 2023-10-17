@@ -256,13 +256,13 @@ public:
     /**
      * Get the index of the first tile this context is responsible for processing.
      */
-    int getStartTileIndex() const {
+    long long getStartTileIndex() const {
         return startTileIndex;
     }
     /**
      * Get the total number of tiles this context is responsible for processing.
      */
-    int getNumTiles() const {
+    long long getNumTiles() const {
         return numTiles;
     }
     /**
@@ -326,7 +326,7 @@ private:
     OpenCLSort* blockSorter;
     cl::Event downloadCountEvent;
     cl::Buffer* pinnedCountBuffer;
-    unsigned int* pinnedCountMemory;
+    void* pinnedCountMemory;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
@@ -335,10 +335,9 @@ private:
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
     bool useCutoff, usePeriodic, deviceIsCpu, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, useLargeBlocks;
-    int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
+    int startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
     int forceThreadBlockSize, interactingBlocksThreadBlockSize, groupFlags;
-    unsigned int tilesAfterReorder;
-    long long numTiles;
+    long long numTiles, startTileIndex, tilesAfterReorder;
     std::string kernelSource;
 };
 

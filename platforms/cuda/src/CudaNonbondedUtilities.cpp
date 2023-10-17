@@ -71,7 +71,7 @@ CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(c
     int multiprocessors;
     CHECK_RESULT(cuDeviceGetAttribute(&multiprocessors, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, context.getDevice()));
     CHECK_RESULT(cuEventCreate(&downloadCountEvent, context.getEventFlags()));
-    CHECK_RESULT(cuMemHostAlloc((void**) &pinnedCountBuffer, 2*sizeof(unsigned int), CU_MEMHOSTALLOC_PORTABLE));
+    CHECK_RESULT(cuMemHostAlloc((void**) &pinnedCountBuffer, 2*sizeof(long long), CU_MEMHOSTALLOC_PORTABLE));
     numForceThreadBlocks = 4*multiprocessors;
     forceThreadBlockSize = (context.getComputeCapability() < 2.0 ? 128 : 256);
     
@@ -213,8 +213,8 @@ void CudaNonbondedUtilities::initialize(const System& system) {
     sort(exclusionTilesVec.begin(), exclusionTilesVec.end(), compareInt2);
     exclusionTiles.initialize<int2>(context, exclusionTilesVec.size(), "exclusionTiles");
     exclusionTiles.upload(exclusionTilesVec);
-    map<pair<int, int>, int> exclusionTileMap;
-    for (int i = 0; i < (int) exclusionTilesVec.size(); i++) {
+    map<pair<int, int>, long long> exclusionTileMap;
+    for (long long i = 0; i < exclusionTilesVec.size(); i++) {
         int2 tile = exclusionTilesVec[i];
         exclusionTileMap[make_pair(tile.x, tile.y)] = i;
     }
@@ -251,11 +251,11 @@ void CudaNonbondedUtilities::initialize(const System& system) {
             int y = atom2/CudaContext::TileSize;
             int offset2 = atom2-y*CudaContext::TileSize;
             if (x > y) {
-                int index = exclusionTileMap[make_pair(x, y)]*CudaContext::TileSize;
+                long long index = exclusionTileMap[make_pair(x, y)]*CudaContext::TileSize;
                 exclusionVec[index+offset1] &= allFlags-(1<<offset2);
             }
             else {
-                int index = exclusionTileMap[make_pair(y, x)]*CudaContext::TileSize;
+                long long index = exclusionTileMap[make_pair(y, x)]*CudaContext::TileSize;
                 exclusionVec[index+offset2] &= allFlags-(1<<offset1);
             }
         }
@@ -277,7 +277,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         maxSinglePairs = 5*numAtoms;
         interactingTiles.initialize<int>(context, maxTiles, "interactingTiles");
         interactingAtoms.initialize<int>(context, CudaContext::TileSize*maxTiles, "interactingAtoms");
-        interactionCount.initialize<unsigned int>(context, 2, "interactionCount");
+        interactionCount.initialize<long long>(context, 2, "interactionCount");
         singlePairs.initialize<int2>(context, maxSinglePairs, "singlePairs");
         int elementSize = (context.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
         blockCenter.initialize(context, numAtomBlocks, 4*elementSize, "blockCenter");
@@ -290,9 +290,10 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
         blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks, false);
-        vector<unsigned int> count(2, 0);
-        interactionCount.upload(count);
-        rebuildNeighborList.upload(&count[0]);
+        long long zero64 = 0;
+        interactionCount.upload(&zero64);
+        int zero32 = 0;
+        rebuildNeighborList.upload(&zero32);
     }
 
     // Record arguments for kernels.
@@ -458,13 +459,13 @@ bool CudaNonbondedUtilities::updateNeighborListSize() {
     // this from happening in the future.
 
     if (pinnedCountBuffer[0] > maxTiles) {
-        maxTiles = (unsigned int) (1.2*pinnedCountBuffer[0]);
+        maxTiles = (long long) (1.2*pinnedCountBuffer[0]);
         unsigned int numBlocks = context.getNumAtomBlocks();
-        int totalTiles = numBlocks*(numBlocks+1)/2;
+        long long totalTiles = numBlocks*((long long)numBlocks+1)/2;
         if (maxTiles > totalTiles)
             maxTiles = totalTiles;
         interactingTiles.resize(maxTiles);
-        interactingAtoms.resize(CudaContext::TileSize*(size_t) maxTiles);
+        interactingAtoms.resize(CudaContext::TileSize*maxTiles);
         if (forceArgs.size() > 0)
             forceArgs[7] = &interactingTiles.getDevicePointer();
         findInteractingBlocksArgs[6] = &interactingTiles.getDevicePointer();
@@ -473,7 +474,7 @@ bool CudaNonbondedUtilities::updateNeighborListSize() {
         findInteractingBlocksArgs[7] = &interactingAtoms.getDevicePointer();
     }
     if (pinnedCountBuffer[1] > maxSinglePairs) {
-        maxSinglePairs = (unsigned int) (1.2*pinnedCountBuffer[1]);
+        maxSinglePairs = (long long) (1.2*pinnedCountBuffer[1]);
         singlePairs.resize(maxSinglePairs);
         if (forceArgs.size() > 0)
             forceArgs[19] = &singlePairs.getDevicePointer();
@@ -493,7 +494,7 @@ void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endF
     startBlockIndex = (int) (startFraction*numAtomBlocks);
     numBlocks = (int) (endFraction*numAtomBlocks)-startBlockIndex;
     long long totalTiles = context.getNumAtomBlocks()*((long long)context.getNumAtomBlocks()+1)/2;
-    startTileIndex = (int) (startFraction*totalTiles);
+    startTileIndex = (startFraction*totalTiles);
     numTiles = (long long) (endFraction*totalTiles)-startTileIndex;
     forceRebuildNeighborList = true;
 }
@@ -702,11 +703,11 @@ CUfunction CudaNonbondedUtilities::createInteractionKernel(const string& source,
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
     defines["TILE_SIZE"] = context.intToString(CudaContext::TileSize);
-    int numExclusionTiles = exclusionTiles.getSize();
+    long long numExclusionTiles = exclusionTiles.getSize();
     defines["NUM_TILES_WITH_EXCLUSIONS"] = context.intToString(numExclusionTiles);
     int numContexts = context.getPlatformData().contexts.size();
-    int startExclusionIndex = context.getContextIndex()*numExclusionTiles/numContexts;
-    int endExclusionIndex = (context.getContextIndex()+1)*numExclusionTiles/numContexts;
+    long long startExclusionIndex = context.getContextIndex()*numExclusionTiles/numContexts;
+    long long endExclusionIndex = (context.getContextIndex()+1)*numExclusionTiles/numContexts;
     defines["FIRST_EXCLUSION_TILE"] = context.intToString(startExclusionIndex);
     defines["LAST_EXCLUSION_TILE"] = context.intToString(endExclusionIndex);
     if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision())

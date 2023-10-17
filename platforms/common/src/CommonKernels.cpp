@@ -2117,7 +2117,6 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
         
         // Add the tiles.
         
-        int firstTile = tiles.size();
         for (int i = 0; i < numBlocks1; i++)
             for (int j = 0; j < numBlocks2; j++) {
                 tiles.push_back(make_pair(atomLists.size()+i, atomLists.size()+numBlocks1+j));
@@ -2158,8 +2157,8 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     // where all interactions are excluded, and sort the tiles by size.
 
     vector<vector<int> > exclusionFlags(tiles.size());
-    vector<pair<int, int> > tileOrder;
-    for (int tile = 0; tile < tiles.size(); tile++) {
+    vector<pair<int, long long> > tileOrder;
+    for (long long tile = 0; tile < tiles.size(); tile++) {
         bool swapped = false;
         if (atomLists[tiles[tile].first].size() < atomLists[tiles[tile].second].size()) {
             // For efficiency, we want the first axis to be the larger one.
@@ -2202,8 +2201,8 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     vector<int> tileSetStart;
     tileSetStart.push_back(0);
     int tileSetSize = 0;
-    for (int i = 0; i < tileOrder.size(); i++) {
-        int tile = tileOrder[i].second;
+    for (long long i = 0; i < tileOrder.size(); i++) {
+        long long tile = tileOrder[i].second;
         int size = atomLists[tiles[tile].first].size();
         if (tileSetSize+size > 32) {
             tileSetStart.push_back(i);
@@ -2215,9 +2214,9 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     
     // Build the data structures.
     
-    int numTileSets = tileSetStart.size()-1;
+    long long numTileSets = tileSetStart.size()-1;
     vector<mm_int4> groupData;
-    for (int tileSet = 0; tileSet < numTileSets; tileSet++) {
+    for (long long tileSet = 0; tileSet < numTileSets; tileSet++) {
         int indexInTileSet = 0;
         int minSize = 0;
         if (cc.getSIMDWidth() < 32) {
@@ -2246,15 +2245,22 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     }
     interactionGroupData.initialize<mm_int4>(cc, groupData.size(), "interactionGroupData");
     interactionGroupData.upload(groupData);
-    numGroupTiles.initialize<int>(cc, 1, "numGroupTiles");
+    numGroupTiles.initialize(cc, 1, cc.getSupports64BitGlobalAtomics() ? sizeof(long long) : sizeof(unsigned int), "numGroupTiles");
+
 
     // Allocate space for a neighbor list, if necessary.
 
     if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff && groupData.size() > cc.getNumThreadBlocks()) {
         filteredGroupData.initialize<mm_int4>(cc, groupData.size(), "filteredGroupData");
         interactionGroupData.copyTo(filteredGroupData);
-        int numTiles = groupData.size()/32;
-        numGroupTiles.upload(&numTiles);
+        if (cc.getSupports64BitGlobalAtomics()) {
+            long long numTiles = groupData.size()/32;
+            numGroupTiles.upload(&numTiles);
+        }
+        else {
+            unsigned int numTiles = groupData.size()/32;
+            numGroupTiles.upload(&numTiles);
+        }
     }
     
     // Create the kernel.
@@ -2333,8 +2339,8 @@ void CommonCalcCustomNonbondedForceKernel::initInteractionGroups(const CustomNon
     defines["TILE_SIZE"] = "32";
     defines["NUM_TILES"] = cc.intToString(numTileSets);
     int numContexts = cc.getNumContexts();
-    int startIndex = cc.getContextIndex()*numTileSets/numContexts;
-    int endIndex = (cc.getContextIndex()+1)*numTileSets/numContexts;
+    long long startIndex = cc.getContextIndex()*numTileSets/numContexts;
+    long long endIndex = (cc.getContextIndex()+1)*numTileSets/numContexts;
     defines["FIRST_TILE"] = cc.intToString(startIndex);
     defines["LAST_TILE"] = cc.intToString(endIndex);
     if ((localDataSize/4)%2 == 0 && !cc.getUseDoublePrecision())
@@ -2549,7 +2555,7 @@ double CommonCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
 
         hasCreatedKernels = true;
         maxTiles = (nb.getUseCutoff() ? nb.getInteractingTiles().getSize() : 0);
-        int numAtomBlocks = cc.getPaddedNumAtoms()/32;
+        long long numAtomBlocks = cc.getPaddedNumAtoms()/32;
         map<string, string> defines;
         if (nb.getUseCutoff())
             defines["USE_CUTOFF"] = "1";
@@ -2590,7 +2596,7 @@ double CommonCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
             computeBornSumKernel->addArg(nb.getInteractingAtoms());
         }
         else
-            computeBornSumKernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
+            computeBornSumKernel->addArg(numAtomBlocks*((long long)numAtomBlocks+1)/2);
         computeBornSumKernel->addArg(nb.getExclusionTiles());
         force1Kernel = program->createKernel("computeGBSAForce1");
         force1Kernel->addArg(cc.getLongForceBuffer());
@@ -2611,7 +2617,7 @@ double CommonCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
             force1Kernel->addArg(nb.getInteractingAtoms());
         }
         else
-            force1Kernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
+            force1Kernel->addArg(numAtomBlocks*((long long)numAtomBlocks+1)/2);
         force1Kernel->addArg(nb.getExclusionTiles());
         program = cc.compileProgram(CommonKernelSources::gbsaObcReductions, defines);
         reduceBornSumKernel = program->createKernel("reduceBornSum");
@@ -3480,11 +3486,11 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         // has not yet been initialized then.
 
         {
-            int numExclusionTiles = nb.getExclusionTiles().getSize();
+            long long numExclusionTiles = nb.getExclusionTiles().getSize();
             pairValueDefines["NUM_TILES_WITH_EXCLUSIONS"] = cc.intToString(numExclusionTiles);
             int numContexts = cc.getNumContexts();
-            int startExclusionIndex = cc.getContextIndex()*numExclusionTiles/numContexts;
-            int endExclusionIndex = (cc.getContextIndex()+1)*numExclusionTiles/numContexts;
+            long long startExclusionIndex = cc.getContextIndex()*numExclusionTiles/numContexts;
+            long long endExclusionIndex = (cc.getContextIndex()+1)*numExclusionTiles/numContexts;
             pairValueDefines["FIRST_EXCLUSION_TILE"] = cc.intToString(startExclusionIndex);
             pairValueDefines["LAST_EXCLUSION_TILE"] = cc.intToString(endExclusionIndex);
             pairValueDefines["CUTOFF"] = cc.doubleToString(cutoff);
@@ -3494,11 +3500,11 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             pairValueDefines.clear();
         }
         {
-            int numExclusionTiles = nb.getExclusionTiles().getSize();
+            long long numExclusionTiles = nb.getExclusionTiles().getSize();
             pairEnergyDefines["NUM_TILES_WITH_EXCLUSIONS"] = cc.intToString(numExclusionTiles);
             int numContexts = cc.getNumContexts();
-            int startExclusionIndex = cc.getContextIndex()*numExclusionTiles/numContexts;
-            int endExclusionIndex = (cc.getContextIndex()+1)*numExclusionTiles/numContexts;
+            long long startExclusionIndex = cc.getContextIndex()*numExclusionTiles/numContexts;
+            long long endExclusionIndex = (cc.getContextIndex()+1)*numExclusionTiles/numContexts;
             pairEnergyDefines["FIRST_EXCLUSION_TILE"] = cc.intToString(startExclusionIndex);
             pairEnergyDefines["LAST_EXCLUSION_TILE"] = cc.intToString(endExclusionIndex);
             pairEnergyDefines["CUTOFF"] = cc.doubleToString(cutoff);
@@ -3527,7 +3533,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             pairValueKernel->addArg(nb.getInteractingAtoms());
         }
         else
-            pairValueKernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
+            pairValueKernel->addArg(numAtomBlocks*((long long)numAtomBlocks+1)/2);
         if (globals.isInitialized())
             pairValueKernel->addArg(globals);
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {
@@ -3572,7 +3578,7 @@ double CommonCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             pairEnergyKernel->addArg(nb.getInteractingAtoms());
         }
         else
-            pairEnergyKernel->addArg(numAtomBlocks*(numAtomBlocks+1)/2);
+            pairEnergyKernel->addArg(numAtomBlocks*((long long)numAtomBlocks+1)/2);
         if (globals.isInitialized())
             pairEnergyKernel->addArg(globals);
         for (int i = 0; i < (int) params->getParameterInfos().size(); i++) {

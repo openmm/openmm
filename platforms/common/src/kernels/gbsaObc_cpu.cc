@@ -12,20 +12,20 @@ KERNEL void computeBornSum(
         GLOBAL mm_long* RESTRICT global_bornSum,
         GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT charge, GLOBAL const float2* RESTRICT global_params,
 #ifdef USE_CUTOFF
-        GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
+        GLOBAL const int* RESTRICT tiles, GLOBAL const TileIndex* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, mm_long maxTiles, GLOBAL const real4* RESTRICT blockCenter,
         GLOBAL const real4* RESTRICT blockSize, GLOBAL const int* RESTRICT interactingAtoms,
 #else
-        unsigned int numTiles,
+        mm_long numTiles,
 #endif
         GLOBAL const int2* exclusionTiles) {
     LOCAL AtomData1 localData[TILE_SIZE];
 
     // First loop: process tiles that contain exclusions.
     
-    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+GROUP_ID*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
-    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(GROUP_ID+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
-    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+    const mm_long firstExclusionTile = FIRST_EXCLUSION_TILE+GROUP_ID*((mm_long)LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
+    const mm_long lastExclusionTile = FIRST_EXCLUSION_TILE+(GROUP_ID+1)*((mm_long)LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
+    for (mm_long pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
@@ -156,14 +156,14 @@ KERNEL void computeBornSum(
     // of them (no cutoff).
 
 #ifdef USE_CUTOFF
-    unsigned int numTiles = interactionCount[0];
+    mm_long numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (GROUP_ID*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : numTiles)/NUM_GROUPS);
-    int end = (int) ((GROUP_ID+1)*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : numTiles)/NUM_GROUPS);
+    mm_long pos = (GROUP_ID*numTiles/NUM_GROUPS);
+    mm_long end = ((GROUP_ID+1)*numTiles/NUM_GROUPS);
 #else
-    int pos = (int) (GROUP_ID*(mm_long)numTiles/NUM_GROUPS);
-    int end = (int) ((GROUP_ID+1)*(mm_long)numTiles/NUM_GROUPS);
+    mm_long pos = (GROUP_ID*(mm_long)numTiles/NUM_GROUPS);
+    mm_long end = ((GROUP_ID+1)*(mm_long)numTiles/NUM_GROUPS);
 #endif
     int nextToSkip = -1;
     int currentSkipIndex = 0;
@@ -184,10 +184,10 @@ KERNEL void computeBornSum(
                               0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
 #else
         y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+        x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
+        while (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
         }
 
         // Skip over tiles that have exclusions, since they were already processed.
@@ -195,7 +195,7 @@ KERNEL void computeBornSum(
         while (nextToSkip < pos) {
             if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[currentSkipIndex++];
-                nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                nextToSkip = tile.x + (mm_long)tile.y*NUM_BLOCKS - tile.y*((mm_long)tile.y+1)/2;
             }
             else
                 nextToSkip = end;
@@ -372,11 +372,11 @@ KERNEL void computeGBSAForce1(
         GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const real* RESTRICT charge,
         GLOBAL const real* RESTRICT global_bornRadii, int needEnergy,
 #ifdef USE_CUTOFF
-        GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, unsigned int maxTiles, GLOBAL const real4* RESTRICT blockCenter,
+        GLOBAL const int* RESTRICT tiles, GLOBAL const TileIndex* RESTRICT interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
+        real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ, mm_long maxTiles, GLOBAL const real4* RESTRICT blockCenter,
         GLOBAL const real4* RESTRICT blockSize, GLOBAL const int* RESTRICT interactingAtoms,
 #else
-        unsigned int numTiles,
+        mm_long numTiles,
 #endif
         GLOBAL const int2* exclusionTiles) {
     mixed energy = 0;
@@ -384,9 +384,9 @@ KERNEL void computeGBSAForce1(
 
     // First loop: process tiles that contain exclusions.
     
-    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+GROUP_ID*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
-    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(GROUP_ID+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
-    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+    const mm_long firstExclusionTile = FIRST_EXCLUSION_TILE+GROUP_ID*((mm_long)LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
+    const mm_long lastExclusionTile = FIRST_EXCLUSION_TILE+(GROUP_ID+1)*((mm_long)LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/NUM_GROUPS;
+    for (mm_long pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
@@ -539,14 +539,14 @@ KERNEL void computeGBSAForce1(
     // of them (no cutoff).
 
 #ifdef USE_CUTOFF
-    unsigned int numTiles = interactionCount[0];
+    mm_long numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (GROUP_ID*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : numTiles)/NUM_GROUPS);
-    int end = (int) ((GROUP_ID+1)*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : numTiles)/NUM_GROUPS);
+    mm_long pos = (GROUP_ID*numTiles/NUM_GROUPS);
+    mm_long end = ((GROUP_ID+1)*(numTiles > maxTiles ? NUM_BLOCKS*((mm_long)NUM_BLOCKS+1)/2 : numTiles)/NUM_GROUPS);
 #else
-    int pos = (int) (GROUP_ID*(mm_long)numTiles/NUM_GROUPS);
-    int end = (int) ((GROUP_ID+1)*(mm_long)numTiles/NUM_GROUPS);
+    mm_long pos = (GROUP_ID*(mm_long)numTiles/NUM_GROUPS);
+    mm_long end = ((GROUP_ID+1)*(mm_long)numTiles/NUM_GROUPS);
 #endif
     int nextToSkip = -1;
     int currentSkipIndex = 0;
@@ -567,10 +567,10 @@ KERNEL void computeGBSAForce1(
                               0.5f*periodicBoxSize.z-blockSizeX.z >= CUTOFF);
 #else
         y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+        x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
+        while (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
         }
 
         // Skip over tiles that have exclusions, since they were already processed.
@@ -578,7 +578,7 @@ KERNEL void computeGBSAForce1(
         while (nextToSkip < pos) {
             if (currentSkipIndex < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[currentSkipIndex++];
-                nextToSkip = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                nextToSkip = tile.x + (mm_long)tile.y*NUM_BLOCKS - tile.y*((mm_long)tile.y+1)/2;
             }
             else
                 nextToSkip = end;

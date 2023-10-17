@@ -425,7 +425,7 @@ public:
     /**
      * Convert a number to a string in a format suitable for including in a kernel.
      */
-    std::string intToString(int value) const;
+    std::string intToString(long long value) const;
     /**
      * Get whether the periodic box is triclinic.
      */
@@ -520,6 +520,12 @@ public:
      * expense of reduced simulation performance.
      */
     virtual void flushQueue() = 0;
+    /**
+     * Wait until all work that has been queued has been completed (not simply submitted, as in flushQueue).
+     * No synchronization with the worker thread (getWorkThread) is performed here.
+     * This is useful for debugging.
+     */
+    virtual void finishQueue() = 0;
 protected:
     struct Molecule;
     struct MoleculeGroup;

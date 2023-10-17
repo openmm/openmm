@@ -183,8 +183,8 @@ void CpuCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
         bool triclinic = (boxVectors[0][1] != 0 || boxVectors[0][2] != 0 || boxVectors[1][0] != 0 || boxVectors[1][2] != 0 || boxVectors[2][0] != 0 || boxVectors[2][1] != 0);
         int numParticles = context.getSystem().getNumParticles();
         int numThreads = threads.getNumThreads();
-        int start = threadIndex*numParticles/numThreads;
-        int end = (threadIndex+1)*numParticles/numThreads;
+        int start = threadIndex*(long long)numParticles/numThreads;
+        int end = (threadIndex+1)*(long long)numParticles/numThreads;
         if (data.isPeriodic) {
             if (triclinic) {
                 for (int i = start; i < end; i++) {
@@ -287,8 +287,8 @@ double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, boo
         
         int numParticles = context.getSystem().getNumParticles();
         int numThreads = threads.getNumThreads();
-        int start = threadIndex*numParticles/numThreads;
-        int end = (threadIndex+1)*numParticles/numThreads;
+        int start = threadIndex*(long long)numParticles/numThreads;
+        int end = (threadIndex+1)*(long long)numParticles/numThreads;
         vector<Vec3>& forceData = extractForces(context);
         for (int i = start; i < end; i++) {
             fvec4 f(0.0f);

@@ -194,12 +194,12 @@ DEVICE void computeOneInteraction(AtomData atom1, AtomData atom2, real rmixo, re
  * Compute WCA interaction.
  */
 KERNEL void computeWCAForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed* RESTRICT energyBuffer,
-        GLOBAL const real4* RESTRICT posq, unsigned int startTileIndex, unsigned int numTileIndices, GLOBAL const float2* RESTRICT radiusEpsilon) {
+        GLOBAL const real4* RESTRICT posq, mm_long startTileIndex, mm_long numTileIndices, GLOBAL const float2* RESTRICT radiusEpsilon) {
     unsigned int totalWarps = GLOBAL_SIZE/TILE_SIZE;
     unsigned int warp = GLOBAL_ID/TILE_SIZE;
-    const unsigned int numTiles = numTileIndices;
-    unsigned int pos = (unsigned int) (startTileIndex+warp*(mm_long)numTiles/totalWarps);
-    unsigned int end = (unsigned int) (startTileIndex+(warp+1)*(mm_long)numTiles/totalWarps);
+    const mm_long numTiles = numTileIndices;
+    mm_long pos = (startTileIndex+warp*(mm_long)numTiles/totalWarps);
+    mm_long end = (startTileIndex+(warp+1)*(mm_long)numTiles/totalWarps);
     mixed energy = 0;
     LOCAL AtomData localData[THREAD_BLOCK_SIZE];
     
@@ -213,10 +213,10 @@ KERNEL void computeWCAForce(GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mixed
         AtomData data;
         if (pos < end) {
             y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
+            while (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+                x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
             data = loadAtomData(atom1, posq, radiusEpsilon);

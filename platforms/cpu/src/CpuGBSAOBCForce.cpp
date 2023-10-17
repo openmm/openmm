@@ -129,8 +129,8 @@ void CpuGBSAOBCForce::threadComputeForce(ThreadPool& threads, int threadIndex) {
     const float gammaObc = 4.85f;
     fvec4 boxSize(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2], 0);
     fvec4 invBoxSize((1/periodicBoxSize[0]), (1/periodicBoxSize[1]), (1/periodicBoxSize[2]), 0);
-    int start = (threadIndex*numParticles)/numThreads;
-    int end = ((threadIndex+1)*numParticles)/numThreads;
+    int start = (threadIndex*(long long)numParticles)/numThreads;
+    int end = ((threadIndex+1)*(long long)numParticles)/numThreads;
 
     // Calculate Born radii
 

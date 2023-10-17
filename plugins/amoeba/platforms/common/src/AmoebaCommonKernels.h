@@ -503,7 +503,8 @@ protected:
     void addTorquesToForces();
     void createFieldKernel(const std::string& interactionSrc, std::vector<ComputeArray*> params, ComputeArray& fieldBuffer,
         ComputeKernel& kernel, ComputeKernel& exceptionKernel, ComputeArray& exceptionScale);
-    int numParticles, maxExtrapolationOrder, maxTiles, fieldThreadBlockSize;
+    int numParticles, maxExtrapolationOrder, fieldThreadBlockSize;
+    long long maxTiles;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
     double pmeAlpha, dpmeAlpha, cutoff;

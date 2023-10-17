@@ -224,7 +224,7 @@ public:
      * @param elements the number of elements to copy
      * @param blocking if true, this call will block until the transfer is complete.
      */
-    void uploadSubArray(const void* data, int offset, int elements, bool blocking=true);
+    void uploadSubArray(const void* data, size_t offset, size_t elements, bool blocking=true);
     /**
      * Copy the values in the Buffer to an array.
      * 

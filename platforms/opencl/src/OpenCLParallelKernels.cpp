@@ -54,8 +54,8 @@ using namespace std;
 class OpenCLParallelCalcForcesAndEnergyKernel::BeginComputationTask : public OpenCLContext::WorkTask {
 public:
     BeginComputationTask(ContextImpl& context, OpenCLContext& cl, OpenCLCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, void* pinnedMemory, int& numTiles) : context(context), cl(cl), kernel(kernel),
-            includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), pinnedMemory(pinnedMemory), numTiles(numTiles) {
+            bool includeForce, bool includeEnergy, int groups, void* pinnedMemory, long long& numTiles, int& numTiles32) : context(context), cl(cl), kernel(kernel),
+            includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), pinnedMemory(pinnedMemory), numTiles(numTiles), numTiles32(numTiles32) {
     }
     void execute() {
         // Copy coordinates over to this device and execute the kernel.
@@ -63,8 +63,12 @@ public:
         if (cl.getContextIndex() > 0)
             cl.getQueue().enqueueWriteBuffer(cl.getPosq().getDeviceBuffer(), CL_FALSE, 0, cl.getPaddedNumAtoms()*cl.getPosq().getElementSize(), pinnedMemory);
         kernel.beginComputation(context, includeForce, includeEnergy, groups);
-        if (cl.getNonbondedUtilities().getUsePeriodic())
-            cl.getNonbondedUtilities().getInteractionCount().download(&numTiles, false);
+        if (cl.getNonbondedUtilities().getUsePeriodic()) {
+            if(cl.getSupports64BitGlobalAtomics())
+                cl.getNonbondedUtilities().getInteractionCount().download(&numTiles, false);
+            else
+                cl.getNonbondedUtilities().getInteractionCount().download(&numTiles32, true);
+        }
     }
 private:
     ContextImpl& context;
@@ -73,15 +77,16 @@ private:
     bool includeForce, includeEnergy;
     int groups;
     void* pinnedMemory;
-    int& numTiles;
+    long long& numTiles;
+    int& numTiles32;
 };
 
 class OpenCLParallelCalcForcesAndEnergyKernel::FinishComputationTask : public OpenCLContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, OpenCLContext& cl, OpenCLCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, void* pinnedMemory, bool& valid, int& numTiles) :
+            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, void* pinnedMemory, bool& valid, long long& numTiles, int& numTiles32) :
             context(context), cl(cl), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
-            completionTime(completionTime), pinnedMemory(pinnedMemory), valid(valid), numTiles(numTiles) {
+            completionTime(completionTime), pinnedMemory(pinnedMemory), valid(valid), numTiles(numTiles), numTiles32(numTiles32) {
     }
     void execute() {
         // Execute the kernel, then download forces.
@@ -89,7 +94,7 @@ public:
         energy += kernel.finishComputation(context, includeForce, includeEnergy, groups, valid);
         if (includeForce) {
             if (cl.getContextIndex() > 0) {
-                int numAtoms = cl.getPaddedNumAtoms();
+                size_t numAtoms = cl.getPaddedNumAtoms();
                 void* dest = (cl.getUseDoublePrecision() ? (void*) &((mm_double4*) pinnedMemory)[(cl.getContextIndex()-1)*numAtoms] : (void*) &((mm_float4*) pinnedMemory)[(cl.getContextIndex()-1)*numAtoms]);
                 cl.getQueue().enqueueReadBuffer(cl.getForce().getDeviceBuffer(), CL_TRUE, 0,
                         numAtoms*cl.getForce().getElementSize(), dest);
@@ -98,7 +103,8 @@ public:
                 cl.getQueue().finish();
         }
         completionTime = getTime();
-        if (cl.getNonbondedUtilities().getUsePeriodic() && numTiles > cl.getNonbondedUtilities().getInteractingTiles().getSize()) {
+        long long ntiles = cl.getSupports64BitGlobalAtomics() ? numTiles : numTiles32;
+        if (cl.getNonbondedUtilities().getUsePeriodic() && ntiles > cl.getNonbondedUtilities().getInteractingTiles().getSize()) {
             valid = false;
             cl.getNonbondedUtilities().updateNeighborListSize();
         }
@@ -113,12 +119,13 @@ private:
     long long& completionTime;
     void* pinnedMemory;
     bool& valid;
-    int& numTiles;
+    long long& numTiles;
+    int& numTiles32;
 };
 
 OpenCLParallelCalcForcesAndEnergyKernel::OpenCLParallelCalcForcesAndEnergyKernel(string name, const Platform& platform, OpenCLPlatform::PlatformData& data) :
         CalcForcesAndEnergyKernel(name, platform), data(data), completionTimes(data.contexts.size()), contextNonbondedFractions(data.contexts.size()),
-        tileCounts(data.contexts.size()), pinnedPositionBuffer(NULL), pinnedPositionMemory(NULL), pinnedForceBuffer(NULL), pinnedForceMemory(NULL) {
+        tileCounts(data.contexts.size()), tileCounts32(data.contexts.size()), pinnedPositionBuffer(NULL), pinnedPositionMemory(NULL), pinnedForceBuffer(NULL), pinnedForceMemory(NULL) {
     for (int i = 0; i < (int) data.contexts.size(); i++)
         kernels.push_back(Kernel(new OpenCLCalcForcesAndEnergyKernel(name, platform, *data.contexts[i])));
 }
@@ -146,7 +153,7 @@ void OpenCLParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& cont
     if (!contextForces.isInitialized()) {
         contextForces.initialize<mm_float4>(cl0, &cl0.getForceBuffers().getDeviceBuffer(),
                 data.contexts.size()*cl0.getPaddedNumAtoms(), "contextForces");
-        int bufferBytes = (data.contexts.size()-1)*cl0.getPaddedNumAtoms()*elementSize;
+        size_t bufferBytes = (data.contexts.size()-1)*cl0.getPaddedNumAtoms()*elementSize;
         pinnedPositionBuffer = new cl::Buffer(cl0.getContext(), CL_MEM_ALLOC_HOST_PTR, bufferBytes);
         pinnedPositionMemory = cl0.getQueue().enqueueMapBuffer(*pinnedPositionBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
         pinnedForceBuffer = new cl::Buffer(cl0.getContext(), CL_MEM_ALLOC_HOST_PTR, bufferBytes);
@@ -160,7 +167,7 @@ void OpenCLParallelCalcForcesAndEnergyKernel::beginComputation(ContextImpl& cont
         data.contextEnergy[i] = 0.0;
         OpenCLContext& cl = *data.contexts[i];
         ComputeContext::WorkThread& thread = cl.getWorkThread();
-        thread.addTask(new BeginComputationTask(context, cl, getKernel(i), includeForce, includeEnergy, groups, pinnedPositionMemory, tileCounts[i]));
+        thread.addTask(new BeginComputationTask(context, cl, getKernel(i), includeForce, includeEnergy, groups, pinnedPositionMemory, tileCounts[i], tileCounts32[i]));
     }
 }
 
@@ -168,7 +175,7 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
     for (int i = 0; i < (int) data.contexts.size(); i++) {
         OpenCLContext& cl = *data.contexts[i];
         ComputeContext::WorkThread& thread = cl.getWorkThread();
-        thread.addTask(new FinishComputationTask(context, cl, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i], pinnedForceMemory, valid, tileCounts[i]));
+        thread.addTask(new FinishComputationTask(context, cl, getKernel(i), includeForce, includeEnergy, groups, data.contextEnergy[i], completionTimes[i], pinnedForceMemory, valid, tileCounts[i], tileCounts32[i]));
     }
     data.syncContexts();
     double energy = 0.0;
@@ -178,7 +185,7 @@ double OpenCLParallelCalcForcesAndEnergyKernel::finishComputation(ContextImpl& c
         // Sum the forces from all devices.
         
         OpenCLContext& cl = *data.contexts[0];
-        int numAtoms = cl.getPaddedNumAtoms();
+        size_t numAtoms = cl.getPaddedNumAtoms();
         int elementSize = (cl.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
         cl.getQueue().enqueueWriteBuffer(contextForces.getDeviceBuffer(), CL_FALSE, numAtoms*elementSize,
                 numAtoms*(data.contexts.size()-1)*elementSize, pinnedForceMemory);

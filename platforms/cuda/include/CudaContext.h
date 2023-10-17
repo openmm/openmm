@@ -310,7 +310,7 @@ public:
      * @param memory     the memory to clear
      * @param size       the size of the buffer in bytes
      */
-    void clearBuffer(CUdeviceptr memory, int size);
+    void clearBuffer(CUdeviceptr memory, size_t size);
     /**
      * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
      */
@@ -321,7 +321,7 @@ public:
      * @param memory     the memory to clear
      * @param size       the size of the buffer in bytes
      */
-    void addAutoclearBuffer(CUdeviceptr memory, int size);
+    void addAutoclearBuffer(CUdeviceptr memory, size_t size);
     /**
      * Clear all buffers that have been registered with addAutoclearBuffer().
      */
@@ -541,6 +541,12 @@ public:
      */
     void flushQueue();
     /**
+     * Wait until all work that has been queued has been completed (not simply submitted, as in flushQueue).
+     * No synchronization with the worker thread (getWorkThread) is performed here.
+     * This is useful for debugging.
+     */
+    void finishQueue();
+    /**
      * Get the flags that should be used when creating CUevent objects.
      */
     unsigned int getEventFlags();
@@ -588,7 +594,7 @@ private:
     std::vector<std::string> energyParamDerivNames;
     std::map<std::string, double> energyParamDerivWorkspace;
     std::vector<CUdeviceptr> autoclearBuffers;
-    std::vector<int> autoclearBufferSizes;
+    std::vector<size_t> autoclearBufferSizes;
     CudaIntegrationUtilities* integration;
     CudaExpressionUtilities* expression;
     CudaBondedUtilities* bonded;

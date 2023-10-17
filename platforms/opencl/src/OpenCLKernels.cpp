@@ -153,8 +153,8 @@ void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3
         Vec3 boxVectors[3];
         cl.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         int numThreads = threads.getNumThreads();
-        int start = threadIndex*numParticles/numThreads;
-        int end = (threadIndex+1)*numParticles/numThreads;
+        int start = threadIndex*(long long)numParticles/numThreads;
+        int end = (threadIndex+1)*(long long)numParticles/numThreads;
         if (cl.getUseDoublePrecision()) {
             mm_double4* posq = (mm_double4*) cl.getPinnedBuffer();
             for (int i = start; i < end; ++i) {

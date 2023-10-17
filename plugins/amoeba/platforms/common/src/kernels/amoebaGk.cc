@@ -90,11 +90,11 @@ DEVICE real computeBornSumOneInteraction(AtomData1 atom1, AtomData1 atom2) {
  * Compute the Born sum.
  */
 KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4* RESTRICT posq,
-        GLOBAL const float2* RESTRICT params, unsigned int numTiles) {
+        GLOBAL const float2* RESTRICT params, mm_long numTiles) {
     unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
     unsigned int warp = (GLOBAL_ID)/TILE_SIZE;
-    unsigned int pos = (unsigned int) (warp*(mm_long)numTiles/totalWarps);
-    unsigned int end = (unsigned int) ((warp+1)*(mm_long)numTiles/totalWarps);
+    mm_long pos = (warp*(mm_long)numTiles/totalWarps);
+    mm_long end = ((warp+1)*(mm_long)numTiles/totalWarps);
     unsigned int lasty = 0xFFFFFFFF;
     LOCAL AtomData1 localData[BORN_SUM_THREAD_BLOCK_SIZE];
     do {
@@ -105,11 +105,11 @@ KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4
         AtomData1 data;
         data.bornSum = 0;
         if (pos < end) {
-            y = (int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
+            while (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+                x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
             data.pos = trimTo3(posq[atom1]);
@@ -228,14 +228,14 @@ inline DEVICE AtomData2 loadAtomData2(int atom, GLOBAL const real4* RESTRICT pos
  */
 KERNEL void computeGKForces(
         GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mm_ulong* RESTRICT torqueBuffers, GLOBAL mixed* RESTRICT energyBuffer,
-        GLOBAL const real4* RESTRICT posq, unsigned int startTileIndex, unsigned int numTileIndices, GLOBAL const real* RESTRICT labFrameDipole,
+        GLOBAL const real4* RESTRICT posq, mm_long startTileIndex, mm_long numTileIndices, GLOBAL const real* RESTRICT labFrameDipole,
         GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole, GLOBAL const real* RESTRICT inducedDipolePolar,
         GLOBAL const real* RESTRICT bornRadii, GLOBAL mm_ulong* RESTRICT bornForce) {
     unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
     unsigned int warp = (GLOBAL_ID)/TILE_SIZE;
-    const unsigned int numTiles = numTileIndices;
-    unsigned int pos = (unsigned int) (startTileIndex+warp*(mm_long)numTiles/totalWarps);
-    unsigned int end = (unsigned int) (startTileIndex+(warp+1)*(mm_long)numTiles/totalWarps);
+    const mm_long numTiles = numTileIndices;
+    mm_long pos = (startTileIndex+warp*(mm_long)numTiles/totalWarps);
+    mm_long end = (startTileIndex+(warp+1)*(mm_long)numTiles/totalWarps);
     mixed energy = 0;
     LOCAL AtomData2 localData[GK_FORCE_THREAD_BLOCK_SIZE];
     
@@ -246,10 +246,10 @@ KERNEL void computeGKForces(
         int x, y;
         if (pos < end) {
             y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
+            while (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+                x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
             AtomData2 data = loadAtomData2(atom1, posq, labFrameDipole, labFrameQuadrupole, inducedDipole, inducedDipolePolar, bornRadii);
@@ -500,13 +500,13 @@ DEVICE void computeBornChainRuleInteraction(AtomData3 atom1, AtomData3 atom2, re
  * Compute chain rule terms.
  */
 KERNEL void computeChainRuleForce(
-        GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL const real4* RESTRICT posq, unsigned int startTileIndex, unsigned int numTileIndices,
+        GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL const real4* RESTRICT posq, mm_long startTileIndex, mm_long numTileIndices,
         GLOBAL const float2* RESTRICT params, GLOBAL const real* RESTRICT bornRadii, GLOBAL const mm_long* RESTRICT bornForce) {
     unsigned int totalWarps = (GLOBAL_SIZE)/TILE_SIZE;
     unsigned int warp = (GLOBAL_ID)/TILE_SIZE;
-    const unsigned int numTiles = numTileIndices;
-    unsigned int pos = startTileIndex+warp*numTiles/totalWarps;
-    unsigned int end = startTileIndex+(warp+1)*numTiles/totalWarps;
+    const mm_long numTiles = numTileIndices;
+    mm_long pos = startTileIndex+warp*numTiles/totalWarps;
+    mm_long end = startTileIndex+(warp+1)*numTiles/totalWarps;
     LOCAL AtomData3 localData[CHAIN_RULE_THREAD_BLOCK_SIZE];
     
     do {
@@ -516,10 +516,10 @@ KERNEL void computeChainRuleForce(
         int x, y;
         if (pos < end) {
             y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-            if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
+            while (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
                 y += (x < y ? -1 : 1);
-                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+                x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
             AtomData3 data = loadAtomData3(atom1, posq, params, bornRadii, bornForce);
@@ -668,7 +668,7 @@ DEVICE float computePScaleFactor(uint2 covalent, unsigned int polarizationGroup,
 KERNEL void computeEDiffForce(
         GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL mm_ulong* RESTRICT torqueBuffers, GLOBAL mixed* RESTRICT energyBuffer,
         GLOBAL const real4* RESTRICT posq, GLOBAL const uint2* RESTRICT covalentFlags, GLOBAL const unsigned int* RESTRICT polarizationGroupFlags,
-        GLOBAL const int2* RESTRICT exclusionTiles, unsigned int startTileIndex, unsigned int numTileIndices,
+        GLOBAL const int2* RESTRICT exclusionTiles, mm_long startTileIndex, mm_long numTileIndices,
         GLOBAL const real* RESTRICT labFrameDipole, GLOBAL const real* RESTRICT labFrameQuadrupole, GLOBAL const real* RESTRICT inducedDipole,
         GLOBAL const real* RESTRICT inducedDipolePolar, GLOBAL const real* RESTRICT inducedDipoleS, GLOBAL const real* RESTRICT inducedDipolePolarS,
         GLOBAL const float2* RESTRICT dampingAndThole) {
@@ -681,9 +681,9 @@ KERNEL void computeEDiffForce(
 
     // First loop: process tiles that contain exclusions.
     
-    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+    const mm_long firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    const mm_long lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
+    for (mm_long pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
@@ -824,9 +824,9 @@ KERNEL void computeEDiffForce(
 
     // Second loop: tiles without exclusions (by enumerating all of them, since there's no cutoff).
 
-    const unsigned int numTiles = numTileIndices;
-    int pos = startTileIndex+warp*numTiles/totalWarps;
-    int end = startTileIndex+(warp+1)*numTiles/totalWarps;
+    const mm_long numTiles = numTileIndices;
+    mm_long pos = startTileIndex+warp*numTiles/totalWarps;
+    mm_long end = startTileIndex+(warp+1)*numTiles/totalWarps;
     int skipBase = 0;
     int currentSkipIndex = tbx;
     LOCAL volatile int skipTiles[EDIFF_THREAD_BLOCK_SIZE];
@@ -837,10 +837,10 @@ KERNEL void computeEDiffForce(
 
         int x, y;
         y = (int) floor(NUM_BLOCKS+0.5f-SQRT((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-        x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-        if (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+        x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
+        while (x < y || x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
             y += (x < y ? -1 : 1);
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            x = (pos-(mm_long)y*NUM_BLOCKS+y*((mm_long)y+1)/2);
         }
 
         // Skip over tiles that have exclusions, since they were already processed.
@@ -850,7 +850,7 @@ KERNEL void computeEDiffForce(
             SYNC_WARPS;
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
-                skipTiles[LOCAL_ID] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                skipTiles[LOCAL_ID] = tile.x + (mm_long)tile.y*NUM_BLOCKS - tile.y*((mm_long)tile.y+1)/2;
             }
             else
                 skipTiles[LOCAL_ID] = end;

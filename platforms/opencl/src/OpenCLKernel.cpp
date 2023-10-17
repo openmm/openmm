@@ -49,7 +49,11 @@ void OpenCLKernel::execute(int threads, int blockSize) {
     
     for (int i = 0; i < arrayArgs.size(); i++)
         if (arrayArgs[i] != NULL)
-            kernel.setArg<cl::Buffer>(i, arrayArgs[i]->getDeviceBuffer());
+            try {
+                kernel.setArg<cl::Buffer>(i, arrayArgs[i]->getDeviceBuffer());
+            } catch (const exception& e) {
+                throw OpenMMException("Unable to set arg " + to_string(i) + " for kernel " + getName());
+            }
     context.executeKernel(kernel, threads, blockSize);
 }
 
@@ -78,5 +82,9 @@ void OpenCLKernel::setPrimitiveArg(int index, const void* value, int size) {
     ASSERT_VALID_INDEX(index, arrayArgs);
     // The const_cast is needed because of a bug in the OpenCL C++ wrappers.  clSetKernelArg()
     // declares the value to be const, but the C++ wrapper doesn't.
-    kernel.setArg(index, size, const_cast<void*>(value));
+    try {
+        kernel.setArg(index, size, const_cast<void*>(value));
+    } catch (const exception& e) {
+        throw OpenMMException("Unable to set arg " + to_string(index) + " for kernel " + getName());
+    }
 }

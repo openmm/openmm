@@ -92,7 +92,7 @@ extern "C" __global__ void sortBoxData(const real2* __restrict__ sortedBlock, co
         real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
 #endif
         const real4* __restrict__ posq, const real4* __restrict__ oldPositions,
-        unsigned int* __restrict__ interactionCount, int* __restrict__ rebuildNeighborList, bool forceRebuild) {
+        unsigned long long* __restrict__ interactionCount, int* __restrict__ rebuildNeighborList, bool forceRebuild) {
     for (int i = threadIdx.x+blockIdx.x*blockDim.x; i < NUM_BLOCKS; i += blockDim.x*gridDim.x) {
         int index = (int) sortedBlock[i].y;
         sortedBlockCenter[i] = blockCenter[index];
@@ -134,26 +134,26 @@ extern "C" __global__ void sortBoxData(const real2* __restrict__ sortedBlock, co
     }
 }
 
-__device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, unsigned int maxSinglePairs, unsigned int* singlePairCount, int2* singlePairs, int* sumBuffer, volatile unsigned int& pairStartIndex) {
+__device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, long long maxSinglePairs, unsigned long long* singlePairCount, int2* singlePairs, int* sumBuffer, volatile long long& pairStartIndex) {
     // Record interactions that should be computed as single pairs rather than in blocks.
     
     const int indexInWarp = threadIdx.x%32;
-    int sum = 0;
+    long long sum = 0;
     #pragma unroll 8 // (GROUP_SIZE / TILE_SIZE)
     for (int i = indexInWarp; i < length; i += 32) {
         int count = __popc(flags[i]);
         sum += (count <= MAX_BITS_FOR_PAIRS ? count : 0);
     }
     for (int i = 1; i < 32; i *= 2) {
-        int n = __shfl_up_sync(0xffffffff, sum, i);
+        long long n = __shfl_up_sync(0xffffffff, sum, i);
         if (indexInWarp >= i)
             sum += n;
     }
     if (indexInWarp == 31)
-        pairStartIndex = atomicAdd(singlePairCount,(unsigned int) sum);
+        pairStartIndex = atomicAdd(singlePairCount, (unsigned long long) sum);
     __syncwarp();
-    int prevSum = __shfl_up_sync(0xffffffff, sum, 1);
-    unsigned int pairIndex = pairStartIndex + (indexInWarp > 0 ? prevSum : 0);
+    long long prevSum = __shfl_up_sync(0xffffffff, sum, 1);
+    long long pairIndex = pairStartIndex + (indexInWarp > 0 ? prevSum : 0);
     for (int i = indexInWarp; i < length; i += 32) {
         int count = __popc(flags[i]);
         if (count <= MAX_BITS_FOR_PAIRS && pairIndex+count <= maxSinglePairs) {
@@ -236,8 +236,8 @@ __device__ int saveSinglePairs(int x, int* atoms, int* flags, int length, unsign
  *
  */
 extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        unsigned int* __restrict__ interactionCount, int* __restrict__ interactingTiles, unsigned int* __restrict__ interactingAtoms,
-        int2* __restrict__ singlePairs, const real4* __restrict__ posq, unsigned int maxTiles, unsigned int maxSinglePairs, unsigned int startBlockIndex,
+        unsigned long long* __restrict__ interactionCount, int* __restrict__ interactingTiles, unsigned int* __restrict__ interactingAtoms,
+        int2* __restrict__ singlePairs, const real4* __restrict__ posq, long long maxTiles, long long maxSinglePairs, unsigned int startBlockIndex,
         unsigned int numBlocks, real2* __restrict__ sortedBlocks, const real4* __restrict__ sortedBlockCenter, const half3* __restrict__ sortedBlockBoundingBox,
 #ifdef USE_LARGE_BLOCKS
         real4* __restrict__ largeBlockCenter, half3* __restrict__ largeBlockBoundingBox,
@@ -257,14 +257,14 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
     __shared__ int workgroupFlagsBuffer[BUFFER_SIZE*(GROUP_SIZE/32)];
     __shared__ int warpExclusions[MAX_EXCLUSIONS*(GROUP_SIZE/32)];
     __shared__ real4 posBuffer[GROUP_SIZE];
-    __shared__ volatile unsigned int workgroupTileIndex[GROUP_SIZE/32];
-    __shared__ unsigned int workgroupPairStartIndex[GROUP_SIZE/32];
+    __shared__ volatile long long workgroupTileIndex[GROUP_SIZE/32];
+    __shared__ long long workgroupPairStartIndex[GROUP_SIZE/32];
     int* sumBuffer = (int*) posBuffer; // Reuse the same buffer to save memory
     int* buffer = workgroupBuffer+BUFFER_SIZE*(warpStart/32);
     int* flagsBuffer = workgroupFlagsBuffer+BUFFER_SIZE*(warpStart/32);
     int* exclusionsForX = warpExclusions+MAX_EXCLUSIONS*(warpStart/32);
-    volatile unsigned int& tileStartIndex = workgroupTileIndex[warpStart/32];
-    volatile unsigned int& pairStartIndex = workgroupPairStartIndex[warpStart/32];
+    volatile long long& tileStartIndex = workgroupTileIndex[warpStart/32];
+    volatile long long& pairStartIndex = workgroupPairStartIndex[warpStart/32];
 
     // Loop over blocks.
     
@@ -437,11 +437,11 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
 #if MAX_BITS_FOR_PAIRS > 0
                     neighborsInBuffer = saveSinglePairs(x, buffer, flagsBuffer, neighborsInBuffer, maxSinglePairs, &interactionCount[1], singlePairs, sumBuffer+warpStart, pairStartIndex);
 #endif
-                    unsigned int tilesToStore = neighborsInBuffer/TILE_SIZE;
+                    long long tilesToStore = neighborsInBuffer/TILE_SIZE;
                     if (tilesToStore > 0) {
                         if (indexInWarp == 0)
                             tileStartIndex = atomicAdd(&interactionCount[0], tilesToStore);
-                        unsigned int newTileStartIndex = tileStartIndex;
+                        long long newTileStartIndex = tileStartIndex;
                         if (newTileStartIndex+tilesToStore <= maxTiles) {
                             if (indexInWarp < tilesToStore)
                                 interactingTiles[newTileStartIndex+indexInWarp] = x;
@@ -464,10 +464,10 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
             neighborsInBuffer = saveSinglePairs(x, buffer, flagsBuffer, neighborsInBuffer, maxSinglePairs, &interactionCount[1], singlePairs, sumBuffer+warpStart, pairStartIndex);
 #endif
         if (neighborsInBuffer > 0) {
-            unsigned int tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
+            long long tilesToStore = (neighborsInBuffer+TILE_SIZE-1)/TILE_SIZE;
             if (indexInWarp == 0)
                 tileStartIndex = atomicAdd(&interactionCount[0], tilesToStore);
-            unsigned int newTileStartIndex = tileStartIndex;
+            long long newTileStartIndex = tileStartIndex;
             if (newTileStartIndex+tilesToStore <= maxTiles) {
                 if (indexInWarp < tilesToStore)
                     interactingTiles[newTileStartIndex+indexInWarp] = x;
@@ -479,7 +479,6 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
     }
     
     // Record the positions the neighbor list is based on.
-    
     for (int i = threadIdx.x+blockIdx.x*blockDim.x; i < NUM_ATOMS; i += blockDim.x*gridDim.x)
         oldPositions[i] = posq[i];
 }

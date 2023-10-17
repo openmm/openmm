@@ -85,7 +85,7 @@ private:
     std::vector<long long> completionTimes;
     std::vector<double> contextNonbondedFractions;
     bool loadBalance;
-    int2* interactionCounts;
+    long2* interactionCounts;
     CudaArray contextForces;
     void* pinnedPositionBuffer;
     long long* pinnedForceBuffer;

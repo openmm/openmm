@@ -84,7 +84,8 @@ private:
     std::vector<Kernel> kernels;
     std::vector<long long> completionTimes;
     std::vector<double> contextNonbondedFractions;
-    std::vector<int> tileCounts;
+    std::vector<long long> tileCounts;
+    std::vector<int> tileCounts32;
     OpenCLArray contextForces;
     cl::Buffer* pinnedPositionBuffer;
     cl::Buffer* pinnedForceBuffer;

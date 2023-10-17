@@ -77,7 +77,7 @@ string ComputeContext::replaceStrings(const string& input, const std::map<std::s
     }
     string result = input;
     for (auto& pair : replacements) {
-        int index = 0;
+        size_t index = 0;
         int size = pair.first.size();
         do {
             index = result.find(pair.first, index);
@@ -119,7 +119,7 @@ string ComputeContext::doubleToString(double value, bool mixedIsDouble) const {
     return s.str();
 }
 
-string ComputeContext::intToString(int value) const {
+string ComputeContext::intToString(long long value) const {
     stringstream s;
     s << value;
     return s.str();

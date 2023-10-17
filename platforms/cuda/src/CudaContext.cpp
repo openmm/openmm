@@ -706,8 +706,8 @@ void CudaContext::clearBuffer(ArrayInterface& array) {
     clearBuffer(unwrap(array).getDevicePointer(), array.getSize()*array.getElementSize());
 }
 
-void CudaContext::clearBuffer(CUdeviceptr memory, int size) {
-    int words = size/4;
+void CudaContext::clearBuffer(CUdeviceptr memory, size_t size) {
+    size_t words = size/4;
     void* args[] = {&memory, &words};
     executeKernel(clearBufferKernel, args, words, 128);
 }
@@ -716,7 +716,7 @@ void CudaContext::addAutoclearBuffer(ArrayInterface& array) {
     addAutoclearBuffer(unwrap(array).getDevicePointer(), array.getSize()*array.getElementSize());
 }
 
-void CudaContext::addAutoclearBuffer(CUdeviceptr memory, int size) {
+void CudaContext::addAutoclearBuffer(CUdeviceptr memory, size_t size) {
     autoclearBuffers.push_back(memory);
     autoclearBufferSizes.push_back(size/4);
 }
@@ -811,6 +811,13 @@ void CudaContext::addEnergyParameterDerivative(const string& param) {
 
 void CudaContext::flushQueue() {
     cuStreamSynchronize(getCurrentStream());
+}
+void CudaContext::finishQueue() {
+    CUcontext popped;
+    string errorMessage = "Error on synchronization";
+    CHECK_RESULT(cuCtxPushCurrent(context));
+    CHECK_RESULT(cuCtxSynchronize());
+    CHECK_RESULT(cuCtxPopCurrent(&popped));
 }
 
 vector<int> CudaContext::getDevicePrecedence() {
