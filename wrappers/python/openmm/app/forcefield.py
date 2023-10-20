@@ -481,6 +481,7 @@ class ForceField(object):
 
     def registerPatch(self, patch):
         """Register a new patch that can be applied to templates."""
+        patch.index = len(self._patches)
         self._patches[patch.name] = patch
 
     def registerTemplatePatch(self, residue, patch, patchResidueIndex):
@@ -792,6 +793,17 @@ class ForceField(object):
             else:
                 self.excludeWith = self.atoms[0]
 
+        def __eq__(self, other):
+            if not isinstance(other, ForceField._VirtualSiteData):
+                return False
+            if self.type != other.type or self.index != other.index or self.atoms != other.atoms or self.excludeWith != other.excludeWith:
+                return False
+            if self.type in ('average2', 'average3', 'outOfPlane'):
+                return self.weights == other.weights
+            elif self.type == 'localCoords':
+                return self.originWeights == other.originWeights and self.xWeights == other.xWeights and self.yWeights == other.yWeights and self.localPos == other.localPos
+            return False
+
     class _PatchData(object):
         """Inner class used to encapsulate data about a patch definition."""
         def __init__(self, name, numResidues):
@@ -807,6 +819,10 @@ class ForceField(object):
             self.allAtomNames = set()
             self.virtualSites = [[] for i in range(numResidues)]
             self.attributes = {}
+            self.index = None
+
+        def __lt__(self, other):
+            return self.index < other.index
 
         def createPatchedTemplates(self, templates):
             """Apply this patch to a set of templates, creating new modified ones."""
@@ -1582,7 +1598,7 @@ def _applyPatchesToMatchResidues(forcefield, data, residues, templateForResidue,
     patchedTemplates = {}
     for name, template in forcefield._templates.items():
         if name in forcefield._templatePatches:
-            patches = [forcefield._patches[patchName] for patchName, patchResidueIndex in forcefield._templatePatches[name] if forcefield._patches[patchName].numResidues == 1]
+            patches = sorted([forcefield._patches[patchName] for patchName, patchResidueIndex in forcefield._templatePatches[name] if forcefield._patches[patchName].numResidues == 1])
             if len(patches) > 0:
                 newTemplates = []
                 patchedTemplates[name] = newTemplates
