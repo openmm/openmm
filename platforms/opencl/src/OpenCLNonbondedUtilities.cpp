@@ -87,6 +87,14 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
     // list.  We guess based on system size which will be faster.
 
     useLargeBlocks = (context.getNumAtoms() > 100000);
+
+    std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
+    bool isAMDGpu = !deviceIsCpu && ((vendor.size() >= 3 && vendor.substr(0, 3) == "AMD") || (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc."));
+    flushBeforeDownloadCount = isAMDGpu;
+#if __APPLE__ && defined(__aarch64__)
+    flushBeforeDownloadCount = true;
+#endif
+
     setKernelSource(deviceIsCpu ? OpenCLKernelSources::nonbonded_cpu : OpenCLKernelSources::nonbonded);
 }
 
@@ -395,11 +403,9 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
         context.executeKernel(kernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     if (useNeighborList && numTiles > 0) {
-        #if __APPLE__ && defined(__aarch64__)
         // Ensure cached up work executes while you're waiting.
-        if (kernels.hasForces)
+        if (flushBeforeDownloadCount && kernels.hasForces)
             context.getQueue().flush();
-        #endif
         downloadCountEvent.wait();
         updateNeighborListSize();
     }
