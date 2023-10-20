@@ -33,8 +33,78 @@
  * -------------------------------------------------------------------------- */
 
 #include "Context.h"
+#include <map>
+#include <string>
+#include <vector>
 
 namespace OpenMM {
+
+/**
+ * A MinimizationReporter can be passed to LocalEnergyMinimizer::minimize() to provide
+ * periodic information on the progress of minimization, and to give you the chance to
+ * stop minimization early.  Define a subclass that overrides report() and implement it
+ * to take whatever action you want.
+ * 
+ * To correctly interpret the information passed to the reporter, you need to know a bit
+ * about how the minimizer works.  The L-BFGS algorithm used by the minimizer does not
+ * support constraints.  The minimizer therefore replaces all constraints with harmonic
+ * restraints, then performs unconstrained minimization of a combined objective function
+ * that is the sum of the system's potential energy and the restraint energy.  Once
+ * minimization completes, it checks whether all constraints are satisfied to an acceptable
+ * tolerance.  It not, it increases the strength of the harmonic restraints and performs
+ * additional minimization.  If the error in constrained distances is especially large,
+ * it may choose to throw out all work that has been done so far and start over with
+ * stronger restraints.  This has several important consequences.
+ * 
+ * <ul>
+ * <li>The objective function being minimized not actually the same as the potential energy.</li>
+ * <li>The objective function and the potential energy can both increase between iterations.</li>
+ * <li>The total number of iterations performed could be larger than the number specified
+ *     by the maxIterations argument, if that many iterations leaves unacceptable constraint errors.</li>
+ * <li>All work is provisional.  It is possible for the minimizer to throw it out and start over.</li>
+ * </ul>
+ */
+class OPENMM_EXPORT MinimizationReporter {
+public:
+    MinimizationReporter() {
+    }
+    virtual ~MinimizationReporter() {
+    }
+    /**
+     * This is called after each iteration to provide information about the current status
+     * of minimization.  It receives the current particle coordinates, the gradient of the
+     * objective function with respect to them, and a set of useful statistics.  In particular,
+     * args contains these values:
+     * 
+     * "system energy": the current potential energy of the system
+     * 
+     * "restraint energy": the energy of the harmonic restraints
+     * 
+     * "restraint strength": the force constant of the restraints (in kJ/mol/nm^2)
+     * 
+     * "max constraint error": the maximum relative error in the length of any constraint
+     * 
+     * If this function returns true, it will cause the L-BFGS optimizer to immediately
+     * exit.  If all constrained distances are sufficiently close to their target values,
+     * minimize() will return.  If any constraint error is unacceptably large, it will instead
+     * cause the minimizer to immediately increase the strength of the harmonic restraints and
+     * perform additional optimization.
+     * 
+     * @param iteration  the index of the current iteration.  This refers to the current call
+     *                   to the L-BFGS optimizer.  Each time the minimizer increases the restraint
+     *                   strength, the iteration index is reset to 0.
+     * @param x          the current particle positions in flattened order: the three coordinates
+     *                   of the first particle, then the three coordinates of the second particle, etc.
+     * @param grad       the current gradient of the objective function (potential energy plus
+     *                   restraint energy) with respect to the particle coordinates, in flattened
+     *                   order
+     * @param args       additional statistics described above about the current state of minimization
+     * @return whether to immediately stop minimization
+     */
+    virtual bool report(int iteration, const std::vector<double>& x, const std::vector<double>& grad, std::map<std::string, double>& args) {
+        return false;
+    }
+};
 
 /**
  * Given a Context, this class searches for a new set of particle positions that represent
@@ -62,8 +132,10 @@ public:
      * @param maxIterations  the maximum number of iterations to perform.  If this is 0, minimation is continued
      *                       until the results converge without regard to how many iterations it takes.  The
      *                       default value is 0.
+     * @param reporter       an optional MinimizationReporter to invoke after each iteration.  This can be used
+     *                       to monitor the progress of minimization or to stop minimization early.
      */
-    static void minimize(Context& context, double tolerance = 10, int maxIterations = 0);
+    static void minimize(Context& context, double tolerance = 10, int maxIterations = 0, MinimizationReporter* reporter = NULL);
 };
 
 } // namespace OpenMM

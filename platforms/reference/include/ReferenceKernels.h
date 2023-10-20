@@ -34,6 +34,7 @@
 
 #include "ReferencePlatform.h"
 #include "openmm/kernels.h"
+#include "openmm/internal/CustomCPPForceImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
 #include "SimTKOpenMMRealType.h"
 #include "ReferenceNeighborList.h"
@@ -1678,6 +1679,34 @@ private:
     int numParticles;
     std::vector<Vec3> displ1;
     std::vector<Vec3> displ0;
+};
+
+/**
+ * This kernel is invoked by CustomCPPForceImpl to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcCustomCPPForceKernel : public CalcCustomCPPForceKernel {
+public:
+    ReferenceCalcCustomCPPForceKernel(std::string name, const Platform& platform) : CalcCustomCPPForceKernel(name, platform), force(NULL) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCPPForceImpl this kernel will be used for
+     */
+    void initialize(const System& system, CustomCPPForceImpl& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    CustomCPPForceImpl* force;
+    std::vector<Vec3> forces;
 };
 
 } // namespace OpenMM
