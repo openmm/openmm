@@ -403,11 +403,11 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
         context.executeKernel(kernel, numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     if (useNeighborList && numTiles > 0) {
-#if __APPLE__ && defined(__aarch64__)
+        #if __APPLE__ && defined(__aarch64__)
         // Ensure cached up work executes while you're waiting.
         if (kernels.hasForces)
             context.getQueue().flush();
-#endif
+        #endif
         downloadCountEvent.wait();
         updateNeighborListSize();
     }
