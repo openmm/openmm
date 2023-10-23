@@ -56,7 +56,7 @@ private:
 };
 
 OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
-        blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0), tilesAfterReorder(0) {
+        blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), flushAfterEnqueueRead(false), lastCutoff(0.0), groupFlags(0), tilesAfterReorder(0) {
     // Decide how many thread blocks and force buffers to use.
 
     deviceIsCpu = (context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
@@ -90,7 +90,13 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
 
     std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
     bool isAMDGpu = !deviceIsCpu && ((vendor.size() >= 3 && vendor.substr(0, 3) == "AMD") || (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc."));
-    flushBeforeComputeNonbonded = isAMDGpu;
+#ifdef WIN32
+    flushAfterEnqueueRead = isAMDGpu;
+#endif // WIN32
+#if __APPLE__ && defined(__aarch64__)
+    flushAfterEnqueueRead = true;
+#endif
+    flushBeforeForces = isAMDGpu;
 
     setKernelSource(deviceIsCpu ? OpenCLKernelSources::nonbonded_cpu : OpenCLKernelSources::nonbonded);
 }
@@ -380,11 +386,9 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     lastCutoff = kernels.cutoffDistance;
     context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(int), pinnedCountMemory, NULL, &downloadCountEvent);
 
-    #if WIN32 || (__APPLE__ && defined(__aarch64__))
     // Segment the command stream to avoid stalls later.
-    if (groupKernels[forceGroups].hasForces)
+    if (flushAfterEnqueueRead && groupKernels[forceGroups].hasForces)
         context.getQueue().flush();
-    #endif
 }
 
 void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
@@ -392,7 +396,7 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
         return;
     KernelSet& kernels = groupKernels[forceGroups];
     if (kernels.hasForces) {
-        if (flushBeforeComputeNonbonded) {
+        if (flushBeforeForces) {
             context.getQueue().flush();
         }
         cl::Kernel& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
