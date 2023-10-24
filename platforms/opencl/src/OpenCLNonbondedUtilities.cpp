@@ -381,7 +381,7 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
 
     #if __APPLE__ && defined(__aarch64__)
     // Segment the command stream to avoid stalls later.
-    if (flushAfterEnqueueRead && groupKernels[forceGroups].hasForces)
+    if (groupKernels[forceGroups].hasForces)
         context.getQueue().flush();
     #else
     if (isAMD)
