@@ -393,9 +393,8 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
         return;
     KernelSet& kernels = groupKernels[forceGroups];
     if (kernels.hasForces) {
-        if (isAMD) {
+        if (isAMD)
             context.getQueue().flush();
-        }
         cl::Kernel& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
         if (*reinterpret_cast<cl_kernel*>(&kernel) == NULL)
             kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
