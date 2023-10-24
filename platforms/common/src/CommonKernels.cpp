@@ -7952,6 +7952,7 @@ void CommonCalcATMForceKernel::copyState(ContextImpl& context,
 }
 
 void CommonCalcATMForceKernel::copyParametersToContext(ContextImpl& context, const ATMForce& force) {
+    ContextSelector selector(cc);
     if (force.getNumParticles() != numParticles)
         throw OpenMMException("copyParametersToContext: The number of ATMMetaForce particles has changed");
     displVector1.resize(cc.getPaddedNumAtoms());
