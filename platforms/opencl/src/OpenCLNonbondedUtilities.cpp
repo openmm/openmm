@@ -87,6 +87,10 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
     // list.  We guess based on system size which will be faster.
 
     useLargeBlocks = (context.getNumAtoms() > 100000);
+
+    std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
+    isAMD = !deviceIsCpu && ((vendor.size() >= 3 && vendor.substr(0, 3) == "AMD") || (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc."));
+
     setKernelSource(deviceIsCpu ? OpenCLKernelSources::nonbonded_cpu : OpenCLKernelSources::nonbonded);
 }
 
@@ -374,6 +378,8 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     forceRebuildNeighborList = false;
     lastCutoff = kernels.cutoffDistance;
     context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(int), pinnedCountMemory, NULL, &downloadCountEvent);
+    if (isAMD)
+        context.getQueue().flush();
 
     #if __APPLE__ && defined(__aarch64__)
     // Segment the command stream to avoid stalls later.
@@ -387,6 +393,8 @@ void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool include
         return;
     KernelSet& kernels = groupKernels[forceGroups];
     if (kernels.hasForces) {
+        if (isAMD)
+            context.getQueue().flush();
         cl::Kernel& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
         if (*reinterpret_cast<cl_kernel*>(&kernel) == NULL)
             kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
