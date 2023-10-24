@@ -379,14 +379,14 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     lastCutoff = kernels.cutoffDistance;
     context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(int), pinnedCountMemory, NULL, &downloadCountEvent);
 
-#if __APPLE__ && defined(__aarch64__)
+    #if __APPLE__ && defined(__aarch64__)
     // Segment the command stream to avoid stalls later.
     if (flushAfterEnqueueRead && groupKernels[forceGroups].hasForces)
         context.getQueue().flush();
-#else
+    #else
     if (isAMD)
         context.getQueue().flush();
-#endif
+    #endif
 }
 
 void OpenCLNonbondedUtilities::computeInteractions(int forceGroups, bool includeForces, bool includeEnergy) {
