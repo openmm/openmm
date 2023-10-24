@@ -378,13 +378,12 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     forceRebuildNeighborList = false;
     lastCutoff = kernels.cutoffDistance;
     context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(int), pinnedCountMemory, NULL, &downloadCountEvent);
+    if (isAMD)
+        context.getQueue().flush();
 
     #if __APPLE__ && defined(__aarch64__)
     // Segment the command stream to avoid stalls later.
     if (groupKernels[forceGroups].hasForces)
-        context.getQueue().flush();
-    #else
-    if (isAMD)
         context.getQueue().flush();
     #endif
 }
