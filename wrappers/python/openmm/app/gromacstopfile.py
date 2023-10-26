@@ -562,7 +562,7 @@ class GromacsTopFile(object):
         self._defines['FLEXIBLE'] = True
         self._genpairs = True
         if defines is not None:
-            for define, value in defines.iteritems():
+            for define, value in defines.items():
                 self._defines[define] = value
 
         # Parse the file.
