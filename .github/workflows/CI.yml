@@ -160,7 +160,7 @@ jobs:
 
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - uses: conda-incubator/setup-miniconda@v2
         name: "Prepare base dependencies (M1)"
@@ -216,14 +216,14 @@ jobs:
         id: prepare-ccache
         shell: bash -l {0}
         run: |
-          echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
-          echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
+          echo "key=$(echo "${{ matrix.name }}" | tr -d ' .')" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
 
           ccache -p
           ccache -z
 
       - name: "Restore ccache"
-        uses: actions/cache@v1.1.0
+        uses: actions/cache@v3.3.2
         with:
           path: .ccache
           key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
@@ -347,7 +347,7 @@ jobs:
               -DOPENMM_BUILD_EXAMPLES=ON ^
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - uses: conda-incubator/setup-miniconda@v2
         name: "Prepare base dependencies"
@@ -373,14 +373,14 @@ jobs:
           set name=%name:.=%
           for /f "usebackq tokens=*" %%a in (`%CONDA_PREFIX%\Library\usr\bin\date.exe +%%Y%%m%%d-%%H%%M%%S`) do set "timestamp=%%a"
 
-          echo ::set-output name=key::%name%
-          echo ::set-output name=timestamp::%timestamp%
+          echo key=%name%>> %GITHUB_OUTPUT%
+          echo timestamp=%timestamp%>> %GITHUB_OUTPUT%
 
           ccache -p
           ccache -z
 
       - name: "Restore ccache"
-        uses: actions/cache@v1.1.0
+        uses: actions/cache@v3.3.2
         with:
           path: .ccache
           key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
@@ -484,7 +484,7 @@ jobs:
 
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     # Following bits adapted from conda-forge Azure configs.
     # If it stops working, check any feedstock with ppc64le or aarch64
@@ -517,11 +517,11 @@ jobs:
       id: prepare-ccache
       shell: bash -l {0}
       run: |
-        echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
-        echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
+        echo "key=$(echo "${{ matrix.name }}" | tr -d ' .')" >> $GITHUB_OUTPUT
+        echo "timestamp=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
 
     - name: "Restore ccache"
-      uses: actions/cache@v1.1.0
+      uses: actions/cache@v3.3.2
       with:
         path: .ccache
         key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
@@ -559,7 +559,7 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - uses: conda-incubator/setup-miniconda@v2
         name: "Prepare base dependencies"
@@ -586,14 +586,14 @@ jobs:
         id: prepare-ccache
         shell: bash -l {0}
         run: |
-          echo "::set-output name=key::$(echo "${{ matrix.name }}" | tr -d ' .')"
-          echo "::set-output name=timestamp::$(date +%Y%m%d-%H%M%S)"
+          echo "key=$(echo "${{ matrix.name }}" | tr -d ' .')" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
 
           ccache -p
           ccache -z
 
       - name: "Restore ccache"
-        uses: actions/cache@v1.1.0
+        uses: actions/cache@v3.3.2
         with:
           path: .ccache
           key: ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-${{ steps.prepare-ccache.outputs.timestamp }}
