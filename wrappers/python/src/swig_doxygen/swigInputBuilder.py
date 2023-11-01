@@ -96,7 +96,7 @@ def getText(subNodePath, node):
             s = "%s\n\n" % s
     return s.strip()
 
-OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z:]*:(.*)")
+OPENMM_RE_PATTERN=re.compile("(.*)OpenMM:[a-zA-Z0-9:]*:(.*)")
 def stripOpenmmPrefix(name, rePattern=OPENMM_RE_PATTERN):
     try:
         m=rePattern.search(name)
