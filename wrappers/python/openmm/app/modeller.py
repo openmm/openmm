@@ -1183,9 +1183,9 @@ class Modeller(object):
                                         cross = Vec3(v1[1]*v2[2]-v1[2]*v2[1], v1[2]*v2[0]-v1[0]*v2[2], v1[0]*v2[1]-v1[1]*v2[0])
                                         position = templateAtomPositions[site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
                                     elif site.type == 'localCoords':
-                                        origin = templateAtomPositions[site.atoms[0]]*site.originWeights[0] + templateAtomPositions[site.atoms[1]]*site.originWeights[1] + templateAtomPositions[site.atoms[2]]*site.originWeights[2];
-                                        xdir = templateAtomPositions[site.atoms[0]]*site.xWeights[0] + templateAtomPositions[site.atoms[1]]*site.xWeights[1] + templateAtomPositions[site.atoms[2]]*site.xWeights[2];
-                                        ydir = templateAtomPositions[site.atoms[0]]*site.yWeights[0] + templateAtomPositions[site.atoms[1]]*site.yWeights[1] + templateAtomPositions[site.atoms[2]]*site.yWeights[2];
+                                        origin = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.originWeights)])
+                                        xdir = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.xWeights)])
+                                        ydir = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.yWeights)])
                                         zdir = Vec3(xdir[1]*ydir[2]-xdir[2]*ydir[1], xdir[2]*ydir[0]-xdir[0]*ydir[2], xdir[0]*ydir[1]-xdir[1]*ydir[0])
                                         xdir /= norm(xdir);
                                         zdir /= norm(zdir);
