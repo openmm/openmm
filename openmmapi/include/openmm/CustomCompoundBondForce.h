@@ -326,7 +326,7 @@ public:
     /**
      * Get the parameters for a tabulated function that may appear in the energy expression.
      *
-     * @deprecated This method exists only for backward compatibility.  Call cetFunctionParameters() on the TabulatedFunction
+     * @deprecated This method exists only for backward compatibility.  Call getFunctionParameters() on the TabulatedFunction
      * object instead.  If the specified function is not a Continuous1DFunction, this throws an exception.
      */
     void getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const;
