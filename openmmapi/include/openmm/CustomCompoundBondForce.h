@@ -326,15 +326,15 @@ public:
     /**
      * Get the parameters for a tabulated function that may appear in the energy expression.
      *
-     * @deprecated This method exists only for backward compatibility.  Use getTabulatedFunctionParameters() instead.
-     * If the specified function is not a Continuous1DFunction, this throws an exception.
+     * @deprecated This method exists only for backward compatibility.  Call getFunctionParameters() on the TabulatedFunction
+     * object instead.  If the specified function is not a Continuous1DFunction, this throws an exception.
      */
     void getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max) const;
     /**
      * Set the parameters for a tabulated function that may appear in the energy expression.
      *
-     * @deprecated This method exists only for backward compatibility.  Use setTabulatedFunctionParameters() instead.
-     * If the specified function is not a Continuous1DFunction, this throws an exception.
+     * @deprecated This method exists only for backward compatibility.  Call setFunctionParameters() on the TabulatedFunction
+     * object instead.  If the specified function is not a Continuous1DFunction, this throws an exception.
      */
     void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max);
     /**
