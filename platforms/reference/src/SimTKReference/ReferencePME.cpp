@@ -367,15 +367,15 @@ pme_grid_spread_charge(pme_t pme, const vector<double>& charges)
         thetay  = &(pme->bsplines_theta[1][i*order]);
         thetaz  = &(pme->bsplines_theta[2][i*order]);
 
-        /* Loop over norder*norder*norder (typically 4*4*4) neighbor cells.
+        /* Loop over norder*norder*norder (typically 5*5*5) neighbor cells.
          *
          * As a neat optimization, we only spread in the forward direction, but apply PBC!
          *
-         * Since we are going to do an FFT on the grid, it doesnt matter where the data is,
+         * Since we are going to do an FFT on the grid, it doesn't matter where the data is,
          * in frequency space the result will be the same.
          *
          * So, the influence function (bsplines) will probably be something like (0.15,0.35,0.35,0.15),
-         * with largest weight 2-3 steps forward (you dont need to understand that for the implementation :-)
+         * with largest weight 2-3 steps forward (you don't need to understand that for the implementation :-)
          * Effectively, you can look at this as translating the entire grid.
          *
          * Why do we do this stupid thing?
@@ -672,7 +672,7 @@ pme_grid_interpolate_force(pme_t pme,
 
         /* See pme_grid_spread_charge() for comments about the order here, and only interpolation in one direction */
 
-        /* Since we will add order^3 (typically 4*4*4=64) terms to the force on each particle, we use temporary fx/fy/fz
+        /* Since we will add order^3 (typically 5*5*5=125) terms to the force on each particle, we use temporary fx/fy/fz
          * variables, and only add it to memory forces[] at the end.
          */
         for (ix=0;ix<order;ix++)
