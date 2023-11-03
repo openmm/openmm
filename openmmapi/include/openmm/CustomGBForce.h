@@ -50,14 +50,14 @@ namespace OpenMM {
  * It also allows tabulated functions to be defined and used with the computations.  It optionally supports periodic boundary
  * conditions and cutoffs for long range interactions.
  *
- * The computation consists of calculating some number of per-particle <i>computed values</i>, followed by one or more
- * <i>energy terms</i>.  A computed value is a scalar value that is computed for each particle in the system.  It may
+ * The computation consists of calculating some number of per-particle <b>computed values</b>, followed by one or more
+ * <b>energy terms</b>.  A computed value is a scalar value that is computed for each particle in the system.  It may
  * depend on an arbitrary set of global and per-particle parameters, and well as on other computed values that have
  * been calculated before it.  Once all computed values have been calculated, the energy terms and their derivatives
  * are evaluated to determine the system energy and particle forces.  The energy terms may depend on global parameters,
  * per-particle parameters, and per-particle computed values.
  *
- * When specifying a computed value or energy term, you provide an algebraic expression to evaluate and a <i>computation type</i>
+ * When specifying a computed value or energy term, you provide an algebraic expression to evaluate and a <b>computation type</b>
  * describing how the expression is to be evaluated.  There are two main types of computations:
  *
  * <ul>

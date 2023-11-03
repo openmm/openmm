@@ -18,6 +18,7 @@ OpenMM Developer's Guide
    06_opencl_platform.rst
    07_cuda_platform.rst
    08_common_compute.rst
+   09_customcppforceimpl.rst
 
 .. only:: html
 

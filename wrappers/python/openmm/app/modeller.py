@@ -257,7 +257,7 @@ class Modeller(object):
         self.topology = newTopology
         self.positions = newPositions
 
-    def _addIons(self, forcefield, numWaters, replaceableMols, ionCutoff=0.05*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
+    def _addIons(self, forcefield, numWaters, replaceableMols, ionCutoff=0.05*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True, residueTemplates=dict()):
         """Adds ions to the system by replacing certain molecules.
 
         Parameters
@@ -281,6 +281,12 @@ class Modeller(object):
             Note that only monovalent ions are currently supported.
         neutralize : bool=True
             whether to add ions to neutralize the system
+        residueTemplates : dict=dict()
+            specifies which template the ForceField should use for particular residues.  The keys
+            should be Residue objects from the Topology, and the values should be the names of the
+            templates to use for them.  This is useful when a ForceField contains multiple templates
+            that can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
+            monoatomic iron ion in the Topology).
         """
 
         posIonElements = {'Cs+': elem.cesium, 'K+': elem.potassium,
@@ -302,7 +308,7 @@ class Modeller(object):
         negativeElement = negIonElements[negativeIon]
 
         # Determine the total charge of the system
-        system = forcefield.createSystem(self.topology)
+        system = forcefield.createSystem(self.topology, residueTemplates=residueTemplates)
         for i in range(system.getNumForces()):
             if isinstance(system.getForce(i), NonbondedForce):
                 nonbonded = system.getForce(i)
@@ -375,7 +381,7 @@ class Modeller(object):
             self.topology = modeller.topology
             self.positions = modeller.positions
 
-    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, boxShape='cube', positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
+    def addSolvent(self, forcefield, model='tip3p', boxSize=None, boxVectors=None, padding=None, numAdded=None, boxShape='cube', positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True, residueTemplates=dict()):
         """Add solvent (both water and ions) to the model to fill a periodic box.
 
         The algorithm works as follows:
@@ -439,6 +445,12 @@ class Modeller(object):
             Note that only monovalent ions are currently supported.
         neutralize : bool=True
             whether to add ions to neutralize the system
+        residueTemplates : dict=dict()
+            specifies which template the ForceField should use for particular residues.  The keys
+            should be Residue objects from the Topology, and the values should be the names of the
+            templates to use for them.  This is useful when a ForceField contains multiple templates
+            that can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
+            monoatomic iron ion in the Topology).
         """
         if len([x for x in (boxSize, boxVectors, padding, numAdded) if x is not None]) > 1:
             raise ValueError('At most one of the following arguments may be specified: boxSize, boxVectors, padding, numAdded')
@@ -504,7 +516,7 @@ class Modeller(object):
 
         # Have the ForceField build a System for the solute from which we can determine van der Waals radii.
 
-        system = forcefield.createSystem(self.topology)
+        system = forcefield.createSystem(self.topology, residueTemplates=residueTemplates)
         nonbonded = None
         for i in range(system.getNumForces()):
             if isinstance(system.getForce(i), NonbondedForce):
@@ -644,7 +656,7 @@ class Modeller(object):
         numTotalWaters = len(waterPos)
 
         # Add ions to neutralize the system.
-        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
+        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize, residueTemplates=residueTemplates)
 
     def _computeBoxVectors(self, width, boxShape):
         """Compute the periodic box vectors given a box width and shape."""
@@ -721,7 +733,7 @@ class Modeller(object):
                     terminal = hydrogen.attrib['terminal']
                 data.hydrogens.append(Modeller._Hydrogen(hydrogen.attrib['name'], hydrogen.attrib['parent'], maxph, atomVariants, terminal))
 
-    def addHydrogens(self, forcefield=None, pH=7.0, variants=None, platform=None):
+    def addHydrogens(self, forcefield=None, pH=7.0, variants=None, platform=None, residueTemplates=dict()):
         """Add missing hydrogens to the model.
 
         Some residues can exist in multiple forms depending on the pH and properties of the local environment.  These
@@ -787,6 +799,12 @@ class Modeller(object):
         platform : Platform=None
             the Platform to use when computing the hydrogen atom positions.  If
             this is None, the default Platform will be used.
+        residueTemplates : dict=dict()
+            specifies which template the ForceField should use for particular residues.  The keys
+            should be Residue objects from the Topology, and the values should be the names of the
+            templates to use for them.  This is useful when a ForceField contains multiple templates
+            that can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
+            monoatomic iron ion in the Topology).
 
         Returns
         -------
@@ -991,7 +1009,7 @@ class Modeller(object):
         if forcefield is not None:
             # Use the ForceField the user specified.
 
-            system = forcefield.createSystem(newTopology, rigidWater=False, nonbondedMethod=CutoffNonPeriodic)
+            system = forcefield.createSystem(newTopology, rigidWater=False, nonbondedMethod=CutoffNonPeriodic, residueTemplates=residueTemplates)
             atoms = list(newTopology.atoms())
             for i in range(system.getNumParticles()):
                 if i not in addedH:
@@ -1051,7 +1069,7 @@ class Modeller(object):
         del context
         return actualVariants
 
-    def addExtraParticles(self, forcefield, ignoreExternalBonds=False):
+    def addExtraParticles(self, forcefield, ignoreExternalBonds=False, residueTemplates=dict()):
         """Add missing extra particles to the model that are required by a force
         field.
 
@@ -1074,6 +1092,12 @@ class Modeller(object):
             If true, ignore external bonds when matching residues to templates.
             This is useful when the Topology represents one piece of a larger
             molecule, so chains are not terminated properly.
+        residueTemplates : dict=dict()
+            specifies which template the ForceField should use for particular residues.  The keys
+            should be Residue objects from the Topology, and the values should be the names of the
+            templates to use for them.  This is useful when a ForceField contains multiple templates
+            that can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
+            monoatomic iron ion in the Topology).
         """
         # Record which atoms are bonded to each other atom.
 
@@ -1093,7 +1117,7 @@ class Modeller(object):
 
         # Identify the template to use for each residue.
 
-        templates = forcefield._matchAllResiduesToTemplates(ForceField._SystemData(self.topology), self.topology, {}, False, True, False)
+        templates = forcefield._matchAllResiduesToTemplates(ForceField._SystemData(self.topology), self.topology, residueTemplates, False, True, False)
 
         # Create the new Topology.
 
@@ -1159,9 +1183,9 @@ class Modeller(object):
                                         cross = Vec3(v1[1]*v2[2]-v1[2]*v2[1], v1[2]*v2[0]-v1[0]*v2[2], v1[0]*v2[1]-v1[1]*v2[0])
                                         position = templateAtomPositions[site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
                                     elif site.type == 'localCoords':
-                                        origin = templateAtomPositions[site.atoms[0]]*site.originWeights[0] + templateAtomPositions[site.atoms[1]]*site.originWeights[1] + templateAtomPositions[site.atoms[2]]*site.originWeights[2];
-                                        xdir = templateAtomPositions[site.atoms[0]]*site.xWeights[0] + templateAtomPositions[site.atoms[1]]*site.xWeights[1] + templateAtomPositions[site.atoms[2]]*site.xWeights[2];
-                                        ydir = templateAtomPositions[site.atoms[0]]*site.yWeights[0] + templateAtomPositions[site.atoms[1]]*site.yWeights[1] + templateAtomPositions[site.atoms[2]]*site.yWeights[2];
+                                        origin = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.originWeights)])
+                                        xdir = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.xWeights)])
+                                        ydir = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.yWeights)])
                                         zdir = Vec3(xdir[1]*ydir[2]-xdir[2]*ydir[1], xdir[2]*ydir[0]-xdir[0]*ydir[2], xdir[0]*ydir[1]-xdir[1]*ydir[0])
                                         xdir /= norm(xdir);
                                         zdir /= norm(zdir);
@@ -1206,7 +1230,7 @@ class Modeller(object):
             # There were particles whose position we couldn't identify before, since they were neither virtual sites nor Drude particles.
             # Try to figure them out based on bonds.  First, use the ForceField to create a list of every bond involving one of them.
 
-            system = forcefield.createSystem(newTopology, constraints=AllBonds)
+            system = forcefield.createSystem(newTopology, constraints=AllBonds, residueTemplates=residueTemplates)
             bonds = []
             for i in range(system.getNumConstraints()):
                 bond = system.getConstraintParameters(i)
@@ -1234,7 +1258,7 @@ class Modeller(object):
         self.positions = newPositions
 
 
-    def addMembrane(self, forcefield, lipidType='POPC', membraneCenterZ=0*nanometer, minimumPadding=1*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True):
+    def addMembrane(self, forcefield, lipidType='POPC', membraneCenterZ=0*nanometer, minimumPadding=1*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True, residueTemplates=dict()):
         """Add a lipid membrane to the model.
 
         This method actually adds both a membrane and a water box.  It is best to build them together,
@@ -1286,6 +1310,12 @@ class Modeller(object):
             Note that only monovalent ions are currently supported.
         neutralize : bool=True
             whether to add ions to neutralize the system
+        residueTemplates : dict=dict()
+            specifies which template the ForceField should use for particular residues.  The keys
+            should be Residue objects from the Topology, and the values should be the names of the
+            templates to use for them.  This is useful when a ForceField contains multiple templates
+            that can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
+            monoatomic iron ion in the Topology).
         """
         if 'topology' in dir(lipidType) and 'positions' in dir(lipidType):
             patch = lipidType
@@ -1451,8 +1481,8 @@ class Modeller(object):
 
         # Create a System for the lipids, then add in the protein as stationary particles.
 
-        system = forcefield.createSystem(membraneTopology, nonbondedMethod=CutoffPeriodic)
-        proteinSystem = forcefield.createSystem(self.topology, nonbondedMethod=CutoffNonPeriodic)
+        system = forcefield.createSystem(membraneTopology, nonbondedMethod=CutoffPeriodic, residueTemplates=residueTemplates)
+        proteinSystem = forcefield.createSystem(self.topology, nonbondedMethod=CutoffNonPeriodic, residueTemplates=residueTemplates)
         numMembraneParticles = system.getNumParticles()
         numProteinParticles = proteinSystem.getNumParticles()
         for i in range(numProteinParticles):
@@ -1520,7 +1550,7 @@ class Modeller(object):
 
         needExtraWater = (boxSizeZ > patchSize[2])
         if needExtraWater:
-            modeller.addSolvent(forcefield, neutralize=False)
+            modeller.addSolvent(forcefield, neutralize=False, residueTemplates=residueTemplates)
 
         # Record the positions of all waters that have been added.
 
@@ -1587,7 +1617,7 @@ class Modeller(object):
             if lowerZBoundary < waterZ.value_in_unit(nanometer) < upperZBoundary:
                 del waterPos[wRes]
 
-        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize)
+        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize, residueTemplates=residueTemplates)
 
 
 class _CellList(object):

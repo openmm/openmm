@@ -62,6 +62,7 @@ that they aren't important!
     :maxdepth: 2
 
     generated/LocalEnergyMinimizer
+    generated/MinimizationReporter
     generated/NoseHooverChain
     generated/OpenMMException
     generated/Vec3

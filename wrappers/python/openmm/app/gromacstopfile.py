@@ -42,7 +42,7 @@ import openmm as mm
 import math
 import os
 import re
-import distutils.spawn
+import shutil
 from collections import OrderedDict, defaultdict
 from itertools import combinations, combinations_with_replacement
 from copy import deepcopy
@@ -290,8 +290,6 @@ class GromacsTopFile(object):
                 self._processAngleType(line)
             elif self._currentCategory == 'dihedraltypes':
                 self._processDihedralType(line)
-            elif self._currentCategory == 'implicit_genborn_params':
-                self._processImplicitType(line)
             elif self._currentCategory == 'pairtypes':
                 self._processPairType(line)
             elif self._currentCategory == 'cmaptypes':
@@ -488,13 +486,6 @@ class GromacsTopFile(object):
         else:
             self._dihedralTypes[key] = [fields]
 
-    def _processImplicitType(self, line):
-        """Process a line in the [ implicit_genborn_params ] category."""
-        fields = line.split()
-        if len(fields) < 6:
-            raise ValueError('Too few fields in [ implicit_genborn_params ] line: '+line)
-        self._implicitTypes[fields[0]] = fields
-
     def _processPairType(self, line):
         """Process a line in the [ pairtypes ] category."""
         fields = line.split()
@@ -571,7 +562,7 @@ class GromacsTopFile(object):
         self._defines['FLEXIBLE'] = True
         self._genpairs = True
         if defines is not None:
-            for define, value in defines.iteritems():
+            for define, value in defines.items():
                 self._defines[define] = value
 
         # Parse the file.
@@ -586,7 +577,6 @@ class GromacsTopFile(object):
         self._bondTypes= {}
         self._angleTypes = {}
         self._dihedralTypes = {}
-        self._implicitTypes = {}
         self._pairTypes = {}
         self._cmapTypes = {}
         self._nonbondTypes = {}
@@ -661,9 +651,8 @@ class GromacsTopFile(object):
                 for fields in moleculeType.bonds:
                     top.addBond(atoms[int(fields[0])-1], atoms[int(fields[1])-1])
 
-    def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer,
-                     constraints=None, rigidWater=True, implicitSolvent=None, soluteDielectric=1.0, solventDielectric=78.5,
-                     ewaldErrorTolerance=0.0005, removeCMMotion=True, hydrogenMass=None, switchDistance=None):
+    def createSystem(self, nonbondedMethod=ff.NoCutoff, nonbondedCutoff=1.0*unit.nanometer, constraints=None,
+                     rigidWater=True, ewaldErrorTolerance=0.0005, removeCMMotion=True, hydrogenMass=None, switchDistance=None):
         """Construct an OpenMM System representing the topology described by this
         top file.
 
@@ -682,16 +671,6 @@ class GromacsTopFile(object):
         rigidWater : boolean=True
             If true, water molecules will be fully rigid regardless of the value
             passed for the constraints argument
-        implicitSolvent : object=None
-            If not None, the implicit solvent model to use.  The only allowed
-            value is OBC2.  This option is deprecated, since Gromacs 2019 and later
-            no longer support implicit solvent.  It will be removed in a future
-            release.
-        soluteDielectric : float=1.0
-            The solute dielectric constant to use in the implicit solvent model.
-        solventDielectric : float=78.5
-            The solvent dielectric constant to use in the implicit solvent
-            model.
         ewaldErrorTolerance : float=0.0005
             The error tolerance to use if nonbondedMethod is Ewald, PME or LJPME.
         removeCMMotion : boolean=True
@@ -741,14 +720,6 @@ class GromacsTopFile(object):
             lj.addPerParticleParameter('C')
             lj.addPerParticleParameter('A')
             sys.addForce(lj)
-        if implicitSolvent is OBC2:
-            gb = mm.GBSAOBCForce()
-            gb.setSoluteDielectric(soluteDielectric)
-            gb.setSolventDielectric(solventDielectric)
-            sys.addForce(gb)
-            nb.setReactionFieldDielectric(1.0)
-        elif implicitSolvent is not None:
-            raise ValueError('Illegal value for implicitSolvent')
         bonds = {}
         angles = {}
         periodic = None
@@ -1038,11 +1009,6 @@ class GromacsTopFile(object):
                             epsilon = float(params[7])
                             lj.addParticle([math.sqrt(4*epsilon*sigma**6), math.sqrt(4*epsilon*sigma**12)])
 
-                    if implicitSolvent is OBC2:
-                        if fields[1] not in self._implicitTypes:
-                            raise ValueError('No implicit solvent parameters specified for atom type: '+fields[1])
-                        gbparams = self._implicitTypes[fields[1]]
-                        gb.addParticle(q, float(gbparams[4]), float(gbparams[5]))
                 for fields in moleculeType.bonds:
                     atoms = [int(x)-1 for x in fields[:2]]
                     bondIndices.append((baseAtomIndex+atoms[0], baseAtomIndex+atoms[1]))
@@ -1327,11 +1293,11 @@ def _defaultGromacsIncludeDir():
     if 'GMXBIN' in os.environ:
         return os.path.abspath(os.path.join(os.environ['GMXBIN'], '..', 'share', 'gromacs', 'top'))
 
-    pdb2gmx_path = distutils.spawn.find_executable('pdb2gmx')
+    pdb2gmx_path = shutil.which('pdb2gmx')
     if pdb2gmx_path is not None:
         return os.path.abspath(os.path.join(os.path.dirname(pdb2gmx_path), '..', 'share', 'gromacs', 'top'))
     else:
-        gmx_path = distutils.spawn.find_executable('gmx')
+        gmx_path = shutil.which('gmx')
         if gmx_path is not None:
             return os.path.abspath(os.path.join(os.path.dirname(gmx_path), '..', 'share', 'gromacs', 'top'))
 

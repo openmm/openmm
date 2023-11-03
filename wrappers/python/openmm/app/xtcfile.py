@@ -12,7 +12,7 @@ from openmm.app.internal.xtc_utils import (
 import numpy as np
 import os
 from openmm import Vec3
-from openmm.unit import nanometers, femtoseconds, is_quantity, norm
+from openmm.unit import nanometers, picoseconds, is_quantity, norm
 import math
 import tempfile
 import shutil
@@ -51,7 +51,7 @@ class XTCFile(object):
         self._interval = interval
         self._modelCount = 0
         if is_quantity(dt):
-            dt = dt.value_in_unit(femtoseconds)
+            dt = dt.value_in_unit(picoseconds)
         self._dt = dt
         if append:
             if not os.path.isfile(self._filename):

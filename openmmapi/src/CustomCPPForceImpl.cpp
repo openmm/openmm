@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,40 +29,30 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/internal/MonteCarloMembraneBarostatImpl.h"
+#include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/CustomCPPForceImpl.h"
+#include "openmm/kernels.h"
 
 using namespace OpenMM;
+using namespace std;
 
-MonteCarloMembraneBarostat::MonteCarloMembraneBarostat(double defaultPressure, double defaultSurfaceTension, double defaultTemperature, XYMode xymode, ZMode zmode, int frequency) :
-        xymode(xymode), zmode(zmode) {
-    setDefaultPressure(defaultPressure);
-    setDefaultSurfaceTension(defaultSurfaceTension);
-    setDefaultTemperature(defaultTemperature);
-    setFrequency(frequency);
-    setRandomNumberSeed(0);
+CustomCPPForceImpl::CustomCPPForceImpl(const Force& owner) {
+    forceGroup = owner.getForceGroup();
 }
 
-void MonteCarloMembraneBarostat::setDefaultPressure(double pressure) {
-    defaultPressure = pressure;
+void CustomCPPForceImpl::initialize(ContextImpl& context) {
+    kernel = context.getPlatform().createKernel(CalcCustomCPPForceKernel::Name(), context);
+    kernel.getAs<CalcCustomCPPForceKernel>().initialize(context.getSystem(), *this);
 }
 
-void MonteCarloMembraneBarostat::setDefaultSurfaceTension(double surfaceTension) {
-    defaultSurfaceTension = surfaceTension;
+double CustomCPPForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
+    if ((groups&(1<<forceGroup)) != 0)
+        return kernel.getAs<CalcCustomCPPForceKernel>().execute(context, includeForces, includeEnergy);
+    return 0.0;
 }
 
-void MonteCarloMembraneBarostat::setFrequency(int freq) {
-    if (freq < 0)
-        throw OpenMMException("Frequency cannot be negative");
-    frequency = freq;
-}
-
-void MonteCarloMembraneBarostat::setDefaultTemperature(double temp) {
-    if (temp < 0)
-        throw OpenMMException("Temperature cannot be negative");
-    defaultTemperature = temp;
-}
-
-ForceImpl* MonteCarloMembraneBarostat::createImpl() const {
-    return new MonteCarloMembraneBarostatImpl(*this);
+vector<string> CustomCPPForceImpl::getKernelNames() {
+    vector<string> names;
+    names.push_back(CalcCustomCPPForceKernel::Name());
+    return names;
 }

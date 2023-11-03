@@ -1654,7 +1654,57 @@ private:
     int numParticles;
 };
 
-  
+/**
+ * This kernel is invoked by CustomCPPForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CommonCalcCustomCPPForceKernel : public CalcCustomCPPForceKernel {
+public:
+    CommonCalcCustomCPPForceKernel(std::string name, const Platform& platform, OpenMM::ContextImpl& contextImpl, ComputeContext& cc) :
+            CalcCustomCPPForceKernel(name, platform), contextImpl(contextImpl), cc(cc), force(NULL) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomCPPForceImpl this kernel will be used for
+     */
+    void initialize(const System& system, CustomCPPForceImpl& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    /**
+     * The is called by the pre-computation to start the calculation running.
+     */
+    void beginComputation(bool includeForces, bool includeEnergy, int groups);
+    /**
+     * This is called by the worker thread to do the computation.
+     */
+    void executeOnWorkerThread(bool includeForces);
+    /**
+     * This is called by the post-computation to add the forces to the main array.
+     */
+    double addForces(bool includeForces, bool includeEnergy, int groups);
+private:
+    class ExecuteTask;
+    class StartCalculationPreComputation;
+    class AddForcesPostComputation;
+    OpenMM::ContextImpl& contextImpl;
+    ComputeContext& cc;
+    CustomCPPForceImpl* force;
+    ComputeArray forcesArray;
+    ComputeKernel addForcesKernel;
+    std::vector<Vec3> positionsVec, forcesVec;
+    std::vector<float> floatForces;
+    int forceGroupFlag;
+    double energy;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_COMMONKERNELS_H_*/
