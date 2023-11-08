@@ -60,18 +60,19 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
     // Decide how many thread blocks and force buffers to use.
 
     deviceIsCpu = (context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
+    std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
+    isAMD = !deviceIsCpu && ((vendor.size() >= 3 && vendor.substr(0, 3) == "AMD") || (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc."));
     if (deviceIsCpu) {
         numForceThreadBlocks = context.getNumThreadBlocks();
         forceThreadBlockSize = 1;
     }
     else if (context.getSIMDWidth() == 32) {
         int blocksPerComputeUnit = 4;
-        std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
         if (vendor.size() >= 5 && vendor.substr(0, 5) == "Apple") {
             // 1536 threads per GPU core.
             blocksPerComputeUnit = 6;
         }
-        else if (deviceIsAMDGpu()) {
+        else if (isAMD) {
             blocksPerComputeUnit = 16;
         }
         numForceThreadBlocks = blocksPerComputeUnit*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
@@ -90,9 +91,6 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
     // list.  We guess based on system size which will be faster.
 
     useLargeBlocks = (context.getNumAtoms() > 100000);
-
-    std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
-    isAMD = !deviceIsCpu && ((vendor.size() >= 3 && vendor.substr(0, 3) == "AMD") || (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc."));
 
     setKernelSource(deviceIsCpu ? OpenCLKernelSources::nonbonded_cpu : OpenCLKernelSources::nonbonded);
 }
@@ -203,7 +201,7 @@ static bool compareInt2LargeSIMD(mm_int2 a, mm_int2 b) {
 }
 
 void OpenCLNonbondedUtilities::initialize(const System& system) {
-    if (deviceIsAMDGpu()) {
+    if (isAMD) {
         while (numForceThreadBlocks > context.getNumAtomBlocks()) {
             numForceThreadBlocks /= 2;
         }
@@ -794,9 +792,4 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
 
 void OpenCLNonbondedUtilities::setKernelSource(const string& source) {
     kernelSource = source;
-}
-
-bool OpenCLNonbondedUtilities::deviceIsAMDGpu() {
-    string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
-    return !deviceIsCpu && (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.");
 }

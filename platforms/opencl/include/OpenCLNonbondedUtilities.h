@@ -304,12 +304,6 @@ public:
     void setKernelSource(const std::string& source);
 
 private:
-    /**
-     * Returns true if device is an AMD Gpu.
-     */
-    bool deviceIsAMDGpu();
-
-private:
     class KernelSet;
     class BlockSortTrait;
     OpenCLContext& context;
