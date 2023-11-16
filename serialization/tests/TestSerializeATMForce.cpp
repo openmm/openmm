@@ -55,6 +55,8 @@ void testSerialization() {
     HarmonicAngleForce* v2 = new HarmonicAngleForce();
     v2->addAngle(3, 11, 15, 0.4, 0.2);
     force.addForce(v2);
+    force.addParticle(Vec3(1, 2, 3));
+    force.addParticle(Vec3(0, 0, -1), Vec3(3, 2, 1));
 
     // Serialize and then deserialize it.
 
@@ -82,6 +84,14 @@ void testSerialization() {
         XmlSerializer::serialize<Force>(&force.getForce(i), "Force", buffer1);
         XmlSerializer::serialize<Force>(&force2.getForce(i), "Force", buffer2);
         ASSERT_EQUAL(buffer1.str(), buffer2.str());
+    }
+    ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        Vec3 d1a, d1b, d0a, d0b;
+        force.getParticleParameters(i, d1a, d0a);
+        force2.getParticleParameters(i, d1b, d0b);
+        ASSERT_EQUAL_VEC(d1a, d1b, 0.0);
+        ASSERT_EQUAL_VEC(d0a, d0b, 0.0);
     }
 }
 
