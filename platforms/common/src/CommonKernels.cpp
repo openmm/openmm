@@ -2438,8 +2438,16 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
 
     int paddedNumParticles = cc.getPaddedNumAtoms();
     int numParams = force.getNumPerParticleParameters();
-    vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
-    vector<double> parameters;
+
+    thread_local static vector<vector<float> > paramVector;
+
+    if (paramVector.size() != paddedNumParticles)
+    {
+        paramVector = vector<vector<float>>(paddedNumParticles, std::vector<float>(numParams, 0));
+    }
+
+    thread_local static vector<double> parameters;
+
     for (int i = 0; i < numParticles; i++) {
         force.getParticleParameters(i, parameters);
         paramVector[i].resize(parameters.size());
