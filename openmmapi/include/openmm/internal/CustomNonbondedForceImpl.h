@@ -64,7 +64,7 @@ public:
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
-    void updateSomeParametersInContext(const std::set<int> &indicies, ContextImpl& context);
+    void updateSomeParametersInContext(int start, int count, ContextImpl& context);
 
     /**
      * Prepare for computing the long range correction.  This function pre-computes anything

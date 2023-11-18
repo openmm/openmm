@@ -2428,7 +2428,7 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
     return 0;
 }
 
-void CommonCalcCustomNonbondedForceKernel::copySomeParametersToContext(const set<int> &indicies, ContextImpl& context, const CustomNonbondedForce& force) {
+void CommonCalcCustomNonbondedForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const CustomNonbondedForce& force) {
     ContextSelector selector(cc);
     int numParticles = force.getNumParticles();
     if (numParticles != cc.getNumAtoms())
@@ -2436,24 +2436,19 @@ void CommonCalcCustomNonbondedForceKernel::copySomeParametersToContext(const set
 
     // Record the per-particle parameters.
 
-    int paddedNumParticles = cc.getPaddedNumAtoms();
     int numParams = force.getNumPerParticleParameters();
 
-    map<int, vector<float>> paramMap;
+    vector<vector<float> > paramVector(count, std::vector<float>(numParams, 0));
 
     thread_local static vector<double> parameters;
 
-    for (const auto &index : indicies) {
-        force.getParticleParameters(index, parameters);
-        vector<float> p(parameters.size());
-
-        for (int i=0; i<(int)parameters.size(); i++) {
-            p[i] = (float)parameters[i];
-        }
-        paramMap.insert(std::make_pair(index, p));
+    for (int i = 0; i < count; i++) {
+        force.getParticleParameters(start+i, parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (float) parameters[j];
     }
-
-    params->setSomeParameterValues(paramMap);
+    params->setSomeParameterValues(start, paramVector);
 
     // If necessary, recompute the long range correction.
 

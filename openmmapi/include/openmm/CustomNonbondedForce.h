@@ -570,7 +570,7 @@ public:
      * the parameters of existing ones.  While the tabulated values of a function can change, everything else about it (its dimensions,
      * the data range) must not be changed.
      */
-    void updateSomeParametersInContext(const std::set<int> &indicies, Context& context);
+    void updateSomeParametersInContext(int start, int count, Context& context);
     /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.

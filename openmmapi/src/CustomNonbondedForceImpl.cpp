@@ -163,8 +163,8 @@ void CustomNonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
     context.systemChanged();
 }
 
-void CustomNonbondedForceImpl::updateSomeParametersInContext(const std::set<int> &indicies, ContextImpl& context) {
-    kernel.getAs<CalcCustomNonbondedForceKernel>().copySomeParametersToContext(indicies, context, owner);
+void CustomNonbondedForceImpl::updateSomeParametersInContext(int start, int count, ContextImpl& context) {
+    kernel.getAs<CalcCustomNonbondedForceKernel>().copySomeParametersToContext(start, count, context, owner);
     context.systemChanged();
 }
 

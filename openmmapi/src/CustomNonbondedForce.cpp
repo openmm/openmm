@@ -333,6 +333,6 @@ void CustomNonbondedForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomNonbondedForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
 
-void CustomNonbondedForce::updateSomeParametersInContext(const set<int> &indicies, Context& context) {
-    dynamic_cast<CustomNonbondedForceImpl&>(getImplInContext(context)).updateSomeParametersInContext(indicies, getContextImpl(context));
+void CustomNonbondedForce::updateSomeParametersInContext(int start, int count, Context& context) {
+    dynamic_cast<CustomNonbondedForceImpl&>(getImplInContext(context)).updateSomeParametersInContext(start, count, getContextImpl(context));
 }

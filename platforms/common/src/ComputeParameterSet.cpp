@@ -116,54 +116,46 @@ void ComputeParameterSet::getParameterValues(vector<vector<T> >& values) {
 }
 
 template<class T>
-void ComputeParameterSet::setSomeParameterValues(const map<int, vector<T> > &values) {
+void ComputeParameterSet::setSomeParameterValues(int start, const vector<vector<T> >& values) {
     if (sizeof(T) != elementSize)
         throw OpenMMException("Called setSomeParameterValues() with vector of wrong type");
-
-    if (values.empty())
-        return;
-
-    thread_local static vector<T> data;
-
     int base = 0;
+
+    const int numValues = values.size();
+
+    if (start + numValues >= numObjects)
+        throw OpenMMException("Called setSomeParameterValues() with too many values");
+
     for (int i = 0; i < (int) arrays.size(); i++) {
-        arrays[i]->download(data);
-
         if (arrays[i]->getElementSize() == 4*elementSize) {
-            for (auto it = values.cbegin(); it != values.cend(); ++it)
-            {
-                int j = it->first;
-                const auto &value = it->second;
-
-                data[4*j] = value[base];
+            vector<T> data(4*numValues, 0);
+            for (int j = 0; j < numValues; j++) {
+                data[4*j] = values[j][base];
                 if (base+1 < numParameters)
-                    data[4*j+1] = value[base+1];
+                    data[4*j+1] = values[j][base+1];
                 if (base+2 < numParameters)
-                    data[4*j+2] = value[base+2];
+                    data[4*j+2] = values[j][base+2];
                 if (base+3 < numParameters)
-                    data[4*j+3] = value[base+3];
+                    data[4*j+3] = values[j][base+3];
             }
-            arrays[i]->upload(data.data());
+            arrays[i]->uploadSubArray(data.data(), 4*start, 4*numValues);
             base += 4;
         }
         else if (arrays[i]->getElementSize() == 2*elementSize) {
-            for (auto it = values.cbegin(); it != values.cend(); ++it)
-            {
-                int j = it->first;
-                const auto &value = it->second;
-                data[2*j] = value[base];
+            vector<T> data(2*numValues, 0);
+            for (int j = 0; j < numValues; j++) {
+                data[2*j] = values[j][base];
                 if (base+1 < numParameters)
-                    data[2*j+1] = value[base+1];
+                    data[2*j+1] = values[j][base+1];
             }
+            arrays[i]->uploadSubArray(data.data(), 2*start, 2*numValues);
+            base += 2;
         }
         else if (arrays[i]->getElementSize() == elementSize) {
-            for (auto it = values.cbegin(); it != values.cend(); ++it)
-            {
-                int j = it->first;
-                const auto &value = it->second;
-                data[j] = value[base];
-            }
-            arrays[i]->upload(data.data());
+            vector<T> data(numValues, 0);
+            for (int j = 0; j < numValues; j++)
+                data[j] = values[j][base];
+            arrays[i]->uploadSubArray(data.data(), start, numValues);
             base++;
         }
         else
@@ -239,6 +231,6 @@ template void ComputeParameterSet::getParameterValues<float>(vector<vector<float
 template void ComputeParameterSet::setParameterValues<float>(const vector<vector<float> >& values);
 template void ComputeParameterSet::getParameterValues<double>(vector<vector<double> >& values);
 template void ComputeParameterSet::setParameterValues<double>(const vector<vector<double> >& values);
-template void ComputeParameterSet::setSomeParameterValues<float>(const map<int, vector<float> >& values);
-template void ComputeParameterSet::setSomeParameterValues<double>(const map<int, vector<double> >& values);
+template void ComputeParameterSet::setSomeParameterValues<float>(int start, const vector<vector<float> >& values);
+template void ComputeParameterSet::setSomeParameterValues<double>(int start, const vector<vector<double> >& values);
 }

@@ -677,11 +677,12 @@ public:
     /**
      * Copy specified changed parameters over to a context.
      *
-     * @param indicies   the indicies of the parameters to copy
+     * @param start      start index of the particle whose parameters to copy
+     * @param count      number of particles whose parameters to copy
      * @param context    the context to copy parameters to
      * @param force      the CustomNonbondedForce to copy the parameters from
      */
-    virtual void copySomeParametersToContext(const std::set<int> &indices, ContextImpl& context, const CustomNonbondedForce& force) = 0;
+    virtual void copySomeParametersToContext(int start, int count, ContextImpl& context, const CustomNonbondedForce& force) = 0;
 };
 
 /**

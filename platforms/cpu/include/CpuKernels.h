@@ -321,14 +321,14 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
     /**
-     * Copy some changed parameters over to a context.
+     * Copy specified changed parameters over to a context.
      *
-     * @param indicies   the indices of the parameters that were changed
+     * @param start      start index of the particle whose parameters to copy
+     * @param count      number of particles whose parameters to copy
      * @param context    the context to copy parameters to
      * @param force      the CustomNonbondedForce to copy the parameters from
      */
-    void copySomeParametersToContext(const std::set<int> &indicies,
-                                     ContextImpl& context, const CustomNonbondedForce& force);
+    void copySomeParametersToContext(int start, int count, ContextImpl& context, const CustomNonbondedForce& force);
 private:
     void createInteraction(const CustomNonbondedForce& force);
     CpuPlatform::PlatformData& data;
