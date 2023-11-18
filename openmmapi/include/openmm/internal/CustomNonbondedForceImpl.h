@@ -64,6 +64,8 @@ public:
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
+    void updateSomeParametersInContext(const std::set<int> &indicies, ContextImpl& context);
+
     /**
      * Prepare for computing the long range correction.  This function pre-computes anything
      * that depends only on the Force (such as particle parameters) but not on information in

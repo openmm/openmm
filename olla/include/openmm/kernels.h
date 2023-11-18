@@ -674,6 +674,14 @@ public:
      * @param force      the CustomNonbondedForce to copy the parameters from
      */
     virtual void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) = 0;
+    /**
+     * Copy specified changed parameters over to a context.
+     *
+     * @param indicies   the indicies of the parameters to copy
+     * @param context    the context to copy parameters to
+     * @param force      the CustomNonbondedForce to copy the parameters from
+     */
+    virtual void copySomeParametersToContext(const std::set<int> &indices, ContextImpl& context, const CustomNonbondedForce& force) = 0;
 };
 
 /**

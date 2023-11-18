@@ -2428,6 +2428,59 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
     return 0;
 }
 
+void CommonCalcCustomNonbondedForceKernel::copySomeParametersToContext(const set<int> &indicies, ContextImpl& context, const CustomNonbondedForce& force) {
+    ContextSelector selector(cc);
+    int numParticles = force.getNumParticles();
+    if (numParticles != cc.getNumAtoms())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the per-particle parameters.
+
+    int paddedNumParticles = cc.getPaddedNumAtoms();
+    int numParams = force.getNumPerParticleParameters();
+
+    map<int, vector<float>> paramMap;
+
+    thread_local static vector<double> parameters;
+
+    for (const auto &index : indicies) {
+        force.getParticleParameters(index, parameters);
+        vector<float> p(parameters.size());
+
+        for (int i=0; i<(int)parameters.size(); i++) {
+            p[i] = (float)parameters[i];
+        }
+        paramMap.insert(std::make_pair(index, p));
+    }
+
+    params->setSomeParameterValues(paramMap);
+
+    // If necessary, recompute the long range correction.
+
+    if (forceCopy != NULL) {
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
+        CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, cc.getThreadPool());
+        hasInitializedLongRangeCorrection = false;
+        *forceCopy = force;
+    }
+
+    // See if any tabulated functions have changed.
+
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
+            int width;
+            vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
+            tabulatedFunctionArrays[i].upload(f);
+        }
+    }
+
+    // Mark that the current reordering may be invalid.
+
+    cc.invalidateMolecules(info);
+}
+
 void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
     ContextSelector selector(cc);
     int numParticles = force.getNumParticles();

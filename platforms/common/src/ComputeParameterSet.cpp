@@ -115,6 +115,62 @@ void ComputeParameterSet::getParameterValues(vector<vector<T> >& values) {
     }
 }
 
+template<class T>
+void ComputeParameterSet::setSomeParameterValues(const map<int, vector<T> > &values) {
+    if (sizeof(T) != elementSize)
+        throw OpenMMException("Called setSomeParameterValues() with vector of wrong type");
+
+    if (values.empty())
+        return;
+
+    thread_local static vector<T> data;
+
+    int base = 0;
+    for (int i = 0; i < (int) arrays.size(); i++) {
+        arrays[i]->download(data);
+
+        if (arrays[i]->getElementSize() == 4*elementSize) {
+            for (auto it = values.cbegin(); it != values.cend(); ++it)
+            {
+                int j = it->first;
+                const auto &value = it->second;
+
+                data[4*j] = value[base];
+                if (base+1 < numParameters)
+                    data[4*j+1] = value[base+1];
+                if (base+2 < numParameters)
+                    data[4*j+2] = value[base+2];
+                if (base+3 < numParameters)
+                    data[4*j+3] = value[base+3];
+            }
+            arrays[i]->upload(data.data());
+            base += 4;
+        }
+        else if (arrays[i]->getElementSize() == 2*elementSize) {
+            for (auto it = values.cbegin(); it != values.cend(); ++it)
+            {
+                int j = it->first;
+                const auto &value = it->second;
+                data[2*j] = value[base];
+                if (base+1 < numParameters)
+                    data[2*j+1] = value[base+1];
+            }
+        }
+        else if (arrays[i]->getElementSize() == elementSize) {
+            for (auto it = values.cbegin(); it != values.cend(); ++it)
+            {
+                int j = it->first;
+                const auto &value = it->second;
+                data[j] = value[base];
+            }
+            arrays[i]->upload(data.data());
+            base++;
+        }
+        else
+            throw OpenMMException("Internal error: Unknown buffer type in ComputeParameterSet");
+    }
+}
+
 template <class T>
 void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values) {
     if (sizeof(T) != elementSize)
@@ -122,7 +178,7 @@ void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values) {
     int base = 0;
     for (int i = 0; i < (int) arrays.size(); i++) {
         if (arrays[i]->getElementSize() == 4*elementSize) {
-            vector<T> data(4*numObjects);
+            thread_local static vector<T> data(4*numObjects);
             for (int j = 0; j < numObjects; j++) {
                 data[4*j] = values[j][base];
                 if (base+1 < numParameters)
@@ -136,7 +192,7 @@ void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values) {
             base += 4;
         }
         else if (arrays[i]->getElementSize() == 2*elementSize) {
-            vector<T> data(2*numObjects);
+            thread_local static vector<T> data(2*numObjects);
             for (int j = 0; j < numObjects; j++) {
                 data[2*j] = values[j][base];
                 if (base+1 < numParameters)
@@ -146,7 +202,7 @@ void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values) {
             base += 2;
         }
         else if (arrays[i]->getElementSize() == elementSize) {
-            vector<T> data(numObjects);
+            thread_local static vector<T> data(numObjects);
             for (int j = 0; j < numObjects; j++)
                 data[j] = values[j][base];
             arrays[i]->upload(data.data());
@@ -183,4 +239,6 @@ template void ComputeParameterSet::getParameterValues<float>(vector<vector<float
 template void ComputeParameterSet::setParameterValues<float>(const vector<vector<float> >& values);
 template void ComputeParameterSet::getParameterValues<double>(vector<vector<double> >& values);
 template void ComputeParameterSet::setParameterValues<double>(const vector<vector<double> >& values);
+template void ComputeParameterSet::setSomeParameterValues<float>(const map<int, vector<float> >& values);
+template void ComputeParameterSet::setSomeParameterValues<double>(const map<int, vector<double> >& values);
 }

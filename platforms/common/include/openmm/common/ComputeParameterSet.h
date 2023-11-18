@@ -83,6 +83,13 @@ public:
     template <class T>
     void setParameterValues(const std::vector<std::vector<T> >& values);
     /**
+     * Set the values of the parameters indexed by the keys of this map.
+     * 
+     * @param values    a map whose keys are parameter indices and whose values are the corresponding values
+     */
+    template <class T>
+    void setSomeParameterValues(const std::map<int, std::vector<T> >& values);
+    /**
      * Get a vector of ComputeParameterInfo objects which describe the arrays
      * containing the data.
      */

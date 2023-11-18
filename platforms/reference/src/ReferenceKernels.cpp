@@ -1317,6 +1317,45 @@ double ReferenceCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bo
     return energy;
 }
 
+void ReferenceCalcCustomNonbondedForceKernel::copySomeParametersToContext(const set<int> &indicies, ContextImpl& context, const CustomNonbondedForce& force) {
+    if (numParticles != force.getNumParticles())
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+
+    // Record the values.
+
+    int numParameters = force.getNumPerParticleParameters();
+    thread_local static vector<double> parameters;
+
+    for (const auto &index : indicies) {
+        force.getParticleParameters(index, parameters);
+        for (int j = 0; j < numParameters; j++)
+            particleParamArray[index][j] = parameters[j];
+    }
+
+    // If necessary, recompute the long range correction.
+    
+    if (forceCopy != NULL) {
+        ThreadPool threads;
+        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, threads.getNumThreads());
+        CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, threads);
+        hasInitializedLongRangeCorrection = true;
+        *forceCopy = force;
+    }
+
+    // See if any tabulated functions have changed.
+
+    bool changed = false;
+    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
+        string name = force.getTabulatedFunctionName(i);
+        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
+            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
+            changed = true;
+        }
+    }
+    if (changed)
+        createExpressions(force);
+}
+
 void ReferenceCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
     if (numParticles != force.getNumParticles())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");

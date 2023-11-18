@@ -490,6 +490,15 @@ public:
      * @param force      the CustomNonbondedForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
+    /**
+     * Copy some changed parameters over to a context.
+     *
+     * @param indicies   the indices of the parameters that were changed
+     * @param context    the context to copy parameters to
+     * @param force      the CustomNonbondedForce to copy the parameters from
+     */
+    void copySomeParametersToContext(const std::set<int> &indicies,
+                                     ContextImpl& context, const CustomNonbondedForce& force);
 private:
     class Task;
     CudaPlatform::PlatformData& data;
