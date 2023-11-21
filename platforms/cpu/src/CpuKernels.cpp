@@ -1027,6 +1027,9 @@ void CpuCalcCustomNonbondedForceKernel::copySomeParametersToContext(int start, i
     if (numParticles != force.getNumParticles())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
+    else if (start < 0 or start+count > numParticles)
+        throw OpenMMException("updateParametersInContext: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+
     // Record the values.
 
     int numParameters = force.getNumPerParticleParameters();
@@ -1065,44 +1068,7 @@ void CpuCalcCustomNonbondedForceKernel::copySomeParametersToContext(int start, i
 }
 
 void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
-    if (numParticles != force.getNumParticles())
-        throw OpenMMException("updateParametersInContext: The number of particles has changed");
-
-    // Record the values.
-
-    int numParameters = force.getNumPerParticleParameters();
-    vector<double> params;
-    for (int i = 0; i < numParticles; ++i) {
-        vector<double> parameters;
-        force.getParticleParameters(i, parameters);
-        for (int j = 0; j < numParameters; j++)
-            particleParamArray[i][j] = parameters[j];
-    }
-    
-    // If necessary, recompute the long range correction.
-    
-    if (forceCopy != NULL) {
-        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, data.threads.getNumThreads());
-        CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, data.threads);
-        hasInitializedLongRangeCorrection = true;
-        *forceCopy = force;
-    }
-
-    // See if any tabulated functions have changed.
-
-    bool changed = false;
-    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
-        string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
-            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
-            changed = true;
-        }
-    }
-    if (changed) {
-        delete nonbonded;
-        nonbonded = NULL;
-        createInteraction(force);
-    }
+    this->copySomeParametersToContext(0, force.getNumParticles(), context, force);
 }
 
 CpuCalcGBSAOBCForceKernel::~CpuCalcGBSAOBCForceKernel() {

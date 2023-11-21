@@ -2434,6 +2434,9 @@ void CommonCalcCustomNonbondedForceKernel::copySomeParametersToContext(int start
     if (numParticles != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
+    else if (start < 0 or start+count > numParticles)
+        throw OpenMMException("updateParametersInContext: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+
     // Record the per-particle parameters.
 
     int numParams = force.getNumPerParticleParameters();
@@ -2477,57 +2480,7 @@ void CommonCalcCustomNonbondedForceKernel::copySomeParametersToContext(int start
 }
 
 void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
-    ContextSelector selector(cc);
-    int numParticles = force.getNumParticles();
-    if (numParticles != cc.getNumAtoms())
-        throw OpenMMException("updateParametersInContext: The number of particles has changed");
-
-    // Record the per-particle parameters.
-
-    int paddedNumParticles = cc.getPaddedNumAtoms();
-    int numParams = force.getNumPerParticleParameters();
-
-    thread_local static vector<vector<float> > paramVector;
-
-    if (paramVector.size() != paddedNumParticles)
-    {
-        paramVector = vector<vector<float>>(paddedNumParticles, std::vector<float>(numParams, 0));
-    }
-
-    thread_local static vector<double> parameters;
-
-    for (int i = 0; i < numParticles; i++) {
-        force.getParticleParameters(i, parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
-    }
-    params->setParameterValues(paramVector);
-
-    // If necessary, recompute the long range correction.
-
-    if (forceCopy != NULL) {
-        longRangeCorrectionData = CustomNonbondedForceImpl::prepareLongRangeCorrection(force, cc.getThreadPool().getNumThreads());
-        CustomNonbondedForceImpl::calcLongRangeCorrection(force, longRangeCorrectionData, context.getOwner(), longRangeCoefficient, longRangeCoefficientDerivs, cc.getThreadPool());
-        hasInitializedLongRangeCorrection = false;
-        *forceCopy = force;
-    }
-
-    // See if any tabulated functions have changed.
-
-    for (int i = 0; i < force.getNumTabulatedFunctions(); i++) {
-        string name = force.getTabulatedFunctionName(i);
-        if (force.getTabulatedFunction(i).getUpdateCount() != tabulatedFunctionUpdateCount[name]) {
-            tabulatedFunctionUpdateCount[name] = force.getTabulatedFunction(i).getUpdateCount();
-            int width;
-            vector<float> f = cc.getExpressionUtilities().computeFunctionCoefficients(force.getTabulatedFunction(i), width);
-            tabulatedFunctionArrays[i].upload(f);
-        }
-    }
-
-    // Mark that the current reordering may be invalid.
-
-    cc.invalidateMolecules(info);
+    this->copySomeParametersToContext(0, force.getNumParticles(), context, force);
 }
 
 class CommonCalcGBSAOBCForceKernel::ForceInfo : public ComputeForceInfo {

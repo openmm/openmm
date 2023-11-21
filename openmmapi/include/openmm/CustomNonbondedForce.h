@@ -561,8 +561,8 @@ public:
     /**
      * Update some of the per-particle parameters and tabulated functions in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
-     * Simply call setParticleParameters() to modify this object's parameters, then call updateSomeParametersInContext(indicies)
-     * to copy the parameters at the specified indicies over to the Context.
+     * Simply call setParticleParameters() to modify this object's parameters, then call updateSomeParametersInContext(start, count, context)
+     * to copy the parameters for particles from index start to start+count-1 over to the Context.
      *
      * This method has several limitations.  The only information it updates is the values of specified per-particle parameters and tabulated
      * functions.  All other aspects of the Force (the energy function, nonbonded method, cutoff distance, etc.) are unaffected and can
