@@ -1039,6 +1039,30 @@ class TestModeller(unittest.TestCase):
             names2 = sorted([a.name for a in res2.atoms()])
             self.assertEqual(names1, names2)
 
+    def test_addHydrogensBondType(self):
+        """Test that addHydrogens() preserves bond info."""
+
+        pdb = PDBFile("systems/alanine-dipeptide-explicit.pdb")
+        topology = pdb.topology
+        # add some explicit info to selected bonds
+        for b in topology.bonds():
+            if ((b.atom1.element, b.atom2.element) in [
+                (element.carbon, element.oxygen), (element.oxygen, element.carbon)
+            ]):
+                b.type = Double
+                b.order = 2.0
+        modeller = Modeller(pdb.topology, pdb.positions)
+        # keep just the solute and remove hydrogens
+        hydrogens_and_water = [
+            a for a in modeller.topology.atoms() if a.element == element.hydrogen or a.residue.name == "HOH"
+        ]
+        modeller.delete(hydrogens_and_water)
+
+        modeller.addHydrogens()
+
+        # bonds that had explicit type and order still have it
+        self.assertIn((Double, 2.0), [(b.type, b.order) for b in modeller.topology.bonds()])
+
     def test_removeExtraHydrogens(self):
         """Test that addHydrogens() can remove hydrogens that shouldn't be there. """
 
@@ -1065,21 +1089,37 @@ class TestModeller(unittest.TestCase):
     def test_addExtraParticles(self):
         """Test addExtraParticles()."""
 
-        # Create a box of water.
+        # start with a solvated pdb
 
-        ff1 = ForceField('tip3p.xml')
-        modeller = Modeller(Topology(), []*nanometers)
-        modeller.addSolvent(ff1, 'tip3p', boxSize=Vec3(2,2,2)*nanometers)
+        pdb = PDBFile("systems/alanine-dipeptide-explicit.pdb")
+        topology = pdb.topology
+        # add some explicit info to selected bonds to later check that they are preserved
+        for b in topology.bonds():
+            if ((b.atom1.element, b.atom2.element) in [
+                (element.carbon, element.oxygen), (element.oxygen, element.carbon)
+            ]):
+                b.type = Double
+                b.order = 2.0
+        modeller = Modeller(pdb.topology, pdb.positions)
+        # sanity check: initial water has 3 sites
+        for residue in modeller.topology.residues():
+            if residue.name == "HOH":
+                self.assertEqual(len(list(residue.atoms())), 3)
 
-        # Now convert the water to TIP4P.
+        # Now convert the water to TIP4P by adding virtual sites.
 
-        ff2 = ForceField('tip4pew.xml')
+        ff2 = ForceField('amber10.xml', 'tip4pew.xml')
         modeller.addExtraParticles(ff2)
         for residue in modeller.topology.residues():
+            if residue.name != "HOH":
+                continue
             atoms = list(residue.atoms())
             self.assertEqual(4, len(atoms))
             ep = [atom for atom in atoms if atom.element is None]
             self.assertEqual(1, len(ep))
+
+        # Regression test: check that extra bonds info are retained for the solute
+        self.assertIn((Double, 2.0), [(b.type, b.order) for b in modeller.topology.bonds()])
 
 
     def test_addVirtualSites(self):
