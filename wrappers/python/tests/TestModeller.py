@@ -40,7 +40,7 @@ class TestModeller(unittest.TestCase):
         atom_C2 = self.topology_start4.addAtom('C2', element.carbon, residue)
         atom_H2 = self.topology_start4.addAtom('H2', element.hydrogen, residue)
         self.topology_start4.addBond(atom_H1, atom_C1, Single, 1.0)
-        self.topology_start4.addBond(atom_C1, atom_C2, Triple, 3.0 )
+        self.topology_start4.addBond(atom_C1, atom_C2, Triple, 3.0)
         self.topology_start4.addBond(atom_C2, atom_H2, Single, 1.0)
         self.positions4 = nanometers * [
             Vec3(0,0,0), Vec3(0.106,0,0), Vec3(0.226, 0, 0), Vec3(0.332, 0, 0)
@@ -145,7 +145,7 @@ class TestModeller(unittest.TestCase):
         validate_deltas(self, topology_before, topology_after, chain_delta, residue_delta, atom_delta)
 
     def test_deleteBondTypes(self):
-        """ Test that delete() preserves bond type and order"""
+        """ Test that delete() preserves bond type and order. """
         topology, positions = self.topology_start4, self.positions4
         modeller = Modeller(topology, positions)
         to_delete = [atom for atom in topology.atoms() if atom.element==Element.getBySymbol('H')]
