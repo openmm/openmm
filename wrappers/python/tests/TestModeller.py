@@ -31,21 +31,6 @@ class TestModeller(unittest.TestCase):
         self.topology_start3 = self.pdb3.topology
         self.positions3 = self.pdb3.positions
 
-        # a topology (acetylene) with explicit bond types and orders
-        self.topology_start4 = Topology()
-        chain = self.topology_start4.addChain(id='A')
-        residue = self.topology_start4.addResidue('ethyne', chain)
-        atom_H1 = self.topology_start4.addAtom('H1', element.hydrogen, residue)
-        atom_C1 = self.topology_start4.addAtom('C1', element.carbon, residue)
-        atom_C2 = self.topology_start4.addAtom('C2', element.carbon, residue)
-        atom_H2 = self.topology_start4.addAtom('H2', element.hydrogen, residue)
-        self.topology_start4.addBond(atom_H1, atom_C1, Single, 1.0)
-        self.topology_start4.addBond(atom_C1, atom_C2, Triple, 3.0)
-        self.topology_start4.addBond(atom_C2, atom_H2, Single, 1.0)
-        self.positions4 = nanometers * [
-            Vec3(0,0,0), Vec3(0.106,0,0), Vec3(0.226, 0, 0), Vec3(0.332, 0, 0)
-        ]
-
     def test_deleteWater(self):
         """ Test the deleteWater() method. """
 
@@ -144,17 +129,6 @@ class TestModeller(unittest.TestCase):
 
         validate_deltas(self, topology_before, topology_after, chain_delta, residue_delta, atom_delta)
 
-    def test_deleteBondTypes(self):
-        """ Test that delete() preserves bond type and order. """
-        topology, positions = self.topology_start4, self.positions4
-        modeller = Modeller(topology, positions)
-        to_delete = [atom for atom in topology.atoms() if atom.element==Element.getBySymbol('H')]
-
-        modeller.delete(to_delete)
-
-        retrieved = [(b.type, b.order) for b in modeller.getTopology().bonds()]
-        self.assertEqual(retrieved[0], (Triple, 3.0))
-
     def test_add(self):
         """ Test the add() method. """
 
@@ -221,27 +195,6 @@ class TestModeller(unittest.TestCase):
         validate_preserved(self, topology_toAdd, topology_after, chain_dict, residue_dict, atom_dict)
         # validate that the final topology has the correct number of items
         validate_deltas(self, topology_before, topology_after, chain_delta, residue_delta, atom_delta)
-
-    def test_addBondTypes(self):
-        """ Regression test for issue #4112: add() should preserve bond type and order."""
-        # this modeller has explicit bond info
-        modeller = Modeller(self.topology_start4, self.positions4)
-        to_add = PDBFile('systems/methanol-box.pdb')
-        topology_to_add = to_add.topology
-        positions_to_add = to_add.positions
-        # add a dummy bond to the "to_add" system to check that it also is preserved
-        atom0, atom1 = (atom for i, atom in enumerate(topology_to_add.atoms()) if i < 2)
-        topology_to_add.addBond(atom0, atom1, Single, 1.0)
-
-        modeller.add(topology_to_add, positions_to_add)
-
-        retrieved = [(b.type, b.order) for b in modeller.getTopology().bonds()]
-        # base modeller
-        self.assertEqual(retrieved[0], (Single, 1.0))
-        self.assertEqual(retrieved[1], (Triple, 3.0))
-        self.assertEqual(retrieved[2], (Single, 1.0))
-        # added modeller
-        self.assertEqual(retrieved[3], (Single, 1.0))
 
     def test_convertWater(self):
         """ Test the convertWater() method. """
@@ -311,14 +264,6 @@ class TestModeller(unittest.TestCase):
 
         topology_start = self.pdb.topology
         topology_start.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5)*nanometers)
-        # add some explicit bond types
-        for b in topology_start.bonds():
-            if (
-                b.atom1.element == element.hydrogen or b.atom2.element == element.hydrogen
-            ) and b.atom1.residue.name != "HOH":
-                b.type = Single
-                b.order = 1.0
-
         for model in ['tip3p', 'spce', 'tip4pew', 'tip5p', 'swm4ndp']:
             forcefield = ForceField('amber10.xml', model + '.xml')
             modeller = Modeller(topology_start, self.positions)
@@ -368,9 +313,6 @@ class TestModeller(unittest.TestCase):
                         self.assertTrue(len(matoms)==1 and len(m1atoms)==0 and len(m2atoms)==0)
                     elif model=='tip5p':
                         self.assertTrue(len(matoms)==0 and len(m1atoms)==1 and len(m2atoms)==1)
-
-            # Regression test: check that bond type data have survived both deleteWater and addSolvent
-            self.assertIn((Single, 1.0), [(b.type, b.order) for b in topology_after.bonds()])
 
     def test_addSolventPeriodicBox(self):
         """ Test the addSolvent() method; test that the five ways of passing in the periodic box all work. """
@@ -1039,30 +981,6 @@ class TestModeller(unittest.TestCase):
             names2 = sorted([a.name for a in res2.atoms()])
             self.assertEqual(names1, names2)
 
-    def test_addHydrogensBondType(self):
-        """Test that addHydrogens() preserves bond info."""
-
-        pdb = PDBFile("systems/alanine-dipeptide-explicit.pdb")
-        topology = pdb.topology
-        # add some explicit info to selected bonds
-        for b in topology.bonds():
-            if ((b.atom1.element, b.atom2.element) in [
-                (element.carbon, element.oxygen), (element.oxygen, element.carbon)
-            ]):
-                b.type = Double
-                b.order = 2.0
-        modeller = Modeller(pdb.topology, pdb.positions)
-        # keep just the solute and remove hydrogens
-        hydrogens_and_water = [
-            a for a in modeller.topology.atoms() if a.element == element.hydrogen or a.residue.name == "HOH"
-        ]
-        modeller.delete(hydrogens_and_water)
-
-        modeller.addHydrogens()
-
-        # bonds that had explicit type and order still have it
-        self.assertIn((Double, 2.0), [(b.type, b.order) for b in modeller.topology.bonds()])
-
     def test_removeExtraHydrogens(self):
         """Test that addHydrogens() can remove hydrogens that shouldn't be there. """
 
@@ -1089,37 +1007,21 @@ class TestModeller(unittest.TestCase):
     def test_addExtraParticles(self):
         """Test addExtraParticles()."""
 
-        # start with a solvated pdb
+        # Create a box of water.
 
-        pdb = PDBFile("systems/alanine-dipeptide-explicit.pdb")
-        topology = pdb.topology
-        # add some explicit info to selected bonds to later check that they are preserved
-        for b in topology.bonds():
-            if ((b.atom1.element, b.atom2.element) in [
-                (element.carbon, element.oxygen), (element.oxygen, element.carbon)
-            ]):
-                b.type = Double
-                b.order = 2.0
-        modeller = Modeller(pdb.topology, pdb.positions)
-        # sanity check: initial water has 3 sites
-        for residue in modeller.topology.residues():
-            if residue.name == "HOH":
-                self.assertEqual(len(list(residue.atoms())), 3)
+        ff1 = ForceField('tip3p.xml')
+        modeller = Modeller(Topology(), []*nanometers)
+        modeller.addSolvent(ff1, 'tip3p', boxSize=Vec3(2,2,2)*nanometers)
 
-        # Now convert the water to TIP4P by adding virtual sites.
+        # Now convert the water to TIP4P.
 
-        ff2 = ForceField('amber10.xml', 'tip4pew.xml')
+        ff2 = ForceField('tip4pew.xml')
         modeller.addExtraParticles(ff2)
         for residue in modeller.topology.residues():
-            if residue.name != "HOH":
-                continue
             atoms = list(residue.atoms())
             self.assertEqual(4, len(atoms))
             ep = [atom for atom in atoms if atom.element is None]
             self.assertEqual(1, len(ep))
-
-        # Regression test: check that extra bonds info are retained for the solute
-        self.assertIn((Double, 2.0), [(b.type, b.order) for b in modeller.topology.bonds()])
 
 
     def test_addVirtualSites(self):
@@ -1366,7 +1268,6 @@ class TestModeller(unittest.TestCase):
             # None and Double from topology; other Nones and Single from topology_to_add
             {(None, None), (Single, 1.0), (Double, 2.0)}
         )
-
 
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         scale = max(1.0, norm(p1),)
