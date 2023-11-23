@@ -41,6 +41,7 @@ jobs:
       # Note: conda activate doesn't work here, because it creates a new shell!
       - script: |
           conda install cmake ^
+                        simde ^
                         cython ^
                         ninja ^
                         numpy ^

@@ -32,11 +32,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#ifdef __AVX__
-#include <immintrin.h>
-#else
-#include <smmintrin.h>
-#endif
+#define SIMDE_ENABLE_NATIVE_ALIASES
+#include <simde/x86/avx.h>
 
 #include "hardware.h"
 
@@ -101,7 +98,7 @@ public:
     void storeVec3(float* v) const {
         // This code could be called from objects compiled for better SIMD domains (e.g., AVX) so conditionally
         // compile in the most efficient variant of the instruction.
-#ifdef  __AVX__
+#if defined(SIMDE_X86_AVX_NATIVE) || !defined(SIMDE_X86_SSE2_NATIVE)
         _mm_maskstore_ps(v, _mm_setr_epi32(-1, -1, -1, 0), val);
 #else
         _mm_maskmoveu_si128 (_mm_castps_si128(val), _mm_setr_epi32(-1, -1, -1, 0), (char*)v);

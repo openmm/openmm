@@ -7,6 +7,7 @@ addons:
       - python-numpy
       - python-scipy
       - libfftw3-dev
+      - libsimde-dev
 
 env:
   global:
@@ -127,7 +128,7 @@ before_install:
   - mkdir -p $HOME/ccache && tar xf ccache-3.2.4-0.tar.bz2 -C $HOME/ccache
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       brew cask uninstall oclint;
-      brew install fftw;
+      brew install fftw simde;
       brew upgrade python;
       brew install -y https://raw.githubusercontent.com/Homebrew/homebrew-core/5b680fb58fedfb00cd07a7f69f5a621bb9240f3b/Formula/doxygen.rb;
       pip3 install virtualenv;

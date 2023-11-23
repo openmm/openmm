@@ -12,6 +12,7 @@ dependencies:
 - swig
 - numpy
 - doxygen 1.8.14
+- simde
 # test
 - pytest
 - pytest-xdist

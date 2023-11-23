@@ -15,6 +15,7 @@ dependencies:
 - numpy
 - ocl-icd-system
 - doxygen 1.8.14
+- simde
 # test
 - pytest
 - pytest-xdist
