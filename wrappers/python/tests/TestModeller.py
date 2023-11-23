@@ -1224,13 +1224,9 @@ class TestModeller(unittest.TestCase):
         modeller.addSolvent(forcefield, "tip3p")
         # sanity check: water was added
         self.assertTrue(any(r.name == "HOH" for r in modeller.topology.residues()))
-        # Then: bond info are retained
-        self.assertIn((Double, 2.0), [(b.type, b.order) for b in modeller.topology.bonds()])
 
         # When (2): convert water (no sites added)
         modeller.convertWater("spce")
-        # Then: bond info are retained
-        self.assertIn((Double, 2.0), [(b.type, b.order) for b in modeller.topology.bonds()])
 
         # When (3): convert water with addExtraParticles
         new_forcefield = ForceField('amber10.xml', 'tip4pew.xml')
@@ -1240,20 +1236,24 @@ class TestModeller(unittest.TestCase):
             set([len(list(res.atoms())) for res in modeller.topology.residues() if res.name == "HOH"]),
             {4}
         )
-        # Then: bond info are retained
-        self.assertIn((Double, 2.0), [(b.type, b.order) for b in modeller.topology.bonds()])
 
-        # When (4): remove all water and hydrogens
-        hydrogens_and_water = [
-            a for a in modeller.topology.atoms() if a.element == element.hydrogen or a.residue.name == "HOH"
-        ]
-        modeller.delete(hydrogens_and_water)
+        # When (4): delete water (with deleteWater) and hydrogens (with delete)
+        modeller.deleteWater()
+        hydrogens = [a for a in modeller.topology.atoms() if a.element == element.hydrogen]
+        modeller.delete(hydrogens)
         # sanity check: all gone
+        self.assertFalse(any(a.element == element.hydrogen for a in modeller.topology.atoms()))
         self.assertFalse(any(r.name == "HOH" for r in modeller.topology.residues()))
-        # Then: bond info are retained
+
+        # When (5): add back hydrogens
+        modeller.addHydrogens()
+        # sanity check: hydrogens are back
+        self.assertTrue(any(a.element == element.hydrogen for a in modeller.topology.atoms()))
+
+        # Then (intermediate): bond info have been retained throughout the workflow
         self.assertIn((Double, 2.0), [(b.type, b.order) for b in modeller.topology.bonds()])
 
-        # When (5): add a modeller (which also bears some bond info)
+        # When (6): add a modeller (which also bears some bond info)
         to_add = PDBFile('systems/methanol-box.pdb')
         topology_to_add = to_add.topology
         positions_to_add = to_add.positions
@@ -1261,8 +1261,9 @@ class TestModeller(unittest.TestCase):
         atom0, atom1 = (atom for i, atom in enumerate(topology_to_add.atoms()) if i < 2)
         topology_to_add.addBond(atom0, atom1, Single, 1.0)
         modeller.add(topology_to_add, positions_to_add)
+
         # Then: bond info are retained for both the old and the new system
-        all_bond_extra_data =  [(b.type, b.order) for b in modeller.topology.bonds()]
+        all_bond_extra_data = [(b.type, b.order) for b in modeller.topology.bonds()]
         self.assertEqual(
             set(all_bond_extra_data),
             # None and Double from topology; other Nones and Single from topology_to_add
