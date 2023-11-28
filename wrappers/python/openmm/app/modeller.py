@@ -178,7 +178,7 @@ class Modeller(object):
         for bond in self.topology.bonds():
             if bond[0] in newAtoms and bond[1] in newAtoms:
                 if bond not in deleteSet and (bond[1], bond[0]) not in deleteSet:
-                    newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+                    newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
         self.topology = newTopology
         self.positions = newPositions
 
@@ -253,7 +253,7 @@ class Modeller(object):
                         newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
             if bond[0] in newAtoms and bond[1] in newAtoms:
-                newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+                newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
         self.topology = newTopology
         self.positions = newPositions
 
@@ -549,7 +549,7 @@ class Modeller(object):
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
-            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+            newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
 
         # Sort the solute atoms into cells for fast lookup.
 
@@ -1000,7 +1000,7 @@ class Modeller(object):
                         newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
             if bond[0] in newAtoms and bond[1] in newAtoms:
-                newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+                newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
 
         # The hydrogens were added at random positions.  Now perform an energy minimization to fix them up.
 
@@ -1224,7 +1224,7 @@ class Modeller(object):
 
         for bond in self.topology.bonds():
             if bond[0] in newAtoms and bond[1] in newAtoms:
-                newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]])
+                newTopology.addBond(newAtoms[bond[0]], newAtoms[bond[1]], bond.type, bond.order)
 
         if len(missingPositions) > 0:
             # There were particles whose position we couldn't identify before, since they were neither virtual sites nor Drude particles.
