@@ -104,7 +104,7 @@ class DCDReporter(object):
                 self._out, simulation.topology, simulation.integrator.getStepSize(),
                 simulation.currentStep, self._reportInterval, self._append
             )
-        self._dcd.writeModel(state.getPositions(), periodicBoxVectors=state.getPeriodicBoxVectors())
+        self._dcd.writeModel(state.getPositions(asNumpy=True), periodicBoxVectors=state.getPeriodicBoxVectors())
 
     def __del__(self):
         self._out.close()
