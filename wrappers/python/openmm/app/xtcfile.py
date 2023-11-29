@@ -9,11 +9,9 @@ from openmm.app.internal.xtc_utils import (
     get_xtc_nframes,
     get_xtc_natoms,
 )
-import numpy as np
 import os
 from openmm import Vec3
 from openmm.unit import nanometers, picoseconds, is_quantity, norm
-import math
 import tempfile
 import shutil
 
