@@ -936,7 +936,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             }
             exclusionAtoms.upload(exclusionAtomsVec);
             map<string, string> replacements;
-            replacements["PARAMS"] = cl.getBondedUtilities().addArgument(exclusionParams.getDeviceBuffer(), "float4");
+            replacements["PARAMS"] = cl.getBondedUtilities().addArgument(exclusionParams, "float4");
             replacements["EWALD_ALPHA"] = cl.doubleToString(alpha);
             replacements["TWO_OVER_SQRT_PI"] = cl.doubleToString(2.0/sqrt(M_PI));
             replacements["DO_LJPME"] = doLJPME ? "1" : "0";
@@ -998,7 +998,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         baseExceptionParams.upload(baseExceptionParamsVec);
         map<string, string> replacements;
         replacements["APPLY_PERIODIC"] = (usePeriodic && force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0");
-        replacements["PARAMS"] = cl.getBondedUtilities().addArgument(exceptionParams.getDeviceBuffer(), "float4");
+        replacements["PARAMS"] = cl.getBondedUtilities().addArgument(exceptionParams, "float4");
         if (force.getIncludeDirectSpace())
             cl.getBondedUtilities().addInteraction(atoms, cl.replaceStrings(CommonKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }
