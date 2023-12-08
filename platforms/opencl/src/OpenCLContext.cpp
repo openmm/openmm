@@ -647,6 +647,13 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     return program;
 }
 
+vector<ComputeContext*> OpenCLContext::getAllContexts() {
+    vector<ComputeContext*> result;
+    for (OpenCLContext* c : platformData.contexts)
+        result.push_back(c);
+    return result;
+}
+
 cl::CommandQueue& OpenCLContext::getQueue() {
     return currentQueue;
 }
