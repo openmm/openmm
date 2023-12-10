@@ -92,7 +92,7 @@ __kernel void computeSortKeys(__global const real4* restrict blockBoundingBox, _
         real size = LOG(box.x+box.y+box.z);
         int bin = (size-sizeRange.x)*scale;
         bin = max(0, min(bin, numSizeBins-1));
-        sortedBlocks[i] = (((unsigned int) bin)<<24) + i;
+        sortedBlocks[i] = (((unsigned int) bin)<<BIN_SHIFT) + i;
     }
 }
 
@@ -109,7 +109,7 @@ __kernel void sortBoxData(__global const unsigned int* restrict sortedBlocks, __
 #endif
         ) {
     for (int i = get_global_id(0); i < NUM_BLOCKS; i += get_global_size(0)) {
-        unsigned int index = sortedBlocks[i] & 0xFFFFFF;
+        unsigned int index = sortedBlocks[i] & BLOCK_INDEX_MASK;
         sortedBlockCenter[i] = blockCenter[index];
         sortedBlockBoundingBox[i] = blockBoundingBox[index];
     }
@@ -117,12 +117,12 @@ __kernel void sortBoxData(__global const unsigned int* restrict sortedBlocks, __
     // Compute the sizes of large blocks (composed of 32 regular blocks) starting from each block.
 
     for (int i = get_global_id(0); i < NUM_BLOCKS; i += get_global_size(0)) {
-        unsigned int index = sortedBlocks[i] & 0xFFFFFF;
+        unsigned int index = sortedBlocks[i] & BLOCK_INDEX_MASK;
         real4 minPos = blockCenter[index]-blockBoundingBox[index];
         real4 maxPos = blockCenter[index]+blockBoundingBox[index];
         int last = min(i+32, NUM_BLOCKS);
         for (int j = i+1; j < last; j++) {
-            index = sortedBlocks[j] & 0xFFFFFF;
+            index = sortedBlocks[j] & BLOCK_INDEX_MASK;
             real4 blockPos = blockCenter[index];
             real4 width = blockBoundingBox[index];
 #ifdef USE_PERIODIC
@@ -191,7 +191,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
     for (int block1 = startBlockIndex+warpIndex; block1 < startBlockIndex+numBlocks; block1 += totalWarps) {
         // Load data for this block.  Note that all threads in a warp are processing the same block.
         
-        int x = sortedBlocks[block1] & 0xFFFFFF;
+        int x = sortedBlocks[block1] & BLOCK_INDEX_MASK;
         real4 blockCenterX = sortedBlockCenter[block1];
         real4 blockSizeX = sortedBlockBoundingBox[block1];
         int neighborsInBuffer = 0;
@@ -278,7 +278,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                     includeBlock2 = true;
 #endif
                 if (includeBlock2) {
-                    int y = sortedBlocks[block2] & 0xFFFFFF;
+                    int y = sortedBlocks[block2] & BLOCK_INDEX_MASK;
                     for (int k = 0; k < numExclusions; k++)
                         includeBlock2 &= (exclusionsForX[k] != y);
                 }
@@ -292,7 +292,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                 while (i < TILE_SIZE && !includeBlockFlags[warpStart+i])
                     i++;
                 if (i < TILE_SIZE) {
-                    int y = sortedBlocks[block2Base+i] & 0xFFFFFF;
+                    int y = sortedBlocks[block2Base+i] & BLOCK_INDEX_MASK;
 
                     // Check each atom in block Y for interactions.
 

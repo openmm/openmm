@@ -127,7 +127,7 @@ extern "C" __global__ void computeSortKeys(const real4* __restrict__ blockBoundi
         real size = LOG(box.x+box.y+box.z);
         int bin = (size-sizeRange.x)*scale;
         bin = max(0, min(bin, numSizeBins-1));
-        sortedBlocks[i] = (((unsigned int) bin)<<24) + i;
+        sortedBlocks[i] = (((unsigned int) bin)<<BIN_SHIFT) + i;
     }
 }
 
@@ -143,7 +143,7 @@ extern "C" __global__ void sortBoxData(const unsigned int* __restrict__ sortedBl
         const real4* __restrict__ posq, const real4* __restrict__ oldPositions,
         unsigned int* __restrict__ interactionCount, int* __restrict__ rebuildNeighborList, bool forceRebuild) {
     for (int i = threadIdx.x+blockIdx.x*blockDim.x; i < NUM_BLOCKS; i += blockDim.x*gridDim.x) {
-        unsigned int index = sortedBlocks[i] & 0xFFFFFF;
+        unsigned int index = sortedBlocks[i] & BLOCK_INDEX_MASK;
         sortedBlockCenter[i] = blockCenter[index];
         sortedBlockBoundingBox[i] = half3(trimTo3(blockBoundingBox[index]));
     }
@@ -151,12 +151,12 @@ extern "C" __global__ void sortBoxData(const unsigned int* __restrict__ sortedBl
     // Compute the sizes of large blocks (composed of 32 regular blocks) starting from each block.
     
     for (int i = threadIdx.x+blockIdx.x*blockDim.x; i < NUM_BLOCKS; i += blockDim.x*gridDim.x) {
-        unsigned int index = sortedBlocks[i] & 0xFFFFFF;
+        unsigned int index = sortedBlocks[i] & BLOCK_INDEX_MASK;
         real4 minPos = blockCenter[index]-blockBoundingBox[index];
         real4 maxPos = blockCenter[index]+blockBoundingBox[index];
         int last = min(i+32, NUM_BLOCKS);
         for (int j = i+1; j < last; j++) {
-            index = sortedBlocks[j] & 0xFFFFFF;
+            index = sortedBlocks[j] & BLOCK_INDEX_MASK;
             real4 blockPos = blockCenter[index];
             real4 width = blockBoundingBox[index];
 #ifdef USE_PERIODIC
@@ -322,7 +322,7 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
     for (int block1 = startBlockIndex+warpIndex; block1 < startBlockIndex+numBlocks; block1 += totalWarps) {
         // Load data for this block.  Note that all threads in a warp are processing the same block.
         
-        int x = sortedBlocks[block1] & 0xFFFFFF;
+        int x = sortedBlocks[block1] & BLOCK_INDEX_MASK;
         real4 blockCenterX = sortedBlockCenter[block1];
         real3 blockSizeX = sortedBlockBoundingBox[block1].toReal3();
         int neighborsInBuffer = 0;
@@ -413,7 +413,7 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
                     includeBlock2 = forceInclude = true;
 #endif
                 if (includeBlock2) {
-                    int y = sortedBlocks[block2] & 0xFFFFFF;
+                    int y = sortedBlocks[block2] & BLOCK_INDEX_MASK;
                     #pragma unroll 4 // (MAX_EXCLUSIONS)
                     for (int k = 0; k < numExclusions; k++)
                         includeBlock2 &= (exclusionsForX[k] != y);
@@ -428,7 +428,7 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
                 int i = __ffs(includeBlockFlags)-1;
                 includeBlockFlags &= includeBlockFlags-1;
                 forceInclude = (forceIncludeFlags>>i) & 1;
-                int y = sortedBlocks[block2Base+i] & 0xFFFFFF;
+                int y = sortedBlocks[block2Base+i] & BLOCK_INDEX_MASK;
 
                 // Check each atom in block Y for interactions.
 
