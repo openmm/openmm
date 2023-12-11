@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -83,6 +83,11 @@ static Vec3* extractBoxVectors(ContextImpl& context) {
 static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *data->constraints;
+}
+
+static const ReferenceVirtualSites& extractVirtualSites(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return *data->virtualSites;
 }
 
 static map<string, double>& extractEnergyParameterDerivatives(ContextImpl& context) {
@@ -1461,6 +1466,7 @@ void CpuIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langevi
             delete dynamics;
         dynamics = new CpuLangevinDynamics(context.getSystem().getNumParticles(), stepSize, friction, temperature, data.threads, data.random);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
@@ -1501,6 +1507,7 @@ void CpuIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, const L
             delete dynamics;
         dynamics = new CpuLangevinMiddleDynamics(context.getSystem().getNumParticles(), stepSize, friction, temperature, data.threads, data.random);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
