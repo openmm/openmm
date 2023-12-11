@@ -41,18 +41,15 @@ using namespace std;
 
 class OpenCLNonbondedUtilities::BlockSortTrait : public OpenCLSort::SortTrait {
 public:
-    BlockSortTrait(bool useDouble) : useDouble(useDouble) {
-    }
-    int getDataSize() const {return useDouble ? sizeof(mm_double2) : sizeof(mm_float2);}
-    int getKeySize() const {return useDouble ? sizeof(cl_double) : sizeof(cl_float);}
-    const char* getDataType() const {return "real2";}
-    const char* getKeyType() const {return "real";}
-    const char* getMinKey() const {return "-MAXFLOAT";}
-    const char* getMaxKey() const {return "MAXFLOAT";}
-    const char* getMaxValue() const {return "(real2) (MAXFLOAT, MAXFLOAT)";}
-    const char* getSortKey() const {return "value.x";}
-private:
-    bool useDouble;
+    BlockSortTrait() {}
+    int getDataSize() const {return sizeof(int);}
+    int getKeySize() const {return sizeof(int);}
+    const char* getDataType() const {return "unsigned int";}
+    const char* getKeyType() const {return "unsigned int";}
+    const char* getMinKey() const {return "0";}
+    const char* getMaxKey() const {return "0xFFFFFFFFu";}
+    const char* getMaxValue() const {return "0xFFFFFFFFu";}
+    const char* getSortKey() const {return "value";}
 };
 
 OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
@@ -301,14 +298,16 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         int elementSize = (context.getUseDoublePrecision() ? sizeof(cl_double) : sizeof(cl_float));
         blockCenter.initialize(context, numAtomBlocks, 4*elementSize, "blockCenter");
         blockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "blockBoundingBox");
-        sortedBlocks.initialize(context, numAtomBlocks, 2*elementSize, "sortedBlocks");
+        sortedBlocks.initialize<cl_uint>(context, numAtomBlocks, "sortedBlocks");
         sortedBlockCenter.initialize(context, numAtomBlocks+1, 4*elementSize, "sortedBlockCenter");
         sortedBlockBoundingBox.initialize(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
+        numBlockSizes = min((context.getNumAtomBlocks()+63)/64, context.getNumThreadBlocks());
+        blockSizeRange.initialize(context, numBlockSizes, 2*elementSize, "blockSizeRange");
         largeBlockCenter.initialize(context, numAtomBlocks, 4*elementSize, "largeBlockCenter");
         largeBlockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "largeBlockBoundingBox");
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
-        blockSorter = new OpenCLSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks, false);
+        blockSorter = new OpenCLSort(context, new BlockSortTrait(), numAtomBlocks, false);
         vector<cl_uint> count(1, 0);
         interactionCount.upload(count);
         rebuildNeighborList.upload(count);
@@ -366,11 +365,11 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     if (lastCutoff != kernels.cutoffDistance)
         forceRebuildNeighborList = true;
     setPeriodicBoxArgs(context, kernels.findBlockBoundsKernel, 1);
-    context.executeKernel(kernels.findBlockBoundsKernel, context.getNumAtoms());
+    context.executeKernel(kernels.findBlockBoundsKernel, context.getNumAtomBlocks());
+    context.executeKernel(kernels.computeSortKeysKernel, context.getNumAtomBlocks());
     if (useLargeBlocks)
         setPeriodicBoxArgs(context, kernels.sortBoxDataKernel, 12);
-    else
-        blockSorter->sort(sortedBlocks);
+    blockSorter->sort(sortedBlocks);
     kernels.sortBoxDataKernel.setArg<cl_int>(9, forceRebuildNeighborList);
     context.executeKernel(kernels.sortBoxDataKernel, context.getNumAtoms());
     setPeriodicBoxArgs(context, kernels.findInteractingBlocksKernel, 0);
@@ -526,6 +525,11 @@ void OpenCLNonbondedUtilities::createKernelsForGroups(int groups) {
             defines["USE_LARGE_BLOCKS"] = "1";
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
         defines["BUFFER_GROUPS"] = (deviceIsCpu ? "4" : "2");
+        int binShift = 1;
+        while (1<<binShift <= context.getNumAtomBlocks())
+            binShift++;
+        defines["BIN_SHIFT"] = context.intToString(binShift);
+        defines["BLOCK_INDEX_MASK"] = context.intToString((1<<binShift)-1);
         string file = (deviceIsCpu ? OpenCLKernelSources::findInteractingBlocks_cpu : OpenCLKernelSources::findInteractingBlocks);
         int groupSize = (deviceIsCpu || context.getSIMDWidth() < 32 ? 32 : 256);
         while (true) {
@@ -537,7 +541,12 @@ void OpenCLNonbondedUtilities::createKernelsForGroups(int groups) {
             kernels.findBlockBoundsKernel.setArg<cl::Buffer>(7, blockCenter.getDeviceBuffer());
             kernels.findBlockBoundsKernel.setArg<cl::Buffer>(8, blockBoundingBox.getDeviceBuffer());
             kernels.findBlockBoundsKernel.setArg<cl::Buffer>(9, rebuildNeighborList.getDeviceBuffer());
-            kernels.findBlockBoundsKernel.setArg<cl::Buffer>(10, sortedBlocks.getDeviceBuffer());
+            kernels.findBlockBoundsKernel.setArg<cl::Buffer>(10, blockSizeRange.getDeviceBuffer());
+            kernels.computeSortKeysKernel = cl::Kernel(interactingBlocksProgram, "computeSortKeys");
+            kernels.computeSortKeysKernel.setArg<cl::Buffer>(0, blockBoundingBox.getDeviceBuffer());
+            kernels.computeSortKeysKernel.setArg<cl::Buffer>(1, sortedBlocks.getDeviceBuffer());
+            kernels.computeSortKeysKernel.setArg<cl::Buffer>(2, blockSizeRange.getDeviceBuffer());
+            kernels.computeSortKeysKernel.setArg<cl_int>(3, numBlockSizes);
             kernels.sortBoxDataKernel = cl::Kernel(interactingBlocksProgram, "sortBoxData");
             kernels.sortBoxDataKernel.setArg<cl::Buffer>(0, sortedBlocks.getDeviceBuffer());
             kernels.sortBoxDataKernel.setArg<cl::Buffer>(1, blockCenter.getDeviceBuffer());

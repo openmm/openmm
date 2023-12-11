@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -49,18 +49,15 @@ using namespace std;
 
 class CudaNonbondedUtilities::BlockSortTrait : public CudaSort::SortTrait {
 public:
-    BlockSortTrait(bool useDouble) : useDouble(useDouble) {
-    }
-    int getDataSize() const {return useDouble ? sizeof(double2) : sizeof(float2);}
-    int getKeySize() const {return useDouble ? sizeof(double) : sizeof(float);}
-    const char* getDataType() const {return "real2";}
-    const char* getKeyType() const {return "real";}
-    const char* getMinKey() const {return "-3.40282e+38f";}
-    const char* getMaxKey() const {return "3.40282e+38f";}
-    const char* getMaxValue() const {return "make_real2(3.40282e+38f, 3.40282e+38f)";}
-    const char* getSortKey() const {return "value.x";}
-private:
-    bool useDouble;
+    BlockSortTrait() {}
+    int getDataSize() const {return sizeof(int);}
+    int getKeySize() const {return sizeof(int);}
+    const char* getDataType() const {return "unsigned int";}
+    const char* getKeyType() const {return "unsigned int";}
+    const char* getMinKey() const {return "0";}
+    const char* getMaxKey() const {return "0xFFFFFFFFu";}
+    const char* getMaxValue() const {return "0xFFFFFFFFu";}
+    const char* getSortKey() const {return "value";}
 };
 
 CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
@@ -282,14 +279,16 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         int elementSize = (context.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
         blockCenter.initialize(context, numAtomBlocks, 4*elementSize, "blockCenter");
         blockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "blockBoundingBox");
-        sortedBlocks.initialize(context, numAtomBlocks, 2*elementSize, "sortedBlocks");
+        sortedBlocks.initialize<unsigned int>(context, numAtomBlocks, "sortedBlocks");
         sortedBlockCenter.initialize(context, numAtomBlocks+1, 4*elementSize, "sortedBlockCenter");
         sortedBlockBoundingBox.initialize(context, numAtomBlocks+1, 4*elementSize, "sortedBlockBoundingBox");
+        numBlockSizes = min((context.getNumAtomBlocks()+63)/64, context.getNumThreadBlocks());
+        blockSizeRange.initialize(context, numBlockSizes, 2*elementSize, "blockSizeRange");
         largeBlockCenter.initialize(context, numAtomBlocks, 4*elementSize, "largeBlockCenter");
         largeBlockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "largeBlockBoundingBox");
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
-        blockSorter = new CudaSort(context, new BlockSortTrait(context.getUseDoublePrecision()), numAtomBlocks, false);
+        blockSorter = new CudaSort(context, new BlockSortTrait(), numAtomBlocks, false);
         vector<unsigned int> count(2, 0);
         interactionCount.upload(count);
         rebuildNeighborList.upload(&count[0]);
@@ -336,7 +335,11 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         findBlockBoundsArgs.push_back(&blockCenter.getDevicePointer());
         findBlockBoundsArgs.push_back(&blockBoundingBox.getDevicePointer());
         findBlockBoundsArgs.push_back(&rebuildNeighborList.getDevicePointer());
-        findBlockBoundsArgs.push_back(&sortedBlocks.getDevicePointer());
+        findBlockBoundsArgs.push_back(&blockSizeRange.getDevicePointer());
+        computeSortKeysArgs.push_back(&blockBoundingBox.getDevicePointer());
+        computeSortKeysArgs.push_back(&sortedBlocks.getDevicePointer());
+        computeSortKeysArgs.push_back(&blockSizeRange.getDevicePointer());
+        computeSortKeysArgs.push_back(&numBlockSizes);
         sortBoxDataArgs.push_back(&sortedBlocks.getDevicePointer());
         sortBoxDataArgs.push_back(&blockCenter.getDevicePointer());
         sortBoxDataArgs.push_back(&blockBoundingBox.getDevicePointer());
@@ -417,9 +420,9 @@ void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
 
     if (lastCutoff != kernels.cutoffDistance)
         forceRebuildNeighborList = true;
-    context.executeKernel(kernels.findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtoms());
-    if (!useLargeBlocks)
-        blockSorter->sort(sortedBlocks);
+    context.executeKernel(kernels.findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtomBlocks());
+    context.executeKernel(kernels.computeSortKeysKernel, &computeSortKeysArgs[0], context.getNumAtomBlocks());
+    blockSorter->sort(sortedBlocks);
     context.executeKernel(kernels.sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
     context.executeKernel(kernels.findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
     forceRebuildNeighborList = false;
@@ -530,8 +533,14 @@ void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
             defines["USE_LARGE_BLOCKS"] = "1";
         defines["MAX_EXCLUSIONS"] = context.intToString(maxExclusions);
         defines["MAX_BITS_FOR_PAIRS"] = (canUsePairList ? (context.getComputeCapability() < 8.0 ? "2" : "3") : "0");
+        int binShift = 1;
+        while (1<<binShift <= context.getNumAtomBlocks())
+            binShift++;
+        defines["BIN_SHIFT"] = context.intToString(binShift);
+        defines["BLOCK_INDEX_MASK"] = context.intToString((1<<binShift)-1);
         CUmodule interactingBlocksProgram = context.createModule(CudaKernelSources::vectorOps+CudaKernelSources::findInteractingBlocks, defines);
         kernels.findBlockBoundsKernel = context.getKernel(interactingBlocksProgram, "findBlockBounds");
+        kernels.computeSortKeysKernel = context.getKernel(interactingBlocksProgram, "computeSortKeys");
         kernels.sortBoxDataKernel = context.getKernel(interactingBlocksProgram, "sortBoxData");
         kernels.findInteractingBlocksKernel = context.getKernel(interactingBlocksProgram, "findBlocksWithInteractions");
     }
