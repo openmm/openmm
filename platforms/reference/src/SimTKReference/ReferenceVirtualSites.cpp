@@ -123,7 +123,8 @@ void ReferenceVirtualSites::computePositions(const OpenMM::System& system, vecto
 }
 
 void ReferenceVirtualSites::distributeForces(const OpenMM::System& system, const vector<OpenMM::Vec3>& atomCoordinates, vector<OpenMM::Vec3>& forces) const {
-    for (int i : order) {
+    for (auto iter = order.rbegin(); iter != order.rend(); ++iter) {
+        int i = *iter;
         Vec3 f = forces[i];
         if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
             // A two particle average.

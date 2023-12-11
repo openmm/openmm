@@ -630,6 +630,8 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     vsiteForceKernel->addArg(vsiteLocalCoordsWeights);
     vsiteForceKernel->addArg(vsiteLocalCoordsPos);
     vsiteForceKernel->addArg(vsiteLocalCoordsStartIndex);
+    vsiteForceKernel->addArg(vsiteStage);
+    vsiteForceKernel->addArg();
     for (int i = 0; i < 3; i++)
         vsiteSaveForcesKernel->addArg();
 

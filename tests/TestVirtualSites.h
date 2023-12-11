@@ -494,15 +494,22 @@ void testNestedSites() {
     system.setVirtualSite(2, new TwoParticleAverageSite(0, 4, 0.5, 0.5));
     system.setVirtualSite(1, new TwoParticleAverageSite(0, 2, 0.5, 0.5));
     system.setVirtualSite(3, new TwoParticleAverageSite(2, 4, 0.5, 0.5));
+    CustomExternalForce* force = new CustomExternalForce("-c*x");
+    force->addPerParticleParameter("c");
+    force->addParticle(1, {1.0});
+    force->addParticle(3, {2.0});
+    system.addForce(force);
     vector<Vec3> positions(5);
     positions[4] = Vec3(0, 0, 4.0);
     VerletIntegrator integrator(0.002);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.computeVirtualSites();
-    State state = context.getState(State::Positions);
+    State state = context.getState(State::Positions | State::Forces);
     for (int i = 0; i < 5; i++)
         ASSERT_EQUAL_VEC(Vec3(0, 0, i), state.getPositions()[i], 1e-6);
+    ASSERT_EQUAL_VEC(Vec3(1*0.75 + 2*0.25, 0, 0), state.getForces()[0], 1e-6);
+    ASSERT_EQUAL_VEC(Vec3(1*0.25 + 2*0.75, 0, 0), state.getForces()[4], 1e-6);
 }
 
 void runPlatformTests();
