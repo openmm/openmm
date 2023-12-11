@@ -482,6 +482,29 @@ void testOverlappingSites() {
         ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], 1e-5);
 }
 
+/**
+ * Test virtual sites that depend on other virtual sites.
+ */
+void testNestedSites() {
+    System system;
+    system.addParticle(1.0);
+    for (int i = 0; i < 3; i++)
+        system.addParticle(0.0);
+    system.addParticle(1.0);
+    system.setVirtualSite(2, new TwoParticleAverageSite(0, 4, 0.5, 0.5));
+    system.setVirtualSite(1, new TwoParticleAverageSite(0, 2, 0.5, 0.5));
+    system.setVirtualSite(3, new TwoParticleAverageSite(2, 4, 0.5, 0.5));
+    vector<Vec3> positions(5);
+    positions[4] = Vec3(0, 0, 4.0);
+    VerletIntegrator integrator(0.002);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.computeVirtualSites();
+    State state = context.getState(State::Positions);
+    for (int i = 0; i < 5; i++)
+        ASSERT_EQUAL_VEC(Vec3(0, 0, i), state.getPositions()[i], 1e-6);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -496,6 +519,7 @@ int main(int argc, char* argv[]) {
         testLocalCoordinates(4);
         testConservationLaws();
         testOverlappingSites();
+        testNestedSites();
         runPlatformTests();
     }
     catch(const exception& e) {

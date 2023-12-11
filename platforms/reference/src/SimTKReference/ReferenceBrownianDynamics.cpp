@@ -27,7 +27,6 @@
 
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceBrownianDynamics.h"
-#include "ReferenceVirtualSites.h"
 #include "openmm/OpenMMException.h"
 
 #include <cstdio>
@@ -136,6 +135,6 @@ void ReferenceBrownianDynamics::update(const OpenMM::System& system, vector<Vec3
                atomCoordinates[i][j] = xPrime[i][j];
            }
    }
-   ReferenceVirtualSites::computePositions(system, atomCoordinates);
+   getVirtualSites().computePositions(system, atomCoordinates);
    incrementTimeStep();
 }

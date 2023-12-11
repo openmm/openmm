@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -104,6 +104,7 @@ ReferencePlatform::PlatformData::PlatformData(const System& system) : time(0.0),
     periodicBoxSize = new Vec3();
     periodicBoxVectors = new Vec3[3];
     constraints = new ReferenceConstraints(system);
+    virtualSites = new ReferenceVirtualSites(system);
     energyParameterDerivatives = new map<string, double>();
 }
 
@@ -114,5 +115,6 @@ ReferencePlatform::PlatformData::~PlatformData() {
     delete periodicBoxSize;
     delete[] periodicBoxVectors;
     delete constraints;
+    delete virtualSites;
     delete energyParameterDerivatives;
 }
