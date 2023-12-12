@@ -70,7 +70,7 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == CalcForcesAndEnergyKernel::Name())
         return new OpenCLCalcForcesAndEnergyKernel(name, platform, cl);
     if (name == UpdateStateDataKernel::Name())
-        return new OpenCLUpdateStateDataKernel(name, platform, cl);
+        return new CommonUpdateStateDataKernel(name, platform, cl);
     if (name == ApplyConstraintsKernel::Name())
         return new CommonApplyConstraintsKernel(name, platform, cl);
     if (name == VirtualSitesKernel::Name())

@@ -130,6 +130,12 @@ public:
      */
     virtual int getContextIndex() const = 0;
     /**
+     * Get a list of all contexts being used for the current simulation.
+     * This is relevant when a simulation is parallelized across multiple devices.  In that case,
+     * one ComputeContext is created for each device.
+     */
+    virtual std::vector<ComputeContext*> getAllContexts() = 0;
+    /**
      * Construct an uninitialized array of the appropriate class for this platform.  The returned
      * value should be created on the heap with the "new" operator.
      */
