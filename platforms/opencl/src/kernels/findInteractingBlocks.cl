@@ -112,19 +112,17 @@ __kernel void sortBoxData(__global const unsigned int* restrict sortedBlocks, __
         unsigned int index = sortedBlocks[i] & BLOCK_INDEX_MASK;
         sortedBlockCenter[i] = blockCenter[index];
         sortedBlockBoundingBox[i] = blockBoundingBox[index];
-    }
-#ifdef USE_LARGE_BLOCKS
-    // Compute the sizes of large blocks (composed of 32 regular blocks) starting from each block.
 
-    for (int i = get_global_id(0); i < NUM_BLOCKS; i += get_global_size(0)) {
-        unsigned int index = sortedBlocks[i] & BLOCK_INDEX_MASK;
+#ifdef USE_LARGE_BLOCKS
+        // Compute the sizes of large blocks (composed of 32 regular blocks) starting from each block.
+
         real4 minPos = blockCenter[index]-blockBoundingBox[index];
         real4 maxPos = blockCenter[index]+blockBoundingBox[index];
         int last = min(i+32, NUM_BLOCKS);
         for (int j = i+1; j < last; j++) {
-            index = sortedBlocks[j] & BLOCK_INDEX_MASK;
-            real4 blockPos = blockCenter[index];
-            real4 width = blockBoundingBox[index];
+            unsigned int index2 = sortedBlocks[j] & BLOCK_INDEX_MASK;
+            real4 blockPos = blockCenter[index2];
+            real4 width = blockBoundingBox[index2];
 #ifdef USE_PERIODIC
             real4 center = 0.5f*(maxPos+minPos);
             APPLY_PERIODIC_TO_POS_WITH_CENTER(blockPos, center)
@@ -134,8 +132,9 @@ __kernel void sortBoxData(__global const unsigned int* restrict sortedBlocks, __
         }
         largeBlockCenter[i] = 0.5f*(maxPos+minPos);
         largeBlockBoundingBox[i] = 0.5f*(maxPos-minPos);
-    }
 #endif
+    }
+
     // Also check whether any atom has moved enough so that we really need to rebuild the neighbor list.
 
     bool rebuild = forceRebuild;
@@ -245,6 +244,13 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                     blockDelta.y = max((real) 0, fabs(blockDelta.y)-blockSizeX.y-largeSize.y);
                     blockDelta.z = max((real) 0, fabs(blockDelta.z)-blockSizeX.z-largeSize.z);
                     includeLargeBlock = (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < PADDED_CUTOFF_SQUARED);
+#ifdef TRICLINIC
+                    // The calculation to find the nearest periodic copy is only guaranteed to work if the nearest copy is less than half a box width away.
+                    // If there's any possibility we might have missed it, do a detailed check.
+
+                    if (periodicBoxSize.z/2-blockSizeX.z-largeSize.z < PADDED_CUTOFF || periodicBoxSize.y/2-blockSizeX.y-largeSize.y < PADDED_CUTOFF)
+                        includeLargeBlock = true;
+#endif
                 }
                 largeBlockFlags[get_local_id(0)] = includeLargeBlock;
                 loadedLargeBlocks = 32;
