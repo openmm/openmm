@@ -100,6 +100,7 @@ void testWater() {
     // Simulate it and check energy conservation and the total force on the Drude particles.
 
     DrudeSCFIntegrator integ(0.0005);
+    integ.setMinimizationErrorTolerance(0.1);
     Context context(system, integ, platform);
     context.setPositions(positions);
     context.applyConstraints(1e-5);
