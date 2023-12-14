@@ -175,6 +175,20 @@ public:
                     weights.push_back(site.getWeight13());
                     weights.push_back(site.getWeightCross());
                 }
+                else if (dynamic_cast<const SymmetrySite*>(&vsite) != NULL) {
+                    // An out of plane site.
+
+                    const SymmetrySite& site = dynamic_cast<const SymmetrySite&>(vsite);
+                    Vec3 Rx, Ry, Rz, offset;
+                    site.getRotationMatrix(Rx, Ry, Rz);
+                    offset = site.getOffsetVector();
+                    for (int j = 0; j < 3; j++) {
+                        weights.push_back(Rx[j]);
+                        weights.push_back(Ry[j]);
+                        weights.push_back(Rz[j]);
+                        weights.push_back(offset[j]);
+                    }
+                }
                 siteWeights.push_back(weights);
             }
         }
