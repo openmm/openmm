@@ -46,7 +46,7 @@ DrudeSCFIntegrator::DrudeSCFIntegrator(double stepSize) : DrudeIntegrator(stepSi
 {
     setDrudeTemperature(0.0);  // This is only used to initialize velocities for this integrator
     setStepSize(stepSize);
-    setMinimizationErrorTolerance(10.0);
+    setMinimizationErrorTolerance(1.0);
     setConstraintTolerance(1e-5);
     setMaxDrudeDistance(0.0);
 }
