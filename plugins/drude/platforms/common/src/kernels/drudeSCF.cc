@@ -6,14 +6,14 @@ KERNEL void minimizeDrudePositions(int numDrude, int paddedNumAtoms, float toler
         int index = drudeIndex[i];
         int4 parents = drudeParents[i];
         float4 params = drudeParams[i];
-        real4 fscale = make_real4(params.z, params.z, params.z, 0);
+        real3 fscale = make_real3(params.z, params.z, params.z);
         if (parents.y != -1) {
-            real4 dir = posq[parents.x]-posq[parents.y];
+            real3 dir = trimTo3(posq[parents.x]-posq[parents.y]);
             dir *= RSQRT(dot(dir, dir));
             fscale += params.x*dir;
         }
         if (parents.z != -1 && parents.w != -1) {
-            real4 dir = posq[parents.z]-posq[parents.w];
+            real3 dir = trimTo3(posq[parents.z]-posq[parents.w]);
             dir *= RSQRT(dot(dir, dir));
             fscale += params.y*dir;
         }

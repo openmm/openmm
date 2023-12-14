@@ -438,7 +438,7 @@ void CommonIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const Drud
         kernel2->addArg(integration.getPosDelta());
         if (cc.getUseMixedPrecision())
             kernel2->addArg(cc.getPosqCorrection());
-        minimizeKernel->addArg(drudeParams.getSize());
+        minimizeKernel->addArg((int) drudeParams.getSize());
         minimizeKernel->addArg(cc.getPaddedNumAtoms());
         minimizeKernel->addArg();
         minimizeKernel->addArg(cc.getPosq());
