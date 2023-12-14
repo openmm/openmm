@@ -413,7 +413,6 @@ void CommonIntegrateDrudeSCFStepKernel::initialize(const System& system, const D
     program = cc.compileProgram(CommonDrudeKernelSources::drudeSCF);
     minimizeKernel = program->createKernel("minimizeDrudePositions");
     prevStepSize = -1.0;
-    event = cc.createEvent();
 }
 
 void CommonIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
@@ -505,16 +504,14 @@ void CommonIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double to
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     for (int iteration = 0; iteration < 50; iteration++) {
         context.calcForcesAndEnergy(true, false, context.getIntegrator().getIntegrationForceGroups());
-        cc.getLongForceBuffer().download(forces, false);
-        event->enqueue();
         minimizeKernel->execute(drudeParams.getSize());
-        event->wait();
+        cc.getLongForceBuffer().download(forces);
         double totalForce = 0;
         for (int i : drudeIndexVec) {
             Vec3 f(scale*forces[i], scale*forces[i+paddedNumAtoms], scale*forces[i+paddedNumAtoms*2]);
             totalForce += f.dot(f);
         }
-        if (sqrt(totalForce/(3*numDrude)) < tolerance || (iteration > 0 && totalForce > 0.9*lastForce))
+        if (sqrt(totalForce/(3*numDrude)) < tolerance || (iteration > 0 && totalForce > 0.9*lastForce)) 
             break;
         lastForce = totalForce;
     }

@@ -153,7 +153,6 @@ private:
     std::vector<int> drudeIndexVec;
     ComputeArray drudeParams, drudeIndices, drudeParents;
     ComputeKernel kernel1, kernel2, minimizeKernel;
-    ComputeEvent event;
 };
 
 } // namespace OpenMM
