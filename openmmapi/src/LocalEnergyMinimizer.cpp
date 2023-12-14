@@ -46,10 +46,12 @@ using namespace std;
 struct MinimizerData {
     Context& context;
     double k;
+    MinimizationReporter* reporter;
     bool checkLargeForces;
     VerletIntegrator cpuIntegrator;
     Context* cpuContext;
-    MinimizerData(Context& context, double k) : context(context), k(k), cpuIntegrator(1.0), cpuContext(NULL) {
+    MinimizerData(Context& context, double k, MinimizationReporter* reporter) :
+            context(context), k(k), reporter(reporter), cpuIntegrator(1.0), cpuContext(NULL) {
         string platformName = context.getPlatform().getName();
         checkLargeForces = (platformName == "CUDA" || platformName == "OpenCL" || platformName == "HIP" || platformName == "Metal");
     }
@@ -151,7 +153,49 @@ static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsf
     return energy;
 }
 
-void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxIterations) {
+static int report(void *instance, const lbfgsfloatval_t *x, const lbfgsfloatval_t *g, const lbfgsfloatval_t fx,
+        const lbfgsfloatval_t xnorm, const lbfgsfloatval_t gnorm, const lbfgsfloatval_t step, int n, int iteration, int ls) {
+    // Copy over the positions and gradients.
+
+    vector<double> xout(n), gradout(n);
+    for (int i = 0; i < n; i++) {
+        xout[i] = x[i];
+        gradout[i] = g[i];
+    }
+
+    // Compute the other arguments passed to the reporter.
+
+    MinimizerData* data = reinterpret_cast<MinimizerData*>(instance);
+    Context& context = data->context;
+    const System& system = context.getSystem();
+    double restraintEnergy = 0.0, maxError = 0.0;
+    double k = data->k;
+    for (int i = 0; i < system.getNumConstraints(); i++) {
+        int p1, p2;
+        double distance;
+        system.getConstraintParameters(i, p1, p2, distance);
+        Vec3 delta(x[3*p1]-x[3*p2], x[3*p1+1]-x[3*p2+1], x[3*p1+2]-x[3*p2+2]);
+        double r2 = delta.dot(delta);
+        double r = sqrt(r2);
+        double dr = r-distance;
+        restraintEnergy += 0.5*k*dr*dr;
+        maxError = max(maxError, fabs(dr)/distance);
+    }
+    map<string, double> args;
+    args["restraint energy"] = restraintEnergy;
+    args["system energy"] = fx-restraintEnergy;
+    args["restraint strength"] = k;
+    args["max constraint error"] = maxError;
+
+    // Invoke the reporter.
+
+    MinimizationReporter* reporter = reinterpret_cast<MinimizationReporter*>(data->reporter);
+    if (reporter->report(iteration-1, xout, gradout, args))
+        return 1;
+    return 0;
+}
+
+void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxIterations, MinimizationReporter* reporter) {
     const System& system = context.getSystem();
     int numParticles = system.getNumParticles();
     double constraintTol = context.getIntegrator().getConstraintTolerance();
@@ -192,12 +236,13 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
         // Repeatedly minimize, steadily increasing the strength of the springs until all constraints are satisfied.
 
         double prevMaxError = 1e10;
-        MinimizerData data(context, k);
+        MinimizerData data(context, k, reporter);
         while (true) {
             // Perform the minimization.
 
             lbfgsfloatval_t fx;
-            lbfgs(numParticles*3, x, &fx, evaluate, NULL, &data, &param);
+            lbfgs_progress_t reportFn = (reporter == NULL ? NULL : report);
+            lbfgs(numParticles*3, x, &fx, evaluate, reportFn, &data, &param);
 
             // Check whether all constraints are satisfied.
 
@@ -210,7 +255,7 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
                 system.getConstraintParameters(i, particle1, particle2, distance);
                 Vec3 delta = positions[particle2]-positions[particle1];
                 double r = sqrt(delta.dot(delta));
-                double error = fabs(r-distance);
+                double error = fabs(r-distance)/distance;
                 if (error > maxError)
                     maxError = error;
             }

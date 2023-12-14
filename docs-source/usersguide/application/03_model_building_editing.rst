@@ -129,8 +129,8 @@ water models:
 
     modeller.addSolvent(forcefield, model='tip5p')
 
-Allowed values for the :code:`model` option are ``'tip3p'``, ``'tip3pfb'``, ``'spce'``,
-``'tip4pew'``, ``'tip4pfb'``, and ``'tip5p'``.  Be sure to include the single quotes
+Allowed values for the :code:`model` option are ``'tip3p'``, ``'spce'``,
+``'tip4pew'``, ``'tip5p'``, and ``'swm4ndp'``.  Be sure to include the single quotes
 around the value.
 
 Another option is to add extra ion pairs to give a desired total ionic strength.

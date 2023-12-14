@@ -123,7 +123,7 @@ class Simulation(object):
     def currentStep(self, step):
         self.context.setStepCount(step)
 
-    def minimizeEnergy(self, tolerance=10*unit.kilojoules_per_mole/unit.nanometer, maxIterations=0):
+    def minimizeEnergy(self, tolerance=10*unit.kilojoules_per_mole/unit.nanometer, maxIterations=0, reporter=None):
         """Perform a local energy minimization on the system.
 
         Parameters
@@ -136,8 +136,11 @@ class Simulation(object):
             The maximum number of iterations to perform.  If this is 0,
             minimization is continued until the results converge without regard
             to how many iterations it takes.
+        reporter : MinimizationReporter = None
+            an optional reporter to invoke after each iteration.  This can be used to monitor the progress
+            of minimization or to stop minimization early.
         """
-        mm.LocalEnergyMinimizer.minimize(self.context, tolerance, maxIterations)
+        mm.LocalEnergyMinimizer.minimize(self.context, tolerance, maxIterations, reporter)
 
     def step(self, steps):
         """Advance the simulation by integrating a specified number of time steps."""

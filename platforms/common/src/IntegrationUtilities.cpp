@@ -75,7 +75,7 @@ struct IntegrationUtilities::ShakeCluster {
     }
 };
 
-struct IntegrationUtilities::ConstraintOrderer : public binary_function<int, int, bool> {
+struct IntegrationUtilities::ConstraintOrderer {
     const vector<int>& atom1;
     const vector<int>& atom2;
     const vector<int>& constraints;

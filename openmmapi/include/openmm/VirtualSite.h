@@ -70,8 +70,8 @@ private:
 
 /**
  * This is a VirtualSite that computes the particle location as a weighted average
- * of two other particle's locations.  Assuming the weights add up to 1, this means
- * the virtual site is on the line passing through the two particles.
+ * of two other particle's locations.  This means the virtual site is on the
+ * line passing through the two particles.
  */
 class OPENMM_EXPORT TwoParticleAverageSite : public VirtualSite {
 public:
@@ -81,8 +81,8 @@ public:
      * 
      * @param particle1    the index of the first particle
      * @param particle2    the index of the second particle
-     * @param weight1      the weight factor (between 0 and 1) for the first particle
-     * @param weight2      the weight factor (between 0 and 1) for the second particle
+     * @param weight1      the weight factor (typically between 0 and 1) for the first particle
+     * @param weight2      the weight factor (typically between 0 and 1) for the second particle
      */
     TwoParticleAverageSite(int particle1, int particle2, double weight1, double weight2);
     /**
@@ -98,8 +98,8 @@ private:
 
 /**
  * This is a VirtualSite that computes the particle location as a weighted average
- * of three other particle's locations.  Assuming the weights add up to 1, this means
- * the virtual site is in the plane of the three particles.
+ * of three other particle's locations.  This means the virtual site is in the
+ * plane of the three particles.
  */
 class OPENMM_EXPORT ThreeParticleAverageSite : public VirtualSite {
 public:
@@ -110,9 +110,9 @@ public:
      * @param particle1    the index of the first particle
      * @param particle2    the index of the second particle
      * @param particle3    the index of the third particle
-     * @param weight1      the weight factor (between 0 and 1) for the first particle
-     * @param weight2      the weight factor (between 0 and 1) for the second particle
-     * @param weight3      the weight factor (between 0 and 1) for the third particle
+     * @param weight1      the weight factor (typically between 0 and 1) for the first particle
+     * @param weight2      the weight factor (typically between 0 and 1) for the second particle
+     * @param weight3      the weight factor (typically between 0 and 1) for the third particle
      */
     ThreeParticleAverageSite(int particle1, int particle2, int particle3, double weight1, double weight2, double weight3);
     /**
@@ -136,7 +136,8 @@ private:
  * r<sub>1</sub> + w<sub>12</sub>r<sub>12</sub> + w<sub>13</sub>r<sub>13</sub> + w<sub>cross</sub>(r<sub>12</sub> x r<sub>13</sub>)
  * 
  * The three weight factors are user-specified.  This allows the virtual site location
- * to be out of the plane of the three particles.
+ * to be out of the plane of the three particles. Note that while w<sub>12</sub> and
+ * w<sub>13</sub> are unitless, w<sub>cross</sub> has units of inverse distance.
  */
 class OPENMM_EXPORT OutOfPlaneSite : public VirtualSite {
 public:

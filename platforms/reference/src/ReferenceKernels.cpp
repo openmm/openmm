@@ -2970,7 +2970,7 @@ void ReferenceCalcATMForceKernel::initialize(const System& system, const ATMForc
         Vec3 displacement1, displacement0;
         force.getParticleParameters(i, displacement1, displacement0 );
         displ1[i] = displacement1;
-	displ0[i] = displacement0;
+        displ0[i] = displacement0;
     }
 }
 
@@ -3030,6 +3030,21 @@ void ReferenceCalcATMForceKernel::copyParametersToContext(ContextImpl& context, 
         Vec3 displacement1, displacement0;
         force.getParticleParameters(i, displacement1, displacement0 );
         displ1[i] = displacement1;
-	displ0[i] = displacement0;
+        displ0[i] = displacement0;
     }
+}
+
+void ReferenceCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPForceImpl& force) {
+    this->force = &force;
+    forces.resize(system.getNumParticles());
+}
+
+double ReferenceCalcCustomCPPForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    double energy = force->computeForce(context, posData, forces);
+    if (includeForces)
+        for (int i = 0; i < forces.size(); i++)
+            forceData[i] += forces[i];
+    return energy;
 }

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -70,7 +70,7 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == CalcForcesAndEnergyKernel::Name())
         return new OpenCLCalcForcesAndEnergyKernel(name, platform, cl);
     if (name == UpdateStateDataKernel::Name())
-        return new OpenCLUpdateStateDataKernel(name, platform, cl);
+        return new CommonUpdateStateDataKernel(name, platform, cl);
     if (name == ApplyConstraintsKernel::Name())
         return new CommonApplyConstraintsKernel(name, platform, cl);
     if (name == VirtualSitesKernel::Name())
@@ -110,7 +110,9 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     if (name == CalcCustomCVForceKernel::Name())
         return new OpenCLCalcCustomCVForceKernel(name, platform, cl);
     if (name == CalcATMForceKernel::Name())
-        return new OpenCLCalcATMForceKernel(name, platform, cl);    
+        return new OpenCLCalcATMForceKernel(name, platform, cl);
+    if (name == CalcCustomCPPForceKernel::Name())
+        return new CommonCalcCustomCPPForceKernel(name, platform, context, cl);
     if (name == CalcRMSDForceKernel::Name())
         return new CommonCalcRMSDForceKernel(name, platform, cl);
     if (name == CalcCustomManyParticleForceKernel::Name())

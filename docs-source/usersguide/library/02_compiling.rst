@@ -437,4 +437,4 @@ Step 3: Install local build of openmm
 =====================================
 
 Now we just install our local build of :code:`openmm` as instructed in
-:ref:`_compiling-openmm-from-source-linux`
+:ref:`compiling-openmm-from-source-linux`

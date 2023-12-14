@@ -78,12 +78,14 @@ class TestAmberPrmtopFile(unittest.TestCase):
         """Test all eight options for the constraints and rigidWater parameters."""
 
         topology = prmtop1.topology
-        for constraints_value in [None, HBonds, AllBonds, HAngles]:
-            for rigidWater_value in [True, False]:
-                system = prmtop1.createSystem(constraints=constraints_value,
-                                              rigidWater=rigidWater_value)
-                validateConstraints(self, topology, system,
-                                    constraints_value, rigidWater_value)
+        for constraints in [None, HBonds, AllBonds, HAngles]:
+            for rigidWater in [True, False]:
+                system = prmtop1.createSystem(constraints=constraints, rigidWater=rigidWater)
+                if constraints != None:
+                    # Amber adds an extra "bond" between water hydrogens, so any constraint
+                    # method except None is equivalent to rigidWater=True.
+                    rigidWater = True
+                validateConstraints(self, topology, system, constraints, rigidWater)
 
     def test_ImplicitSolvent(self):
         """Test the four types of implicit solvents using the implicitSolvent
@@ -459,6 +461,17 @@ class TestAmberPrmtopFile(unittest.TestCase):
             integrator = VerletIntegrator(0.001*picoseconds)
             # If a constraint was added to a massless particle, this will throw an exception.
             context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+
+    def testWaterBonds(self):
+        """Test that water molecules have the right set of bonds"""
+        top = prmtop1.topology
+        for residue in top.residues():
+            if residue.name == 'HOH':
+                bonds = list(residue.bonds())
+                self.assertEqual(2, len(bonds))
+                for a1, a2 in bonds:
+                    self.assertTrue(a1.element == elem.oxygen or a2.element == elem.oxygen)
+                    self.assertTrue(a1.element == elem.hydrogen or a2.element == elem.hydrogen)
 
 if __name__ == '__main__':
     unittest.main()

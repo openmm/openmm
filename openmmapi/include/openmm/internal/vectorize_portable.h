@@ -1,5 +1,5 @@
-#ifndef OPENMM_VECTORIZE_PNACL_H_
-#define OPENMM_VECTORIZE_PNACL_H_
+#ifndef OPENMM_VECTORIZE_PORTABLE_H_
+#define OPENMM_VECTORIZE_PORTABLE_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -362,7 +362,7 @@ static inline fvec4 operator/(float v1, fvec4 v2) {
 // Operations for blending fvec4s based on an ivec4.
 
 static inline fvec4 blend(fvec4 v1, fvec4 v2, __m128i mask) {
-    return (__m128) ((mask&(__m128i)v2) + ((ivec4(0xFFFFFFFF)-ivec4(mask))&(__m128i)v1));
+    return mask ? v2.val : v1.val;
 }
 
 static inline fvec4 blendZero(fvec4 v, ivec4 mask) {
@@ -454,5 +454,5 @@ static inline fvec4 reduceToVec3(fvec4 x, fvec4 y, fvec4 z) {
     return fvec4(nx, ny, nz, 0.0);
 }
 
-#endif /*OPENMM_VECTORIZE_PNACL_H_*/
+#endif /*OPENMM_VECTORIZE_PORTABLE_H_*/
 
