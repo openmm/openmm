@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -384,18 +384,29 @@ double ReferenceIntegrateDrudeLangevinStepKernel::computeKineticEnergy(ContextIm
 }
 
 ReferenceIntegrateDrudeSCFStepKernel::~ReferenceIntegrateDrudeSCFStepKernel() {
-    if (minimizerPos != NULL)
-        lbfgs_free(minimizerPos);
 }
 
 void ReferenceIntegrateDrudeSCFStepKernel::initialize(const System& system, const DrudeSCFIntegrator& integrator, const DrudeForce& force) {
-    // Identify Drude particles.
-    
-    for (int i = 0; i < force.getNumParticles(); i++) {
-        int p, p1, p2, p3, p4;
+    // Record information about the drude particles.
+
+    int numDrude = force.getNumParticles();
+    particle.resize(numDrude);
+    particle1.resize(numDrude);
+    particle2.resize(numDrude);
+    particle3.resize(numDrude);
+    particle4.resize(numDrude);
+    k1.resize(numDrude);
+    k2.resize(numDrude);
+    k3.resize(numDrude);
+    for (int i = 0; i < numDrude; i++) {
         double charge, polarizability, aniso12, aniso34;
-        force.getParticleParameters(i, p, p1, p2, p3, p4, charge, polarizability, aniso12, aniso34);
-        drudeParticles.push_back(p);
+        force.getParticleParameters(i, particle[i], particle1[i], particle2[i], particle3[i], particle4[i], charge, polarizability, aniso12, aniso34);
+        double a1 = (particle2[i] == -1 ? 1 : aniso12);
+        double a2 = (particle3[i] == -1 || particle4[i] == -1 ? 1 : aniso34);
+        double a3 = 3-a1-a2;
+        k3[i] = ONE_4PI_EPS0*charge*charge/(polarizability*a3);
+        k1[i] = ONE_4PI_EPS0*charge*charge/(polarizability*a1) - k3[i];
+        k2[i] = ONE_4PI_EPS0*charge*charge/(polarizability*a2) - k3[i];
     }
 
     // Record particle masses.
@@ -406,16 +417,6 @@ void ReferenceIntegrateDrudeSCFStepKernel::initialize(const System& system, cons
         particleMass.push_back(mass);
         particleInvMass.push_back(mass == 0.0 ? 0.0 : 1.0/mass);
     }
-    
-    // Initialize the energy minimizer.
-    
-    minimizerPos = lbfgs_malloc(drudeParticles.size()*3);
-    if (minimizerPos == NULL)
-        throw OpenMMException("DrudeSCFIntegrator: Failed to allocate memory");
-    lbfgs_parameter_init(&minimizerParams);
-    minimizerParams.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;
-    if (sizeof(double) < 8)
-        minimizerParams.xtol = 1e-7;
 }
 
 void ReferenceIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const DrudeSCFIntegrator& integrator) {
@@ -461,54 +462,40 @@ double ReferenceIntegrateDrudeSCFStepKernel::computeKineticEnergy(ContextImpl& c
     return computeShiftedKineticEnergy(context, particleInvMass, 0.5*integrator.getStepSize());
 }
 
-struct MinimizerData {
-    ContextImpl& context;
-    vector<int>& drudeParticles;
-    MinimizerData(ContextImpl& context, vector<int>& drudeParticles) : context(context), drudeParticles(drudeParticles) {}
-};
-
-static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step) {
-    MinimizerData* data = reinterpret_cast<MinimizerData*>(instance);
-    ContextImpl& context = data->context;
-    vector<int>& drudeParticles = data->drudeParticles;
-    int numDrudeParticles = drudeParticles.size();
-
-    // Compute the force and energy for this configuration.
-
+void ReferenceIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tolerance) {
     vector<Vec3>& pos = extractPositions(context);
     vector<Vec3>& force = extractForces(context);
-    for (int i = 0; i < numDrudeParticles; i++)
-        pos[drudeParticles[i]] = Vec3(x[3*i], x[3*i+1], x[3*i+2]);
-    double energy = context.calcForcesAndEnergy(true, true, context.getIntegrator().getIntegrationForceGroups());
-    for (int i = 0; i < numDrudeParticles; i++) {
-        Vec3 f = force[drudeParticles[i]];
-        g[3*i] = -f[0];
-        g[3*i+1] = -f[1];
-        g[3*i+2] = -f[2];
+    int numDrude = particle.size();
+    double lastForce = 0;
+    for (int iteration = 0; iteration < 50; iteration++) {
+        context.calcForcesAndEnergy(true, false, context.getIntegrator().getIntegrationForceGroups());
+        double totalForce = 0;
+        for (int i = 0; i < numDrude; i++) {
+            int p = particle[i];
+            int p1 = particle1[i];
+            int p2 = particle2[i];
+            int p3 = particle3[i];
+            int p4 = particle4[i];
+            Vec3 fscale(k3[i], k3[i], k3[i]);
+            if (p2 != -1) {
+                Vec3 dir = pos[p1]-pos[p2];
+                dir /= sqrt(dir.dot(dir));;
+                fscale += k1[i]*dir;
+            }
+            if (p3 != -1 && p4 != -1) {
+                Vec3 dir = pos[p3]-pos[p4];
+                dir /= sqrt(dir.dot(dir));;
+                fscale += k2[i]*dir;
+            }
+            Vec3 f = force[p];
+            double f2 = f.dot(f);
+            totalForce += f2;
+            double damping = (sqrt(f2) > 10*tolerance ? 0.5 : 1.0);
+            for (int i = 0; i < 3; i++)
+                pos[p][i] += damping*f[i]/fscale[i];
+        }
+        if (sqrt(totalForce/(3*numDrude)) < tolerance || (iteration > 0 && totalForce > 0.9*lastForce))
+            break;
+        lastForce = totalForce;
     }
-    return energy;
-}
-
-void ReferenceIntegrateDrudeSCFStepKernel::minimize(ContextImpl& context, double tolerance) {
-    // Record the initial positions and determine a normalization constant for scaling the tolerance.
-
-    vector<Vec3>& pos = extractPositions(context);
-    int numDrudeParticles = drudeParticles.size();
-    double norm = 0.0;
-    for (int i = 0; i < numDrudeParticles; i++) {
-        Vec3 p = pos[drudeParticles[i]];
-        minimizerPos[3*i] = p[0];
-        minimizerPos[3*i+1] = p[1];
-        minimizerPos[3*i+2] = p[2];
-        norm += p.dot(p);
-    }
-    norm /= numDrudeParticles;
-    norm = (norm < 1 ? 1 : sqrt(norm));
-    minimizerParams.epsilon = tolerance/norm;
-    
-    // Perform the minimization.
-
-    lbfgsfloatval_t fx;
-    MinimizerData data(context, drudeParticles);
-    lbfgs(numDrudeParticles*3, minimizerPos, &fx, evaluate, NULL, &data, &minimizerParams);
 }

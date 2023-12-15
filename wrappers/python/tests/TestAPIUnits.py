@@ -1050,10 +1050,10 @@ class TestAPIUnits(unittest.TestCase):
         integrator = DrudeSCFIntegrator(0.002)
         self.assertEqual(integrator.getStepSize(), 0.002*picoseconds)
         self.assertAlmostEqualUnit(integrator.getMinimizationErrorTolerance(),
-                                   0.1*kilojoule_per_mole/nanometer)
-        integrator.setMinimizationErrorTolerance(1*kilocalorie_per_mole/angstrom)
+                                   1*kilojoule_per_mole/nanometer)
+        integrator.setMinimizationErrorTolerance(0.1*kilocalorie_per_mole/angstrom)
         self.assertAlmostEqualUnit(integrator.getMinimizationErrorTolerance(),
-                                   1*kilocalorie_per_mole/angstrom)
+                                   0.1*kilocalorie_per_mole/angstrom)
 
     def testDrudeLangevinIntegrator(self):
         """ Tests the DrudeLangevinIntegrator API features """
