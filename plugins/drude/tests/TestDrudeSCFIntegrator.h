@@ -132,7 +132,7 @@ void testWater() {
     }
 }
 
-void testInitialTemperature() {
+void testInitialTemperature(double drudeMass) {
     // Check temperature initialization for a collection of randomly placed particles
     const int numRealParticles = 50000;
     const int numParticles = 2 * numRealParticles;
@@ -140,7 +140,6 @@ void testInitialTemperature() {
     const double targetTemperature = 300;
     const double drudeTemperature = 0;
     const double realMass = 10;
-    const double drudeMass = 1;
     System system;
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
@@ -196,7 +195,8 @@ int main(int argc, char* argv[]) {
         setupKernels(argc, argv);
         testWater();
         runPlatformTests();
-        testInitialTemperature();
+        testInitialTemperature(0);
+        testInitialTemperature(1);
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
