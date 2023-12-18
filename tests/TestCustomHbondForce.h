@@ -204,13 +204,8 @@ void testVectorAngle() {
         State s1 = c1.getState(State::Forces | State::Energy);
         State s2 = c2.getState(State::Forces | State::Energy);
         for (int j = 0; j < customSystem.getNumParticles(); j++) {
-            std::cout << "Particle " << j << ": Positions = " << positions[j] << std::endl;
-        }
-        for (int j = 0; j < customSystem.getNumParticles(); j++) {
-            std::cout << "Particle " << j << ": Force Reference = " << s2.getForces()[j] << ", Custom = " << s1.getForces()[j] << std::endl;
             ASSERT_EQUAL_VEC(s2.getForces()[j], s1.getForces()[j], TOL);
         }
-        std::cout << "Potential Energy Reference = " << s2.getPotentialEnergy() << ", Custom = " << s1.getPotentialEnergy() << std::endl;
         ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
         
     }
@@ -222,7 +217,7 @@ void testVectorAngle() {
     expected[2] = Vec3(0.0,0.0,0.0);
     expected[3] = Vec3(0.0,0.0,0.0);
 
-    std::cout << "Anti-Parallel vectors" << std::endl;
+    // Anti-Parallel
     positions[0] = Vec3(0.0,0.0,0.0);
     positions[1] = Vec3(0.0,0.0,1.0);
     positions[2] = Vec3(0.0,0.0,0.0);
@@ -230,24 +225,20 @@ void testVectorAngle() {
     c1.setPositions(positions);
     State s1 = c1.getState(State::Forces | State::Energy);
     for (int j = 0; j < customSystem.getNumParticles(); j++) {
-        std::cout << "Particle " << j << " Custom = " << s1.getForces()[j] << std::endl;
         ASSERT_EQUAL_VEC(expected[j], s1.getForces()[j], TOL);
     }
-    std::cout << "Potential Energy " << s1.getPotentialEnergy() << std::endl;
     ASSERT_EQUAL_TOL(M_PI_2, s1.getPotentialEnergy(), TOL);
 
-    std::cout << "Parallel vectors" << std::endl;
+    // Parallel
     positions[3] = Vec3(0.0,0.0,1.0);
     c1.setPositions(positions);
     s1 = c1.getState(State::Forces | State::Energy);
     for (int j = 0; j < customSystem.getNumParticles(); j++) {
-        std::cout << "Particle " << j << " Custom = " << s1.getForces()[j] << std::endl;
         ASSERT_EQUAL_VEC(expected[j], s1.getForces()[j], TOL);
     }
-    std::cout << "Potential Energy " << s1.getPotentialEnergy() << std::endl;
     ASSERT_EQUAL_TOL(-M_PI_2, s1.getPotentialEnergy(), TOL);
 
-    std::cout << "90degrees vectors" << std::endl;
+    // 90 degrees
     positions[3] = Vec3(0.0,1.0,0.0);
     expected[0] = Vec3(0.0,-1.0,0.0);
     expected[1] = Vec3(0.0,1.0,0.0);
@@ -257,13 +248,11 @@ void testVectorAngle() {
     c1.setPositions(positions);
     s1 = c1.getState(State::Forces | State::Energy);
     for (int j = 0; j < customSystem.getNumParticles(); j++) {
-        std::cout << "Particle " << j << " Custom = " << s1.getForces()[j] << std::endl;
         ASSERT_EQUAL_VEC(expected[j], s1.getForces()[j], TOL);
     }
-    std::cout << "Potential Energy " << s1.getPotentialEnergy() << std::endl;
     ASSERT_EQUAL_TOL(0, s1.getPotentialEnergy(), TOL);
 
-    std::cout << "-90degrees vectors" << std::endl;
+    // -90 degrees
     positions[3] = Vec3(0.0,-1.0,0.0);
     expected[0] = Vec3(0.0,1.0,0.0);
     expected[1] = Vec3(0.0,-1.0,0.0);
@@ -272,10 +261,8 @@ void testVectorAngle() {
     c1.setPositions(positions);
     s1 = c1.getState(State::Forces | State::Energy);
     for (int j = 0; j < customSystem.getNumParticles(); j++) {
-        std::cout << "Particle " << j << " Custom = " << s1.getForces()[j] << std::endl;
         ASSERT_EQUAL_VEC(expected[j], s1.getForces()[j], TOL);
     }
-    std::cout << "Potential Energy " << s1.getPotentialEnergy() << std::endl;
     ASSERT_EQUAL_TOL(0, s1.getPotentialEnergy(), TOL);
 
 }
