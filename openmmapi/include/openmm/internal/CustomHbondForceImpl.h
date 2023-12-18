@@ -69,22 +69,24 @@ public:
      * in it, and replaces them with variables.  The particle indices returned in the maps are defined
      * as follows: 0=a1, 1=a2, 2=a3, 3=d1, 4=d2, 5=d3.
      *
-     * @param force     the CustomHbondForce to process
-     * @param functions definitions of custom function that may appear in the expression
-     * @param distances on exit, this will contain an entry for each distance used in the expression.  The key is the name
-     *                  of the corresponding variable, and the value is the list of particle indices.
-     * @param angles    on exit, this will contain an entry for each angle used in the expression.  The key is the name
-     *                  of the corresponding variable, and the value is the list of particle indices.
-     * @param dihedrals on exit, this will contain an entry for each dihedral used in the expression.  The key is the name
-     *                  of the corresponding variable, and the value is the list of particle indices.
-     * @return a Parsed expression for the energy
+     * @param force         the CustomHbondForce to process
+     * @param functions     definitions of custom function that may appear in the expression
+     * @param distances     on exit, this will contain an entry for each distance used in the expression.  The key is the name
+     *                      of the corresponding variable, and the value is the list of particle indices.
+     * @param angles        on exit, this will contain an entry for each angle used in the expression.  The key is the name
+     *                      of the corresponding variable, and the value is the list of particle indices.
+     * @param vectorangles  on exit, this will contain an entry for each vectorangles used in the expression.  The key is the name
+     *                      of the corresponding variable, and the value is the list of particle indices.
+     * @param dihedrals     on exit, this will contain an entry for each dihedral used in the expression.  The key is the name
+     *                      of the corresponding variable, and the value is the list of particle indices.
+     * @return              a Parsed expression for the energy
      */
     static Lepton::ParsedExpression prepareExpression(const CustomHbondForce& force, const std::map<std::string, Lepton::CustomFunction*>& functions, std::map<std::string, std::vector<int> >& distances,
-            std::map<std::string, std::vector<int> >& angles, std::map<std::string, std::vector<int> >& dihedrals);
+            std::map<std::string, std::vector<int> >& angles, std::map<std::string, std::vector<int> >& vectorangles, std::map<std::string, std::vector<int> >& dihedrals);
 private:
     class FunctionPlaceholder;
     static Lepton::ExpressionTreeNode replaceFunctions(const Lepton::ExpressionTreeNode& node, std::map<std::string, int> atoms,
-            std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles,
+            std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles, std::map<std::string, std::vector<int> >& vectorangles,
             std::map<std::string, std::vector<int> >& dihedrals, std::set<std::string>& variables);
     const CustomHbondForce& owner;
     Kernel kernel;

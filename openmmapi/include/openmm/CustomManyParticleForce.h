@@ -170,7 +170,7 @@ namespace OpenMM {
  * As seen above, the expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
  * 
  * This class also supports the functions pointdistance(x1, y1, z1, x2, y2, z2),
- * pointangle(x1, y1, z1, x2, y2, z2, x3, y3, z3), and pointdihedral(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4).
+ * pointangle(x1, y1, z1, x2, y2, z2, x3, y3, z3), pointvectorangle(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), and pointdihedral(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4).
  * These functions are similar to distance(), angle(), and dihedral(), but the arguments are the
  * coordinates of points to perform the calculation based on rather than the names of particles.
  * This enables more flexible geometric calculations.  For example, the following computes the distance

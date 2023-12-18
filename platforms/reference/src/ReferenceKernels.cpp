@@ -1769,15 +1769,16 @@ void ReferenceCalcCustomHbondForceKernel::createInteraction(const CustomHbondFor
 
     map<string, vector<int> > distances;
     map<string, vector<int> > angles;
+    map<string, vector<int> > vectorangles;
     map<string, vector<int> > dihedrals;
-    Lepton::ParsedExpression energyExpression = CustomHbondForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    Lepton::ParsedExpression energyExpression = CustomHbondForceImpl::prepareExpression(force, functions, distances, angles, vectorangles, dihedrals);
     vector<string> donorParameterNames;
     vector<string> acceptorParameterNames;
     for (int i = 0; i < force.getNumPerDonorParameters(); i++)
         donorParameterNames.push_back(force.getPerDonorParameterName(i));
     for (int i = 0; i < force.getNumPerAcceptorParameters(); i++)
         acceptorParameterNames.push_back(force.getPerAcceptorParameterName(i));
-    ixn = new ReferenceCustomHbondIxn(donorParticles, acceptorParticles, energyExpression, donorParameterNames, acceptorParameterNames, distances, angles, dihedrals);
+    ixn = new ReferenceCustomHbondIxn(donorParticles, acceptorParticles, energyExpression, donorParameterNames, acceptorParameterNames, distances, angles, vectorangles, dihedrals);
     NonbondedMethod nonbondedMethod = CalcCustomHbondForceKernel::NonbondedMethod(force.getNonbondedMethod());
     isPeriodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff)
@@ -1892,6 +1893,7 @@ void ReferenceCalcCustomCentroidBondForceKernel::createInteraction(const CustomC
 
     functions["pointdistance"] = new ReferencePointDistanceFunction(usePeriodic, &boxVectors);
     functions["pointangle"] = new ReferencePointAngleFunction(usePeriodic, &boxVectors);
+    functions["pointvectorangle"] = new ReferencePointVectorAngleFunction(usePeriodic, &boxVectors);
     functions["pointdihedral"] = new ReferencePointDihedralFunction(usePeriodic, &boxVectors);
 
     // Parse the expression and create the object used to calculate the interaction.
@@ -2009,6 +2011,7 @@ void ReferenceCalcCustomCompoundBondForceKernel::createInteraction(const CustomC
 
     functions["pointdistance"] = new ReferencePointDistanceFunction(usePeriodic, &boxVectors);
     functions["pointangle"] = new ReferencePointAngleFunction(usePeriodic, &boxVectors);
+    functions["pointvectorangle"] = new ReferencePointVectorAngleFunction(usePeriodic, &boxVectors);
     functions["pointdihedral"] = new ReferencePointDihedralFunction(usePeriodic, &boxVectors);
 
     // Parse the expression and create the object used to calculate the interaction.

@@ -4255,8 +4255,9 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
 
     map<string, vector<int> > distances;
     map<string, vector<int> > angles;
+    map<string, vector<int> > vectorangles;
     map<string, vector<int> > dihedrals;
-    Lepton::ParsedExpression energyExpression = CustomHbondForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    Lepton::ParsedExpression energyExpression = CustomHbondForceImpl::prepareExpression(force, functions, distances, angles, vectorangles, dihedrals);
     map<string, Lepton::ParsedExpression> forceExpressions;
     set<string> computedDeltas;
     computedDeltas.insert("D1A1");
@@ -4293,6 +4294,25 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         compute << "real "+angleName+" = computeAngle(delta"+deltaName1+", delta"+deltaName2+");\n";
         variables[angle.first] = angleName;
         forceExpressions["real dEdAngle"+cc.intToString(index)+" = "] = energyExpression.differentiate(angle.first).optimize();
+        index++;
+    }
+    index = 0;
+        for (auto& vectorangle : vectorangles) {
+        const vector<int>& atoms = vectorangle.second;
+        string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
+        string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[3]];
+        string vectorangleName = "vectorangle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]]+atomNames[atoms[3]];
+        if (computedDeltas.count(deltaName1) == 0) {
+            compute << "real4 delta"+deltaName1+" = delta("+atomNamesLower[atoms[1]]+", "+atomNamesLower[atoms[0]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
+            computedDeltas.insert(deltaName1);
+        }
+        if (computedDeltas.count(deltaName2) == 0) {
+            compute << "real4 delta"+deltaName2+" = delta("+atomNamesLower[atoms[2]]+", "+atomNamesLower[atoms[3]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
+            computedDeltas.insert(deltaName2);
+        }
+        compute << "real "+vectorangleName+" = computeAngle(delta"+deltaName1+", delta"+deltaName2+");\n";
+        variables[vectorangle.first] = vectorangleName;
+        forceExpressions["real dEdVectorAngle"+cc.intToString(index)+" = "] = energyExpression.differentiate(vectorangle.first).optimize();
         index++;
     }
     index = 0;
@@ -4370,6 +4390,25 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         applyDonorAndAcceptorForces(compute, atoms[0], "deltaCross0", false);
         applyDonorAndAcceptorForces(compute, atoms[1], "deltaCross1", false);
         applyDonorAndAcceptorForces(compute, atoms[2], "deltaCross2", false);
+        compute << "}\n";
+        index++;
+    }
+    index = 0;
+    for (auto& vectorangle : vectorangles) {
+        const vector<int>& atoms = vectorangle.second;
+        string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
+        string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[3]];
+        compute << "{\n";
+        compute << "real3 crossProd = trimTo3(cross(delta"+deltaName2+", delta"+deltaName1+"));\n";
+        compute << "real lengthCross = max(SQRT(dot(crossProd,crossProd)), (real) 1e-6f);\n";
+        compute << "real3 deltaCross0 = -cross(trimTo3(delta"+deltaName1+"), crossProd)*dEdVectorAngle"+cc.intToString(index)+"/(delta"+deltaName1+".w*lengthCross);\n";
+        compute << "real3 deltaCross3 = cross(trimTo3(delta"+deltaName2+"), crossProd)*dEdVectorAngle"+cc.intToString(index)+"/(delta"+deltaName2+".w*lengthCross);\n";
+        compute << "real3 deltaCross1 = -deltaCross0;\n";
+        compute << "real3 deltaCross2 = -deltaCross3;\n";
+        applyDonorAndAcceptorForces(compute, atoms[0], "deltaCross0", false);
+        applyDonorAndAcceptorForces(compute, atoms[1], "deltaCross1", false);
+        applyDonorAndAcceptorForces(compute, atoms[2], "deltaCross2", false);
+        applyDonorAndAcceptorForces(compute, atoms[3], "deltaCross3", false);
         compute << "}\n";
         index++;
     }

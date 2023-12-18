@@ -200,14 +200,16 @@ map<string, double> CustomHbondForceImpl::getDefaultParameters() {
 }
 
 ParsedExpression CustomHbondForceImpl::prepareExpression(const CustomHbondForce& force, const map<string, CustomFunction*>& customFunctions, map<string, vector<int> >& distances,
-        map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals) {
+        map<string, vector<int> >& angles, map<string, vector<int> >& vectorangles, map<string, vector<int> >& dihedrals) {
     CustomHbondForceImpl::FunctionPlaceholder custom(1);
     CustomHbondForceImpl::FunctionPlaceholder distance(2);
     CustomHbondForceImpl::FunctionPlaceholder angle(3);
+    CustomHbondForceImpl::FunctionPlaceholder vectorangle(4);
     CustomHbondForceImpl::FunctionPlaceholder dihedral(4);
     map<string, CustomFunction*> functions = customFunctions;
     functions["distance"] = &distance;
     functions["angle"] = &angle;
+    functions["vectorangle"] = &vectorangle;
     functions["dihedral"] = &dihedral;
     ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions);
     map<string, int> atoms;
@@ -224,21 +226,21 @@ ParsedExpression CustomHbondForceImpl::prepareExpression(const CustomHbondForce&
         variables.insert(force.getPerAcceptorParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         variables.insert(force.getGlobalParameterName(i));
-    return ParsedExpression(replaceFunctions(expression.getRootNode(), atoms, distances, angles, dihedrals, variables)).optimize();
+    return ParsedExpression(replaceFunctions(expression.getRootNode(), atoms, distances, angles, vectorangles, dihedrals, variables)).optimize();
 }
 
 ExpressionTreeNode CustomHbondForceImpl::replaceFunctions(const ExpressionTreeNode& node, map<string, int> atoms,
-        map<string, vector<int> >& distances, map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals, set<string>& variables) {
+        map<string, vector<int> >& distances, map<string, vector<int> >& angles, map<string, vector<int> >& vectorangles, map<string, vector<int> >& dihedrals, set<string>& variables) {
     const Operation& op = node.getOperation();
     if (op.getId() == Operation::VARIABLE && variables.find(op.getName()) == variables.end())
         throw OpenMMException("CustomHBondForce: Unknown variable '"+op.getName()+"'");
-    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "dihedral"))
+    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "vectorangle" && op.getName() != "dihedral"))
     {
-        // This is not a distance, angle, or dihedral, so process its children.
+        // This is not a distance, angle, vectorangle, or dihedral, so process its children.
 
         vector<ExpressionTreeNode> children;
         for (auto& child : node.getChildren())
-            children.push_back(replaceFunctions(child, atoms, distances, angles, dihedrals, variables));
+            children.push_back(replaceFunctions(child, atoms, distances, angles, vectorangles, dihedrals, variables));
         return ExpressionTreeNode(op.clone(), children);
     }
     const Operation::Custom& custom = static_cast<const Operation::Custom&>(op);
@@ -257,22 +259,30 @@ ExpressionTreeNode CustomHbondForceImpl::replaceFunctions(const ExpressionTreeNo
     // Select a name for the variable and add it to the appropriate map.
     
     stringstream variable;
-    if (numArgs == 2)
+    if (op.getName() == "distance") {
         variable << "distance";
-    else if (numArgs == 3)
+    } else if (op.getName() == "angle") {
         variable << "angle";
-    else
+    } else if (op.getName() == "vectorangle") {
+        variable << "vectorangle";
+    } else if (op.getName() == "dihedral") {
         variable << "dihedral";
-    for (int i = 0; i < numArgs; i++)
+    }
+    for (int i = 0; i < numArgs; i++) {
         variable << indices[i];
+    }
     string name = variable.str();
-    if (numArgs == 2)
+
+    if (op.getName() == "distance") {
         distances[name] = indices;
-    else if (numArgs == 3)
+    } else if (op.getName() == "angle") {
         angles[name] = indices;
-    else
+    } else if (op.getName() == "vectorangle") {
+        vectorangles[name] = indices;
+    } else if (op.getName() == "dihedral") {
         dihedrals[name] = indices;
-    
+    }
+ 
     // Return a new node that represents it as a simple variable.
     
     return ExpressionTreeNode(new Operation::Variable(name));

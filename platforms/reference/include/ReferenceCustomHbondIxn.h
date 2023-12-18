@@ -40,6 +40,7 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
 
       class DistanceTermInfo;
       class AngleTermInfo;
+      class VectorAngleTermInfo;
       class DihedralTermInfo;
       bool cutoff;
       bool periodic;
@@ -50,6 +51,7 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
       std::vector<std::string> donorParamNames, acceptorParamNames;
       std::vector<DistanceTermInfo> distanceTerms;
       std::vector<AngleTermInfo> angleTerms;
+      std::vector<VectorAngleTermInfo> vectorangleTerms;
       std::vector<DihedralTermInfo> dihedralTerms;
 
       /**---------------------------------------------------------------------------------------
@@ -85,7 +87,8 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
        ReferenceCustomHbondIxn(const std::vector<std::vector<int> >& donorAtoms, const std::vector<std::vector<int> >& acceptorAtoms,
                                const Lepton::ParsedExpression& energyExpression, const std::vector<std::string>& donorParameterNames,
                                const std::vector<std::string>& acceptorParameterNames, const std::map<std::string, std::vector<int> >& distances,
-                               const std::map<std::string, std::vector<int> >& angles, const std::map<std::string, std::vector<int> >& dihedrals);
+                               const std::map<std::string, std::vector<int> >& angles, const std::map<std::string, std::vector<int> >& vectorangles, 
+                               const std::map<std::string, std::vector<int> >& dihedrals);
 
       /**---------------------------------------------------------------------------------------
 
@@ -180,6 +183,18 @@ public:
     mutable double delta2[ReferenceForce::LastDeltaRIndex];
     AngleTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
             name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), forceExpression(forceExpression) {
+    }
+};
+
+class ReferenceCustomHbondIxn::VectorAngleTermInfo {
+public:
+    std::string name;
+    int p1, p2, p3, p4;
+    Lepton::ExpressionProgram forceExpression;
+    mutable double delta1[ReferenceForce::LastDeltaRIndex];
+    mutable double delta2[ReferenceForce::LastDeltaRIndex];
+    VectorAngleTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
+            name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), p4(atoms[3]), forceExpression(forceExpression) {
     }
 };
 

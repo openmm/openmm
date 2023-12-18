@@ -115,8 +115,8 @@ void testHbond() {
         c2.setPositions(positions);
         State s1 = c1.getState(State::Forces | State::Energy);
         State s2 = c2.getState(State::Forces | State::Energy);
-        for (int i = 0; i < customSystem.getNumParticles(); i++)
-            ASSERT_EQUAL_VEC(s2.getForces()[i], s1.getForces()[i], TOL);
+        for (int j = 0; j < customSystem.getNumParticles(); j++)
+            ASSERT_EQUAL_VEC(s2.getForces()[j], s1.getForces()[j], TOL);
         ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
     }
     
@@ -142,6 +142,144 @@ void testHbond() {
         ASSERT_EQUAL_VEC(s2.getForces()[i], s1.getForces()[i], TOL);
     ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
 }
+
+void testVectorAngle() {
+    // Create a system using a CustomHbondForce.
+
+    System customSystem;
+    customSystem.addParticle(1.0);
+    customSystem.addParticle(1.0);
+    customSystem.addParticle(1.0);
+    customSystem.addParticle(1.0);
+    CustomHbondForce* custom = new CustomHbondForce("k*(vectorangle(d2,d1,a1,a2)-psi0)");
+    custom->addGlobalParameter("k", 1);
+    custom->addGlobalParameter("psi0", M_PI_2);
+    vector<double> parameters(0);
+    custom->addDonor(0, 1, -1, parameters);
+    custom->addAcceptor(2, 3, -1, parameters);
+    custom->setCutoffDistance(10.0);
+    customSystem.addForce(custom);
+    ASSERT(!custom->usesPeriodicBoundaryConditions());
+    ASSERT(!customSystem.usesPeriodicBoundaryConditions());
+
+    // Create an identical system without using vectorangle
+
+    System standardSystem;
+    standardSystem.addParticle(1.0);
+    standardSystem.addParticle(1.0);
+    standardSystem.addParticle(1.0);
+    standardSystem.addParticle(1.0);
+    CustomHbondForce* ref = new CustomHbondForce("k*(vangle - psi0);"
+                                                 "vangle   = acos(cost3lim);"
+                                                 "cost3lim = min(max(cost3,-0.9999),0.9999);"
+                                                 "cost3    = sin(t1)*sin(t2)*cos(phi)-cos(t1)*cos(t2);"
+                                                 "t1       = angle(d2,d1,a1);"
+                                                 "t2       = angle(d1,a1,a2);"
+                                                 "phi      = dihedral(d2,d1,a1,a2);");
+    ref->addGlobalParameter("k", 1);
+    ref->addGlobalParameter("psi0", M_PI_2);
+    ref->addDonor(0, 1, -1, parameters);
+    ref->addAcceptor(2, 3, -1, parameters);
+    ref->setCutoffDistance(10.0);
+
+    standardSystem.addForce(ref);
+    ASSERT(!ref->usesPeriodicBoundaryConditions());
+    ASSERT(!standardSystem.usesPeriodicBoundaryConditions());
+
+    // Set the atoms in various positions, and verify that both systems give identical forces and energy.
+
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    vector<Vec3> positions(4);
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context c1(customSystem, integrator1, platform);
+    Context c2(standardSystem, integrator2, platform);
+    for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < (int) positions.size(); j++)
+            positions[j] = Vec3(2.0*genrand_real2(sfmt), 2.0*genrand_real2(sfmt), 2.0*genrand_real2(sfmt));
+        c1.setPositions(positions);
+        c2.setPositions(positions);
+        State s1 = c1.getState(State::Forces | State::Energy);
+        State s2 = c2.getState(State::Forces | State::Energy);
+        for (int j = 0; j < customSystem.getNumParticles(); j++) {
+            std::cout << "Particle " << j << ": Positions = " << positions[j] << std::endl;
+        }
+        for (int j = 0; j < customSystem.getNumParticles(); j++) {
+            std::cout << "Particle " << j << ": Force Reference = " << s2.getForces()[j] << ", Custom = " << s1.getForces()[j] << std::endl;
+            ASSERT_EQUAL_VEC(s2.getForces()[j], s1.getForces()[j], TOL);
+        }
+        std::cout << "Potential Energy Reference = " << s2.getPotentialEnergy() << ", Custom = " << s1.getPotentialEnergy() << std::endl;
+        ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
+        
+    }
+
+    //Special cases where reference fails
+    vector<Vec3> expected(4);
+    expected[0] = Vec3(0.0,0.0,0.0);
+    expected[1] = Vec3(0.0,0.0,0.0);
+    expected[2] = Vec3(0.0,0.0,0.0);
+    expected[3] = Vec3(0.0,0.0,0.0);
+
+    std::cout << "Anti-Parallel vectors" << std::endl;
+    positions[0] = Vec3(0.0,0.0,0.0);
+    positions[1] = Vec3(0.0,0.0,1.0);
+    positions[2] = Vec3(0.0,0.0,0.0);
+    positions[3] = Vec3(0.0,0.0,-1.0);
+    c1.setPositions(positions);
+    State s1 = c1.getState(State::Forces | State::Energy);
+    for (int j = 0; j < customSystem.getNumParticles(); j++) {
+        std::cout << "Particle " << j << " Custom = " << s1.getForces()[j] << std::endl;
+        ASSERT_EQUAL_VEC(expected[j], s1.getForces()[j], TOL);
+    }
+    std::cout << "Potential Energy " << s1.getPotentialEnergy() << std::endl;
+    ASSERT_EQUAL_TOL(M_PI_2, s1.getPotentialEnergy(), TOL);
+
+    std::cout << "Parallel vectors" << std::endl;
+    positions[3] = Vec3(0.0,0.0,1.0);
+    c1.setPositions(positions);
+    s1 = c1.getState(State::Forces | State::Energy);
+    for (int j = 0; j < customSystem.getNumParticles(); j++) {
+        std::cout << "Particle " << j << " Custom = " << s1.getForces()[j] << std::endl;
+        ASSERT_EQUAL_VEC(expected[j], s1.getForces()[j], TOL);
+    }
+    std::cout << "Potential Energy " << s1.getPotentialEnergy() << std::endl;
+    ASSERT_EQUAL_TOL(-M_PI_2, s1.getPotentialEnergy(), TOL);
+
+    std::cout << "90degrees vectors" << std::endl;
+    positions[3] = Vec3(0.0,1.0,0.0);
+    expected[0] = Vec3(0.0,-1.0,0.0);
+    expected[1] = Vec3(0.0,1.0,0.0);
+    expected[2] = Vec3(0.0,0.0,-1.0);
+    expected[3] = Vec3(0.0,0.0,1.0);
+    
+    c1.setPositions(positions);
+    s1 = c1.getState(State::Forces | State::Energy);
+    for (int j = 0; j < customSystem.getNumParticles(); j++) {
+        std::cout << "Particle " << j << " Custom = " << s1.getForces()[j] << std::endl;
+        ASSERT_EQUAL_VEC(expected[j], s1.getForces()[j], TOL);
+    }
+    std::cout << "Potential Energy " << s1.getPotentialEnergy() << std::endl;
+    ASSERT_EQUAL_TOL(0, s1.getPotentialEnergy(), TOL);
+
+    std::cout << "-90degrees vectors" << std::endl;
+    positions[3] = Vec3(0.0,-1.0,0.0);
+    expected[0] = Vec3(0.0,1.0,0.0);
+    expected[1] = Vec3(0.0,-1.0,0.0);
+    expected[2] = Vec3(0.0,0.0,-1.0);
+    expected[3] = Vec3(0.0,0.0,1.0);
+    c1.setPositions(positions);
+    s1 = c1.getState(State::Forces | State::Energy);
+    for (int j = 0; j < customSystem.getNumParticles(); j++) {
+        std::cout << "Particle " << j << " Custom = " << s1.getForces()[j] << std::endl;
+        ASSERT_EQUAL_VEC(expected[j], s1.getForces()[j], TOL);
+    }
+    std::cout << "Potential Energy " << s1.getPotentialEnergy() << std::endl;
+    ASSERT_EQUAL_TOL(0, s1.getPotentialEnergy(), TOL);
+
+}
+
 
 void testExclusions() {
     System system;
@@ -352,6 +490,7 @@ int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         testHbond();
+        testVectorAngle();
         testExclusions();
         testCutoff();
         testCustomFunctions();

@@ -128,18 +128,23 @@ map<string, double> CustomCompoundBondForceImpl::getDefaultParameters() {
 ParsedExpression CustomCompoundBondForceImpl::prepareExpression(const CustomCompoundBondForce& force, const map<string, CustomFunction*>& customFunctions) {
     CustomCompoundBondForceImpl::FunctionPlaceholder distance(2);
     CustomCompoundBondForceImpl::FunctionPlaceholder angle(3);
+    CustomCompoundBondForceImpl::FunctionPlaceholder vectorangle(4);
     CustomCompoundBondForceImpl::FunctionPlaceholder dihedral(4);
     CustomCompoundBondForceImpl::FunctionPlaceholder pointdistance(6);
     CustomCompoundBondForceImpl::FunctionPlaceholder pointangle(9);
+    CustomCompoundBondForceImpl::FunctionPlaceholder pointvectorangle(12);
     CustomCompoundBondForceImpl::FunctionPlaceholder pointdihedral(12);
     map<string, CustomFunction*> functions = customFunctions;
     functions["distance"] = &distance;
     functions["angle"] = &angle;
+    functions["vectorangle"] = &vectorangle;
     functions["dihedral"] = &dihedral;
     if (functions.find("pointdistance") == functions.end())
         functions["pointdistance"] = &pointdistance;
     if (functions.find("pointangle") == functions.end())
         functions["pointangle"] = &pointangle;
+    if (functions.find("pointvectorangle") == functions.end())
+        functions["pointvectorangle"] = &pointvectorangle;
     if (functions.find("pointdihedral") == functions.end())
         functions["pointdihedral"] = &pointdihedral;
     ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions);
@@ -169,7 +174,7 @@ ExpressionTreeNode CustomCompoundBondForceImpl::replaceFunctions(const Expressio
     if (op.getId() == Operation::VARIABLE && variables.find(op.getName()) == variables.end())
         throw OpenMMException("CustomCompoundBondForce: Unknown variable '"+op.getName()+"'");
     vector<ExpressionTreeNode> children;
-    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "dihedral")) {
+    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "vectorangle" && op.getName() != "dihedral")) {
         // The arguments are not particle identifiers, so process its children.
 
         for (auto& child : node.getChildren())
@@ -204,6 +209,8 @@ ExpressionTreeNode CustomCompoundBondForceImpl::replaceFunctions(const Expressio
         return ExpressionTreeNode(new Operation::Custom("pointdistance", functions.at("pointdistance")->clone()), children);
     if (op.getName() == "angle")
         return ExpressionTreeNode(new Operation::Custom("pointangle", functions.at("pointangle")->clone()), children);
+    if (op.getName() == "vectorangle")
+        return ExpressionTreeNode(new Operation::Custom("pointvectorangle", functions.at("pointvectorangle")->clone()), children);
     if (op.getName() == "dihedral")
         return ExpressionTreeNode(new Operation::Custom("pointdihedral", functions.at("pointdihedral")->clone()), children);
     throw OpenMMException("Internal error.  Unexpected function '"+op.getName()+"'");

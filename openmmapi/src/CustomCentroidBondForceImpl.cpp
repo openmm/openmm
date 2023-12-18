@@ -142,18 +142,23 @@ map<string, double> CustomCentroidBondForceImpl::getDefaultParameters() {
 ParsedExpression CustomCentroidBondForceImpl::prepareExpression(const CustomCentroidBondForce& force, const map<string, CustomFunction*>& customFunctions) {
     CustomCentroidBondForceImpl::FunctionPlaceholder distance(2);
     CustomCentroidBondForceImpl::FunctionPlaceholder angle(3);
+    CustomCentroidBondForceImpl::FunctionPlaceholder vectorangle(4);
     CustomCentroidBondForceImpl::FunctionPlaceholder dihedral(4);
     CustomCentroidBondForceImpl::FunctionPlaceholder pointdistance(6);
     CustomCentroidBondForceImpl::FunctionPlaceholder pointangle(9);
+    CustomCentroidBondForceImpl::FunctionPlaceholder pointvectorangle(12);
     CustomCentroidBondForceImpl::FunctionPlaceholder pointdihedral(12);
     map<string, CustomFunction*> functions = customFunctions;
     functions["distance"] = &distance;
     functions["angle"] = &angle;
+    functions["vectorangle"] = &vectorangle;
     functions["dihedral"] = &dihedral;
     if (functions.find("pointdistance") == functions.end())
         functions["pointdistance"] = &pointdistance;
     if (functions.find("pointangle") == functions.end())
         functions["pointangle"] = &pointangle;
+    if (functions.find("pointvectorangle") == functions.end())
+        functions["pointvectorangle"] = &pointvectorangle;
     if (functions.find("pointdihedral") == functions.end())
         functions["pointdihedral"] = &pointdihedral;
     ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions);
@@ -183,7 +188,7 @@ ExpressionTreeNode CustomCentroidBondForceImpl::replaceFunctions(const Expressio
     if (op.getId() == Operation::VARIABLE && variables.find(op.getName()) == variables.end())
         throw OpenMMException("CustomCentroidBondForce: Unknown variable '"+op.getName()+"'");
     vector<ExpressionTreeNode> children;
-    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "dihedral")) {
+    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "vectorangle" && op.getName() != "dihedral")) {
         // The arguments are not group identifiers, so process its children.
 
         for (auto& child : node.getChildren())
@@ -218,6 +223,8 @@ ExpressionTreeNode CustomCentroidBondForceImpl::replaceFunctions(const Expressio
         return ExpressionTreeNode(new Operation::Custom("pointdistance", functions.at("pointdistance")->clone()), children);
     if (op.getName() == "angle")
         return ExpressionTreeNode(new Operation::Custom("pointangle", functions.at("pointangle")->clone()), children);
+    if (op.getName() == "vectorangle")
+        return ExpressionTreeNode(new Operation::Custom("pointvectorangle", functions.at("pointvectorangle")->clone()), children);
     if (op.getName() == "dihedral")
         return ExpressionTreeNode(new Operation::Custom("pointdihedral", functions.at("pointdihedral")->clone()), children);
     throw OpenMMException("Internal error.  Unexpected function '"+op.getName()+"'");
