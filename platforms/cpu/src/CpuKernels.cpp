@@ -713,7 +713,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     return energy;
 }
 
-void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+void CpuCalcNonbondedForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const NonbondedForce& force) {
     if (force.getNumParticles() != numParticles)
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
@@ -755,6 +755,10 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
     NonbondedForce::NonbondedMethod method = force.getNonbondedMethod();
     if (force.getUseDispersionCorrection() && (method == NonbondedForce::CutoffPeriodic || method == NonbondedForce::Ewald || method == NonbondedForce::PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
+}
+
+void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+    copySomeParametersToContext(0, numParticles, context, force);
 }
 
 void CpuCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {

@@ -62,6 +62,7 @@ public:
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
+    void updateSomeParametersInContext(int start, int count, ContextImpl& context);
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     /**

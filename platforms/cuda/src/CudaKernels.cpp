@@ -1038,7 +1038,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
     return energy;
 }
 
-void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+void CudaCalcNonbondedForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const NonbondedForce& force) {
     // Make sure the new parameters are acceptable.
     
     ContextSelector selector(cu);
@@ -1120,6 +1120,9 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
     cu.invalidateMolecules();
     recomputeParams = true;
 }
+
+void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+    this->copySomeParametersToContext(0, force.getNumParticles(), context, force);
 
 void CudaCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
     if (nonbondedMethod != PME)

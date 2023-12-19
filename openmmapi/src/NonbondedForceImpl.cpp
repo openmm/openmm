@@ -349,6 +349,11 @@ void NonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
     context.systemChanged();
 }
 
+void NonbondedForceImpl::updateSomeParametersInContext(int start, int count, ContextImpl& context) {
+    kernel.getAs<CalcNonbondedForceKernel>().copySomeParametersToContext(start, count, context, owner);
+    context.systemChanged();
+}
+
 void NonbondedForceImpl::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
     kernel.getAs<CalcNonbondedForceKernel>().getPMEParameters(alpha, nx, ny, nz);
 }

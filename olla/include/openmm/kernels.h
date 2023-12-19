@@ -617,6 +617,16 @@ public:
      */
     virtual void copyParametersToContext(ContextImpl& context, const NonbondedForce& force) = 0;
     /**
+     * Copy some changed parameters over to a context.
+     *
+     * @param start      the start index of the particle whose parameters to change
+     * @param count      the number of particles to change (from start:start+count)
+     * @param context    the context to copy parameters to
+     * @param force      the CustomNonbondedForce to copy the parameters from
+     */
+    virtual void copySomeParametersToContext(int start, int count, 
+                                             ContextImpl& context, const NonbondedForce& force) = 0;
+    /**
      * Get the parameters being used for PME.
      *
      * @param alpha   the separation parameter

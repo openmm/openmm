@@ -575,6 +575,11 @@ double OpenCLParallelCalcNonbondedForceKernel::execute(ContextImpl& context, boo
     return 0.0;
 }
 
+void OpenCLParallelCalcNonbondedForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const NonbondedForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
+}
+
 void OpenCLParallelCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
     for (int i = 0; i < (int) kernels.size(); i++)
         getKernel(i).copyParametersToContext(context, force);

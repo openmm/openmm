@@ -2112,15 +2112,10 @@ public:
         }
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        thread_local static vector<double> params1, params2;
-        force.getParticleParameters(particle1, params1);
-        force.getParticleParameters(particle2, params2);
-        for (int i = 0; i < (int) params1.size(); i++)
-            if (params1[i] != params2[i])
-                return false;
         if (groupsForParticle.size() > 0 && groupsForParticle[particle1] != groupsForParticle[particle2])
             return false;
-        return true;
+
+        return force.areParticlesIdentical(particle1, particle2);
     }
     int getNumParticleGroups() {
         return force.getNumExclusions();

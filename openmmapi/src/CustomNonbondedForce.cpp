@@ -191,6 +191,16 @@ void CustomNonbondedForce::getParticleParameters(int index, std::vector<double>&
     parameters = particles[index].parameters;
 }
 
+bool CustomNonbondedForce::areParticlesIdentical(int particle1, int particle2) const {
+    ASSERT_VALID_INDEX(particle1, particles);
+    ASSERT_VALID_INDEX(particle2, particles);
+
+    const auto &params1 = particles[particle1].parameters;
+    const auto &params2 = particles[particle2].parameters;
+
+    return params1 == params2;
+}
+
 void CustomNonbondedForce::setParticleParameters(int index, const vector<double>& parameters) {
     ASSERT_VALID_INDEX(index, particles);
     particles[index].parameters = parameters;

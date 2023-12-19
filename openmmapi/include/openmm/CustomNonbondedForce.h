@@ -406,6 +406,12 @@ public:
      */
     void setParticleParameters(int index, const std::vector<double>& parameters);
     /**
+     * Return whether the particles at indexes particle1 and particle2 are identical.
+     * This is faster than called getParticleParameters() for each index 
+     * and comparing the results.
+     */
+    bool areParticlesIdentical(int particle1, int particle2) const;
+    /**
      * Add a particle pair to the list of interactions that should be excluded.
      *
      * In many cases, you can use createExclusionsFromBonds() rather than adding each exclusion explicitly.
