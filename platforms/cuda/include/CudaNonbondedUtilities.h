@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -338,6 +338,7 @@ private:
     CudaArray sortedBlocks;
     CudaArray sortedBlockCenter;
     CudaArray sortedBlockBoundingBox;
+    CudaArray blockSizeRange;
     CudaArray largeBlockCenter;
     CudaArray largeBlockBoundingBox;
     CudaArray oldPositions;
@@ -345,7 +346,7 @@ private:
     CudaSort* blockSorter;
     CUevent downloadCountEvent;
     unsigned int* pinnedCountBuffer;
-    std::vector<void*> forceArgs, findBlockBoundsArgs, sortBoxDataArgs, findInteractingBlocksArgs;
+    std::vector<void*> forceArgs, findBlockBoundsArgs, computeSortKeysArgs, sortBoxDataArgs, findInteractingBlocksArgs;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
@@ -354,7 +355,7 @@ private:
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
     bool useCutoff, usePeriodic, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, canUsePairList, useLargeBlocks;
-    int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags;
+    int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks, forceThreadBlockSize, numAtoms, groupFlags, numBlockSizes;
     unsigned int maxTiles, maxSinglePairs, tilesAfterReorder;
     long long numTiles;
     std::string kernelSource;
@@ -371,6 +372,7 @@ public:
     std::string source;
     CUfunction forceKernel, energyKernel, forceEnergyKernel;
     CUfunction findBlockBoundsKernel;
+    CUfunction computeSortKeysKernel;
     CUfunction sortBoxDataKernel;
     CUfunction findInteractingBlocksKernel;
     CUfunction findInteractionsWithinBlocksKernel;

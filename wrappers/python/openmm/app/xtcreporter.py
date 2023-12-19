@@ -71,5 +71,5 @@ class XTCReporter(object):
                 self._append,
             )
         self._xtc.writeModel(
-            state.getPositions(), periodicBoxVectors=state.getPeriodicBoxVectors()
+            state.getPositions(asNumpy=True), periodicBoxVectors=state.getPeriodicBoxVectors()
         )

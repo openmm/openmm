@@ -104,12 +104,12 @@ class PDBReporter(object):
             topology = self._subsetTopology
 
             #PDBFile will convert to angstroms so do it here first instead
-            positions = state.getPositions().value_in_unit(angstroms) 
+            positions = state.getPositions(asNumpy=True).value_in_unit(angstroms)
             positions = [positions[i] for i in self._atomSubset]
 
         else:
             topology = simulation.topology
-            positions = state.getPositions()
+            positions = state.getPositions(asNumpy=True)
 
         if self._nextModel == 0:
             PDBFile.writeHeader(topology, self._out)
@@ -202,12 +202,12 @@ class PDBxReporter(PDBReporter):
             topology = self._subsetTopology
 
             #PDBFile will convert to angstroms so do it here first instead
-            positions = state.getPositions().value_in_unit(angstroms) 
+            positions = state.getPositions(asNumpy=True).value_in_unit(angstroms)
             positions = [positions[i] for i in self._atomSubset]
 
         else:
             topology = simulation.topology
-            positions = state.getPositions()
+            positions = state.getPositions(asNumpy=True)
 
         if self._nextModel == 0:
             PDBxFile.writeHeader(topology, self._out)
