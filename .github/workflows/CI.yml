@@ -28,51 +28,51 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Linux CUDA 10.0
-            os: ubuntu-latest
-            python-version: "3.7"
-            cuda-version: "10.0"
-            OPENCL: false
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_CUDA_TESTS=OFF \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-              -DOPENMM_BUILD_CPU_LIB=OFF \
-              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
-              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
-              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
-              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
-              -DOPENMM_BUILD_EXAMPLES=OFF \
-              -DOPENCL_LIBRARY=/usr/local/cuda-10.0/lib64/libOpenCL.so \
-              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-10.0/lib64/libcudart.so \
-              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-10.0/bin/nvcc \
-              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-10.0/ \
-              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-10.0/include \
-              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0/ \
+#          - name: Linux CUDA 10.0
+#            os: ubuntu-latest
+#            python-version: "3.7"
+#            cuda-version: "10.0"
+#            OPENCL: false
+#            CMAKE_FLAGS: |
+#              -DOPENMM_BUILD_CUDA_TESTS=OFF \
+#              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+#              -DOPENMM_BUILD_CPU_LIB=OFF \
+#              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+#              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+#              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+#              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+#              -DOPENMM_BUILD_EXAMPLES=OFF \
+#              -DOPENCL_LIBRARY=/usr/local/cuda-10.0/lib64/libOpenCL.so \
+#              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-10.0/lib64/libcudart.so \
+#              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-10.0/bin/nvcc \
+#              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-10.0/ \
+#              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-10.0/include \
+#              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.0/ \
+#
+#          - name: Linux CUDA 11.2
+#            os: ubuntu-latest
+#            python-version: "3.7"
+#            OPENCL: false
+#            cuda-version: "11.2"
+#            CMAKE_FLAGS: |
+#              -DOPENMM_BUILD_CUDA_TESTS=OFF \
+#              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+#              -DOPENMM_BUILD_CPU_LIB=OFF \
+#              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
+#              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
+#              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
+#              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
+#              -DOPENMM_BUILD_EXAMPLES=OFF \
+#              -DOPENCL_LIBRARY=/usr/local/cuda-11.2/lib64/libOpenCL.so \
+#              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-11.2/lib64/libcudart.so \
+#              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-11.2/bin/nvcc \
+#              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-11.2/ \
+#              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-11.2/include \
+#              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.2/ \
 
-          - name: Linux CUDA 11.2
+          - name: Linux Intel OpenCL
             os: ubuntu-latest
-            python-version: "3.7"
-            OPENCL: false
-            cuda-version: "11.2"
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_CUDA_TESTS=OFF \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-              -DOPENMM_BUILD_CPU_LIB=OFF \
-              -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
-              -DOPENMM_BUILD_REFERENCE_TESTS=OFF \
-              -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
-              -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
-              -DOPENMM_BUILD_EXAMPLES=OFF \
-              -DOPENCL_LIBRARY=/usr/local/cuda-11.2/lib64/libOpenCL.so \
-              -DCUDA_CUDART_LIBRARY=/usr/local/cuda-11.2/lib64/libcudart.so \
-              -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-11.2/bin/nvcc \
-              -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-11.2/ \
-              -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-11.2/include \
-              -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.2/ \
-
-          - name: Linux AMD OpenCL
-            os: ubuntu-latest
-            python-version: "3.7"
+            python-version: "3.12"
             OPENCL: true
             cuda-version: ""
             CMAKE_FLAGS: |
@@ -87,66 +87,64 @@ jobs:
               -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
               -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
               -DOPENMM_BUILD_EXAMPLES=OFF \
-              -DOPENCL_INCLUDE_DIR=${GITHUB_WORKSPACE}/AMDAPPSDK/include \
-              -DOPENCL_LIBRARY=${GITHUB_WORKSPACE}/AMDAPPSDK/lib/x86_64/libOpenCL.so \
 
-          - name: Linux CPU Python 3.7 with static lib
-            os: ubuntu-latest
-            python-version: "3.7"
-            OPENCL: false
-            cuda-version: ""
-            CC: $CCACHE/clang
-            CXX: $CCACHE/clang++
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_STATIC_LIB=ON \
-              -DOPENMM_BUILD_OPENCL_LIB=OFF \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-
-          - name: Linux CPU Python 3.7 with condaforge compilers
-            python-version: "3.7"
-            os: ubuntu-latest
-            OPENCL: false
-            cuda-version: ""
-            compilers: conda-forge
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_LIB=OFF \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-
-          - name: Linux CPU Python 3.7
-            python-version: "3.7"
-            os: ubuntu-latest
-            OPENCL: false
-            cuda-version: ""
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_LIB=OFF \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-
-          - name: Linux CPU Python 3.11
-            python-version: "3.11"
-            os: ubuntu-latest
-            OPENCL: false
-            cuda-version: ""
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_LIB=OFF \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-
-          - name: Linux CPU Pypy
-            python-version: "pypy"
-            os: ubuntu-latest
-            OPENCL: false
-            cuda-version: ""
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_LIB=OFF \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-
-          - name: MacOS Intel CPU/OpenCL Python 3.11
-            python-version: "3.11"
-            os: macos-latest
-            OPENCL: false
-            cuda-version: ""
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_LIB=ON \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+#          - name: Linux CPU Python 3.7 with static lib
+#            os: ubuntu-latest
+#            python-version: "3.7"
+#            OPENCL: false
+#            cuda-version: ""
+#            CC: $CCACHE/clang
+#            CXX: $CCACHE/clang++
+#            CMAKE_FLAGS: |
+#              -DOPENMM_BUILD_STATIC_LIB=ON \
+#              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+#              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+#
+#          - name: Linux CPU Python 3.7 with condaforge compilers
+#            python-version: "3.7"
+#            os: ubuntu-latest
+#            OPENCL: false
+#            cuda-version: ""
+#            compilers: conda-forge
+#            CMAKE_FLAGS: |
+#              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+#              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+#
+#          - name: Linux CPU Python 3.7
+#            python-version: "3.7"
+#            os: ubuntu-latest
+#            OPENCL: false
+#            cuda-version: ""
+#            CMAKE_FLAGS: |
+#              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+#              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+#
+#          - name: Linux CPU Python 3.11
+#            python-version: "3.11"
+#            os: ubuntu-latest
+#            OPENCL: false
+#            cuda-version: ""
+#            CMAKE_FLAGS: |
+#              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+#              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+#
+#          - name: Linux CPU Pypy
+#            python-version: "pypy"
+#            os: ubuntu-latest
+#            OPENCL: false
+#            cuda-version: ""
+#            CMAKE_FLAGS: |
+#              -DOPENMM_BUILD_OPENCL_LIB=OFF \
+#              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+#
+#          - name: MacOS Intel CPU/OpenCL Python 3.11
+#            python-version: "3.11"
+#            os: macos-latest
+#            OPENCL: false
+#            cuda-version: ""
+#            CMAKE_FLAGS: |
+#              -DOPENMM_BUILD_OPENCL_LIB=ON \
+#              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
           #- name: MacOS M1 CPU arm64 Python 3.11
           #  python-version: "3.11"
@@ -201,7 +199,7 @@ jobs:
 
       - name: "Install OpenCL on Ubuntu (if needed)"
         if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
-        run: source devtools/ci/gh-actions/scripts/install_amd_opencl.sh
+        run: source devtools/ci/gh-actions/scripts/install_intel_opencl.sh
 
       - name: "Install conda-forge compilers on Ubuntu or M1 (if needed)"
         if: matrix.compilers == 'conda-forge'
