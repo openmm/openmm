@@ -83,7 +83,7 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
     // us from sorting atom blocks by size, which leads to a slightly less efficient neighbor
     // list.  We guess based on system size which will be faster.
 
-    useLargeBlocks = (context.getNumAtoms() > 100000);
+    useLargeBlocks = (!deviceIsCpu && context.getNumAtoms() > 100000);
 
     std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
     isAMD = !deviceIsCpu && ((vendor.size() >= 3 && vendor.substr(0, 3) == "AMD") || (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc."));
