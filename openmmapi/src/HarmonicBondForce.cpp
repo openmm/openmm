@@ -69,6 +69,10 @@ void HarmonicBondForce::updateParametersInContext(Context& context) {
     dynamic_cast<HarmonicBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
 
+void HarmonicBondForce::updateSomeParametersInContext(int start, int count, Context& context) {
+    dynamic_cast<HarmonicBondForceImpl&>(getImplInContext(context)).updateSomeParametersInContext(start, count, getContextImpl(context));
+}
+
 void HarmonicBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {
     usePeriodic = periodic;
 }

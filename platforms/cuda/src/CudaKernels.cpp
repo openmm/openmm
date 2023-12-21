@@ -1123,6 +1123,7 @@ void CudaCalcNonbondedForceKernel::copySomeParametersToContext(int start, int co
 
 void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
     this->copySomeParametersToContext(0, force.getNumParticles(), context, force);
+}
 
 void CudaCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
     if (nonbondedMethod != PME)

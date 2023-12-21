@@ -252,6 +252,11 @@ void OpenCLParallelCalcHarmonicBondForceKernel::copyParametersToContext(ContextI
         getKernel(i).copyParametersToContext(context, force);
 }
 
+void OpenCLParallelCalcHarmonicBondForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicBondForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
+}
+
 class OpenCLParallelCalcCustomBondForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, CommonCalcCustomBondForceKernel& kernel, bool includeForce,
@@ -334,6 +339,11 @@ void OpenCLParallelCalcHarmonicAngleForceKernel::copyParametersToContext(Context
         getKernel(i).copyParametersToContext(context, force);
 }
 
+void OpenCLParallelCalcHarmonicAngleForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicAngleForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
+}
+
 class OpenCLParallelCalcCustomAngleForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, CommonCalcCustomAngleForceKernel& kernel, bool includeForce,
@@ -414,6 +424,11 @@ double OpenCLParallelCalcPeriodicTorsionForceKernel::execute(ContextImpl& contex
 void OpenCLParallelCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
     for (int i = 0; i < (int) kernels.size(); i++)
         getKernel(i).copyParametersToContext(context, force);
+}
+
+void OpenCLParallelCalcPeriodicTorsionForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const PeriodicTorsionForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
 }
 
 class OpenCLParallelCalcRBTorsionForceKernel::Task : public OpenCLContext::WorkTask {

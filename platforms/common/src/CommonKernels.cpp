@@ -537,31 +537,45 @@ double CommonCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool inc
     return 0.0;
 }
 
-void CommonCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
+void CommonCalcHarmonicBondForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicBondForce& force) {
     ContextSelector selector(cc);
     int numContexts = cc.getNumContexts();
     int startIndex = cc.getContextIndex()*force.getNumBonds()/numContexts;
     int endIndex = (cc.getContextIndex()+1)*force.getNumBonds()/numContexts;
     if (numBonds != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
-    if (numBonds == 0)
+    else if (start < 0 or start+count > force.getNumBonds())
+        throw OpenMMException("updateParametersInContext[bond]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+
+    if (numBonds == 0 or count == 0)
         return;
     
     // Record the per-bond parameters.
-    
-    vector<mm_float2> paramVector(numBonds);
-    for (int i = 0; i < numBonds; i++) {
+    if (startIndex >= start+count or endIndex < start)
+        // nothing to update
+        return;
+
+    start = max(0, start-startIndex);
+    count = min(count, endIndex-startIndex-start+1);
+
+    vector<mm_float2> paramVector(count);
+    for (int i = 0; i < count; i++) {
         int atom1, atom2;
         double length, k;
-        force.getBondParameters(startIndex+i, atom1, atom2, length, k);
+        force.getBondParameters(startIndex+start+i, atom1, atom2, length, k);
         paramVector[i] = mm_float2((float) length, (float) k);
     }
-    params.upload(paramVector);
+    params.uploadSubArray(paramVector.data(), start, count);
     
     // Mark that the current reordering may be invalid.
     
     cc.invalidateMolecules(info);
 }
+
+void CommonCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
+    copySomeParametersToContext(0, force.getNumBonds(), context, force);
+}
+
 class CommonCalcCustomBondForceKernel::ForceInfo : public ComputeForceInfo {
 public:
     ForceInfo(const CustomBondForce& force) : force(force) {
@@ -774,7 +788,7 @@ double CommonCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool in
     return 0.0;
 }
 
-void CommonCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+void CommonCalcHarmonicAngleForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicAngleForce& force) {
     ContextSelector selector(cc);
     int numContexts = cc.getNumContexts();
     int startIndex = cc.getContextIndex()*force.getNumAngles()/numContexts;
@@ -798,6 +812,10 @@ void CommonCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& co
     // Mark that the current reordering may be invalid.
     
     cc.invalidateMolecules();
+}
+
+void CommonCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+    copySomeParametersToContext(0, force.getNumAngles(), context, force);
 }
 
 class CommonCalcCustomAngleForceKernel::ForceInfo : public ComputeForceInfo {
@@ -1014,7 +1032,7 @@ double CommonCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool 
     return 0.0;
 }
 
-void CommonCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+void CommonCalcPeriodicTorsionForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const PeriodicTorsionForce& force) {
     ContextSelector selector(cc);
     int numContexts = cc.getNumContexts();
     int startIndex = cc.getContextIndex()*force.getNumTorsions()/numContexts;
@@ -1038,6 +1056,10 @@ void CommonCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& 
     // Mark that the current reordering may be invalid.
     
     cc.invalidateMolecules();
+}
+
+void CommonCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+    copySomeParametersToContext(0, force.getNumTorsions(), context, force);
 }
 
 class CommonCalcRBTorsionForceKernel::ForceInfo : public ComputeForceInfo {
@@ -2765,7 +2787,7 @@ void CommonCalcCustomNonbondedForceKernel::copySomeParametersToContext(int start
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
     else if (start < 0 or start+count > numParticles)
-        throw OpenMMException("updateParametersInContext: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+        throw OpenMMException("updateParametersInContext[Nonbonded]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
 
     // Record the per-particle parameters.
 

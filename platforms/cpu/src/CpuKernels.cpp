@@ -332,7 +332,7 @@ double CpuCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool inclu
     return energy;
 }
 
-void CpuCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+void CpuCalcHarmonicAngleForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicAngleForce& force) {
     if (numAngles != force.getNumAngles())
         throw OpenMMException("updateParametersInContext: The number of angles has changed");
 
@@ -347,6 +347,10 @@ void CpuCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& conte
         angleParamArray[i][0] = angle;
         angleParamArray[i][1] = k;
     }
+}
+
+void CpuCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+    copySomeParametersToContext(0, force.getNumAngles(), context, force);
 }
 
 void CpuCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
@@ -380,7 +384,7 @@ double CpuCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool inc
     return energy;
 }
 
-void CpuCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+void CpuCalcPeriodicTorsionForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const PeriodicTorsionForce& force) {
     if (numTorsions != force.getNumTorsions())
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
 
@@ -396,6 +400,10 @@ void CpuCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& con
         torsionParamArray[i][1] = phase;
         torsionParamArray[i][2] = periodicity;
     }
+}
+
+void CpuCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+    copySomeParametersToContext(0, force.getNumTorsions(), context, force);
 }
 
 void CpuCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
@@ -1032,7 +1040,7 @@ void CpuCalcCustomNonbondedForceKernel::copySomeParametersToContext(int start, i
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
     else if (start < 0 or start+count > numParticles)
-        throw OpenMMException("updateParametersInContext: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+        throw OpenMMException("updateParametersInContext[CpuNonbond]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
 
     // Record the values.
 

@@ -82,3 +82,8 @@ void PeriodicTorsionForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcPeriodicTorsionForceKernel>().copyParametersToContext(context, owner);
     context.systemChanged();
 }
+
+void PeriodicTorsionForceImpl::updateSomeParametersInContext(int start, int count, ContextImpl& context) {
+    kernel.getAs<CalcPeriodicTorsionForceKernel>().copySomeParametersToContext(start, count, context, owner);
+    context.systemChanged();
+}

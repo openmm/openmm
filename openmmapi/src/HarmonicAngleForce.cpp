@@ -71,6 +71,10 @@ void HarmonicAngleForce::updateParametersInContext(Context& context) {
     dynamic_cast<HarmonicAngleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
 
+void HarmonicAngleForce::updateSomeParametersInContext(int start, int count, Context& context) {
+    dynamic_cast<HarmonicAngleForceImpl&>(getImplInContext(context)).updateSomeParametersInContext(start, count, getContextImpl(context));
+}
+
 void HarmonicAngleForce::setUsesPeriodicBoundaryConditions(bool periodic) {
     usePeriodic = periodic;
 }

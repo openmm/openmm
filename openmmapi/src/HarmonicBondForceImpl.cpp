@@ -92,3 +92,8 @@ void HarmonicBondForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcHarmonicBondForceKernel>().copyParametersToContext(context, owner);
     context.systemChanged();
 }
+
+void HarmonicBondForceImpl::updateSomeParametersInContext(int start, int count, ContextImpl& context) {
+    kernel.getAs<CalcHarmonicBondForceKernel>().copySomeParametersToContext(start, count, context, owner);
+    context.systemChanged();
+}

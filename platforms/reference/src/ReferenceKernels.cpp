@@ -386,7 +386,7 @@ double ReferenceCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool 
     return energy;
 }
 
-void ReferenceCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
+void ReferenceCalcHarmonicBondForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicBondForce& force) {
     if (numBonds != force.getNumBonds())
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
 
@@ -403,6 +403,10 @@ void ReferenceCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& 
         bondParamArray[i][0] = length;
         bondParamArray[i][1] = k;
     }
+}
+
+void ReferenceCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
+    copySomeParametersToContext(0, force.getNumBonds(), context, force);
 }
 
 ReferenceCalcCustomBondForceKernel::~ReferenceCalcCustomBondForceKernel() {
@@ -517,7 +521,7 @@ double ReferenceCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool
     return energy;
 }
 
-void ReferenceCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+void ReferenceCalcHarmonicAngleForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicAngleForce& force) {
     if (numAngles != force.getNumAngles())
         throw OpenMMException("updateParametersInContext: The number of angles has changed");
 
@@ -532,6 +536,10 @@ void ReferenceCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl&
         angleParamArray[i][0] = angle;
         angleParamArray[i][1] = k;
     }
+}
+
+void ReferenceCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+    copySomeParametersToContext(0, force.getNumAngles(), context, force);
 }
 
 ReferenceCalcCustomAngleForceKernel::~ReferenceCalcCustomAngleForceKernel() {
@@ -649,7 +657,7 @@ double ReferenceCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bo
     return energy;
 }
 
-void ReferenceCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+void ReferenceCalcPeriodicTorsionForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const PeriodicTorsionForce& force) {
     if (numTorsions != force.getNumTorsions())
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
 
@@ -665,6 +673,10 @@ void ReferenceCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImp
         torsionParamArray[i][1] = phase;
         torsionParamArray[i][2] = periodicity;
     }
+}
+
+void ReferenceCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+    copySomeParametersToContext(0, force.getNumTorsions(), context, force);
 }
 
 void ReferenceCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
@@ -1326,7 +1338,7 @@ void ReferenceCalcCustomNonbondedForceKernel::copySomeParametersToContext(int st
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
     else if (start < 0 or start+count > numParticles)
-        throw OpenMMException("updateParametersInContext: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+        throw OpenMMException("updateParametersInContext[RefNonbond]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
 
     // Record the values.
 

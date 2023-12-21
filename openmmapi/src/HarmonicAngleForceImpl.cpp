@@ -86,3 +86,8 @@ void HarmonicAngleForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcHarmonicAngleForceKernel>().copyParametersToContext(context, owner);
     context.systemChanged();
 }
+
+void HarmonicAngleForceImpl::updateSomeParametersInContext(int start, int count, ContextImpl& context) {
+    kernel.getAs<CalcHarmonicAngleForceKernel>().copySomeParametersToContext(start, count, context, owner);
+    context.systemChanged();
+}

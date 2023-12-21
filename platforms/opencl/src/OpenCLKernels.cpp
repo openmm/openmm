@@ -1073,11 +1073,12 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
 
 void OpenCLCalcNonbondedForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const NonbondedForce& force) {
     // Make sure the new parameters are acceptable.
-
-    if (force.getNumParticles() != cl.getNumAtoms())
+    if (count <= 0)
+        return;
+    else if (force.getNumParticles() != cl.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     else if (start < 0 or start+count > cl.getNumAtoms())
-        throw OpenMMException("updateParametersInContext: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+        throw OpenMMException("updateParametersInContext[OpenCLNonbond]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
 
     if (!hasCoulomb || !hasLJ) {
         for (int i = 0; i < count; i++) {
