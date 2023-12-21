@@ -170,7 +170,7 @@ void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values) {
     int base = 0;
     for (int i = 0; i < (int) arrays.size(); i++) {
         if (arrays[i]->getElementSize() == 4*elementSize) {
-            thread_local static vector<T> data(4*numObjects);
+            vector<T> data(4*numObjects);
             for (int j = 0; j < numObjects; j++) {
                 data[4*j] = values[j][base];
                 if (base+1 < numParameters)
@@ -184,7 +184,7 @@ void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values) {
             base += 4;
         }
         else if (arrays[i]->getElementSize() == 2*elementSize) {
-            thread_local static vector<T> data(2*numObjects);
+            vector<T> data(2*numObjects);
             for (int j = 0; j < numObjects; j++) {
                 data[2*j] = values[j][base];
                 if (base+1 < numParameters)
@@ -194,7 +194,7 @@ void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values) {
             base += 2;
         }
         else if (arrays[i]->getElementSize() == elementSize) {
-            thread_local static vector<T> data(numObjects);
+            vector<T> data(numObjects);
             for (int j = 0; j < numObjects; j++)
                 data[j] = values[j][base];
             arrays[i]->upload(data.data());
