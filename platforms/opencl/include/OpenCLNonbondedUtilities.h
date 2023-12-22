@@ -302,7 +302,6 @@ public:
      * Set the source code for the main kernel.  It only needs to be changed in very unusual circumstances.
      */
     void setKernelSource(const std::string& source);
-
 private:
     class KernelSet;
     class BlockSortTrait;

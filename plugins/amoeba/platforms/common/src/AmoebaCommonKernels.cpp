@@ -1158,7 +1158,7 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
         
         unsigned int maxTiles = nb.getInteractingTiles().getSize();
         pmeTransformMultipolesKernel->execute(cc.getNumAtoms());
-        pmeSpreadFixedMultipolesKernel->execute(cc.getNumAtoms());
+        pmeSpreadFixedMultipolesKernel->execute(min(cc.getNumAtoms(), cc.getReducedNumThreadBlocks()*ComputeContext::ThreadBlockSize));
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
         computeFFT(true);
@@ -1182,13 +1182,13 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
             cc.clearBuffer(pmeGridLong);
         else
             cc.clearBuffer(pmeGrid1);
-        pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
+        pmeSpreadInducedDipolesKernel->execute(min(cc.getNumAtoms(), cc.getReducedNumThreadBlocks()*ComputeContext::ThreadBlockSize));
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
         computeFFT(true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
         computeFFT(false);
-        pmeInducedPotentialKernel->execute(cc.getNumAtoms());
+        pmeInducedPotentialKernel->execute(min(cc.getNumAtoms(), cc.getReducedNumThreadBlocks()*ComputeContext::ThreadBlockSize));
         
         // Iterate until the dipoles converge.
         
@@ -1258,13 +1258,13 @@ void CommonCalcAmoebaMultipoleForceKernel::computeInducedField() {
             cc.clearBuffer(pmeGridLong);
         else
             cc.clearBuffer(pmeGrid1);
-        pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
+        pmeSpreadInducedDipolesKernel->execute(min(cc.getNumAtoms(), cc.getReducedNumThreadBlocks()*ComputeContext::ThreadBlockSize));
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
         computeFFT(true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
         computeFFT(false);
-        pmeInducedPotentialKernel->execute(cc.getNumAtoms());
+        pmeInducedPotentialKernel->execute(min(cc.getNumAtoms(), cc.getReducedNumThreadBlocks()*ComputeContext::ThreadBlockSize));
         if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
             pmeRecordInducedFieldDipolesKernel->execute(cc.getNumAtoms());
         }
@@ -1943,7 +1943,7 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::finishComputation() {
     
     gkForceKernel->setArg(4, startTileIndex);
     gkForceKernel->setArg(5, numTileIndices);
-    gkForceKernel->execute(numForceThreadBlocks*gkForceThreads, gkForceThreads);
+    gkForceKernel->execute(cc.getReducedNumThreadBlocks()*gkForceThreads, gkForceThreads);
 
     // Compute the surface area force.
     

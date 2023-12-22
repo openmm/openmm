@@ -201,13 +201,6 @@ static bool compareInt2LargeSIMD(mm_int2 a, mm_int2 b) {
 }
 
 void OpenCLNonbondedUtilities::initialize(const System& system) {
-    if (isAMD) {
-        while (numForceThreadBlocks > context.getNumAtomBlocks()) {
-            numForceThreadBlocks /= 2;
-        }
-        numForceThreadBlocks = std::max(numForceThreadBlocks, (int) context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
-    }
-
     if (atomExclusions.size() == 0) {
         // No exclusions were specifically requested, so just mark every atom as not interacting with itself.
 

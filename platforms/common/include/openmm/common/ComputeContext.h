@@ -327,6 +327,10 @@ public:
      */
     virtual int getNumThreadBlocks() const = 0;
     /**
+     * Get the reduced number of thread blocks to use when executing register or LDS heavy kernels.
+     */
+    virtual int getReducedNumThreadBlocks() const = 0;
+    /**
      * Get the maximum number of threads in a thread block supported by this device.
      */
     virtual int getMaxThreadBlockSize() const = 0;

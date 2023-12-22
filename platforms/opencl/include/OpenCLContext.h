@@ -452,6 +452,12 @@ public:
         return numThreadBlocks;
     }
     /**
+     * Get the reduced number of thread blocks to use when executing register and LDS heavy kernels.
+     */
+    int getReducedNumThreadBlocks() const {
+        return numReducedThreadBlocks;
+    }
+    /**
      * Get the maximum number of threads in a thread block supported by this device.
      */
     int getMaxThreadBlockSize() const {
@@ -672,6 +678,7 @@ private:
     int contextIndex;
     int numAtomBlocks;
     int numThreadBlocks;
+    int numReducedThreadBlocks;
     int numForceBuffers;
     int simdWidth;
     bool supports64BitGlobalAtomics, supportsDoublePrecision, useDoublePrecision, useMixedPrecision, boxIsTriclinic, hasAssignedPosqCharges;
