@@ -148,6 +148,12 @@ public:
         return contextIndex;
     }
     /**
+     * Get a list of all contexts being used for the current simulation.
+     * This is relevant when a simulation is parallelized across multiple devices.  In that case,
+     * one ComputeContext is created for each device.
+     */
+    std::vector<ComputeContext*> getAllContexts();
+    /**
      * Get the stream currently being used for execution.
      */
     CUstream getCurrentStream();

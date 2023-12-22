@@ -9,11 +9,9 @@ from openmm.app.internal.xtc_utils import (
     get_xtc_nframes,
     get_xtc_natoms,
 )
-import numpy as np
 import os
 from openmm import Vec3
 from openmm.unit import nanometers, picoseconds, is_quantity, norm
-import math
 import tempfile
 import shutil
 
@@ -92,11 +90,12 @@ class XTCFile(object):
             raise ValueError("The number of positions must match the number of atoms")
         if is_quantity(positions):
             positions = positions.value_in_unit(nanometers)
-        if any(math.isnan(norm(pos)) for pos in positions):
+        import numpy as np
+        if np.isnan(positions).any():
             raise ValueError(
                 "Particle position is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan"
             )
-        if any(math.isinf(norm(pos)) for pos in positions):
+        if np.isinf(positions).any():
             raise ValueError(
                 "Particle position is infinite.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan"
             )

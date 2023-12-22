@@ -319,6 +319,7 @@ private:
     OpenCLArray sortedBlocks;
     OpenCLArray sortedBlockCenter;
     OpenCLArray sortedBlockBoundingBox;
+    OpenCLArray blockSizeRange;
     OpenCLArray largeBlockCenter;
     OpenCLArray largeBlockBoundingBox;
     OpenCLArray oldPositions;
@@ -336,7 +337,7 @@ private:
     double lastCutoff;
     bool useCutoff, usePeriodic, deviceIsCpu, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, useLargeBlocks, isAMD;
     int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
-    int forceThreadBlockSize, interactingBlocksThreadBlockSize, groupFlags;
+    int forceThreadBlockSize, interactingBlocksThreadBlockSize, groupFlags, numBlockSizes;
     unsigned int tilesAfterReorder;
     long long numTiles;
     std::string kernelSource;
@@ -353,6 +354,7 @@ public:
     std::string source;
     cl::Kernel forceKernel, energyKernel, forceEnergyKernel;
     cl::Kernel findBlockBoundsKernel;
+    cl::Kernel computeSortKeysKernel;
     cl::Kernel sortBoxDataKernel;
     cl::Kernel findInteractingBlocksKernel;
     cl::Kernel findInteractionsWithinBlocksKernel;
