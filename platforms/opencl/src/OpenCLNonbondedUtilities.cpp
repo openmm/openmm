@@ -60,23 +60,25 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
     std::string vendor = context.getDevice().getInfo<CL_DEVICE_VENDOR>();
     isAMD = !deviceIsCpu && ((vendor.size() >= 3 && vendor.substr(0, 3) == "AMD") || (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc."));
     if (deviceIsCpu) {
-        numForceThreadBlocks = context.getNumThreadBlocks();
+        numForceThreadBlocks = numReducedForceThreadBlocks = context.getNumThreadBlocks();
         forceThreadBlockSize = 1;
     }
     else if (context.getSIMDWidth() == 32) {
         int blocksPerComputeUnit = 4;
+        int reducedBlocksPerComputeUnit = 4;
         if (vendor.size() >= 5 && vendor.substr(0, 5) == "Apple") {
             // 1536 threads per GPU core.
-            blocksPerComputeUnit = 6;
+            blocksPerComputeUnit = reducedBlocksPerComputeUnit = 6;
         }
         else if (isAMD) {
             blocksPerComputeUnit = 16;
         }
         numForceThreadBlocks = blocksPerComputeUnit*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+        numReducedForceThreadBlocks = reducedBlocksPerComputeUnit*context.getDevice().getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
         forceThreadBlockSize = 256;
     }
     else {
-        numForceThreadBlocks = context.getNumThreadBlocks();
+        numForceThreadBlocks = numReducedForceThreadBlocks = context.getNumThreadBlocks();
         forceThreadBlockSize = (context.getSIMDWidth() >= 32 ? OpenCLContext::ThreadBlockSize : 32);
     }
     pinnedCountBuffer = new cl::Buffer(context.getContext(), CL_MEM_ALLOC_HOST_PTR, sizeof(unsigned int));

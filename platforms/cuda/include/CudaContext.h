@@ -349,12 +349,6 @@ public:
         return numThreadBlocks;
     }
     /**
-     * Get the reduced number of thread blocks to use when executing register and LDS heavy kernels.
-     */
-    int getReducedNumThreadBlocks() const {
-        return numThreadBlocks;
-    }
-    /**
      * Get the maximum number of threads in a thread block supported by this device.
      */
     int getMaxThreadBlockSize() const {

@@ -154,6 +154,13 @@ public:
         return numForceThreadBlocks;
     }
     /**
+     * Get the reduced number of thread blocks used for computing nonbonded forces in register heavy kernels.
+     * This value may be the same as getNumForceThreadBlocks.
+     */
+    int getNumReducedForceThreadBlocks() {
+        return numReducedForceThreadBlocks;
+    }
+    /**
      * Get the size of each work group used for computing nonbonded forces.
      */
     int getForceThreadBlockSize() {
@@ -336,7 +343,7 @@ private:
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
     bool useCutoff, usePeriodic, deviceIsCpu, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, useLargeBlocks, isAMD;
-    int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks;
+    int startTileIndex, startBlockIndex, numBlocks, maxExclusions, numForceThreadBlocks, numReducedForceThreadBlocks;
     int forceThreadBlockSize, interactingBlocksThreadBlockSize, groupFlags, numBlockSizes;
     unsigned int tilesAfterReorder;
     long long numTiles;
