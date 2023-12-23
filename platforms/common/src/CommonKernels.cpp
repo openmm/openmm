@@ -568,7 +568,6 @@ void CommonCalcHarmonicBondForceKernel::copySomeParametersToContext(int start, i
     params.uploadSubArray(paramVector.data(), start, count);
     
     // Mark that the current reordering may be invalid.
-    
     cc.invalidateMolecules(info);
 }
 
@@ -795,22 +794,30 @@ void CommonCalcHarmonicAngleForceKernel::copySomeParametersToContext(int start, 
     int endIndex = (cc.getContextIndex()+1)*force.getNumAngles()/numContexts;
     if (numAngles != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of angles has changed");
-    if (numAngles == 0)
+    else if (start < 0 or start+count > force.getNumAngles())
+        throw OpenMMException("updateParametersInContext[angle]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+    
+    if (numAngles == 0 or count == 0)
         return;
     
     // Record the per-angle parameters.
-    
-    vector<mm_float2> paramVector(numAngles);
-    for (int i = 0; i < numAngles; i++) {
+    if (startIndex >= start+count or endIndex < start)
+        // nothing to update
+        return;
+
+    start = max(0, start-startIndex);
+    count = min(count, endIndex-startIndex-start+1);
+
+    vector<mm_float2> paramVector(count);
+    for (int i = 0; i < count; i++) {
         int atom1, atom2, atom3;
         double angle, k;
-        force.getAngleParameters(startIndex+i, atom1, atom2, atom3, angle, k);
+        force.getAngleParameters(startIndex+start+i, atom1, atom2, atom3, angle, k);
         paramVector[i] = mm_float2((float) angle, (float) k);
     }
-    params.upload(paramVector);
+    params.uploadSubArray(paramVector.data(), start, count);
     
     // Mark that the current reordering may be invalid.
-    
     cc.invalidateMolecules();
 }
 
@@ -1039,22 +1046,30 @@ void CommonCalcPeriodicTorsionForceKernel::copySomeParametersToContext(int start
     int endIndex = (cc.getContextIndex()+1)*force.getNumTorsions()/numContexts;
     if (numTorsions != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
-    if (numTorsions == 0)
+    else if (start < 0 or start+count > force.getNumTorsions())
+        throw OpenMMException("updateParametersInContext[torsion]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+
+    if (numTorsions == 0 or count == 0)
         return;
     
     // Record the per-torsion parameters.
-    
-    vector<mm_float4> paramVector(numTorsions);
-    for (int i = 0; i < numTorsions; i++) {
+    if (startIndex >= start+count or endIndex < start)
+        // nothing to update
+        return;
+
+    start = max(0, start-startIndex);
+    count = min(count, endIndex-startIndex-start+1);
+
+    vector<mm_float4> paramVector(count);
+    for (int i = 0; i < count; i++) {
         int atom1, atom2, atom3, atom4, periodicity;
         double phase, k;
-        force.getTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, periodicity, phase, k);
+        force.getTorsionParameters(startIndex+start+i, atom1, atom2, atom3, atom4, periodicity, phase, k);
         paramVector[i] = mm_float4((float) k, (float) phase, (float) periodicity, 0.0f);
     }
-    params.upload(paramVector);
+    params.uploadSubArray(paramVector.data(), start, count);
     
     // Mark that the current reordering may be invalid.
-    
     cc.invalidateMolecules();
 }
 
