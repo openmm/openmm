@@ -818,7 +818,7 @@ void CommonCalcHarmonicAngleForceKernel::copySomeParametersToContext(int start, 
     params.uploadSubArray(paramVector.data(), start, count);
     
     // Mark that the current reordering may be invalid.
-    cc.invalidateMolecules();
+    cc.invalidateMolecules(info);
 }
 
 void CommonCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
@@ -1070,7 +1070,7 @@ void CommonCalcPeriodicTorsionForceKernel::copySomeParametersToContext(int start
     params.uploadSubArray(paramVector.data(), start, count);
     
     // Mark that the current reordering may be invalid.
-    cc.invalidateMolecules();
+    cc.invalidateMolecules(info);
 }
 
 void CommonCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
