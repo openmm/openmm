@@ -336,10 +336,7 @@ void ComputeContext::invalidateMolecules() {
             return;
 }
 
-#include <iostream>
-
 bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
-    std::cout << "LONG HAND CHECK!\n";
     if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff())
         return false;
     bool valid = true;
@@ -438,8 +435,6 @@ bool ComputeContext::invalidateMoleculesByAtom(ComputeForceInfo* force, int star
         }
     }
 
-    std::cout << "SHORT HAND ATOM CHECK! " << start << " " << count << "\n";
-
     // the parameters that change only affect atoms that are not part of
     // any duplicate molecules
     return false;
@@ -509,8 +504,6 @@ bool ComputeContext::invalidateMoleculesByGroup(ComputeForceInfo* force, int sta
             }
         }
     }
-
-    std::cout << "SHORT HAND GROUP CHECK! " << start << " " << count << "\n";
 
     // changing these group parameters will not change molecules that have duplicates
     return false;

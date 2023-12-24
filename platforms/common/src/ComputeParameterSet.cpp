@@ -115,8 +115,6 @@ void ComputeParameterSet::getParameterValues(vector<vector<T> >& values) {
     }
 }
 
-#include <iostream>
-
 template<class T>
 void ComputeParameterSet::setSomeParameterValues(int start, const vector<vector<T> >& values) {
     if (sizeof(T) != elementSize)
@@ -127,7 +125,6 @@ void ComputeParameterSet::setSomeParameterValues(int start, const vector<vector<
 
     if (start + numValues > numObjects)
     {
-        std::cout << "start: " << start << " numValues: " << numValues << " numObjects: " << numObjects << std::endl;
         throw OpenMMException("Called setSomeParameterValues() with too many values");
     }
 
@@ -143,7 +140,7 @@ void ComputeParameterSet::setSomeParameterValues(int start, const vector<vector<
                 if (base+3 < numParameters)
                     data[4*j+3] = values[j][base+3];
             }
-            arrays[i]->uploadSubArray(data.data(), 4*start, 4*numValues);
+            arrays[i]->uploadSubArray(data.data(), start, numValues);
             base += 4;
         }
         else if (arrays[i]->getElementSize() == 2*elementSize) {
@@ -153,7 +150,7 @@ void ComputeParameterSet::setSomeParameterValues(int start, const vector<vector<
                 if (base+1 < numParameters)
                     data[2*j+1] = values[j][base+1];
             }
-            arrays[i]->uploadSubArray(data.data(), 2*start, 2*numValues);
+            arrays[i]->uploadSubArray(data.data(), start, numValues);
             base += 2;
         }
         else if (arrays[i]->getElementSize() == elementSize) {
