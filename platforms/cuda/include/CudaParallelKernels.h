@@ -128,6 +128,16 @@ public:
      * @param force      the HarmonicBondForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force);
+    /**
+     * Copy some changed parameters over to a context.
+     *
+     * @param start      the start index of the bond whose parameters to change
+     * @param count      the number of bonds to change (from start:start+count)
+     * @param context    the context to copy parameters to
+     * @param force      the Force to copy the parameters from
+     */
+    void copySomeParametersToContext(int start, int count, 
+                                     ContextImpl& context, const HarmonicBondForce& force);
 private:
     class Task;
     CudaPlatform::PlatformData& data;
@@ -166,6 +176,16 @@ public:
      * @param force      the CustomBondForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const CustomBondForce& force);
+    /**
+     * Copy some changed parameters over to a context.
+     *
+     * @param start      the start index of the bond whose parameters to change
+     * @param count      the number of bonds to change (from start:start+count)
+     * @param context    the context to copy parameters to
+     * @param force      the Force to copy the parameters from
+     */
+    void copySomeParametersToContext(int start, int count, 
+                                     ContextImpl& context, const CustomBondForce& force);
 private:
     class Task;
     CudaPlatform::PlatformData& data;
@@ -204,6 +224,16 @@ public:
      * @param force      the HarmonicAngleForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
+    /**
+     * Copy some changed parameters over to a context.
+     *
+     * @param start      the start index of the angle whose parameters to change
+     * @param count      the number of angles to change (from start:start+count)
+     * @param context    the context to copy parameters to
+     * @param force      the Force to copy the parameters from
+     */
+    void copySomeParametersToContext(int start, int count, 
+                                     ContextImpl& context, const HarmonicAngleForce& force);
 private:
     class Task;
     CudaPlatform::PlatformData& data;
@@ -281,6 +311,16 @@ public:
      * @param force      the PeriodicTorsionForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
+    /**
+     * Copy some changed parameters over to a context.
+     *
+     * @param start      the start index of the torsion whose parameters to change
+     * @param count      the number of torsions to change (from start:start+count)
+     * @param context    the context to copy parameters to
+     * @param force      the Force to copy the parameters from
+     */
+    void copySomeParametersToContext(int start, int count, 
+                                     ContextImpl& context, const PeriodicTorsionForce& force);
 private:
     CudaPlatform::PlatformData& data;
     std::vector<Kernel> kernels;

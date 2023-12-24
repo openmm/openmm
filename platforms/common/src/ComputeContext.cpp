@@ -336,7 +336,10 @@ void ComputeContext::invalidateMolecules() {
             return;
 }
 
+#include <iostream>
+
 bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
+    std::cout << "LONG HAND CHECK!\n";
     if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff())
         return false;
     bool valid = true;
@@ -388,6 +391,129 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
     findMoleculeGroups();
     reorderAtoms();
     return true;
+}
+
+bool ComputeContext::invalidateMoleculesByAtom(ComputeForceInfo* force, int start, int count) {
+    // we do not need to check if any of the molecules have been invalidated
+    // *if* the parameters that change belong only to a single molecule
+    // (or to molecules that don't have any duplicates)
+    if (start < 0 or count < 0 or (start == 0 and count >= numAtoms))
+    {
+        // we are changing all parameters, so quickest to do the full test
+        return invalidateMolecules(force);
+    }
+
+    if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff())
+        return false;
+
+    // these are all atom indexes - ensure that they belong to molecules 
+    // that only have one copy (i.e. changing them will not separate 
+    // two or more identical molecules)
+    for (int group = 0; group < (int) moleculeGroups.size(); group++) {
+        MoleculeGroup& mol = moleculeGroups[group];
+
+        // only test groups that have more than one instance
+        if (mol.instances.size() == 1)
+            continue;
+
+        vector<int>& instances = mol.instances;
+        vector<int>& offsets = mol.offsets;
+        vector<int>& atoms = mol.atoms;
+        
+        int numMolecules = instances.size();
+        for (int j = 0; j < numMolecules; j++) {
+            // see if any of the atoms fall into the range we are checking
+            Molecule& m = molecules[instances[j]];
+            int offset = offsets[j];
+            for (int i = 0; i < (int) atoms.size(); i++) {
+                int atom_idx = atoms[i] + offset;
+
+                if (atom_idx >= start and atom_idx < start + count)
+                {
+                    // this atom is in the range we are checking,
+                    // so we should check to invalidate the parameters
+                    return invalidateMolecules(force);
+                }
+            }
+        }
+    }
+
+    std::cout << "SHORT HAND ATOM CHECK! " << start << " " << count << "\n";
+
+    // the parameters that change only affect atoms that are not part of
+    // any duplicate molecules
+    return false;
+}
+
+bool ComputeContext::invalidateMoleculesByGroup(ComputeForceInfo* force, int start, int count) {
+    int numGroups = force->getNumParticleGroups();
+
+    if (start < 0 or count < 0 or (start == 0 and count >= numGroups))
+    {
+        // we are changing all parameters, so quickest to do the full test
+        return invalidateMolecules(force);
+    }
+
+    if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff())
+        return false;
+
+    // go through each changed parameter and get the range of changed atoms.
+    // Then check to see if any of these atoms are in duplicate molecules
+    std::vector<int> particles;
+
+    int start_changed_atom_index = -1;
+    int end_changed_atom_index = -1;
+
+    for (int j = 0; j < count; ++j)
+    {
+        force->getParticlesInGroup(start+j, particles);
+
+        for (int particle : particles)
+        {
+            if (start_changed_atom_index == -1 or particle < start_changed_atom_index)
+                start_changed_atom_index = particle;
+
+            if (end_changed_atom_index == -1 or particle > end_changed_atom_index)
+                end_changed_atom_index = particle;
+        }
+    }
+
+    // these are all atom indexes - ensure that they belong to molecules 
+    // that only have one copy (i.e. changing them will not separate 
+    // two or more identical molecules)
+    for (int group = 0; group < (int) moleculeGroups.size(); group++) {
+        MoleculeGroup& mol = moleculeGroups[group];
+
+        // only test groups that have more than one instance
+        if (mol.instances.size() == 1)
+            continue;
+
+        vector<int>& instances = mol.instances;
+        vector<int>& offsets = mol.offsets;
+        vector<int>& atoms = mol.atoms;
+        
+        int numMolecules = instances.size();
+        for (int j = 0; j < numMolecules; j++) {
+            // see if any of the atoms fall into the range we are checking
+            Molecule& m = molecules[instances[j]];
+            int offset = offsets[j];
+            for (int i = 0; i < (int) atoms.size(); i++) {
+                int atom_idx = atoms[i] + offset;
+
+                if (atom_idx >= start_changed_atom_index and atom_idx <= end_changed_atom_index)
+                {
+                    // this atom is in the range we are checking,
+                    // so we should check to invalidate the parameters
+                    return invalidateMolecules(force);
+                }
+            }
+        }
+    }
+
+    std::cout << "SHORT HAND GROUP CHECK! " << start << " " << count << "\n";
+
+    // changing these group parameters will not change molecules that have duplicates
+    return false;
 }
 
 void ComputeContext::resetAtomOrder() {

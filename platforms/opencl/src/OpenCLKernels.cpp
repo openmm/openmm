@@ -1154,7 +1154,15 @@ void OpenCLCalcNonbondedForceKernel::copySomeParametersToContext(int start, int 
     }
     if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
-    cl.invalidateMolecules(info);
+
+    if (start == 0 and count == force.getNumParticles())
+        // check everything to see if they have been invalidated
+        cl.invalidateMolecules();
+    else
+        // we will assume the exceptions won't change anything if the 
+        // atoms themselves aren't changing (mostly safe assumption)
+        cl.invalidateMoleculesByAtom(info, start, count);
+
     recomputeParams = true;
 }
 

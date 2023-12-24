@@ -474,7 +474,7 @@ double ReferenceCalcCustomBondForceKernel::execute(ContextImpl& context, bool in
     return energy;
 }
 
-void ReferenceCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force) {
+void ReferenceCalcCustomBondForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const CustomBondForce& force) {
     if (numBonds != force.getNumBonds())
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
 
@@ -490,6 +490,10 @@ void ReferenceCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& co
         for (int j = 0; j < numParameters; j++)
             bondParamArray[i][j] = params[j];
     }
+}
+
+void ReferenceCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force) {
+    copySomeParametersToContext(0, force.getNumBonds(), context, force);
 }
 
 void ReferenceCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {

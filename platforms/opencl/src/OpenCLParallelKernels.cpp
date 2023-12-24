@@ -298,6 +298,11 @@ void OpenCLParallelCalcCustomBondForceKernel::copyParametersToContext(ContextImp
         getKernel(i).copyParametersToContext(context, force);
 }
 
+void OpenCLParallelCalcCustomBondForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const CustomBondForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
+}
+
 class OpenCLParallelCalcHarmonicAngleForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, CommonCalcHarmonicAngleForceKernel& kernel, bool includeForce,

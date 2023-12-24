@@ -1117,7 +1117,15 @@ void CudaCalcNonbondedForceKernel::copySomeParametersToContext(int start, int co
     }
     if (force.getUseDispersionCorrection() && cu.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
-    cu.invalidateMolecules();
+
+    if (start == 0 and count == force.getNumParticles())
+        // check everything to see if they have been invalidated
+        cu.invalidateMolecules();
+    else
+        // we will assume the exceptions won't change anything if the 
+        // atoms themselves aren't changing (mostly safe assumption)
+        cu.invalidateMoleculesByAtom(info, start, count);
+
     recomputeParams = true;
 }
 

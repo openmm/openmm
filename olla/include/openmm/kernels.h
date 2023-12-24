@@ -371,6 +371,16 @@ public:
      * @param force      the CustomBondForce to copy the parameters from
      */
     virtual void copyParametersToContext(ContextImpl& context, const CustomBondForce& force) = 0;
+    /**
+     * Copy some changed parameters over to a context.
+     *
+     * @param start      the start index of the bond whose parameters to change
+     * @param count      the number of bonds to change (from start:start+count)
+     * @param context    the context to copy parameters to
+     * @param force      the Force to copy the parameters from
+     */
+    virtual void copySomeParametersToContext(int start, int count, 
+                                             ContextImpl& context, const CustomBondForce& force) = 0;
 };
 
 /**

@@ -332,6 +332,11 @@ void CudaParallelCalcHarmonicBondForceKernel::copyParametersToContext(ContextImp
         getKernel(i).copyParametersToContext(context, force);
 }
 
+void CudaParallelCalcHarmonicBondForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicBondForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
+}
+
 class CudaParallelCalcCustomBondForceKernel::Task : public CudaContext::WorkTask {
 public:
     Task(ContextImpl& context, CommonCalcCustomBondForceKernel& kernel, bool includeForce,
@@ -373,6 +378,11 @@ void CudaParallelCalcCustomBondForceKernel::copyParametersToContext(ContextImpl&
         getKernel(i).copyParametersToContext(context, force);
 }
 
+void CudaParallelCalcCustomBondForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const CustomBondForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
+}
+
 class CudaParallelCalcHarmonicAngleForceKernel::Task : public CudaContext::WorkTask {
 public:
     Task(ContextImpl& context, CommonCalcHarmonicAngleForceKernel& kernel, bool includeForce,
@@ -412,6 +422,11 @@ double CudaParallelCalcHarmonicAngleForceKernel::execute(ContextImpl& context, b
 void CudaParallelCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
     for (int i = 0; i < (int) kernels.size(); i++)
         getKernel(i).copyParametersToContext(context, force);
+}
+
+void CudaParallelCalcHarmonicAngleForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicAngleForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
 }
 
 class CudaParallelCalcCustomAngleForceKernel::Task : public CudaContext::WorkTask {
@@ -494,6 +509,11 @@ double CudaParallelCalcPeriodicTorsionForceKernel::execute(ContextImpl& context,
 void CudaParallelCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
     for (int i = 0; i < (int) kernels.size(); i++)
         getKernel(i).copyParametersToContext(context, force);
+}
+
+void CudaParallelCalcPeriodicTorsionForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const PeriodicTorsionForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
 }
 
 class CudaParallelCalcRBTorsionForceKernel::Task : public CudaContext::WorkTask {

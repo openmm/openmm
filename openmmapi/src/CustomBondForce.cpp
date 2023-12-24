@@ -136,6 +136,10 @@ void CustomBondForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
 
+void CustomBondForce::updateSomeParametersInContext(int start, int count, Context& context) {
+    dynamic_cast<CustomBondForceImpl&>(getImplInContext(context)).updateSomeParametersInContext(start, count, getContextImpl(context));
+}
+
 void CustomBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {
     usePeriodic = periodic;
 }

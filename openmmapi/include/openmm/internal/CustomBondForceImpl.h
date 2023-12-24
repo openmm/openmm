@@ -61,6 +61,7 @@ public:
     std::vector<std::string> getKernelNames();
     std::vector<std::pair<int, int> > getBondedParticles() const;
     void updateParametersInContext(ContextImpl& context);
+    void updateSomeParametersInContext(int start, int count, ContextImpl& context);
 private:
     const CustomBondForce& owner;
     Kernel kernel;
