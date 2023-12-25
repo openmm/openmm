@@ -677,7 +677,7 @@ double CudaParallelCalcNonbondedForceKernel::execute(ContextImpl& context, bool 
 
 void CudaParallelCalcNonbondedForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const NonbondedForce& force) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(start, count, context, force);
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
 }
 
 void CudaParallelCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {

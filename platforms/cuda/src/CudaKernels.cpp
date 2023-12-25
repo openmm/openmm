@@ -1040,6 +1040,10 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
 
 void CudaCalcNonbondedForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const NonbondedForce& force) {
     // Make sure the new parameters are acceptable.
+    if (count <= 0)
+        return;
+    else if (start < 0 or start+count > force.getNumParticles())
+        throw OpenMMException("updateParametersInContext[CudaNonbond]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
     
     ContextSelector selector(cu);
     if (force.getNumParticles() != cu.getNumAtoms())
@@ -1079,14 +1083,16 @@ void CudaCalcNonbondedForceKernel::copySomeParametersToContext(int start, int co
     
     // Record the per-particle parameters.
     
-    vector<float4> baseParticleParamVec(cu.getPaddedNumAtoms(), make_float4(0, 0, 0, 0));
+    vector<float4> baseParticleParamVec(count, make_float4(0, 0, 0, 0));
+
+    // why is 'order' needed - it is not used in this function?
     const vector<int>& order = cu.getAtomIndex();
-    for (int i = 0; i < force.getNumParticles(); i++) {
+    for (int i = 0; i < count; i++) {
         double charge, sigma, epsilon;
-        force.getParticleParameters(i, charge, sigma, epsilon);
+        force.getParticleParameters(start+i, charge, sigma, epsilon);
         baseParticleParamVec[i] = make_float4(charge, sigma, epsilon, 0);
     }
-    baseParticleParams.upload(baseParticleParamVec);
+    baseParticleParams.uploadSubArray(baseParticleParamVec.data(), start, count);
     
     // Record the exceptions.
     
@@ -1109,9 +1115,11 @@ void CudaCalcNonbondedForceKernel::copySomeParametersToContext(int start, int co
     if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
         if (cu.getContextIndex() == 0) {
             for (int i = 0; i < force.getNumParticles(); i++) {
-                ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                double charge, sigma, epsilon;
+                force.getParticleParameters(i, charge, sigma, epsilon);
+                ewaldSelfEnergy -= charge * charge * ONE_4PI_EPS0 * alpha / sqrt(M_PI);
                 if (doLJPME)
-                    ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
+                    ewaldSelfEnergy += epsilon*pow(sigma*dispersionAlpha, 6)/3.0;
             }
         }
     }
