@@ -327,6 +327,13 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE,3) void findBlocksWithInterac
                     blockDelta.y = max(0.0f, fabs(blockDelta.y)-blockSizeX.y-largeSize.y);
                     blockDelta.z = max(0.0f, fabs(blockDelta.z)-blockSizeX.z-largeSize.z);
                     includeLargeBlock = (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < PADDED_CUTOFF_SQUARED);
+#ifdef TRICLINIC
+                    // The calculation to find the nearest periodic copy is only guaranteed to work if the nearest copy is less than half a box width away.
+                    // If there's any possibility we might have missed it, do a detailed check.
+
+                    if (periodicBoxSize.z/2-blockSizeX.z-largeSize.z < PADDED_CUTOFF || periodicBoxSize.y/2-blockSizeX.y-largeSize.y < PADDED_CUTOFF)
+                        includeLargeBlock = true;
+#endif
                 }
                 largeBlockFlags = BALLOT(includeLargeBlock);
                 loadedLargeBlocks = 32;
