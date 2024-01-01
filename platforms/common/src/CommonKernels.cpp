@@ -8034,6 +8034,7 @@ void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const
     this->rigidMolecules = rigidMolecules;
     ContextSelector selector(cc);
     savedPositions.initialize(cc, cc.getPaddedNumAtoms(), cc.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedPositions");
+    savedVelocities.initialize(cc, cc.getPaddedNumAtoms(), cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedVelocities");
     savedLongForces.initialize<long long>(cc, cc.getPaddedNumAtoms()*3, "savedLongForces");
     try {
         cc.getFloatForceBuffer(); // This will throw an exception on the CUDA platform.
@@ -8049,6 +8050,7 @@ void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const
 void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) {
     ContextSelector selector(cc);
     cc.getPosq().copyTo(savedPositions);
+    cc.getVelm().copyTo(savedVelocities);
     cc.getLongForceBuffer().copyTo(savedLongForces);
     if (savedFloatForces.isInitialized())
         cc.getFloatForceBuffer().copyTo(savedFloatForces);
@@ -8112,6 +8114,7 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
 void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
     ContextSelector selector(cc);
     savedPositions.copyTo(cc.getPosq());
+    savedVelocities.copyTo(cc.getVelm());
     savedLongForces.copyTo(cc.getLongForceBuffer());
     cc.setPosCellOffsets(lastPosCellOffsets);
     if (savedFloatForces.isInitialized())

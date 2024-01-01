@@ -66,6 +66,7 @@ __kernel void findBlockBounds(int numAtoms, real4 periodicBoxSize, real4 invPeri
     if (get_global_id(0) == 0)
         rebuildNeighborList[0] = 0;
 }
+
 __kernel void computeSortKeys(__global const real4* restrict blockBoundingBox, __global unsigned int* restrict sortedBlocks, __global real2* restrict blockSizeRange, int numSizes) {
     // Find the total range of sizes recorded by all blocks.
 

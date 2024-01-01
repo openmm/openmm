@@ -1693,7 +1693,7 @@ private:
     ComputeContext& cc;
     bool hasInitializedKernels, rigidMolecules, atomsWereReordered;
     int numMolecules;
-    ComputeArray savedPositions, savedFloatForces, savedLongForces;
+    ComputeArray savedPositions, savedFloatForces, savedLongForces, savedVelocities;
     ComputeArray moleculeAtoms;
     ComputeArray moleculeStartIndex;
     ComputeKernel kernel;
