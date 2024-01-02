@@ -196,6 +196,13 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
                     blockDelta.y = max((real) 0, fabs(blockDelta.y)-blockSizeX.y-largeSize.y);
                     blockDelta.z = max((real) 0, fabs(blockDelta.z)-blockSizeX.z-largeSize.z);
                     includeLargeBlock = (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z < PADDED_CUTOFF_SQUARED);
+#ifdef TRICLINIC
+                    // The calculation to find the nearest periodic copy is only guaranteed to work if the nearest copy is less than half a box width away.
+                    // If there's any possibility we might have missed it, do a detailed check.
+
+                    if (periodicBoxSize.z/2-blockSizeX.z-largeSize.z < PADDED_CUTOFF || periodicBoxSize.y/2-blockSizeX.y-largeSize.y < PADDED_CUTOFF)
+                        includeLargeBlock = true;
+#endif
                 }
                 largeBlockFlags[get_local_id(0)] = includeLargeBlock;
                 loadedLargeBlocks = 32;
