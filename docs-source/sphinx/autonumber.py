@@ -34,7 +34,7 @@ def chapter_numbers_by_section(env):
         sections = env.toc_secnumbers[doc]
         for section_id in sections:
             # Include the src to disambiguate duplicates
-            src = env.srcdir + "/" + doc
+            src = str(Path(env.srcdir)/doc)
             key = f"{src}:{section_id[1:]}"
             if key in section_numbers:
                 warn(f"{section_id} is duplicated in {src}")
