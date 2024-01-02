@@ -55,7 +55,7 @@ def process_docstring(app, what, name, obj, options, lines):
         """ Replace subscript tags. """
         return r'\ :sub:`{}`\ '.format(m.group(1))
     def replace_superscript(m):
-        """ Replace subscript tags. """
+        """ Replace superscript tags. """
         return r'\ :sup:`{}`\ '.format(m.group(1))
 
     linesep = '|LINEBREAK|'
