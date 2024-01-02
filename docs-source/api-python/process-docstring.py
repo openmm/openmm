@@ -51,6 +51,9 @@ def process_docstring(app, what, name, obj, options, lines):
                 s = linesep + s
             newline = '.. verbatim::' + linesep
             return newline + '    ' + s.replace(linesep, linesep + '    ')
+    def replace_subscript(m):
+        """ Replace subscript tags. """
+        return r'\ :sub:`{}`\ '.format(m.group(1))
 
     linesep = '|LINEBREAK|'
     joined = linesep.join(lines)
@@ -60,6 +63,8 @@ def process_docstring(app, what, name, obj, options, lines):
     joined = re.sub(r'@deprecated(.*?\|LINEBREAK\|)', repl2, joined, flags=re.IGNORECASE)
     joined = re.sub(r'<i>(.*?)</i>', repl3, joined)
     joined = re.sub(r'<verbatim>(.*?)</verbatim>', repl4, joined)
+    joined = re.sub(r'<sub>(.*?)</sub>', replace_subscript, joined)
+
     lines[:] = [(l if not l.isspace() else '') for l in joined.split(linesep)]
 
 
@@ -68,8 +73,8 @@ def setup(app):
 
 
 def test():
-    lines    = ['Hello World', '<tt><pre>', 'contents', '</pre></tt>', '', '<tt>contents2</tt>']
-    linesRef = ['Hello World', '.. code-block:: c++', '', '    contents', '', '', '.. code-block:: c++', '', '    contents2']
+    lines    = ['Hello World', '<tt><pre>', 'contents', '</pre></tt>', '', '<tt>contents2</tt>', 'r<sub>1</sub>']
+    linesRef = ['Hello World', '.. code-block:: c++', '', '    contents', '', '', '.. code-block:: c++', '', '    contents2', 'r\\ :sub:`1`\\ ']
     process_docstring(None, None, None, None, None, lines)
     assert lines == linesRef
 
