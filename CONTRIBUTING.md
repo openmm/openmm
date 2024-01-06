@@ -11,7 +11,7 @@ want and discuss possible designs for it.
 
 Once everyone is in agreement, the next step is to
 [create a pull request](https://help.github.com/en/articles/about-pull-requests) with the code changes.
-For larger features, feel free to create the pull request even before the implementaton is
+For larger features, feel free to create the pull request even before the implementation is
 finished so as to get early feedback on the code.  When doing this, put the letters "WIP" at
 the start of the title of the pull request to indicate it is still a work in progress.
 
