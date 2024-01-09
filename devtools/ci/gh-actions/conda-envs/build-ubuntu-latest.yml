@@ -13,7 +13,8 @@ dependencies:
 - cython
 - swig
 - numpy
-- ocl-icd-system
+- ocl-icd
+- pocl
 - doxygen 1.8.14
 # test
 - pytest
