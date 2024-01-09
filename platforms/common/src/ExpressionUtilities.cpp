@@ -28,6 +28,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/SplineFitter.h"
 #include "lepton/Operation.h"
+#include <iostream>
 
 using namespace OpenMM;
 using namespace Lepton;
@@ -189,9 +190,9 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
             }
             else if (node.getOperation().getName() == "pointvectorangle") {
                 // This is a vectorangle() function.
-
-                computeDelta(out, "angle_delta21", node, 0, 3, tempType, distancesArePeriodic, temps);
-                computeDelta(out, "angle_delta34", node, 6, 9, tempType, distancesArePeriodic, temps);
+                std::cout << "Inside " << node.getOperation().getName()  << std::endl;
+                computeDelta(out, "angle_delta21", node, 3, 0, tempType, distancesArePeriodic, temps);
+                computeDelta(out, "angle_delta34", node, 9, 6, tempType, distancesArePeriodic, temps);
                                 
                 out << tempType << " angle_theta = computeAngle(angle_delta21, angle_delta34);\n";
                 out << tempType << "3 angle_crossProd = trimTo3(cross(angle_delta34, angle_delta21));\n";
@@ -201,7 +202,7 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     int argIndex = -1;
-                    for (int k = 0; k < 9; k++) {
+                    for (int k = 0; k < 12; k++) {
                         if (derivOrder[k] > 0) {
                             if (derivOrder[k] > 1 || argIndex != -1)
                                 throw OpenMMException("Unsupported derivative of "+node.getOperation().getName()); // Should be impossible for this to happen.
@@ -223,16 +224,53 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                     else if (argIndex == 5)
                         out << nodeNames[j] << " = -angle_deltaCross0.z;\n";
                     else if (argIndex == 6)
-                        out << nodeNames[j] << " = -angle_deltaCross2.x;\n";
-                    else if (argIndex == 7)
-                        out << nodeNames[j] << " = -angle_deltaCross2.y;\n";
-                    else if (argIndex == 8)
-                        out << nodeNames[j] << " = -angle_deltaCross2.z;\n";
-                    else if (argIndex == 9)
                         out << nodeNames[j] << " = angle_deltaCross2.x;\n";
-                    else if (argIndex == 10)
+                    else if (argIndex == 7)
                         out << nodeNames[j] << " = angle_deltaCross2.y;\n";
+                    else if (argIndex == 8)
+                        out << nodeNames[j] << " = angle_deltaCross2.z;\n";
+                    else if (argIndex == 9)
+                        out << nodeNames[j] << " = -angle_deltaCross2.x;\n";
+                    else if (argIndex == 10)
+                        out << nodeNames[j] << " = -angle_deltaCross2.y;\n";
                     else if (argIndex == 11)
+                        out << nodeNames[j] << " = -angle_deltaCross2.z;\n";
+                }
+            }
+            else if (node.getOperation().getName() == "arrayvectorangle") {
+                // This is a vectorangle() function.
+                std::cout << "Inside " << node.getOperation().getName()  << std::endl;
+                initializeDelta(out, "angle_delta1", node, 0, tempType, distancesArePeriodic, temps);
+                initializeDelta(out, "angle_delta2", node, 3, tempType, distancesArePeriodic, temps);
+                                
+                out << tempType << " angle_theta = computeAngle(angle_delta1, angle_delta2);\n";
+                out << tempType << "3 angle_crossProd = trimTo3(cross(angle_delta2, angle_delta1));\n";
+                out << "real angle_lengthCross = max(SQRT(dot(angle_crossProd, angle_crossProd)), (real) 1e-6f);\n";
+                out << "real3 angle_deltaCross1 = -cross(trimTo3(angle_delta1), angle_crossProd)/(angle_delta1.w*angle_lengthCross);\n";
+                out << "real3 angle_deltaCross2 = cross(trimTo3(angle_delta2), angle_crossProd)/(angle_delta2.w*angle_lengthCross);\n";
+                for (int j = 0; j < nodes.size(); j++) {
+                    const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
+                    int argIndex = -1;
+                    for (int k = 0; k < 6; k++) {
+                        if (derivOrder[k] > 0) {
+                            if (derivOrder[k] > 1 || argIndex != -1)
+                                throw OpenMMException("Unsupported derivative of "+node.getOperation().getName());
+                            argIndex = k;
+                        }
+                    }
+                    if (argIndex == -1)
+                        out << nodeNames[j] << " = angle_theta;\n";
+                    else if (argIndex == 0)
+                        out << nodeNames[j] << " = angle_deltaCross1.x;\n";
+                    else if (argIndex == 1)
+                        out << nodeNames[j] << " = angle_deltaCross1.y;\n";
+                    else if (argIndex == 2)
+                        out << nodeNames[j] << " = angle_deltaCross1.z;\n";
+                    else if (argIndex == 3)
+                        out << nodeNames[j] << " = angle_deltaCross2.x;\n";
+                    else if (argIndex == 4)
+                        out << nodeNames[j] << " = angle_deltaCross2.y;\n";
+                    else if (argIndex == 5)
                         out << nodeNames[j] << " = angle_deltaCross2.z;\n";
                 }
             }
@@ -1166,3 +1204,24 @@ void ExpressionUtilities::computeDelta(stringstream& out, const string& varName,
         out << "APPLY_PERIODIC_TO_DELTA(" << varName << ")\n";
     out << varName << ".w = " << varName << ".x*" << varName << ".x + " << varName << ".y*" << varName << ".y + " << varName << ".z*" << varName << ".z;\n";
 }
+
+void ExpressionUtilities::initializeDelta(stringstream& out, const string& varName, 
+                                          const ExpressionTreeNode& node, int startIndex, 
+                                          const string& tempType, bool periodic, 
+                                          const vector<pair<ExpressionTreeNode, string> >& temps) {
+    // Initialize the displacement using values from the node starting from startIndex.
+
+    out << tempType << "4 " << varName << " = make_" << tempType << "4(";
+    for (int i = 0; i < 3; i++) {
+        if (i > 0)
+            out << ", ";
+        out << getTempName(node.getChildren()[startIndex + i], temps);
+    }
+    out << ", 0);\n";
+    
+    if (periodic)
+        out << "APPLY_PERIODIC_TO_DELTA(" << varName << ")\n";
+
+    out << varName << ".w = " << varName << ".x*" << varName << ".x + " << varName << ".y*" << varName << ".y + " << varName << ".z*" << varName << ".z;\n";
+}
+

@@ -1,6 +1,8 @@
 __pycache__
 build
 build?
+install
+.vscode
 
 # macOS
 .DS_Store

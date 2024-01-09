@@ -60,6 +60,7 @@ namespace OpenMM {
  * <li>distance(p1, p2): the distance between particles p1 and p2 (where "p1" and "p2" may be replaced by the names
  * of whichever particles you want to calculate the distance between).</li>
  * <li>angle(p1, p2, p3): the angle formed by the three specified particles.</li>
+ * <li>vectorangle(g1, g2, g3, g4): the angle defined between the vectors g1 to g2, and g3 to g4.</li>
  * <li>dihedral(p1, p2, p3, p4): the dihedral angle formed by the four specified particles.</li>
  * <li>arbitrary global and per-particle parameters that you define.</li>
  * </ul>
@@ -170,7 +171,8 @@ namespace OpenMM {
  * As seen above, the expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
  * 
  * This class also supports the functions pointdistance(x1, y1, z1, x2, y2, z2),
- * pointangle(x1, y1, z1, x2, y2, z2, x3, y3, z3), pointvectorangle(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), and pointdihedral(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4).
+ * pointangle(x1, y1, z1, x2, y2, z2, x3, y3, z3), pointvectorangle(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), 
+ * arrayvectorangle(x1, y1, z1, x2, y2, z2) and pointdihedral(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4).
  * These functions are similar to distance(), angle(), and dihedral(), but the arguments are the
  * coordinates of points to perform the calculation based on rather than the names of particles.
  * This enables more flexible geometric calculations.  For example, the following computes the distance

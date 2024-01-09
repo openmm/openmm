@@ -164,6 +164,7 @@ ParsedExpression CustomManyParticleForceImpl::prepareExpression(const CustomMany
     CustomManyParticleForceImpl::FunctionPlaceholder pointangle(9);
     CustomManyParticleForceImpl::FunctionPlaceholder pointvectorangle(12);
     CustomManyParticleForceImpl::FunctionPlaceholder pointdihedral(12);
+    CustomManyParticleForceImpl::FunctionPlaceholder arrayvectorangle(6);
     map<string, CustomFunction*> functions = customFunctions;
     functions["distance"] = &distance;
     functions["angle"] = &angle;
@@ -177,6 +178,8 @@ ParsedExpression CustomManyParticleForceImpl::prepareExpression(const CustomMany
         functions["pointvectorangle"] = &pointvectorangle;
     if (functions.find("pointdihedral") == functions.end())
         functions["pointdihedral"] = &pointdihedral;
+    if (functions.find("arrayvectorangle") == functions.end())
+        functions["arrayvectorangle"] = &arrayvectorangle;
     ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions);
     map<string, int> atoms;
     set<string> variables;

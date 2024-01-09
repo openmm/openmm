@@ -131,6 +131,8 @@ private:
     void callFunction2(std::stringstream& out, std::string singleFn, std::string doubleFn, const std::string& arg1, const std::string& arg2, const std::string& tempType);
     void computeDelta(std::stringstream& out, const std::string& varName, const Lepton::ExpressionTreeNode& node, int index1, int index2, const std::string& tempType,
             bool periodic, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
+    void initializeDelta(std::stringstream& out, const std::string& varName, const Lepton::ExpressionTreeNode& node, int startIndex, const std::string& tempType,
+            bool periodic, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
     std::vector<std::vector<double> > computeFunctionParameters(const std::vector<const TabulatedFunction*>& functions);
     ComputeContext& context;
     FunctionPlaceholder fp1, fp2, fp3, periodicDistance;

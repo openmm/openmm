@@ -65,6 +65,7 @@ namespace OpenMM {
  * <li>distance(g1, g2): the distance between the centers of groups g1 and g2 (where "g1" and "g2" may be replaced
  * by the names of whichever groups you want to calculate the distance between).</li>
  * <li>angle(g1, g2, g3): the angle formed by the centers of the three specified groups.</li>
+ * <li>vectorangle(g1, g2, g3, g4): the angle defined between the vectors g1 to g2, and g3 to g4.</li>
  * <li>dihedral(g1, g2, g3, g4): the dihedral angle formed by the centers of the four specified groups.</li>
  * </ul>
  *
@@ -112,7 +113,8 @@ namespace OpenMM {
  * select(x,y,z) = z if x = 0, y otherwise.
  * 
  * This class also supports the functions pointdistance(x1, y1, z1, x2, y2, z2),
- * pointangle(x1, y1, z1, x2, y2, z2, x3, y3, z3), pointvectorangle(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), and pointdihedral(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4).
+ * pointangle(x1, y1, z1, x2, y2, z2, x3, y3, z3), pointvectorangle(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4), 
+ * arrayvectorangle(x1, y1, z1, x2, y2, z2) and pointdihedral(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4).
  * These functions are similar to distance(), angle(), and dihedral(), but the arguments are the
  * coordinates of points to perform the calculation based on rather than the names of groups.
  * This enables more flexible geometric calculations.  For example, the following computes the distance

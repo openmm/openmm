@@ -117,6 +117,165 @@ void testHarmonicBond() {
     ASSERT_EQUAL(5, molecules[0].size());
 }
 
+void testVectorAngleFunction() {
+    /* Tests that the vector angle function has the same behavior as the angle function*/
+    int numParticles = 5;
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(2.0);
+    vector<double> table(20);
+    for (int i = 0; i < 20; i++)
+        table[i] = sin(0.11*i);
+
+    CustomCentroidBondForce* angle = new CustomCentroidBondForce(3, "angle(g1,g2,g3)");
+    CustomCentroidBondForce* vectorangle = new CustomCentroidBondForce(4, "vectorangle(g1,g2,g3,g4)");
+    CustomCentroidBondForce* pointvectorangle = new CustomCentroidBondForce(4, "pointvectorangle(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)");
+    CustomCentroidBondForce* arrayvectorangle = new CustomCentroidBondForce(4, "arrayvectorangle(x2-x1,y2-y1,z2-z1,x4-x3,y4-y3,z4-z3)");
+    
+    vector<CustomCentroidBondForce*> vectorangles = {vectorangle, pointvectorangle, arrayvectorangle};
+
+    // Add identical bonds to the CustomCentroidBondForce.  As a stronger test, make sure that
+    // group number is different from particle number.
+    vector<int> groupMembers(1);
+
+    for (auto vectorAngleForce : vectorangles) {
+        vector<double> parameters;
+        vector<int> groups(4);
+
+        // Add groups
+        for (int i = 0; i < numParticles; i++) {
+            groupMembers[0] = i;
+            vectorAngleForce->addGroup(groupMembers);
+        }
+
+        // Add bonds
+        int orders[][4] = {{0, 1, 4, 3}};
+        for (auto& order : orders) {
+            for (int i = 0; i < 4; i++) {
+                groups[i] = order[i];
+            }
+            vectorAngleForce->addBond(groups, parameters);
+        }
+    }
+
+    
+    for (int i = 0; i < numParticles; i++) {
+        groupMembers[0] = i;
+        angle->addGroup(groupMembers);
+    }
+    angle->addBond({0, 2, 4}, {});
+
+    // Add both forces as different force groups, and create a context.
+
+    angle->setForceGroup(0);
+    vectorangle->setForceGroup(1);
+    pointvectorangle->setForceGroup(2);
+    arrayvectorangle->setForceGroup(3);
+    
+    system.addForce(angle);
+    for (auto vectorAngleForce : vectorangles) {
+        system.addForce(vectorAngleForce);
+    }
+
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+
+    // Evaluate the force and energy for various positions and see if they match.
+
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+
+    // Edge case test vectors
+    vector<vector<Vec3>> testPositions = {
+        // Parallel vectors
+        {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(1, 0, 0)},
+        // Antiparallel vectors
+        {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(-1, 0, 0)},
+        // 45 degree angle
+        {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0.7, 0.7, 0)},
+        // Orthogonal vectors (90 degrees)
+        {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 1, 0)},
+        // One zero vector
+        {Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 1, 0)},
+        // Both vectors zero
+        {Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0)}
+    };
+
+    // Generate random positions
+    for (int i = 0; i < 10; i++) {
+        vector<Vec3> randomPositions;
+        for (int j = 0; j < numParticles; j++) {
+            randomPositions.push_back(Vec3(5.0 * genrand_real2(sfmt), 5.0 * genrand_real2(sfmt), 5.0 * genrand_real2(sfmt)));
+        }
+        testPositions.push_back(randomPositions);
+    }
+    
+    for (auto& positions : testPositions) {
+            positions[1] = positions[2];
+            positions[3] = positions[2];
+    }
+
+    // Add a check for nan values before assertions
+    auto checkAndAssertTol = [](double expected, double found, double tol) {
+        if (!(std::isnan(expected) && std::isnan(found))) {
+            ASSERT_EQUAL_TOL(expected, found, tol);
+        }
+    };
+
+    for (const auto& positions : testPositions) {
+        context.setPositions(positions);
+        State state0 = context.getState(State::Forces | State::Energy, false, 1 << 0);
+        State state1 = context.getState(State::Forces | State::Energy, false, 1 << 1);
+        State state2 = context.getState(State::Forces | State::Energy, false, 1 << 2);
+        State state3 = context.getState(State::Forces | State::Energy, false, 1 << 3);
+
+        // Print potential energy for comparison
+        std::cout << "Potential Energy (Angle): " << state0.getPotentialEnergy() << "\n";
+        std::cout << "Potential Energy (VectorAngle): " << state1.getPotentialEnergy() << "\n";
+        std::cout << "Potential Energy (pointVectorAngle): " << state2.getPotentialEnergy() << "\n";
+        std::cout << "Potential Energy (arrayVectorAngle): " << state3.getPotentialEnergy() << "\n";
+
+        // Print forces for each particle
+        for (int k = 0; k < numParticles; k++) {
+            std::cout << "Particle " << k << " Forces Comparison:\n";
+            std::cout << "Angle: " << state0.getForces()[k] << "\n";
+            std::cout << "VectorAngle: " << state1.getForces()[k] << "\n";
+            std::cout << "pointVectorAngle: " << state2.getForces()[k] << "\n";
+            std::cout << "arrayVectorAngle: " << state3.getForces()[k] << "\n";
+        }
+    }
+
+    for (const auto& positions : testPositions) {
+        context.setPositions(positions);
+        State state0 = context.getState(State::Forces | State::Energy, false, 1<<0);
+        State state1 = context.getState(State::Forces | State::Energy, false, 1<<1);
+        State state2 = context.getState(State::Forces | State::Energy, false, 1<<2);
+        State state3 = context.getState(State::Forces | State::Energy, false, 1<<3);
+        
+        if (state0.getPotentialEnergy()!=state0.getPotentialEnergy()){
+            // Energy in NaN
+            ASSERT(state1.getPotentialEnergy()!=state1.getPotentialEnergy())
+            ASSERT(state2.getPotentialEnergy()!=state2.getPotentialEnergy())
+            ASSERT(state3.getPotentialEnergy()!=state3.getPotentialEnergy())
+            continue;
+        }
+        
+        ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
+        ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state2.getPotentialEnergy(), TOL);
+        ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state3.getPotentialEnergy(), TOL);
+        for (int j = 0; j < numParticles; j++){
+            ASSERT_EQUAL_VEC(state1.getForces()[j], state2.getForces()[j], TOL);
+            ASSERT_EQUAL_VEC(state1.getForces()[j], state3.getForces()[j], TOL);
+        }
+        ASSERT_EQUAL_VEC(state0.getForces()[0], state1.getForces()[0], TOL);
+        ASSERT_EQUAL_VEC(state0.getForces()[4], state1.getForces()[4], TOL);
+        ASSERT_EQUAL_VEC(state0.getForces()[2], state1.getForces()[1]+state1.getForces()[3], TOL);
+
+    }
+}
+
+
 void testComplexFunction(bool byGroups) {
     int numParticles = 5;
     System system;
@@ -420,6 +579,7 @@ int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         testHarmonicBond();
+        testVectorAngleFunction();
         testComplexFunction(true);
         testComplexFunction(false);
         testCustomWeights();

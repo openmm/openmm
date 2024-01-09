@@ -1895,6 +1895,8 @@ void ReferenceCalcCustomCentroidBondForceKernel::createInteraction(const CustomC
     functions["pointangle"] = new ReferencePointAngleFunction(usePeriodic, &boxVectors);
     functions["pointvectorangle"] = new ReferencePointVectorAngleFunction(usePeriodic, &boxVectors);
     functions["pointdihedral"] = new ReferencePointDihedralFunction(usePeriodic, &boxVectors);
+    functions["arrayvectorangle"] = new ReferenceArrayVectorAngleFunction(usePeriodic, &boxVectors);
+    
 
     // Parse the expression and create the object used to calculate the interaction.
 
@@ -2013,6 +2015,7 @@ void ReferenceCalcCustomCompoundBondForceKernel::createInteraction(const CustomC
     functions["pointangle"] = new ReferencePointAngleFunction(usePeriodic, &boxVectors);
     functions["pointvectorangle"] = new ReferencePointVectorAngleFunction(usePeriodic, &boxVectors);
     functions["pointdihedral"] = new ReferencePointDihedralFunction(usePeriodic, &boxVectors);
+    functions["arrayvectorangle"] = new ReferenceArrayVectorAngleFunction(usePeriodic, &boxVectors);
 
     // Parse the expression and create the object used to calculate the interaction.
 

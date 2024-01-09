@@ -36,6 +36,7 @@
 #include "lepton/Operation.h"
 #include "lepton/Parser.h"
 #include <sstream>
+#include <iostream>
 
 using namespace OpenMM;
 using Lepton::CustomFunction;
@@ -126,6 +127,7 @@ map<string, double> CustomCompoundBondForceImpl::getDefaultParameters() {
 }
 
 ParsedExpression CustomCompoundBondForceImpl::prepareExpression(const CustomCompoundBondForce& force, const map<string, CustomFunction*>& customFunctions) {
+    std::cout << "prepareExpression called" << std::endl;
     CustomCompoundBondForceImpl::FunctionPlaceholder distance(2);
     CustomCompoundBondForceImpl::FunctionPlaceholder angle(3);
     CustomCompoundBondForceImpl::FunctionPlaceholder vectorangle(4);
@@ -134,6 +136,7 @@ ParsedExpression CustomCompoundBondForceImpl::prepareExpression(const CustomComp
     CustomCompoundBondForceImpl::FunctionPlaceholder pointangle(9);
     CustomCompoundBondForceImpl::FunctionPlaceholder pointvectorangle(12);
     CustomCompoundBondForceImpl::FunctionPlaceholder pointdihedral(12);
+    CustomCompoundBondForceImpl::FunctionPlaceholder arrayvectorangle(12);
     map<string, CustomFunction*> functions = customFunctions;
     functions["distance"] = &distance;
     functions["angle"] = &angle;
@@ -147,6 +150,8 @@ ParsedExpression CustomCompoundBondForceImpl::prepareExpression(const CustomComp
         functions["pointvectorangle"] = &pointvectorangle;
     if (functions.find("pointdihedral") == functions.end())
         functions["pointdihedral"] = &pointdihedral;
+    if (functions.find("arrayvectorangle") == functions.end())
+        functions["arrayvectorangle"] = &arrayvectorangle;
     ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions);
     map<string, int> atoms;
     set<string> variables;
@@ -171,14 +176,41 @@ ParsedExpression CustomCompoundBondForceImpl::prepareExpression(const CustomComp
 ExpressionTreeNode CustomCompoundBondForceImpl::replaceFunctions(const ExpressionTreeNode& node, map<string, int> atoms,
         const map<string, CustomFunction*>& functions, set<string>& variables) {
     const Operation& op = node.getOperation();
+    // Print information about the function call
+//    std::cout << "replaceFunctions called" << std::endl;
+//    std::cout << "Operation ID: " << op.getId() << ", Name: " << op.getName() << std::endl;
+
+    // // Print details of the atoms map
+    // std::cout << "Atoms Map:" << std::endl;
+    // for (const auto& pair : atoms) {
+    //     std::cout << "  " << pair.first << ": " << pair.second << std::endl;
+    // }
+
+    // Print details of the functions map
+    // std::cout << "Functions Map:" << std::endl;
+    // for (const auto& pair : functions) {
+    //     std::cout << "  " << pair.first << ": Function Pointer" << std::endl;
+    //     std::cout << pair.second->getNumArguments() << std::endl;
+
+    // }
+
+    // // Print details of the variables set
+    // std::cout << "Variables Set:" << std::endl;
+    // for (const auto& var : variables) {
+    //     std::cout << "  " << var << std::endl;
+    // }
+    
     if (op.getId() == Operation::VARIABLE && variables.find(op.getName()) == variables.end())
         throw OpenMMException("CustomCompoundBondForce: Unknown variable '"+op.getName()+"'");
     vector<ExpressionTreeNode> children;
     if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "vectorangle" && op.getName() != "dihedral")) {
         // The arguments are not particle identifiers, so process its children.
-
-        for (auto& child : node.getChildren())
+ //       std::cout << "Processing children: " << op.getName() << std::endl;
+        for (auto& child : node.getChildren()) {
+ //           std::cout << "Child ID: " << child.getOperation().getId() << ", Name: " << child.getOperation().getName() << std::endl;
             children.push_back(replaceFunctions(child, atoms, functions, variables));
+        }
+//        std::cout << "Children size: " << children.size() << std::endl;
         return ExpressionTreeNode(op.clone(), children);
     }
     const Operation::Custom& custom = static_cast<const Operation::Custom&>(op);
@@ -186,6 +218,7 @@ ExpressionTreeNode CustomCompoundBondForceImpl::replaceFunctions(const Expressio
     // Identify the atoms this term is based on.
 
     int numArgs = custom.getNumArguments();
+//    std::cout << "NumArgs: " << numArgs <<std::endl;
     vector<int> indices(numArgs);
     for (int i = 0; i < numArgs; i++) {
         map<string, int>::const_iterator iter = atoms.find(node.getChildren()[i].getOperation().getName());
@@ -205,6 +238,7 @@ ExpressionTreeNode CustomCompoundBondForceImpl::replaceFunctions(const Expressio
         children.push_back(ExpressionTreeNode(new Operation::Variable(y.str())));
         children.push_back(ExpressionTreeNode(new Operation::Variable(z.str())));
     }
+//  std::cout << "Replacing for point function: " << op.getName()<< " " << numArgs <<" "<< children.size() <<std::endl;
     if (op.getName() == "distance")
         return ExpressionTreeNode(new Operation::Custom("pointdistance", functions.at("pointdistance")->clone()), children);
     if (op.getName() == "angle")
