@@ -189,14 +189,14 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
             }
             else if (node.getOperation().getName() == "pointvectorangle") {
                 // This is a vectorangle() function.
-                computeDelta(out, "angle_delta21", node, 3, 0, tempType, distancesArePeriodic, temps);
-                computeDelta(out, "angle_delta43", node, 9, 6, tempType, distancesArePeriodic, temps);
+                computeDelta(out, "angle_delta10", node, 3, 0, tempType, distancesArePeriodic, temps);
+                computeDelta(out, "angle_delta32", node, 9, 6, tempType, distancesArePeriodic, temps);
                                 
-                out << tempType << " angle_theta = computeAngle(angle_delta21, angle_delta43);\n";
-                out << tempType << "3 angle_crossProd = trimTo3(cross(angle_delta43, angle_delta21));\n";
+                out << tempType << " angle_theta = computeAngle(angle_delta10, angle_delta32);\n";
+                out << tempType << "3 angle_crossProd = trimTo3(cross(angle_delta10, angle_delta32));\n";
                 out << "real angle_lengthCross = max(SQRT(dot(angle_crossProd, angle_crossProd)), (real) 1e-6f);\n";
-                out << "real3 angle_deltaCross0 = cross(trimTo3(angle_delta21), angle_crossProd)/(angle_delta21.w*angle_lengthCross);\n";
-                out << "real3 angle_deltaCross2 = -cross(trimTo3(angle_delta43), angle_crossProd)/(angle_delta43.w*angle_lengthCross);\n";
+                out << "real3 angle_deltaCross0 = cross(angle_crossProd,trimTo3(angle_delta10))/(angle_delta10.w*angle_lengthCross);\n";
+                out << "real3 angle_deltaCross3 = cross(angle_crossProd,trimTo3(angle_delta32))/(angle_delta32.w*angle_lengthCross);\n";
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     int argIndex = -1;
@@ -222,29 +222,29 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                     else if (argIndex == 5)
                         out << nodeNames[j] << " = -angle_deltaCross0.z;\n";
                     else if (argIndex == 6)
-                        out << nodeNames[j] << " = angle_deltaCross2.x;\n";
+                        out << nodeNames[j] << " = -angle_deltaCross3.x;\n";
                     else if (argIndex == 7)
-                        out << nodeNames[j] << " = angle_deltaCross2.y;\n";
+                        out << nodeNames[j] << " = -angle_deltaCross3.y;\n";
                     else if (argIndex == 8)
-                        out << nodeNames[j] << " = angle_deltaCross2.z;\n";
+                        out << nodeNames[j] << " = -angle_deltaCross3.z;\n";
                     else if (argIndex == 9)
-                        out << nodeNames[j] << " = -angle_deltaCross2.x;\n";
+                        out << nodeNames[j] << " = angle_deltaCross3.x;\n";
                     else if (argIndex == 10)
-                        out << nodeNames[j] << " = -angle_deltaCross2.y;\n";
+                        out << nodeNames[j] << " = angle_deltaCross3.y;\n";
                     else if (argIndex == 11)
-                        out << nodeNames[j] << " = -angle_deltaCross2.z;\n";
+                        out << nodeNames[j] << " = angle_deltaCross3.z;\n";
                 }
             }
             else if (node.getOperation().getName() == "arrayvectorangle") {
                 // This is a vectorangle() function.
-                initializeDelta(out, "angle_delta1", node, 0, tempType, distancesArePeriodic, temps);
-                initializeDelta(out, "angle_delta2", node, 3, tempType, distancesArePeriodic, temps);
+                initializeDelta(out, "angle_delta0", node, 0, tempType, distancesArePeriodic, temps);
+                initializeDelta(out, "angle_delta1", node, 3, tempType, distancesArePeriodic, temps);
                                 
-                out << tempType << " angle_theta = computeAngle(angle_delta1, angle_delta2);\n";
-                out << tempType << "3 angle_crossProd = trimTo3(cross(angle_delta2, angle_delta1));\n";
+                out << tempType << " angle_theta = computeAngle(angle_delta0, angle_delta1);\n";
+                out << tempType << "3 angle_crossProd = trimTo3(cross(angle_delta0, angle_delta1));\n";
                 out << "real angle_lengthCross = max(SQRT(dot(angle_crossProd, angle_crossProd)), (real) 1e-6f);\n";
+                out << "real3 angle_deltaCross0 = cross(trimTo3(angle_delta0), angle_crossProd)/(angle_delta0.w*angle_lengthCross);\n";
                 out << "real3 angle_deltaCross1 = -cross(trimTo3(angle_delta1), angle_crossProd)/(angle_delta1.w*angle_lengthCross);\n";
-                out << "real3 angle_deltaCross2 = cross(trimTo3(angle_delta2), angle_crossProd)/(angle_delta2.w*angle_lengthCross);\n";
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     int argIndex = -1;
@@ -258,17 +258,17 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                     if (argIndex == -1)
                         out << nodeNames[j] << " = angle_theta;\n";
                     else if (argIndex == 0)
-                        out << nodeNames[j] << " = angle_deltaCross1.x;\n";
+                        out << nodeNames[j] << " = angle_deltaCross0.x;\n";
                     else if (argIndex == 1)
-                        out << nodeNames[j] << " = angle_deltaCross1.y;\n";
+                        out << nodeNames[j] << " = angle_deltaCross0.y;\n";
                     else if (argIndex == 2)
-                        out << nodeNames[j] << " = angle_deltaCross1.z;\n";
+                        out << nodeNames[j] << " = angle_deltaCross0.z;\n";
                     else if (argIndex == 3)
-                        out << nodeNames[j] << " = angle_deltaCross2.x;\n";
+                        out << nodeNames[j] << " = angle_deltaCross1.x;\n";
                     else if (argIndex == 4)
-                        out << nodeNames[j] << " = angle_deltaCross2.y;\n";
+                        out << nodeNames[j] << " = angle_deltaCross1.y;\n";
                     else if (argIndex == 5)
-                        out << nodeNames[j] << " = angle_deltaCross2.z;\n";
+                        out << nodeNames[j] << " = angle_deltaCross1.z;\n";
                 }
             }
             else if (node.getOperation().getName() == "pointdihedral") {

@@ -147,18 +147,18 @@ int ReferencePointVectorAngleFunction::getNumArguments() const {
 }
 
 double ReferencePointVectorAngleFunction::evaluate(const double* arguments) const {
-    Vec3 delta21 = Vec3(arguments[3], arguments[4], arguments[5])-Vec3(arguments[0], arguments[1], arguments[2]);
-    Vec3 delta43 = Vec3(arguments[9], arguments[10], arguments[11])-Vec3(arguments[6], arguments[7], arguments[8]);
+    Vec3 delta10 = Vec3(arguments[3], arguments[4], arguments[5])-Vec3(arguments[0], arguments[1], arguments[2]);
+    Vec3 delta32 = Vec3(arguments[9], arguments[10], arguments[11])-Vec3(arguments[6], arguments[7], arguments[8]);
     if (periodic) {
         Vec3* boxVectors = *boxVectorHandle;
-        delta21 -= boxVectors[2]*floor(delta21[2]/boxVectors[2][2]+0.5);
-        delta21 -= boxVectors[1]*floor(delta21[1]/boxVectors[1][1]+0.5);
-        delta21 -= boxVectors[0]*floor(delta21[0]/boxVectors[0][0]+0.5);
-        delta43 -= boxVectors[2]*floor(delta43[2]/boxVectors[2][2]+0.5);
-        delta43 -= boxVectors[1]*floor(delta43[1]/boxVectors[1][1]+0.5);
-        delta43 -= boxVectors[0]*floor(delta43[0]/boxVectors[0][0]+0.5);
+        delta10 -= boxVectors[2]*floor(delta10[2]/boxVectors[2][2]+0.5);
+        delta10 -= boxVectors[1]*floor(delta10[1]/boxVectors[1][1]+0.5);
+        delta10 -= boxVectors[0]*floor(delta10[0]/boxVectors[0][0]+0.5);
+        delta32 -= boxVectors[2]*floor(delta32[2]/boxVectors[2][2]+0.5);
+        delta32 -= boxVectors[1]*floor(delta32[1]/boxVectors[1][1]+0.5);
+        delta32 -= boxVectors[0]*floor(delta32[0]/boxVectors[0][0]+0.5);
     }
-    return ReferenceBondIxn::getAngleBetweenTwoVectors(&delta21[0], &delta43[0]);
+    return ReferenceBondIxn::getAngleBetweenTwoVectors(&delta10[0], &delta32[0]);
 }
 
 double ReferencePointVectorAngleFunction::evaluateDerivative(const double* arguments, const int* derivOrder) const {
@@ -170,27 +170,27 @@ double ReferencePointVectorAngleFunction::evaluateDerivative(const double* argum
             argIndex = i;
         }
     }
-    Vec3 delta21 = Vec3(arguments[3], arguments[4], arguments[5])-Vec3(arguments[0], arguments[1], arguments[2]);
-    Vec3 delta43 = Vec3(arguments[9], arguments[10], arguments[11])-Vec3(arguments[6], arguments[7], arguments[8]);
+    Vec3 delta10 = Vec3(arguments[3], arguments[4], arguments[5])-Vec3(arguments[0], arguments[1], arguments[2]);
+    Vec3 delta32 = Vec3(arguments[9], arguments[10], arguments[11])-Vec3(arguments[6], arguments[7], arguments[8]);
     if (periodic) {
         Vec3* boxVectors = *boxVectorHandle;
-        delta21 -= boxVectors[2]*floor(delta21[2]/boxVectors[2][2]+0.5);
-        delta21 -= boxVectors[1]*floor(delta21[1]/boxVectors[1][1]+0.5);
-        delta21 -= boxVectors[0]*floor(delta21[0]/boxVectors[0][0]+0.5);
-        delta43 -= boxVectors[2]*floor(delta43[2]/boxVectors[2][2]+0.5);
-        delta43 -= boxVectors[1]*floor(delta43[1]/boxVectors[1][1]+0.5);
-        delta43 -= boxVectors[0]*floor(delta43[0]/boxVectors[0][0]+0.5);
+        delta10 -= boxVectors[2]*floor(delta10[2]/boxVectors[2][2]+0.5);
+        delta10 -= boxVectors[1]*floor(delta10[1]/boxVectors[1][1]+0.5);
+        delta10 -= boxVectors[0]*floor(delta10[0]/boxVectors[0][0]+0.5);
+        delta32 -= boxVectors[2]*floor(delta32[2]/boxVectors[2][2]+0.5);
+        delta32 -= boxVectors[1]*floor(delta32[1]/boxVectors[1][1]+0.5);
+        delta32 -= boxVectors[0]*floor(delta32[0]/boxVectors[0][0]+0.5);
     }
-    Vec3 thetaCross = delta21.cross(delta43);
+    Vec3 thetaCross = delta10.cross(delta32);
     double lengthThetaCross = sqrt(thetaCross.dot(thetaCross));
     if (lengthThetaCross < 1.0e-6)
         lengthThetaCross = 1.0e-6;
     Vec3 deltaCrossP[4];
-    deltaCrossP[0] = delta21.cross(thetaCross)/(delta21.dot(delta21)*lengthThetaCross);
-    deltaCrossP[3] = delta43.cross(thetaCross)/(delta43.dot(delta43)*lengthThetaCross);
+    deltaCrossP[0] = thetaCross.cross(delta10)/(delta10.dot(delta10)*lengthThetaCross);
+    deltaCrossP[3] = thetaCross.cross(delta32)/(delta32.dot(delta32)*lengthThetaCross);
     deltaCrossP[1] = -deltaCrossP[0];
     deltaCrossP[2] = -deltaCrossP[3];
-    return -deltaCrossP[argIndex/3][argIndex%3];
+    return deltaCrossP[argIndex/3][argIndex%3];
 }
 
 Lepton::CustomFunction* ReferenceArrayVectorAngleFunction::clone() const {
