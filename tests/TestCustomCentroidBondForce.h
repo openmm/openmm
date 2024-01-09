@@ -127,15 +127,21 @@ void testVectorAngleFunction() {
     for (int i = 0; i < 20; i++)
         table[i] = sin(0.11*i);
 
+    // Creates 4 equivalent forces
     CustomCentroidBondForce* angle = new CustomCentroidBondForce(3, "angle(g1,g2,g3)");
     CustomCentroidBondForce* vectorangle = new CustomCentroidBondForce(4, "vectorangle(g1,g2,g3,g4)");
     CustomCentroidBondForce* pointvectorangle = new CustomCentroidBondForce(4, "pointvectorangle(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)");
     CustomCentroidBondForce* arrayvectorangle = new CustomCentroidBondForce(4, "arrayvectorangle(x2-x1,y2-y1,z2-z1,x4-x3,y4-y3,z4-z3)");
     
-    vector<CustomCentroidBondForce*> vectorangles = {vectorangle, pointvectorangle, arrayvectorangle};
+    // Define groups and bonds.
+    // particles 1,2, and 3 have the same position.
+    // Angle is defined using particles 0, 2, and 3
+    // VectorAngle is defined using particles 0, 1, and 4, 3
+    // Energies should be equivalent
+    // Forces in particles 0 and 3 should be equivalent
+    // Forces in particle 2 should be the sum of forces in particles 1 and 3
 
-    // Add identical bonds to the CustomCentroidBondForce.  As a stronger test, make sure that
-    // group number is different from particle number.
+    vector<CustomCentroidBondForce*> vectorangles = {vectorangle, pointvectorangle, arrayvectorangle};
     vector<int> groupMembers(1);
 
     for (auto vectorAngleForce : vectorangles) {
@@ -165,8 +171,7 @@ void testVectorAngleFunction() {
     }
     angle->addBond({0, 2, 4}, {});
 
-    // Add both forces as different force groups, and create a context.
-
+    // Add forces as different force groups, and create a context.
     angle->setForceGroup(0);
     vectorangle->setForceGroup(1);
     pointvectorangle->setForceGroup(2);
@@ -181,12 +186,11 @@ void testVectorAngleFunction() {
     Context context(system, integrator, platform);
 
     // Evaluate the force and energy for various positions and see if they match.
-
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     vector<Vec3> positions(numParticles);
 
-    // Edge case test vectors
+    // Edge case positions
     vector<vector<Vec3>> testPositions = {
         // Parallel vectors
         {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(1, 0, 0)},
@@ -202,7 +206,7 @@ void testVectorAngleFunction() {
         {Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0)}
     };
 
-    // Generate random positions
+    // Random positions
     for (int i = 0; i < 10; i++) {
         vector<Vec3> randomPositions;
         for (int j = 0; j < numParticles; j++) {
@@ -214,36 +218,6 @@ void testVectorAngleFunction() {
     for (auto& positions : testPositions) {
             positions[1] = positions[2];
             positions[3] = positions[2];
-    }
-
-    // Add a check for nan values before assertions
-    auto checkAndAssertTol = [](double expected, double found, double tol) {
-        if (!(std::isnan(expected) && std::isnan(found))) {
-            ASSERT_EQUAL_TOL(expected, found, tol);
-        }
-    };
-
-    for (const auto& positions : testPositions) {
-        context.setPositions(positions);
-        State state0 = context.getState(State::Forces | State::Energy, false, 1 << 0);
-        State state1 = context.getState(State::Forces | State::Energy, false, 1 << 1);
-        State state2 = context.getState(State::Forces | State::Energy, false, 1 << 2);
-        State state3 = context.getState(State::Forces | State::Energy, false, 1 << 3);
-
-        // Print potential energy for comparison
-        std::cout << "Potential Energy (Angle): " << state0.getPotentialEnergy() << "\n";
-        std::cout << "Potential Energy (VectorAngle): " << state1.getPotentialEnergy() << "\n";
-        std::cout << "Potential Energy (pointVectorAngle): " << state2.getPotentialEnergy() << "\n";
-        std::cout << "Potential Energy (arrayVectorAngle): " << state3.getPotentialEnergy() << "\n";
-
-        // Print forces for each particle
-        for (int k = 0; k < numParticles; k++) {
-            std::cout << "Particle " << k << " Forces Comparison:\n";
-            std::cout << "Angle: " << state0.getForces()[k] << "\n";
-            std::cout << "VectorAngle: " << state1.getForces()[k] << "\n";
-            std::cout << "pointVectorAngle: " << state2.getForces()[k] << "\n";
-            std::cout << "arrayVectorAngle: " << state3.getForces()[k] << "\n";
-        }
     }
 
     for (const auto& positions : testPositions) {
@@ -261,6 +235,7 @@ void testVectorAngleFunction() {
             continue;
         }
         
+        // Forces should be equal between vector angle implementations
         ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
         ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state2.getPotentialEnergy(), TOL);
         ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state3.getPotentialEnergy(), TOL);
@@ -268,6 +243,8 @@ void testVectorAngleFunction() {
             ASSERT_EQUAL_VEC(state1.getForces()[j], state2.getForces()[j], TOL);
             ASSERT_EQUAL_VEC(state1.getForces()[j], state3.getForces()[j], TOL);
         }
+        
+        // Forces should be similar to angle
         ASSERT_EQUAL_VEC(state0.getForces()[0], state1.getForces()[0], TOL);
         ASSERT_EQUAL_VEC(state0.getForces()[4], state1.getForces()[4], TOL);
         ASSERT_EQUAL_VEC(state0.getForces()[2], state1.getForces()[1]+state1.getForces()[3], TOL);

@@ -37,7 +37,6 @@
 #include "lepton/Parser.h"
 #include <sstream>
 #include <utility>
-#include <iostream>
 
 using namespace OpenMM;
 using namespace std;
@@ -189,9 +188,6 @@ ParsedExpression CustomCentroidBondForceImpl::prepareExpression(const CustomCent
 ExpressionTreeNode CustomCentroidBondForceImpl::replaceFunctions(const ExpressionTreeNode& node, map<string, int> groups,
         const map<string, CustomFunction*>& functions, set<string>& variables) {
     const Operation& op = node.getOperation();
-    // std::cout << "Processing operation: " << op.getName() << std::endl;
-    // for (auto& child : node.getChildren())
-    //     std::cout << "    Children: " << child.getOperation().getName() << std::endl;
     if (op.getId() == Operation::VARIABLE && variables.find(op.getName()) == variables.end())
         throw OpenMMException("CustomCentroidBondForce: Unknown variable '"+op.getName()+"'");
     vector<ExpressionTreeNode> children;
@@ -200,7 +196,6 @@ ExpressionTreeNode CustomCentroidBondForceImpl::replaceFunctions(const Expressio
 
         for (auto& child : node.getChildren())
             children.push_back(replaceFunctions(child, groups, functions, variables));
-        // std::cout << "Operation final: " << op.getName()<< " numArgs: " << children.size() <<std::endl;
         return ExpressionTreeNode(op.clone(), children);
     }
     const Operation::Custom& custom = static_cast<const Operation::Custom&>(op);
@@ -227,17 +222,12 @@ ExpressionTreeNode CustomCentroidBondForceImpl::replaceFunctions(const Expressio
         children.push_back(ExpressionTreeNode(new Operation::Variable(y.str())));
         children.push_back(ExpressionTreeNode(new Operation::Variable(z.str())));
     }
-    // std::cout << "replacing operation: " << op.getName()<< " numArgs: " << numArgs <<std::endl;
     if (op.getName() == "distance")
         return ExpressionTreeNode(new Operation::Custom("pointdistance", functions.at("pointdistance")->clone()), children);
     if (op.getName() == "angle")
         return ExpressionTreeNode(new Operation::Custom("pointangle", functions.at("pointangle")->clone()), children);
     if (op.getName() == "vectorangle")
         return ExpressionTreeNode(new Operation::Custom("pointvectorangle", functions.at("pointvectorangle")->clone()), children);
-    // if (op.getName() == "arrayvectorangle"){
-    //     return ExpressionTreeNode(new Operation::Custom("pointvectorangle", functions.at("pointvectorangle")->clone()), children);
-    //     std::cout << "replacing operation: " << op.getName()<< " numArgs: " << numArgs <<std::endl;
-    //     }
     if (op.getName() == "dihedral")
         return ExpressionTreeNode(new Operation::Custom("pointdihedral", functions.at("pointdihedral")->clone()), children);
     throw OpenMMException("Internal error.  Unexpected function '"+op.getName()+"'");

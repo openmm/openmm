@@ -28,7 +28,6 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/SplineFitter.h"
 #include "lepton/Operation.h"
-#include <iostream>
 
 using namespace OpenMM;
 using namespace Lepton;
@@ -190,15 +189,14 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
             }
             else if (node.getOperation().getName() == "pointvectorangle") {
                 // This is a vectorangle() function.
-                std::cout << "Inside " << node.getOperation().getName()  << std::endl;
                 computeDelta(out, "angle_delta21", node, 3, 0, tempType, distancesArePeriodic, temps);
-                computeDelta(out, "angle_delta34", node, 9, 6, tempType, distancesArePeriodic, temps);
+                computeDelta(out, "angle_delta43", node, 9, 6, tempType, distancesArePeriodic, temps);
                                 
-                out << tempType << " angle_theta = computeAngle(angle_delta21, angle_delta34);\n";
-                out << tempType << "3 angle_crossProd = trimTo3(cross(angle_delta34, angle_delta21));\n";
+                out << tempType << " angle_theta = computeAngle(angle_delta21, angle_delta43);\n";
+                out << tempType << "3 angle_crossProd = trimTo3(cross(angle_delta43, angle_delta21));\n";
                 out << "real angle_lengthCross = max(SQRT(dot(angle_crossProd, angle_crossProd)), (real) 1e-6f);\n";
                 out << "real3 angle_deltaCross0 = cross(trimTo3(angle_delta21), angle_crossProd)/(angle_delta21.w*angle_lengthCross);\n";
-                out << "real3 angle_deltaCross2 = -cross(trimTo3(angle_delta34), angle_crossProd)/(angle_delta34.w*angle_lengthCross);\n";
+                out << "real3 angle_deltaCross2 = -cross(trimTo3(angle_delta43), angle_crossProd)/(angle_delta43.w*angle_lengthCross);\n";
                 for (int j = 0; j < nodes.size(); j++) {
                     const vector<int>& derivOrder = dynamic_cast<const Operation::Custom*>(&nodes[j]->getOperation())->getDerivOrder();
                     int argIndex = -1;
@@ -239,7 +237,6 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
             }
             else if (node.getOperation().getName() == "arrayvectorangle") {
                 // This is a vectorangle() function.
-                std::cout << "Inside " << node.getOperation().getName()  << std::endl;
                 initializeDelta(out, "angle_delta1", node, 0, tempType, distancesArePeriodic, temps);
                 initializeDelta(out, "angle_delta2", node, 3, tempType, distancesArePeriodic, temps);
                                 

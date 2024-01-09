@@ -1897,7 +1897,6 @@ void ReferenceCalcCustomCentroidBondForceKernel::createInteraction(const CustomC
     functions["pointdihedral"] = new ReferencePointDihedralFunction(usePeriodic, &boxVectors);
     functions["arrayvectorangle"] = new ReferenceArrayVectorAngleFunction(usePeriodic, &boxVectors);
     
-
     // Parse the expression and create the object used to calculate the interaction.
 
     int numGroups = force.getNumGroups();
