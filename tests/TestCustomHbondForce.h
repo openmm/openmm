@@ -268,6 +268,88 @@ void testVectorAngle2() {
 
 }
 
+void testVectorAngle() {
+    /* Compares VectorAngle with angle*/
+    
+    // Initialize the system
+    int numParticles = 5;
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+
+    // Create CustomHbondForce using angle
+    CustomHbondForce* angleForce = new CustomHbondForce("angle(d1,d2,a1)");
+    angleForce->addDonor(0, 2, -1, {});
+    angleForce->addAcceptor(4, -1, -1, {});
+    angleForce->setCutoffDistance(10.0);
+    angleForce->setForceGroup(0);
+    system.addForce(angleForce);
+
+    // Create CustomHbondForce using vectorangle
+    CustomHbondForce* vectorAngleForce = new CustomHbondForce("vectorangle(d1,d2,a1,a2)");
+    vectorAngleForce->addDonor(0, 1, -1, {});
+    vectorAngleForce->addAcceptor(4, 3, -1, {});
+    vectorAngleForce->setCutoffDistance(10.0);
+    vectorAngleForce->setForceGroup(1);
+    system.addForce(vectorAngleForce);
+
+    // Set up the contexts for each force
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    // Edge case test vectors
+    vector<vector<Vec3>> testPositions = {
+        // Parallel vectors
+        {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(1, 0, 0)},
+        // Antiparallel vectors
+        {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(-1, 0, 0)},
+        // 45 degree angle
+        {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0.7, 0.7, 0)},
+        // Orthogonal vectors (90 degrees)
+        {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 1, 0)},
+        // One zero vector
+        {Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 1, 0)},
+        // Both vectors zero
+        {Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0)}
+    };
+
+    // Generate random positions
+    for (int i = 0; i < 10; i++) {
+        vector<Vec3> randomPositions;
+        for (int j = 0; j < numParticles; j++) {
+            randomPositions.push_back(Vec3(5.0 * genrand_real2(sfmt), 5.0 * genrand_real2(sfmt), 5.0 * genrand_real2(sfmt)));
+        }
+        testPositions.push_back(randomPositions);
+    }
+    
+    for (auto& positions : testPositions) {
+            positions[1] = positions[2];
+            positions[3] = positions[2];
+    }
+
+    for (const auto& positions : testPositions) {
+        context.setPositions(positions);
+        State state0 = context.getState(State::Forces | State::Energy, false, 1<<0);
+        State state1 = context.getState(State::Forces | State::Energy, false, 1<<1);
+        
+        if (state0.getPotentialEnergy()!=state0.getPotentialEnergy()){
+            // Energy in NaN
+            ASSERT(state1.getPotentialEnergy()!=state1.getPotentialEnergy())
+            continue;
+        }
+        
+        ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
+        ASSERT_EQUAL_VEC(state0.getForces()[0], state1.getForces()[0], TOL);
+        ASSERT_EQUAL_VEC(state0.getForces()[4], state1.getForces()[4], TOL);
+        ASSERT_EQUAL_VEC(state0.getForces()[2], state1.getForces()[1]+state1.getForces()[3], TOL);
+
+    }
+
+}
+
 
 void testExclusions() {
     System system;
@@ -479,6 +561,7 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         testHbond();
         testVectorAngle();
+        testVectorAngle2();
         testExclusions();
         testCutoff();
         testCustomFunctions();
