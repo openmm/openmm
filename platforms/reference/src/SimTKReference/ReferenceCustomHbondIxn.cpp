@@ -25,6 +25,7 @@
 #include <string.h>
 #include <sstream>
 #include <utility>
+#include <iostream>
 
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
@@ -35,6 +36,7 @@ using std::pair;
 using std::set;
 using std::string;
 using std::stringstream;
+using std::iostream;
 using std::vector;
 using namespace OpenMM;
 
@@ -197,7 +199,7 @@ void ReferenceCustomHbondIxn::calculateOneIxn(int donor, int acceptor, vector<Ve
     for (int i = 0; i < (int) vectorangleTerms.size(); i++) {
         const VectorAngleTermInfo& term = vectorangleTerms[i];
         computeDelta(atoms[term.p1], atoms[term.p2], term.delta1, atomCoordinates);
-        computeDelta(atoms[term.p4], atoms[term.p3], term.delta2, atomCoordinates);
+        computeDelta(atoms[term.p3], atoms[term.p4], term.delta2, atomCoordinates);
         variables[term.name] = computeAngle(term.delta1, term.delta2);
     }
     for (int i = 0; i < (int) dihedralTerms.size(); i++) {
@@ -250,7 +252,7 @@ void ReferenceCustomHbondIxn::calculateOneIxn(int donor, int acceptor, vector<Ve
     }
 
     // Apply forces based on vectorangles.
-
+    
     for (int i = 0; i < (int) vectorangleTerms.size(); i++) {
         const VectorAngleTermInfo& term = vectorangleTerms[i];
         double dEdTheta = term.forceExpression.evaluate(variables);
@@ -259,14 +261,14 @@ void ReferenceCustomHbondIxn::calculateOneIxn(int donor, int acceptor, vector<Ve
         double lengthThetaCross = sqrt(DOT3(thetaCross, thetaCross));
         if (lengthThetaCross < 1.0e-06)
             lengthThetaCross = 1.0e-06;
-        double termA = dEdTheta/(term.delta1[ReferenceForce::R2Index]*lengthThetaCross);
-        double termC = -dEdTheta/(term.delta2[ReferenceForce::R2Index]*lengthThetaCross);
+        double term0 = dEdTheta/(term.delta1[ReferenceForce::R2Index]*lengthThetaCross);
+        double term3 = dEdTheta/(term.delta2[ReferenceForce::R2Index]*lengthThetaCross);
         double deltaCrossP[4][3];
         SimTKOpenMMUtilities::crossProductVector3(term.delta1, thetaCross, deltaCrossP[0]);
         SimTKOpenMMUtilities::crossProductVector3(term.delta2, thetaCross, deltaCrossP[3]);
         for (int i = 0; i < 3; i++) {
-            deltaCrossP[0][i] *= termA;
-            deltaCrossP[3][i] *= termC;
+            deltaCrossP[0][i] *= term0;
+            deltaCrossP[3][i] *= term3;
             deltaCrossP[1][i] = -deltaCrossP[0][i];
             deltaCrossP[2][i] = -deltaCrossP[3][i];
         }

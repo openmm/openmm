@@ -143,15 +143,21 @@ void testHbond() {
     ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
 }
 
-void testVectorAngle() {
-    // Create a system using a CustomHbondForce.
+void testVectorAngle2() {
+    /* Compares VectorAngle with an approximation of vector angle*/
 
-    System customSystem;
-    customSystem.addParticle(1.0);
-    customSystem.addParticle(1.0);
-    customSystem.addParticle(1.0);
-    customSystem.addParticle(1.0);
-    CustomHbondForce* custom = new CustomHbondForce("k*(vectorangle(d2,d1,a1,a2)-psi0)");
+    const int numParticles = 4;
+    const int numTestIterations = 10;
+    const double TOL = 1e-5;
+    
+    // Initialize systems
+    System customSystem, standardSystem;
+    for (int i = 0; i < numParticles; i++) {
+        customSystem.addParticle(1.0);
+        standardSystem.addParticle(1.0);
+    }
+
+    CustomHbondForce* custom = new CustomHbondForce("k*(vectorangle(d2,d1,a2,a1)-psi0)");
     custom->addGlobalParameter("k", 1);
     custom->addGlobalParameter("psi0", M_PI_2);
     vector<double> parameters(0);
@@ -164,11 +170,6 @@ void testVectorAngle() {
 
     // Create an identical system without using vectorangle
 
-    System standardSystem;
-    standardSystem.addParticle(1.0);
-    standardSystem.addParticle(1.0);
-    standardSystem.addParticle(1.0);
-    standardSystem.addParticle(1.0);
     CustomHbondForce* ref = new CustomHbondForce("k*(vangle - psi0);"
                                                  "vangle   = acos(cost3lim);"
                                                  "cost3lim = min(max(cost3,-0.9999),0.9999);"
@@ -191,7 +192,7 @@ void testVectorAngle() {
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
 
-    vector<Vec3> positions(4);
+    vector<Vec3> positions(numParticles);
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
     Context c1(customSystem, integrator1, platform);
@@ -203,10 +204,10 @@ void testVectorAngle() {
         c2.setPositions(positions);
         State s1 = c1.getState(State::Forces | State::Energy);
         State s2 = c2.getState(State::Forces | State::Energy);
+        ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
         for (int j = 0; j < customSystem.getNumParticles(); j++) {
             ASSERT_EQUAL_VEC(s2.getForces()[j], s1.getForces()[j], TOL);
         }
-        ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
         
     }
 

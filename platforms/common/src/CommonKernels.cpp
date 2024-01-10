@@ -4300,14 +4300,14 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         for (auto& vectorangle : vectorangles) {
         const vector<int>& atoms = vectorangle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
-        string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[3]];
+        string deltaName2 = atomNames[atoms[3]]+atomNames[atoms[2]];
         string vectorangleName = "vectorangle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]]+atomNames[atoms[3]];
         if (computedDeltas.count(deltaName1) == 0) {
             compute << "real4 delta"+deltaName1+" = delta("+atomNamesLower[atoms[1]]+", "+atomNamesLower[atoms[0]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName1);
         }
         if (computedDeltas.count(deltaName2) == 0) {
-            compute << "real4 delta"+deltaName2+" = delta("+atomNamesLower[atoms[2]]+", "+atomNamesLower[atoms[3]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
+            compute << "real4 delta"+deltaName2+" = delta("+atomNamesLower[atoms[3]]+", "+atomNamesLower[atoms[2]]+", periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);\n";
             computedDeltas.insert(deltaName2);
         }
         compute << "real "+vectorangleName+" = computeAngle(delta"+deltaName1+", delta"+deltaName2+");\n";
@@ -4397,11 +4397,11 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     for (auto& vectorangle : vectorangles) {
         const vector<int>& atoms = vectorangle.second;
         string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
-        string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[3]];
+        string deltaName2 = atomNames[atoms[3]]+atomNames[atoms[2]];
         compute << "{\n";
-        compute << "real3 crossProd = trimTo3(cross(delta"+deltaName2+", delta"+deltaName1+"));\n";
+        compute << "real3 crossProd = trimTo3(cross(delta"+deltaName1+", delta"+deltaName2+"));\n";
         compute << "real lengthCross = max(SQRT(dot(crossProd,crossProd)), (real) 1e-6f);\n";
-        compute << "real3 deltaCross0 = -cross(trimTo3(delta"+deltaName1+"), crossProd)*dEdVectorAngle"+cc.intToString(index)+"/(delta"+deltaName1+".w*lengthCross);\n";
+        compute << "real3 deltaCross0 = cross(trimTo3(delta"+deltaName1+"), crossProd)*dEdVectorAngle"+cc.intToString(index)+"/(delta"+deltaName1+".w*lengthCross);\n";
         compute << "real3 deltaCross3 = cross(trimTo3(delta"+deltaName2+"), crossProd)*dEdVectorAngle"+cc.intToString(index)+"/(delta"+deltaName2+".w*lengthCross);\n";
         compute << "real3 deltaCross1 = -deltaCross0;\n";
         compute << "real3 deltaCross2 = -deltaCross3;\n";
