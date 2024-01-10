@@ -4461,7 +4461,7 @@ double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
     setPeriodicBoxArgs(cc, kernel, 6);
     int numDonorBlocks = (numDonors+31)/32;
     int numAcceptorBlocks = (numAcceptors+31)/32;
-    kernel->execute(numDonorBlocks*numAcceptorBlocks*32, cc.getIsCPU() ? 32 : 64);
+    kernel->execute(numDonorBlocks*numAcceptorBlocks*32, cc.getSIMDWidth() < 32 ? 32 : 64);
     return 0.0;
 }
 
