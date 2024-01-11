@@ -60,6 +60,13 @@ void ATMForceProxy::serialize(const void* object, SerializationNode& node) const
         SerializationNode& f = forces.createChildNode("Force");
         f.createChildNode("Force", &force.getForce(i));
     }
+    SerializationNode& particles = node.createChildNode("Particles");
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        Vec3 d1, d0;
+        force.getParticleParameters(i, d1, d0);
+        particles.createChildNode("Particle").setDoubleProperty("d1x", d1[0]).setDoubleProperty("d1y", d1[1]).setDoubleProperty("d1z", d1[2])
+                .setDoubleProperty("d0x", d0[0]).setDoubleProperty("d0y", d0[1]).setDoubleProperty("d0z", d0[2]);
+    }
 }
 
 void* ATMForceProxy::deserialize(const SerializationNode& node) const {
@@ -80,6 +87,10 @@ void* ATMForceProxy::deserialize(const SerializationNode& node) const {
         const SerializationNode& forces = node.getChildNode("Forces");
         for (auto& f : forces.getChildren())
             force->addForce(f.getChildren()[0].decodeObject<Force>());
+        const SerializationNode& particles = node.getChildNode("Particles");
+        for (auto& p : particles.getChildren())
+            force->addParticle(Vec3(p.getDoubleProperty("d1x"), p.getDoubleProperty("d1y"), p.getDoubleProperty("d1z")),
+                               Vec3(p.getDoubleProperty("d0x"), p.getDoubleProperty("d0y"), p.getDoubleProperty("d0z")));
         return force;
     }
     catch (...) {

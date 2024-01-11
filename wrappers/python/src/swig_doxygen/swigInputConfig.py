@@ -144,6 +144,7 @@ STEAL_OWNERSHIP = {("Platform", "registerPlatform") : [0],
                    ("CustomNonbondedForce", "addTabulatedFunction") : [1],
                    ("CustomGBForce", "addTabulatedFunction") : [1],
                    ("CustomHbondForce", "addTabulatedFunction") : [1],
+                   ("CustomCentroidBondForce", "addTabulatedFunction") : [1],
                    ("CustomCompoundBondForce", "addTabulatedFunction") : [1],
                    ("CustomManyParticleForce", "addTabulatedFunction") : [1],
                    ("CustomCVForce", "addTabulatedFunction") : [1],
@@ -521,4 +522,5 @@ UNITS = {
 ("ATMForce", "getDefaultUmax") :  ('unit.kilojoule_per_mole', ()),
 ("ATMForce", "getDefaultUbcore") :  ('unit.kilojoule_per_mole', ()),
 ("ATMForce", "getDefaultAcore") :  (None, ()),
+("ATMForce", "getParticleParameters") : (None, ("unit.nanometer", "unit.nanometer")),
 }

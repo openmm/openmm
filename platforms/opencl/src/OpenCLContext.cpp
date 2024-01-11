@@ -603,8 +603,6 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     }
     if (!compilationDefines.empty())
         src << endl;
-    if (supportsDoublePrecision)
-        src << "#pragma OPENCL EXTENSION cl_khr_fp64 : enable\n";
     if (useDoublePrecision) {
         src << "typedef double real;\n";
         src << "typedef double2 real2;\n";
@@ -647,6 +645,13 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
         throw OpenMMException("Error compiling kernel: "+program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device));
     }
     return program;
+}
+
+vector<ComputeContext*> OpenCLContext::getAllContexts() {
+    vector<ComputeContext*> result;
+    for (OpenCLContext* c : platformData.contexts)
+        result.push_back(c);
+    return result;
 }
 
 cl::CommandQueue& OpenCLContext::getQueue() {

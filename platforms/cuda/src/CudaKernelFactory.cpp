@@ -72,7 +72,7 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == CalcForcesAndEnergyKernel::Name())
         return new CudaCalcForcesAndEnergyKernel(name, platform, cu);
     if (name == UpdateStateDataKernel::Name())
-        return new CudaUpdateStateDataKernel(name, platform, cu);
+        return new CommonUpdateStateDataKernel(name, platform, cu);
     if (name == ApplyConstraintsKernel::Name())
         return new CommonApplyConstraintsKernel(name, platform, cu);
     if (name == VirtualSitesKernel::Name())

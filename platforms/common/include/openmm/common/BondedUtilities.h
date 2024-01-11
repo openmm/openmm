@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,19 +27,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/common/ArrayInterface.h"
+#include "openmm/common/ComputeArray.h"
+#include "openmm/common/ComputeKernel.h"
+#include "openmm/System.h"
 #include <string>
 #include <vector>
 
 namespace OpenMM {
 
 /**
- * This abstract class defines an interface for computing bonded interactions.  Call
- * getBondedUtilities() on a ComputeContext to get the BondedUtilities object for that
- * context.
- * 
  * This class provides a generic mechanism for evaluating bonded interactions.  You write only
- * the source code needed to compute one interaction, and this object takes care of creating
+ * the source code needed to compute one interaction, and this class takes care of creating
  * and executing a complete kernel that loops over bonds, evaluates each one, and accumulates
  * the resulting forces and energies.  This offers two advantages.  First, it simplifies the
  * task of writing a new Force.  Second, it allows multiple forces to be evaluated by a single
@@ -85,6 +83,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT_COMMON BondedUtilities {
 public:
+    BondedUtilities(ComputeContext& context);
     virtual ~BondedUtilities() {
     }
     /**
@@ -95,7 +94,7 @@ public:
      * @param source   the code to evaluate the interaction
      * @param group    the force group in which the interaction should be calculated
      */
-    virtual void addInteraction(const std::vector<std::vector<int> >& atoms, const std::string& source, int group) = 0;
+    void addInteraction(const std::vector<std::vector<int> >& atoms, const std::string& source, int group);
     /**
      * Add an argument that should be passed to the interaction kernel.
      * 
@@ -104,7 +103,7 @@ public:
      * @return the name that will be used for the argument.  Any code you pass to addInteraction() should
      * refer to it by this name.
      */
-    virtual std::string addArgument(ArrayInterface& data, const std::string& type) = 0;
+    std::string addArgument(ArrayInterface& data, const std::string& type);
     /**
      * Register that the interaction kernel will be computing the derivative of the potential energy
      * with respect to a parameter.
@@ -113,14 +112,39 @@ public:
      * @return the variable that will be used to accumulate the derivative.  Any code you pass to addInteraction() should
      * add its contributions to this variable.
      */
-    virtual std::string addEnergyParameterDerivative(const std::string& param) = 0;
+    std::string addEnergyParameterDerivative(const std::string& param);
     /**
      * Add some code that should be included in the program, before the start of the kernel.
      * This can be used, for example, to define functions that will be called by the kernel.
      * 
      * @param source   the code to include
      */
-    virtual void addPrefixCode(const std::string& source) = 0;
+    void addPrefixCode(const std::string& source);
+    /**
+     * Initialize this object in preparation for a simulation.
+     */
+    void initialize(const System& system);
+    /**
+     * Compute the bonded interactions.
+     * 
+     * @param groups        a set of bit flags for which force groups to include
+     */
+    void computeInteractions(int groups);
+private:
+    std::string createForceSource(int forceIndex, int numBonds, int numAtoms, int group, const std::string& computeForce);
+    ComputeContext& context;
+    ComputeKernel kernel;
+    std::vector<std::vector<std::vector<int> > > forceAtoms;
+    std::vector<std::vector<int> > indexWidth;
+    std::vector<std::string> forceSource;
+    std::vector<int> forceGroup;
+    std::vector<ArrayInterface*> arguments;
+    std::vector<std::string> argTypes;
+    std::vector<std::vector<ComputeArray> > atomIndices;
+    std::vector<std::string> prefixCode;
+    std::vector<std::string> energyParameterDerivatives;
+    int numForceBuffers, maxBonds, allGroups;
+    bool hasInitializedKernels, hasInteractions;
 };
 
 } // namespace OpenMM

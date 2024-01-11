@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2014-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2014-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,8 +36,10 @@
     #include "vectorize_neon.h"
 #elif defined(__PPC__)
     #include "vectorize_ppc.h"
-#else
+#elif defined(__SSE__) || defined(_M_IX86) || defined(_M_AMD64)
     #include "vectorize_sse.h"
+#else
+    #include "vectorize_portable.h"
 #endif
 
 #endif /*OPENMM_VECTORIZE_H_*/

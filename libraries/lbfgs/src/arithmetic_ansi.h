@@ -23,10 +23,10 @@
  * THE SOFTWARE.
  */
 
-/* $Id: arithmetic_ansi.h 65 2010-01-29 12:19:16Z naoaki $ */
+/* $Id$ */
 
 #include <stdlib.h>
-#include <string.h>
+#include <memory.h>
 
 #if     LBFGS_FLOAT == 32 && LBFGS_IEEE_FLOAT
 #define fsigndiff(x, y) (((*(uint32_t*)(x)) ^ (*(uint32_t*)(y))) & 0x80000000U)

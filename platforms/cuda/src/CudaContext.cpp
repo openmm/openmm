@@ -634,6 +634,13 @@ CUfunction CudaContext::getKernel(CUmodule& module, const string& name) {
     return function;
 }
 
+vector<ComputeContext*> CudaContext::getAllContexts() {
+    vector<ComputeContext*> result;
+    for (CudaContext* c : platformData.contexts)
+        result.push_back(c);
+    return result;
+}
+
 CUstream CudaContext::getCurrentStream() {
     return currentStream;
 }
