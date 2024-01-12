@@ -80,8 +80,10 @@ void verifySorting(vector<float> array, bool uniform) {
     for (int i = 1; i < (int) sorted.size(); i++)
 //        ASSERT(sorted[i-1] <= sorted[i]);
         if (sorted[i-1] > sorted[i]) {
-            printf("error\n");
-            return;
+            printf("%d\n----\n", i);
+            for (int j = 0; j < sorted.size(); j++)
+                printf("%g\n", sorted[j]);
+            ASSERT(sorted[i-1] <= sorted[i]);
         }
 
     // Make sure the sorted array contains the same values as the original one.
@@ -137,7 +139,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     cout << "Done" << endl;
-    return 1;
+    return 0;
 }
 
 
