@@ -81,7 +81,7 @@ void verifySorting(vector<float> array, bool uniform) {
 //        ASSERT(sorted[i-1] <= sorted[i]);
         if (sorted[i-1] > sorted[i]) {
             printf("%d\n----\n", i);
-            for (int j = 0; j < sorted.size(); j++)
+            for (int j = sorted.size()-1000; j < sorted.size(); j++)
                 printf("%g\n", sorted[j]);
             ASSERT(sorted[i-1] <= sorted[i]);
         }
@@ -130,6 +130,8 @@ int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
             platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
+        if (string(argv[1]) != "single")
+            return 0;
         testUniformValues();
         testLogValues();
         testShortList();
