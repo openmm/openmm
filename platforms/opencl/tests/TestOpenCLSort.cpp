@@ -62,6 +62,7 @@ class SortTrait : public OpenCLSort::SortTrait {
 void verifySorting(vector<float> array, bool uniform) {
     // Sort the array.
 
+    printf("%d %d\n", array.size(), uniform);
     System system;
     system.addParticle(0.0);
     OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"), "false", "false", 1, NULL);
