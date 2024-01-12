@@ -625,8 +625,11 @@ DEVICE void computeCCMAPositionConstraintForce(GLOBAL const int2* RESTRICT const
         delta1[index] = (rrpr > d_ij2*1e-6f ? reducedMass[index]*diff/rrpr : 0.0f);
         threadConverged &= (rp2 > lowerTol*dist2 && rp2 < upperTol*dist2);
     }
+    // The following SYNC calls are to work around an error with PoCL.
+    SYNC_WARPS;
     if (*groupConverged && !threadConverged)
         *groupConverged = 0;
+    SYNC_WARPS;
 }
 
 KERNEL void computeCCMAPositionConstraintForceKernel(GLOBAL const int2* RESTRICT constraintAtoms, GLOBAL const mixed4* RESTRICT constraintDistance,
