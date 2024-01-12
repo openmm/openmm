@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     cout << "Done" << endl;
-    return 0;
+    return 1;
 }
 
 
