@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -607,15 +607,10 @@ void CommonCalcCustomBondForceKernel::initialize(const System& system, const Cus
         return;
     vector<vector<int> > atoms(numBonds, vector<int>(2));
     params = new ComputeParameterSet(cc, force.getNumPerBondParameters(), numBonds, "customBondParams");
-    vector<vector<float> > paramVector(numBonds);
-    for (int i = 0; i < numBonds; i++) {
-        vector<double> parameters;
-        force.getBondParameters(startIndex+i, atoms[i][0], atoms[i][1], parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
-    }
-    params->setParameterValues(paramVector);
+    vector<vector<double> > paramVector(numBonds);
+    for (int i = 0; i < numBonds; i++)
+        force.getBondParameters(startIndex+i, atoms[i][0], atoms[i][1], paramVector[i]);
+    params->setParameterValues(paramVector, true);
     info = new ForceInfo(force);
     cc.addForce(info);
 
@@ -700,16 +695,11 @@ void CommonCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& conte
     
     // Record the per-bond parameters.
     
-    vector<vector<float> > paramVector(numBonds);
-    vector<double> parameters;
-    for (int i = 0; i < numBonds; i++) {
-        int atom1, atom2;
-        force.getBondParameters(startIndex+i, atom1, atom2, parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
-    }
-    params->setParameterValues(paramVector);
+    vector<vector<double> > paramVector(numBonds);
+    int atom1, atom2;
+    for (int i = 0; i < numBonds; i++)
+        force.getBondParameters(startIndex+i, atom1, atom2, paramVector[i]);
+    params->setParameterValues(paramVector, true);
     
     // Mark that the current reordering may be invalid.
     
@@ -846,15 +836,10 @@ void CommonCalcCustomAngleForceKernel::initialize(const System& system, const Cu
         return;
     vector<vector<int> > atoms(numAngles, vector<int>(3));
     params = new ComputeParameterSet(cc, force.getNumPerAngleParameters(), numAngles, "customAngleParams");
-    vector<vector<float> > paramVector(numAngles);
-    for (int i = 0; i < numAngles; i++) {
-        vector<double> parameters;
-        force.getAngleParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
-    }
-    params->setParameterValues(paramVector);
+    vector<vector<double> > paramVector(numAngles);
+    for (int i = 0; i < numAngles; i++)
+        force.getAngleParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], paramVector[i]);
+    params->setParameterValues(paramVector, true);
     info = new ForceInfo(force);
     cc.addForce(info);
 
@@ -939,16 +924,11 @@ void CommonCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& cont
     
     // Record the per-angle parameters.
     
-    vector<vector<float> > paramVector(numAngles);
-    vector<double> parameters;
-    for (int i = 0; i < numAngles; i++) {
-        int atom1, atom2, atom3;
-        force.getAngleParameters(startIndex+i, atom1, atom2, atom3, parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
-    }
-    params->setParameterValues(paramVector);
+    vector<vector<double> > paramVector(numAngles);
+    int atom1, atom2, atom3;
+    for (int i = 0; i < numAngles; i++)
+        force.getAngleParameters(startIndex+i, atom1, atom2, atom3, paramVector[i]);
+    params->setParameterValues(paramVector, true);
     
     // Mark that the current reordering may be invalid.
     
@@ -1179,15 +1159,10 @@ void CommonCalcCustomTorsionForceKernel::initialize(const System& system, const 
         return;
     vector<vector<int> > atoms(numTorsions, vector<int>(4));
     params = new ComputeParameterSet(cc, force.getNumPerTorsionParameters(), numTorsions, "customTorsionParams");
-    vector<vector<float> > paramVector(numTorsions);
-    for (int i = 0; i < numTorsions; i++) {
-        vector<double> parameters;
-        force.getTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
-    }
-    params->setParameterValues(paramVector);
+    vector<vector<double> > paramVector(numTorsions);
+    for (int i = 0; i < numTorsions; i++)
+        force.getTorsionParameters(startIndex+i, atoms[i][0], atoms[i][1], atoms[i][2], atoms[i][3], paramVector[i]);
+    params->setParameterValues(paramVector, true);
     info = new ForceInfo(force);
     cc.addForce(info);
 
@@ -1272,16 +1247,11 @@ void CommonCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& co
     
     // Record the per-torsion parameters.
     
-    vector<vector<float> > paramVector(numTorsions);
-    vector<double> parameters;
-    for (int i = 0; i < numTorsions; i++) {
-        int atom1, atom2, atom3, atom4;
-        force.getTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
-    }
-    params->setParameterValues(paramVector);
+    vector<vector<double> > paramVector(numTorsions);
+    int atom1, atom2, atom3, atom4;
+    for (int i = 0; i < numTorsions; i++)
+        force.getTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, paramVector[i]);
+    params->setParameterValues(paramVector, true);
     
     // Mark that the current reordering may be invalid.
     
@@ -1459,15 +1429,10 @@ void CommonCalcCustomExternalForceKernel::initialize(const System& system, const
         return;
     vector<vector<int> > atoms(numParticles, vector<int>(1));
     params = new ComputeParameterSet(cc, force.getNumPerParticleParameters(), numParticles, "customExternalParams");
-    vector<vector<float> > paramVector(numParticles);
-    for (int i = 0; i < numParticles; i++) {
-        vector<double> parameters;
-        force.getParticleParameters(startIndex+i, atoms[i][0], parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
-    }
-    params->setParameterValues(paramVector);
+    vector<vector<double> > paramVector(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        force.getParticleParameters(startIndex+i, atoms[i][0], paramVector[i]);
+    params->setParameterValues(paramVector, true);
     info = new ForceInfo(force, system.getNumParticles());
     cc.addForce(info);
 
@@ -1553,16 +1518,11 @@ void CommonCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& c
     
     // Record the per-particle parameters.
     
-    vector<vector<float> > paramVector(numParticles);
-    vector<double> parameters;
-    for (int i = 0; i < numParticles; i++) {
-        int particle;
-        force.getParticleParameters(startIndex+i, particle, parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
-    }
-    params->setParameterValues(paramVector);
+    vector<vector<double> > paramVector(numParticles);
+    int particle;
+    for (int i = 0; i < numParticles; i++)
+        force.getParticleParameters(startIndex+i, particle, paramVector[i]);
+    params->setParameterValues(paramVector, true);
     
     // Mark that the current reordering may be invalid.
     
@@ -1610,16 +1570,11 @@ void CommonCalcCustomCompoundBondForceKernel::initialize(const System& system, c
         return;
     int particlesPerBond = force.getNumParticlesPerBond();
     vector<vector<int> > atoms(numBonds, vector<int>(particlesPerBond));
-    params = new ComputeParameterSet(cc, force.getNumPerBondParameters(), numBonds, "customCompoundBondParams");
-    vector<vector<float> > paramVector(numBonds);
-    for (int i = 0; i < numBonds; i++) {
-        vector<double> parameters;
-        force.getBondParameters(startIndex+i, atoms[i], parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
-    }
-    params->setParameterValues(paramVector);
+    params = new ComputeParameterSet(cc, force.getNumPerBondParameters(), numBonds, "customCompoundBondParams", false, cc.getUseDoublePrecision());
+    vector<vector<double> > paramVector(numBonds);
+    for (int i = 0; i < numBonds; i++)
+        force.getBondParameters(startIndex+i, atoms[i], paramVector[i]);
+    params->setParameterValues(paramVector, true);
     info = new ForceInfo(force);
     cc.addForce(info);
 
@@ -1740,16 +1695,11 @@ void CommonCalcCustomCompoundBondForceKernel::copyParametersToContext(ContextImp
 
     // Record the per-bond parameters.
 
-    vector<vector<float> > paramVector(numBonds);
+    vector<vector<double> > paramVector(numBonds);
     vector<int> particles;
-    vector<double> parameters;
-    for (int i = 0; i < numBonds; i++) {
-        force.getBondParameters(startIndex+i, particles, parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
-    }
-    params->setParameterValues(paramVector);
+    for (int i = 0; i < numBonds; i++)
+        force.getBondParameters(startIndex+i, particles, paramVector[i]);
+    params->setParameterValues(paramVector, true);
 
     // See if any tabulated functions have changed.
 
@@ -1863,19 +1813,15 @@ void CommonCalcCustomCentroidBondForceKernel::initialize(const System& system, c
     
     int groupsPerBond = force.getNumGroupsPerBond();
     vector<int> bondGroupVec(numBonds*groupsPerBond);
-    params = new ComputeParameterSet(cc, force.getNumPerBondParameters(), numBonds, "customCentroidBondParams");
-    vector<vector<float> > paramVector(numBonds);
+    params = new ComputeParameterSet(cc, force.getNumPerBondParameters(), numBonds, "customCentroidBondParams", false, cc.getUseDoublePrecision());
+    vector<vector<double> > paramVector(numBonds);
     for (int i = 0; i < numBonds; i++) {
         vector<int> groups;
-        vector<double> parameters;
-        force.getBondParameters(i, groups, parameters);
+        force.getBondParameters(i, groups, paramVector[i]);
         for (int j = 0; j < groups.size(); j++)
             bondGroupVec[i+j*numBonds] = groups[j];
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
     }
-    params->setParameterValues(paramVector);
+    params->setParameterValues(paramVector, true);
     bondGroups.initialize<int>(cc, bondGroupVec.size(), "bondGroups");
     bondGroups.upload(bondGroupVec);
 
@@ -2068,16 +2014,11 @@ void CommonCalcCustomCentroidBondForceKernel::copyParametersToContext(ContextImp
 
     // Record the per-bond parameters.
 
-    vector<vector<float> > paramVector(numBonds);
+    vector<vector<double> > paramVector(numBonds);
     vector<int> particles;
-    vector<double> parameters;
-    for (int i = 0; i < numBonds; i++) {
-        force.getBondParameters(i, particles, parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
-    }
-    params->setParameterValues(paramVector);
+    for (int i = 0; i < numBonds; i++)
+        force.getBondParameters(i, particles, paramVector[i]);
+    params->setParameterValues(paramVector, true);
 
     // See if any tabulated functions have changed.
 
@@ -2304,8 +2245,8 @@ void CommonCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     variables.push_back(make_pair(ExpressionTreeNode(new Operation::Square(), rnode), "r2"));
     variables.push_back(make_pair(ExpressionTreeNode(new Operation::Reciprocal(), rnode), "invR"));
     for (int i = 0; i < paramNames.size(); i++) {
-        variables.push_back(makeVariable(paramNames[i]+"1", prefix+"params"+cc.intToString(i+1)+"1"));
-        variables.push_back(makeVariable(paramNames[i]+"2", prefix+"params"+cc.intToString(i+1)+"2"));
+        variables.push_back(makeVariable(paramNames[i]+"1", "((real) "+prefix+"params"+cc.intToString(i+1)+"1)"));
+        variables.push_back(makeVariable(paramNames[i]+"2", "((real) "+prefix+"params"+cc.intToString(i+1)+"2)"));
     }
     for (int i = 0; i < computedValueNames.size(); i++) {
         variables.push_back(makeVariable(computedValueNames[i]+"1", prefix+"values"+cc.intToString(i+1)+"1"));
@@ -3223,8 +3164,8 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         variables.push_back(make_pair(ExpressionTreeNode(new Operation::Reciprocal(), rnode), "invR"));
         for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
             const string& name = force.getPerParticleParameterName(i);
-            variables.push_back(makeVariable(name+"1", "params"+params->getParameterSuffix(i, "1")));
-            variables.push_back(makeVariable(name+"2", "params"+params->getParameterSuffix(i, "2")));
+            variables.push_back(makeVariable(name+"1", "((real) params"+params->getParameterSuffix(i, "1)")));
+            variables.push_back(makeVariable(name+"2", "((real) params"+params->getParameterSuffix(i, "2)")));
             rename[name+"1"] = name+"2";
             rename[name+"2"] = name+"1";
         }
@@ -3396,8 +3337,8 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         variables.push_back(make_pair(ExpressionTreeNode(new Operation::Reciprocal(), rnode), "invR"));
         for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
             const string& name = force.getPerParticleParameterName(i);
-            variables.push_back(makeVariable(name+"1", "params"+params->getParameterSuffix(i, "1")));
-            variables.push_back(makeVariable(name+"2", "params"+params->getParameterSuffix(i, "2")));
+            variables.push_back(makeVariable(name+"1", "((real) params"+params->getParameterSuffix(i, "1)")));
+            variables.push_back(makeVariable(name+"2", "((real) params"+params->getParameterSuffix(i, "2)")));
         }
         for (int i = 0; i < numComputedValues; i++) {
             variables.push_back(makeVariable(computedValueNames[i]+"1", "values"+computedValues->getParameterSuffix(i, "1")));
@@ -3738,8 +3679,8 @@ void CommonCalcCustomGBForceKernel::initialize(const System& system, const Custo
         variables.push_back(make_pair(ExpressionTreeNode(new Operation::Reciprocal(), rnode), "invR"));
         for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
             const string& name = force.getPerParticleParameterName(i);
-            variables.push_back(makeVariable(name+"1", prefix+"params"+params->getParameterSuffix(i, "1")));
-            variables.push_back(makeVariable(name+"2", prefix+"params"+params->getParameterSuffix(i, "2")));
+            variables.push_back(makeVariable(name+"1", "((real) "+prefix+"params"+params->getParameterSuffix(i, "1)")));
+            variables.push_back(makeVariable(name+"2", "((real) "+prefix+"params"+params->getParameterSuffix(i, "2)")));
             rename[name+"1"] = name+"2";
             rename[name+"2"] = name+"1";
         }
@@ -4629,7 +4570,7 @@ void CommonCalcCustomManyParticleForceKernel::initialize(const System& system, c
         const string& name = force.getPerParticleParameterName(i);
         for (int j = 0; j < particlesPerSet; j++) {
             string index = cc.intToString(j+1);
-            variables.push_back(makeVariable(name+index, "params"+params->getParameterSuffix(i, index)));
+            variables.push_back(makeVariable(name+index, "((real) params"+params->getParameterSuffix(i, index)+")"));
         }
     }
     if (force.getNumGlobalParameters() > 0) {
