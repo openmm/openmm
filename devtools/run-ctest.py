@@ -89,7 +89,7 @@ def execute_tests(options, raw_options):
                  '-T', 'Test',
                  '--timeout', options.timeout,
                  '--stop-time', stop_time.strftime('%H:%M:%S')] + raw_options +
-                 (['--schedule-random'] if options.in_order else []))
+                 ([] if options.in_order else ['--schedule-random']))
 
 
 def execute_failed_tests(options, raw_options):
@@ -117,7 +117,7 @@ def execute_failed_tests(options, raw_options):
                  '-R', '|'.join(failed_tests),
                  '--timeout', options.timeout,
                  '--stop-time', stop_time.strftime('%H:%M:%S')] +
-                 (['--schedule-random'] if options.in_order else []))
+                 ([] if options.in_order else ['--schedule-random']))
 
 
 if __name__ == '__main__':
