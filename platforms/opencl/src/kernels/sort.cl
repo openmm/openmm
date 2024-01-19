@@ -91,21 +91,21 @@ __kernel void computeRange(__global const DATA_TYPE* restrict data, uint length,
 
     // Now reduce them.
 
-    minBuffer[get_local_id(0)] = minimum;
-    maxBuffer[get_local_id(0)] = maximum;
-    barrier(CLK_LOCAL_MEM_FENCE);
-    for (uint step = 1; step < get_local_size(0); step *= 2) {
-        if (get_local_id(0)+step < get_local_size(0) && get_local_id(0)%(2*step) == 0) {
-            minBuffer[get_local_id(0)] = min(minBuffer[get_local_id(0)], minBuffer[get_local_id(0)+step]);
-            maxBuffer[get_local_id(0)] = max(maxBuffer[get_local_id(0)], maxBuffer[get_local_id(0)+step]);
-        }
+    if (get_local_id(0) < get_local_size(0)) { // Always true.  A workaround for a bug in PoCL.
+        minBuffer[get_local_id(0)] = minimum;
+        maxBuffer[get_local_id(0)] = maximum;
         barrier(CLK_LOCAL_MEM_FENCE);
+        for (uint step = 1; step < get_local_size(0); step *= 2) {
+            if (get_local_id(0)+step < get_local_size(0) && get_local_id(0)%(2*step) == 0) {
+                minBuffer[get_local_id(0)] = min(minBuffer[get_local_id(0)], minBuffer[get_local_id(0)+step]);
+                maxBuffer[get_local_id(0)] = max(maxBuffer[get_local_id(0)], maxBuffer[get_local_id(0)+step]);
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
+        }
     }
-    minimum = minBuffer[0];
-    maximum = maxBuffer[0];
     if (get_local_id(0) == 0) {
-        range[0] = minimum;
-        range[1] = maximum;
+        range[0] = minBuffer[0];
+        range[1] = maxBuffer[0];
     }
 #endif
 

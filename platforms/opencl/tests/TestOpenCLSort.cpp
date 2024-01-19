@@ -62,7 +62,6 @@ class SortTrait : public OpenCLSort::SortTrait {
 void verifySorting(vector<float> array, bool uniform) {
     // Sort the array.
 
-    printf("%d %d\n", array.size(), uniform);
     System system;
     system.addParticle(0.0);
     OpenCLPlatform::PlatformData platformData(system, "", "", platform.getPropertyDefaultValue("OpenCLPrecision"), "false", "false", 1, NULL);
@@ -78,13 +77,7 @@ void verifySorting(vector<float> array, bool uniform) {
     // Verify that it is in sorted order.
 
     for (int i = 1; i < (int) sorted.size(); i++)
-//        ASSERT(sorted[i-1] <= sorted[i]);
-        if (sorted[i-1] > sorted[i]) {
-            printf("%d\n----\n", i);
-            for (int j = sorted.size()-1000; j < sorted.size(); j++)
-                printf("%g\n", sorted[j]);
-            ASSERT(sorted[i-1] <= sorted[i]);
-        }
+        ASSERT(sorted[i-1] <= sorted[i]);
 
     // Make sure the sorted array contains the same values as the original one.
 
@@ -130,8 +123,6 @@ int main(int argc, char* argv[]) {
     try {
         if (argc > 1)
             platform.setPropertyDefaultValue("OpenCLPrecision", string(argv[1]));
-        if (string(argv[1]) != "single")
-            return 0;
         testUniformValues();
         testLogValues();
         testShortList();
