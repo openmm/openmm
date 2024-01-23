@@ -136,6 +136,13 @@ double ATMForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForce
     state0Energy = innerContextImpl0.calcForcesAndEnergy(includeForces, true);
     state1Energy = innerContextImpl1.calcForcesAndEnergy(includeForces, true);
 
+    // Protect against overflow when the hybrid potential function does
+    // not depend on u0 or u1 and their values are unbound; typically at the endstates
+
+    double maxEnergy = 1.e12;
+    if(isnan(state0Energy)) state0Energy = maxEnergy;
+    if(isnan(state1Energy)) state1Energy = maxEnergy;
+
     // Compute the alchemical energy and forces.
 
     for (int i = 0; i < globalParameterNames.size(); i++)
