@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -116,7 +116,27 @@ void ComputeParameterSet::getParameterValues(vector<vector<T> >& values) {
 }
 
 template <class T>
-void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values) {
+void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values, bool convert) {
+    if (convert && sizeof(T) == sizeof(float) && elementSize == sizeof(double)) {
+        vector<vector<double> > values2(values.size());
+        for (int i = 0; i < values.size(); i++) {
+            values2[i].resize(values[i].size(), 0.0);
+            for (int j = 0; j < values[i].size(); j++)
+                values2[i][j] = (double) values[i][j];
+        }
+        setParameterValues(values2);
+        return;
+    }
+    if (convert && sizeof(T) == sizeof(double) && elementSize == sizeof(float)) {
+        vector<vector<float> > values2(values.size());
+        for (int i = 0; i < values.size(); i++) {
+            values2[i].resize(values[i].size(), 0.0);
+            for (int j = 0; j < values[i].size(); j++)
+                values2[i][j] = (float) values[i][j];
+        }
+        setParameterValues(values2);
+        return;
+    }
     if (sizeof(T) != elementSize)
         throw OpenMMException("Called setParameterValues() with vector of wrong type");
     int base = 0;
@@ -180,7 +200,7 @@ string ComputeParameterSet::getParameterSuffix(int index, const std::string& ext
  */
 namespace OpenMM {
 template void ComputeParameterSet::getParameterValues<float>(vector<vector<float> >& values);
-template void ComputeParameterSet::setParameterValues<float>(const vector<vector<float> >& values);
+template void ComputeParameterSet::setParameterValues<float>(const vector<vector<float> >& values, bool convert);
 template void ComputeParameterSet::getParameterValues<double>(vector<vector<double> >& values);
-template void ComputeParameterSet::setParameterValues<double>(const vector<vector<double> >& values);
+template void ComputeParameterSet::setParameterValues<double>(const vector<vector<double> >& values, bool convert);
 }
