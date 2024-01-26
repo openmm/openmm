@@ -5,26 +5,11 @@ KERNEL void hybridForce(int numParticles,
                         GLOBAL mm_long* RESTRICT force1,
                         real dEdu0,
                         real dEdu1) {
-  real epsi = 1.e-12;
-  if(fabs(dEdu0) < epsi){
-    for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
-        force[i] += (mm_long) (dEdu1*force1[i]);
-        force[i+paddedNumParticles] += (mm_long) (dEdu1*force1[i+paddedNumParticles]);
-        force[i+paddedNumParticles*2] += (mm_long) (dEdu1*force1[i+paddedNumParticles*2]);
-    }
-  } else if(fabs(dEdu1) < epsi){
-    for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
-      force[i] += (mm_long) (dEdu0*force0[i]);
-      force[i+paddedNumParticles] += (mm_long) (dEdu0*force0[i+paddedNumParticles]);
-      force[i+paddedNumParticles*2] += (mm_long) (dEdu0*force0[i+paddedNumParticles*2]);
-    }
-  }else{
     for (int i = GLOBAL_ID; i < numParticles; i += GLOBAL_SIZE) {
         force[i] += (mm_long) (dEdu0*force0[i] + dEdu1*force1[i]);
         force[i+paddedNumParticles] += (mm_long) (dEdu0*force0[i+paddedNumParticles] + dEdu1*force1[i+paddedNumParticles]);
         force[i+paddedNumParticles*2] += (mm_long) (dEdu0*force0[i+paddedNumParticles*2] + dEdu1*force1[i+paddedNumParticles*2]);
     }
-  }
 }
 
 KERNEL void copyState(int numParticles,
