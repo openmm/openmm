@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2023 Stanford University and Simbios.
  * Contributors: Andy Simmonett, Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -117,7 +117,7 @@ void ReferenceNoseHooverDynamics::step2(OpenMM::ContextImpl &context, const Open
                                           vector<Vec3>& velocities,
                                           vector<Vec3>& forces, vector<double>& masses, double tolerance, bool &forcesAreValid,
                                           const std::vector<int> & atomList, const std::vector<std::tuple<int, int, double>> &pairList,
-                                          double maxPairDistance) {
+                                          double maxPairDistance, const Vec3* boxVectors) {
     const double halfdt = 0.5*getDeltaT();
     for (int atom = 0; atom < numberOfAtoms; ++atom) {
         if (masses[atom] != 0.0) {
@@ -202,7 +202,7 @@ void ReferenceNoseHooverDynamics::step2(OpenMM::ContextImpl &context, const Open
         }
     } /* end of hard wall constraint part */
 
-    ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates);
+    ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates, boxVectors);
 
     incrementTimeStep();
 }

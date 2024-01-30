@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2006-2013 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2023 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -141,6 +141,10 @@ class OPENMM_EXPORT  ReferenceForce {
       static Vec3 getDeltaRPeriodic(const OpenMM::Vec3& atomCoordinatesI, const OpenMM::Vec3& atomCoordinatesJ,
                                     const OpenMM::Vec3* boxVectors);
 
+      /**
+       * Invert the periodic box vectors to get the corresponding vectors in reciprocal space.
+       */
+      static void invertBoxVectors(const OpenMM::Vec3* boxVectors, OpenMM::Vec3* recipBoxVectors);
       /**
        * Get a pointer to the memory for setting a variable in a CompiledExpression.  If the expression
        * does not use the specified variable, return NULL.

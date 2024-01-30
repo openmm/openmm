@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2023 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -97,11 +97,12 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
          @param masses              atom masses
          @param maxStepSize         maximum time step
          @param tolerance           the constraint tolerance
+         @param boxVectors          the current periodic box vectors
 
          --------------------------------------------------------------------------------------- */
 
       void update(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates,
-                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double maxStepSize, double tolerance);
+                  std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses, double maxStepSize, double tolerance, const Vec3* boxVectors);
 
       /**---------------------------------------------------------------------------------------
 

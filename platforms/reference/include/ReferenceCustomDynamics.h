@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2011-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2011-2023 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -113,12 +113,13 @@ public:
          @param perDof              the values of per-DOF variables
          @param forcesAreValid      whether the current forces are valid or need to be recomputed
          @param tolerance           the constraint tolerance
-      
+         @param boxVectors          the current periodic box vectors
+
          --------------------------------------------------------------------------------------- */
      
       void update(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
                   std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces, std::vector<double>& masses,
-                  std::map<std::string, double>& globals, std::vector<std::vector<OpenMM::Vec3> >& perDof, bool& forcesAreValid, double tolerance);
+                  std::map<std::string, double>& globals, std::vector<std::vector<OpenMM::Vec3> >& perDof, bool& forcesAreValid, double tolerance, const Vec3* boxVectors);
       
       /**---------------------------------------------------------------------------------------
       

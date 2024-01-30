@@ -808,7 +808,10 @@ KERNEL void computeVirtualSites(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTR
         GLOBAL const int4* RESTRICT outOfPlaneAtoms, GLOBAL const real4* RESTRICT outOfPlaneWeights,
         GLOBAL const int* RESTRICT localCoordsIndex, GLOBAL const int* RESTRICT localCoordsAtoms,
         GLOBAL const real* RESTRICT localCoordsWeights, GLOBAL const real4* RESTRICT localCoordsPos,
-        GLOBAL const int* RESTRICT localCoordsStartIndex) {
+        GLOBAL const int* RESTRICT localCoordsStartIndex, GLOBAL const int2* RESTRICT symmetryAtoms,
+        GLOBAL const real4* RESTRICT symmetryMatrix, GLOBAL const real4* RESTRICT symmetryOffset,
+        GLOBAL const int* RESTRICT symmetryUseBox, real4 periodicBoxVecX, real4 periodicBoxVecY,
+        real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     
     // Two particle average sites.
     
@@ -886,6 +889,33 @@ KERNEL void computeVirtualSites(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTR
         pos.z = origin.z + xdir.z*localPosition.x + ydir.z*localPosition.y + zdir.z*localPosition.z;
         storePos(posq, posqCorrection, siteAtomIndex, pos);
     }
+
+    // Symmetry sites.
+
+    for (int index = GLOBAL_ID; index < NUM_SYMMETRY; index += GLOBAL_SIZE) {
+        int2 atoms = symmetryAtoms[index];
+        real4 Rx = symmetryMatrix[3*index];
+        real4 Ry = symmetryMatrix[3*index+1];
+        real4 Rz = symmetryMatrix[3*index+2];
+        real4 v = symmetryOffset[index];
+        int useBoxVectors = symmetryUseBox[index];
+        mixed4 pos = loadPos(posq, posqCorrection, atoms.x);
+        mixed4 r = loadPos(posq, posqCorrection, atoms.y);
+        if (useBoxVectors) {
+            r.x = r.x*recipBoxVecX.x + r.y*recipBoxVecY.x + r.z*recipBoxVecZ.x;
+            r.y = r.y*recipBoxVecY.y + r.z*recipBoxVecZ.y,
+            r.z = r.z*recipBoxVecZ.z;
+        }
+        pos.x = Rx.x*r.x + Rx.y*r.y + Rx.z*r.z + v.x;
+        pos.y = Ry.x*r.x + Ry.y*r.y + Ry.z*r.z + v.y;
+        pos.z = Rz.x*r.x + Rz.y*r.y + Rz.z*r.z + v.z;
+        if (useBoxVectors) {
+            pos.x = pos.x*periodicBoxVecX.x + pos.y*periodicBoxVecY.x + pos.z*periodicBoxVecZ.x;
+            pos.y = pos.y*periodicBoxVecY.y + pos.z*periodicBoxVecZ.y,
+            pos.z = pos.z*periodicBoxVecZ.z;
+        }
+        storePos(posq, posqCorrection, atoms.x, pos);
+    }
 }
 
 inline DEVICE real3 loadForce(int index, GLOBAL const mm_long* RESTRICT force) {
@@ -915,7 +945,10 @@ KERNEL void distributeVirtualSiteForces(GLOBAL const real4* RESTRICT posq, GLOBA
         GLOBAL const int4* RESTRICT outOfPlaneAtoms, GLOBAL const real4* RESTRICT outOfPlaneWeights,
         GLOBAL const int* RESTRICT localCoordsIndex, GLOBAL const int* RESTRICT localCoordsAtoms,
         GLOBAL const real* RESTRICT localCoordsWeights, GLOBAL const real4* RESTRICT localCoordsPos,
-        GLOBAL const int* RESTRICT localCoordsStartIndex) {
+        GLOBAL const int* RESTRICT localCoordsStartIndex, GLOBAL const int2* RESTRICT symmetryAtoms,
+        GLOBAL const real4* RESTRICT symmetryMatrix, GLOBAL const real4* RESTRICT symmetryOffset,
+        GLOBAL const int* RESTRICT symmetryUseBox, real4 periodicBoxVecX, real4 periodicBoxVecY,
+        real4 periodicBoxVecZ, real4 recipBoxVecX, real4 recipBoxVecY, real4 recipBoxVecZ) {
     
     // Two particle average sites.
     
@@ -1013,6 +1046,32 @@ KERNEL void distributeVirtualSiteForces(GLOBAL const real4* RESTRICT posq, GLOBA
             fresult.z += fp3.x*wxScaled*(1-dx.z*dx.z) + fp3.z*(dz.z*sz   ) + fp3.y*((-dx.z*dy.z     )*wxScaled + dy.z*sz - dx.x*t1 - dx.y*t2) + f.z*originWeight;
             addForce(localCoordsAtoms[j], force, fresult);
         }
+    }
+
+    // Symmetry sites.
+
+    for (int index = GLOBAL_ID; index < NUM_SYMMETRY; index += GLOBAL_SIZE) {
+        int2 atoms = symmetryAtoms[index];
+        real4 Rx = symmetryMatrix[3*index];
+        real4 Ry = symmetryMatrix[3*index+1];
+        real4 Rz = symmetryMatrix[3*index+2];
+        real4 v = symmetryOffset[index];
+        int useBoxVectors = symmetryUseBox[index];
+        real3 f = loadForce(atoms.x, force);
+        if (useBoxVectors) {
+            f.x = f.x*periodicBoxVecX.x + f.y*periodicBoxVecY.x + f.z*periodicBoxVecZ.x;
+            f.y = f.y*periodicBoxVecY.y + f.z*periodicBoxVecZ.y,
+            f.z = f.z*periodicBoxVecZ.z;
+        }
+        real3 f1 = make_real3(Rx.x*f.x + Ry.x*f.y + Rz.x*f.z,
+                              Rx.y*f.x + Ry.y*f.y + Rz.y*f.z,
+                              Rx.z*f.x + Ry.z*f.y + Rz.z*f.z);
+        if (useBoxVectors) {
+            f1.x = f1.x*recipBoxVecX.x + f1.y*recipBoxVecY.x + f1.z*recipBoxVecZ.x;
+            f1.y = f1.y*recipBoxVecY.y + f1.z*recipBoxVecZ.y,
+            f1.z = f1.z*recipBoxVecZ.z;
+        }
+        addForce(atoms.y, force, f1);
     }
 }
 

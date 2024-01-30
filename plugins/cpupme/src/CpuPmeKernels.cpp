@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -38,6 +38,7 @@
 #define POCKETFFT_CACHE_SIZE 4
 #include "CpuPmeKernels.h"
 #include "SimTKOpenMMRealType.h"
+#include "ReferenceForce.h"
 #include "openmm/internal/hardware.h"
 #include "openmm/internal/vectorize.h"
 #include "openmm/OpenMMException.h"
@@ -629,14 +630,7 @@ void CpuCalcPmeReciprocalForceKernel::beginComputation(IO& io, const Vec3* perio
     this->periodicBoxVectors[2] = periodicBoxVectors[2];
     this->includeEnergy = includeEnergy;
     energy = 0.0;
-
-    // Invert the box vectors.
-
-    double determinant = periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2];
-    double scale = 1.0/determinant;
-    recipBoxVectors[0] = Vec3(periodicBoxVectors[1][1]*periodicBoxVectors[2][2], 0, 0)*scale;
-    recipBoxVectors[1] = Vec3(-periodicBoxVectors[1][0]*periodicBoxVectors[2][2], periodicBoxVectors[0][0]*periodicBoxVectors[2][2], 0)*scale;
-    recipBoxVectors[2] = Vec3(periodicBoxVectors[1][0]*periodicBoxVectors[2][1]-periodicBoxVectors[1][1]*periodicBoxVectors[2][0], -periodicBoxVectors[0][0]*periodicBoxVectors[2][1], periodicBoxVectors[0][0]*periodicBoxVectors[1][1])*scale;
+    ReferenceForce::invertBoxVectors(periodicBoxVectors, recipBoxVectors);
 
     // Do the calculation.
 
@@ -915,14 +909,7 @@ void CpuCalcDispersionPmeReciprocalForceKernel::beginComputation(CalcPmeReciproc
     this->periodicBoxVectors[2] = periodicBoxVectors[2];
     this->includeEnergy = includeEnergy;
     energy = 0.0;
-
-    // Invert the box vectors.
-
-    double determinant = periodicBoxVectors[0][0]*periodicBoxVectors[1][1]*periodicBoxVectors[2][2];
-    double scale = 1.0/determinant;
-    recipBoxVectors[0] = Vec3(periodicBoxVectors[1][1]*periodicBoxVectors[2][2], 0, 0)*scale;
-    recipBoxVectors[1] = Vec3(-periodicBoxVectors[1][0]*periodicBoxVectors[2][2], periodicBoxVectors[0][0]*periodicBoxVectors[2][2], 0)*scale;
-    recipBoxVectors[2] = Vec3(periodicBoxVectors[1][0]*periodicBoxVectors[2][1]-periodicBoxVectors[1][1]*periodicBoxVectors[2][0], -periodicBoxVectors[0][0]*periodicBoxVectors[2][1], periodicBoxVectors[0][0]*periodicBoxVectors[1][1])*scale;
+    ReferenceForce::invertBoxVectors(periodicBoxVectors, recipBoxVectors);
 
     // Do the calculation.
 

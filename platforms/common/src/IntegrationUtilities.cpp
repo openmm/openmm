@@ -432,6 +432,10 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     vector<int> vsiteLocalCoordsStartVec;
     vector<double> vsiteLocalCoordsWeightVec;
     vector<mm_double4> vsiteLocalCoordsPosVec;
+    vector<mm_int2> vsiteSymmetryAtomVec;
+    vector<mm_double4> vsiteSymmetryMatrixVec;
+    vector<mm_double4> vsiteSymmetryOffsetVec;
+    vector<int> vsiteSymmetryUseBoxVec;
     for (int i = 0; i < numAtoms; i++) {
         if (system.isVirtualSite(i)) {
             if (dynamic_cast<const TwoParticleAverageSite*>(&system.getVirtualSite(i)) != NULL) {
@@ -475,6 +479,20 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
                 Vec3 pos = site.getLocalPosition();
                 vsiteLocalCoordsPosVec.push_back(mm_double4(pos[0], pos[1], pos[2], 0.0));
             }
+            else if (dynamic_cast<const SymmetrySite*>(&system.getVirtualSite(i)) != NULL) {
+                // A symmetry site.
+
+                const SymmetrySite& site = dynamic_cast<const SymmetrySite&>(system.getVirtualSite(i));
+                vsiteSymmetryAtomVec.push_back(mm_int2(i, site.getParticle(0)));
+                Vec3 Rx, Ry, Rz;
+                site.getRotationMatrix(Rx, Ry, Rz);
+                vsiteSymmetryMatrixVec.push_back(mm_double4(Rx[0], Rx[1], Rx[2], 0.0));
+                vsiteSymmetryMatrixVec.push_back(mm_double4(Ry[0], Ry[1], Ry[2], 0.0));
+                vsiteSymmetryMatrixVec.push_back(mm_double4(Rz[0], Rz[1], Rz[2], 0.0));
+                Vec3 v = site.getOffsetVector();
+                vsiteSymmetryOffsetVec.push_back(mm_double4(v[0], v[1], v[2], 0.0));
+                vsiteSymmetryUseBoxVec.push_back(site.getUseBoxVectors() ? 1 : 0);
+            }
         }
     }
     vsiteLocalCoordsStartVec.push_back(vsiteLocalCoordsAtomVec.size());
@@ -482,13 +500,15 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     int num3Avg = vsite3AvgAtomVec.size();
     int numOutOfPlane = vsiteOutOfPlaneAtomVec.size();
     int numLocalCoords = vsiteLocalCoordsPosVec.size();
-    numVsites = num2Avg+num3Avg+numOutOfPlane+numLocalCoords;
+    int numSymmetry = vsiteSymmetryAtomVec.size();
+    numVsites = num2Avg+num3Avg+numOutOfPlane+numLocalCoords+numSymmetry;
     vsite2AvgAtoms.initialize<mm_int4>(context, max(1, num2Avg), "vsite2AvgAtoms");
     vsite3AvgAtoms.initialize<mm_int4>(context, max(1, num3Avg), "vsite3AvgAtoms");
     vsiteOutOfPlaneAtoms.initialize<mm_int4>(context, max(1, numOutOfPlane), "vsiteOutOfPlaneAtoms");
     vsiteLocalCoordsIndex.initialize<int>(context, max(1, (int) vsiteLocalCoordsIndexVec.size()), "vsiteLocalCoordsIndex");
     vsiteLocalCoordsAtoms.initialize<int>(context, max(1, (int) vsiteLocalCoordsAtomVec.size()), "vsiteLocalCoordsAtoms");
     vsiteLocalCoordsStartIndex.initialize<int>(context, max(1, (int) vsiteLocalCoordsStartVec.size()), "vsiteLocalCoordsStartIndex");
+    vsiteSymmetryAtoms.initialize<mm_int2>(context, max(1, numSymmetry), "vsiteSymmetryAtoms");
     if (num2Avg > 0)
         vsite2AvgAtoms.upload(vsite2AvgAtomVec);
     if (num3Avg > 0)
@@ -500,12 +520,17 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         vsiteLocalCoordsAtoms.upload(vsiteLocalCoordsAtomVec);
         vsiteLocalCoordsStartIndex.upload(vsiteLocalCoordsStartVec);
     }
+    if (numSymmetry > 0)
+        vsiteSymmetryAtoms.upload(vsiteSymmetryAtomVec);
     int elementSize = (context.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     vsite2AvgWeights.initialize(context, max(1, num2Avg), 2*elementSize, "vsite2AvgWeights");
     vsite3AvgWeights.initialize(context, max(1, num3Avg), 4*elementSize, "vsite3AvgWeights");
     vsiteOutOfPlaneWeights.initialize(context, max(1, numOutOfPlane), 4*elementSize, "vsiteOutOfPlaneWeights");
     vsiteLocalCoordsWeights.initialize(context, max(1, (int) vsiteLocalCoordsWeightVec.size()), elementSize, "vsiteLocalCoordsWeights");
     vsiteLocalCoordsPos.initialize(context, max(1, (int) vsiteLocalCoordsPosVec.size()), 4*elementSize, "vsiteLocalCoordsPos");
+    vsiteSymmetryMatrix.initialize(context, max(1, 3*numSymmetry), 4*elementSize, "vsiteSymmetryMatrix");
+    vsiteSymmetryOffset.initialize(context, max(1, numSymmetry), 4*elementSize, "vsiteSymmetryOffset");
+    vsiteSymmetryUseBox.initialize<int>(context, max(1, numSymmetry), "vsiteSymmetryUseBox");
     if (num2Avg > 0)
         vsite2AvgWeights.upload(vsite2AvgWeightVec, true);
     if (num3Avg > 0)
@@ -515,6 +540,11 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     if (numLocalCoords > 0) {
         vsiteLocalCoordsWeights.upload(vsiteLocalCoordsWeightVec, true);
         vsiteLocalCoordsPos.upload(vsiteLocalCoordsPosVec, true);
+    }
+    if (numSymmetry > 0) {
+        vsiteSymmetryMatrix.upload(vsiteSymmetryMatrixVec, true);
+        vsiteSymmetryOffset.upload(vsiteSymmetryOffsetVec, true);
+        vsiteSymmetryUseBox.upload(vsiteSymmetryUseBoxVec);
     }
 
     // If multiple virtual sites depend on the same particle, make sure the force distribution
@@ -539,6 +569,7 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     defines["NUM_3_AVERAGE"] = context.intToString(num3Avg);
     defines["NUM_OUT_OF_PLANE"] = context.intToString(numOutOfPlane);
     defines["NUM_LOCAL_COORDS"] = context.intToString(numLocalCoords);
+    defines["NUM_SYMMETRY"] = context.intToString(numSymmetry);
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     if (hasOverlappingVsites)
         defines["HAS_OVERLAPPING_VSITES"] = "1";
@@ -577,6 +608,12 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     vsitePositionKernel->addArg(vsiteLocalCoordsWeights);
     vsitePositionKernel->addArg(vsiteLocalCoordsPos);
     vsitePositionKernel->addArg(vsiteLocalCoordsStartIndex);
+    vsitePositionKernel->addArg(vsiteSymmetryAtoms);
+    vsitePositionKernel->addArg(vsiteSymmetryMatrix);
+    vsitePositionKernel->addArg(vsiteSymmetryOffset);
+    vsitePositionKernel->addArg(vsiteSymmetryUseBox);
+    for (int i = 0; i < 6; i++)
+        vsitePositionKernel->addArg(); // Arguments for periodic box
     vsiteForceKernel->addArg(context.getPosq());
     if (context.getUseMixedPrecision())
         vsiteForceKernel->addArg(context.getPosqCorrection());
@@ -594,6 +631,12 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     vsiteForceKernel->addArg(vsiteLocalCoordsWeights);
     vsiteForceKernel->addArg(vsiteLocalCoordsPos);
     vsiteForceKernel->addArg(vsiteLocalCoordsStartIndex);
+    vsiteForceKernel->addArg(vsiteSymmetryAtoms);
+    vsiteForceKernel->addArg(vsiteSymmetryMatrix);
+    vsiteForceKernel->addArg(vsiteSymmetryOffset);
+    vsiteForceKernel->addArg(vsiteSymmetryUseBox);
+    for (int i = 0; i < 6; i++)
+        vsiteForceKernel->addArg(); // Arguments for periodic box
     for (int i = 0; i < 3; i++)
         vsiteSaveForcesKernel->addArg();
 
@@ -736,8 +779,37 @@ void IntegrationUtilities::applyVelocityConstraints(double tol) {
 
 void IntegrationUtilities::computeVirtualSites() {
     ContextSelector selector(context);
-    if (numVsites > 0)
+    if (numVsites > 0) {
+        Vec3 boxVectors[3];
+        context.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        mm_double4 recipBoxVectorsDouble[3];
+        context.computeReciprocalBoxVectors(recipBoxVectorsDouble);
+        if (context.getUseDoublePrecision()) {
+            mm_double4 boxVectorsDouble[3];
+            for (int i = 0; i < 3; i++)
+                boxVectorsDouble[i] = mm_double4(boxVectors[i][0], boxVectors[i][1], boxVectors[i][2], 0);
+            vsitePositionKernel->setArg(17, boxVectorsDouble[0]);
+            vsitePositionKernel->setArg(18, boxVectorsDouble[1]);
+            vsitePositionKernel->setArg(19, boxVectorsDouble[2]);
+            vsitePositionKernel->setArg(20, recipBoxVectorsDouble[0]);
+            vsitePositionKernel->setArg(21, recipBoxVectorsDouble[1]);
+            vsitePositionKernel->setArg(22, recipBoxVectorsDouble[2]);
+        }
+        else {
+            mm_float4 boxVectorsFloat[3], recipBoxVectorsFloat[3];
+            for (int i = 0; i < 3; i++) {
+                boxVectorsFloat[i] = mm_float4((float) boxVectors[i][0], (float) boxVectors[i][1], (float) boxVectors[i][2], 0);
+                recipBoxVectorsFloat[i] = mm_float4((float) recipBoxVectorsDouble[i].x, (float) recipBoxVectorsDouble[i].y, (float) recipBoxVectorsDouble[i].z, 0);
+            }
+            vsitePositionKernel->setArg(17, boxVectorsFloat[0]);
+            vsitePositionKernel->setArg(18, boxVectorsFloat[1]);
+            vsitePositionKernel->setArg(19, boxVectorsFloat[2]);
+            vsitePositionKernel->setArg(20, recipBoxVectorsFloat[0]);
+            vsitePositionKernel->setArg(21, recipBoxVectorsFloat[1]);
+            vsitePositionKernel->setArg(22, recipBoxVectorsFloat[2]);
+        }
         vsitePositionKernel->execute(numVsites);
+    }
 }
 
 void IntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumberSeed) {
