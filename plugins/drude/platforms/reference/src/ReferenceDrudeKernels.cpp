@@ -61,6 +61,11 @@ static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     return *data->constraints;
 }
 
+static const ReferenceVirtualSites& extractVirtualSites(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return *data->virtualSites;
+}
+
 static double computeShiftedKineticEnergy(ContextImpl& context, vector<double>& inverseMasses, double timeShift) {
     const System& system = context.getSystem();
     int numParticles = system.getNumParticles();
@@ -374,7 +379,7 @@ void ReferenceIntegrateDrudeLangevinStepKernel::execute(ContextImpl& context, co
             }
         }
     }
-    ReferenceVirtualSites::computePositions(context.getSystem(), pos);
+    extractVirtualSites(context).computePositions(context.getSystem(), pos);
     data.time += integrator.getStepSize();
     data.stepCount++;
 }
@@ -452,7 +457,7 @@ void ReferenceIntegrateDrudeSCFStepKernel::execute(ContextImpl& context, const D
     
     // Update the positions of virtual sites and Drude particles.
     
-    ReferenceVirtualSites::computePositions(context.getSystem(), pos);
+    extractVirtualSites(context).computePositions(context.getSystem(), pos);
     minimize(context, integrator.getMinimizationErrorTolerance());
     data.time += integrator.getStepSize();
     data.stepCount++;

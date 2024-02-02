@@ -189,6 +189,6 @@ void ReferenceStochasticDynamics::update(const OpenMM::System& system, vector<Ve
 
    updatePart3(numberOfAtoms, atomCoordinates, velocities, inverseMasses, xPrime);
 
-   ReferenceVirtualSites::computePositions(system, atomCoordinates);
+   getVirtualSites().computePositions(system, atomCoordinates);
    incrementTimeStep();
 }

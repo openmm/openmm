@@ -233,6 +233,6 @@ void ReferenceVariableStochasticDynamics::update(const OpenMM::System& system, v
        }
    }
 
-   ReferenceVirtualSites::computePositions(system, atomCoordinates);
+   getVirtualSites().computePositions(system, atomCoordinates);
    incrementTimeStep();
 }
