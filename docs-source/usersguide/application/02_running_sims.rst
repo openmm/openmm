@@ -428,7 +428,7 @@ of the :class:`Platform` to use.  This overrides the default logic.
 :class:`Simulation`.  The following lines specify to use the :class:`CUDA` platform:
 ::
 
-    platform = Platform.getPlatformByName('CUDA')
+    platform = Platform.getPlatform('CUDA')
     simulation = Simulation(prmtop.topology, system, integrator, platform)
 
 The platform name should be one of :code:`OpenCL`, :code:`CUDA`, :code:`CPU`, or
@@ -441,7 +441,7 @@ work across two different GPUs (CUDA devices 0 and 1), doing all computations in
 double precision:
 ::
 
-    platform = Platform.getPlatformByName('CUDA')
+    platform = Platform.getPlatform('CUDA')
     properties = {'DeviceIndex': '0,1', 'Precision': 'double'}
     simulation = Simulation(prmtop.topology, system, integrator, platform, properties)
 

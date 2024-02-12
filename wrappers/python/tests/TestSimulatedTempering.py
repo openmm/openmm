@@ -20,7 +20,7 @@ class TestSimulatedTempering(unittest.TestCase):
         residue = topology.addResidue('H2', chain)
         topology.addAtom('H1', element.hydrogen, residue)
         topology.addAtom('H2', element.hydrogen, residue)
-        simulation = Simulation(topology, system, integrator, Platform.getPlatformByName('Reference'))
+        simulation = Simulation(topology, system, integrator, Platform.getPlatform('Reference'))
         st = SimulatedTempering(simulation, numTemperatures=10, minTemperature=200*kelvin, maxTemperature=400*kelvin, tempChangeInterval=5, reportInterval=10000)
         self.assertEqual(10, len(st.temperatures))
         self.assertEqual(200*kelvin, st.temperatures[0])
@@ -72,7 +72,7 @@ class TestSimulatedTempering(unittest.TestCase):
         residue = topology.addResidue('H2', chain)
         topology.addAtom('H1', element.hydrogen, residue)
         topology.addAtom('H2', element.hydrogen, residue)
-        simulation = Simulation(topology, system, integrator, Platform.getPlatformByName('Reference'))
+        simulation = Simulation(topology, system, integrator, Platform.getPlatform('Reference'))
         simulation.context.setPositions([Vec3(0, 0, 0), Vec3(1, 0, 0)])
 
         # Check the temperature is correct before creating the simulated tempering simulation

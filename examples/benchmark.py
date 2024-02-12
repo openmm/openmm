@@ -347,7 +347,7 @@ def runOneTest(testName, options):
     test_result['timestep_in_fs'] = dt.value_in_unit(unit.femtoseconds)
     properties = {}
     initialSteps = 5
-    platform = mm.Platform.getPlatformByName(options.platform)
+    platform = mm.Platform.getPlatform(options.platform)
     if options.device is not None and 'DeviceIndex' in platform.getPropertyNames():
         properties['DeviceIndex'] = options.device
         if ',' in options.device or ' ' in options.device:

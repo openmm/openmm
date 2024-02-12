@@ -304,7 +304,7 @@ void testTriclinic2() {
     Context context1(system, integ1, platform);
     context1.setPositions(positions);
     VerletIntegrator integ2(0.001);
-    Context context2(system, integ2, Platform::getPlatformByName("Reference"));
+    Context context2(system, integ2, Platform::getPlatform("Reference"));
     context2.setPositions(positions);
     State state1 = context1.getState(State::Forces | State::Energy, false, 2);
     State state2 = context2.getState(State::Forces | State::Energy, false, 2);

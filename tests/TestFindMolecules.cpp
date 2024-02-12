@@ -57,7 +57,7 @@ void testFindMolecules() {
                 bonds->addBond(index, index-1, 1.0, 1.0);
         }
     VerletIntegrator integrator(1.0);
-    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    Context context(system, integrator, Platform::getPlatform("Reference"));
     ContextImpl* contextImpl = *reinterpret_cast<ContextImpl**>(&context);
     const vector<vector<int> >& molecules = contextImpl->getMolecules();
     ASSERT_EQUAL(numMolecules, molecules.size());
