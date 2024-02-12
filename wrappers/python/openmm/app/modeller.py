@@ -1065,7 +1065,7 @@ class Modeller(object):
         context.setPositions(newPositions)
         LocalEnergyMinimizer.minimize(context, 1.0, 50)
         self.topology = newTopology
-        self.positions = context.getState(getPositions=True).getPositions()
+        self.positions = context.getState(positions=True).getPositions()
         del context
         return actualVariants
 
@@ -1528,7 +1528,7 @@ class Modeller(object):
         for i in range(steps):
             weight1 = i/(steps-1)
             weight2 = 1.0-weight1
-            mergedPositions = context.getState(getPositions=True).getPositions(asNumpy=hasNumpy).value_in_unit(nanometer)
+            mergedPositions = context.getState(positions=True).getPositions(asNumpy=hasNumpy).value_in_unit(nanometer)
             if hasNumpy:
                 mergedPositions[numMembraneParticles:] = weight1*proteinPosArray + weight2*scaledProteinPosArray
             else:
@@ -1540,7 +1540,7 @@ class Modeller(object):
         # Add the membrane to the protein.
 
         modeller = Modeller(self.topology, self.positions)
-        modeller.add(membraneTopology, context.getState(getPositions=True).getPositions()[:numMembraneParticles])
+        modeller.add(membraneTopology, context.getState(positions=True).getPositions()[:numMembraneParticles])
         modeller.topology.setPeriodicBoxVectors(membraneTopology.getPeriodicBoxVectors())
         del context
         del system

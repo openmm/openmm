@@ -248,7 +248,7 @@ PDB file.
         simulation.context.setPositions(modeller.positions)
         simulation.minimizeEnergy(maxIterations=100)
         print('Saving...')
-        positions = simulation.context.getState(getPositions=True).getPositions()
+        positions = simulation.context.getState(positions=True).getPositions()
         PDBFile.writeFile(simulation.topology, positions, open('output.pdb', 'w'))
         print('Done')
 

@@ -588,7 +588,7 @@ notable differences:
    available.  For example:
    ::
 
-    myContext.getState(getEnergy=True, getForce=False, …)
+    myContext.getState(energy=True, force=False, …)
 
 #. Wherever the C++ API uses references to return multiple values from a method,
    the Python API returns a tuple.  For example, in C++ you would query a

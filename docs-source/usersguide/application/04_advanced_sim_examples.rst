@@ -209,7 +209,7 @@ the potential energy of each one.  Assume we have already created our :class:`Sy
         for file in os.listdir('structures'):
             pdb = PDBFile(os.path.join('structures', file))
             simulation.context.setPositions(pdb.positions)
-            state = simulation.context.getState(getEnergy=True)
+            state = simulation.context.getState(energy=True)
             print(file, state.getPotentialEnergy())
 
     .. caption::
@@ -220,6 +220,6 @@ We use Python’s :code:`listdir()` function to list all the files in the
 directory.  We create a :class:`PDBFile` object for each one and call
 :meth:`setPositions()` on the Context to specify the particle positions loaded
 from the PDB file.  We then compute the energy by calling :meth:`getState()`
-with the option :code:`getEnergy=True`\ , and print it to the console along
+with the option :code:`energy=True`\ , and print it to the console along
 with the name of the file.
 
