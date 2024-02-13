@@ -139,7 +139,7 @@ class TestCharmmFiles(unittest.TestCase):
             a.charge = 0.0
 
         # Now compute the full energy
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
         system = psf.createSystem(params, nonbondedMethod=PME,
                                   nonbondedCutoff=8*angstroms)
 
@@ -168,7 +168,7 @@ class TestCharmmFiles(unittest.TestCase):
                 f.setForceGroup(1)
             else:
                 f.setForceGroup(0)
-        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatformByName('Reference'))
+        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatform('Reference'))
         context.setPositions(crd.positions)
         state = context.getState(getEnergy=True, groups={1})
         energy = state.getPotentialEnergy().value_in_unit(kilocalories_per_mole)
@@ -184,7 +184,7 @@ class TestCharmmFiles(unittest.TestCase):
         psf.setBox(30.0*angstroms, 30.0*angstroms, 30.0*angstroms)
 
         # Now compute the full energy
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
         system = psf.createSystem(params, nonbondedMethod=PME, ewaldErrorTolerance=0.00005)
         integrator = DrudeLangevinIntegrator(300*kelvin, 1.0/picosecond, 1*kelvin, 10/picosecond, 0.001*picoseconds)
         con = Context(system, integrator, plat)
@@ -234,7 +234,7 @@ class TestCharmmFiles(unittest.TestCase):
         psf.setBox(33.2*angstroms, 33.2*angstroms, 33.2*angstroms)
 
         # Now compute the full energy
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
         system = psf.createSystem(params, nonbondedMethod=PME, ewaldErrorTolerance=0.00005)
         integrator = DrudeLangevinIntegrator(300*kelvin, 1.0/picosecond, 1*kelvin, 10/picosecond, 0.001*picoseconds)
         con = Context(system, integrator, plat)
@@ -251,7 +251,7 @@ class TestCharmmFiles(unittest.TestCase):
         crd = CharmmCrdFile('systems/chlb_cgenff.crd')
         params = CharmmParameterSet('systems/top_all36_cgenff.rtf',
                                     'systems/par_all36_cgenff.prm')
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
         system = psf.createSystem(params)
         con = Context(system, VerletIntegrator(2*femtoseconds), plat)
         con.setPositions(crd.positions)
@@ -310,7 +310,7 @@ class TestCharmmFiles(unittest.TestCase):
         for i in range(5):
             system = self.psf_c.createSystem(self.params, implicitSolvent=solventType[i], nonbondedMethod=nonbondedMethod[i], implicitSolventSaltConc=salt[i])
             integrator = VerletIntegrator(0.001)
-            context = Context(system, integrator, Platform.getPlatformByName("Reference"))
+            context = Context(system, integrator, Platform.getPlatform("Reference"))
             context.setPositions(self.pdb.positions)
             state1 = context.getState(getForces=True)
             #out = open('systems/ala-ala-ala-implicit-forces/'+file[i]+'.xml', 'w')
@@ -338,7 +338,7 @@ class TestCharmmFiles(unittest.TestCase):
             a.charge = 0.0
 
         # Now compute the full energy
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
 
         system_strict     = psf.createSystem(params_strict    , nonbondedMethod=PME,
                                   nonbondedCutoff=8*angstroms)
@@ -365,7 +365,7 @@ class TestCharmmFiles(unittest.TestCase):
         force = [f for f in system.getForces() if isinstance(f, CustomTorsionForce)][0]
         group = force.getForceGroup()
         integrator = VerletIntegrator(0.001)
-        context = Context(system, integrator, Platform.getPlatformByName("Reference"))
+        context = Context(system, integrator, Platform.getPlatform("Reference"))
         angle = 0.1
         pos1 = [Vec3(0,0,0), Vec3(1,0,0), Vec3(1,1,0), Vec3(0,1,math.tan(angle))] # theta = angle
         pos2 = [Vec3(0,0,0), Vec3(1,0,0), Vec3(1,1,0), Vec3(2,1,math.tan(angle))] # theta = pi-angle
@@ -448,7 +448,7 @@ class TestCharmmFiles(unittest.TestCase):
                 params = CharmmParameterSet('systems/charmm22.rtf', parfile.name)
                 os.remove(parfile.name)
             system = self.psf_c.createSystem(params, nonbondedMethod=NoCutoff)
-            context = Context(system, VerletIntegrator(1*femtoseconds), Platform.getPlatformByName('Reference'))
+            context = Context(system, VerletIntegrator(1*femtoseconds), Platform.getPlatform('Reference'))
             context.setPositions(crd.positions)
             energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilocalories_per_mole)
             self.assertAlmostEqual(energy, modeEnergy[abs(nbxmod)], delta=1e-3*abs(energy))
@@ -459,7 +459,7 @@ class TestCharmmFiles(unittest.TestCase):
         pdb = PDBFile('systems/MoS2.pdb')
         params = CharmmParameterSet('systems/MoS2.prm')
         system = psf.createSystem(params, nonbondedMethod=NoCutoff)
-        context = Context(system, VerletIntegrator(1*femtoseconds), Platform.getPlatformByName('Reference'))
+        context = Context(system, VerletIntegrator(1*femtoseconds), Platform.getPlatform('Reference'))
         context.setPositions(pdb.positions)
         energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilocalories_per_mole)
         # Compare with value computed with NAMD.
@@ -507,7 +507,7 @@ class TestCharmmFiles(unittest.TestCase):
         crd = CharmmCrdFile('systems/ala3_solv.crd')
         params = CharmmParameterSet('systems/par_all36_prot.prm',
                                     'systems/toppar_water_ions.str')
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
         system_charmm = psf.createSystem(params, nonbondedMethod=PME,
                                   nonbondedCutoff=8 * angstroms)
         topology = psf.topology

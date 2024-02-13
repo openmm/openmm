@@ -64,7 +64,7 @@ class TestIntegrators(unittest.TestCase):
         velocities = [ (random.random()-0.5, random.random()-0.5, random.random()-0.5) for i in range(numParticles) ]
 
         # Create Context
-        platform = Platform.getPlatformByName('Reference')
+        platform = Platform.getPlatform('Reference')
         context = Context(system, integrator, platform)
         context.setPositions(positions)
         context.setVelocities(velocities)
@@ -161,7 +161,7 @@ class TestIntegrators(unittest.TestCase):
         # Create a System with a single particle and no forces
         system = System()
         system.addParticle(12.0*amu)
-        platform = Platform.getPlatformByName('Reference')
+        platform = Platform.getPlatform('Reference')
         initial_positions = [Vec3(0,0,0)]
         initial_velocities = [Vec3(1,0,0)]
         nsteps = 125 # number of steps to take

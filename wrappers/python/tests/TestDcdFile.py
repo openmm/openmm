@@ -39,7 +39,7 @@ class TestDCDFile(unittest.TestCase):
         # Create a simulation and write some frames to a DCD file.
         
         integrator = mm.VerletIntegrator(0.001*unit.picoseconds)
-        simulation = app.Simulation(pdb.topology, system, integrator, mm.Platform.getPlatformByName('Reference'))
+        simulation = app.Simulation(pdb.topology, system, integrator, mm.Platform.getPlatform('Reference'))
         dcd = app.DCDReporter(fname, 2)
         simulation.reporters.append(dcd)
         simulation.context.setPositions(pdb.positions)
@@ -53,7 +53,7 @@ class TestDCDFile(unittest.TestCase):
         # Create a new simulation and have it append some more frames.
 
         integrator = mm.VerletIntegrator(0.001*unit.picoseconds)
-        simulation = app.Simulation(pdb.topology, system, integrator, mm.Platform.getPlatformByName('Reference'))
+        simulation = app.Simulation(pdb.topology, system, integrator, mm.Platform.getPlatform('Reference'))
         dcd = app.DCDReporter(fname, 2, append=True)
         simulation.reporters.append(dcd)
         simulation.context.setPositions(pdb.positions)

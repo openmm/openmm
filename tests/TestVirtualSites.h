@@ -468,7 +468,7 @@ void testOverlappingSites() {
     }
     VerletIntegrator i1(0.002);
     VerletIntegrator i2(0.002);
-    Context c1(system, i1, Platform::getPlatformByName("Reference"));
+    Context c1(system, i1, Platform::getPlatform("Reference"));
     Context c2(system, i2, platform);
     c1.setPositions(positions);
     c2.setPositions(positions);

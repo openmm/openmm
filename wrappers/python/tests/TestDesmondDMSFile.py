@@ -90,7 +90,7 @@ class TestDesmondDMSFile(unittest.TestCase):
         """Test OPLS potential energy of nabumetone """
         system = self.dms_opls1.createSystem(nonbondedMethod=NoCutoff, OPLS = True)
         integrator = LangevinIntegrator(300*kelvin, 1.0/picosecond, 0.0005*picoseconds)
-        context = Context(system, integrator,Platform.getPlatformByName('Reference'))
+        context = Context(system, integrator,Platform.getPlatform('Reference'))
         context.setPositions(self.dms_opls1.positions)
         ene = context.getState(getEnergy=True).getPotentialEnergy()
         self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 94.21, places=2)
@@ -99,7 +99,7 @@ class TestDesmondDMSFile(unittest.TestCase):
         """Test OPLS potential energy of beta-cyclodextrin/nabumetone complex """
         system = self.dms_opls2.createSystem(nonbondedMethod=NoCutoff, OPLS = True)
         integrator = LangevinIntegrator(300*kelvin, 1.0/picosecond, 0.0005*picoseconds)
-        context = Context(system, integrator,Platform.getPlatformByName('Reference'))
+        context = Context(system, integrator,Platform.getPlatform('Reference'))
         context.setPositions(self.dms_opls2.positions)
         ene = context.getState(getEnergy=True).getPotentialEnergy()
         self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 903.04, places=2)

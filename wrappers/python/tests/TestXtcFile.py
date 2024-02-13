@@ -163,7 +163,7 @@ class TestXtcFile(unittest.TestCase):
                 pdb.topology,
                 system,
                 integrator,
-                mm.Platform.getPlatformByName("Reference"),
+                mm.Platform.getPlatform("Reference"),
             )
             xtc = app.XTCReporter(fname, 2)
             simulation.reporters.append(xtc)
@@ -182,7 +182,7 @@ class TestXtcFile(unittest.TestCase):
                 pdb.topology,
                 system,
                 integrator,
-                mm.Platform.getPlatformByName("Reference"),
+                mm.Platform.getPlatform("Reference"),
             )
             xtc = app.XTCReporter(fname, 2, append=True)
             simulation.reporters.append(xtc)

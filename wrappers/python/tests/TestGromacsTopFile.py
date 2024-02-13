@@ -45,7 +45,7 @@ class TestGromacsTopFile(unittest.TestCase):
             if isinstance(force, PeriodicTorsionForce):
                 force.setForceGroup(1)
         context = Context(system, VerletIntegrator(1*femtosecond),
-                          Platform.getPlatformByName('Reference'))
+                          Platform.getPlatform('Reference'))
         context.setPositions(gro.positions)
         ene = context.getState(getEnergy=True, groups=2**1).getPotentialEnergy()
         self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 341.6905133582857)
@@ -57,7 +57,7 @@ class TestGromacsTopFile(unittest.TestCase):
         system = top.createSystem()
 
         context = Context(system, VerletIntegrator(1*femtosecond),
-                          Platform.getPlatformByName('Reference'))
+                          Platform.getPlatform('Reference'))
         context.setPositions(gro.positions)
         ene = context.getState(getEnergy=True).getPotentialEnergy()
         self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), -346.940915296)
@@ -72,7 +72,7 @@ class TestGromacsTopFile(unittest.TestCase):
                 f.setUseLongRangeCorrection(True)
 
         context = Context(system, VerletIntegrator(1*femtosecond),
-                          Platform.getPlatformByName('Reference'))
+                          Platform.getPlatform('Reference'))
         context.setPositions(gro.positions)
         energy = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
         self.assertAlmostEqual(energy, 3135.33, delta=energy*0.005)
@@ -173,7 +173,7 @@ class TestGromacsTopFile(unittest.TestCase):
         self.assertEqual(1, len(top._moleculeTypes['BENX'].vsites2))
 
         context = Context(system, VerletIntegrator(1*femtosecond),
-                          Platform.getPlatformByName('Reference'))
+                          Platform.getPlatform('Reference'))
         context.setPositions(gro.positions)
         context.computeVirtualSites()
         ene = context.getState(getEnergy=True).getPotentialEnergy()
@@ -203,7 +203,7 @@ class TestGromacsTopFile(unittest.TestCase):
         system = top.createSystem()
         for i, f in enumerate(system.getForces()):
             f.setForceGroup(i)
-        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatformByName('Reference'))
+        context = Context(system, VerletIntegrator(1*femtosecond), Platform.getPlatform('Reference'))
         context.setPositions(gro.positions)
         energy = {}
         for i, f in enumerate(system.getForces()):

@@ -262,8 +262,8 @@ class Simulation(object):
                 getForces = True
             if next[4]:
                 getEnergy = True
-        state = self.context.getState(getPositions=getPositions, getVelocities=getVelocities, getForces=getForces,
-                                      getEnergy=getEnergy, getParameters=True, enforcePeriodicBox=periodic,
+        state = self.context.getState(positions=getPositions, velocities=getVelocities, forces=getForces,
+                                      energy=getEnergy, parameters=True, enforcePeriodicBox=periodic,
                                       groups=self.context.getIntegrator().getIntegrationForceGroups())
         for reporter, next in reports:
             reporter.report(self, state)
@@ -325,7 +325,7 @@ class Simulation(object):
             a File-like object to write the state to, or alternatively a
             filename
         """
-        state = self.context.getState(getPositions=True, getVelocities=True, getParameters=True, getIntegratorParameters=True)
+        state = self.context.getState(positions=True, velocities=True, parameters=True, integratorParameters=True)
         xml = mm.XmlSerializer.serialize(state)
         if isinstance(file, str):
             with open(file, 'w') as f:
