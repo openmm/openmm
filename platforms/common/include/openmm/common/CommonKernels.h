@@ -1374,8 +1374,8 @@ private:
     ComputeContext& cc;
     bool hasInitializedKernels;
     int blockSize;
-    ComputeArray params;
-    ComputeKernel kernel1, kernel2, selectSizeKernel;
+    ComputeArray params, oldDelta;
+    ComputeKernel kernel1, kernel2, kernel3, selectSizeKernel;
     double prevTemp, prevFriction, prevErrorTol;
 };
 
