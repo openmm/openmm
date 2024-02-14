@@ -7,7 +7,7 @@ pipeline {
                 stage("Build and test CUDA platform") {
                     agent {
                         docker {
-                            image "swails/openmm-all:latest"
+                            image "swails/openmm-all:test"
                             label "cuda && docker"
                             args '--gpus all'
                             alwaysPull true
@@ -23,7 +23,7 @@ pipeline {
                 stage("Build and test OpenCL platform") {
                     agent {
                         docker {
-                            image "swails/openmm-all:latest"
+                            image "swails/openmm-all:test"
                             label "cuda && docker"
                             args '--gpus all'
                             alwaysPull true
@@ -39,7 +39,7 @@ pipeline {
                 stage("Build/test CPU platforms") {
                     agent {
                         docker {
-                            image "swails/openmm-cpu:latest"
+                            image "swails/openmm-cpu:test"
                             label "docker"
                             alwaysPull true
                         }
