@@ -38,7 +38,6 @@
 #include "CpuCustomNonbondedForce.h"
 #include "CpuGayBerneForce.h"
 #include "CpuGBSAOBCForce.h"
-#include "CpuLangevinDynamics.h"
 #include "CpuLangevinMiddleDynamics.h"
 #include "CpuNeighborList.h"
 #include "CpuNonbondedForce.h"

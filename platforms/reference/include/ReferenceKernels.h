@@ -59,7 +59,6 @@ class ReferenceCustomHbondIxn;
 class ReferenceCustomManyParticleIxn;
 class ReferenceGayBerneForce;
 class ReferenceBrownianDynamics;
-class ReferenceStochasticDynamics;
 class ReferenceConstraintAlgorithm;
 class ReferenceNoseHooverChain;
 class ReferenceMonteCarloBarostat;
