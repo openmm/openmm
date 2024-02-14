@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -99,7 +99,6 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(CalcGayBerneForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateNoseHooverStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinMiddleStepKernel::Name(), factory);
     registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
     registerKernelFactory(IntegrateVariableVerletStepKernel::Name(), factory);

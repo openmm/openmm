@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -54,7 +54,6 @@
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/KernelImpl.h"
-#include "openmm/LangevinIntegrator.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
@@ -1175,39 +1174,6 @@ public:
      * @param velocities    element [i][j] contains the velocity of bead j for chain i
      */
     virtual void setChainStates(ContextImpl& context, const std::vector<std::vector<double> >& positions, const std::vector<std::vector<double> >& velocities) = 0;
-};
-
-/**
- * This kernel is invoked by LangevinIntegrator to take one time step.
- */
-class IntegrateLangevinStepKernel : public KernelImpl {
-public:
-    static std::string Name() {
-        return "IntegrateLangevinStep";
-    }
-    IntegrateLangevinStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
-    }
-    /**
-     * Initialize the kernel.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param integrator the LangevinIntegrator this kernel will be used for
-     */
-    virtual void initialize(const System& system, const LangevinIntegrator& integrator) = 0;
-    /**
-     * Execute the kernel.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
-     */
-    virtual void execute(ContextImpl& context, const LangevinIntegrator& integrator) = 0;
-    /**
-     * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
-     */
-    virtual double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) = 0;
 };
 
 /**
