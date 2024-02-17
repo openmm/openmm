@@ -5677,91 +5677,6 @@ double CommonIntegrateVerletStepKernel::computeKineticEnergy(ContextImpl& contex
     return cc.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
 }
 
-void CommonIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
-    cc.initializeContexts();
-    ContextSelector selector(cc);
-    cc.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::langevin);
-    kernel1 = program->createKernel("integrateLangevinPart1");
-    kernel2 = program->createKernel("integrateLangevinPart2");
-    params.initialize(cc, 3, cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "langevinParams");
-    prevStepSize = -1.0;
-}
-
-void CommonIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
-    ContextSelector selector(cc);
-    IntegrationUtilities& integration = cc.getIntegrationUtilities();
-    int numAtoms = cc.getNumAtoms();
-    int paddedNumAtoms = cc.getPaddedNumAtoms();
-    if (!hasInitializedKernels) {
-        hasInitializedKernels = true;
-        kernel1->addArg(numAtoms);
-        kernel1->addArg(paddedNumAtoms);
-        kernel1->addArg(cc.getVelm());
-        kernel1->addArg(cc.getLongForceBuffer());
-        kernel1->addArg(integration.getPosDelta());
-        kernel1->addArg(params);
-        kernel1->addArg(integration.getStepSize());
-        kernel1->addArg(integration.getRandom());
-        kernel1->addArg();
-        kernel2->addArg(numAtoms);
-        kernel2->addArg(cc.getPosq());
-        kernel2->addArg(integration.getPosDelta());
-        kernel2->addArg(cc.getVelm());
-        kernel2->addArg(integration.getStepSize());
-        if (cc.getUseMixedPrecision())
-            kernel2->addArg(cc.getPosqCorrection());
-    }
-    double temperature = integrator.getTemperature();
-    double friction = integrator.getFriction();
-    double stepSize = integrator.getStepSize();
-    cc.getIntegrationUtilities().setNextStepSize(stepSize);
-    if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
-        // Calculate the integration parameters.
-
-        double kT = BOLTZ*temperature;
-        double vscale = exp(-stepSize*friction);
-        double fscale = (friction == 0 ? stepSize : (1-vscale)/friction);
-        double noisescale = sqrt(kT*(1-vscale*vscale));
-        vector<double> p(params.getSize());
-        p[0] = vscale;
-        p[1] = fscale;
-        p[2] = noisescale;
-        params.upload(p, true);
-        prevTemp = temperature;
-        prevFriction = friction;
-        prevStepSize = stepSize;
-    }
-
-    // Call the first integration kernel.
-
-    kernel1->setArg(8, integration.prepareRandomNumbers(cc.getPaddedNumAtoms()));
-    kernel1->execute(numAtoms);
-
-    // Apply constraints.
-
-    integration.applyConstraints(integrator.getConstraintTolerance());
-
-    // Call the second integration kernel.
-
-    kernel2->execute(numAtoms);
-    integration.computeVirtualSites();
-
-    // Update the time and step count.
-
-    cc.setTime(cc.getTime()+stepSize);
-    cc.setStepCount(cc.getStepCount()+1);
-    cc.reorderAtoms();
-    
-    // Reduce UI lag.
-
-    flushPeriodically(cc);
-}
-
-double CommonIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
-    return cc.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
-}
-
 void CommonIntegrateLangevinMiddleStepKernel::initialize(const System& system, const LangevinMiddleIntegrator& integrator) {
     cc.initializeContexts();
     ContextSelector selector(cc);
@@ -6709,11 +6624,19 @@ void CommonIntegrateVariableLangevinStepKernel::initialize(const System& system,
     cc.initializeContexts();
     ContextSelector selector(cc);
     cc.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::langevin);
-    kernel1 = program->createKernel("integrateLangevinPart1");
-    kernel2 = program->createKernel("integrateLangevinPart2");
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::langevinMiddle);
+    kernel1 = program->createKernel("integrateLangevinMiddlePart1");
+    kernel2 = program->createKernel("integrateLangevinMiddlePart2");
+    kernel3 = program->createKernel("integrateLangevinMiddlePart3");
+    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision()) {
+        params.initialize<double>(cc, 3, "langevinMiddleParams");
+        oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+    }
+    else {
+        params.initialize<float>(cc, 3, "langevinMiddleParams");
+        oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+    }
     selectSizeKernel = program->createKernel("selectLangevinStepSize");
-    params.initialize(cc, 3, cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "langevinParams");
     blockSize = min(256, system.getNumParticles());
     blockSize = max(blockSize, (int) params.getSize());
 }
@@ -6730,18 +6653,23 @@ double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
         kernel1->addArg(paddedNumAtoms);
         kernel1->addArg(cc.getVelm());
         kernel1->addArg(cc.getLongForceBuffer());
-        kernel1->addArg(integration.getPosDelta());
-        kernel1->addArg(params);
         kernel1->addArg(integration.getStepSize());
-        kernel1->addArg(integration.getRandom());
-        kernel1->addArg();
         kernel2->addArg(numAtoms);
-        kernel2->addArg(cc.getPosq());
-        kernel2->addArg(integration.getPosDelta());
         kernel2->addArg(cc.getVelm());
+        kernel2->addArg(integration.getPosDelta());
+        kernel2->addArg(oldDelta);
+        kernel2->addArg(params);
         kernel2->addArg(integration.getStepSize());
+        kernel2->addArg(integration.getRandom());
+        kernel2->addArg(); // Random index will be set just before it is executed.
+        kernel3->addArg(numAtoms);
+        kernel3->addArg(cc.getPosq());
+        kernel3->addArg(cc.getVelm());
+        kernel3->addArg(integration.getPosDelta());
+        kernel3->addArg(oldDelta);
+        kernel3->addArg(integration.getStepSize());
         if (cc.getUseMixedPrecision())
-            kernel2->addArg(cc.getPosqCorrection());
+            kernel3->addArg(cc.getPosqCorrection());
         selectSizeKernel->addArg(numAtoms);
         selectSizeKernel->addArg(paddedNumAtoms);
         for (int i = 0; i < 4; i++)
@@ -6772,18 +6700,14 @@ double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
     }
     selectSizeKernel->execute(blockSize, blockSize);
 
-    // Call the first integration kernel.
+    // Perform the integration.
 
-    kernel1->setArg(8, integration.prepareRandomNumbers(cc.getPaddedNumAtoms()));
+    kernel2->setArg(7, integration.prepareRandomNumbers(cc.getPaddedNumAtoms()));
     kernel1->execute(numAtoms);
-
-    // Apply constraints.
-
-    integration.applyConstraints(integrator.getConstraintTolerance());
-
-    // Call the second integration kernel.
-
+    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
     kernel2->execute(numAtoms);
+    integration.applyConstraints(integrator.getConstraintTolerance());
+    kernel3->execute(numAtoms);
     integration.computeVirtualSites();
     
     // Reduce UI lag.
