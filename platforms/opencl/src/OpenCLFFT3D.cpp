@@ -56,6 +56,12 @@ OpenCLFFT3D::OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize
     config.inputBufferStride[0] = zsize;
     config.inputBufferStride[1] = ysize*zsize;
     config.inputBufferStride[2] = xsize*ysize*zsize;
+    cl::Platform platform(context.getDevice().getInfo<CL_DEVICE_PLATFORM>());
+    string platformVendor = platform.getInfo<CL_PLATFORM_VENDOR>();
+    if (platformVendor.size() >= 5 && platformVendor.substr(0, 5) == "Intel") {
+        // Intel's OpenCL uses low accuracy trig functions, so tell VkFFT to use lookup tables instead.
+        config.useLUT = 1;
+    }
     VkFFTResult result = initializeVkFFT(&app, config);
     if (result != VKFFT_SUCCESS)
         throw OpenMMException("Error initializing VkFFT: "+context.intToString(result));
