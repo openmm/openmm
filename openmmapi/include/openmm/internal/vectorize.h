@@ -36,6 +36,8 @@
     #include "vectorize_neon.h"
 #elif defined(__PPC__)
     #include "vectorize_ppc.h"
+#elif defined(__LOONGARCH64__)
+    #include "vectorize_lsx.h"
 #elif defined(__SSE__) || defined(_M_IX86) || defined(_M_AMD64)
     #include "vectorize_sse.h"
 #else
