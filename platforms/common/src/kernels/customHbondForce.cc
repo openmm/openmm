@@ -1,4 +1,4 @@
-DEVICE void findBoundingBox(GLOBAL const real4* restrict posq, GLOBAL const int4* RESTRICT atoms, int numGroups,
+DEVICE void findBoundingBox(GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT atoms, int numGroups,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         GLOBAL real4* center, GLOBAL real4* blockSize) {
     real4 pos = posq[atoms[0].x];
@@ -13,8 +13,8 @@ DEVICE void findBoundingBox(GLOBAL const real4* restrict posq, GLOBAL const int4
         real4 center = 0.5f*(maxPos+minPos);
         APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)
 #endif
-        minPos = min(minPos, pos);
-        maxPos = max(maxPos, pos);
+        minPos = make_real4(min(minPos.x,pos.x), min(minPos.y,pos.y), min(minPos.z,pos.z), 0);
+        maxPos = make_real4(max(maxPos.x,pos.x), max(maxPos.y,pos.y), max(maxPos.z,pos.z), 0);
     }
     *blockSize = 0.5f*(maxPos-minPos);
     *center = 0.5f*(maxPos+minPos);
@@ -22,8 +22,8 @@ DEVICE void findBoundingBox(GLOBAL const real4* restrict posq, GLOBAL const int4
 
 KERNEL void findBlockBounds(GLOBAL const int4* RESTRICT donorAtoms, GLOBAL const int4* RESTRICT acceptorAtoms,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        GLOBAL const real4* restrict posq, GLOBAL real4* restrict donorBlockCenter, GLOBAL real4* restrict donorBlockSize,
-        GLOBAL real4* restrict acceptorBlockCenter, GLOBAL real4* restrict acceptorBlockSize) {
+        GLOBAL const real4* RESTRICT posq, GLOBAL real4* RESTRICT donorBlockCenter, GLOBAL real4* RESTRICT donorBlockSize,
+        GLOBAL real4* RESTRICT acceptorBlockCenter, GLOBAL real4* RESTRICT acceptorBlockSize) {
     for (int index = GLOBAL_ID; index < NUM_DONOR_BLOCKS; index += GLOBAL_SIZE) {
         findBoundingBox(posq, donorAtoms+index*32, min(32, NUM_DONORS-index*32), periodicBoxSize,
                 invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, donorBlockCenter+index,
@@ -107,8 +107,8 @@ KERNEL void computeHbondForces(
         GLOBAL const int4* RESTRICT donorAtoms, GLOBAL const int4* RESTRICT acceptorAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
 #ifdef USE_BOUNDING_BOXES
-        , GLOBAL real4* restrict donorBlockCenter, GLOBAL real4* restrict donorBlockSize,
-        GLOBAL real4* restrict acceptorBlockCenter, GLOBAL real4* restrict acceptorBlockSize
+        , GLOBAL real4* RESTRICT donorBlockCenter, GLOBAL real4* RESTRICT donorBlockSize,
+        GLOBAL real4* RESTRICT acceptorBlockCenter, GLOBAL real4* RESTRICT acceptorBlockSize
 #endif
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = GLOBAL_SIZE/32;
