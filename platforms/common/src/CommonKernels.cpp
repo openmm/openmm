@@ -4107,6 +4107,19 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     info = new ForceInfo(force);
     cc.addForce(info);
 
+    // Decide whether to use bounding boxes to accelerate the calculation.
+
+    int numDonorBlocks = (numDonors+31)/32;
+    int numAcceptorBlocks = (numAcceptors+31)/32;
+    useBoundingBoxes = (force.getNonbondedMethod() != CustomHbondForce::NoCutoff && numDonorBlocks*numAcceptorBlocks > cc.getNumThreadBlocks());
+    if (useBoundingBoxes) {
+        int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
+        donorBlockCenter.initialize(cc, numDonorBlocks, 4*elementSize, "donorBlockCenter");
+        donorBlockSize.initialize(cc, numDonorBlocks, 4*elementSize, "donorBlockSize");
+        acceptorBlockCenter.initialize(cc, numAcceptorBlocks, 4*elementSize, "acceptorBlockCenter");
+        acceptorBlockSize.initialize(cc, numAcceptorBlocks, 4*elementSize, "acceptorBlockSize");
+    }
+
     // Record exclusions.
 
     vector<mm_int4> donorExclusionVector(numDonors, mm_int4(-1, -1, -1, -1));
@@ -4349,10 +4362,10 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     defines["PADDED_NUM_ATOMS"] = cc.intToString(cc.getPaddedNumAtoms());
     defines["NUM_DONORS"] = cc.intToString(numDonors);
     defines["NUM_ACCEPTORS"] = cc.intToString(numAcceptors);
-    defines["NUM_DONOR_BLOCKS"] = cc.intToString((numDonors+31)/32);
-    defines["NUM_ACCEPTOR_BLOCKS"] = cc.intToString((numAcceptors+31)/32);
+    defines["NUM_DONOR_BLOCKS"] = cc.intToString(numDonorBlocks);
+    defines["NUM_ACCEPTOR_BLOCKS"] = cc.intToString(numAcceptorBlocks);
     defines["M_PI"] = cc.doubleToString(M_PI);
-    defines["THREAD_BLOCK_SIZE"] = "64";
+    defines["THREAD_BLOCK_SIZE"] = "128";
     if (force.getNonbondedMethod() != CustomHbondForce::NoCutoff) {
         defines["USE_CUTOFF"] = "1";
         defines["CUTOFF_SQUARED"] = cc.doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
@@ -4361,8 +4374,11 @@ void CommonCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         defines["USE_PERIODIC"] = "1";
     if (force.getNumExclusions() > 0)
         defines["USE_EXCLUSIONS"] = "1";
+    if (useBoundingBoxes)
+        defines["USE_BOUNDING_BOXES"] = "1";
     ComputeProgram program = cc.compileProgram(cc.replaceStrings(CommonKernelSources::customHbondForce, replacements), defines);
-    kernel = program->createKernel("computeHbondForces");
+    blockBoundsKernel = program->createKernel("findBlockBounds");
+    forceKernel = program->createKernel("computeHbondForces");
 }
 
 double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -4382,27 +4398,48 @@ double CommonCalcCustomHbondForceKernel::execute(ContextImpl& context, bool incl
     }
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
-        kernel->addArg(cc.getLongForceBuffer());
-        kernel->addArg(cc.getEnergyBuffer());
-        kernel->addArg(cc.getPosq());
-        kernel->addArg(donorExclusions);
-        kernel->addArg(donors);
-        kernel->addArg(acceptors);
+        if (useBoundingBoxes) {
+            blockBoundsKernel->addArg(donors);
+            blockBoundsKernel->addArg(acceptors);
+            for (int i = 0; i < 5; i++)
+                blockBoundsKernel->addArg(); // Periodic box size arguments are set when the kernel is executed.
+            blockBoundsKernel->addArg(cc.getPosq());
+            blockBoundsKernel->addArg(donorBlockCenter);
+            blockBoundsKernel->addArg(donorBlockSize);
+            blockBoundsKernel->addArg(acceptorBlockCenter);
+            blockBoundsKernel->addArg(acceptorBlockSize);
+        }
+        forceKernel->addArg(cc.getLongForceBuffer());
+        forceKernel->addArg(cc.getEnergyBuffer());
+        forceKernel->addArg(cc.getPosq());
+        forceKernel->addArg(donorExclusions);
+        forceKernel->addArg(donors);
+        forceKernel->addArg(acceptors);
         for (int i = 0; i < 5; i++)
-            kernel->addArg(); // Periodic box size arguments are set when the kernel is executed.
+            forceKernel->addArg(); // Periodic box size arguments are set when the kernel is executed.
+        if (useBoundingBoxes) {
+            forceKernel->addArg(donorBlockCenter);
+            forceKernel->addArg(donorBlockSize);
+            forceKernel->addArg(acceptorBlockCenter);
+            forceKernel->addArg(acceptorBlockSize);
+        }
         if (globals.isInitialized())
-            kernel->addArg(globals);
+            forceKernel->addArg(globals);
         for (auto& parameter : donorParams->getParameterInfos())
-            kernel->addArg(parameter.getArray());
+            forceKernel->addArg(parameter.getArray());
         for (auto& parameter : acceptorParams->getParameterInfos())
-            kernel->addArg(parameter.getArray());
+            forceKernel->addArg(parameter.getArray());
         for (auto& function : tabulatedFunctionArrays)
-            kernel->addArg(function);
+            forceKernel->addArg(function);
     }
-    setPeriodicBoxArgs(cc, kernel, 6);
+    if (useBoundingBoxes) {
+        setPeriodicBoxArgs(cc, blockBoundsKernel, 2);
+        blockBoundsKernel->execute(max(numDonors, numAcceptors));
+    }
+    setPeriodicBoxArgs(cc, forceKernel, 6);
     int numDonorBlocks = (numDonors+31)/32;
     int numAcceptorBlocks = (numAcceptors+31)/32;
-    kernel->execute(numDonorBlocks*numAcceptorBlocks*32, cc.getIsCPU() ? 32 : 64);
+    forceKernel->execute(numDonorBlocks*numAcceptorBlocks*32, cc.getIsCPU() ? 32 : 128);
     return 0.0;
 }
 

@@ -1,3 +1,41 @@
+DEVICE void findBoundingBox(GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT atoms, int numGroups,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        GLOBAL real4* center, GLOBAL real4* blockSize) {
+    real4 pos = posq[atoms[0].x];
+#ifdef USE_PERIODIC
+    APPLY_PERIODIC_TO_POS(pos)
+#endif
+    real4 minPos = pos;
+    real4 maxPos = pos;
+    for (int i = 1; i < numGroups; i++) {
+        pos = posq[atoms[i].x];
+#ifdef USE_PERIODIC
+        real4 center = 0.5f*(maxPos+minPos);
+        APPLY_PERIODIC_TO_POS_WITH_CENTER(pos, center)
+#endif
+        minPos = make_real4(min(minPos.x,pos.x), min(minPos.y,pos.y), min(minPos.z,pos.z), 0);
+        maxPos = make_real4(max(maxPos.x,pos.x), max(maxPos.y,pos.y), max(maxPos.z,pos.z), 0);
+    }
+    *blockSize = 0.5f*(maxPos-minPos);
+    *center = 0.5f*(maxPos+minPos);
+}
+
+KERNEL void findBlockBounds(GLOBAL const int4* RESTRICT donorAtoms, GLOBAL const int4* RESTRICT acceptorAtoms,
+        real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        GLOBAL const real4* RESTRICT posq, GLOBAL real4* RESTRICT donorBlockCenter, GLOBAL real4* RESTRICT donorBlockSize,
+        GLOBAL real4* RESTRICT acceptorBlockCenter, GLOBAL real4* RESTRICT acceptorBlockSize) {
+    for (int index = GLOBAL_ID; index < NUM_DONOR_BLOCKS; index += GLOBAL_SIZE) {
+        findBoundingBox(posq, donorAtoms+index*32, min(32, NUM_DONORS-index*32), periodicBoxSize,
+                invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, donorBlockCenter+index,
+                donorBlockSize+index);
+    }
+    for (int index = GLOBAL_ID; index < NUM_ACCEPTOR_BLOCKS; index += GLOBAL_SIZE) {
+        findBoundingBox(posq, acceptorAtoms+index*32, min(32, NUM_ACCEPTORS-index*32), periodicBoxSize,
+                invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, acceptorBlockCenter+index,
+                acceptorBlockSize+index);
+    }
+}
+
 /**
  * Compute the difference between two vectors, optionally taking periodic boundary conditions into account
  * and setting the fourth component to the squared magnitude.
@@ -68,6 +106,10 @@ KERNEL void computeHbondForces(
 	GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, GLOBAL const int4* RESTRICT exclusions,
         GLOBAL const int4* RESTRICT donorAtoms, GLOBAL const int4* RESTRICT acceptorAtoms, real4 periodicBoxSize, real4 invPeriodicBoxSize,
         real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
+#ifdef USE_BOUNDING_BOXES
+        , GLOBAL real4* RESTRICT donorBlockCenter, GLOBAL real4* RESTRICT donorBlockSize,
+        GLOBAL real4* RESTRICT acceptorBlockCenter, GLOBAL real4* RESTRICT acceptorBlockSize
+#endif
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = GLOBAL_SIZE/32;
     const unsigned int warp = GLOBAL_ID/32;
@@ -76,15 +118,28 @@ KERNEL void computeHbondForces(
     LOCAL AcceptorData localData[THREAD_BLOCK_SIZE];
     mixed energy = 0;
     for (int tile = warp; tile < NUM_DONOR_BLOCKS*NUM_ACCEPTOR_BLOCKS; tile += totalWarps) {
-        int donorStart = (tile/NUM_ACCEPTOR_BLOCKS)*32;
-        int acceptorStart = (tile%NUM_ACCEPTOR_BLOCKS)*32;
+        int donorBlock = tile/NUM_ACCEPTOR_BLOCKS;
+        int acceptorBlock = tile%NUM_ACCEPTOR_BLOCKS;
+#ifdef USE_BOUNDING_BOXES
+        real4 blockDelta = donorBlockCenter[donorBlock]-acceptorBlockCenter[acceptorBlock];
+#ifdef USE_PERIODIC
+        APPLY_PERIODIC_TO_DELTA(blockDelta)
+#endif
+        real4 donorSize = donorBlockSize[donorBlock];
+        real4 acceptorSize = acceptorBlockSize[acceptorBlock];
+        blockDelta.x = max((real) 0, fabs(blockDelta.x)-donorSize.x-acceptorSize.x);
+        blockDelta.y = max((real) 0, fabs(blockDelta.y)-donorSize.y-acceptorSize.y);
+        blockDelta.z = max((real) 0, fabs(blockDelta.z)-donorSize.z-acceptorSize.z);
+        if (blockDelta.x*blockDelta.x+blockDelta.y*blockDelta.y+blockDelta.z*blockDelta.z >= CUTOFF_SQUARED)
+            continue;
+#endif
 
         // Load information about the donor this thread will compute forces on.
 
         real3 f1 = make_real3(0);
         real3 f2 = make_real3(0);
         real3 f3 = make_real3(0);
-        int donorIndex = donorStart+indexInWarp;
+        int donorIndex = donorBlock*32 + indexInWarp;
         int4 atoms, exclusionIndices;
         real3 d1, d2, d3;
         if (donorIndex < NUM_DONORS) {
@@ -105,6 +160,7 @@ KERNEL void computeHbondForces(
         localData[LOCAL_ID].f1 = make_real3(0);
         localData[LOCAL_ID].f2 = make_real3(0);
         localData[LOCAL_ID].f3 = make_real3(0);
+        int acceptorStart = acceptorBlock*32;
         int blockSize = min(32, NUM_ACCEPTORS-acceptorStart);
         int4 atoms2 = (indexInWarp < blockSize ? acceptorAtoms[acceptorStart+indexInWarp] : make_int4(-1));
         if (indexInWarp < blockSize) {
