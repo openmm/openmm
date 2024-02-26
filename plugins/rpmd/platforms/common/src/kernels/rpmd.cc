@@ -46,6 +46,7 @@ KERNEL void applyPileThermostat(GLOBAL mixed4* velm, GLOBAL float4* random, unsi
         vimag[indexInBlock] = make_mixed3(0);
         SYNC_THREADS;
         FFT_V_FORWARD
+        SYNC_WARPS; // Workaround for error on PoCL
 
         // Apply the thermostat.
 
