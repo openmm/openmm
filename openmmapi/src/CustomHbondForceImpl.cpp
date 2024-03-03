@@ -209,7 +209,7 @@ ParsedExpression CustomHbondForceImpl::prepareExpression(const CustomHbondForce&
     map<string, CustomFunction*> functions = customFunctions;
     functions["distance"] = &distance;
     functions["angle"] = &angle;
-    functions["vectorangle"] = &vectorangle;
+    functions["angle4"] = &vectorangle;
     functions["dihedral"] = &dihedral;
     ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions);
     map<string, int> atoms;
@@ -234,7 +234,7 @@ ExpressionTreeNode CustomHbondForceImpl::replaceFunctions(const ExpressionTreeNo
     const Operation& op = node.getOperation();
     if (op.getId() == Operation::VARIABLE && variables.find(op.getName()) == variables.end())
         throw OpenMMException("CustomHBondForce: Unknown variable '"+op.getName()+"'");
-    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "vectorangle" && op.getName() != "dihedral"))
+    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "angle4" && op.getName() != "dihedral"))
     {
         // This is not a distance, angle, vectorangle, or dihedral, so process its children.
 
@@ -263,7 +263,7 @@ ExpressionTreeNode CustomHbondForceImpl::replaceFunctions(const ExpressionTreeNo
         variable << "distance";
     } else if (op.getName() == "angle") {
         variable << "angle";
-    } else if (op.getName() == "vectorangle") {
+    } else if (op.getName() == "angle4") {
         variable << "vectorangle";
     } else if (op.getName() == "dihedral") {
         variable << "dihedral";
@@ -277,7 +277,7 @@ ExpressionTreeNode CustomHbondForceImpl::replaceFunctions(const ExpressionTreeNo
         distances[name] = indices;
     } else if (op.getName() == "angle") {
         angles[name] = indices;
-    } else if (op.getName() == "vectorangle") {
+    } else if (op.getName() == "angle4") {
         vectorangles[name] = indices;
     } else if (op.getName() == "dihedral") {
         dihedrals[name] = indices;

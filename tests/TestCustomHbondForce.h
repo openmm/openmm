@@ -157,7 +157,7 @@ void testVectorAngle2() {
         standardSystem.addParticle(1.0);
     }
 
-    CustomHbondForce* custom = new CustomHbondForce("k*(vectorangle(d2,d1,a2,a1)-psi0)");
+    CustomHbondForce* custom = new CustomHbondForce("k*(angle4(d2,d1,a2,a1)-psi0)");
     custom->addGlobalParameter("k", 1);
     custom->addGlobalParameter("psi0", M_PI_2);
     vector<double> parameters(0);
@@ -286,7 +286,7 @@ void testVectorAngle() {
     system.addForce(angleForce);
 
     // Create CustomHbondForce using vectorangle
-    CustomHbondForce* vectorAngleForce = new CustomHbondForce("vectorangle(d1,d2,a1,a2)");
+    CustomHbondForce* vectorAngleForce = new CustomHbondForce("angle4(d1,d2,a1,a2)");
     vectorAngleForce->addDonor(0, 1, -1, {});
     vectorAngleForce->addAcceptor(4, 3, -1, {});
     vectorAngleForce->setCutoffDistance(10.0);
