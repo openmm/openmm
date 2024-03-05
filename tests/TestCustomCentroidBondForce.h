@@ -129,9 +129,9 @@ void testVectorAngleFunction() {
 
     // Creates 4 equivalent forces
     CustomCentroidBondForce* angle = new CustomCentroidBondForce(3, "angle(g1,g2,g3)");
-    CustomCentroidBondForce* vectorangle = new CustomCentroidBondForce(4, "vectorangle(g1,g2,g3,g4)");
-    CustomCentroidBondForce* pointvectorangle = new CustomCentroidBondForce(4, "pointvectorangle(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)");
-    CustomCentroidBondForce* arrayvectorangle = new CustomCentroidBondForce(4, "arrayvectorangle(x2-x1,y2-y1,z2-z1,x4-x3,y4-y3,z4-z3)");
+    CustomCentroidBondForce* vectorangle = new CustomCentroidBondForce(4, "angle4(g1,g2,g3,g4)");
+    //CustomCentroidBondForce* pointvectorangle = new CustomCentroidBondForce(4, "pointvectorangle(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)");
+    CustomCentroidBondForce* arrayvectorangle = new CustomCentroidBondForce(4, "vectorangle(x2-x1,y2-y1,z2-z1,x4-x3,y4-y3,z4-z3)");
     
     // Define groups and bonds.
     // particles 1,2, and 3 have the same position.
@@ -141,7 +141,7 @@ void testVectorAngleFunction() {
     // Forces in particles 0 and 3 should be equivalent
     // Forces in particle 2 should be the sum of forces in particles 1 and 3
 
-    vector<CustomCentroidBondForce*> vectorangles = {vectorangle, pointvectorangle, arrayvectorangle};
+    vector<CustomCentroidBondForce*> vectorangles = {vectorangle, arrayvectorangle};
     vector<int> groupMembers(1);
 
     for (auto vectorAngleForce : vectorangles) {
@@ -174,8 +174,7 @@ void testVectorAngleFunction() {
     // Add forces as different force groups, and create a context.
     angle->setForceGroup(0);
     vectorangle->setForceGroup(1);
-    pointvectorangle->setForceGroup(2);
-    arrayvectorangle->setForceGroup(3);
+    arrayvectorangle->setForceGroup(2);
     
     system.addForce(angle);
     for (auto vectorAngleForce : vectorangles) {
@@ -225,23 +224,19 @@ void testVectorAngleFunction() {
         State state0 = context.getState(State::Forces | State::Energy, false, 1<<0);
         State state1 = context.getState(State::Forces | State::Energy, false, 1<<1);
         State state2 = context.getState(State::Forces | State::Energy, false, 1<<2);
-        State state3 = context.getState(State::Forces | State::Energy, false, 1<<3);
         
         if (state0.getPotentialEnergy()!=state0.getPotentialEnergy()){
             // Energy in NaN
             ASSERT(state1.getPotentialEnergy()!=state1.getPotentialEnergy())
             ASSERT(state2.getPotentialEnergy()!=state2.getPotentialEnergy())
-            ASSERT(state3.getPotentialEnergy()!=state3.getPotentialEnergy())
             continue;
         }
         
         // Forces should be equal between vector angle implementations
         ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
         ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state2.getPotentialEnergy(), TOL);
-        ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state3.getPotentialEnergy(), TOL);
         for (int j = 0; j < numParticles; j++){
             ASSERT_EQUAL_VEC(state1.getForces()[j], state2.getForces()[j], TOL);
-            ASSERT_EQUAL_VEC(state1.getForces()[j], state3.getForces()[j], TOL);
         }
         
         // Forces should be similar to angle
@@ -265,12 +260,12 @@ void testComplexFunction(bool byGroups) {
     // When every group contains only one particle, a CustomCentroidBondForce is identical to a
     // CustomCompoundBondForce.  Use that to test a complicated energy function with lots of terms.
 
-    CustomCompoundBondForce* compound = new CustomCompoundBondForce(4, "x1+y2+z4+fn(distance(p1,p2))*angle(p3,p2,p4)+scale*vectorangle(p2,p1,p4,p3)+scale*dihedral(p2,p1,p4,p3)");
+    CustomCompoundBondForce* compound = new CustomCompoundBondForce(4, "x1+y2+z4+fn(distance(p1,p2))*angle(p3,p2,p4)+scale*angle4(p2,p1,p4,p3)+scale*dihedral(p2,p1,p4,p3)");
     string expression;
     if (byGroups)
-        expression = "x1+y2+z4+fn(distance(g1,g2))*angle(g3,g2,g4)+scale*vectorangle(g2,g1,g4,g3)+scale*dihedral(g2,g1,g4,g3)";
+        expression = "x1+y2+z4+fn(distance(g1,g2))*angle(g3,g2,g4)+scale*angle4(g2,g1,g4,g3)+scale*dihedral(g2,g1,g4,g3)";
     else
-        expression = "x1+y2+z4+fn(pointdistance(x1,y1,z1,x2,y2,z2))*pointangle(x3,y3,z3,x2,y2,z2,x4,y4,z4)+scale*pointvectorangle(x2,y2,z2,x1,y1,z1,x4,y4,z4,x3,y3,z3)+scale*pointdihedral(x2,y2,z2,x1,y1,z1,x4,y4,z4,x3,y3,z3)";
+        expression = "x1+y2+z4+fn(pointdistance(x1,y1,z1,x2,y2,z2))*pointangle(x3,y3,z3,x2,y2,z2,x4,y4,z4)+scale*vectorangle(x2-x1,y2-y1,z2-z1,x4-x3,y4-y3,z4-z3)+scale*pointdihedral(x2,y2,z2,x1,y1,z1,x4,y4,z4,x3,y3,z3)";
     CustomCentroidBondForce* centroid = new CustomCentroidBondForce(4, expression);
     compound->addGlobalParameter("scale", 0.5);
     centroid->addGlobalParameter("scale", 0.5);

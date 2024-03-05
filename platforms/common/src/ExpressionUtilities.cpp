@@ -235,7 +235,7 @@ void ExpressionUtilities::processExpression(stringstream& out, const ExpressionT
                         out << nodeNames[j] << " = angle_deltaCross3.z;\n";
                 }
             }
-            else if (node.getOperation().getName() == "arrayvectorangle") {
+            else if (node.getOperation().getName() == "vectorangle") {
                 // This is a vectorangle() function.
                 initializeDelta(out, "angle_delta0", node, 0, tempType, distancesArePeriodic, temps);
                 initializeDelta(out, "angle_delta1", node, 3, tempType, distancesArePeriodic, temps);
