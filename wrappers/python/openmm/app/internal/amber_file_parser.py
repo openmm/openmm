@@ -1334,7 +1334,7 @@ class AmberAsciiRestart(object):
             hasbox = hasvels = True
         else:
             raise TypeError('Badly formatted restart file. Has %d lines '
-                            'for %d atoms.' % (len(self.lines), self.natom))
+                            'for %d atoms.' % (len(lines), self.natom))
 
         if self._asNumpy:
             coordinates = np.zeros((self.natom, 3), np.float32)
