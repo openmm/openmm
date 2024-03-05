@@ -146,7 +146,7 @@ ParsedExpression CustomCentroidBondForceImpl::prepareExpression(const CustomCent
     CustomCentroidBondForceImpl::FunctionPlaceholder dihedral(4);
     CustomCentroidBondForceImpl::FunctionPlaceholder pointdistance(6);
     CustomCentroidBondForceImpl::FunctionPlaceholder pointangle(9);
-    //CustomCentroidBondForceImpl::FunctionPlaceholder pointvectorangle(12);
+    CustomCentroidBondForceImpl::FunctionPlaceholder pointvectorangle(12);
     CustomCentroidBondForceImpl::FunctionPlaceholder pointdihedral(12);
     CustomCentroidBondForceImpl::FunctionPlaceholder arrayvectorangle(6);
     map<string, CustomFunction*> functions = customFunctions;
@@ -158,8 +158,8 @@ ParsedExpression CustomCentroidBondForceImpl::prepareExpression(const CustomCent
         functions["pointdistance"] = &pointdistance;
     if (functions.find("pointangle") == functions.end())
         functions["pointangle"] = &pointangle;
-    //if (functions.find("pointvectorangle") == functions.end())
-    //    functions["pointvectorangle"] = &pointvectorangle;
+    if (functions.find("pointvectorangle") == functions.end())
+        functions["pointvectorangle"] = &pointvectorangle;
     if (functions.find("pointdihedral") == functions.end())
         functions["pointdihedral"] = &pointdihedral;
     if (functions.find("vectorangle") == functions.end())

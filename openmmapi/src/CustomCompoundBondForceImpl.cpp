@@ -132,7 +132,7 @@ ParsedExpression CustomCompoundBondForceImpl::prepareExpression(const CustomComp
     CustomCompoundBondForceImpl::FunctionPlaceholder dihedral(4);
     CustomCompoundBondForceImpl::FunctionPlaceholder pointdistance(6);
     CustomCompoundBondForceImpl::FunctionPlaceholder pointangle(9);
-    //CustomCompoundBondForceImpl::FunctionPlaceholder pointvectorangle(12);
+    CustomCompoundBondForceImpl::FunctionPlaceholder pointvectorangle(12);
     CustomCompoundBondForceImpl::FunctionPlaceholder pointdihedral(12);
     CustomCompoundBondForceImpl::FunctionPlaceholder arrayvectorangle(12);
     map<string, CustomFunction*> functions = customFunctions;
@@ -144,8 +144,8 @@ ParsedExpression CustomCompoundBondForceImpl::prepareExpression(const CustomComp
         functions["pointdistance"] = &pointdistance;
     if (functions.find("pointangle") == functions.end())
         functions["pointangle"] = &pointangle;
-    //if (functions.find("pointvectorangle") == functions.end())
-    //    functions["pointvectorangle"] = &pointvectorangle;
+    if (functions.find("pointvectorangle") == functions.end())
+        functions["pointvectorangle"] = &pointvectorangle;
     if (functions.find("pointdihedral") == functions.end())
         functions["pointdihedral"] = &pointdihedral;
     if (functions.find("vectorangle") == functions.end())

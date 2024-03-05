@@ -130,7 +130,7 @@ void testVectorAngleFunction() {
     // Creates 4 equivalent forces
     CustomCentroidBondForce* angle = new CustomCentroidBondForce(3, "angle(g1,g2,g3)");
     CustomCentroidBondForce* vectorangle = new CustomCentroidBondForce(4, "angle4(g1,g2,g3,g4)");
-    //CustomCentroidBondForce* pointvectorangle = new CustomCentroidBondForce(4, "pointvectorangle(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)");
+    CustomCentroidBondForce* pointvectorangle = new CustomCentroidBondForce(4, "pointvectorangle(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)");
     CustomCentroidBondForce* arrayvectorangle = new CustomCentroidBondForce(4, "vectorangle(x2-x1,y2-y1,z2-z1,x4-x3,y4-y3,z4-z3)");
     
     // Define groups and bonds.
@@ -141,7 +141,7 @@ void testVectorAngleFunction() {
     // Forces in particles 0 and 3 should be equivalent
     // Forces in particle 2 should be the sum of forces in particles 1 and 3
 
-    vector<CustomCentroidBondForce*> vectorangles = {vectorangle, arrayvectorangle};
+    vector<CustomCentroidBondForce*> vectorangles = {vectorangle, pointvectorangle, arrayvectorangle};
     vector<int> groupMembers(1);
 
     for (auto vectorAngleForce : vectorangles) {
@@ -174,7 +174,8 @@ void testVectorAngleFunction() {
     // Add forces as different force groups, and create a context.
     angle->setForceGroup(0);
     vectorangle->setForceGroup(1);
-    arrayvectorangle->setForceGroup(2);
+    pointvectorangle->setForceGroup(2);
+    arrayvectorangle->setForceGroup(3);
     
     system.addForce(angle);
     for (auto vectorAngleForce : vectorangles) {
@@ -224,19 +225,23 @@ void testVectorAngleFunction() {
         State state0 = context.getState(State::Forces | State::Energy, false, 1<<0);
         State state1 = context.getState(State::Forces | State::Energy, false, 1<<1);
         State state2 = context.getState(State::Forces | State::Energy, false, 1<<2);
+        State state3 = context.getState(State::Forces | State::Energy, false, 1<<3);
         
         if (state0.getPotentialEnergy()!=state0.getPotentialEnergy()){
             // Energy in NaN
             ASSERT(state1.getPotentialEnergy()!=state1.getPotentialEnergy())
             ASSERT(state2.getPotentialEnergy()!=state2.getPotentialEnergy())
+            ASSERT(state3.getPotentialEnergy()!=state3.getPotentialEnergy())
             continue;
         }
         
         // Forces should be equal between vector angle implementations
         ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
         ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state2.getPotentialEnergy(), TOL);
+        ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state3.getPotentialEnergy(), TOL);
         for (int j = 0; j < numParticles; j++){
             ASSERT_EQUAL_VEC(state1.getForces()[j], state2.getForces()[j], TOL);
+            ASSERT_EQUAL_VEC(state1.getForces()[j], state3.getForces()[j], TOL);
         }
         
         // Forces should be similar to angle

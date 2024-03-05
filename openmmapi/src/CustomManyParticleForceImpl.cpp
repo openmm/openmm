@@ -162,7 +162,7 @@ ParsedExpression CustomManyParticleForceImpl::prepareExpression(const CustomMany
     CustomManyParticleForceImpl::FunctionPlaceholder dihedral(4);
     CustomManyParticleForceImpl::FunctionPlaceholder pointdistance(6);
     CustomManyParticleForceImpl::FunctionPlaceholder pointangle(9);
-    //CustomManyParticleForceImpl::FunctionPlaceholder pointvectorangle(12);
+    CustomManyParticleForceImpl::FunctionPlaceholder pointvectorangle(12);
     CustomManyParticleForceImpl::FunctionPlaceholder pointdihedral(12);
     CustomManyParticleForceImpl::FunctionPlaceholder arrayvectorangle(6);
     map<string, CustomFunction*> functions = customFunctions;
@@ -174,8 +174,8 @@ ParsedExpression CustomManyParticleForceImpl::prepareExpression(const CustomMany
         functions["pointdistance"] = &pointdistance;
     if (functions.find("pointangle") == functions.end())
         functions["pointangle"] = &pointangle;
-    //if (functions.find("pointvectorangle") == functions.end())
-    //    functions["pointvectorangle"] = &pointvectorangle;
+    if (functions.find("pointvectorangle") == functions.end())
+        functions["pointvectorangle"] = &pointvectorangle;
     if (functions.find("pointdihedral") == functions.end())
         functions["pointdihedral"] = &pointdihedral;
     if (functions.find("vectorangle") == functions.end())
