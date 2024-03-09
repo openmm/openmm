@@ -12,8 +12,14 @@ sudo apt-key del 7fa2af80
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
 sudo dpkg -i cuda-keyring_1.1-1_all.deb
 sudo apt-get update
-apt list cuda --all-versions
-sudo apt-get -y install cuda
+CUDA_APT=${CUDA_VERSION/./-}
+sudo apt-get install -y \
+    libgl1-mesa-dev cuda-compiler-${CUDA_APT} \
+    cuda-drivers cuda-driver-dev-${CUDA_APT} \
+    cuda-cudart-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} \
+    libcufft-${CUDA_APT} ${CUFFT}-dev-${CUDA_APT} \
+    cuda-nvrtc-${CUDA_APT} cuda-nvrtc-dev-${CUDA_APT} \
+    cuda-nvprof-${CUDA_APT}
 sudo apt-get clean
 
 export CUDA_HOME=/usr/local/cuda-${CUDA_VERSION}
