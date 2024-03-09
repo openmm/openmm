@@ -165,7 +165,7 @@ jobs:
         if: matrix.os == 'M1-arm64'
         with:
           python-version: ${{ matrix.python-version }}
-          activate-environment: build
+          #installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-MacOSX-arm64.sh#${{ github.run_number }}
           installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh#${{ github.run_number }}
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
           auto-activate-base: false
@@ -204,7 +204,9 @@ jobs:
       - name: "Install conda-forge compilers on Ubuntu or M1 (if needed)"
         if: matrix.compilers == 'conda-forge'
         shell: bash -l {0}
-        run: conda install -c conda-forge compilers
+        run: |
+          echo $PATH
+          conda install -c conda-forge compilers
 
       - name: "Set SDK on MacOS (if needed)"
         if: startsWith(matrix.os, 'macos')
@@ -308,8 +310,9 @@ jobs:
           python -m pytest -v -n 2
 
       - name: "Cleanup self-hosted runner (M1)"
-        shell: bash -l {0}
-        if: matrix.os == 'M1-arm64'
+        shell: bash --noprofile --norc -eo pipefail {0}
+        if: (matrix.os == 'M1-arm64') && always()
+        continue-on-error: true
         run: |
           rm -rf /Users/runner/miniconda3/*
 
