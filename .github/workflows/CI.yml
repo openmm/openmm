@@ -49,11 +49,11 @@ jobs:
               -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-12.4/include \
               -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.4/ \
 
-          - name: Linux CUDA 11.2
+          - name: Linux CUDA 11.8
             os: ubuntu-latest
             python-version: "3.11"
             OPENCL: false
-            cuda-version: "11.2"
+            cuda-version: "11.8"
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_CUDA_TESTS=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
