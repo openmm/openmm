@@ -42,7 +42,6 @@ jobs:
               -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
               -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
               -DOPENMM_BUILD_EXAMPLES=OFF \
-              -DOPENCL_LIBRARY=/usr/local/cuda-12.4/lib64/libOpenCL.so \
               -DCUDA_CUDART_LIBRARY=/usr/local/cuda-12.4/lib64/libcudart.so \
               -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-12.4/bin/nvcc \
               -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-12.4/ \
@@ -63,7 +62,6 @@ jobs:
               -DOPENMM_BUILD_SERIALIZATION_TESTS=OFF \
               -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
               -DOPENMM_BUILD_EXAMPLES=OFF \
-              -DOPENCL_LIBRARY=/usr/local/cuda-11.2/lib64/libOpenCL.so \
               -DCUDA_CUDART_LIBRARY=/usr/local/cuda-11.2/lib64/libcudart.so \
               -DCUDA_NVCC_EXECUTABLE=/usr/local/cuda-11.2/bin/nvcc \
               -DCUDA_SDK_ROOT_DIR=/usr/local/cuda-11.2/ \
