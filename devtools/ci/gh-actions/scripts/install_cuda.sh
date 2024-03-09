@@ -17,7 +17,7 @@ sudo apt-get install -y \
     libgl1-mesa-dev cuda-compiler-${CUDA_APT} \
     cuda-drivers cuda-driver-dev-${CUDA_APT} \
     cuda-cudart-${CUDA_APT} cuda-cudart-dev-${CUDA_APT} \
-    libcufft-${CUDA_APT} ${CUFFT}-dev-${CUDA_APT} \
+    libcufft-${CUDA_APT} libcufft-dev-${CUDA_APT} \
     cuda-nvrtc-${CUDA_APT} cuda-nvrtc-dev-${CUDA_APT} \
     cuda-nvprof-${CUDA_APT}
 sudo apt-get clean
