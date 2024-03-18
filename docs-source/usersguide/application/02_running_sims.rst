@@ -470,7 +470,7 @@ must first add the extra particles to the :class:`Topology`.  See section
 :numref:`adding-or-removing-extra-particles` for details.
 
 The force fields described below are the ones that are bundled with OpenMM.
-Additional force fields are available online at https://github.com/choderalab/openmm-forcefields.
+Additional force fields are available online at https://github.com/openmm/openmmforcefields.
 
 Amber14
 -------
@@ -527,7 +527,7 @@ to them.
          :file:`tip3p.xml` will be missing parameters for ions in your system.
 
 The converted parameter sets come from the `AmberTools 17 release <http://ambermd.org/AmberTools.php>`_
-and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `ParmEd <https://github.com/parmed/parmed>`_.
+and were converted using the `openmmforcefields <https://github.com/openmm/openmmforcefields>`_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
 CHARMM36
 --------
@@ -596,7 +596,7 @@ such as :file:`charmm36/water.xml`, which specifies the default CHARMM water mod
          the PSF file directly, as discussed in Section :numref:`using-charmm-files`.
 
 The converted parameter sets come from the `CHARMM36 July 2017 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_
-and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `parmed <https://github.com/parmed/parmed>`_.
+and were converted using the `openmmforcefields <https://github.com/openmm/openmmforcefields>`_ package and `parmed <https://github.com/parmed/parmed>`_.
 
 Implicit Solvent
 ----------------
