@@ -84,7 +84,7 @@ public:
      * @param defaultTemperature      the default temperature at which the system is being maintained (in Kelvin)
      * @param frequency               the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
      * @param scaleMoleculesAsRigid   if true, coordinate scaling keeps molecules rigid, scaling only the center of mass
-     *                                of each one.  If false, every atom is scaled independently.
+     *                                of each one. If false, every constrained atom group is scaled independently.
      */
     MonteCarloFlexibleBarostat(double defaultPressure, double defaultTemperature, int frequency = 25, bool scaleMoleculesAsRigid = true);
     /**
