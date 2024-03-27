@@ -146,9 +146,9 @@ void xtc_read(std::string filename, float* coords_arr, float* box_arr, float* ti
     }
 }
 
-static void box_from_array(matrix& matrix_box, float* box, int frame, int nframes) {
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
+static void box_from_array(matrix& matrix_box, float* box, size_t frame, size_t nframes) {
+    for (size_t i = 0; i < 3; i++) {
+        for (size_t j = 0; j < 3; j++) {
             matrix_box[i][j] = box[(3 * i + j) * nframes + frame];
         }
     }
@@ -159,7 +159,7 @@ void xtc_write(std::string filename, int natoms, int nframes, int* step, float* 
     XTCFrame frame(natoms);
     size_t nframes_long = nframes;
     for (size_t f = 0; f < nframes; f++) {
-        box_from_array(frame.box, box, f, nframes);
+        box_from_array(frame.box, box, f, nframes_long);
         for (size_t i = 0; i < natoms; i++) {
             size_t xidx = Xf(i, f, nframes_long);
             size_t yidx = Yf(xidx, nframes_long);
