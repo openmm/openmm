@@ -269,7 +269,8 @@ void testNonbonded() {
 
     //in this scenario the non-bonded force is added to the System, a copy is added to ATMForce and
     //the System's copy is disabled by giving it a force group that is not evaluated.
-    //This should cause atom reordering in the main context
+    //This used to be needed to ensure atoms would be reordered.  It isn't anymore, but
+    //this test is left in to make sure it still works.
     system.addForce(nbforce);
     atm->addForce(XmlSerializer::clone<Force>(*nbforce));
     nbforce->setForceGroup(1);
@@ -285,7 +286,6 @@ void testNonbonded() {
     double epert1 = u1 - u0;
 
     //in this second scenario the non-bonded force is remove from the System
-    //and atom reordering is disabled.
     system.removeForce(0);
     LangevinMiddleIntegrator integrator2(300, 1.0, 0.004);
     Context context2(system, integrator2, platform);
