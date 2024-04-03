@@ -245,7 +245,6 @@ void testNonbonded() {
     System system;
     double u0, u1, energy;
     double lambda = 0.5;
-    int numParticles = 216;
     double width = 4.0;
 
     system.setDefaultPeriodicBoxVectors(Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0, 0, width));
@@ -411,6 +410,7 @@ void testLargeSystem() {
     
     int numParticles = 1000;
     System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
     CustomExternalForce* external = new CustomExternalForce("x^2 + 2*y^2 + 3*z^2");
     ATMForce* atm = new ATMForce(0.0, 0.0, 0.1, 0.0, 0.0, 1e6, 5e5, 1.0/16, 1.0);
     atm->addForce(external);
@@ -427,19 +427,26 @@ void testLargeSystem() {
         atm->addParticle(d);
     }
 
-    // Also add a nonbonded force to trigger atom reordering on the GPU.
+    // Also add nonbonded forces to trigger atom reordering on the GPU.
 
     CustomNonbondedForce* nb = new CustomNonbondedForce("a*r^2");
     nb->addGlobalParameter("a", 0.0);
     for (int i = 0; i < numParticles; i++)
         nb->addParticle();
+    nb->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
     system.addForce(nb);
-    VerletIntegrator integrator(1.0);
-    Context context(system, integrator, platform);
-    context.setPositions(positions);
+    CustomNonbondedForce* nb1 = new CustomNonbondedForce("0");
+    nb1->addPerParticleParameter("b");
+    for (int i = 0; i < numParticles; i++)
+        nb1->addParticle({(double) (i%3)});
+    nb1->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    atm->addForce(nb1);
     
     // Evaluate the forces to see if the particles are at the correct positions.
 
+    VerletIntegrator integrator(1.0);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
     for (double lambda : {0.0, 1.0}) {
         context.setParameter(ATMForce::Lambda1(), lambda);
         context.setParameter(ATMForce::Lambda2(), lambda);

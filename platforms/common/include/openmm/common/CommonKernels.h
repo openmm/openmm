@@ -1714,19 +1714,15 @@ public:
     virtual ComputeContext& getInnerComputeContext(ContextImpl& innerContext) = 0;
     
 private:
-    class ForceInfo;
     class ReorderListener;
     
     void initKernels(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1);
     
     bool hasInitializedKernel;
     ComputeContext& cc;
-
-    std::vector<mm_float4> displVector1;
-    std::vector<mm_float4> displVector0;
-
     ComputeArray displ1;
     ComputeArray displ0;
+    ComputeArray invAtomOrder, inner0InvAtomOrder, inner1InvAtomOrder;
     ComputeKernel copyStateKernel;
     ComputeKernel hybridForceKernel;
 

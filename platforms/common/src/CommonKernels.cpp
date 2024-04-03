@@ -5629,6 +5629,7 @@ void CommonCalcCustomCVForceKernel::copyState(ContextImpl& context, ContextImpl&
         listener1->execute();
         listener2->execute();
     }
+    cc2.reorderAtoms();
     copyStateKernel->execute(numAtoms);
     Vec3 a, b, c;
     context.getPeriodicBoxVectors(a, b, c);
@@ -8027,49 +8028,20 @@ void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& contex
         cc.setAtomIndex(lastAtomOrder);
 }
 
-class CommonCalcATMForceKernel::ForceInfo : public ComputeForceInfo {
-public:
-    ForceInfo(ComputeForceInfo& force) : force(force) {
-    }
-    bool areParticlesIdentical(int particle1, int particle2) {
-        return force.areParticlesIdentical(particle1, particle2);
-    }
-    int getNumParticleGroups() {
-        return force.getNumParticleGroups();
-    }
-    void getParticlesInGroup(int index, vector<int>& particles) {
-        force.getParticlesInGroup(index, particles);
-    }
-    bool areGroupsIdentical(int group1, int group2) {
-        return force.areGroupsIdentical(group1, group2);
-    }
-private:
-    ComputeForceInfo& force;
-};
-
 class CommonCalcATMForceKernel::ReorderListener : public ComputeContext::ReorderListener {
 public:
-    ReorderListener(ComputeContext& cc, vector<mm_float4>& displVector1, ArrayInterface& displ1,
-                                        vector<mm_float4>& displVector0, ArrayInterface& displ0) :
-    cc(cc), displVector1(displVector1), displ1(displ1), displVector0(displVector0), displ0(displ0)  {
+    ReorderListener(ComputeContext& cc, ArrayInterface& invAtomOrder) : cc(cc), invAtomOrder(invAtomOrder) {
     }
     void execute() {
-        const vector<int>& id = cc.getAtomIndex();
-        vector<mm_float4> newDisplVectorContext1(cc.getPaddedNumAtoms());
-        vector<mm_float4> newDisplVectorContext0(cc.getPaddedNumAtoms());
-        for (int i = 0; i < cc.getNumAtoms(); i++) {
-            newDisplVectorContext1[i] = displVector1[id[i]];
-            newDisplVectorContext0[i] = displVector0[id[i]];
-        }
-        displ1.upload(newDisplVectorContext1);
-        displ0.upload(newDisplVectorContext0);
+        vector<int> invOrder(cc.getPaddedNumAtoms());
+        const vector<int>& order = cc.getAtomIndex();
+        for (int i = 0; i < order.size(); i++)
+            invOrder[order[i]] = i;
+        invAtomOrder.upload(invOrder);
     }
 private:
     ComputeContext& cc;
-    ArrayInterface& displ1;
-    ArrayInterface& displ0;
-    std::vector<mm_float4> displVector1;
-    std::vector<mm_float4> displVector0;
+    ArrayInterface& invAtomOrder;
 };
 
 CommonCalcATMForceKernel::~CommonCalcATMForceKernel() {
@@ -8080,31 +8052,23 @@ void CommonCalcATMForceKernel::initialize(const System& system, const ATMForce& 
     numParticles = force.getNumParticles();
     if (numParticles == 0)
         return;
-    displVector1.resize(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-    displVector0.resize(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-    vector<mm_float4> displVectorContext1(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-    vector<mm_float4> displVectorContext0(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_float4> displVector1(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+    vector<mm_float4> displVector0(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
     for (int i = 0; i < numParticles; i++) {
         Vec3 displacement1, displacement0;
         force.getParticleParameters(i, displacement1, displacement0);
         displVector1[i] = mm_float4(displacement1[0], displacement1[1], displacement1[2], 0);
         displVector0[i] = mm_float4(displacement0[0], displacement0[1], displacement0[2], 0);
     }
-    const vector<int>& id = cc.getAtomIndex();
-    for (int i = 0; i < numParticles; i++)
-        displVectorContext1[i] = displVector1[id[i]];
     displ1.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ1");
-    displ1.upload(displVectorContext1);
-
-    for (int i = 0; i < numParticles; i++)
-        displVectorContext0[i] = displVector0[id[i]];
+    displ1.upload(displVector1);
     displ0.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ0");
-    displ0.upload(displVectorContext0);
-
+    displ0.upload(displVector0);
+    invAtomOrder.initialize<int>(cc, cc.getPaddedNumAtoms(), "invAtomOrder");
+    inner0InvAtomOrder.initialize<int>(cc, cc.getPaddedNumAtoms(), "inner0InvAtomOrder");
+    inner1InvAtomOrder.initialize<int>(cc, cc.getPaddedNumAtoms(), "inner1InvAtomOrder");
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
         cc.addEnergyParameterDerivative(force.getEnergyParameterDerivativeName(i));
-
-    cc.addForce(new ComputeForceInfo());
 }
 
 void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1) {
@@ -8115,10 +8079,22 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
         ComputeContext& cc0 = getInnerComputeContext(innerContext0);
         ComputeContext& cc1 = getInnerComputeContext(innerContext1);
 
-        //initialize the listener, this reorders the displacement vectors
-        ReorderListener* listener = new ReorderListener(cc, displVector1, displ1, displVector0, displ0);
+        // Copy positions to the inner contexts.
+        vector<Vec3> positions;
+        context.getPositions(positions);
+        innerContext0.setPositions(positions);
+        innerContext1.setPositions(positions);
+
+        // Initialize the listeners.
+        ReorderListener* listener = new ReorderListener(cc, invAtomOrder);
+        ReorderListener* listener0 = new ReorderListener(cc0, inner0InvAtomOrder);
+        ReorderListener* listener1 = new ReorderListener(cc1, inner1InvAtomOrder);
         cc.addReorderListener(listener);
+        cc0.addReorderListener(listener0);
+        cc1.addReorderListener(listener1);
         listener->execute();
+        listener0->execute();
+        listener1->execute();
 
         //create CopyState kernel
         ComputeProgram program = cc.compileProgram(CommonKernelSources::atmforce);
@@ -8129,6 +8105,9 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
         copyStateKernel->addArg(cc1.getPosq());
         copyStateKernel->addArg(displ0);
         copyStateKernel->addArg(displ1);
+        copyStateKernel->addArg(cc.getAtomIndexArray());
+        copyStateKernel->addArg(inner0InvAtomOrder);
+        copyStateKernel->addArg(inner1InvAtomOrder);
         if (cc.getUseMixedPrecision()) {
             copyStateKernel->addArg(cc.getPosqCorrection());
             copyStateKernel->addArg(cc0.getPosqCorrection());
@@ -8142,6 +8121,9 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
         hybridForceKernel->addArg(cc.getLongForceBuffer());
         hybridForceKernel->addArg(cc0.getLongForceBuffer());
         hybridForceKernel->addArg(cc1.getLongForceBuffer());
+        hybridForceKernel->addArg(invAtomOrder);
+        hybridForceKernel->addArg(inner0InvAtomOrder);
+        hybridForceKernel->addArg(inner1InvAtomOrder);
         hybridForceKernel->addArg();
         hybridForceKernel->addArg();
 
@@ -8156,12 +8138,12 @@ void CommonCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& in
     ContextSelector selector(cc);
     initKernels(context, innerContext0, innerContext1);
     if (cc.getUseDoublePrecision()) {
-        hybridForceKernel->setArg(5, dEdu0);
-        hybridForceKernel->setArg(6, dEdu1);
+        hybridForceKernel->setArg(8, dEdu0);
+        hybridForceKernel->setArg(9, dEdu1);
     }
     else {
-        hybridForceKernel->setArg(5, (float) dEdu0);
-        hybridForceKernel->setArg(6, (float) dEdu1);
+        hybridForceKernel->setArg(8, (float) dEdu0);
+        hybridForceKernel->setArg(9, (float) dEdu1);
     }
     hybridForceKernel->execute(numParticles);
     map<string, double>& derivs = cc.getEnergyParamDerivWorkspace();
@@ -8175,6 +8157,10 @@ void CommonCalcATMForceKernel::copyState(ContextImpl& context,
 
     initKernels(context, innerContext0, innerContext1);
 
+    ComputeContext& cc0 = getInnerComputeContext(innerContext0);
+    ComputeContext& cc1 = getInnerComputeContext(innerContext1);
+    cc0.reorderAtoms();
+    cc1.reorderAtoms();
     copyStateKernel->execute(numParticles);
 
     Vec3 a, b, c;
@@ -8195,23 +8181,16 @@ void CommonCalcATMForceKernel::copyParametersToContext(ContextImpl& context, con
     ContextSelector selector(cc);
     if (force.getNumParticles() != numParticles)
         throw OpenMMException("copyParametersToContext: The number of ATMMetaForce particles has changed");
-    displVector1.resize(cc.getPaddedNumAtoms());
-    displVector0.resize(cc.getPaddedNumAtoms());
+    vector<mm_float4> displVector1(cc.getPaddedNumAtoms());
+    vector<mm_float4> displVector0(cc.getPaddedNumAtoms());
     for (int i = 0; i < numParticles; i++) {
         Vec3 displacement1, displacement0;
         force.getParticleParameters(i, displacement1, displacement0);
         displVector1[i] = mm_float4(displacement1[0], displacement1[1], displacement1[2], 0);
         displVector0[i] = mm_float4(displacement0[0], displacement0[1], displacement0[2], 0);
     }
-    const vector<int>& id = cc.getAtomIndex();
-    vector<mm_float4> displVectorContext1(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-    vector<mm_float4> displVectorContext0(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-    for (int i = 0; i < numParticles; i++) {
-        displVectorContext1[i] = displVector1[id[i]];
-        displVectorContext0[i] = displVector0[id[i]];
-    }
-    displ1.upload(displVectorContext1);
-    displ0.upload(displVectorContext0);
+    displ1.upload(displVector1);
+    displ0.upload(displVector0);
 }
 
 class CommonCalcCustomCPPForceKernel::StartCalculationPreComputation : public ComputeContext::ForcePreComputation {
