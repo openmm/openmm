@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -2959,13 +2959,13 @@ void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& i
     vector<Vec3> pos0(pos);
     for (int i = 0; i < pos0.size(); i++)
         pos0[i] += displ0[i];
-    extractPositions(innerContext0) = pos0;
+    innerContext0.setPositions(pos0);
 
     //in the target state, particles are displaced by displ1
     vector<Vec3> pos1(pos);
     for (int i = 0; i < pos1.size(); i++)
         pos1[i] += displ1[i];
-    extractPositions(innerContext1) = pos1;
+    innerContext1.setPositions(pos1);
 
     Vec3 a, b, c;
     context.getPeriodicBoxVectors(a, b, c);

@@ -115,9 +115,6 @@ void ATMForceImpl::initialize(ContextImpl& context) {
 
     innerContext0 = context.createLinkedContext(innerSystem0, innerIntegrator0);
     innerContext1 = context.createLinkedContext(innerSystem1, innerIntegrator1);
-    vector<Vec3> positions(system.getNumParticles(), Vec3());
-    innerContext0->setPositions(positions);
-    innerContext1->setPositions(positions);
 
     // Create the kernel.
 
