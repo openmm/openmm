@@ -144,8 +144,8 @@ class Simulation(object):
 
     def step(self, steps: int):
         """Advance the simulation by integrating a specified number of time steps."""
-        if not isinstance(steps, int):
-            raise TypeError(f'Expected type int for steps, got {type(steps)}')
+        if int(steps) != steps:
+            raise TypeError(f'Expected an integer for steps, got {type(steps)}')
             
         self._simulate(endStep=self.currentStep+steps)
 
