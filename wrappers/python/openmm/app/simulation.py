@@ -142,8 +142,11 @@ class Simulation(object):
         """
         mm.LocalEnergyMinimizer.minimize(self.context, tolerance, maxIterations, reporter)
 
-    def step(self, steps):
+    def step(self, steps: int):
         """Advance the simulation by integrating a specified number of time steps."""
+        if int(steps) != steps:
+            raise TypeError(f'Expected an integer for steps, got {type(steps)}')
+            
         self._simulate(endStep=self.currentStep+steps)
 
     def runForClockTime(self, time, checkpointFile=None, stateFile=None, checkpointInterval=None):
