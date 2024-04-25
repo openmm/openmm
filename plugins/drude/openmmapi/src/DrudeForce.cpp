@@ -38,7 +38,7 @@
 using namespace OpenMM;
 using namespace std;
 
-DrudeForce::DrudeForce() {
+DrudeForce::DrudeForce() : usePeriodic(false) {
 }
 
 int DrudeForce::addParticle(int particle, int particle1, int particle2, int particle3, int particle4, double charge, double polarizability, double aniso12, double aniso34) {
