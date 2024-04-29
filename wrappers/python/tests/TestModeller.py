@@ -1341,6 +1341,49 @@ class TestModeller(unittest.TestCase):
             modeller.addMembrane(ff)
         modeller.addMembrane(ff, residueTemplates=residueTemplates)
 
+    def test_residueTemplates(self):
+        """Test the residueTemplates argument to Modeller methods"""
+
+        # Create a Topology and ForceField involving residues that match multiple templates.
+
+        topology = Topology()
+        chain = topology.addChain()
+        residue1 = topology.addResidue('Fe', chain)
+        topology.addAtom('Fe', element.iron, residue1)
+        residue2 = topology.addResidue('Fe', chain)
+        topology.addAtom('Fe', element.iron, residue2)
+        positions = [Vec3(0, 0, 0), Vec3(1, 0, 0)]*nanometers
+        ff = ForceField('amber14/tip3pfb.xml', 'amber14/lipid17.xml')
+        residueTemplates = {residue1: 'FE2', residue2: 'FE'}
+
+        # Test addSolvent().
+
+        modeller = Modeller(topology, positions)
+        with self.assertRaises(Exception):
+            modeller.addSolvent(ff, padding=1*nanometer)
+        modeller.addSolvent(ff, padding=1*nanometer, residueTemplates=residueTemplates)
+
+        # Test addHydrogens().
+
+        modeller = Modeller(topology, positions)
+        with self.assertRaises(Exception):
+            modeller.addHydrogens(ff)
+        modeller.addHydrogens(ff, residueTemplates=residueTemplates)
+
+        # Test addExtraParticles().
+
+        modeller = Modeller(topology, positions)
+        with self.assertRaises(Exception):
+            modeller.addExtraParticles(ff)
+        modeller.addExtraParticles(ff, residueTemplates=residueTemplates)
+
+        # Test addMembrane().
+
+        modeller = Modeller(topology, positions)
+        with self.assertRaises(Exception):
+            modeller.addMembrane(ff)
+        modeller.addMembrane(ff, residueTemplates=residueTemplates)
+
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         scale = max(1.0, norm(p1),)
         for i in range(3):
