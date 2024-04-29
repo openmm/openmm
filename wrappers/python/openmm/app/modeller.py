@@ -540,10 +540,13 @@ class Modeller(object):
         newTopology.setPeriodicBoxVectors(vectors*nanometer)
         newAtoms = {}
         newPositions = []*nanometer
+        newResidueTemplates=dict()
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
                 newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
+                if residue in residueTemplates:
+                    newResidueTemplates[newResidue] = residueTemplates[residue]
                 for atom in residue.atoms():
                     newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
@@ -656,7 +659,7 @@ class Modeller(object):
         numTotalWaters = len(waterPos)
 
         # Add ions to neutralize the system.
-        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize, residueTemplates=residueTemplates)
+        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize, residueTemplates=newResidueTemplates)
 
     def _computeBoxVectors(self, width, boxShape):
         """Compute the periodic box vectors given a box width and shape."""
