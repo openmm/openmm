@@ -7,6 +7,9 @@ real3 force4 = make_real3(0);
 // First pair.
 
 real3 delta = make_real3(pos1.x-pos3.x, pos1.y-pos3.y, pos1.z-pos3.z);
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(delta)
+#endif
 real rInv = RSQRT(dot(delta, delta));
 real r = RECIP(rInv);
 real u = drudeParams.x*r;
@@ -20,6 +23,9 @@ force3 -= f;
 // Second pair.
 
 delta = make_real3(pos1.x-pos4.x, pos1.y-pos4.y, pos1.z-pos4.z);
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(delta)
+#endif
 rInv = RSQRT(dot(delta, delta));
 r = RECIP(rInv);
 u = drudeParams.x*r;
@@ -33,6 +39,9 @@ force4 -= f;
 // Third pair.
 
 delta = make_real3(pos2.x-pos3.x, pos2.y-pos3.y, pos2.z-pos3.z);
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(delta)
+#endif
 rInv = RSQRT(dot(delta, delta));
 r = RECIP(rInv);
 u = drudeParams.x*r;
@@ -46,6 +55,9 @@ force3 -= f;
 // Fourth pair.
 
 delta = make_real3(pos2.x-pos4.x, pos2.y-pos4.y, pos2.z-pos4.z);
+#if APPLY_PERIODIC
+APPLY_PERIODIC_TO_DELTA(delta)
+#endif
 rInv = RSQRT(dot(delta, delta));
 r = RECIP(rInv);
 u = drudeParams.x*r;
