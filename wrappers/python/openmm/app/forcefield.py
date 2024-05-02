@@ -438,14 +438,9 @@ class ForceField(object):
         if name in self._atomTypes:
             #  allow multiple registrations of the same atom type provided the definitions are identical
             existing = self._atomTypes[name]
-            if (
-                existing.atomClass != parameters['class']
-            ) or (
-                existing.mass != float(parameters['mass'])
-            ) or (
-                existing.element.symbol != parameters['element']
-            ):
-                raise ValueError('Found multiple definitions for atom type: '+name)
+            if existing.atomClass == parameters['class'] and existing.mass == float(parameters['mass']) and existing.element.symbol == parameters['element']:
+                return
+            raise ValueError('Found multiple definitions for atom type: '+name)
         atomClass = parameters['class']
         mass = _convertParameterToNumber(parameters['mass'])
         element = None
