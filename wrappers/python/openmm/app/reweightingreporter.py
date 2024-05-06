@@ -46,7 +46,7 @@ class ReweightingReporter(object):
         """
         self._reportInterval = reportInterval
         self._integrator = integrator
-        self._out = open(file, 'w')
+        self._out = open(file, 'a')
         
         
         self._factorM = factorM
@@ -142,7 +142,7 @@ class ReweightingReporter(object):
             state  = simulation.context.getState(getPositions = self._needsPositions, getVelocities = False,
                                                 getForces = False, getEnergy = True,
                                                 getParameters = False, enforcePeriodicBox = False,
-                                                groups = 0b00000000000000000000000000000000) 
+                                                groups = 0b00000000000000000000000000000001) 
             energy = state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
             values.append(energy)
         if self._firtsPertubation:
@@ -170,7 +170,7 @@ class ReweightingReporter(object):
             state  = simulation.context.getState(getPositions = self._needsPositions, getVelocities = False,
                                                 getForces = False, getEnergy = True,
                                                 getParameters = False, enforcePeriodicBox = False,
-                                                groups = 0b00000000000000000000000000001000) 
+                                                groups = 0b00000000000000000000000000010000) 
             energy = state.getPotentialEnergy().value_in_unit(unit.kilojoules_per_mole)
             values.append(energy)            
         return values
