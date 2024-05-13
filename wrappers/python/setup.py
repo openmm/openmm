@@ -164,6 +164,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     (through custom forces and integrators), openness, and high performance
     (especially on recent GPUs) that make it truly unique among simulation codes.
     """
+    setupKeywords["install_requires"]  = ["numpy"]
 
     define_macros = [('MAJOR_VERSION', major_version_num),
                      ('MINOR_VERSION', minor_version_num)]
