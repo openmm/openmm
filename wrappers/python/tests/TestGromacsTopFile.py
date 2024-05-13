@@ -180,7 +180,7 @@ class TestGromacsTopFile(unittest.TestCase):
         # the energy output is from gromacs and it only prints out 6 sig digits.
         self.assertAlmostEqual(ene.value_in_unit(kilojoules_per_mole), 1.88855e+02, places=3)
 
-    def test_Vsite3(self):
+    def test_Vsite3Func1(self):
         """Test a three particle virtual site."""
         top = GromacsTopFile('systems/tip4pew.top')
         system = top.createSystem()
@@ -194,6 +194,25 @@ class TestGromacsTopFile(unittest.TestCase):
         self.assertAlmostEqual(0.786646558, vs.getWeight(0))
         self.assertAlmostEqual(0.106676721, vs.getWeight(1))
         self.assertAlmostEqual(0.106676721, vs.getWeight(2))
+
+    def test_Vsite3Func4(self):
+        """Test a three particle virtual site."""
+        top = GromacsTopFile('systems/tip5p.top')
+        system = top.createSystem()
+        self.assertEqual(3, system.getNumConstraints())
+        for i in (3, 4):
+            self.assertTrue(system.isVirtualSite(i))
+            vs = system.getVirtualSite(i)
+            self.assertIsInstance(vs, OutOfPlaneSite)
+            self.assertEqual(0, vs.getParticle(0))
+            self.assertEqual(1, vs.getParticle(1))
+            self.assertEqual(2, vs.getParticle(2))
+            self.assertAlmostEqual(-0.344908, vs.getWeight12())
+            self.assertAlmostEqual(-0.344908, vs.getWeight13())
+            wc = -6.4437903493
+            if i == 4:
+                wc = -wc
+            self.assertAlmostEqual(wc, vs.getWeightCross())
 
     def test_GROMOS(self):
         """Test a system using the GROMOS 54a7 force field."""
