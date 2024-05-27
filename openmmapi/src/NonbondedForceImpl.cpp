@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -81,6 +81,8 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
         int particle[2];
         double chargeProd, sigma, epsilon;
         owner.getExceptionParameters(i, particle[0], particle[1], chargeProd, sigma, epsilon);
+        int minp = min(particle[0], particle[1]);
+        int maxp = max(particle[0], particle[1]);
         for (int j = 0; j < 2; j++) {
             if (particle[j] < 0 || particle[j] >= owner.getNumParticles()) {
                 stringstream msg;
@@ -89,7 +91,7 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
                 throw OpenMMException(msg.str());
             }
         }
-        if (exceptions[particle[0]].count(particle[1]) > 0 || exceptions[particle[1]].count(particle[0]) > 0) {
+        if (exceptions[minp].count(maxp) > 0) {
             stringstream msg;
             msg << "NonbondedForce: Multiple exceptions are specified for particles ";
             msg << particle[0];
@@ -97,8 +99,7 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
             msg << particle[1];
             throw OpenMMException(msg.str());
         }
-        exceptions[particle[0]].insert(particle[1]);
-        exceptions[particle[1]].insert(particle[0]);
+        exceptions[minp].insert(maxp);
         if (sigma < 0)
             throw OpenMMException("NonbondedForce: sigma for an exception cannot be negative");
         if (epsilon < 0)

@@ -99,10 +99,10 @@ def printTestResult(test_result, options):
 def timeIntegration(context, steps, initialSteps):
     """Integrate a Context for a specified number of steps, then return how many seconds it took."""
     context.getIntegrator().step(initialSteps) # Make sure everything is fully initialized
-    context.getState(getEnergy=True)
+    context.getState(energy=True)
     start = datetime.now()
     context.getIntegrator().step(steps)
-    context.getState(getEnergy=True)
+    context.getState(energy=True)
     end = datetime.now()
     elapsed = end-start
     return elapsed.seconds + elapsed.microseconds*1e-6
@@ -347,7 +347,7 @@ def runOneTest(testName, options):
     test_result['timestep_in_fs'] = dt.value_in_unit(unit.femtoseconds)
     properties = {}
     initialSteps = 5
-    platform = mm.Platform.getPlatformByName(options.platform)
+    platform = mm.Platform.getPlatform(options.platform)
     if options.device is not None and 'DeviceIndex' in platform.getPropertyNames():
         properties['DeviceIndex'] = options.device
         if ',' in options.device or ' ' in options.device:
@@ -384,7 +384,7 @@ def runOneTest(testName, options):
         tol = 1.0e-8
         context.applyConstraints(tol)
         context.applyVelocityConstraints(tol)
-        state = context.getState(getPositions=True, getVelocities=True, getEnergy=True, getForces=True, getParameters=True)
+        state = context.getState(positions=True, velocities=True, energy=True, forces=True, parameters=True)
 
     # Time integration, ensuring we trigger kernel compilation before we start timing
     steps = 20

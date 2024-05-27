@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2016 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2024 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -53,6 +53,7 @@ ReferenceVariableStochasticDynamics::ReferenceVariableStochasticDynamics(int num
                                                           double accuracy) :
            ReferenceDynamics(numberOfAtoms, 0.0f, temperature), friction(friction), _accuracy(accuracy) {
    xPrime.resize(numberOfAtoms);
+   oldx.resize(numberOfAtoms);
    inverseMasses.resize(numberOfAtoms);
 }
 
@@ -97,38 +98,7 @@ double ReferenceVariableStochasticDynamics::getFriction() const {
    return friction;
 }
 
-/**---------------------------------------------------------------------------------------
-
-   First SD update; based on code in update.c do_update_sd() Gromacs 3.1.4
-
-   @param numberOfAtoms       number of atoms
-   @param atomCoordinates     atom coordinates
-   @param velocities          velocities
-   @param forces              forces
-   @param masses              atom masses
-   @param inverseMasses       inverse atom masses
-   @param xPrime              xPrime
-   @param maxStepSize         maximum time step
-
-   --------------------------------------------------------------------------------------- */
-
-void ReferenceVariableStochasticDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& atomCoordinates,
-                                              vector<Vec3>& velocities,
-                                              vector<Vec3>& forces, vector<double>& masses, vector<double>& inverseMasses,
-                                              vector<Vec3>& xPrime, double maxStepSize) {
-   // first-time-through initialization
-
-   if (getTimeStep() == 0) {
-      // invert masses
-
-      for (int ii = 0; ii < numberOfAtoms; ii++) {
-         if (masses[ii] == 0)
-             inverseMasses[ii] = 0;
-         else
-             inverseMasses[ii] = 1/masses[ii];
-      }
-   }
-
+void ReferenceVariableStochasticDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& velocities, vector<Vec3>& forces, vector<double>& inverseMasses, double maxStepSize) {
    // Select the step size to use
     double error = 0;
     for (int i = 0; i < numberOfAtoms; ++i) {
@@ -138,59 +108,42 @@ void ReferenceVariableStochasticDynamics::updatePart1(int numberOfAtoms, vector<
         }
     }
     error = sqrt(error/(numberOfAtoms*3));
-    double newStepSize = sqrt(getAccuracy()/error);
+    double dt = sqrt(getAccuracy()/error);
     if (getDeltaT() > 0.0f)
-        newStepSize = std::min(newStepSize, getDeltaT()*2.0f); // For safety, limit how quickly dt can increase.
-    if (newStepSize > getDeltaT() && newStepSize < 1.2f*getDeltaT())
-        newStepSize = getDeltaT(); // Keeping dt constant between steps improves the behavior of the integrator.
-    if (newStepSize > maxStepSize)
-        newStepSize = maxStepSize;
-    setDeltaT(newStepSize);
+        dt = std::min(dt, getDeltaT()*2.0f); // For safety, limit how quickly dt can increase.
+    if (dt > getDeltaT() && dt < 1.2f*getDeltaT())
+        dt = getDeltaT(); // Keeping dt constant between steps improves the behavior of the integrator.
+    if (dt > maxStepSize)
+        dt = maxStepSize;
+    setDeltaT(dt);
  
     // perform first update
 
-   double dt = getDeltaT();
-   double friction = getFriction();
-   const double vscale = exp(-dt*friction);
-   const double fscale = (friction == 0 ? dt : (1-vscale)/friction);
-   const double kT = BOLTZ*getTemperature();
-   const double noisescale = sqrt(kT*(1-vscale*vscale));
-
-   for (int ii = 0; ii < numberOfAtoms; ii++) {
-       if (masses[ii] != 0) {
-           double sqrtInvMass = sqrt(inverseMasses[ii]);
-           for (int jj = 0; jj < 3; jj++) {
-               velocities[ii][jj]  = vscale*velocities[ii][jj] + fscale*inverseMasses[ii]*forces[ii][jj] + noisescale*sqrtInvMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-           }
-       }
-   }
-
+    for (int i = 0; i < numberOfAtoms; i++)
+        if (inverseMasses[i] != 0.0)
+            velocities[i] += (dt*inverseMasses[i])*forces[i];
 }
 
-/**---------------------------------------------------------------------------------------
-
-   Second update; based on code in update.c do_update_sd() w/ bFirstHalf = false in Gromacs 3.1.4
-
-   @param numberOfAtoms       number of atoms
-   @param atomCoordinates     atom coordinates
-   @param velocities          velocities
-   @param forces              forces
-   @param masses              atom masses
-
-   --------------------------------------------------------------------------------------- */
-
 void ReferenceVariableStochasticDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCoordinates,
-                                              vector<Vec3>& velocities,
-                                              vector<Vec3>& forces, vector<double>& inverseMasses,
-                                              vector<Vec3>& xPrime) {
-   // perform second update
+                                         vector<Vec3>& velocities, vector<double>& inverseMasses,
+                                         vector<Vec3>& xPrime) {
+    const double halfdt = 0.5*getDeltaT();
+    const double kT = BOLTZ*getTemperature();
+    const double friction = getFriction();
+    const double vscale = exp(-getDeltaT()*friction);
+    const double noisescale = sqrt(1-vscale*vscale);
 
-   for (int ii = 0; ii < numberOfAtoms; ii++) {
-       if (inverseMasses[ii] != 0.0)
-           for (int jj = 0; jj < 3; jj++)
-               xPrime[ii][jj] = atomCoordinates[ii][jj]+getDeltaT()*velocities[ii][jj];
-   }
-
+    for (int i = 0; i < numberOfAtoms; i++) {
+        if (inverseMasses[i] != 0.0) {
+            xPrime[i] = atomCoordinates[i] + velocities[i]*halfdt;
+            velocities[i] = vscale*velocities[i] + noisescale*sqrt(kT*inverseMasses[i])*Vec3(
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber(),
+                    SimTKOpenMMUtilities::getNormallyDistributedRandomNumber());
+            xPrime[i] = xPrime[i] + velocities[i]*halfdt;
+            oldx[i] = xPrime[i];
+        }
+    }
 }
 
 /**---------------------------------------------------------------------------------------
@@ -209,30 +162,41 @@ void ReferenceVariableStochasticDynamics::updatePart2(int numberOfAtoms, vector<
 void ReferenceVariableStochasticDynamics::update(const OpenMM::System& system, vector<Vec3>& atomCoordinates,
                                           vector<Vec3>& velocities,
                                           vector<Vec3>& forces, vector<double>& masses, double maxStepSize, double tolerance) {
+    int numberOfAtoms = system.getNumParticles();
+    ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
+    if (getTimeStep() == 0) {
+        // Invert masses
 
-   // 1st update
+        for (int ii = 0; ii < numberOfAtoms; ii++) {
+            if (masses[ii] == 0.0)
+                inverseMasses[ii] = 0.0;
+            else
+                inverseMasses[ii] = 1/masses[ii];
+        }
+    }
 
-   int numberOfAtoms = system.getNumParticles();
-   updatePart1(numberOfAtoms, atomCoordinates, velocities, forces, masses, inverseMasses, xPrime, maxStepSize);
+    // 1st update
 
-   // 2nd update
+    updatePart1(numberOfAtoms, velocities, forces, inverseMasses, maxStepSize);
+    if (referenceConstraintAlgorithm)
+        referenceConstraintAlgorithm->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
 
-   updatePart2(numberOfAtoms, atomCoordinates, velocities, forces, inverseMasses, xPrime);
+    // 2nd update
 
-   ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
-   if (referenceConstraintAlgorithm)
-      referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses, tolerance);
+    updatePart2(numberOfAtoms, atomCoordinates, velocities, inverseMasses, xPrime);
+    if (referenceConstraintAlgorithm)
+        referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses, tolerance);
 
-   // copy xPrime -> atomCoordinates
+    // copy xPrime -> atomCoordinates
 
-   double invStepSize = 1.0/getDeltaT();
-   for (int ii = 0; ii < numberOfAtoms; ii++) {
-       if (masses[ii] != 0.0) {
-           velocities[ii] = (xPrime[ii]-atomCoordinates[ii])*invStepSize;
-           atomCoordinates[ii] = xPrime[ii];
-       }
-   }
+    double invStepSize = 1.0/getDeltaT();
+    for (int i = 0; i < numberOfAtoms; i++) {
+        if (masses[i] != 0.0) {
+            velocities[i] += (xPrime[i]-oldx[i])*invStepSize;
+            atomCoordinates[i] = xPrime[i];
+        }
+    }
 
-   ReferenceVirtualSites::computePositions(system, atomCoordinates);
-   incrementTimeStep();
+    getVirtualSites().computePositions(system, atomCoordinates);
+    incrementTimeStep();
 }

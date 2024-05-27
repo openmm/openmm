@@ -9,7 +9,7 @@
  * https://github.com/Gallicchio-Lab/openmm-atmmetaforce-plugin               *
  * with support from the National Science Foundation CAREER 1750511           *
  *                                                                            *
- * Portions copyright (c) 2021-2023 by the Authors                            *
+ * Portions copyright (c) 2021-2024 by the Authors                            *
  * Authors: Emilio Gallicchio                                                 *
  * Contributors: Peter Eastman                                                *
  *                                                                            *
@@ -56,7 +56,8 @@
 using namespace OpenMM;
 using namespace std;
 
-ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrator0(1.0), innerIntegrator1(1.0) {
+ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrator0(1.0), innerIntegrator1(1.0),
+        innerContext0(NULL), innerContext1(NULL) {
     Lepton::ParsedExpression expr = Lepton::Parser::parse(owner.getEnergyFunction()).optimize();
     energyExpression = expr.createCompiledExpression();
     u0DerivExpression = expr.differentiate("u0").createCompiledExpression();
@@ -81,6 +82,10 @@ ATMForceImpl::ATMForceImpl(const ATMForce& owner) : owner(owner), innerIntegrato
 }
 
 ATMForceImpl::~ATMForceImpl() {
+    if (innerContext0 != NULL)
+        delete innerContext0;
+    if (innerContext1 != NULL)
+        delete innerContext1;
 }
 
 void ATMForceImpl::copySystem(ContextImpl& context, const OpenMM::System& system, OpenMM::System& innerSystem) {
@@ -110,9 +115,6 @@ void ATMForceImpl::initialize(ContextImpl& context) {
 
     innerContext0 = context.createLinkedContext(innerSystem0, innerIntegrator0);
     innerContext1 = context.createLinkedContext(innerSystem1, innerIntegrator1);
-    vector<Vec3> positions(system.getNumParticles(), Vec3());
-    innerContext0->setPositions(positions);
-    innerContext1->setPositions(positions);
 
     // Create the kernel.
 

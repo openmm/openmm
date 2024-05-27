@@ -808,12 +808,17 @@ KERNEL void computeVirtualSites(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTR
         GLOBAL const int4* RESTRICT outOfPlaneAtoms, GLOBAL const real4* RESTRICT outOfPlaneWeights,
         GLOBAL const int* RESTRICT localCoordsIndex, GLOBAL const int* RESTRICT localCoordsAtoms,
         GLOBAL const real* RESTRICT localCoordsWeights, GLOBAL const real4* RESTRICT localCoordsPos,
-        GLOBAL const int* RESTRICT localCoordsStartIndex) {
+        GLOBAL const int* RESTRICT localCoordsStartIndex, GLOBAL const int* RESTRICT vsiteStage,
+        int currentStage) {
     
     // Two particle average sites.
     
     for (int index = GLOBAL_ID; index < NUM_2_AVERAGE; index += GLOBAL_SIZE) {
         int4 atoms = avg2Atoms[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[atoms.x] != currentStage)
+            continue;
+#endif
         real2 weights = avg2Weights[index];
         mixed4 pos = loadPos(posq, posqCorrection, atoms.x);
         mixed4 pos1 = loadPos(posq, posqCorrection, atoms.y);
@@ -828,6 +833,10 @@ KERNEL void computeVirtualSites(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTR
     
     for (int index = GLOBAL_ID; index < NUM_3_AVERAGE; index += GLOBAL_SIZE) {
         int4 atoms = avg3Atoms[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[atoms.x] != currentStage)
+            continue;
+#endif
         real4 weights = avg3Weights[index];
         mixed4 pos = loadPos(posq, posqCorrection, atoms.x);
         mixed4 pos1 = loadPos(posq, posqCorrection, atoms.y);
@@ -843,6 +852,10 @@ KERNEL void computeVirtualSites(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTR
     
     for (int index = GLOBAL_ID; index < NUM_OUT_OF_PLANE; index += GLOBAL_SIZE) {
         int4 atoms = outOfPlaneAtoms[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[atoms.x] != currentStage)
+            continue;
+#endif
         real4 weights = outOfPlaneWeights[index];
         mixed4 pos = loadPos(posq, posqCorrection, atoms.x);
         mixed4 pos1 = loadPos(posq, posqCorrection, atoms.y);
@@ -861,6 +874,10 @@ KERNEL void computeVirtualSites(GLOBAL real4* RESTRICT posq, GLOBAL real4* RESTR
     
     for (int index = GLOBAL_ID; index < NUM_LOCAL_COORDS; index += GLOBAL_SIZE) {
         int siteAtomIndex = localCoordsIndex[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[siteAtomIndex] != currentStage)
+            continue;
+#endif
         int start = localCoordsStartIndex[index];
         int end = localCoordsStartIndex[index+1];
         mixed3 origin = make_mixed3(0), xdir = make_mixed3(0), ydir = make_mixed3(0);
@@ -915,12 +932,17 @@ KERNEL void distributeVirtualSiteForces(GLOBAL const real4* RESTRICT posq, GLOBA
         GLOBAL const int4* RESTRICT outOfPlaneAtoms, GLOBAL const real4* RESTRICT outOfPlaneWeights,
         GLOBAL const int* RESTRICT localCoordsIndex, GLOBAL const int* RESTRICT localCoordsAtoms,
         GLOBAL const real* RESTRICT localCoordsWeights, GLOBAL const real4* RESTRICT localCoordsPos,
-        GLOBAL const int* RESTRICT localCoordsStartIndex) {
+        GLOBAL const int* RESTRICT localCoordsStartIndex, GLOBAL const int* RESTRICT vsiteStage,
+        int currentStage) {
     
     // Two particle average sites.
     
     for (int index = GLOBAL_ID; index < NUM_2_AVERAGE; index += GLOBAL_SIZE) {
         int4 atoms = avg2Atoms[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[atoms.x] != currentStage)
+            continue;
+#endif
         real2 weights = avg2Weights[index];
         real3 f = loadForce(atoms.x, force);
         addForce(atoms.y, force, f*weights.x);
@@ -931,6 +953,10 @@ KERNEL void distributeVirtualSiteForces(GLOBAL const real4* RESTRICT posq, GLOBA
     
     for (int index = GLOBAL_ID; index < NUM_3_AVERAGE; index += GLOBAL_SIZE) {
         int4 atoms = avg3Atoms[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[atoms.x] != currentStage)
+            continue;
+#endif
         real4 weights = avg3Weights[index];
         real3 f = loadForce(atoms.x, force);
         addForce(atoms.y, force, f*weights.x);
@@ -942,6 +968,10 @@ KERNEL void distributeVirtualSiteForces(GLOBAL const real4* RESTRICT posq, GLOBA
     
     for (int index = GLOBAL_ID; index < NUM_OUT_OF_PLANE; index += GLOBAL_SIZE) {
         int4 atoms = outOfPlaneAtoms[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[atoms.x] != currentStage)
+            continue;
+#endif
         real4 weights = outOfPlaneWeights[index];
         mixed4 pos1 = loadPos(posq, posqCorrection, atoms.y);
         mixed4 pos2 = loadPos(posq, posqCorrection, atoms.z);
@@ -964,6 +994,10 @@ KERNEL void distributeVirtualSiteForces(GLOBAL const real4* RESTRICT posq, GLOBA
     
     for (int index = GLOBAL_ID; index < NUM_LOCAL_COORDS; index += GLOBAL_SIZE) {
         int siteAtomIndex = localCoordsIndex[index];
+#ifdef MULTIPLE_VSITE_STAGES
+        if (vsiteStage[siteAtomIndex] != currentStage)
+            continue;
+#endif
         int start = localCoordsStartIndex[index];
         int end = localCoordsStartIndex[index+1];
         mixed3 origin = make_mixed3(0), xdir = make_mixed3(0), ydir = make_mixed3(0);

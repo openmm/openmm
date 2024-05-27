@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -944,7 +944,7 @@ public:
 private:
     class ForceInfo;
     int numDonors, numAcceptors;
-    bool hasInitializedKernel;
+    bool hasInitializedKernel, useBoundingBoxes;
     ComputeContext& cc;
     ForceInfo* info;
     ComputeParameterSet* donorParams;
@@ -954,12 +954,13 @@ private:
     ComputeArray acceptors;
     ComputeArray donorExclusions;
     ComputeArray acceptorExclusions;
+    ComputeArray donorBlockCenter, donorBlockSize, acceptorBlockCenter, acceptorBlockSize;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
     std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;
-    ComputeKernel kernel;
+    ComputeKernel blockBoundsKernel, forceKernel;
 };
 
 /**
@@ -1162,43 +1163,6 @@ public:
 private:
     ComputeContext& cc;
     bool hasInitializedKernels;
-    ComputeKernel kernel1, kernel2;
-};
-
-/**
- * This kernel is invoked by LangevinIntegrator to take one time step.
- */
-class CommonIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
-public:
-    CommonIntegrateLangevinStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateLangevinStepKernel(name, platform), cc(cc),
-            hasInitializedKernels(false) {
-    }
-    /**
-     * Initialize the kernel, setting up the particle masses.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param integrator the LangevinIntegrator this kernel will be used for
-     */
-    void initialize(const System& system, const LangevinIntegrator& integrator);
-    /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
-     */
-    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
-    /**
-     * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
-     */
-    double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator);
-private:
-    ComputeContext& cc;
-    double prevTemp, prevFriction, prevStepSize;
-    bool hasInitializedKernels;
-    ComputeArray params;
     ComputeKernel kernel1, kernel2;
 };
 
@@ -1462,8 +1426,8 @@ private:
     ComputeContext& cc;
     bool hasInitializedKernels;
     int blockSize;
-    ComputeArray params;
-    ComputeKernel kernel1, kernel2, selectSizeKernel;
+    ComputeArray params, oldDelta;
+    ComputeKernel kernel1, kernel2, kernel3, selectSizeKernel;
     double prevTemp, prevFriction, prevErrorTol;
 };
 
@@ -1744,7 +1708,7 @@ private:
     ComputeContext& cc;
     bool hasInitializedKernels, rigidMolecules, atomsWereReordered;
     int numMolecules;
-    ComputeArray savedPositions, savedFloatForces, savedLongForces;
+    ComputeArray savedPositions, savedFloatForces, savedLongForces, savedVelocities;
     ComputeArray moleculeAtoms;
     ComputeArray moleculeStartIndex;
     ComputeKernel kernel;
@@ -1801,19 +1765,15 @@ public:
     virtual ComputeContext& getInnerComputeContext(ContextImpl& innerContext) = 0;
     
 private:
-    class ForceInfo;
     class ReorderListener;
     
     void initKernels(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1);
     
     bool hasInitializedKernel;
     ComputeContext& cc;
-
-    std::vector<mm_float4> displVector1;
-    std::vector<mm_float4> displVector0;
-
     ComputeArray displ1;
     ComputeArray displ0;
+    ComputeArray invAtomOrder, inner0InvAtomOrder, inner1InvAtomOrder;
     ComputeKernel copyStateKernel;
     ComputeKernel hybridForceKernel;
 

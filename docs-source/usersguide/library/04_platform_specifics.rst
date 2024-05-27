@@ -12,7 +12,7 @@ Context constructor:
 
 .. code-block:: c
 
-    Platform& platform = Platform::getPlatformByName("OpenCL");
+    Platform& platform = Platform::getPlatform("OpenCL");
     map<string, string> properties;
     properties["DeviceIndex"] = "1";
     Context context(system, integrator, platform, properties);

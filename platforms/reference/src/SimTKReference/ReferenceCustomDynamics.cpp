@@ -351,7 +351,7 @@ void ReferenceCustomDynamics::update(ContextImpl& context, int numberOfAtoms, ve
         }
         step = nextStep;
     }
-    ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates);
+    getVirtualSites().computePositions(context.getSystem(), atomCoordinates);
     incrementTimeStep();
     recordChangedParameters(context, globals);
 }

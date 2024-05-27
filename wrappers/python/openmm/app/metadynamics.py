@@ -172,7 +172,7 @@ class Metadynamics(object):
             simulation.step(nextSteps)
             if simulation.currentStep % self.frequency == 0:
                 position = self._force.getCollectiveVariableValues(simulation.context)
-                energy = simulation.context.getState(getEnergy=True, groups={forceGroup}).getPotentialEnergy()
+                energy = simulation.context.getState(energy=True, groups={forceGroup}).getPotentialEnergy()
                 height = self.height*np.exp(-energy/(unit.MOLAR_GAS_CONSTANT_R*self._deltaT))
                 self._addGaussian(position, height, simulation.context)
             if self.saveFrequency is not None and simulation.currentStep % self.saveFrequency == 0:

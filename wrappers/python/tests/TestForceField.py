@@ -323,7 +323,7 @@ class TestForceField(unittest.TestCase):
             forcefield = ForceField('amber96.xml', f'implicit/{solventType[i]}.xml')
             system = forcefield.createSystem(self.pdb2.topology, nonbondedMethod=nonbondedMethod[i], implicitSolventKappa=kappa[i])
             integrator = VerletIntegrator(0.001)
-            context = Context(system, integrator, Platform.getPlatformByName("Reference"))
+            context = Context(system, integrator, Platform.getPlatform("Reference"))
             context.setPositions(self.pdb2.positions)
             state1 = context.getState(getForces=True)
             if file[i] is not None:
@@ -872,7 +872,7 @@ class TestForceField(unittest.TestCase):
             a.charge = 0.0
 
         # Now compute the full energy
-        plat = Platform.getPlatformByName('Reference')
+        plat = Platform.getPlatform('Reference')
         system = psf.createSystem(params, nonbondedMethod=PME,
                                   nonbondedCutoff=5*angstroms)
 
@@ -1122,7 +1122,7 @@ END"""))
             if isinstance(f, NonbondedForce):
                 f.setPMEParameters(3.4, 64, 64, 64)
         integrator = DrudeLangevinIntegrator(300, 1.0, 1.0, 10.0, 0.001)
-        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+        context = Context(system, integrator, Platform.getPlatform('Reference'))
         context.setPositions(pdb.positions)
 
         # Compare the energy to values computed by CHARMM.  Here is what it outputs:
@@ -1200,7 +1200,7 @@ self.scriptExecuted = True
         for i, f in enumerate(system.getForces()):
             f.setForceGroup(i)
         integrator = VerletIntegrator(0.001)
-        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+        context = Context(system, integrator, Platform.getPlatform('Reference'))
         context.setPositions(pdb.positions)
         energies = {}
         for i, f in enumerate(system.getForces()):
@@ -1244,7 +1244,7 @@ self.scriptExecuted = True
 </ForceField> """
         ff = ForceField(StringIO(xml))
         system = ff.createSystem(pdb.topology)
-        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatformByName('Reference'))
+        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatform('Reference'))
         context.setPositions(pdb.positions)
         energy1 = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
 
@@ -1257,7 +1257,7 @@ self.scriptExecuted = True
         f.addParticle(0, 0.404468018036, 0.6276)
         f.addParticle(0, 0.251367073323, 0.1962296)
         system.addForce(f)
-        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatformByName('Reference'))
+        context = Context(system, VerletIntegrator(2*femtoseconds), Platform.getPlatform('Reference'))
         context.setPositions(pdb.positions)
         energy2 = context.getState(getEnergy=True).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
         self.assertAlmostEqual(energy1, energy2)
@@ -1417,7 +1417,7 @@ class AmoebaTestForceField(unittest.TestCase):
         forcefield = ForceField('amoeba2013.xml', 'amoeba2013_gk.xml')
         system = forcefield.createSystem(pdb.topology, polarization='direct')
         integrator = VerletIntegrator(0.001)
-        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+        context = Context(system, integrator, Platform.getPlatform('Reference'))
         context.setPositions(pdb.positions)
         state1 = context.getState(getForces=True)
         with open('systems/alanine-dipeptide-amoeba-forces.xml') as input:
@@ -1433,7 +1433,7 @@ class AmoebaTestForceField(unittest.TestCase):
         for i, f in enumerate(system.getForces()):
             f.setForceGroup(i)
         integrator = VerletIntegrator(0.001)
-        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+        context = Context(system, integrator, Platform.getPlatform('Reference'))
         context.setPositions(pdb.positions)
         energies = {}
         for i, f in enumerate(system.getForces()):

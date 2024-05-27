@@ -1,0 +1,56 @@
+#include "oplsaa.ff/forcefield.itp"
+
+; original reference: [M. W. Mahoney and W. L. Jorgensen, J. Chem. Phys. 112 , 2000]
+;
+; Note that there are various issues with tip5p and the different forcefields.
+; Discussion is here: https://gitlab.com/gromacs/gromacs/-/issues/1348
+
+[ moleculetype ]
+; molname       nrexcl
+SOL             2
+
+[ atoms ]
+; id    at type res nr  residu name     at name         cg nr   charge
+1       opls_118     1       SOL              OW             1       0
+2       opls_119     1       SOL             HW1             1       0.241
+3       opls_119     1       SOL             HW2             1       0.241
+4       opls_120     1       SOL             LP1             1      -0.241
+5       opls_120     1       SOL             LP2             1      -0.241
+
+[ bonds ]
+; i     j       funct   length  force.c.
+1       2       1       0.09572 502416.0 0.09572        502416.0
+1       3       1       0.09572 502416.0 0.09572        502416.0
+
+[ angles ]
+; i     j       k       funct   angle   force.c.
+2       1       3       1       104.52  628.02  104.52  628.02
+
+[ virtual_sites3 ]
+; The position of the virtual site is computed as follows:
+;
+; The distance from OW to L is 0.07 nm, the geometry is tetrahedral
+; (109.47 deg)
+; Therefore, a = b = 0.07 * cos (109.47/2) / | xOH1 + xOH2 |
+;            c = 0.07 * sin (109.47/2) / | xOH1 X xOH2 |
+;
+; Using | xOH1 X xOH2 | = | xOH1 | | xOH2 | sin (H1-O-H2)
+;       | xOH1 + xOH2 | = 2 | xOH1 | cos (H1-O-H2)
+; Vsite pos x4 = x1 + a*x21 + b*x31 + c*(x21 X x31)
+
+; Vsite from                    funct   a       b               c
+4       1       2       3       4       -0.344908  -0.344908  -6.4437903493
+5       1       2       3       4       -0.344908  -0.344908   6.4437903493
+
+[ exclusions ]
+1       2       3       4       5
+2       1       3       4       5
+3       1       2       4       5
+4       1       2       3       5
+5       1       2       3       4
+
+[ system ]
+1 TIP5P
+
+[ molecules ]
+SOL 1

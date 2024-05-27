@@ -428,7 +428,7 @@ of the :class:`Platform` to use.  This overrides the default logic.
 :class:`Simulation`.  The following lines specify to use the :class:`CUDA` platform:
 ::
 
-    platform = Platform.getPlatformByName('CUDA')
+    platform = Platform.getPlatform('CUDA')
     simulation = Simulation(prmtop.topology, system, integrator, platform)
 
 The platform name should be one of :code:`OpenCL`, :code:`CUDA`, :code:`CPU`, or
@@ -441,7 +441,7 @@ work across two different GPUs (CUDA devices 0 and 1), doing all computations in
 double precision:
 ::
 
-    platform = Platform.getPlatformByName('CUDA')
+    platform = Platform.getPlatform('CUDA')
     properties = {'DeviceIndex': '0,1', 'Precision': 'double'}
     simulation = Simulation(prmtop.topology, system, integrator, platform, properties)
 
@@ -470,7 +470,7 @@ must first add the extra particles to the :class:`Topology`.  See section
 :numref:`adding-or-removing-extra-particles` for details.
 
 The force fields described below are the ones that are bundled with OpenMM.
-Additional force fields are available online at https://github.com/choderalab/openmm-forcefields.
+Additional force fields are available online at https://github.com/openmm/openmmforcefields.
 
 Amber14
 -------
@@ -527,7 +527,7 @@ to them.
          :file:`tip3p.xml` will be missing parameters for ions in your system.
 
 The converted parameter sets come from the `AmberTools 17 release <http://ambermd.org/AmberTools.php>`_
-and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `ParmEd <https://github.com/parmed/parmed>`_.
+and were converted using the `openmmforcefields <https://github.com/openmm/openmmforcefields>`_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
 CHARMM36
 --------
@@ -596,7 +596,7 @@ such as :file:`charmm36/water.xml`, which specifies the default CHARMM water mod
          the PSF file directly, as discussed in Section :numref:`using-charmm-files`.
 
 The converted parameter sets come from the `CHARMM36 July 2017 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_
-and were converted using the `openmm-forcefields <https://github.com/choderalab/openmm-forcefields>`_ package and `parmed <https://github.com/parmed/parmed>`_.
+and were converted using the `openmmforcefields <https://github.com/openmm/openmmforcefields>`_ package and `parmed <https://github.com/parmed/parmed>`_.
 
 Implicit Solvent
 ----------------

@@ -202,7 +202,7 @@ void ReferenceNoseHooverDynamics::step2(OpenMM::ContextImpl &context, const Open
         }
     } /* end of hard wall constraint part */
 
-    ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates);
+    getVirtualSites().computePositions(context.getSystem(), atomCoordinates);
 
     incrementTimeStep();
 }

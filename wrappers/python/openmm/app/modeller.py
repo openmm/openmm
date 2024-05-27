@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2023 Stanford University and the Authors.
+Portions copyright (c) 2012-2024 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: 
 
@@ -540,10 +540,13 @@ class Modeller(object):
         newTopology.setPeriodicBoxVectors(vectors*nanometer)
         newAtoms = {}
         newPositions = []*nanometer
+        newResidueTemplates=dict()
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
                 newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
+                if residue in residueTemplates:
+                    newResidueTemplates[newResidue] = residueTemplates[residue]
                 for atom in residue.atoms():
                     newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
                     newAtoms[atom] = newAtom
@@ -656,7 +659,7 @@ class Modeller(object):
         numTotalWaters = len(waterPos)
 
         # Add ions to neutralize the system.
-        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize, residueTemplates=residueTemplates)
+        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize, residueTemplates=newResidueTemplates)
 
     def _computeBoxVectors(self, width, boxShape):
         """Compute the periodic box vectors given a box width and shape."""
@@ -853,12 +856,15 @@ class Modeller(object):
         newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
+        newResidueTemplates = {}
         newIndices = []
         acceptors = [atom for atom in self.topology.atoms() if atom.element in (elem.oxygen, elem.nitrogen)]
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
                 newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
+                if residue in residueTemplates:
+                    newResidueTemplates[newResidue] = residueTemplates[residue]
                 isNTerminal = (residue == chain._residues[0])
                 isCTerminal = (residue == chain._residues[-1])
                 if residue.name in Modeller._residueHydrogens:
@@ -1009,8 +1015,7 @@ class Modeller(object):
         if forcefield is not None:
             # Use the ForceField the user specified.
 
-            system = forcefield.createSystem(newTopology, rigidWater=False, nonbondedMethod=CutoffNonPeriodic, residueTemplates=residueTemplates)
-            atoms = list(newTopology.atoms())
+            system = forcefield.createSystem(newTopology, rigidWater=False, nonbondedMethod=CutoffNonPeriodic, residueTemplates=newResidueTemplates)
             for i in range(system.getNumParticles()):
                 if i not in addedH:
                     # Existing atom, make it immobile.
@@ -1065,7 +1070,7 @@ class Modeller(object):
         context.setPositions(newPositions)
         LocalEnergyMinimizer.minimize(context, 1.0, 50)
         self.topology = newTopology
-        self.positions = context.getState(getPositions=True).getPositions()
+        self.positions = context.getState(positions=True).getPositions()
         del context
         return actualVariants
 
@@ -1125,11 +1130,14 @@ class Modeller(object):
         newTopology.setPeriodicBoxVectors(self.topology.getPeriodicBoxVectors())
         newAtoms = {}
         newPositions = []*nanometer
+        newResidueTemplates = {}
         missingPositions = set()
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
                 newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
+                if residue in residueTemplates:
+                    newResidueTemplates[newResidue] = residueTemplates[residue]
                 template = templates[residue.index]
                 if len(template.atoms) == len(list(residue.atoms())):
                     # Just copy the residue over.
@@ -1230,7 +1238,7 @@ class Modeller(object):
             # There were particles whose position we couldn't identify before, since they were neither virtual sites nor Drude particles.
             # Try to figure them out based on bonds.  First, use the ForceField to create a list of every bond involving one of them.
 
-            system = forcefield.createSystem(newTopology, constraints=AllBonds, residueTemplates=residueTemplates)
+            system = forcefield.createSystem(newTopology, constraints=AllBonds, residueTemplates=newResidueTemplates)
             bonds = []
             for i in range(system.getNumConstraints()):
                 bond = system.getConstraintParameters(i)
@@ -1528,7 +1536,7 @@ class Modeller(object):
         for i in range(steps):
             weight1 = i/(steps-1)
             weight2 = 1.0-weight1
-            mergedPositions = context.getState(getPositions=True).getPositions(asNumpy=hasNumpy).value_in_unit(nanometer)
+            mergedPositions = context.getState(positions=True).getPositions(asNumpy=hasNumpy).value_in_unit(nanometer)
             if hasNumpy:
                 mergedPositions[numMembraneParticles:] = weight1*proteinPosArray + weight2*scaledProteinPosArray
             else:
@@ -1540,7 +1548,7 @@ class Modeller(object):
         # Add the membrane to the protein.
 
         modeller = Modeller(self.topology, self.positions)
-        modeller.add(membraneTopology, context.getState(getPositions=True).getPositions()[:numMembraneParticles])
+        modeller.add(membraneTopology, context.getState(positions=True).getPositions()[:numMembraneParticles])
         modeller.topology.setPeriodicBoxVectors(membraneTopology.getPeriodicBoxVectors())
         del context
         del system
@@ -1577,6 +1585,10 @@ class Modeller(object):
             if len(toDelete) > 0:
                 modeller.delete(toDelete)
 
+        newResidueTemplates = {}
+        for r1, r2 in zip(self.topology.residues(), modeller.topology.residues()):
+            if r1 in residueTemplates:
+                newResidueTemplates[r2] = residueTemplates[r1]
         self.topology = modeller.topology
         self.positions = modeller.positions
 
@@ -1617,7 +1629,7 @@ class Modeller(object):
             if lowerZBoundary < waterZ.value_in_unit(nanometer) < upperZBoundary:
                 del waterPos[wRes]
 
-        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize, residueTemplates=residueTemplates)
+        self._addIons(forcefield, numTotalWaters, waterPos, positiveIon=positiveIon, negativeIon=negativeIon, ionicStrength=ionicStrength, neutralize=neutralize, residueTemplates=newResidueTemplates)
 
 
 class _CellList(object):
