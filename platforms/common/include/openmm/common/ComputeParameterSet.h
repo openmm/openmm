@@ -85,6 +85,14 @@ public:
     template <class T>
     void setParameterValues(const std::vector<std::vector<T> >& values, bool convert=false);
     /**
+     * Set the values of the subset of parameters from 'start' to `start+values.size()`.
+     * 
+     * @param start     the index of the first parameter to set
+     * @param values    values[i][j] contains the value of parameter j for object start+i
+     */
+    template <class T>
+    void setSomeParameterValues(int start, const std::vector<std::vector<T> >& values);
+    /**
      * Get a vector of ComputeParameterInfo objects which describe the arrays
      * containing the data.
      */

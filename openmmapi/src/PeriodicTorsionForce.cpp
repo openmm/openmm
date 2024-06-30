@@ -75,6 +75,10 @@ void PeriodicTorsionForce::updateParametersInContext(Context& context) {
     dynamic_cast<PeriodicTorsionForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
 
+void PeriodicTorsionForce::updateSomeParametersInContext(int start, int count, Context& context) {
+    dynamic_cast<PeriodicTorsionForceImpl&>(getImplInContext(context)).updateSomeParametersInContext(start, count, getContextImpl(context));
+}
+
 void PeriodicTorsionForce::setUsesPeriodicBoundaryConditions(bool periodic) {
     usePeriodic = periodic;
 }

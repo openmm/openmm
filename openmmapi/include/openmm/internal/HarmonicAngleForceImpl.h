@@ -62,6 +62,7 @@ public:
     }
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context);
+    void updateSomeParametersInContext(int start, int count, ContextImpl& context);
 private:
     const HarmonicAngleForce& owner;
     Kernel kernel;

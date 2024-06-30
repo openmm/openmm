@@ -332,3 +332,7 @@ ForceImpl* CustomNonbondedForce::createImpl() const {
 void CustomNonbondedForce::updateParametersInContext(Context& context) {
     dynamic_cast<CustomNonbondedForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
+
+void CustomNonbondedForce::updateSomeParametersInContext(int start, int count, Context& context) {
+    dynamic_cast<CustomNonbondedForceImpl&>(getImplInContext(context)).updateSomeParametersInContext(start, count, getContextImpl(context));
+}

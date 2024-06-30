@@ -1071,15 +1071,19 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     return energy;
 }
 
-void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+void OpenCLCalcNonbondedForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const NonbondedForce& force) {
     // Make sure the new parameters are acceptable.
-
-    if (force.getNumParticles() != cl.getNumAtoms())
+    if (count <= 0)
+        return;
+    else if (force.getNumParticles() != cl.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    else if (start < 0 or start+count > cl.getNumAtoms())
+        throw OpenMMException("updateParametersInContext[OpenCLNonbond]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+
     if (!hasCoulomb || !hasLJ) {
-        for (int i = 0; i < force.getNumParticles(); i++) {
+        for (int i = 0; i < count; i++) {
             double charge, sigma, epsilon;
-            force.getParticleParameters(i, charge, sigma, epsilon);
+            force.getParticleParameters(start+i, charge, sigma, epsilon);
             if (!hasCoulomb && charge != 0.0)
                 throw OpenMMException("updateParametersInContext: The nonbonded force kernel does not include Coulomb interactions, because all charges were originally 0");
             if (!hasLJ && epsilon != 0.0)
@@ -1111,13 +1115,13 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
 
     // Record the per-particle parameters.
 
-    vector<mm_float4> baseParticleParamVec(cl.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-    for (int i = 0; i < force.getNumParticles(); i++) {
+    vector<mm_float4> baseParticleParamVec(count, mm_float4(0, 0, 0, 0));
+    for (int i = 0; i < count; i++) {
         double charge, sigma, epsilon;
-        force.getParticleParameters(i, charge, sigma, epsilon);
+        force.getParticleParameters(start+i, charge, sigma, epsilon);
         baseParticleParamVec[i] = mm_float4(charge, sigma, epsilon, 0);
     }
-    baseParticleParams.upload(baseParticleParamVec);
+    baseParticleParams.uploadSubArray(baseParticleParamVec.data(), start, count);
     
     // Record the exceptions.
     
@@ -1140,16 +1144,30 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
     if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
         if (cl.getContextIndex() == 0) {
             for (int i = 0; i < force.getNumParticles(); i++) {
-                ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                double charge, sigma, epsilon;
+                force.getParticleParameters(i, charge, sigma, epsilon);
+                ewaldSelfEnergy -= charge * charge * ONE_4PI_EPS0 * alpha / sqrt(M_PI);
                 if (doLJPME)
-                    ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
+                    ewaldSelfEnergy += epsilon*pow(sigma*dispersionAlpha, 6)/3.0;
             }
         }
     }
     if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
-    cl.invalidateMolecules(info);
+
+    if (start == 0 and count == force.getNumParticles())
+        // check everything to see if they have been invalidated
+        cl.invalidateMolecules();
+    else
+        // we will assume the exceptions won't change anything if the 
+        // atoms themselves aren't changing (mostly safe assumption)
+        cl.invalidateMoleculesByAtom(info, start, count);
+
     recomputeParams = true;
+}
+
+void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+    this->copySomeParametersToContext(0, force.getNumParticles(), context, force);
 }
 
 void OpenCLCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {

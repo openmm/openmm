@@ -115,6 +115,56 @@ void ComputeParameterSet::getParameterValues(vector<vector<T> >& values) {
     }
 }
 
+template<class T>
+void ComputeParameterSet::setSomeParameterValues(int start, const vector<vector<T> >& values) {
+    if (sizeof(T) != elementSize)
+        throw OpenMMException("Called setSomeParameterValues() with vector of wrong type");
+    int base = 0;
+
+    const int numValues = values.size();
+
+    if (start + numValues > numObjects)
+    {
+        throw OpenMMException("Called setSomeParameterValues() with too many values");
+    }
+
+    for (int i = 0; i < (int) arrays.size(); i++) {
+        if (arrays[i]->getElementSize() == 4*elementSize) {
+            vector<T> data(4*numValues, 0);
+            for (int j = 0; j < numValues; j++) {
+                data[4*j] = values[j][base];
+                if (base+1 < numParameters)
+                    data[4*j+1] = values[j][base+1];
+                if (base+2 < numParameters)
+                    data[4*j+2] = values[j][base+2];
+                if (base+3 < numParameters)
+                    data[4*j+3] = values[j][base+3];
+            }
+            arrays[i]->uploadSubArray(data.data(), start, numValues);
+            base += 4;
+        }
+        else if (arrays[i]->getElementSize() == 2*elementSize) {
+            vector<T> data(2*numValues, 0);
+            for (int j = 0; j < numValues; j++) {
+                data[2*j] = values[j][base];
+                if (base+1 < numParameters)
+                    data[2*j+1] = values[j][base+1];
+            }
+            arrays[i]->uploadSubArray(data.data(), start, numValues);
+            base += 2;
+        }
+        else if (arrays[i]->getElementSize() == elementSize) {
+            vector<T> data(numValues, 0);
+            for (int j = 0; j < numValues; j++)
+                data[j] = values[j][base];
+            arrays[i]->uploadSubArray(data.data(), start, numValues);
+            base++;
+        }
+        else
+            throw OpenMMException("Internal error: Unknown buffer type in ComputeParameterSet");
+    }
+}
+
 template <class T>
 void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values, bool convert) {
     if (convert && sizeof(T) == sizeof(float) && elementSize == sizeof(double)) {
@@ -203,4 +253,6 @@ template void ComputeParameterSet::getParameterValues<float>(vector<vector<float
 template void ComputeParameterSet::setParameterValues<float>(const vector<vector<float> >& values, bool convert);
 template void ComputeParameterSet::getParameterValues<double>(vector<vector<double> >& values);
 template void ComputeParameterSet::setParameterValues<double>(const vector<vector<double> >& values, bool convert);
+template void ComputeParameterSet::setSomeParameterValues<float>(int start, const vector<vector<float> >& values);
+template void ComputeParameterSet::setSomeParameterValues<double>(int start, const vector<vector<double> >& values);
 }
