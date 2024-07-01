@@ -123,20 +123,21 @@ void xtc_read(std::string filename, float* coords_arr, float* box_arr, float* ti
         throw std::runtime_error("xtc_read(): natoms is 0\n");
     }
     XDRFILE_RAII xd(filename, "r");
-    int fidx = 0;
+    size_t fidx = 0;
+    size_t nframes_long = nframes;
     XTCFrame frame(natoms);
     while (exdrOK == frame.readNextFrame(xd)) {
         time_arr[fidx] = frame.time;
         step_arr[fidx] = frame.step;
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                box_arr[fidx + (3 * i + j) * nframes] = frame.box[i][j];
+                box_arr[fidx + (3 * i + j) * nframes_long] = frame.box[i][j];
             }
         }
-        for (int aidx = 0; aidx < natoms; aidx++) {
-            int xidx = Xf(aidx, fidx, nframes);
-            int yidx = Yf(xidx, nframes);
-            int zidx = Zf(yidx, nframes);
+        for (size_t aidx = 0; aidx < natoms; aidx++) {
+	    size_t xidx = Xf(aidx, fidx, nframes_long);
+            size_t yidx = Yf(xidx, nframes_long);
+            size_t zidx = Zf(yidx, nframes_long);
             coords_arr[xidx] = frame.positions[3 * aidx + 0];
             coords_arr[yidx] = frame.positions[3 * aidx + 1];
             coords_arr[zidx] = frame.positions[3 * aidx + 2];
@@ -145,9 +146,9 @@ void xtc_read(std::string filename, float* coords_arr, float* box_arr, float* ti
     }
 }
 
-static void box_from_array(matrix& matrix_box, float* box, int frame, int nframes) {
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
+static void box_from_array(matrix& matrix_box, float* box, size_t frame, size_t nframes) {
+    for (size_t i = 0; i < 3; i++) {
+        for (size_t j = 0; j < 3; j++) {
             matrix_box[i][j] = box[(3 * i + j) * nframes + frame];
         }
     }
@@ -156,12 +157,13 @@ static void box_from_array(matrix& matrix_box, float* box, int frame, int nframe
 void xtc_write(std::string filename, int natoms, int nframes, int* step, float* timex, float* pos, float* box) {
     XDRFILE_RAII xd(filename, "a");
     XTCFrame frame(natoms);
-    for (int f = 0; f < nframes; f++) {
-        box_from_array(frame.box, box, f, nframes);
-        for (int i = 0; i < natoms; i++) {
-            int xidx = Xf(i, f, nframes);
-            int yidx = Yf(xidx, nframes);
-            int zidx = Zf(yidx, nframes);
+    size_t nframes_long = nframes;
+    for (size_t f = 0; f < nframes; f++) {
+        box_from_array(frame.box, box, f, nframes_long);
+        for (size_t i = 0; i < natoms; i++) {
+            size_t xidx = Xf(i, f, nframes_long);
+            size_t yidx = Yf(xidx, nframes_long);
+            size_t zidx = Zf(yidx, nframes_long);
             frame.positions[3 * i + 0] = pos[xidx];
             frame.positions[3 * i + 1] = pos[yidx];
             frame.positions[3 * i + 2] = pos[zidx];
