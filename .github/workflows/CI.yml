@@ -471,7 +471,7 @@ jobs:
             compilers: compilers
 
           - name: PowerPC CPU Python 3.11 devtoolset-7 compilers
-            docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:10.2
             python-version: "3.11"
             compilers: devtoolset-7
 
