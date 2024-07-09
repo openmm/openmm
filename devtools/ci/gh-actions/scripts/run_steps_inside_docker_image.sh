@@ -15,7 +15,9 @@ if [[ ${COMPILERS} == devtoolset* ]]; then
     sudo yum install -y centos-release-scl
     echo "b"
     sudo yum install -y ${COMPILERS}
+    echo "c"
     source /opt/rh/${COMPILERS}/enable
+    echo "d"
 else
     extra_conda_packages="${COMPILERS}"
 fi
