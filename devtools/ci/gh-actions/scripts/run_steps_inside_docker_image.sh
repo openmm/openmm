@@ -11,8 +11,9 @@ extra_conda_packages=""
 if [[ ${COMPILERS} == devtoolset* ]]; then
     #sudo sed -i.bak 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
     #sudo sed -i.bak 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
-    sudo ls
+    echo "a"
     sudo yum install -y centos-release-scl
+    echo "b"
     sudo yum install -y ${COMPILERS}
     source /opt/rh/${COMPILERS}/enable
 else
