@@ -9,14 +9,8 @@ echo "::endgroup::"
 echo "::group::Prepare build environment..."
 extra_conda_packages=""
 if [[ ${COMPILERS} == devtoolset* ]]; then
-    echo "a"
     sudo yum install -y centos-release-scl
-    echo "b"
-    sudo sed -i.bak 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
-    sudo sed -i.bak 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
-    echo "c"
     sudo yum install -y ${COMPILERS}
-    echo "d"
     source /opt/rh/${COMPILERS}/enable
 else
     extra_conda_packages="${COMPILERS}"
