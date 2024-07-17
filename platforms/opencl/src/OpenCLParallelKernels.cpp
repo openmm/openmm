@@ -624,9 +624,9 @@ double OpenCLParallelCalcCustomNonbondedForceKernel::execute(ContextImpl& contex
     return 0.0;
 }
 
-void OpenCLParallelCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
+void OpenCLParallelCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle);
 }
 
 class OpenCLParallelCalcCustomExternalForceKernel::Task : public OpenCLContext::WorkTask {

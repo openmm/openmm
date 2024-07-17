@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -704,9 +704,9 @@ double CudaParallelCalcCustomNonbondedForceKernel::execute(ContextImpl& context,
     return 0.0;
 }
 
-void CudaParallelCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
+void CudaParallelCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle);
 }
 
 class CudaParallelCalcCustomExternalForceKernel::Task : public CudaContext::WorkTask {

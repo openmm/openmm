@@ -159,8 +159,8 @@ map<string, double> CustomNonbondedForceImpl::getDefaultParameters() {
     return parameters;
 }
 
-void CustomNonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
-    kernel.getAs<CalcCustomNonbondedForceKernel>().copyParametersToContext(context, owner);
+void CustomNonbondedForceImpl::updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle) {
+    kernel.getAs<CalcCustomNonbondedForceKernel>().copyParametersToContext(context, owner, firstParticle, lastParticle);
     context.systemChanged();
 }
 

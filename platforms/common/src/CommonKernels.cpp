@@ -2704,7 +2704,7 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
     return 0;
 }
 
-void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
+void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) {
     ContextSelector selector(cc);
     int numParticles = force.getNumParticles();
     if (numParticles != cc.getNumAtoms())
@@ -2747,7 +2747,7 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
 
     // Mark that the current reordering may be invalid.
 
-    cc.invalidateMolecules(info);
+    cc.invalidateMolecules(info, firstParticle <= lastParticle, false);
 }
 
 class CommonCalcGBSAOBCForceKernel::ForceInfo : public ComputeForceInfo {

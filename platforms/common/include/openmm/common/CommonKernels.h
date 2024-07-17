@@ -730,8 +730,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomNonbondedForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle);
 private:
     class ForceInfo;
     class LongRangePostComputation;

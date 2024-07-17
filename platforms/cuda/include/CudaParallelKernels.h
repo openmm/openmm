@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -488,8 +488,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomNonbondedForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle);
 private:
     class Task;
     CudaPlatform::PlatformData& data;
