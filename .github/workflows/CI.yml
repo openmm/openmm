@@ -137,7 +137,16 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS Intel CPU/OpenCL Python 3.11
+          - name: MacOS Intel Python 3.11
+            python-version: "3.11"
+            os: macos-13
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=ON \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
+          - name: MacOS ARM Python 3.11
             python-version: "3.11"
             os: macos-latest
             OPENCL: false
@@ -146,29 +155,9 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          #- name: MacOS M1 CPU arm64 Python 3.11
-          #  python-version: "3.11"
-          #  os: M1-arm64
-          #  OPENCL: false
-          #  cuda-version: ""
-          #  compilers: conda-forge
-          #  CMAKE_FLAGS: |
-          #    -DOPENMM_BUILD_OPENCL_LIB=ON \
-          #    -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-
 
     steps:
       - uses: actions/checkout@v3
-
-      - uses: conda-incubator/setup-miniconda@v2
-        name: "Prepare base dependencies (M1)"
-        if: matrix.os == 'M1-arm64'
-        with:
-          python-version: ${{ matrix.python-version }}
-          activate-environment: build
-          installer-url: https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-arm64.sh#${{ github.run_number }}
-          environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.os }}.yml
-          auto-activate-base: false
 
       - uses: conda-incubator/setup-miniconda@v2
         name: "Prepare base dependencies"
@@ -182,7 +171,7 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v2
         name: "Prepare base dependencies"
-        if: matrix.os != 'M1-arm64' && matrix.python-version != 'pypy'
+        if: matrix.python-version != 'pypy'
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
@@ -228,23 +217,8 @@ jobs:
           restore-keys: |
             ccache-${{ secrets.CACHE_VERSION }}-${{ steps.prepare-ccache.outputs.key }}-
 
-      - name: "Configure build with CMake (M1)"
-        shell: bash -l {0}
-        if: matrix.os == 'M1-arm64'
-        run: |
-          mkdir build
-          cd build
-
-          /usr/bin/arch -arch arm64 cmake .. \
-            -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} \
-            -DCMAKE_PREFIX_PATH=${CONDA_PREFIX} \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            ${{ matrix.CMAKE_FLAGS }}
-
       - name: "Configure build with CMake"
         shell: bash -l {0}
-        if: matrix.os != 'M1-arm64'
         run: |
           mkdir build
           cd build
@@ -306,12 +280,6 @@ jobs:
           python -c "import openmm as mm; print('---Loaded---', *mm.pluginLoadedLibNames, '---Failed---', *mm.Platform.getPluginLoadFailures(), sep='\n')"
           cd build/python/tests
           python -m pytest -v -n 2
-
-      - name: "Cleanup self-hosted runner (M1)"
-        shell: bash -l {0}
-        if: matrix.os == 'M1-arm64'
-        run: |
-          rm -rf /Users/runner/miniconda3/*
 
   windows:
     runs-on: windows-latest
