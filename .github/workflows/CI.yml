@@ -137,7 +137,16 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: MacOS Intel CPU/OpenCL Python 3.11
+          - name: MacOS Intel Python 3.11
+            python-version: "3.11"
+            os: macos-13
+            OPENCL: false
+            cuda-version: ""
+            CMAKE_FLAGS: |
+              -DOPENMM_BUILD_OPENCL_LIB=ON \
+              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
+
+          - name: MacOS ARM Python 3.11
             python-version: "3.11"
             os: macos-latest
             OPENCL: false
@@ -145,16 +154,6 @@ jobs:
             CMAKE_FLAGS: |
               -DOPENMM_BUILD_OPENCL_LIB=ON \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-
-          #- name: MacOS M1 CPU arm64 Python 3.11
-          #  python-version: "3.11"
-          #  os: M1-arm64
-          #  OPENCL: false
-          #  cuda-version: ""
-          #  compilers: conda-forge
-          #  CMAKE_FLAGS: |
-          #    -DOPENMM_BUILD_OPENCL_LIB=ON \
-          #    -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
 
     steps:
