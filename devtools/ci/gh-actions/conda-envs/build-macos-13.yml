@@ -1,0 +1,19 @@
+name: build
+channels:
+- conda-forge
+- bioconda
+dependencies:
+# build
+- cmake
+- ccache
+# host
+- python
+- cython
+- swig
+- numpy <2.0
+- doxygen 1.8.14
+# test
+- pytest
+- pytest-xdist
+- pytest-timeout
+
