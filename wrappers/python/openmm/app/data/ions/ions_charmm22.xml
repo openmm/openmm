@@ -1,0 +1,35 @@
+<ForceField>
+  <Info>
+    <!-- Ion parameters from CHARMM22. Beglov D & Roux B (1994) J. Chem. Phys. 100, 9050-9063. -->
+    <DateGenerated>2022-09-11T06:28:33.596324</DateGenerated>
+    <Source Source="parm/frcmod.ions_charmm22" md5hash="011995a91088b5185d05794261faa582" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ions_charmm22</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ions_charmm22-Na+" element="Na" mass="22.99" name="ions_charmm22-Na+"/><!--          0.250               sodium -->
+    <Type class="ions_charmm22-K+" element="K" mass="39.10" name="ions_charmm22-K+"/><!--          1.060               potassium -->
+    <Type class="ions_charmm22-Cl-" element="Cl" mass="35.45" name="ions_charmm22-Cl-"/><!--          1.910               chlorine -->
+    <Type class="ions_charmm22-Mg2+" element="Mg" mass="24.305" name="ions_charmm22-Mg2+"/><!--                             magnesium -->
+  </AtomTypes>
+  <Residues>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="ions_charmm22-Cl-"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="ions_charmm22-K+"/>
+    </Residue>
+    <Residue name="MG">
+      <Atom charge="2.0" name="MG" type="ions_charmm22-Mg2+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="ions_charmm22-Na+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.1962296" sigma="0.24299262537277755" type="ions_charmm22-Na+"/>
+    <Atom epsilon="0.364008" sigma="0.3142645228240047" type="ions_charmm22-K+"/>
+    <Atom epsilon="0.6276" sigma="0.4044680180357141" type="ions_charmm22-Cl-"/>
+    <Atom epsilon="0.06276" sigma="0.2111429961992604" type="ions_charmm22-Mg2+"/>
+  </NonbondedForce>
+</ForceField>

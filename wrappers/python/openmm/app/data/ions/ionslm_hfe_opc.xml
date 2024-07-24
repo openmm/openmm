@@ -1,0 +1,315 @@
+<ForceField>
+  <Info>
+    <!-- Li/Merz ion parameters of atomic ions for the OPC water model (12-6 HFE set) -->
+    <DateGenerated>2022-09-11T06:28:33.632233</DateGenerated>
+    <Source Source="parm/frcmod.ionslm_hfe_opc" md5hash="e61d3206b09c1777c5b4534cfb51edcd" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ionslm_hfe_opc</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ionslm_hfe_opc-Li+" element="Li" mass="6.94" name="ionslm_hfe_opc-Li+"/>
+    <Type class="ionslm_hfe_opc-Na+" element="Na" mass="22.99" name="ionslm_hfe_opc-Na+"/>
+    <Type class="ionslm_hfe_opc-K+" element="K" mass="39.10" name="ionslm_hfe_opc-K+"/>
+    <Type class="ionslm_hfe_opc-Rb+" element="Rb" mass="85.47" name="ionslm_hfe_opc-Rb+"/>
+    <Type class="ionslm_hfe_opc-Cs+" element="Cs" mass="132.91" name="ionslm_hfe_opc-Cs+"/>
+    <Type class="ionslm_hfe_opc-Tl+" element="Tl" mass="204.38" name="ionslm_hfe_opc-Tl+"/>
+    <Type class="ionslm_hfe_opc-Cu+" element="Cu" mass="63.55" name="ionslm_hfe_opc-Cu+"/>
+    <Type class="ionslm_hfe_opc-Ag+" element="Ag" mass="107.87" name="ionslm_hfe_opc-Ag+"/>
+    <Type class="ionslm_hfe_opc-F-" element="F" mass="19.00" name="ionslm_hfe_opc-F-"/>
+    <Type class="ionslm_hfe_opc-Cl-" element="Cl" mass="35.45" name="ionslm_hfe_opc-Cl-"/>
+    <Type class="ionslm_hfe_opc-Br-" element="Br" mass="79.90" name="ionslm_hfe_opc-Br-"/>
+    <Type class="ionslm_hfe_opc-I-" element="I" mass="126.9" name="ionslm_hfe_opc-I-"/>
+    <Type class="ionslm_hfe_opc-Be2+" element="Be" mass="9.01" name="ionslm_hfe_opc-Be2+"/>
+    <Type class="ionslm_hfe_opc-Cu2+" element="Cu" mass="63.55" name="ionslm_hfe_opc-Cu2+"/>
+    <Type class="ionslm_hfe_opc-Ni2+" element="Ni" mass="58.69" name="ionslm_hfe_opc-Ni2+"/>
+    <Type class="ionslm_hfe_opc-Pt2+" element="Pt" mass="195.08" name="ionslm_hfe_opc-Pt2+"/>
+    <Type class="ionslm_hfe_opc-Zn2+" element="Zn" mass="65.4" name="ionslm_hfe_opc-Zn2+"/>
+    <Type class="ionslm_hfe_opc-Co2+" element="Co" mass="58.93" name="ionslm_hfe_opc-Co2+"/>
+    <Type class="ionslm_hfe_opc-Pd2+" element="Pd" mass="106.42" name="ionslm_hfe_opc-Pd2+"/>
+    <Type class="ionslm_hfe_opc-Ag2+" element="Ag" mass="107.87" name="ionslm_hfe_opc-Ag2+"/>
+    <Type class="ionslm_hfe_opc-Cr2+" element="Cr" mass="52.00" name="ionslm_hfe_opc-Cr2+"/>
+    <Type class="ionslm_hfe_opc-Fe2+" element="Fe" mass="55.85" name="ionslm_hfe_opc-Fe2+"/>
+    <Type class="ionslm_hfe_opc-Mg2+" element="Mg" mass="24.305" name="ionslm_hfe_opc-Mg2+"/>
+    <Type class="ionslm_hfe_opc-V2+" element="V" mass="50.94" name="ionslm_hfe_opc-V2+"/>
+    <Type class="ionslm_hfe_opc-Mn2+" element="Mn" mass="54.94" name="ionslm_hfe_opc-Mn2+"/>
+    <Type class="ionslm_hfe_opc-Hg2+" element="Hg" mass="200.59" name="ionslm_hfe_opc-Hg2+"/>
+    <Type class="ionslm_hfe_opc-Cd2+" element="Cd" mass="112.41" name="ionslm_hfe_opc-Cd2+"/>
+    <Type class="ionslm_hfe_opc-Yb2+" element="Yb" mass="173.05" name="ionslm_hfe_opc-Yb2+"/>
+    <Type class="ionslm_hfe_opc-Ca2+" element="Ca" mass="40.08" name="ionslm_hfe_opc-Ca2+"/>
+    <Type class="ionslm_hfe_opc-Sn2+" element="Sn" mass="118.71" name="ionslm_hfe_opc-Sn2+"/>
+    <Type class="ionslm_hfe_opc-Pb2+" element="Pb" mass="207.2" name="ionslm_hfe_opc-Pb2+"/>
+    <Type class="ionslm_hfe_opc-Eu2+" element="Eu" mass="151.96" name="ionslm_hfe_opc-Eu2+"/>
+    <Type class="ionslm_hfe_opc-Sr2+" element="Sr" mass="87.62" name="ionslm_hfe_opc-Sr2+"/>
+    <Type class="ionslm_hfe_opc-Sm2+" element="Sm" mass="150.36" name="ionslm_hfe_opc-Sm2+"/>
+    <Type class="ionslm_hfe_opc-Ba2+" element="Ba" mass="137.33" name="ionslm_hfe_opc-Ba2+"/>
+    <Type class="ionslm_hfe_opc-Ra2+" element="Ra" mass="226.03" name="ionslm_hfe_opc-Ra2+"/>
+    <Type class="ionslm_hfe_opc-Al3+" element="Al" mass="26.98" name="ionslm_hfe_opc-Al3+"/>
+    <Type class="ionslm_hfe_opc-Fe3+" element="Fe" mass="55.85" name="ionslm_hfe_opc-Fe3+"/>
+    <Type class="ionslm_hfe_opc-Cr3+" element="Cr" mass="52.00" name="ionslm_hfe_opc-Cr3+"/>
+    <Type class="ionslm_hfe_opc-In3+" element="In" mass="114.82" name="ionslm_hfe_opc-In3+"/>
+    <Type class="ionslm_hfe_opc-Tl3+" element="Tl" mass="204.38" name="ionslm_hfe_opc-Tl3+"/>
+    <Type class="ionslm_hfe_opc-Y3+" element="Y" mass="88.91" name="ionslm_hfe_opc-Y3+"/>
+    <Type class="ionslm_hfe_opc-La3+" element="La" mass="138.91" name="ionslm_hfe_opc-La3+"/>
+    <Type class="ionslm_hfe_opc-Ce3+" element="Ce" mass="140.12" name="ionslm_hfe_opc-Ce3+"/>
+    <Type class="ionslm_hfe_opc-Pr3+" element="Pr" mass="140.91" name="ionslm_hfe_opc-Pr3+"/>
+    <Type class="ionslm_hfe_opc-Nd3+" element="Nd" mass="144.24" name="ionslm_hfe_opc-Nd3+"/>
+    <Type class="ionslm_hfe_opc-Sm3+" element="Sm" mass="150.36" name="ionslm_hfe_opc-Sm3+"/>
+    <Type class="ionslm_hfe_opc-Eu3+" element="Eu" mass="151.96" name="ionslm_hfe_opc-Eu3+"/>
+    <Type class="ionslm_hfe_opc-Gd3+" element="Gd" mass="157.25" name="ionslm_hfe_opc-Gd3+"/>
+    <Type class="ionslm_hfe_opc-Tb3+" element="Tb" mass="158.93" name="ionslm_hfe_opc-Tb3+"/>
+    <Type class="ionslm_hfe_opc-Dy3+" element="Dy" mass="162.5" name="ionslm_hfe_opc-Dy3+"/>
+    <Type class="ionslm_hfe_opc-Er3+" element="Er" mass="167.26" name="ionslm_hfe_opc-Er3+"/>
+    <Type class="ionslm_hfe_opc-Tm3+" element="Tm" mass="168.93" name="ionslm_hfe_opc-Tm3+"/>
+    <Type class="ionslm_hfe_opc-Lu3+" element="Lu" mass="174.97" name="ionslm_hfe_opc-Lu3+"/>
+    <Type class="ionslm_hfe_opc-Hf4+" element="Hf" mass="178.49" name="ionslm_hfe_opc-Hf4+"/>
+    <Type class="ionslm_hfe_opc-Zr4+" element="Zr" mass="91.22" name="ionslm_hfe_opc-Zr4+"/>
+    <Type class="ionslm_hfe_opc-Ce4+" element="Ce" mass="140.12" name="ionslm_hfe_opc-Ce4+"/>
+    <Type class="ionslm_hfe_opc-U4+" element="U" mass="238.03" name="ionslm_hfe_opc-U4+"/>
+    <Type class="ionslm_hfe_opc-Pu4+" element="Pu" mass="244.06" name="ionslm_hfe_opc-Pu4+"/>
+    <Type class="ionslm_hfe_opc-Th4+" element="Th" mass="232.04" name="ionslm_hfe_opc-Th4+"/>
+  </AtomTypes>
+  <Residues>
+    <Residue name="AG">
+      <Atom charge="1.0" name="AG" type="ionslm_hfe_opc-Ag+"/>
+    </Residue>
+    <Residue name="Ag">
+      <Atom charge="2.0" name="Ag" type="ionslm_hfe_opc-Ag2+"/>
+    </Residue>
+    <Residue name="AL">
+      <Atom charge="3.0" name="AL" type="ionslm_hfe_opc-Al3+"/>
+    </Residue>
+    <Residue name="BA">
+      <Atom charge="2.0" name="BA" type="ionslm_hfe_opc-Ba2+"/>
+    </Residue>
+    <Residue name="Be">
+      <Atom charge="2.0" name="Be" type="ionslm_hfe_opc-Be2+"/>
+    </Residue>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="ionslm_hfe_opc-Br-"/>
+    </Residue>
+    <Residue name="CA">
+      <Atom charge="2.0" name="CA" type="ionslm_hfe_opc-Ca2+"/>
+    </Residue>
+    <Residue name="CD">
+      <Atom charge="2.0" name="CD" type="ionslm_hfe_opc-Cd2+"/>
+    </Residue>
+    <Residue name="CE">
+      <Atom charge="3.0" name="CE" type="ionslm_hfe_opc-Ce3+"/>
+    </Residue>
+    <Residue name="Ce">
+      <Atom charge="4.0" name="Ce" type="ionslm_hfe_opc-Ce4+"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="ionslm_hfe_opc-Cl-"/>
+    </Residue>
+    <Residue name="CO">
+      <Atom charge="2.0" name="CO" type="ionslm_hfe_opc-Co2+"/>
+    </Residue>
+    <Residue name="Cr">
+      <Atom charge="2.0" name="Cr" type="ionslm_hfe_opc-Cr2+"/>
+    </Residue>
+    <Residue name="CR">
+      <Atom charge="3.0" name="CR" type="ionslm_hfe_opc-Cr3+"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="ionslm_hfe_opc-Cs+"/>
+    </Residue>
+    <Residue name="CU1">
+      <Atom charge="1.0" name="CU1" type="ionslm_hfe_opc-Cu+"/>
+    </Residue>
+    <Residue name="CU">
+      <Atom charge="2.0" name="CU" type="ionslm_hfe_opc-Cu2+"/>
+    </Residue>
+    <Residue name="Dy">
+      <Atom charge="3.0" name="Dy" type="ionslm_hfe_opc-Dy3+"/>
+    </Residue>
+    <Residue name="Er">
+      <Atom charge="3.0" name="Er" type="ionslm_hfe_opc-Er3+"/>
+    </Residue>
+    <Residue name="EU">
+      <Atom charge="2.0" name="EU" type="ionslm_hfe_opc-Eu2+"/>
+    </Residue>
+    <Residue name="EU3">
+      <Atom charge="3.0" name="EU3" type="ionslm_hfe_opc-Eu3+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="ionslm_hfe_opc-F-"/>
+    </Residue>
+    <Residue name="FE2">
+      <Atom charge="2.0" name="FE2" type="ionslm_hfe_opc-Fe2+"/>
+    </Residue>
+    <Residue name="FE">
+      <Atom charge="3.0" name="FE" type="ionslm_hfe_opc-Fe3+"/>
+    </Residue>
+    <Residue name="GD">
+      <Atom charge="3.0" name="GD" type="ionslm_hfe_opc-Gd3+"/>
+    </Residue>
+    <Residue name="Hf">
+      <Atom charge="4.0" name="Hf" type="ionslm_hfe_opc-Hf4+"/>
+    </Residue>
+    <Residue name="HG">
+      <Atom charge="2.0" name="HG" type="ionslm_hfe_opc-Hg2+"/>
+    </Residue>
+    <Residue name="I">
+      <Atom charge="-1.0" name="I" type="ionslm_hfe_opc-I-"/>
+    </Residue>
+    <Residue name="IN">
+      <Atom charge="3.0" name="IN" type="ionslm_hfe_opc-In3+"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="ionslm_hfe_opc-K+"/>
+    </Residue>
+    <Residue name="LA">
+      <Atom charge="3.0" name="LA" type="ionslm_hfe_opc-La3+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="ionslm_hfe_opc-Li+"/>
+    </Residue>
+    <Residue name="LU">
+      <Atom charge="3.0" name="LU" type="ionslm_hfe_opc-Lu3+"/>
+    </Residue>
+    <Residue name="MG">
+      <Atom charge="2.0" name="MG" type="ionslm_hfe_opc-Mg2+"/>
+    </Residue>
+    <Residue name="MN">
+      <Atom charge="2.0" name="MN" type="ionslm_hfe_opc-Mn2+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="ionslm_hfe_opc-Na+"/>
+    </Residue>
+    <Residue name="Nd">
+      <Atom charge="3.0" name="Nd" type="ionslm_hfe_opc-Nd3+"/>
+    </Residue>
+    <Residue name="NI">
+      <Atom charge="2.0" name="NI" type="ionslm_hfe_opc-Ni2+"/>
+    </Residue>
+    <Residue name="PB">
+      <Atom charge="2.0" name="PB" type="ionslm_hfe_opc-Pb2+"/>
+    </Residue>
+    <Residue name="PD">
+      <Atom charge="2.0" name="PD" type="ionslm_hfe_opc-Pd2+"/>
+    </Residue>
+    <Residue name="PR">
+      <Atom charge="3.0" name="PR" type="ionslm_hfe_opc-Pr3+"/>
+    </Residue>
+    <Residue name="PT">
+      <Atom charge="2.0" name="PT" type="ionslm_hfe_opc-Pt2+"/>
+    </Residue>
+    <Residue name="Pu">
+      <Atom charge="4.0" name="Pu" type="ionslm_hfe_opc-Pu4+"/>
+    </Residue>
+    <Residue name="Ra">
+      <Atom charge="2.0" name="Ra" type="ionslm_hfe_opc-Ra2+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="ionslm_hfe_opc-Rb+"/>
+    </Residue>
+    <Residue name="Sm">
+      <Atom charge="2.0" name="Sm" type="ionslm_hfe_opc-Sm2+"/>
+    </Residue>
+    <Residue name="SM">
+      <Atom charge="3.0" name="SM" type="ionslm_hfe_opc-Sm3+"/>
+    </Residue>
+    <Residue name="Sn">
+      <Atom charge="2.0" name="Sn" type="ionslm_hfe_opc-Sn2+"/>
+    </Residue>
+    <Residue name="SR">
+      <Atom charge="2.0" name="SR" type="ionslm_hfe_opc-Sr2+"/>
+    </Residue>
+    <Residue name="TB">
+      <Atom charge="3.0" name="TB" type="ionslm_hfe_opc-Tb3+"/>
+    </Residue>
+    <Residue name="Th">
+      <Atom charge="4.0" name="Th" type="ionslm_hfe_opc-Th4+"/>
+    </Residue>
+    <Residue name="TL">
+      <Atom charge="1.0" name="TL" type="ionslm_hfe_opc-Tl+"/>
+    </Residue>
+    <Residue name="Tl">
+      <Atom charge="3.0" name="Tl" type="ionslm_hfe_opc-Tl3+"/>
+    </Residue>
+    <Residue name="Tm">
+      <Atom charge="3.0" name="Tm" type="ionslm_hfe_opc-Tm3+"/>
+    </Residue>
+    <Residue name="U">
+      <Atom charge="4.0" name="U" type="ionslm_hfe_opc-U4+"/>
+    </Residue>
+    <Residue name="V2+">
+      <Atom charge="2.0" name="V2+" type="ionslm_hfe_opc-V2+"/>
+    </Residue>
+    <Residue name="Y">
+      <Atom charge="3.0" name="Y" type="ionslm_hfe_opc-Y3+"/>
+    </Residue>
+    <Residue name="YB2">
+      <Atom charge="2.0" name="YB2" type="ionslm_hfe_opc-Yb2+"/>
+    </Residue>
+    <Residue name="ZN">
+      <Atom charge="2.0" name="ZN" type="ionslm_hfe_opc-Zn2+"/>
+    </Residue>
+    <Residue name="Zr">
+      <Atom charge="4.0" name="Zr" type="ionslm_hfe_opc-Zr4+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.009039866720000001" sigma="0.2212992415860603" type="ionslm_hfe_opc-Li+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.12386075112" sigma="0.2613896839023756" type="ionslm_hfe_opc-Na+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.58382766144" sigma="0.3032619236549715" type="ionslm_hfe_opc-K+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.9537620464000001" sigma="0.3239307739158274" type="ionslm_hfe_opc-Rb+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="1.47731805816" sigma="0.349232297511013" type="ionslm_hfe_opc-Cs+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.47070573208000005" sigma="0.29577837442259264" type="ionslm_hfe_opc-Tl+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.0032724319200000004" sigma="0.21025209748112006" type="ionslm_hfe_opc-Cu+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.025210566480000002" sigma="0.23448454261453733" type="ionslm_hfe_opc-Ag+"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="1.0313754556" sigma="0.3278507282756449" type="ionslm_hfe_opc-F-"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="2.8400519208" sigma="0.4205041949622401" type="ionslm_hfe_opc-Cl-"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="3.17863094952" sigma="0.4452711793265416" type="ionslm_hfe_opc-Br-"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="3.77817463544" sigma="0.5167212565213968" type="ionslm_hfe_opc-I-"/><!--     HFE set for the OPC water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="4.184e-07" sigma="0.1518091415711138" type="ionslm_hfe_opc-Be2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.0009216096800000001" sigma="0.19849223440166763" type="ionslm_hfe_opc-Cu2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00132938232" sigma="0.20169946978697278" type="ionslm_hfe_opc-Ni2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00168209352" sigma="0.20383762671050965" type="ionslm_hfe_opc-Pt2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00192342664" sigma="0.20508488491590612" type="ionslm_hfe_opc-Zn2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00283691936" sigma="0.20882665953209553" type="ionslm_hfe_opc-Co2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00299398672" sigma="0.20936119876297973" type="ionslm_hfe_opc-Pd2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00502322672" sigma="0.21470659107182177" type="ionslm_hfe_opc-Ag2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00631378152" sigma="0.21720110748261476" type="ionslm_hfe_opc-Cr2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00739860904" sigma="0.21898290491889544" type="ionslm_hfe_opc-Fe2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.008636361759999999" sigma="0.22076470235517612" type="ionslm_hfe_opc-Mg2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.0093175588" sigma="0.22165560107331644" type="ionslm_hfe_opc-V2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.0218984284" sigma="0.23252456543462854" type="ionslm_hfe_opc-Mn2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.0218984284" sigma="0.23252456543462854" type="ionslm_hfe_opc-Hg2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.0230594884" sigma="0.23323728440914082" type="ionslm_hfe_opc-Cd2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.14921629320000002" sigma="0.26530963826219306" type="ionslm_hfe_opc-Yb2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.15418977216000002" sigma="0.2660223572367053" type="ionslm_hfe_opc-Ca2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.17114857016" sigma="0.2683386939038702" type="ionslm_hfe_opc-Sn2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.28625681168" sigma="0.280989455701463" type="ionslm_hfe_opc-Pb2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.38639884336" sigma="0.2895420833956103" type="ionslm_hfe_opc-Eu2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.40018520704000005" sigma="0.2906111618573787" type="ionslm_hfe_opc-Sr2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.41424963936000003" sigma="0.29168024031914713" type="ionslm_hfe_opc-Sm2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.8815327339200001" sigma="0.32018899929963796" type="ionslm_hfe_opc-Ba2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.8815327339200001" sigma="0.32018899929963796" type="ionslm_hfe_opc-Ra2+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="5.94128e-06" sigma="0.16463808311233472" type="ionslm_hfe_opc-Al3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.0001102484" sigma="0.1822778777315134" type="ionslm_hfe_opc-Fe3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.0017148542400000002" sigma="0.20401580645413772" type="ionslm_hfe_opc-Cr3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.00215375584" sigma="0.20615396337767453" type="ionslm_hfe_opc-In3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.00215375584" sigma="0.20615396337767453" type="ionslm_hfe_opc-Tl3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.06504822960000001" sigma="0.24927346133566697" type="ionslm_hfe_opc-Y3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.28625681168" sigma="0.280989455701463" type="ionslm_hfe_opc-La3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.221430878" sigma="0.2743968051872245" type="ionslm_hfe_opc-Ce3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.17523713312" sigma="0.2688732331347544" type="ionslm_hfe_opc-Pr3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.14921629320000002" sigma="0.26530963826219306" type="ionslm_hfe_opc-Nd3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.11443453384" sigma="0.25978606620972294" type="ionslm_hfe_opc-Sm3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.0953611004" sigma="0.2562224713371616" type="ionslm_hfe_opc-Eu3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.08927271096" sigma="0.25497521313176513" type="ionslm_hfe_opc-Gd3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.08029342856" sigma="0.2530152359518564" type="ionslm_hfe_opc-Tb3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.07200664" sigma="0.2510552587719476" type="ionslm_hfe_opc-Dy3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.05324888936" sigma="0.24588804620673363" type="ionslm_hfe_opc-Er3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.04880585792000001" sigma="0.24446260825770916" type="ionslm_hfe_opc-Tm3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.04880585792000001" sigma="0.24446260825770916" type="ionslm_hfe_opc-Lu3+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.0001102484" sigma="0.1822778777315134" type="ionslm_hfe_opc-Hf4+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.00057576024" sigma="0.19457228004185012" type="ionslm_hfe_opc-Zr4+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.022184153760000002" sigma="0.23270274517825662" type="ionslm_hfe_opc-Ce4+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.00207446904" sigma="0.2057976038904184" type="ionslm_hfe_opc-U4+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.00651925776" sigma="0.21755746696987088" type="ionslm_hfe_opc-Pu4+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.06112589696" sigma="0.24820438287389857" type="ionslm_hfe_opc-Th4+"/><!--     HFE set for the OPC water model from Li et al., JCTC, 2021, 17, 2342 -->
+  </NonbondedForce>
+</ForceField>

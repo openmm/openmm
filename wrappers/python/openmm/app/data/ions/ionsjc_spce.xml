@@ -1,0 +1,60 @@
+<ForceField>
+  <Info>
+    <!-- Monovalent ion parameters for Ewald and SPC/E water from Joung & Cheatham JPCB (2008) -->
+    <DateGenerated>2022-09-11T06:28:33.622249</DateGenerated>
+    <Source Source="parm/frcmod.ionsjc_spce" md5hash="576c159afdaa5f4f6b05250ce4326bd3" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ionsjc_spce</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ionsjc_spce-Li+" element="Li" mass="6.94" name="ionsjc_spce-Li+"/><!--          0.029               lithium   pol: J. Phys. Chem. 11,1541,(1978) -->
+    <Type class="ionsjc_spce-Na+" element="Na" mass="22.99" name="ionsjc_spce-Na+"/><!--          0.250               sodium    pol: J. Phys. Chem. 11,1541,(1978) -->
+    <Type class="ionsjc_spce-K+" element="K" mass="39.10" name="ionsjc_spce-K+"/><!--          1.060               potassium -->
+    <Type class="ionsjc_spce-Rb+" element="Rb" mass="85.47" name="ionsjc_spce-Rb+"/><!--                              rubidium -->
+    <Type class="ionsjc_spce-Cs+" element="Cs" mass="132.91" name="ionsjc_spce-Cs+"/><!--                              cesium -->
+    <Type class="ionsjc_spce-F-" element="F" mass="19.00" name="ionsjc_spce-F-"/><!--          0.320               fluorine -->
+    <Type class="ionsjc_spce-Cl-" element="Cl" mass="35.45" name="ionsjc_spce-Cl-"/><!--          1.910               chlorine  (Applequist) -->
+    <Type class="ionsjc_spce-Br-" element="Br" mass="79.90" name="ionsjc_spce-Br-"/><!--          2.880               bromine   (Applequist) -->
+    <Type class="ionsjc_spce-I-" element="I" mass="126.9" name="ionsjc_spce-I-"/><!--          4.690               iodine    (Applequist) -->
+  </AtomTypes>
+  <Residues>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="ionsjc_spce-Br-"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="ionsjc_spce-Cl-"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="ionsjc_spce-Cs+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="ionsjc_spce-F-"/>
+    </Residue>
+    <Residue name="I">
+      <Atom charge="-1.0" name="I" type="ionsjc_spce-I-"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="ionsjc_spce-K+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="ionsjc_spce-Li+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="ionsjc_spce-Na+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="ionsjc_spce-Rb+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="1.4088967296000001" sigma="0.14094017720980168" type="ionsjc_spce-Li+"/>
+    <Atom epsilon="1.4754532912" sigma="0.21595384927721822" type="ionsjc_spce-Na+"/>
+    <Atom epsilon="1.7978873936000002" sigma="0.2838403315995121" type="ionsjc_spce-K+"/>
+    <Atom epsilon="1.8623134624" sigma="0.3094982146819539" type="ionsjc_spce-Rb+"/>
+    <Atom epsilon="0.37595959600000006" sigma="0.36010126187232516" type="ionsjc_spce-Cs+"/>
+    <Atom epsilon="0.030963692" sigma="0.4021516813685492" type="ionsjc_spce-F-"/>
+    <Atom epsilon="0.05349244" sigma="0.48304528497569194" type="ionsjc_spce-Cl-"/>
+    <Atom epsilon="0.1127947824" sigma="0.4901724747208147" type="ionsjc_spce-Br-"/>
+    <Atom epsilon="0.179010348" sigma="0.5201066716503301" type="ionsjc_spce-I-"/>
+  </NonbondedForce>
+</ForceField>
