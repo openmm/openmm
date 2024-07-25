@@ -1442,8 +1442,7 @@ class AmberNetcdfRestart(object):
         try:
             from scipy.io import netcdf_file
         except ImportError:
-            raise ImportError('scipy is necessary to parse NetCDF '
-                                'restarts')
+            raise ImportError('scipy is necessary to parse NetCDF restarts')
 
         self.filename = filename
         self.velocities = self.boxVectors = self.time = None
