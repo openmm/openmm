@@ -2712,17 +2712,19 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
 
     // Record the per-particle parameters.
 
-    int paddedNumParticles = cc.getPaddedNumAtoms();
-    int numParams = force.getNumPerParticleParameters();
-    vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
-    vector<double> parameters;
-    for (int i = 0; i < numParticles; i++) {
-        force.getParticleParameters(i, parameters);
-        paramVector[i].resize(parameters.size());
-        for (int j = 0; j < (int) parameters.size(); j++)
-            paramVector[i][j] = (float) parameters[j];
+    if (firstParticle <= lastParticle) {
+        int numToSet = lastParticle-firstParticle+1;
+        int numParams = force.getNumPerParticleParameters();
+        vector<vector<float> > paramVector(numToSet, vector<float>(numParams, 0));
+        vector<double> parameters;
+        for (int i = 0; i < numToSet; i++) {
+            force.getParticleParameters(firstParticle+i, parameters);
+            paramVector[i].resize(parameters.size());
+            for (int j = 0; j < (int) parameters.size(); j++)
+                paramVector[i][j] = (float) parameters[j];
+        }
+        params->setParameterValuesSubset(firstParticle, paramVector);
     }
-    params->setParameterValues(paramVector);
 
     // If necessary, recompute the long range correction.
 
