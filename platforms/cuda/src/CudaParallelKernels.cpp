@@ -327,9 +327,9 @@ double CudaParallelCalcHarmonicBondForceKernel::execute(ContextImpl& context, bo
     return 0.0;
 }
 
-void CudaParallelCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
+void CudaParallelCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force, int firstBond, int lastBond) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstBond, lastBond);
 }
 
 class CudaParallelCalcCustomBondForceKernel::Task : public CudaContext::WorkTask {
@@ -368,9 +368,9 @@ double CudaParallelCalcCustomBondForceKernel::execute(ContextImpl& context, bool
     return 0.0;
 }
 
-void CudaParallelCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force) {
+void CudaParallelCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force, int firstBond, int lastBond) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstBond, lastBond);
 }
 
 class CudaParallelCalcHarmonicAngleForceKernel::Task : public CudaContext::WorkTask {
@@ -409,9 +409,9 @@ double CudaParallelCalcHarmonicAngleForceKernel::execute(ContextImpl& context, b
     return 0.0;
 }
 
-void CudaParallelCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+void CudaParallelCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force, int firstAngle, int lastAngle) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstAngle, lastAngle);
 }
 
 class CudaParallelCalcCustomAngleForceKernel::Task : public CudaContext::WorkTask {
@@ -450,9 +450,9 @@ double CudaParallelCalcCustomAngleForceKernel::execute(ContextImpl& context, boo
     return 0.0;
 }
 
-void CudaParallelCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& context, const CustomAngleForce& force) {
+void CudaParallelCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& context, const CustomAngleForce& force, int firstAngle, int lastAngle) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstAngle, lastAngle);
 }
 
 class CudaParallelCalcPeriodicTorsionForceKernel::Task : public CudaContext::WorkTask {
@@ -491,9 +491,9 @@ double CudaParallelCalcPeriodicTorsionForceKernel::execute(ContextImpl& context,
     return 0.0;
 }
 
-void CudaParallelCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+void CudaParallelCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force, int firstTorsion, int lastTorsion) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstTorsion, lastTorsion);
 }
 
 class CudaParallelCalcRBTorsionForceKernel::Task : public CudaContext::WorkTask {
@@ -614,9 +614,9 @@ double CudaParallelCalcCustomTorsionForceKernel::execute(ContextImpl& context, b
     return 0.0;
 }
 
-void CudaParallelCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force) {
+void CudaParallelCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force, int firstTorsion, int lastTorsion) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstTorsion, lastTorsion);
 }
 
 class CudaParallelCalcNonbondedForceKernel::Task : public CudaContext::WorkTask {
