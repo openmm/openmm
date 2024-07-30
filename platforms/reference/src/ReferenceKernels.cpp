@@ -1689,7 +1689,7 @@ double ReferenceCalcCustomExternalForceKernel::execute(ContextImpl& context, boo
     return energy;
 }
 
-void ReferenceCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& context, const CustomExternalForce& force) {
+void ReferenceCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& context, const CustomExternalForce& force, int firstParticle, int lastParticle) {
     if (numParticles != force.getNumParticles())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
@@ -1697,14 +1697,13 @@ void ReferenceCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl
 
     int numParameters = force.getNumPerParticleParameters();
     vector<double> params;
-    for (int i = 0; i < numParticles; ++i) {
+    for (int i = firstParticle; i <= lastParticle; ++i) {
         int particle;
-        vector<double> parameters;
-        force.getParticleParameters(i, particle, parameters);
+        force.getParticleParameters(i, particle, params);
         if (particle != particles[i])
             throw OpenMMException("updateParametersInContext: A particle index has changed");
         for (int j = 0; j < numParameters; j++)
-            particleParamArray[i][j] = parameters[j];
+            particleParamArray[i][j] = params[j];
     }
 }
 

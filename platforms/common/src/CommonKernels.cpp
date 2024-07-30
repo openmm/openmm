@@ -1524,27 +1524,30 @@ double CommonCalcCustomExternalForceKernel::execute(ContextImpl& context, bool i
     return 0.0;
 }
 
-void CommonCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& context, const CustomExternalForce& force) {
+void CommonCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& context, const CustomExternalForce& force, int firstParticle, int lastParticle) {
     ContextSelector selector(cc);
     int numContexts = cc.getNumContexts();
     int startIndex = cc.getContextIndex()*force.getNumParticles()/numContexts;
     int endIndex = (cc.getContextIndex()+1)*force.getNumParticles()/numContexts;
     if (numParticles != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
-    if (numParticles == 0)
+    if (numParticles == 0 || firstParticle >= endIndex || lastParticle < startIndex || firstParticle > lastParticle)
         return;
+    firstParticle = max(firstParticle, startIndex);
+    lastParticle = min(lastParticle, endIndex-1);
     
     // Record the per-particle parameters.
     
-    vector<vector<double> > paramVector(numParticles);
+    int numToSet = lastParticle-firstParticle+1;
+    vector<vector<double> > paramVector(numToSet);
     int particle;
-    for (int i = 0; i < numParticles; i++)
-        force.getParticleParameters(startIndex+i, particle, paramVector[i]);
-    params->setParameterValues(paramVector, true);
+    for (int i = 0; i < numToSet; i++)
+        force.getParticleParameters(firstParticle+i, particle, paramVector[i]);
+    params->setParameterValuesSubset(firstParticle-startIndex, paramVector, true);
     
     // Mark that the current reordering may be invalid.
     
-    cc.invalidateMolecules(info, false, true);
+    cc.invalidateMolecules(info, true, false);
 }
 
 class CommonCalcCustomCompoundBondForceKernel::ForceInfo : public ComputeForceInfo {
