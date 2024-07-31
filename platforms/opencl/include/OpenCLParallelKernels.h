@@ -430,10 +430,14 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the NonbondedForce to copy the parameters from
+     * @param context        the context to copy parameters to
+     * @param force          the NonbondedForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
+     * @param firstException the index of the first exception whose parameters might have changed
+     * @param lastException  the index of the last exception whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
+    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException);
     /**
      * Get the parameters being used for PME.
      *

@@ -1035,7 +1035,7 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
     return energy;
 }
 
-void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
     if (force.getNumParticles() != numParticles)
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
@@ -1062,7 +1062,7 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
 
     // Record the values.
 
-    for (int i = 0; i < numParticles; ++i)
+    for (int i = firstParticle; i <= lastParticle; ++i)
         force.getParticleParameters(i, baseParticleParams[i][0], baseParticleParams[i][1], baseParticleParams[i][2]);
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
