@@ -58,10 +58,13 @@ def _getDataDirectories():
         _dataDirectories = [os.path.join(os.path.dirname(__file__), 'data')]
         try:
             from importlib_metadata import entry_points
-            for entry in entry_points().select(group='openmm.forcefielddir'):
-                _dataDirectories.append(entry.load()())
         except:
-            pass # importlib_metadata is not installed
+            try:
+                from importlib.metadata import entry_points
+            except:
+                return _dataDirectories
+        for entry in entry_points().select(group='openmm.forcefielddir'):
+            _dataDirectories.append(entry.load()())
     return _dataDirectories
 
 def _convertParameterToNumber(param):
