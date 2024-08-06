@@ -58,6 +58,12 @@ def _getDataDirectories():
         _dataDirectories = [os.path.join(os.path.dirname(__file__), 'data')]
         try:
             from importlib_metadata import entry_points
+        except:
+            try:
+                from importlib.metadata import entry_points
+            except:
+                pass
+        try:
             for entry in entry_points().select(group='openmm.forcefielddir'):
                 _dataDirectories.append(entry.load()())
         except:
