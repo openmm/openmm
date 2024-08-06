@@ -117,6 +117,11 @@ void ComputeParameterSet::getParameterValues(vector<vector<T> >& values) {
 
 template <class T>
 void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values, bool convert) {
+    setParameterValuesSubset(0, values, convert);
+}
+
+template <class T>
+void ComputeParameterSet::setParameterValuesSubset(int first, const vector<vector<T> >& values, bool convert) {
     if (convert && sizeof(T) == sizeof(float) && elementSize == sizeof(double)) {
         vector<vector<double> > values2(values.size());
         for (int i = 0; i < values.size(); i++) {
@@ -124,7 +129,7 @@ void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values, b
             for (int j = 0; j < values[i].size(); j++)
                 values2[i][j] = (double) values[i][j];
         }
-        setParameterValues(values2);
+        setParameterValuesSubset(first, values2);
         return;
     }
     if (convert && sizeof(T) == sizeof(double) && elementSize == sizeof(float)) {
@@ -134,16 +139,19 @@ void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values, b
             for (int j = 0; j < values[i].size(); j++)
                 values2[i][j] = (float) values[i][j];
         }
-        setParameterValues(values2);
+        setParameterValuesSubset(first, values2);
         return;
     }
     if (sizeof(T) != elementSize)
         throw OpenMMException("Called setParameterValues() with vector of wrong type");
+    if (first < 0 || first+values.size() > numObjects)
+        throw OpenMMException("Called setParameterValuesSubset() for an illegal range of objects");
+    int numToSet = values.size();
     int base = 0;
     for (int i = 0; i < (int) arrays.size(); i++) {
         if (arrays[i]->getElementSize() == 4*elementSize) {
-            vector<T> data(4*numObjects);
-            for (int j = 0; j < numObjects; j++) {
+            vector<T> data(4*numToSet);
+            for (int j = 0; j < numToSet; j++) {
                 data[4*j] = values[j][base];
                 if (base+1 < numParameters)
                     data[4*j+1] = values[j][base+1];
@@ -152,24 +160,24 @@ void ComputeParameterSet::setParameterValues(const vector<vector<T> >& values, b
                 if (base+3 < numParameters)
                     data[4*j+3] = values[j][base+3];
             }
-            arrays[i]->upload(data.data());
+            arrays[i]->uploadSubArray(data.data(), first, numToSet);
             base += 4;
         }
         else if (arrays[i]->getElementSize() == 2*elementSize) {
-            vector<T> data(2*numObjects);
-            for (int j = 0; j < numObjects; j++) {
+            vector<T> data(2*numToSet);
+            for (int j = 0; j < numToSet; j++) {
                 data[2*j] = values[j][base];
                 if (base+1 < numParameters)
                     data[2*j+1] = values[j][base+1];
             }
-            arrays[i]->upload(data.data());
+            arrays[i]->uploadSubArray(data.data(), first, numToSet);
             base += 2;
         }
         else if (arrays[i]->getElementSize() == elementSize) {
-            vector<T> data(numObjects);
-            for (int j = 0; j < numObjects; j++)
+            vector<T> data(numToSet);
+            for (int j = 0; j < numToSet; j++)
                 data[j] = values[j][base];
-            arrays[i]->upload(data.data());
+            arrays[i]->uploadSubArray(data.data(), first, numToSet);
             base++;
         }
         else
@@ -201,6 +209,8 @@ string ComputeParameterSet::getParameterSuffix(int index, const std::string& ext
 namespace OpenMM {
 template void ComputeParameterSet::getParameterValues<float>(vector<vector<float> >& values);
 template void ComputeParameterSet::setParameterValues<float>(const vector<vector<float> >& values, bool convert);
+template void ComputeParameterSet::setParameterValuesSubset<float>(int first, const vector<vector<float> >& values, bool convert);
 template void ComputeParameterSet::getParameterValues<double>(vector<vector<double> >& values);
 template void ComputeParameterSet::setParameterValues<double>(const vector<vector<double> >& values, bool convert);
+template void ComputeParameterSet::setParameterValuesSubset<double>(int first, const vector<vector<double> >& values, bool convert);
 }

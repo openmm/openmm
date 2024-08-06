@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -590,6 +590,7 @@ private:
     std::vector<ComputedValueInfo> computedValues;
     std::vector<InteractionGroupInfo> interactionGroups;
     std::vector<int> energyParameterDerivatives;
+    mutable int numContexts, firstChangedParticle, lastChangedParticle;
 };
 
 /**

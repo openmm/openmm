@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1038,7 +1038,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
     return energy;
 }
 
-void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
     // Make sure the new parameters are acceptable.
     
     ContextSelector selector(cu);
@@ -1079,18 +1079,32 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
     
     // Record the per-particle parameters.
     
-    vector<float4> baseParticleParamVec(cu.getPaddedNumAtoms(), make_float4(0, 0, 0, 0));
-    const vector<int>& order = cu.getAtomIndex();
-    for (int i = 0; i < force.getNumParticles(); i++) {
-        double charge, sigma, epsilon;
-        force.getParticleParameters(i, charge, sigma, epsilon);
-        baseParticleParamVec[i] = make_float4(charge, sigma, epsilon, 0);
+    if (firstParticle <= lastParticle) {
+        vector<float4> baseParticleParamVec(cu.getPaddedNumAtoms(), make_float4(0, 0, 0, 0));
+        for (int i = 0; i < force.getNumParticles(); i++) {
+            double charge, sigma, epsilon;
+            force.getParticleParameters(i, charge, sigma, epsilon);
+            baseParticleParamVec[i] = make_float4(charge, sigma, epsilon, 0);
+        }
+        baseParticleParams.uploadSubArray(&baseParticleParamVec[firstParticle], firstParticle, lastParticle-firstParticle+1);
+
+        // Compute the self energy.
+
+        ewaldSelfEnergy = 0.0;
+        if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
+            if (cu.getContextIndex() == 0) {
+                for (int i = 0; i < force.getNumParticles(); i++) {
+                    ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                    if (doLJPME)
+                        ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
+                }
+            }
+        }
     }
-    baseParticleParams.upload(baseParticleParamVec);
     
     // Record the exceptions.
     
-    if (numExceptions > 0) {
+    if (firstException <= lastException) {
         vector<float4> baseExceptionParamsVec(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
             int particle1, particle2;
@@ -1105,19 +1119,9 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
     
     // Compute other values.
     
-    ewaldSelfEnergy = 0.0;
-    if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
-        if (cu.getContextIndex() == 0) {
-            for (int i = 0; i < force.getNumParticles(); i++) {
-                ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
-                if (doLJPME)
-                    ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
-            }
-        }
-    }
     if (force.getUseDispersionCorrection() && cu.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
-    cu.invalidateMolecules();
+    cu.invalidateMolecules(info, firstParticle <= lastParticle, firstException <= lastException);
     recomputeParams = true;
 }
 

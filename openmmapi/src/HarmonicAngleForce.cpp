@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,8 +36,9 @@
 #include "openmm/internal/HarmonicAngleForceImpl.h"
 
 using namespace OpenMM;
+using namespace std;
 
-HarmonicAngleForce::HarmonicAngleForce() : usePeriodic(false) {
+HarmonicAngleForce::HarmonicAngleForce() : usePeriodic(false), numContexts(0) {
 }
 
 int HarmonicAngleForce::addAngle(int particle1, int particle2, int particle3, double angle, double k) {
@@ -61,14 +62,30 @@ void HarmonicAngleForce::setAngleParameters(int index, int particle1, int partic
     angles[index].particle3 = particle3;
     angles[index].angle = angle;
     angles[index].k = k;
+    if (numContexts > 0) {
+        firstChangedAngle = min(index, firstChangedAngle);
+        lastChangedAngle = max(index, lastChangedAngle);
+    }
 }
 
 ForceImpl* HarmonicAngleForce::createImpl() const {
+    if (numContexts == 0) {
+        // Begin tracking changes to angles.
+        firstChangedAngle = angles.size();
+        lastChangedAngle = -1;
+    }
+    numContexts++;
     return new HarmonicAngleForceImpl(*this);
 }
 
 void HarmonicAngleForce::updateParametersInContext(Context& context) {
-    dynamic_cast<HarmonicAngleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+    dynamic_cast<HarmonicAngleForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context), firstChangedAngle, lastChangedAngle);
+    if (numContexts == 1) {
+        // We just updated the only existing context for this force, so we can reset
+        // the tracking of changed angles.
+        firstChangedAngle = angles.size();
+        lastChangedAngle = -1;
+    }
 }
 
 void HarmonicAngleForce::setUsesPeriodicBoundaryConditions(bool periodic) {

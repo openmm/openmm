@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,8 +36,9 @@
 #include "openmm/internal/HarmonicBondForceImpl.h"
 
 using namespace OpenMM;
+using namespace std;
 
-HarmonicBondForce::HarmonicBondForce() : usePeriodic(false) {
+HarmonicBondForce::HarmonicBondForce() : usePeriodic(false), numContexts(0) {
 }
 
 int HarmonicBondForce::addBond(int particle1, int particle2, double length, double k) {
@@ -59,14 +60,30 @@ void HarmonicBondForce::setBondParameters(int index, int particle1, int particle
     bonds[index].particle2 = particle2;
     bonds[index].length = length;
     bonds[index].k = k;
+    if (numContexts > 0) {
+        firstChangedBond = min(index, firstChangedBond);
+        lastChangedBond = max(index, lastChangedBond);
+    }
 }
 
 ForceImpl* HarmonicBondForce::createImpl() const {
+    if (numContexts == 0) {
+        // Begin tracking changes to bonds.
+        firstChangedBond = bonds.size();
+        lastChangedBond = -1;
+    }
+    numContexts++;
     return new HarmonicBondForceImpl(*this);
 }
 
 void HarmonicBondForce::updateParametersInContext(Context& context) {
-    dynamic_cast<HarmonicBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+    dynamic_cast<HarmonicBondForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context), firstChangedBond, lastChangedBond);
+    if (numContexts == 1) {
+        // We just updated the only existing context for this force, so we can reset
+        // the tracking of changed bonds.
+        firstChangedBond = bonds.size();
+        lastChangedBond = -1;
+    }
 }
 
 void HarmonicBondForce::setUsesPeriodicBoundaryConditions(bool periodic) {

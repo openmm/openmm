@@ -338,7 +338,7 @@ void ComputeContext::invalidateMolecules() {
             return;
 }
 
-bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
+bool ComputeContext::invalidateMolecules(ComputeForceInfo* force, bool checkAtoms, bool checkGroups) {
     if (numAtoms == 0 || !getNonbondedUtilities().getUseCutoff())
         return false;
     bool valid = true;
@@ -362,15 +362,17 @@ bool ComputeContext::invalidateMolecules(ComputeForceInfo* force) {
                 // See if the atoms are identical.
 
                 Molecule& m2 = molecules[instances[j]];
-                int offset2 = offsets[j];
-                for (int i = 0; i < (int) atoms.size() && valid; i++) {
-                    if (!force->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
-                        valid = false;
+                if (checkAtoms) {
+                    int offset2 = offsets[j];
+                    for (int i = 0; i < (int) atoms.size() && valid; i++) {
+                        if (!force->areParticlesIdentical(atoms[i]+offset1, atoms[i]+offset2))
+                            valid = false;
+                    }
                 }
 
                 // See if the force groups are identical.
 
-                if (valid && forceIndex > -1) {
+                if (valid && forceIndex > -1 && checkGroups) {
                     for (int k = 0; k < (int) m1.groups[forceIndex].size() && valid; k++)
                         if (!force->areGroupsIdentical(m1.groups[forceIndex][k], m2.groups[forceIndex][k]))
                             valid = false;

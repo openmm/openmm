@@ -96,7 +96,7 @@ map<string, double> CustomExternalForceImpl::getDefaultParameters() {
     return parameters;
 }
 
-void CustomExternalForceImpl::updateParametersInContext(ContextImpl& context) {
-    kernel.getAs<CalcCustomExternalForceKernel>().copyParametersToContext(context, owner);
+void CustomExternalForceImpl::updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle) {
+    kernel.getAs<CalcCustomExternalForceKernel>().copyParametersToContext(context, owner, firstParticle, lastParticle);
     context.systemChanged();
 }

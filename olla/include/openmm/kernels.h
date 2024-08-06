@@ -323,8 +323,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the HarmonicBondForce to copy the parameters from
+     * @param firstBond  the index of the first bond whose parameters might have changed
+     * @param lastBond   the index of the last bond whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force, int firstBond, int lastBond) = 0;
 };
 
 /**
@@ -358,8 +360,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomBondForce to copy the parameters from
+     * @param firstBond  the index of the first bond whose parameters might have changed
+     * @param lastBond   the index of the last bond whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const CustomBondForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const CustomBondForce& force, int firstBond, int lastBond) = 0;
 };
 
 /**
@@ -393,8 +397,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the HarmonicAngleForce to copy the parameters from
+     * @param firstAngle the index of the first bond whose parameters might have changed
+     * @param lastAngle  the index of the last bond whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force, int firstAngle, int lastAngle) = 0;
 };
 
 /**
@@ -428,8 +434,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomAngleForce to copy the parameters from
+     * @param firstAngle the index of the first bond whose parameters might have changed
+     * @param lastAngle  the index of the last bond whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force, int firstAngle, int lastAngle) = 0;
 };
 
 /**
@@ -461,10 +469,12 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the PeriodicTorsionForce to copy the parameters from
+     * @param context      the context to copy parameters to
+     * @param force        the PeriodicTorsionForce to copy the parameters from
+     * @param firstTorsion the index of the first torsion whose parameters might have changed
+     * @param lastTorsion  the index of the last torsion whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force, int firstTorsion, int lastTorsion) = 0;
 };
 
 /**
@@ -566,10 +576,12 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomTorsionForce to copy the parameters from
+     * @param context      the context to copy parameters to
+     * @param force        the CustomTorsionForce to copy the parameters from
+     * @param firstTorsion the index of the first torsion whose parameters might have changed
+     * @param lastTorsion  the index of the last torsion whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force, int firstTorsion, int lastTorsion) = 0;
 };
 
 /**
@@ -611,10 +623,14 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the NonbondedForce to copy the parameters from
+     * @param context        the context to copy parameters to
+     * @param force          the NonbondedForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
+     * @param firstException the index of the first exception whose parameters might have changed
+     * @param lastException  the index of the last exception whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const NonbondedForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) = 0;
     /**
      * Get the parameters being used for PME.
      *
@@ -671,8 +687,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomNonbondedForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) = 0;
 };
 
 /**
@@ -779,10 +797,12 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomExternalForce to copy the parameters from
+     * @param context        the context to copy parameters to
+     * @param force          the CustomExternalForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    virtual void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force, int firstParticle, int lastParticle) = 0;
 };
 
 /**

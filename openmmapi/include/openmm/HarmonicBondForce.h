@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2016 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -117,6 +117,7 @@ private:
     class BondInfo;
     std::vector<BondInfo> bonds;
     bool usePeriodic;
+    mutable int numContexts, firstChangedBond, lastChangedBond;
 };
 
 /**
