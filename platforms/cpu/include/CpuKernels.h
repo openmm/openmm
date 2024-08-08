@@ -126,6 +126,16 @@ public:
      * @param force      the HarmonicAngleForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
+    /**
+     * Copy some changed parameters over to a context.
+     *
+     * @param start      the start index of the angle whose parameters to change
+     * @param count      the number of angles to change (from start:start+count)
+     * @param context    the context to copy parameters to
+     * @param force      the Force to copy the parameters from
+     */
+    void copySomeParametersToContext(int start, int count, 
+                                     ContextImpl& context, const HarmonicAngleForce& force);
 private:
     CpuPlatform::PlatformData& data;
     int numAngles;
@@ -166,6 +176,16 @@ public:
      * @param force      the PeriodicTorsionForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
+    /**
+     * Copy some changed parameters over to a context.
+     *
+     * @param start      the start index of the torsion whose parameters to change
+     * @param count      the number of torsions to change (from start:start+count)
+     * @param context    the context to copy parameters to
+     * @param force      the Force to copy the parameters from
+     */
+    void copySomeParametersToContext(int start, int count, 
+                                     ContextImpl& context, const PeriodicTorsionForce& force);
 private:
     CpuPlatform::PlatformData& data;
     int numTorsions;
@@ -248,6 +268,16 @@ public:
      */
     void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
     /**
+     * Copy specified changed parameters over to a context.
+     *
+     * @param start      start index of the particle whose parameters to copy
+     * @param count      number of particles whose parameters to copy
+     * @param context    the context to copy parameters to
+     * @param force      the CustomNonbondedForce to copy the parameters from
+     */
+    void copySomeParametersToContext(int start, int count, 
+                                     ContextImpl& context, const NonbondedForce& force);
+    /**
      * Get the parameters being used for PME.
      *
      * @param alpha   the separation parameter
@@ -319,6 +349,15 @@ public:
      * @param force      the CustomNonbondedForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
+    /**
+     * Copy specified changed parameters over to a context.
+     *
+     * @param start      start index of the particle whose parameters to copy
+     * @param count      number of particles whose parameters to copy
+     * @param context    the context to copy parameters to
+     * @param force      the CustomNonbondedForce to copy the parameters from
+     */
+    void copySomeParametersToContext(int start, int count, ContextImpl& context, const CustomNonbondedForce& force);
 private:
     void createInteraction(const CustomNonbondedForce& force);
     CpuPlatform::PlatformData& data;

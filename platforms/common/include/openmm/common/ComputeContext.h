@@ -514,6 +514,20 @@ public:
      * definitions and order to be revalidated.
      */
     bool invalidateMolecules(ComputeForceInfo* force);
+    /** 
+     * Mark that the current molecule definitions from the atom parameters from start to start+count 
+     * from one particular force (and hence the atom order) may be invalid. This should be called 
+     * whenever a subset of force field parameters change. It will cause the definitions and order
+     * to be revalidated.
+     */
+    bool invalidateMoleculesByAtom(ComputeForceInfo* force, int start, int count);
+    /** 
+     * Mark that the current molecule definitions from the group parameters from start to start+count 
+     * from one particular force (and hence the atom order) may be invalid. This should be called 
+     * whenever a subset of force field parameters change. It will cause the definitions and order
+     * to be revalidated.
+     */
+    bool invalidateMoleculesByGroup(ComputeForceInfo* force, int start, int count);
     /**
      * Make sure the current atom order is valid, based on the forces.  If not, perform reordering
      * to generate a new valid order.  This method is only needed in very unusual situations.

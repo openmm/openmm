@@ -252,6 +252,11 @@ void OpenCLParallelCalcHarmonicBondForceKernel::copyParametersToContext(ContextI
         getKernel(i).copyParametersToContext(context, force);
 }
 
+void OpenCLParallelCalcHarmonicBondForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicBondForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
+}
+
 class OpenCLParallelCalcCustomBondForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, CommonCalcCustomBondForceKernel& kernel, bool includeForce,
@@ -293,6 +298,11 @@ void OpenCLParallelCalcCustomBondForceKernel::copyParametersToContext(ContextImp
         getKernel(i).copyParametersToContext(context, force);
 }
 
+void OpenCLParallelCalcCustomBondForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const CustomBondForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
+}
+
 class OpenCLParallelCalcHarmonicAngleForceKernel::Task : public OpenCLContext::WorkTask {
 public:
     Task(ContextImpl& context, CommonCalcHarmonicAngleForceKernel& kernel, bool includeForce,
@@ -332,6 +342,11 @@ double OpenCLParallelCalcHarmonicAngleForceKernel::execute(ContextImpl& context,
 void OpenCLParallelCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
     for (int i = 0; i < (int) kernels.size(); i++)
         getKernel(i).copyParametersToContext(context, force);
+}
+
+void OpenCLParallelCalcHarmonicAngleForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicAngleForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
 }
 
 class OpenCLParallelCalcCustomAngleForceKernel::Task : public OpenCLContext::WorkTask {
@@ -414,6 +429,11 @@ double OpenCLParallelCalcPeriodicTorsionForceKernel::execute(ContextImpl& contex
 void OpenCLParallelCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
     for (int i = 0; i < (int) kernels.size(); i++)
         getKernel(i).copyParametersToContext(context, force);
+}
+
+void OpenCLParallelCalcPeriodicTorsionForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const PeriodicTorsionForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
 }
 
 class OpenCLParallelCalcRBTorsionForceKernel::Task : public OpenCLContext::WorkTask {
@@ -575,6 +595,11 @@ double OpenCLParallelCalcNonbondedForceKernel::execute(ContextImpl& context, boo
     return 0.0;
 }
 
+void OpenCLParallelCalcNonbondedForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const NonbondedForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
+}
+
 void OpenCLParallelCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
     for (int i = 0; i < (int) kernels.size(); i++)
         getKernel(i).copyParametersToContext(context, force);
@@ -622,6 +647,11 @@ double OpenCLParallelCalcCustomNonbondedForceKernel::execute(ContextImpl& contex
         thread.addTask(new Task(context, getKernel(i), includeForces, includeEnergy, data.contextEnergy[i]));
     }
     return 0.0;
+}
+
+void OpenCLParallelCalcCustomNonbondedForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const CustomNonbondedForce& force) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copySomeParametersToContext(start, count, context, force);
 }
 
 void OpenCLParallelCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {

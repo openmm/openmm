@@ -164,6 +164,11 @@ void CustomNonbondedForceImpl::updateParametersInContext(ContextImpl& context) {
     context.systemChanged();
 }
 
+void CustomNonbondedForceImpl::updateSomeParametersInContext(int start, int count, ContextImpl& context) {
+    kernel.getAs<CalcCustomNonbondedForceKernel>().copySomeParametersToContext(start, count, context, owner);
+    context.systemChanged();
+}
+
 CustomNonbondedForceImpl::LongRangeCorrectionData CustomNonbondedForceImpl::prepareLongRangeCorrection(const CustomNonbondedForce& force, int numThreads) {
     LongRangeCorrectionData data;
     data.method = force.getNonbondedMethod();

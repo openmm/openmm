@@ -537,31 +537,44 @@ double CommonCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool inc
     return 0.0;
 }
 
-void CommonCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
+void CommonCalcHarmonicBondForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicBondForce& force) {
     ContextSelector selector(cc);
     int numContexts = cc.getNumContexts();
     int startIndex = cc.getContextIndex()*force.getNumBonds()/numContexts;
     int endIndex = (cc.getContextIndex()+1)*force.getNumBonds()/numContexts;
     if (numBonds != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
-    if (numBonds == 0)
+    else if (start < 0 or start+count > force.getNumBonds())
+        throw OpenMMException("updateParametersInContext[bond]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+
+    if (numBonds == 0 or count == 0)
         return;
     
     // Record the per-bond parameters.
-    
-    vector<mm_float2> paramVector(numBonds);
-    for (int i = 0; i < numBonds; i++) {
+    if (startIndex >= start+count or endIndex < start)
+        // nothing to update
+        return;
+
+    start = max(0, start-startIndex);
+    count = min(count, endIndex-startIndex-start+1);
+
+    vector<mm_float2> paramVector(count);
+    for (int i = 0; i < count; i++) {
         int atom1, atom2;
         double length, k;
-        force.getBondParameters(startIndex+i, atom1, atom2, length, k);
+        force.getBondParameters(startIndex+start+i, atom1, atom2, length, k);
         paramVector[i] = mm_float2((float) length, (float) k);
     }
-    params.upload(paramVector);
+    params.uploadSubArray(paramVector.data(), start, count);
     
     // Mark that the current reordering may be invalid.
-    
-    cc.invalidateMolecules(info);
+    cc.invalidateMoleculesByGroup(info, start, count);
 }
+
+void CommonCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
+    copySomeParametersToContext(0, force.getNumBonds(), context, force);
+}
+
 class CommonCalcCustomBondForceKernel::ForceInfo : public ComputeForceInfo {
 public:
     ForceInfo(const CustomBondForce& force) : force(force) {
@@ -683,27 +696,46 @@ double CommonCalcCustomBondForceKernel::execute(ContextImpl& context, bool inclu
     return 0.0;
 }
 
-void CommonCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force) {
+void CommonCalcCustomBondForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const CustomBondForce& force) {
     ContextSelector selector(cc);
     int numContexts = cc.getNumContexts();
     int startIndex = cc.getContextIndex()*force.getNumBonds()/numContexts;
     int endIndex = (cc.getContextIndex()+1)*force.getNumBonds()/numContexts;
     if (numBonds != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of bonds has changed");
-    if (numBonds == 0)
+    else if (start < 0 or start+count > force.getNumBonds())
+        throw OpenMMException("updateParametersInContext[custombond]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+
+    if (numBonds == 0 or count == 0)
         return;
     
     // Record the per-bond parameters.
+    if (startIndex >= start+count or endIndex < start)
+        // nothing to update
+        return;
+
+    start = max(0, start-startIndex);
+    count = min(count, endIndex-startIndex-start+1);
     
-    vector<vector<double> > paramVector(numBonds);
-    int atom1, atom2;
-    for (int i = 0; i < numBonds; i++)
-        force.getBondParameters(startIndex+i, atom1, atom2, paramVector[i]);
-    params->setParameterValues(paramVector, true);
+    vector<vector<float> > paramVector(count);
+    vector<double> parameters;
+
+    for (int i = 0; i < count; i++) {
+        int atom1, atom2;
+        force.getBondParameters(startIndex+start+i, atom1, atom2, parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (float) parameters[j];
+    }
+    params->setSomeParameterValues(start, paramVector);
     
     // Mark that the current reordering may be invalid.
     
-    cc.invalidateMolecules(info);
+    cc.invalidateMoleculesByGroup(info, start, count);
+}
+
+void CommonCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force) {
+    copySomeParametersToContext(0, force.getNumBonds(), context, force);
 }
 
 class CommonCalcHarmonicAngleForceKernel::ForceInfo : public ComputeForceInfo {
@@ -764,30 +796,42 @@ double CommonCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool in
     return 0.0;
 }
 
-void CommonCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+void CommonCalcHarmonicAngleForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const HarmonicAngleForce& force) {
     ContextSelector selector(cc);
     int numContexts = cc.getNumContexts();
     int startIndex = cc.getContextIndex()*force.getNumAngles()/numContexts;
     int endIndex = (cc.getContextIndex()+1)*force.getNumAngles()/numContexts;
     if (numAngles != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of angles has changed");
-    if (numAngles == 0)
+    else if (start < 0 or start+count > force.getNumAngles())
+        throw OpenMMException("updateParametersInContext[angle]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+    
+    if (numAngles == 0 or count == 0)
         return;
     
     // Record the per-angle parameters.
-    
-    vector<mm_float2> paramVector(numAngles);
-    for (int i = 0; i < numAngles; i++) {
+    if (startIndex >= start+count or endIndex < start)
+        // nothing to update
+        return;
+
+    start = max(0, start-startIndex);
+    count = min(count, endIndex-startIndex-start+1);
+
+    vector<mm_float2> paramVector(count);
+    for (int i = 0; i < count; i++) {
         int atom1, atom2, atom3;
         double angle, k;
-        force.getAngleParameters(startIndex+i, atom1, atom2, atom3, angle, k);
+        force.getAngleParameters(startIndex+start+i, atom1, atom2, atom3, angle, k);
         paramVector[i] = mm_float2((float) angle, (float) k);
     }
-    params.upload(paramVector);
+    params.uploadSubArray(paramVector.data(), start, count);
     
     // Mark that the current reordering may be invalid.
-    
-    cc.invalidateMolecules();
+    cc.invalidateMoleculesByGroup(info, start, count);
+}
+
+void CommonCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+    copySomeParametersToContext(0, force.getNumAngles(), context, force);
 }
 
 class CommonCalcCustomAngleForceKernel::ForceInfo : public ComputeForceInfo {
@@ -994,30 +1038,42 @@ double CommonCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool 
     return 0.0;
 }
 
-void CommonCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+void CommonCalcPeriodicTorsionForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const PeriodicTorsionForce& force) {
     ContextSelector selector(cc);
     int numContexts = cc.getNumContexts();
     int startIndex = cc.getContextIndex()*force.getNumTorsions()/numContexts;
     int endIndex = (cc.getContextIndex()+1)*force.getNumTorsions()/numContexts;
     if (numTorsions != endIndex-startIndex)
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
-    if (numTorsions == 0)
+    else if (start < 0 or start+count > force.getNumTorsions())
+        throw OpenMMException("updateParametersInContext[torsion]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+
+    if (numTorsions == 0 or count == 0)
         return;
     
     // Record the per-torsion parameters.
-    
-    vector<mm_float4> paramVector(numTorsions);
-    for (int i = 0; i < numTorsions; i++) {
+    if (startIndex >= start+count or endIndex < start)
+        // nothing to update
+        return;
+
+    start = max(0, start-startIndex);
+    count = min(count, endIndex-startIndex-start+1);
+
+    vector<mm_float4> paramVector(count);
+    for (int i = 0; i < count; i++) {
         int atom1, atom2, atom3, atom4, periodicity;
         double phase, k;
-        force.getTorsionParameters(startIndex+i, atom1, atom2, atom3, atom4, periodicity, phase, k);
+        force.getTorsionParameters(startIndex+start+i, atom1, atom2, atom3, atom4, periodicity, phase, k);
         paramVector[i] = mm_float4((float) k, (float) phase, (float) periodicity, 0.0f);
     }
-    params.upload(paramVector);
+    params.uploadSubArray(paramVector.data(), start, count);
     
     // Mark that the current reordering may be invalid.
-    
-    cc.invalidateMolecules();
+    cc.invalidateMoleculesByGroup(info, start, count);
+}
+
+void CommonCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+    copySomeParametersToContext(0, force.getNumTorsions(), context, force);
 }
 
 class CommonCalcRBTorsionForceKernel::ForceInfo : public ComputeForceInfo {
@@ -2704,25 +2760,29 @@ double CommonCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool 
     return 0;
 }
 
-void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
+void CommonCalcCustomNonbondedForceKernel::copySomeParametersToContext(int start, int count, ContextImpl& context, const CustomNonbondedForce& force) {
     ContextSelector selector(cc);
     int numParticles = force.getNumParticles();
     if (numParticles != cc.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
+    else if (start < 0 or start+count > numParticles)
+        throw OpenMMException("updateParametersInContext[Nonbonded]: Illegal start/count parameters: " + std::to_string(start) + "/" + std::to_string(count));
+
     // Record the per-particle parameters.
 
-    int paddedNumParticles = cc.getPaddedNumAtoms();
     int numParams = force.getNumPerParticleParameters();
-    vector<vector<float> > paramVector(paddedNumParticles, vector<float>(numParams, 0));
+
+    vector<vector<float> > paramVector(count, std::vector<float>(numParams, 0));
     vector<double> parameters;
-    for (int i = 0; i < numParticles; i++) {
-        force.getParticleParameters(i, parameters);
+
+    for (int i = 0; i < count; i++) {
+        force.getParticleParameters(start+i, parameters);
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (float) parameters[j];
     }
-    params->setParameterValues(paramVector);
+    params->setSomeParameterValues(start, paramVector);
 
     // If necessary, recompute the long range correction.
 
@@ -2746,8 +2806,11 @@ void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& 
     }
 
     // Mark that the current reordering may be invalid.
+    cc.invalidateMoleculesByAtom(info, start, count);
+}
 
-    cc.invalidateMolecules(info);
+void CommonCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
+    this->copySomeParametersToContext(0, force.getNumParticles(), context, force);
 }
 
 class CommonCalcGBSAOBCForceKernel::ForceInfo : public ComputeForceInfo {

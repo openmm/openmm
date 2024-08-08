@@ -356,6 +356,10 @@ void NonbondedForce::updateParametersInContext(Context& context) {
     dynamic_cast<NonbondedForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
 }
 
+void NonbondedForce::updateSomeParametersInContext(int start, int count, Context& context) {
+    dynamic_cast<NonbondedForceImpl&>(getImplInContext(context)).updateSomeParametersInContext(start, count, getContextImpl(context));
+}
+
 bool NonbondedForce::getExceptionsUsePeriodicBoundaryConditions() const {
     return exceptionsUsePeriodic;
 }

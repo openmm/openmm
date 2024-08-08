@@ -112,3 +112,8 @@ void CustomBondForceImpl::updateParametersInContext(ContextImpl& context) {
     kernel.getAs<CalcCustomBondForceKernel>().copyParametersToContext(context, owner);
     context.systemChanged();
 }
+
+void CustomBondForceImpl::updateSomeParametersInContext(int start, int count, ContextImpl& context) {
+    kernel.getAs<CalcCustomBondForceKernel>().copySomeParametersToContext(start, count, context, owner);
+    context.systemChanged();
+}
