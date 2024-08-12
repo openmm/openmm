@@ -2117,8 +2117,7 @@ AmoebaReferenceMultipoleForce::UpdateInducedDipoleFieldStruct::UpdateInducedDipo
 AmoebaReferenceGeneralizedKirkwoodMultipoleForce::AmoebaReferenceGeneralizedKirkwoodMultipoleForce(AmoebaReferenceGeneralizedKirkwoodForce* amoebaReferenceGeneralizedKirkwoodForce) :
                AmoebaReferenceMultipoleForce(NoCutoff),
                _amoebaReferenceGeneralizedKirkwoodForce(amoebaReferenceGeneralizedKirkwoodForce),
-               _gkc(2.455)
-{
+               _gkc(2.455), _beta0(0.9563), _beta1(0.2578), _beta2(0.0810) {
 
     double solventDielectric  = _amoebaReferenceGeneralizedKirkwoodForce->getSolventDielectric();
 
@@ -2127,17 +2126,18 @@ AmoebaReferenceGeneralizedKirkwoodMultipoleForce::AmoebaReferenceGeneralizedKirk
     _fq                           =  3.0*(1.0 - solventDielectric)/(2.0 + 3.0*solventDielectric);
 
     _amoebaReferenceGeneralizedKirkwoodForce->getGrycukBornRadii(_bornRadii);
+    _amoebaReferenceGeneralizedKirkwoodForce->getSoluteIntegral(_soluteIntegral);
     _amoebaReferenceGeneralizedKirkwoodForce->getAtomicRadii(_atomicRadii);
-    _amoebaReferenceGeneralizedKirkwoodForce->getScaleFactors(_scaledRadii);
+    _amoebaReferenceGeneralizedKirkwoodForce->getScaleFactors(_scaleFactors);
+    _amoebaReferenceGeneralizedKirkwoodForce->getDescreenRadii(_descreenRadii);
+    _amoebaReferenceGeneralizedKirkwoodForce->getNeckFactors(_neckFactors);
 
-    _includeCavityTerm            = _amoebaReferenceGeneralizedKirkwoodForce->getIncludeCavityTerm();
-    _probeRadius                  = _amoebaReferenceGeneralizedKirkwoodForce->getProbeRadius();
-    _surfaceAreaFactor            = _amoebaReferenceGeneralizedKirkwoodForce->getSurfaceAreaFactor();
-    _dielectricOffset             = _amoebaReferenceGeneralizedKirkwoodForce->getDielectricOffset();
-
-    for (unsigned int ii = 0; ii < _scaledRadii.size(); ii++) {
-        _scaledRadii[ii] *= _atomicRadii[ii];
-    }
+    _includeCavityTerm = _amoebaReferenceGeneralizedKirkwoodForce->getIncludeCavityTerm();
+    _probeRadius = _amoebaReferenceGeneralizedKirkwoodForce->getProbeRadius();
+    _surfaceAreaFactor = _amoebaReferenceGeneralizedKirkwoodForce->getSurfaceAreaFactor();
+    _dielectricOffset = _amoebaReferenceGeneralizedKirkwoodForce->getDielectricOffset();
+    _tanhRescaling = _amoebaReferenceGeneralizedKirkwoodForce->getTanhRescaling();
+    _amoebaReferenceGeneralizedKirkwoodForce->getTanhParameters(_beta0, _beta1, _beta2);
 }
 
 AmoebaReferenceGeneralizedKirkwoodMultipoleForce::~AmoebaReferenceGeneralizedKirkwoodMultipoleForce()
@@ -4060,66 +4060,127 @@ double AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateElectrostatic(
     return energy;
 }
 
-void AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateGrycukChainRulePairIxn(const MultipoleParticleData& particleI, const MultipoleParticleData& particleJ,
-                                                                                       const vector<double>& dBorn, vector<Vec3>& forces) const
-{
-    unsigned int iIndex             = particleI.particleIndex;
-    unsigned int jIndex             = particleJ.particleIndex;
+static double neckDescreenDerivative(double r, double radius, double radiusK, double sneck) {
+    // Radius of water in nm.
+    double radiusWater = 0.14;
 
-    double pi43                     = (4.0/3.0)*M_PI;
+    if (r > radius + radiusK + 2 * radiusWater) {
+        return 0.0;
+    }
+
+    // Get Aij and Bij
+    double constants[] = {0.0, 0.0};
+    AmoebaReferenceGeneralizedKirkwoodForce::getNeckConstants(radius, radiusK, constants);
+
+    double Aij = constants[0];
+    double Bij = constants[1];
+
+    // Use Aij and Bij to get neck value using derivative of Equation 13 from Aguilar/Onufriev 2010 paper
+    double rMinusBij = r - Bij;
+    double rMinusBij3 = rMinusBij * rMinusBij * rMinusBij;
+    double rMinusBij4 = rMinusBij3 * rMinusBij;
+    double radiiMinusr = radius + radiusK + 2.0 * radiusWater - r;
+    double radiiMinusr3 = radiiMinusr * radiiMinusr * radiiMinusr;
+    double radiiMinusr4 = radiiMinusr3 * radiiMinusr;
+
+    double PI4_3 = 4.0 * M_PI / 3.0;
+    return 4.0 * PI4_3 * (sneck * Aij * rMinusBij3 * radiiMinusr4 - sneck * Aij * rMinusBij4 * radiiMinusr3);
+}
+
+void AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateGrycukChainRulePairIxn(
+        const MultipoleParticleData &particleI, const MultipoleParticleData &particleJ,
+        const vector<double> &dBorn, vector<Vec3> &forces) const {
+    unsigned int iIndex = particleI.particleIndex;
+    unsigned int jIndex = particleJ.particleIndex;
+
+    if (iIndex == jIndex) return;
+
+    double bornRadiusI = _bornRadii[iIndex];
+
+    const double bigRadius = 3.0;
+    if (bornRadiusI >= bigRadius) return;
+
+    double third = 1.0 / 3.0;
+    double pi43 = 4.0 * third * M_PI;
 
     double lik, uik;
     double lik4, uik4;
-    double factor                   = -pow(M_PI, (1.0/3.0))*pow(6.0,(2.0/3.0))/9.0;
-    double term                     = pi43/(_bornRadii[iIndex]*_bornRadii[iIndex]*_bornRadii[iIndex]);
-          term                      = factor/pow(term, (4.0/3.0));
+    double factor = -pow(M_PI, third) * pow(6.0, 2.0 * third) / 9.0;
+    double term = pi43 / (_bornRadii[iIndex] * _bornRadii[iIndex] * _bornRadii[iIndex]);
+    term = factor / pow(term, 4.0 * third);
+    if (_tanhRescaling) {
+        double rhoi = _atomicRadii[iIndex];
+        double rhoi3 = rhoi * rhoi * rhoi;
+        double rhoi3Psi = rhoi3 * _soluteIntegral[iIndex];
+        double rhoi6Psi2 = rhoi3Psi * rhoi3Psi;
+        double rhoi9Psi3 = rhoi6Psi2 * rhoi3Psi;
+        double rhoi6Psi = rhoi3 * rhoi3 * _soluteIntegral[iIndex];
+        double rhoi9Psi2 = rhoi6Psi2 * rhoi3;
+        double tanhTerm = tanh(_beta0 * rhoi3Psi - _beta1 * rhoi6Psi2 + _beta2 * rhoi9Psi3);
+        double tanh2 = tanhTerm * tanhTerm;
+        double chainRuleTerm = _beta0 * rhoi3 - 2.0 * _beta1 * rhoi6Psi + 3.0 * _beta2 * rhoi9Psi2;
+        double recipBigRad = 1.0 / bigRadius;
+        double recipBigRad3 = recipBigRad * recipBigRad * recipBigRad;
+        double tanh_constant = pi43 * ((1.0 / rhoi3) - recipBigRad3);
+        term = term * tanh_constant * chainRuleTerm * (1.0 - tanh2);
+    }
 
-    Vec3 deltaR                     = particleJ.position - particleI.position;
+    Vec3 deltaR = particleJ.position - particleI.position;
+    double sk = _scaleFactors[jIndex] * _descreenRadii[jIndex];
+    if (sk <= 0.0) return;
+    double sk2 = sk * sk;
+    double r2 = deltaR.dot(deltaR);
+    double r = sqrt(r2);
+    double de = 0.0;
 
-    double sk                       = _scaledRadii[jIndex];
-    double sk2                      = sk*sk;
-    double r2                       = deltaR.dot(deltaR);
-    double r                        = sqrt(r2);
-    double de                       = 0.0;
+    double baseRadiusI = max(_atomicRadii[iIndex], _descreenRadii[iIndex]) + _dielectricOffset;
+    // If atom index engulfs the descreening atom, then there is no descreening.
+    if (baseRadiusI > r + sk) return;
 
-    // If atom index engulfs the descreening atom, then there is no descreening. 
-    if (_atomicRadii[iIndex] > r + sk) return;
-
-    if ((_atomicRadii[iIndex] + r) < sk) {
+    if ((baseRadiusI + r) < sk) {
         double uik4;
-        uik                = sk - r;
-        uik4               = uik*uik;
-        uik4               = uik4*uik4;
-        de                 = -4.0*M_PI/uik4;
+        uik = sk - r;
+        uik4 = uik * uik;
+        uik4 = uik4 * uik4;
+        de = -4.0 * M_PI / uik4;
     }
 
-    if ((_atomicRadii[iIndex] + r) < sk) {
-        lik          = sk - r;
-        lik4         = lik*lik;
-        lik4         = lik4*lik4;
-        de          += 0.25*M_PI*(sk2-4.0*sk*r+17.0*r2)/ (r2*lik4);
-    } else if (r < (_atomicRadii[iIndex] +sk)) {
-        lik          = _atomicRadii[iIndex];
-        lik4         = lik*lik;
-        lik4         = lik4*lik4;
-        de          += 0.25*M_PI*(2.0*_atomicRadii[iIndex]*_atomicRadii[iIndex]-sk2-r2)/ (r2*lik4);
+    if ((baseRadiusI + r) < sk) {
+        lik = sk - r;
+        lik4 = lik * lik;
+        lik4 = lik4 * lik4;
+        de += 0.25 * M_PI * (sk2 - 4.0 * sk * r + 17.0 * r2) / (r2 * lik4);
+    } else if (r < (baseRadiusI + sk)) {
+        lik = baseRadiusI;
+        lik4 = lik * lik;
+        lik4 = lik4 * lik4;
+        de += 0.25 * M_PI * (2.0 * baseRadiusI * baseRadiusI - sk2 - r2) / (r2 * lik4);
     } else {
-        lik          = r - sk;
-        lik4         = lik*lik;
-        lik4         = lik4*lik4;
-        de          += 0.25*M_PI*(sk2-4.0*sk*r+r2)/ (r2*lik4);
+        lik = r - sk;
+        lik4 = lik * lik;
+        lik4 = lik4 * lik4;
+        de += 0.25 * M_PI * (sk2 - 4.0 * sk * r + r2) / (r2 * lik4);
     }
-    uik                = r + sk;
-    uik4               = uik*uik;
-    uik4               = uik4*uik4;
+    uik = r + sk;
+    uik4 = uik * uik;
+    uik4 = uik4 * uik4;
 
-    de                -= 0.25*M_PI*(sk2+4.0*sk*r+r2)/ (r2*uik4);
-    double dbr         = term*de/r;
-          de           = dbr*dBorn[iIndex];
+    de -= 0.25 * M_PI * (sk2 + 4.0 * sk * r + r2) / (r2 * uik4);
 
-    forces[iIndex]    -= deltaR*de;
-    forces[jIndex]    += deltaR*de;
+    double mixedNeckScale =  0.5 * (_neckFactors[iIndex] + _neckFactors[jIndex]);
+    if (mixedNeckScale > 0.0) {
+        de += neckDescreenDerivative(r, baseRadiusI, _descreenRadii[jIndex], mixedNeckScale);
+    }
+
+    double dbr = term * de / r;
+    de = dbr * dBorn[iIndex];
+
+    forces[iIndex] -= deltaR * de;
+    forces[jIndex] += deltaR * de;
 }
+
+
+
 
 double AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateCavityTermEnergyAndForces(vector<double>& dBorn) const
 {
