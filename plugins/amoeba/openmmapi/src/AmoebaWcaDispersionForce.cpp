@@ -38,14 +38,22 @@
 using namespace OpenMM;
 
 AmoebaWcaDispersionForce::AmoebaWcaDispersionForce() {
-    epso      = 0.1100;
-    epsh      = 0.0135;
-    rmino     = 1.7025;
-    rminh     = 1.3275;
-    awater    = 0.033428;
-    slevy     = 1.0;
-    shctd     = 0.81;
-    dispoff   = 0.26;
+    // Amoeba Water '03 vdW parameters (Diameters in Angstroms; Well depth in kcal/mole)
+    // vdw           1               3.4050     0.1100
+    // vdw           2               2.6550     0.0135      0.910
+
+    // Convert kcal/mol to kJ/mol
+    epso = 0.1100 * 4.184e0;
+    epsh = 0.0135 * 4.184e0;
+    // Convert A to nm.
+    rmino = 1.7025e-01;
+    rminh = 1.3275e-01;
+    dispoff = 1.056e-01;
+    // Convert water number density from water / A^3 to water / nm^3.
+    awater = 0.033428e03;
+    // No units.
+    slevy = 1.0;
+    shctd = 0.75;
 }
 
 int AmoebaWcaDispersionForce::addParticle(double radius, double epsilon) {
