@@ -99,7 +99,7 @@ DEVICE real integratlAfterRminDerivative(real ri, real eps, real rmin, real rmin
 }
 
 DEVICE real interact(real factor, real ri, real sk, real rmix, real emix,
-                     real r, real r2, real r3, real3 &force) {
+                     real r, real r2, real r3, real3 *force) {
     real sum = 0;
     // Nothing to do if the integral begins beyond r + sk (i.e. atom k does not exclude solvent)
     if (ri < r + sk) {
@@ -156,9 +156,9 @@ DEVICE real interact(real factor, real ri, real sk, real rmix, real emix,
         }
         // Increment the individual dispersion gradient components.
         de *= factor / r;
-        force.x += de;
-        force.y += de;
-        force.z += de;
+        (*force).x += de;
+        (*force).y += de;
+        (*force).z += de;
     }
     return factor * sum;
 }
@@ -193,8 +193,8 @@ DEVICE void computeOneInteraction(AtomData atom1, AtomData atom2, real rmixo, re
     real nH = 2.0f;
 
     *force = make_real3(0);
-    *energy = interact(nO, riO, sk, rmixo, emixo, r, r2, r3, *force) +
-             interact(nH, riH, sk, rmixh, emixh, r, r2, r3, *force);
+    *energy = interact(nO, riO, sk, rmixo, emixo, r, r2, r3, force) +
+             interact(nH, riH, sk, rmixh, emixh, r, r2, r3, force);
 
     (*force).x *= AWATER * xr;
     (*force).y *= AWATER * yr;

@@ -5,7 +5,7 @@
  */
 KERNEL void reduceBornSum(GLOBAL const mm_long* RESTRICT bornSum, GLOBAL const float* RESTRICT params, GLOBAL real* RESTRICT bornRadii) {
 
-    real RECIP_MAX_RADIUS3 = POW(BIG_RADIUS, -3.0);
+    real RECIP_MAX_RADIUS3 = POW(BIG_RADIUS, (real) -3.0);
     real PI4_3 = 4.0 / 3.0 * M_PI;
     real INVERSE_PI4_3 = 1.0 / PI4_3;
     real ONE_THIRD = 1.0 / 3.0;
@@ -711,9 +711,9 @@ DEVICE void computeBornChainRuleInteraction(AtomData3 atom1, AtomData3 atom2, re
                                             GLOBAL const float* RESTRICT neckB) {
     real third = 1.0 / (real) 3.0;
     real pi43 = 4.0 * third * M_PI;
-    real factor = -POW(M_PI, third)*POW((real) 6.0, 2.0 * third) / 9.0;
+    real factor = -POW(M_PI, third)*POW((real) 6.0, (real) 2.0 * third) / 9.0;
     real term = pi43/(atom1.bornRadius*atom1.bornRadius*atom1.bornRadius);
-    term = factor/POW(term, 4.0 * third);
+    term = factor/POW(term, (real) 4.0 * third);
 
     if (TANH_RESCALING) {
         real bornSum = atom1.bornSum * pi43;
