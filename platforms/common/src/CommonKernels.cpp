@@ -352,6 +352,9 @@ void CommonUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Ve
 }
 
 void CommonUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) {
+    if (!cc.getBoxIsTriclinic() && (b[0] != 0 || c[0] != 0 || c[1] != 0))
+        throw OpenMMException("The box shape has changed from rectangular to triclinic.  To do this, you must call setDefaultPeriodicBoxVectors() on the System to specify a triclinic default box, then reinitialize the Context.");
+
     // If any particles have been wrapped to the first periodic box, we need to unwrap them
     // to avoid changing their positions.
 
