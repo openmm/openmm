@@ -12,7 +12,7 @@ dependencies:
 - python
 - cython
 - swig
-- numpy <2.0
+- numpy
 - ocl-icd-system
 - doxygen 1.8.14
 # test
