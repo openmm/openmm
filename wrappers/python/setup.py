@@ -270,6 +270,7 @@ def main():
         pass
     setupKeywords=buildKeywordDictionary()
     writeVersionPy()
+    print(setupKeywords)
     setup(**setupKeywords)
 
 if __name__ == '__main__':
