@@ -247,11 +247,16 @@ UNITS = {
 ("SerializationProxy", "getTypeName") : (None, ()),
 
 # check getSurfaceAreaFactor
-("AmoebaGeneralizedKirkwoodForce",       "getParticleParameters")                         :  (None, ('unit.elementary_charge', 'unit.nanometer', None)),
+("AmoebaGeneralizedKirkwoodForce",       "getParticleParameters")                         :  (None, ('unit.elementary_charge', 'unit.nanometer', None, 'unit.nanometer', None)),
 ("AmoebaGeneralizedKirkwoodForce",       "getDielectricOffset")                           :  ( 'unit.nanometer', ()),
+("AmoebaGeneralizedKirkwoodForce",       "getSolventDielectric")                          :  ( 'unit.nanometer', ()),
+("AmoebaGeneralizedKirkwoodForce",       "getSoluteDielectric")                           :  ( 'unit.nanometer', ()),
 ("AmoebaGeneralizedKirkwoodForce",       "getIncludeCavityTerm")                          :  ( None,()),
+("AmoebaGeneralizedKirkwoodForce",       "getTanhRescaling")                              :  ( None,()),
+("AmoebaGeneralizedKirkwoodForce",       "getTanhParameters")                              : ( None,(None, None, None)),
 ("AmoebaGeneralizedKirkwoodForce",       "getProbeRadius")                                :  ( 'unit.nanometer', ()),
 ("AmoebaGeneralizedKirkwoodForce",       "getSurfaceAreaFactor")                          :  ( 'unit.kilojoule_per_mole/(unit.nanometer*unit.nanometer)',()),
+
 
 ("AmoebaMultipoleForce",                 "getNumMultipoles")                              :  ( None,()),
 ("AmoebaMultipoleForce",                 "getPolarizationType")                           :  ( None,()),
@@ -304,7 +309,7 @@ UNITS = {
 ("AmoebaVdwForce",                        "getSoftcorePower")                              :  ( None, ()),
 ("AmoebaVdwForce",                        "getSoftcoreAlpha")                              :  ( None, ()),
 ("AmoebaVdwForce",                        "getCutoff")                                     :  ( 'unit.nanometer', ()),
-("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, 'unit.nanometer', 'unit.kilojoule_per_mole', None, None, None)),
+("AmoebaVdwForce",                        "getParticleParameters")                         :  ( None, (None, 'unit.nanometer', 'unit.kilojoule_per_mole', None, None, None, None)),
 ("AmoebaVdwForce",                        "getParticleTypeParameters")                     :  ( None, ('unit.nanometer', 'unit.kilojoule_per_mole')),
 ("AmoebaVdwForce",                        "getTypePairParameters")                         :  ( None, (None, None, 'unit.nanometer', 'unit.kilojoule_per_mole')),
 
