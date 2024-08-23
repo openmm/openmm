@@ -10,7 +10,7 @@ dependencies:
 - python
 - cython
 - swig
-- numpy <2.0
+- numpy
 - doxygen 1.8.14
 # test
 - pytest
