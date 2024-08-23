@@ -577,7 +577,11 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
         __global const real4* restrict posq, unsigned int maxTiles, unsigned int startBlockIndex, unsigned int numBlocks, __global real2* restrict sortedBlocks,
         __global const real4* restrict sortedBlockCenter, __global const real4* restrict sortedBlockBoundingBox,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global real4* restrict oldPositions,
-        __global const int* restrict rebuildNeighborList) {
+        __global const int* restrict rebuildNeighborList
+#ifdef USE_LARGE_BLOCKS
+        , __global real4* restrict largeBlockCenter, __global real4* restrict largeBlockBoundingBox
+#endif
+        ) {
     __local int buffer[BUFFER_SIZE];
     __local int sum[BUFFER_SIZE];
     __local int2 temp[BUFFER_SIZE];
