@@ -152,7 +152,7 @@ class PDBFile(object):
                                 element = elem.get_by_symbol(upper[0])
                             except KeyError:
                                 pass
-                    newAtom = top.addAtom(atomName, element, r, str(atom.serial_number))
+                    newAtom = top.addAtom(atomName, element, r, str(atom.serial_number), formal_charge=atom.formal_charge)
                     atomByNumber[atom.serial_number] = newAtom
         self._positions = []
         for model in pdb.iter_models(True):
