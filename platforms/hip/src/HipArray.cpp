@@ -7,7 +7,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2012-2022 Stanford University and the Authors.      *
- * Portions copyright (c) 2020-2022 Advanced Micro Devices, Inc.              *
+ * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -96,10 +96,9 @@ void HipArray::uploadSubArray(const void* data, int offset, int elements, bool b
     if (offset < 0 || offset+elements > getSize())
         throw OpenMMException("uploadSubArray: data exceeds range of array");
     hipError_t result;
-    if (blocking)
-        result = hipMemcpyHtoD(reinterpret_cast<char*>(pointer)+offset*elementSize, const_cast<void*>(data), elements*elementSize);
-    else
-        result = hipMemcpyHtoDAsync(reinterpret_cast<char*>(pointer)+offset*elementSize, const_cast<void*>(data), elements*elementSize, context->getCurrentStream());
+    result = hipMemcpyAsync(reinterpret_cast<char*>(pointer)+offset*elementSize, const_cast<void*>(data), elements*elementSize, hipMemcpyHostToDevice, context->getCurrentStream());
+    if (blocking && result == hipSuccess)
+        result = hipStreamSynchronize(context->getCurrentStream());
     if (result != hipSuccess) {
         std::stringstream str;
         str<<"Error uploading array "<<name<<": "<<HipContext::getErrorString(result)<<" ("<<result<<")";
@@ -111,10 +110,9 @@ void HipArray::download(void* data, bool blocking) const {
     if (pointer == 0)
         throw OpenMMException("HipArray has not been initialized");
     hipError_t result;
-    if (blocking)
-        result = hipMemcpyDtoH(data, pointer, size*elementSize);
-    else
-        result = hipMemcpyDtoHAsync(data, pointer, size*elementSize, context->getCurrentStream());
+    result = hipMemcpyAsync(data, pointer, size*elementSize, hipMemcpyDeviceToHost, context->getCurrentStream());
+    if (blocking && result == hipSuccess)
+        result = hipStreamSynchronize(context->getCurrentStream());
     if (result != hipSuccess) {
         std::stringstream str;
         str<<"Error downloading array "<<name<<": "<<HipContext::getErrorString(result)<<" ("<<result<<")";
@@ -128,7 +126,7 @@ void HipArray::copyTo(ArrayInterface& dest) const {
     if (dest.getSize() != size || dest.getElementSize() != elementSize)
         throw OpenMMException("Error copying array "+name+" to "+dest.getName()+": The destination array does not match the size of the array");
     HipArray& cuDest = context->unwrap(dest);
-    hipError_t result = hipMemcpyDtoDAsync(cuDest.getDevicePointer(), pointer, size*elementSize, context->getCurrentStream());
+    hipError_t result = hipMemcpyAsync(cuDest.getDevicePointer(), pointer, size*elementSize, hipMemcpyDeviceToDevice, context->getCurrentStream());
     if (result != hipSuccess) {
         std::stringstream str;
         str<<"Error copying array "<<name<<" to "<<dest.getName()<<": "<<HipContext::getErrorString(result)<<" ("<<result<<")";

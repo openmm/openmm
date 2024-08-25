@@ -7,7 +7,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2019 Stanford University and the Authors.           *
- * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
+ * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -43,7 +43,7 @@ HipEvent::~HipEvent() {
 }
 
 void HipEvent::enqueue() {
-    hipEventRecord(event, 0);
+    hipEventRecord(event, context.getCurrentStream());
 }
 
 void HipEvent::wait() {

@@ -10,7 +10,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
- * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
+ * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,7 +39,6 @@
 
 
 #include <map>
-#include <stack>
 #include <string>
 #include <utility>
 #define __CL_ENABLE_EXCEPTIONS
@@ -625,8 +624,8 @@ private:
     std::map<std::string, std::string> compilationDefines;
     std::vector<hipModule_t> loadedModules;
     hipDevice_t device;
-    std::stack<hipDevice_t> outerScopeDevices;
     hipStream_t currentStream;
+    hipStream_t defaultStream;
     hipFunction_t clearBufferKernel;
     hipFunction_t clearTwoBuffersKernel;
     hipFunction_t clearThreeBuffersKernel;

@@ -85,7 +85,7 @@ bool HipContext::hasInitializedHip = false;
 
 
 HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& tempDir, HipPlatform::PlatformData& platformData,
-        HipContext* originalContext) : ComputeContext(system), currentStream(0), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
+        HipContext* originalContext) : ComputeContext(system), currentStream(0), defaultStream(0), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
         pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL),
         useBlockingSync(useBlockingSync), supportsHardwareFloatGlobalAtomicAdd(false) {
     if (!hasInitializedHip) {
@@ -137,17 +137,8 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
             CHECK_RESULT(hipDeviceGet(&device, trialDeviceIndex));
             // try setting device
             if (hipSetDevice(device) == hipSuccess) {
-                // and set flags
-                unsigned int flags = hipDeviceMapHost;
-                if (useBlockingSync)
-                    flags += hipDeviceScheduleBlockingSync;
-                else
-                    flags += hipDeviceScheduleSpin;
-
-                if (hipSetDeviceFlags(flags) == hipSuccess) {
-                    this->deviceIndex = trialDeviceIndex;
-                    break;
-                }
+                this->deviceIndex = trialDeviceIndex;
+                break;
             }
 
         }
@@ -157,12 +148,15 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
             else
                 throw OpenMMException("No compatible HIP device is available");
         }
+        CHECK_RESULT(hipStreamCreateWithFlags(&defaultStream, hipStreamNonBlocking));
     }
     else {
         isLinkedContext = true;
         this->deviceIndex = originalContext->deviceIndex;
         this->device = originalContext->device;
+        defaultStream = originalContext->defaultStream;
     }
+    currentStream = defaultStream;
 
     hipDeviceProp_t props;
     CHECK_RESULT(hipGetDeviceProperties(&props, device));
@@ -192,9 +186,15 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
         if (canAccess) {
             {
                 ContextSelector selector2(*platformData.contexts[0]);
-                CHECK_RESULT(hipDeviceEnablePeerAccess(getDevice(), 0));
+                hipError_t result = hipDeviceEnablePeerAccess(getDevice(), 0);
+                if (result != hipErrorPeerAccessAlreadyEnabled) {
+                    CHECK_RESULT(result);
+                }
             }
-            CHECK_RESULT(hipDeviceEnablePeerAccess(platformData.contexts[0]->getDevice(), 0));
+            hipError_t result = hipDeviceEnablePeerAccess(platformData.contexts[0]->getDevice(), 0);
+            if (result != hipErrorPeerAccessAlreadyEnabled) {
+                CHECK_RESULT(result);
+            }
         }
     }
     numAtoms = system.getNumParticles();
@@ -369,6 +369,8 @@ HipContext::~HipContext() {
         delete nonbonded;
     for (auto module : loadedModules)
         hipModuleUnload(module);
+    if (!isLinkedContext)
+        hipStreamDestroy(defaultStream);
     popAsCurrent();
     contextIsValid = false;
 }
@@ -427,9 +429,11 @@ void HipContext::setAsCurrent() {
         hipSetDevice(device);
 }
 
+thread_local std::stack<hipDevice_t> outerScopeDevices;
+
 void HipContext::pushAsCurrent() {
     if (contextIsValid) {
-        // Emulate cuCtxPushCurrent's behavior
+        // Emulate cuCtxPushCurrent's behavior because hipCtxPushCurrent is deprecated
         hipDevice_t outerScopeDevice;
         hipGetDevice(&outerScopeDevice);
         outerScopeDevices.push(outerScopeDevice);
@@ -441,7 +445,7 @@ void HipContext::pushAsCurrent() {
 
 void HipContext::popAsCurrent() {
     if (contextIsValid) {
-        // Emulate cuCtxPopCurrent's behavior
+        // Emulate cuCtxPopCurrent's behavior because hipCtxPopCurrent is deprecated
         hipDevice_t outerScopeDevice = outerScopeDevices.top();
         outerScopeDevices.pop();
         if (outerScopeDevice != device) {
@@ -666,7 +670,7 @@ void HipContext::setCurrentStream(hipStream_t stream) {
 }
 
 void HipContext::restoreDefaultStream() {
-    setCurrentStream(0);
+    currentStream = defaultStream;
 }
 
 HipArray* HipContext::createArray() {
@@ -885,8 +889,6 @@ vector<int> HipContext::getDevicePrecedence() {
 
 unsigned int HipContext::getEventFlags() {
     unsigned int flags = hipEventDisableTiming;
-    if (useBlockingSync)
-        flags += hipEventBlockingSync;
     return flags;
 }
 

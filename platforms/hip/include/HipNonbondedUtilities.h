@@ -10,7 +10,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
- * Portions copyright (c) 2020-2022 Advanced Micro Devices, Inc.              *
+ * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -340,7 +340,7 @@ private:
     HipSort* blockSorter;
     hipEvent_t downloadCountEvent;
     unsigned int* pinnedCountBuffer;
-    std::vector<void*> forceArgs, findBlockBoundsArgs, sortBoxDataArgs, findInteractingBlocksArgs;
+    std::vector<void*> forceArgs, findBlockBoundsArgs, sortBoxDataArgs, findInteractingBlocksArgs, copyInteractionCountsArgs;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
@@ -369,7 +369,7 @@ public:
     hipFunction_t findBlockBoundsKernel;
     hipFunction_t sortBoxDataKernel;
     hipFunction_t findInteractingBlocksKernel;
-    hipFunction_t findInteractionsWithinBlocksKernel;
+    hipFunction_t copyInteractionCountsKernel;
 };
 
 /**

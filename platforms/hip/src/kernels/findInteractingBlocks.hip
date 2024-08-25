@@ -518,3 +518,9 @@ extern "C" __global__ __launch_bounds__(GROUP_SIZE) void findBlocksWithInteracti
         oldPositions[i] = posq[i];
     }
 }
+
+extern "C" __global__ void copyInteractionCounts(const unsigned int* __restrict__ interactionCount,
+        unsigned int* __restrict__ pinnedInteractionCount) {
+    pinnedInteractionCount[0] = interactionCount[0];
+    pinnedInteractionCount[1] = interactionCount[1];
+}
