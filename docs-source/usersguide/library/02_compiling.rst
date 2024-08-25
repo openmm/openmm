@@ -111,7 +111,7 @@ There are several variables that can be adjusted in the CMake interface:
   any reason CMake is unable to find them, set OPENCL_INCLUDE_DIR to point to
   the directory containing the headers (usually /usr/local/cuda/include on Linux)
   and OPENCL_LIBRARY to point to the library (usually /usr/local/cuda/lib64/libOpenCL.so
-  on Linux).  
+  on Linux).
 
 Configure (press “c”) again.  Adjust any variables that cause an error.
 
@@ -166,12 +166,6 @@ fraction of the time.  These tests will say so in the error message:
 
     exception: Assertion failure at TestReferenceLangevinIntegrator.cpp:129.  Expected 9.97741,
         found 10.7884 (This test is stochastic and may occasionally fail)
-
-If you get an error message such as :code:`exception: Error launching CUDA compiler: 32512` you need
-to specify the path to the CUDA compiler (nvcc) using the :code:`OPENMM_CUDA_COMPILER` environment
-variable, for example using something like the following::
-
-    OPENMM_CUDA_COMPILER=/<path_to_custom_cuda_dir>/nvcc
 
 Step 3: Install
 ===============
@@ -309,7 +303,7 @@ There are several variables that can be adjusted in the CMake interface:
   the directory containing the headers (usually
   "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.4/include", except
   with the correct version number for the toolkit you installed) and
-  OPENCL_LIBRARY to point to the library (usually "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.4/lib/x64/OpenCL.lib").  
+  OPENCL_LIBRARY to point to the library (usually "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.4/lib/x64/OpenCL.lib").
 
 Press "Configure" again.  Adjust any variables that cause an error.
 

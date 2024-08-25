@@ -104,17 +104,6 @@ For more information,  see the OpenMMTools_ website.
 
 .. _OpenMMTools: https://github.com/choderalab/openmmtools
 
-OpenMM-HIP
-**********
-
-This package adds a new platform that is implemented with AMD's HIP framework.
-When running on AMD GPUs, it often has much faster performance than the OpenCL
-platform.  For information about how to install it, see the OpenMM-HIP_ website.
-Once it is installed, the new platform can be selected and used exactly like the
-ones included in the main OpenMM package.
-
-.. _OpenMM-HIP: https://github.com/StreamHPC/openmm-hip
-
 openmmforcefields
 *****************
 
