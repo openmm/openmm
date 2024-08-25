@@ -60,7 +60,7 @@
 #include "openmm/common/ComputeContext.h"
 #include "openmm/Kernel.h"
 
-typedef unsigned long tileflags;
+typedef unsigned int tileflags;
 
 namespace OpenMM {
 
@@ -259,19 +259,15 @@ public:
      * Create a HIP module from source code.
      *
      * @param source             the source code of the module
-     * @param optimizationFlags  the optimization flags to pass to the HIP compiler.  If this is
-     *                           omitted, a default set of options will be used
      */
-    hipModule_t createModule(const std::string source, const char* optimizationFlags = NULL);
+    hipModule_t createModule(const std::string source);
     /**
      * Create a HIP module from source code.
      *
      * @param source             the source code of the module
      * @param defines            a set of preprocessor definitions (name, value) to define when compiling the program
-     * @param optimizationFlags  the optimization flags to pass to the HIP compiler.  If this is
-     *                           omitted, a default set of options will be used
      */
-    hipModule_t createModule(const std::string source, const std::map<std::string, std::string>& defines, const char* optimizationFlags = NULL);
+    hipModule_t createModule(const std::string source, const std::map<std::string, std::string>& defines);
     /**
      * Get a kernel from a HIP module.
      *
@@ -358,22 +354,22 @@ public:
         return simdWidth;
     }
     /**
-     * Get whether the device being used warp shuffles.
+     * Get the number of multiprocessors (compute units) of the device being used.
      */
-    bool getSupportsWarpShuffle() const {
-        return hasWarpShuffle;
+    int getMultiprocessors() const {
+        return multiprocessors;
     }
     /**
      * Get whether the device being used supports 64 bit atomic operations on global memory.
      */
     bool getSupports64BitGlobalAtomics() const {
-        return hasGlobalInt64Atomics;
+        return true;
     }
     /**
      * Get whether the device being used supports double precision math.
      */
     bool getSupportsDoublePrecision() const {
-        return hasDoubles;
+        return true;
     }
     /**
      * Get whether double precision is being used.
@@ -555,16 +551,13 @@ private:
     int numAtomBlocks;
     int numThreadBlocks;
     int simdWidth;
+    int multiprocessors;
     int sharedMemPerBlock;
-    bool hasDoubles;
-    bool hasGlobalInt64Atomics;
-    bool hasWarpShuffle;
     bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, boxIsTriclinic, hasCompilerKernel, isHipccAvailable, hasAssignedPosqCharges;
     bool isLinkedContext;
     std::string compiler, tempDir, cacheDir, gpuArchitecture;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;
-    std::string defaultOptimizationOptions;
     std::map<std::string, std::string> compilationDefines;
     hipDevice_t device;
     hipStream_t currentStream;

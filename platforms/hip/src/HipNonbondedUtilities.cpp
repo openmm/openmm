@@ -69,12 +69,10 @@ HipNonbondedUtilities::HipNonbondedUtilities(HipContext& context) : context(cont
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
-    int multiprocessors;
-    CHECK_RESULT(hipDeviceGetAttribute(&multiprocessors, hipDeviceAttributeMultiprocessorCount, context.getDevice()));
-    CHECK_RESULT(hipEventCreateWithFlags(&downloadCountEvent, 0));
-    CHECK_RESULT(hipHostMalloc((void**) &pinnedCountBuffer, 2*sizeof(int), hipHostMallocPortable));
-    numForceThreadBlocks = 4*multiprocessors;
-    forceThreadBlockSize = (256);
+    CHECK_RESULT(hipEventCreateWithFlags(&downloadCountEvent, context.getEventFlags()));
+    CHECK_RESULT(hipHostMalloc((void**) &pinnedCountBuffer, 2*sizeof(unsigned int), hipHostMallocPortable));
+    numForceThreadBlocks = 5*4*context.getMultiprocessors();
+    forceThreadBlockSize = 64;
     setKernelSource(HipKernelSources::nonbonded);
 }
 
@@ -234,7 +232,7 @@ void HipNonbondedUtilities::initialize(const System& system) {
     // Record the exclusion data.
 
     exclusions.initialize<tileflags>(context, tilesWithExclusions.size()*HipContext::TileSize, "exclusions");
-    tileflags allFlags = static_cast<tileflags>(-1);
+    tileflags allFlags = (tileflags) -1;
     vector<tileflags> exclusionVec(exclusions.getSize(), allFlags);
     for (int atom1 = 0; atom1 < (int) atomExclusions.size(); ++atom1) {
         int x = atom1/HipContext::TileSize;
@@ -245,11 +243,11 @@ void HipNonbondedUtilities::initialize(const System& system) {
             int offset2 = atom2-y*HipContext::TileSize;
             if (x > y) {
                 int index = exclusionTileMap[make_pair(x, y)]*HipContext::TileSize;
-                exclusionVec[index+offset1] &= allFlags-(static_cast<tileflags>(1)<<offset2);
+                exclusionVec[index+offset1] &= allFlags-(1<<offset2);
             }
             else {
                 int index = exclusionTileMap[make_pair(y, x)]*HipContext::TileSize;
-                exclusionVec[index+offset2] &= allFlags-(static_cast<tileflags>(1)<<offset1);
+                exclusionVec[index+offset2] &= allFlags-(1<<offset1);
             }
         }
     }
@@ -413,7 +411,7 @@ void HipNonbondedUtilities::computeInteractions(int forceGroups, bool includeFor
         hipFunction_t& kernel = (includeForces ? (includeEnergy ? kernels.forceEnergyKernel : kernels.forceKernel) : kernels.energyKernel);
         if (kernel == NULL)
             kernel = createInteractionKernel(kernels.source, parameters, arguments, true, true, forceGroups, includeForces, includeEnergy);
-        context.executeKernel(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
+        context.executeKernelFlat(kernel, &forceArgs[0], numForceThreadBlocks*forceThreadBlockSize, forceThreadBlockSize);
     }
     if (useCutoff && numTiles > 0) {
         hipEventSynchronize(downloadCountEvent);
@@ -445,7 +443,7 @@ bool HipNonbondedUtilities::updateNeighborListSize() {
         findInteractingBlocksArgs[7] = &interactingAtoms.getDevicePointer();
     }
     if (pinnedCountBuffer[1] > maxSinglePairs) {
-        maxSinglePairs = (int) (1.2*pinnedCountBuffer[1]);
+        maxSinglePairs = (unsigned int) (1.2*pinnedCountBuffer[1]);
         singlePairs.resize(maxSinglePairs);
         if (forceArgs.size() > 0)
             forceArgs[19] = &singlePairs.getDevicePointer();
@@ -512,18 +510,6 @@ hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& sourc
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     const string suffixes[] = {"x", "y", "z", "w"};
-    stringstream localData;
-    int localDataSize = 0;
-    for (const ParameterInfo& param : params) {
-        if (param.getNumComponents() == 1)
-            localData<<param.getType()<<" "<<param.getName()<<";\n";
-        else {
-            for (int j = 0; j < param.getNumComponents(); ++j)
-                localData<<param.getComponentType()<<" "<<param.getName()<<"_"<<suffixes[j]<<";\n";
-        }
-        localDataSize += param.getSize();
-    }
-    replacements["ATOM_PARAMETER_DATA"] = localData.str();
     stringstream args;
     for (const ParameterInfo& param : params) {
         args << ", ";
@@ -556,101 +542,43 @@ hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& sourc
     }
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
 
-    bool useShuffle = context.getSupportsWarpShuffle();
-
     // Part 1. Defines for on diagonal exclusion tiles
-    stringstream loadLocal1;
-    if(useShuffle) {
-        // not needed if using shuffles as we can directly fetch from register
-    } else {
-        for (const ParameterInfo& param : params) {
-            if (param.getNumComponents() == 1)
-                loadLocal1<<"localData[LOCAL_ID]."<<param.getName()<<" = "<<param.getName()<<"1;\n";
-            else {
-                for (int j = 0; j < param.getNumComponents(); ++j)
-                    loadLocal1<<"localData[LOCAL_ID]."<<param.getName()<<"_"<<suffixes[j]<<" = "<<param.getName()<<"1."<<suffixes[j]<<";\n";
-            }
-        }
-    }
-    replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
 
     stringstream broadcastWarpData;
-    if (useShuffle) {
-        broadcastWarpData << "posq2.x = real_shfl(shflPosq.x, j);\n";
-        broadcastWarpData << "posq2.y = real_shfl(shflPosq.y, j);\n";
-        broadcastWarpData << "posq2.z = real_shfl(shflPosq.z, j);\n";
-        broadcastWarpData << "posq2.w = real_shfl(shflPosq.w, j);\n";
-        for (const ParameterInfo& param : params) {
-            broadcastWarpData << param.getType() << " shfl" << param.getName() << ";\n";
-            for (int j = 0; j < param.getNumComponents(); j++) {
-                if (param.getNumComponents() == 1)
-                    broadcastWarpData << "shfl" << param.getName() << "=real_shfl(" << param.getName() <<"1,j);\n";
-                else
-                    broadcastWarpData << "shfl" << param.getName()+"."+suffixes[j] << "=real_shfl(" << param.getName()+"1."+suffixes[j] <<",j);\n";
-            }
+    broadcastWarpData << "posq2.x = SHFL(shflPosq.x, j);\n";
+    broadcastWarpData << "posq2.y = SHFL(shflPosq.y, j);\n";
+    broadcastWarpData << "posq2.z = SHFL(shflPosq.z, j);\n";
+    broadcastWarpData << "posq2.w = SHFL(shflPosq.w, j);\n";
+    for (const ParameterInfo& param : params) {
+        broadcastWarpData << param.getType() << " shfl" << param.getName() << ";\n";
+        for (int j = 0; j < param.getNumComponents(); j++) {
+            if (param.getNumComponents() == 1)
+                broadcastWarpData << "shfl" << param.getName() << "=SHFL(" << param.getName() <<"1,j);\n";
+            else
+                broadcastWarpData << "shfl" << param.getName()+"."+suffixes[j] << "=SHFL(" << param.getName()+"1."+suffixes[j] <<",j);\n";
         }
-    } else {
-        // not used if not shuffling
     }
     replacements["BROADCAST_WARP_DATA"] = broadcastWarpData.str();
 
     // Part 2. Defines for off-diagonal exclusions, and neighborlist tiles.
     stringstream declareLocal2;
-    if (useShuffle) {
-        for (const ParameterInfo& param : params)
-            declareLocal2<<param.getType()<<" shfl"<<param.getName()<<";\n";
-    }
-    else {
-        // not used if using shared memory
-    }
+    for (const ParameterInfo& param : params)
+        declareLocal2<<param.getType()<<" shfl"<<param.getName()<<";\n";
     replacements["DECLARE_LOCAL_PARAMETERS"] = declareLocal2.str();
 
     stringstream loadLocal2;
-    if (useShuffle) {
-        for (const ParameterInfo& param : params)
-            loadLocal2<<"shfl"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
-    }
-    else {
-        for (const ParameterInfo& param : params) {
-            if (param.getNumComponents() == 1)
-                loadLocal2<<"localData[LOCAL_ID]."<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
-            else {
-                loadLocal2<<param.getType()<<" temp_"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
-                for (int j = 0; j < param.getNumComponents(); ++j)
-                    loadLocal2<<"localData[LOCAL_ID]."<<param.getName()<<"_"<<suffixes[j]<<" = temp_"<<param.getName()<<"."<<suffixes[j]<<";\n";
-            }
-        }
-    }
+    for (const ParameterInfo& param : params)
+        loadLocal2<<"shfl"<<param.getName()<<" = global_"<<param.getName()<<"[j];\n";
     replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
 
     stringstream load2j;
-    if (useShuffle) {
-        for (const ParameterInfo& param : params)
-            load2j<<param.getType()<<" "<<param.getName()<<"2 = shfl"<<param.getName()<<";\n";
-    }
-    else {
-        for (const ParameterInfo& param : params) {
-            if (param.getNumComponents() == 1)
-                load2j<<param.getType()<<" "<<param.getName()<<"2 = localData[atom2]."<<param.getName()<<";\n";
-            else {
-                load2j<<param.getType()<<" "<<param.getName()<<"2 = make_"<<param.getType()<<"(";
-                for (int j = 0; j < param.getNumComponents(); ++j) {
-                    if (j > 0)
-                        load2j<<", ";
-                    load2j<<"localData[atom2]."<<param.getName()<<"_"<<suffixes[j];
-                }
-                load2j<<");\n";
-            }
-        }
-    }
+    for (const ParameterInfo& param : params)
+        load2j<<param.getType()<<" "<<param.getName()<<"2 = shfl"<<param.getName()<<";\n";
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
 
     stringstream clearLocal;
     for (const ParameterInfo& param : params) {
-        if (useShuffle)
-            clearLocal<<"shfl";
-        else
-            clearLocal<<"localData[atom2].";
+        clearLocal<<"shfl";
         clearLocal<<param.getName()<<" = ";
         if (param.getNumComponents() == 1)
             clearLocal<<"0;\n";
@@ -673,29 +601,10 @@ hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& sourc
     replacements["SAVE_DERIVATIVES"] = saveDerivs.str();
 
     stringstream shuffleWarpData;
-    if(useShuffle) {
-        shuffleWarpData << "shflPosq.x = real_shfl(shflPosq.x, tgx+1);\n";
-        shuffleWarpData << "shflPosq.y = real_shfl(shflPosq.y, tgx+1);\n";
-        shuffleWarpData << "shflPosq.z = real_shfl(shflPosq.z, tgx+1);\n";
-        shuffleWarpData << "shflPosq.w = real_shfl(shflPosq.w, tgx+1);\n";
-        shuffleWarpData << "shflForce.x = real_shfl(shflForce.x, tgx+1);\n";
-        shuffleWarpData << "shflForce.y = real_shfl(shflForce.y, tgx+1);\n";
-        shuffleWarpData << "shflForce.z = real_shfl(shflForce.z, tgx+1);\n";
-        for (const ParameterInfo& param : params) {
-            if (param.getNumComponents() == 1)
-                shuffleWarpData<<"shfl"<<param.getName()<<"=real_shfl(shfl"<<param.getName()<<", tgx+1);\n";
-            else {
-                for (int j = 0; j < param.getNumComponents(); j++) {
-                    // looks something like shflsigmaEpsilon.x = real_shfl(shflsigmaEpsilon.x,tgx+1);
-                    shuffleWarpData<<"shfl"<<param.getName()
-                        <<"."<<suffixes[j]<<"=real_shfl(shfl"
-                        <<param.getName()<<"."<<suffixes[j]
-                        <<", tgx+1);\n";
-                }
-            }
-        }
-    } else {
-        // not used otherwise
+    shuffleWarpData << "shflPosq = warpRotateLeft<TILE_SIZE>(shflPosq);\n";
+    shuffleWarpData << "shflForce = warpRotateLeft<TILE_SIZE>(shflForce);\n";
+    for (const ParameterInfo& param : params) {
+        shuffleWarpData<<"shfl"<<param.getName()<<"=warpRotateLeft<TILE_SIZE>(shfl"<<param.getName()<<");\n";
     }
     replacements["SHUFFLE_WARP_DATA"] = shuffleWarpData.str();
 
@@ -708,8 +617,7 @@ hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& sourc
         defines["USE_EXCLUSIONS"] = "1";
     if (isSymmetric)
         defines["USE_SYMMETRIC"] = "1";
-    if (useShuffle)
-        defines["ENABLE_SHUFFLE"] = "1";
+    defines["ENABLE_SHUFFLE"] = "1"; // Used only in hippoNonbonded.cc
     if (includeForces)
         defines["INCLUDE_FORCES"] = "1";
     if (includeEnergy)
@@ -725,6 +633,7 @@ hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& sourc
         }
     }
     defines["MAX_CUTOFF"] = context.doubleToString(maxCutoff);
+    defines["MAX_CUTOFF_SQUARED"] = context.doubleToString(maxCutoff*maxCutoff);
     defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
@@ -736,8 +645,6 @@ hipFunction_t HipNonbondedUtilities::createInteractionKernel(const string& sourc
     int endExclusionIndex = (context.getContextIndex()+1)*numExclusionTiles/numContexts;
     defines["FIRST_EXCLUSION_TILE"] = context.intToString(startExclusionIndex);
     defines["LAST_EXCLUSION_TILE"] = context.intToString(endExclusionIndex);
-    if ((localDataSize/4)%2 == 0 && !context.getUseDoublePrecision())
-        defines["PARAMETER_SIZE_IS_EVEN"] = "1";
     hipModule_t program = context.createModule(HipKernelSources::vectorOps+context.replaceStrings(kernelSource, replacements), defines);
     hipFunction_t kernel = context.getKernel(program, "computeNonbonded");
     return kernel;

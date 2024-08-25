@@ -1,19 +1,3 @@
-#ifndef ENABLE_SHUFFLE
-typedef struct {
-    real x, y, z;
-    real q;
-    real fx, fy, fz;
-    ATOM_PARAMETER_DATA
-#ifndef PARAMETER_SIZE_IS_EVEN
-    real padding;
-#endif
-} AtomData;
-#endif
-
-#ifdef ENABLE_SHUFFLE
-#define real_shfl SHFL
-#endif
-
 /**
  * Compute nonbonded interactions. The kernel is separated into two parts,
  * tiles with exclusions and tiles without exclusions. It relies heavily on
@@ -75,7 +59,7 @@ typedef struct {
  * [in]interactingAtoms - a list of interactions within a given tile
  *
  */
-extern "C" __global__ void computeNonbonded(
+extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded(
         unsigned long long* __restrict__ forceBuffers, mixed* __restrict__ energyBuffer, const real4* __restrict__ posq, const tileflags* __restrict__ exclusions,
         const int2* __restrict__ exclusionTiles, unsigned int startTileIndex, unsigned long long numTileIndices
 #ifdef USE_CUTOFF
@@ -86,21 +70,15 @@ extern "C" __global__ void computeNonbonded(
 #endif
         PARAMETER_ARGUMENTS) {
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;
-    const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/TILE_SIZE; // global warpIndex
+    const unsigned int warp = blockIdx.x*(THREAD_BLOCK_SIZE/TILE_SIZE) + threadIdx.x/TILE_SIZE; // global warpIndex
     const unsigned int tgx = threadIdx.x & (TILE_SIZE-1); // index within the warp
     const unsigned int tbx = threadIdx.x - tgx;           // block warpIndex
     mixed energy = 0;
     INIT_DERIVATIVES
-    // used shared memory if the device cannot shuffle
-#ifndef ENABLE_SHUFFLE
-    __shared__ AtomData localData[THREAD_BLOCK_SIZE];
-#endif
 
     // First loop: process tiles that contain exclusions.
 
-    const unsigned int firstExclusionTile = FIRST_EXCLUSION_TILE+warp*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    const unsigned int lastExclusionTile = FIRST_EXCLUSION_TILE+(warp+1)*(LAST_EXCLUSION_TILE-FIRST_EXCLUSION_TILE)/totalWarps;
-    for (int pos = firstExclusionTile; pos < lastExclusionTile; pos++) {
+    for (int pos = FIRST_EXCLUSION_TILE+warp; pos < LAST_EXCLUSION_TILE; pos+=totalWarps) {
         const int2 tileIndices = exclusionTiles[pos];
         const unsigned int x = tileIndices.x;
         const unsigned int y = tileIndices.y;
@@ -111,61 +89,56 @@ extern "C" __global__ void computeNonbonded(
 #ifdef USE_EXCLUSIONS
         tileflags excl = exclusions[pos*TILE_SIZE+tgx];
 #endif
-        const bool hasExclusions = true;
         if (x == y) {
             // This tile is on the diagonal.
-#ifdef ENABLE_SHUFFLE
             real4 shflPosq = posq1;
-#else
-            localData[threadIdx.x].x = posq1.x;
-            localData[threadIdx.x].y = posq1.y;
-            localData[threadIdx.x].z = posq1.z;
-            localData[threadIdx.x].q = posq1.w;
-            LOAD_LOCAL_PARAMETERS_FROM_1
-#endif
 
             // we do not need to fetch parameters from global since this is a symmetric tile
             // instead we can broadcast the values using shuffle
+            #pragma unroll 2
             for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                int atom2 = tbx+j;
                 real4 posq2;
-#ifdef ENABLE_SHUFFLE
                 BROADCAST_WARP_DATA
-#else
-                posq2 = make_real4(localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
-#endif
                 real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                real invR = RSQRT(r2);
-                real r = r2*invR;
-                LOAD_ATOM2_PARAMETERS
-                atom2 = y*TILE_SIZE+j;
+#ifdef USE_CUTOFF
+                if (r2 < MAX_CUTOFF_SQUARED) {
+#endif
+                    real invR = RSQRT(r2);
+                    real r = r2*invR;
+                    LOAD_ATOM2_PARAMETERS
+                    int atom2 = y*TILE_SIZE+j;
 #ifdef USE_SYMMETRIC
-                real dEdR = 0.0f;
+                    real dEdR = 0.0f;
 #else
-                real3 dEdR1 = make_real3(0);
-                real3 dEdR2 = make_real3(0);
+                    real3 dEdR1 = make_real3(0);
+                    real3 dEdR2 = make_real3(0);
 #endif
 #ifdef USE_EXCLUSIONS
-                bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 1));
+                    bool isExcluded = !(atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && (excl & 1));
 #endif
-                real tempEnergy = 0.0f;
-                const real interactionScale = 0.5f;
-                COMPUTE_INTERACTION
-                energy += 0.5f*tempEnergy;
+                    real tempEnergy = 0.0f;
+                    const real interactionScale = 0.5f;
+                    COMPUTE_INTERACTION
+#ifdef INCLUDE_ENERGY
+                    energy += 0.5f*tempEnergy;
+#endif
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
-                force.x -= delta.x*dEdR;
-                force.y -= delta.y*dEdR;
-                force.z -= delta.z*dEdR;
+                    force.x -= delta.x*dEdR;
+                    force.y -= delta.y*dEdR;
+                    force.z -= delta.z*dEdR;
 #else
-                force.x -= dEdR1.x;
-                force.y -= dEdR1.y;
-                force.z -= dEdR1.z;
+                    force.x -= dEdR1.x;
+                    force.y -= dEdR1.y;
+                    force.z -= dEdR1.z;
 #endif
+#endif
+#ifdef USE_CUTOFF
+                }
 #endif
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
@@ -175,117 +148,88 @@ extern "C" __global__ void computeNonbonded(
         else {
             // This is an off-diagonal tile.
             unsigned int j = y*TILE_SIZE + tgx;
+            int atomIndex = j;
             real4 shflPosq = posq[j];
-#ifdef ENABLE_SHUFFLE
             real3 shflForce;
             shflForce.x = 0.0f;
             shflForce.y = 0.0f;
             shflForce.z = 0.0f;
-#else
-            localData[threadIdx.x].x = shflPosq.x;
-            localData[threadIdx.x].y = shflPosq.y;
-            localData[threadIdx.x].z = shflPosq.z;
-            localData[threadIdx.x].q = shflPosq.w;
-            localData[threadIdx.x].fx = 0.0f;
-            localData[threadIdx.x].fy = 0.0f;
-            localData[threadIdx.x].fz = 0.0f;
-#endif
             DECLARE_LOCAL_PARAMETERS
             LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
 #ifdef USE_EXCLUSIONS
             excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
 #endif
-            unsigned int tj = tgx;
+            #pragma unroll 2
             for (j = 0; j < TILE_SIZE; j++) {
-                int atom2 = tbx+tj;
-#ifdef ENABLE_SHUFFLE
                 real4 posq2 = shflPosq;
-#else
-                real4 posq2 = make_real4(localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
-#endif
                 real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
                 APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                 real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                real invR = RSQRT(r2);
-                real r = r2*invR;
-                LOAD_ATOM2_PARAMETERS
-                atom2 = y*TILE_SIZE+tj;
+#ifdef USE_CUTOFF
+                if (r2 < MAX_CUTOFF_SQUARED) {
+#endif
+                    real invR = RSQRT(r2);
+                    real r = r2*invR;
+                    LOAD_ATOM2_PARAMETERS
+                    int atom2 = atomIndex;
 #ifdef USE_SYMMETRIC
-                real dEdR = 0.0f;
+                    real dEdR = 0.0f;
 #else
-                real3 dEdR1 = make_real3(0);
-                real3 dEdR2 = make_real3(0);
+                    real3 dEdR1 = make_real3(0);
+                    real3 dEdR2 = make_real3(0);
 #endif
 #ifdef USE_EXCLUSIONS
-                bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS || !(excl & 1));
+                    bool isExcluded = !(atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && (excl & 1));
 #endif
-                real tempEnergy = 0.0f;
-                const real interactionScale = 1.0f;
-                COMPUTE_INTERACTION
-                energy += tempEnergy;
+                    real tempEnergy = 0.0f;
+                    const real interactionScale = 1.0f;
+                    COMPUTE_INTERACTION
+#ifdef INCLUDE_ENERGY
+                    energy += tempEnergy;
+#endif
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
-                delta *= dEdR;
-                force.x -= delta.x;
-                force.y -= delta.y;
-                force.z -= delta.z;
-#ifdef ENABLE_SHUFFLE
-                shflForce.x += delta.x;
-                shflForce.y += delta.y;
-                shflForce.z += delta.z;
-
-#else
-                localData[tbx+tj].fx += delta.x;
-                localData[tbx+tj].fy += delta.y;
-                localData[tbx+tj].fz += delta.z;
-#endif
+                    delta *= dEdR;
+                    force.x -= delta.x;
+                    force.y -= delta.y;
+                    force.z -= delta.z;
+                    shflForce.x += delta.x;
+                    shflForce.y += delta.y;
+                    shflForce.z += delta.z;
 #else // !USE_SYMMETRIC
-                force.x -= dEdR1.x;
-                force.y -= dEdR1.y;
-                force.z -= dEdR1.z;
-#ifdef ENABLE_SHUFFLE
-                shflForce.x += dEdR2.x;
-                shflForce.y += dEdR2.y;
-                shflForce.z += dEdR2.z;
-#else
-                localData[tbx+tj].fx += dEdR2.x;
-                localData[tbx+tj].fy += dEdR2.y;
-                localData[tbx+tj].fz += dEdR2.z;
-#endif
+                    force.x -= dEdR1.x;
+                    force.y -= dEdR1.y;
+                    force.z -= dEdR1.z;
+                    shflForce.x += dEdR2.x;
+                    shflForce.y += dEdR2.y;
+                    shflForce.z += dEdR2.z;
 #endif // end USE_SYMMETRIC
 #endif
-#ifdef ENABLE_SHUFFLE
-                SHUFFLE_WARP_DATA
+#ifdef USE_CUTOFF
+                }
 #endif
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
 #endif
-                // cycles the indices
-                // 0 1 2 3 4 5 6 7 -> 1 2 3 4 5 6 7 0
-                tj = (tj + 1) & (TILE_SIZE - 1);
+                SHUFFLE_WARP_DATA
+                atomIndex = warpRotateLeft<TILE_SIZE>(atomIndex);
             }
-            const unsigned int offset = y*TILE_SIZE + tgx;
+            const unsigned int offset = atomIndex;
             // write results for off diagonal tiles
 #ifdef INCLUDE_FORCES
-#ifdef ENABLE_SHUFFLE
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (shflForce.x*0x100000000)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.y*0x100000000)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.z*0x100000000)));
-#else
-            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0x100000000)));
-            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0x100000000)));
-            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
-#endif
+            atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>(realToFixedPoint(shflForce.x)));
+            atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.y)));
+            atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.z)));
 #endif
         }
         // Write results for on and off diagonal tiles
 #ifdef INCLUDE_FORCES
         const unsigned int offset = x*TILE_SIZE + tgx;
-        atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
-        atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
-        atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
+        atomicAdd(&forceBuffers[offset], static_cast<unsigned long long>(realToFixedPoint(force.x)));
+        atomicAdd(&forceBuffers[offset+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.y)));
+        atomicAdd(&forceBuffers[offset+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.z)));
 #endif
     }
 
@@ -296,22 +240,21 @@ extern "C" __global__ void computeNonbonded(
     const unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
-    int pos = (int) (warp*(long long)numTiles/totalWarps);
-    int end = (int) ((warp+1)*(long long)numTiles/totalWarps);
+    for (unsigned int pos0 = warp; pos0 < LAST_EXCLUSION_TILE+numTiles; pos0+=totalWarps) {
+        // Skip warps that may be still busy in the first loop
+        if (pos0 < LAST_EXCLUSION_TILE) {
+            continue;
+        }
+        const unsigned int pos = pos0-LAST_EXCLUSION_TILE;
 #else
     int pos = (int) (startTileIndex+warp*numTileIndices/totalWarps);
     int end = (int) (startTileIndex+(warp+1)*numTileIndices/totalWarps);
-#endif
     int skipBase = 0;
     int currentSkipIndex = tbx;
-    // atomIndices can probably be shuffled as well
-    // but it probably wouldn't make things any faster
-    __shared__ int atomIndices[THREAD_BLOCK_SIZE];
-    __shared__ volatile int skipTiles[THREAD_BLOCK_SIZE];
-    skipTiles[threadIdx.x] = -1;
-
-    while (pos < end) {
-        const bool hasExclusions = false;
+    int skipTiles;
+    skipTiles = -1;
+    for (; pos < end; pos++) {
+#endif
         real3 force = make_real3(0);
         bool includeTile = true;
 
@@ -334,63 +277,44 @@ extern "C" __global__ void computeNonbonded(
 
         // Skip over tiles that have exclusions, since they were already processed.
 
-        while (skipTiles[tbx+TILE_SIZE-1] < pos) {
+        while (SHFL(skipTiles, TILE_SIZE-1) < pos) {
             if (skipBase+tgx < NUM_TILES_WITH_EXCLUSIONS) {
                 int2 tile = exclusionTiles[skipBase+tgx];
-                skipTiles[threadIdx.x] = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
+                skipTiles = tile.x + tile.y*NUM_BLOCKS - tile.y*(tile.y+1)/2;
             }
             else
-                skipTiles[threadIdx.x] = end;
+                skipTiles = end;
             skipBase += TILE_SIZE;
-            currentSkipIndex = tbx;
+            currentSkipIndex = 0;
         }
-        while (skipTiles[currentSkipIndex] < pos)
+        while (SHFL(skipTiles, currentSkipIndex) < pos)
             currentSkipIndex++;
-        includeTile = (skipTiles[currentSkipIndex] != pos);
+        includeTile = (SHFL(skipTiles, currentSkipIndex) != pos);
 #endif
         if (includeTile) {
             unsigned int atom1 = x*TILE_SIZE + tgx;
             // Load atom data for this tile.
             real4 posq1 = posq[atom1];
             LOAD_ATOM1_PARAMETERS
-            //const unsigned int localAtomIndex = threadIdx.x;
 #ifdef USE_CUTOFF
             unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
 #endif
-            atomIndices[threadIdx.x] = j;
-#ifdef ENABLE_SHUFFLE
+            int atomIndex = j;
             DECLARE_LOCAL_PARAMETERS
             real4 shflPosq;
             real3 shflForce;
             shflForce.x = 0.0f;
             shflForce.y = 0.0f;
             shflForce.z = 0.0f;
-#endif
             if (j < PADDED_NUM_ATOMS) {
                 // Load position of atom j from from global memory
-#ifdef ENABLE_SHUFFLE
                 shflPosq = posq[j];
-#else
-                localData[threadIdx.x].x = posq[j].x;
-                localData[threadIdx.x].y = posq[j].y;
-                localData[threadIdx.x].z = posq[j].z;
-                localData[threadIdx.x].q = posq[j].w;
-                localData[threadIdx.x].fx = 0.0f;
-                localData[threadIdx.x].fy = 0.0f;
-                localData[threadIdx.x].fz = 0.0f;
-#endif
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
             else {
-#ifdef ENABLE_SHUFFLE
                 shflPosq = make_real4(0, 0, 0, 0);
-#else
-                localData[threadIdx.x].x = 0;
-                localData[threadIdx.x].y = 0;
-                localData[threadIdx.x].z = 0;
-#endif
                 CLEAR_LOCAL_PARAMETERS
             }
 #ifdef USE_PERIODIC
@@ -399,171 +323,132 @@ extern "C" __global__ void computeNonbonded(
                 // box, then skip having to apply periodic boundary conditions later.
                 real4 blockCenterX = blockCenter[x];
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(posq1, blockCenterX)
-#ifdef ENABLE_SHUFFLE
                 APPLY_PERIODIC_TO_POS_WITH_CENTER(shflPosq, blockCenterX)
-#else
-                APPLY_PERIODIC_TO_POS_WITH_CENTER(localData[threadIdx.x], blockCenterX)
-#endif
-                unsigned int tj = tgx;
+                #pragma unroll 2
                 for (j = 0; j < TILE_SIZE; j++) {
-                    int atom2 = tbx+tj;
-#ifdef ENABLE_SHUFFLE
                     real4 posq2 = shflPosq;
-#else
-                    real4 posq2 = make_real4(localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
-#endif
                     real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                    real invR = RSQRT(r2);
-                    real r = r2*invR;
-                    LOAD_ATOM2_PARAMETERS
-                    atom2 = atomIndices[tbx+tj];
+#ifdef USE_CUTOFF
+                    if (r2 < MAX_CUTOFF_SQUARED) {
+#endif
+                        real invR = RSQRT(r2);
+                        real r = r2*invR;
+                        LOAD_ATOM2_PARAMETERS
+                        int atom2 = atomIndex;
 #ifdef USE_SYMMETRIC
-                    real dEdR = 0.0f;
+                        real dEdR = 0.0f;
 #else
-                    real3 dEdR1 = make_real3(0);
-                    real3 dEdR2 = make_real3(0);
+                        real3 dEdR1 = make_real3(0);
+                        real3 dEdR2 = make_real3(0);
 #endif
 #ifdef USE_EXCLUSIONS
-                    bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
+                        bool isExcluded = !(atom1 < NUM_ATOMS && atom2 < NUM_ATOMS);
 #endif
-                    real tempEnergy = 0.0f;
-                    const real interactionScale = 1.0f;
-                    COMPUTE_INTERACTION
-                    energy += tempEnergy;
+                        real tempEnergy = 0.0f;
+                        const real interactionScale = 1.0f;
+                        COMPUTE_INTERACTION
+#ifdef INCLUDE_ENERGY
+                        energy += tempEnergy;
+#endif
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
-                    delta *= dEdR;
-                    force.x -= delta.x;
-                    force.y -= delta.y;
-                    force.z -= delta.z;
-#ifdef ENABLE_SHUFFLE
-                    shflForce.x += delta.x;
-                    shflForce.y += delta.y;
-                    shflForce.z += delta.z;
-
-#else
-                    localData[tbx+tj].fx += delta.x;
-                    localData[tbx+tj].fy += delta.y;
-                    localData[tbx+tj].fz += delta.z;
-#endif
+                        delta *= dEdR;
+                        force.x -= delta.x;
+                        force.y -= delta.y;
+                        force.z -= delta.z;
+                        shflForce.x += delta.x;
+                        shflForce.y += delta.y;
+                        shflForce.z += delta.z;
 #else // !USE_SYMMETRIC
-                    force.x -= dEdR1.x;
-                    force.y -= dEdR1.y;
-                    force.z -= dEdR1.z;
-#ifdef ENABLE_SHUFFLE
-                    shflForce.x += dEdR2.x;
-                    shflForce.y += dEdR2.y;
-                    shflForce.z += dEdR2.z;
-#else
-                    localData[tbx+tj].fx += dEdR2.x;
-                    localData[tbx+tj].fy += dEdR2.y;
-                    localData[tbx+tj].fz += dEdR2.z;
-#endif
+                        force.x -= dEdR1.x;
+                        force.y -= dEdR1.y;
+                        force.z -= dEdR1.z;
+                        shflForce.x += dEdR2.x;
+                        shflForce.y += dEdR2.y;
+                        shflForce.z += dEdR2.z;
 #endif // end USE_SYMMETRIC
 #endif
-#ifdef ENABLE_SHUFFLE
-                    SHUFFLE_WARP_DATA
+#ifdef USE_CUTOFF
+                    }
 #endif
-                    tj = (tj + 1) & (TILE_SIZE - 1);
+                    SHUFFLE_WARP_DATA
+                    atomIndex = warpRotateLeft<TILE_SIZE>(atomIndex);
                 }
             }
             else
 #endif
             {
                 // We need to apply periodic boundary conditions separately for each interaction.
-                unsigned int tj = tgx;
+                #pragma unroll 2
                 for (j = 0; j < TILE_SIZE; j++) {
-                    int atom2 = tbx+tj;
-#ifdef ENABLE_SHUFFLE
                     real4 posq2 = shflPosq;
-#else
-                    real4 posq2 = make_real4(localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
-#endif
                     real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
                     APPLY_PERIODIC_TO_DELTA(delta)
 #endif
                     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                    real invR = RSQRT(r2);
-                    real r = r2*invR;
-                    LOAD_ATOM2_PARAMETERS
-                    atom2 = atomIndices[tbx+tj];
+#ifdef USE_CUTOFF
+                    if (r2 < MAX_CUTOFF_SQUARED) {
+#endif
+                        real invR = RSQRT(r2);
+                        real r = r2*invR;
+                        LOAD_ATOM2_PARAMETERS
+                        int atom2 = atomIndex;
 #ifdef USE_SYMMETRIC
-                    real dEdR = 0.0f;
+                        real dEdR = 0.0f;
 #else
-                    real3 dEdR1 = make_real3(0);
-                    real3 dEdR2 = make_real3(0);
+                        real3 dEdR1 = make_real3(0);
+                        real3 dEdR2 = make_real3(0);
 #endif
 #ifdef USE_EXCLUSIONS
-                    bool isExcluded = (atom1 >= NUM_ATOMS || atom2 >= NUM_ATOMS);
+                        bool isExcluded = !(atom1 < NUM_ATOMS && atom2 < NUM_ATOMS);
 #endif
-                    real tempEnergy = 0.0f;
-                    const real interactionScale = 1.0f;
-                    COMPUTE_INTERACTION
-                    energy += tempEnergy;
+                        real tempEnergy = 0.0f;
+                        const real interactionScale = 1.0f;
+                        COMPUTE_INTERACTION
+#ifdef INCLUDE_ENERGY
+                        energy += tempEnergy;
+#endif
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
-                    delta *= dEdR;
-                    force.x -= delta.x;
-                    force.y -= delta.y;
-                    force.z -= delta.z;
-#ifdef ENABLE_SHUFFLE
-                    shflForce.x += delta.x;
-                    shflForce.y += delta.y;
-                    shflForce.z += delta.z;
-
-#else
-                    localData[tbx+tj].fx += delta.x;
-                    localData[tbx+tj].fy += delta.y;
-                    localData[tbx+tj].fz += delta.z;
-#endif
+                        delta *= dEdR;
+                        force.x -= delta.x;
+                        force.y -= delta.y;
+                        force.z -= delta.z;
+                        shflForce.x += delta.x;
+                        shflForce.y += delta.y;
+                        shflForce.z += delta.z;
 #else // !USE_SYMMETRIC
-                    force.x -= dEdR1.x;
-                    force.y -= dEdR1.y;
-                    force.z -= dEdR1.z;
-#ifdef ENABLE_SHUFFLE
-                    shflForce.x += dEdR2.x;
-                    shflForce.y += dEdR2.y;
-                    shflForce.z += dEdR2.z;
-#else
-                    localData[tbx+tj].fx += dEdR2.x;
-                    localData[tbx+tj].fy += dEdR2.y;
-                    localData[tbx+tj].fz += dEdR2.z;
-#endif
+                        force.x -= dEdR1.x;
+                        force.y -= dEdR1.y;
+                        force.z -= dEdR1.z;
+                        shflForce.x += dEdR2.x;
+                        shflForce.y += dEdR2.y;
+                        shflForce.z += dEdR2.z;
 #endif // end USE_SYMMETRIC
 #endif
-#ifdef ENABLE_SHUFFLE
-                    SHUFFLE_WARP_DATA
+#ifdef USE_CUTOFF
+                    }
 #endif
-                    tj = (tj + 1) & (TILE_SIZE - 1);
+                    SHUFFLE_WARP_DATA
+                    atomIndex = warpRotateLeft<TILE_SIZE>(atomIndex);
                 }
             }
 
             // Write results.
 #ifdef INCLUDE_FORCES
-            atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (force.x*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.y*0x100000000)));
-            atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (force.z*0x100000000)));
-#ifdef USE_CUTOFF
-            unsigned int atom2 = atomIndices[threadIdx.x];
-#else
-            unsigned int atom2 = y*TILE_SIZE + tgx;
-#endif
+            atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>(realToFixedPoint(force.x)));
+            atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.y)));
+            atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(force.z)));
+            unsigned int atom2 = atomIndex;
             if (atom2 < PADDED_NUM_ATOMS) {
-#ifdef ENABLE_SHUFFLE
-                atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (shflForce.x*0x100000000)));
-                atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.y*0x100000000)));
-                atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (shflForce.z*0x100000000)));
-#else
-                atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fx*0x100000000)));
-                atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fy*0x100000000)));
-                atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (localData[threadIdx.x].fz*0x100000000)));
-#endif
+                atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>(realToFixedPoint(shflForce.x)));
+                atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.y)));
+                atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(shflForce.z)));
             }
 #endif
         }
-        pos++;
     }
 
     // Third loop: single pairs that aren't part of a tile.
@@ -578,44 +463,45 @@ extern "C" __global__ void computeNonbonded(
         int atom2 = pair.y;
         real4 posq1 = posq[atom1];
         real4 posq2 = posq[atom2];
-        LOAD_ATOM1_PARAMETERS
-        int j = atom2;
-atom2 = threadIdx.x;
-        DECLARE_LOCAL_PARAMETERS
-        LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
-        LOAD_ATOM2_PARAMETERS
-atom2 = pair.y;
         real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
         APPLY_PERIODIC_TO_DELTA(delta)
 #endif
         real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-        real invR = RSQRT(r2);
-        real r = r2*invR;
+        if (r2 < MAX_CUTOFF_SQUARED) {
+            LOAD_ATOM1_PARAMETERS
+            int j = atom2;
+            DECLARE_LOCAL_PARAMETERS
+            LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
+            LOAD_ATOM2_PARAMETERS
+            real invR = RSQRT(r2);
+            real r = r2*invR;
 #ifdef USE_SYMMETRIC
-        real dEdR = 0.0f;
+            real dEdR = 0.0f;
 #else
-        real3 dEdR1 = make_real3(0);
-        real3 dEdR2 = make_real3(0);
+            real3 dEdR1 = make_real3(0);
+            real3 dEdR2 = make_real3(0);
 #endif
-        bool hasExclusions = false;
-        bool isExcluded = false;
-        real tempEnergy = 0.0f;
-        const real interactionScale = 1.0f;
-        COMPUTE_INTERACTION
-        energy += tempEnergy;
+            bool isExcluded = false;
+            real tempEnergy = 0.0f;
+            const real interactionScale = 1.0f;
+            COMPUTE_INTERACTION
+#ifdef INCLUDE_ENERGY
+            energy += tempEnergy;
+#endif
 #ifdef INCLUDE_FORCES
 #ifdef USE_SYMMETRIC
-        real3 dEdR1 = delta*dEdR;
-        real3 dEdR2 = -dEdR1;
+            real3 dEdR1 = delta*dEdR;
+            real3 dEdR2 = -dEdR1;
 #endif
-        atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>((long long) (-dEdR1.x*0x100000000)));
-        atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-dEdR1.y*0x100000000)));
-        atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-dEdR1.z*0x100000000)));
-        atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) (-dEdR2.x*0x100000000)));
-        atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-dEdR2.y*0x100000000)));
-        atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (-dEdR2.z*0x100000000)));
+            atomicAdd(&forceBuffers[atom1], static_cast<unsigned long long>(realToFixedPoint(-dEdR1.x)));
+            atomicAdd(&forceBuffers[atom1+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(-dEdR1.y)));
+            atomicAdd(&forceBuffers[atom1+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(-dEdR1.z)));
+            atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>(realToFixedPoint(-dEdR2.x)));
+            atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(-dEdR2.y)));
+            atomicAdd(&forceBuffers[atom2+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>(realToFixedPoint(-dEdR2.z)));
 #endif
+        }
     }
 #endif
 #ifdef INCLUDE_ENERGY

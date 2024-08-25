@@ -69,8 +69,7 @@ using namespace OpenMM;
 using namespace std;
 
 const int HipContext::ThreadBlockSize = 64;
-const int HipContext::TileSize = sizeof(tileflags)*8;
-static_assert(HipContext::ThreadBlockSize == HipContext::TileSize);
+const int HipContext::TileSize = 32;
 bool HipContext::hasInitializedHip = false;
 
 
@@ -136,7 +135,6 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
         for (int i = 0; i < static_cast<int>(devicePrecedence.size()); i++) {
             int trialDeviceIndex = devicePrecedence[i];
             CHECK_RESULT(hipDeviceGet(&device, trialDeviceIndex));
-            defaultOptimizationOptions = "-ffast-math -Wall";
             // try setting device
             if (hipSetDevice(device) == hipSuccess) {
                 // and set flags
@@ -172,10 +170,6 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
     // set device properties
     this->simdWidth = props.warpSize;
     this->sharedMemPerBlock = props.sharedMemPerBlock;
-    this->hasGlobalInt64Atomics = props.arch.hasGlobalInt64Atomics;
-    this->hasDoubles = props.arch.hasDoubles;
-    // HIP-TODO: remove hasWarpShuffle==false paths completely?
-    this->hasWarpShuffle = true;
 
     gpuArchitecture = props.gcnArchName;
     // HIP-TODO: find a good value here
@@ -195,19 +189,15 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
     numAtoms = system.getNumParticles();
     paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
-    int multiprocessors;
     CHECK_RESULT(hipDeviceGetAttribute(&multiprocessors, hipDeviceAttributeMultiprocessorCount, device));
+    // For RDNA GPUs hipDeviceAttributeMultiprocessorCount means WGP (work-group processors, two compute units), not CUs.
+    if (simdWidth == 32)
+        multiprocessors *= 2;
     numThreadBlocks = numThreadBlocksPerComputeUnit*multiprocessors;
 
-    // GCN hardware is more like CUDA-8, w/ no independent forward progress
-    // or *_sync primatives
-    compilationDefines["SYNC_WARPS"] = "";
-    compilationDefines["SHFL(var, srcLane)"] = "__shfl(var, srcLane);";
-    // Important: the predicate for ballot is defined as an integer, hence
-    // it is important that we convert the variable field to a true/false value
-    // before running ballot, such that we do not discard the top half when
-    // running on a long int
-    compilationDefines["BALLOT(var)"] = "__ballot((var) != 0);";
+    compilationDefines["USE_HIP"] = "1";
+    if (simdWidth == 32)
+        compilationDefines["AMD_RDNA"] = "1";
     if (useDoublePrecision) {
         posq.initialize<double4>(*this, paddedNumAtoms, "posq");
         velm.initialize<double4>(*this, paddedNumAtoms, "velm");
@@ -263,11 +253,11 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
 
     // Set defines based on the requested precision.
 
-    compilationDefines["SQRT"] = useDoublePrecision ? "sqrt" : "sqrtf";
-    compilationDefines["RSQRT"] = useDoublePrecision ? "rsqrt" : "rsqrtf";
-    compilationDefines["RECIP"] = useDoublePrecision ? "1.0/" : "1.0f/";
-    compilationDefines["EXP"] = useDoublePrecision ? "exp" : "expf";
-    compilationDefines["LOG"] = useDoublePrecision ? "log" : "logf";
+    compilationDefines["SQRT"] = useDoublePrecision ? "sqrt" : "__fsqrt_rn";
+    compilationDefines["RSQRT"] = useDoublePrecision ? "rsqrt" : "__frsqrt_rn";
+    compilationDefines["RECIP(x)"] = useDoublePrecision ? "(1.0/(x))" : "(1.0f/(x))";
+    compilationDefines["EXP"] = useDoublePrecision ? "exp" : "__expf";
+    compilationDefines["LOG"] = useDoublePrecision ? "log" : "__logf";
     compilationDefines["POW"] = useDoublePrecision ? "pow" : "powf";
     compilationDefines["COS"] = useDoublePrecision ? "cos" : "cosf";
     compilationDefines["SIN"] = useDoublePrecision ? "sin" : "sinf";
@@ -423,14 +413,22 @@ void HipContext::setAsCurrent() {
         hipSetDevice(device);
 }
 
-hipModule_t HipContext::createModule(const string source, const char* optimizationFlags) {
-    return createModule(source, map<string, string>(), optimizationFlags);
+hipModule_t HipContext::createModule(const string source) {
+    return createModule(source, map<string, string>());
 }
 
-hipModule_t HipContext::createModule(const string source, const map<string, string>& defines, const char* optimizationFlags) {
-    static_assert(8*sizeof(void*) == HipContext::TileSize);
+hipModule_t HipContext::createModule(const string source, const map<string, string>& defines) {
+    const char* saveTempsEnv = getenv("OPENMM_SAVE_TEMPS");
+    bool saveTemps = saveTempsEnv != nullptr;
     string bits = intToString(8*sizeof(void*));
-    string options = (optimizationFlags == NULL ? defaultOptimizationOptions : string(optimizationFlags));
+    string options = "-ffast-math -Wall";
+    if (gpuArchitecture.find("gfx90a") == 0 ||
+        gpuArchitecture.find("gfx94") == 0) {
+        // HIP-TODO: Remove it when the compiler does a better job
+        // Disable SLP vectorization as it may generate unoptimal packed math instructions on
+        // >=MI200 (gfx90a, gfx942): more v_mov, higher register usage etc.
+        options += " -fno-slp-vectorize";
+    }
     if (getMaxThreadBlockSize() < 1024) {
         options += " --gpu-max-threads-per-block=" + std::to_string(getMaxThreadBlockSize());
     }
@@ -478,9 +476,7 @@ hipModule_t HipContext::createModule(const string source, const map<string, stri
         src << "typedef float3 mixed3;\n";
         src << "typedef float4 mixed4;\n";
     }
-
-    src << "typedef unsigned long tileflags;\n";
-    src << "static_assert(sizeof(tileflags)*8==" << HipContext::TileSize << ",\"tileflags size does not match TILE_SIZE\");\n";
+    src << "typedef unsigned int tileflags;\n";
     src << HipKernelSources::common << endl;
     for (auto& pair : defines) {
         src << "#define " << pair.first;
@@ -490,6 +486,7 @@ hipModule_t HipContext::createModule(const string source, const map<string, stri
     }
     if (!defines.empty())
         src << endl;
+    src << HipKernelSources::intrinsics << endl;
     src << source << endl;
 
     // See whether we already have PTX for this kernel cached.
@@ -499,12 +496,12 @@ hipModule_t HipContext::createModule(const string source, const map<string, stri
     sha1.Final();
     UINT_8 hash[20];
     sha1.GetHash(hash);
-    stringstream cacheFile;
-    cacheFile << cacheDir;
-    cacheFile.flags(ios::hex);
+    stringstream cacheHash;
+    cacheHash.flags(ios::hex);
     for (int i = 0; i < 20; i++)
-        cacheFile << setw(2) << setfill('0') << (int) hash[i];
-    cacheFile << '_' << gpuArchitecture << '_' << bits;
+        cacheHash << setw(2) << setfill('0') << (int) hash[i];
+    stringstream cacheFile;
+    cacheFile << cacheDir << cacheHash.str() << '_' << gpuArchitecture << '_' << bits;
     hipModule_t module;
     if (hipModuleLoad(&module, cacheFile.str().c_str()) == hipSuccess)
         return module;
@@ -512,11 +509,22 @@ hipModule_t HipContext::createModule(const string source, const map<string, stri
     // Select names for the various temporary files.
 
     stringstream tempFileName;
-    tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
-    tempFileName << "_" << getpid();
-    string inputFile = (tempDir+tempFileName.str()+".hip.cpp");
-    string outputFile = (tempDir+tempFileName.str()+".hsaco");
-    string logFile = (tempDir+tempFileName.str()+".log");
+    if (saveTemps) {
+        tempFileName << saveTempsEnv;
+        const char* saveTempsPrefixEnv = getenv("OPENMM_SAVE_TEMPS_PREFIX");
+        if (saveTempsPrefixEnv) {
+            tempFileName << saveTempsPrefixEnv;
+        }
+        tempFileName << cacheHash.str();
+    }
+    else {
+        tempFileName << tempDir;
+        tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
+        tempFileName << "_" << getpid();
+    }
+    string inputFile = (tempFileName.str()+".hip.cpp");
+    string outputFile = (tempFileName.str()+".hsaco");
+    string logFile = (tempFileName.str()+".log");
     int res = 0;
 
     // If the runtime compiler plugin is available, use it.
@@ -550,7 +558,7 @@ hipModule_t HipContext::createModule(const string source, const map<string, stri
         ofstream out(inputFile.c_str());
         out << src.str();
         out.close();
-        string command = compiler + " --genco --amdgpu-target=" + gpuArchitecture + " " + options + " -o \""+outputFile+"\" " + " \""+inputFile+"\" 2> \""+logFile+"\"";
+        string command = compiler + " --genco --amdgpu-target=" + gpuArchitecture + " " + options + (saveTemps ? " -save-temps=obj" : "") +" -o \""+outputFile+"\" " + " \""+inputFile+"\" 2> \""+logFile+"\"";
         res = std::system(command.c_str());
     }
     try {
@@ -576,20 +584,16 @@ hipModule_t HipContext::createModule(const string source, const map<string, stri
             m<<"Error loading HIP module: "<<getErrorString(result)<<" ("<<result<<")";
             throw OpenMMException(m.str());
         }
-        const char* save = getenv("OPENMM_SAVE_TEMPS");
-        bool savetemps = save != nullptr;
-        if (!savetemps) {
+        if (!saveTemps) {
             remove(inputFile.c_str());
             remove(logFile.c_str());
         }
-        if (rename(outputFile.c_str(), cacheFile.str().c_str()) != 0 && !savetemps)
+        if (rename(outputFile.c_str(), cacheFile.str().c_str()) != 0 && !saveTemps)
             remove(outputFile.c_str());
         return module;
     }
     catch (...) {
-        const char* save = getenv("OPENMM_SAVE_TEMPS");
-        bool savetemps = save != nullptr;
-        if (!savetemps) {
+        if (!saveTemps) {
             remove(inputFile.c_str());
             remove(outputFile.c_str());
             remove(logFile.c_str());
