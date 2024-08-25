@@ -236,7 +236,7 @@ extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded
     // Second loop: tiles without exclusions, either from the neighbor list (with cutoff) or just enumerating all
     // of them (no cutoff).
 
-#ifdef USE_CUTOFF
+#ifdef USE_NEIGHBOR_LIST
     const unsigned int numTiles = interactionCount[0];
     if (numTiles > maxTiles)
         return; // There wasn't enough memory for the neighbor list.
@@ -261,7 +261,7 @@ extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded
         // Extract the coordinates of this tile.
         int x, y;
         bool singlePeriodicCopy = false;
-#ifdef USE_CUTOFF
+#ifdef USE_NEIGHBOR_LIST
         x = tiles[pos];
         real4 blockSizeX = blockSize[x];
         singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
@@ -296,7 +296,7 @@ extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded
             // Load atom data for this tile.
             real4 posq1 = posq[atom1];
             LOAD_ATOM1_PARAMETERS
-#ifdef USE_CUTOFF
+#ifdef USE_NEIGHBOR_LIST
             unsigned int j = interactingAtoms[pos*TILE_SIZE+tgx];
 #else
             unsigned int j = y*TILE_SIZE + tgx;
@@ -453,7 +453,7 @@ extern "C" __launch_bounds__(THREAD_BLOCK_SIZE) __global__ void computeNonbonded
 
     // Third loop: single pairs that aren't part of a tile.
 
-#if USE_CUTOFF
+#if USE_NEIGHBOR_LIST
     const unsigned int numPairs = interactionCount[1];
     if (numPairs > maxSinglePairs)
         return; // There wasn't enough memory for the neighbor list.

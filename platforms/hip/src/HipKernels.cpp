@@ -995,7 +995,7 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     }
     source = cu.replaceStrings(source, replacements);
     if (force.getIncludeDirectSpace())
-        cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), true);
+        cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), numParticles > 3000, true);
 
     // Initialize the exceptions.
 

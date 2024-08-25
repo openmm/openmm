@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -44,11 +44,12 @@ HipSort::HipSort(HipContext& context, SortTrait* trait, unsigned int length, boo
     replacements["MIN_KEY"] = trait->getMinKey();
     replacements["MAX_KEY"] = trait->getMaxKey();
     replacements["MAX_VALUE"] = trait->getMaxValue();
+    replacements["UNIFORM"] = (uniform ? "1" : "0");
     hipModule_t module = context.createModule(context.replaceStrings(HipKernelSources::sort, replacements));
     shortListKernel = context.getKernel(module, "sortShortList");
     shortList2Kernel = context.getKernel(module, "sortShortList2");
     computeRangeKernel = context.getKernel(module, "computeRange");
-    assignElementsKernel = context.getKernel(module, "assignElementsToBuckets");
+    assignElementsKernel = context.getKernel(module, uniform ? "assignElementsToBuckets" : "assignElementsToBuckets2");
     computeBucketPositionsKernel = context.getKernel(module, "computeBucketPositions");
     copyToBucketsKernel = context.getKernel(module, "copyDataToBuckets");
     sortBucketsKernel = context.getKernel(module, "sortBuckets");
@@ -58,7 +59,7 @@ HipSort::HipSort(HipContext& context, SortTrait* trait, unsigned int length, boo
     int maxSharedMem;
     hipDeviceGetAttribute(&maxSharedMem, hipDeviceAttributeMaxSharedMemoryPerBlock, context.getDevice());
     int maxLocalBuffer = (maxSharedMem/trait->getDataSize())/2;
-    int maxShortList = min(3000, max(maxLocalBuffer, HipContext::ThreadBlockSize*context.getNumThreadBlocks()));
+    int maxShortList = min(1024, max(maxLocalBuffer, HipContext::ThreadBlockSize*context.getNumThreadBlocks()));
     isShortList = (length <= maxShortList);
     sortKernelSize = 256;
     rangeKernelSize = 256;

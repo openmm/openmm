@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -82,8 +82,10 @@ public:
      * @param exclusionList    for each atom, specifies the list of other atoms whose interactions should be excluded
      * @param kernel           the code to evaluate the interaction
      * @param forceGroup       the force group in which the interaction should be calculated
+     * @param usesNeighborList specifies whether a neighbor list should be used to optimize this interaction.  This should
+     *                         be viewed as only a suggestion.  Even when it is false, a neighbor list may be used anyway.
      */
-    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup);
+    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup, bool usesNeighborList = true);
     /**
      * Add a nonbonded interaction to be evaluated by the default interaction kernel.
      *
@@ -94,9 +96,11 @@ public:
      * @param exclusionList    for each atom, specifies the list of other atoms whose interactions should be excluded
      * @param kernel           the code to evaluate the interaction
      * @param forceGroup       the force group in which the interaction should be calculated
+     * @param usesNeighborList specifies whether a neighbor list should be used to optimize this interaction.  This should
+     *                         be viewed as only a suggestion.  Even when it is false, a neighbor list may be used anyway.
      * @param supportsPairList specifies whether this interaction can work with a neighbor list that uses a separate pair list
      */
-    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup, bool supportsPairList);
+    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup, bool usesNeighborList, bool supportsPairList);
     /**
      * Add a per-atom parameter that the default interaction kernel may depend on.
      */
@@ -335,12 +339,15 @@ private:
     HipArray sortedBlocks;
     HipArray sortedBlockCenter;
     HipArray sortedBlockBoundingBox;
+    HipArray blockSizeRange;
+    HipArray largeBlockCenter;
+    HipArray largeBlockBoundingBox;
     HipArray oldPositions;
     HipArray rebuildNeighborList;
     HipSort* blockSorter;
     hipEvent_t downloadCountEvent;
     unsigned int* pinnedCountBuffer;
-    std::vector<void*> forceArgs, findBlockBoundsArgs, sortBoxDataArgs, findInteractingBlocksArgs, copyInteractionCountsArgs;
+    std::vector<void*> forceArgs, findBlockBoundsArgs, computeSortKeysArgs, sortBoxDataArgs, findInteractingBlocksArgs, copyInteractionCountsArgs;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
@@ -348,7 +355,7 @@ private:
     std::map<int, double> groupCutoff;
     std::map<int, std::string> groupKernelSource;
     double lastCutoff;
-    bool useCutoff, usePeriodic, anyExclusions, usePadding, forceRebuildNeighborList, canUsePairList;
+    bool useCutoff, usePeriodic, anyExclusions, usePadding, useNeighborList, forceRebuildNeighborList, canUsePairList, useLargeBlocks;
     int startTileIndex, startBlockIndex, numBlocks, numTilesInBatch, maxExclusions;
     int numForceThreadBlocks, forceThreadBlockSize, findInteractingBlocksThreadBlockSize, numAtoms, groupFlags;
     unsigned int maxTiles, maxSinglePairs, tilesAfterReorder;
@@ -367,6 +374,7 @@ public:
     std::string source;
     hipFunction_t forceKernel, energyKernel, forceEnergyKernel;
     hipFunction_t findBlockBoundsKernel;
+    hipFunction_t computeSortKeysKernel;
     hipFunction_t sortBoxDataKernel;
     hipFunction_t findInteractingBlocksKernel;
     hipFunction_t copyInteractionCountsKernel;
