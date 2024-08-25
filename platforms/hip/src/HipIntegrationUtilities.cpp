@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
- * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
+ * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2020-2021 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,6 +27,7 @@
 
 #include "HipIntegrationUtilities.h"
 #include "HipContext.h"
+#include "openmm/common/ContextSelector.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -41,13 +42,13 @@ using namespace std;
 
 HipIntegrationUtilities::HipIntegrationUtilities(HipContext& context, const System& system) : IntegrationUtilities(context, system),
         ccmaConvergedMemory(NULL) {
-        CHECK_RESULT2(hipEventCreateWithFlags(&ccmaEvent, hipEventDisableTiming), "Error creating event for CCMA");
+        CHECK_RESULT2(hipEventCreateWithFlags(&ccmaEvent, context.getEventFlags()), "Error creating event for CCMA");
         CHECK_RESULT2(hipHostMalloc((void**) &ccmaConvergedMemory, sizeof(int), context.getHostMallocFlags()), "Error allocating pinned memory");
         CHECK_RESULT2(hipHostGetDevicePointer(&ccmaConvergedDeviceMemory, ccmaConvergedMemory, 0), "Error getting device address for pinned memory");
 }
 
 HipIntegrationUtilities::~HipIntegrationUtilities() {
-    context.setAsCurrent();
+    ContextSelector selector(context);
     if (ccmaConvergedMemory != NULL) {
         hipHostFree(ccmaConvergedMemory);
         hipEventDestroy(ccmaEvent);
@@ -67,6 +68,7 @@ HipArray& HipIntegrationUtilities::getStepSize() {
 }
 
 void HipIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, double tol) {
+    ContextSelector selector(context);
     ComputeKernel settleKernel, shakeKernel, ccmaForceKernel;
     if (constrainVelocities) {
         settleKernel = settleVelKernel;
@@ -132,6 +134,7 @@ void HipIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, dou
 }
 
 void HipIntegrationUtilities::distributeForcesFromVirtualSites() {
+    ContextSelector selector(context);
     if (numVsites > 0) {
         vsiteForceKernel->setArg(2, context.getLongForceBuffer());
         vsiteForceKernel->execute(numVsites);

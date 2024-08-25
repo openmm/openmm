@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
  * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -50,13 +50,19 @@ void testParallelComputation(NonbondedForce::NonbondedMethod method) {
     vector<Vec3> positions(numParticles);
     for (int i = 0; i < numParticles; i++)
         positions[i] = Vec3(5*genrand_real2(sfmt), 5*genrand_real2(sfmt), 5*genrand_real2(sfmt));
+    force->addGlobalParameter("scale", 0.5);
     for (int i = 0; i < numParticles; ++i)
         for (int j = 0; j < i; ++j) {
             Vec3 delta = positions[i]-positions[j];
-            if (delta.dot(delta) < 0.1)
+            if (delta.dot(delta) < 0.1) {
                 force->addException(i, j, 0, 1, 0);
+            }
+            else if (delta.dot(delta) < 0.2) {
+                int index = force->addException(i, j, 0.5, 1, 1.0);
+                force->addExceptionParameterOffset("scale", index, 0.5, 0.4, 0.3);
+            }
         }
-
+    
     // Create two contexts, one with a single device and one with two devices.
 
     VerletIntegrator integrator1(0.01);
@@ -179,6 +185,7 @@ void runPlatformTests() {
     testParallelComputation(NonbondedForce::NoCutoff);
     testParallelComputation(NonbondedForce::Ewald);
     testParallelComputation(NonbondedForce::PME);
+    testParallelComputation(NonbondedForce::LJPME);
     testReordering();
     testDeterministicForces();
     if (canRunHugeTest())

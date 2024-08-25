@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2018 Stanford University and the Authors.      *
- * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2020-2022 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -439,6 +439,10 @@ void HipNonbondedUtilities::computeInteractions(int forceGroups, bool includeFor
 bool HipNonbondedUtilities::updateNeighborListSize() {
     if (!useCutoff)
         return false;
+    if (context.getStepsSinceReorder() == 0)
+        tilesAfterReorder = pinnedCountBuffer[0];
+    else if (context.getStepsSinceReorder() > 25 && pinnedCountBuffer[0] > 1.1*tilesAfterReorder)
+        context.forceReorder();
     if (pinnedCountBuffer[0] <= maxTiles && pinnedCountBuffer[1] <= maxSinglePairs)
         return false;
 
@@ -446,12 +450,13 @@ bool HipNonbondedUtilities::updateNeighborListSize() {
     // this from happening in the future.
 
     if (pinnedCountBuffer[0] > maxTiles) {
-        maxTiles = (int) (1.2*pinnedCountBuffer[0]);
-        int totalTiles = context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2;
+        maxTiles = (unsigned int) (1.2*pinnedCountBuffer[0]);
+        unsigned int numBlocks = context.getNumAtomBlocks();
+        int totalTiles = numBlocks*(numBlocks+1)/2;
         if (maxTiles > totalTiles)
             maxTiles = totalTiles;
         interactingTiles.resize(maxTiles);
-        interactingAtoms.resize(HipContext::TileSize*maxTiles);
+        interactingAtoms.resize(HipContext::TileSize*(size_t) maxTiles);
         if (forceArgs.size() > 0)
             forceArgs[7] = &interactingTiles.getDevicePointer();
         findInteractingBlocksArgs[6] = &interactingTiles.getDevicePointer();

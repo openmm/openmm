@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2019 Stanford University and the Authors.      *
- * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
+ * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2020-2022 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,6 +30,7 @@
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "openmm/common/ContextSelector.h"
 #include "CommonKernelSources.h"
 #include "HipBondedUtilities.h"
 #include "HipExpressionUtilities.h"
@@ -59,7 +60,7 @@ void HipCalcForcesAndEnergyKernel::initialize(const System& system) {
 
 void HipCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     cu.setForcesValid(true);
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     cu.clearAutoclearBuffers();
     for (auto computation : cu.getPreComputations())
         computation->computeForceAndEnergy(includeForces, includeEnergy, groups);
@@ -72,7 +73,7 @@ void HipCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool i
 }
 
 double HipCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy, int groups, bool& valid) {
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     cu.getBondedUtilities().computeInteractions(groups);
     cu.getNonbondedUtilities().computeInteractions(groups, includeForces, includeEnergy);
     double sum = 0.0;
@@ -99,8 +100,18 @@ void HipUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
         ctx->setTime(time);
 }
 
+long long HipUpdateStateDataKernel::getStepCount(const ContextImpl& context) const {
+    return cu.getStepCount();
+}
+
+void HipUpdateStateDataKernel::setStepCount(const ContextImpl& context, long long count) {
+    vector<HipContext*>& contexts = cu.getPlatformData().contexts;
+    for (auto ctx : contexts)
+        ctx->setStepCount(count);
+}
+
 void HipUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& positions) {
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
     vector<float4> posCorrection;
@@ -161,7 +172,7 @@ void HipUpdateStateDataKernel::getPositions(ContextImpl& context, vector<Vec3>& 
 }
 
 void HipUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<Vec3>& positions) {
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     if (cu.getUseDoublePrecision()) {
@@ -212,7 +223,7 @@ void HipUpdateStateDataKernel::setPositions(ContextImpl& context, const vector<V
 }
 
 void HipUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>& velocities) {
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     velocities.resize(numParticles);
@@ -237,7 +248,7 @@ void HipUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>&
 }
 
 void HipUpdateStateDataKernel::setVelocities(ContextImpl& context, const vector<Vec3>& velocities) {
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     const vector<int>& order = cu.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     if (cu.getUseDoublePrecision() || cu.getUseMixedPrecision()) {
@@ -270,8 +281,12 @@ void HipUpdateStateDataKernel::setVelocities(ContextImpl& context, const vector<
     }
 }
 
+void HipUpdateStateDataKernel::computeShiftedVelocities(ContextImpl& context, double timeShift, vector<Vec3>& velocities) {
+    cu.getIntegrationUtilities().computeShiftedVelocities(timeShift, velocities);
+}
+
 void HipUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& forces) {
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     long long* force = (long long*) cu.getPinnedBuffer();
     cu.getForce().download(force);
     const vector<int>& order = cu.getAtomIndex();
@@ -284,6 +299,7 @@ void HipUpdateStateDataKernel::getForces(ContextImpl& context, vector<Vec3>& for
 }
 
 void HipUpdateStateDataKernel::getEnergyParameterDerivatives(ContextImpl& context, map<string, double>& derivs) {
+    ContextSelector selector(cu);
     const vector<string>& paramDerivNames = cu.getEnergyParamDerivNames();
     int numDerivs = paramDerivNames.size();
     if (numDerivs == 0)
@@ -337,15 +353,15 @@ void HipUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const
 }
 
 void HipUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     int version = 3;
     stream.write((char*) &version, sizeof(int));
     int precision = (cu.getUseDoublePrecision() ? 2 : cu.getUseMixedPrecision() ? 1 : 0);
     stream.write((char*) &precision, sizeof(int));
     double time = cu.getTime();
     stream.write((char*) &time, sizeof(double));
-    int stepCount = cu.getStepCount();
-    stream.write((char*) &stepCount, sizeof(int));
+    long long stepCount = cu.getStepCount();
+    stream.write((char*) &stepCount, sizeof(long long));
     int stepsSinceReorder = cu.getStepsSinceReorder();
     stream.write((char*) &stepsSinceReorder, sizeof(int));
     char* buffer = (char*) cu.getPinnedBuffer();
@@ -367,7 +383,7 @@ void HipUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& s
 }
 
 void HipUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     int version;
     stream.read((char*) &version, sizeof(int));
     if (version != 3)
@@ -379,8 +395,9 @@ void HipUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& str
         throw OpenMMException("Checkpoint was created with a different numeric precision");
     double time;
     stream.read((char*) &time, sizeof(double));
-    int stepCount, stepsSinceReorder;
-    stream.read((char*) &stepCount, sizeof(int));
+    long long stepCount;
+    stream.read((char*) &stepCount, sizeof(long long));
+    int stepsSinceReorder;
     stream.read((char*) &stepsSinceReorder, sizeof(int));
     vector<HipContext*>& contexts = cu.getPlatformData().contexts;
     for (auto ctx : contexts) {
@@ -408,6 +425,7 @@ void HipUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& str
     SimTKOpenMMUtilities::loadCheckpoint(stream);
     for (auto listener : cu.getReorderListeners())
         listener->execute();
+    cu.validateAtomOrder();
 }
 
 class HipCalcNonbondedForceKernel::ForceInfo : public HipForceInfo {
@@ -448,7 +466,7 @@ public:
         forceTemp.initialize<float4>(cu, cu.getNumAtoms(), "PmeForce");
     }
     float* getPosq() {
-        cu.setAsCurrent();
+        ContextSelector selector(cu);
         cu.getPosq().download(posq);
         return (float*) &posq[0];
     }
@@ -532,7 +550,7 @@ private:
 };
 
 HipCalcNonbondedForceKernel::~HipCalcNonbondedForceKernel() {
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     if (sort != NULL)
         delete sort;
     if (fft != NULL)
@@ -551,7 +569,7 @@ HipCalcNonbondedForceKernel::~HipCalcNonbondedForceKernel() {
 }
 
 void HipCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     int forceIndex;
     for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex)
         ;
@@ -650,8 +668,14 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
+    if (force.getNumParticleParameterOffsets() > 0)
+        paramsDefines["HAS_PARTICLE_OFFSETS"] = "1";
+    if (force.getNumExceptionParameterOffsets() > 0)
+        paramsDefines["HAS_EXCEPTION_OFFSETS"] = "1";
     if (usePosqCharges)
         paramsDefines["USE_POSQ_CHARGES"] = "1";
+    if (doLJPME)
+        paramsDefines["INCLUDE_LJPME_EXCEPTIONS"] = "1";
     if (nonbondedMethod == Ewald) {
         // Compute the Ewald parameters.
 
@@ -703,8 +727,16 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         defines["TWO_OVER_SQRT_PI"] = cu.doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
         defines["DO_LJPME"] = doLJPME ? "1" : "0";
-        if (doLJPME)
+        if (doLJPME) {
             defines["EWALD_DISPERSION_ALPHA"] = cu.doubleToString(dispersionAlpha);
+            double invRCut6 = pow(force.getCutoffDistance(), -6);
+            double dalphaR = dispersionAlpha * force.getCutoffDistance();
+            double dar2 = dalphaR*dalphaR;
+            double dar4 = dar2*dar2;
+            double multShift6 = -invRCut6*(1.0 - exp(-dar2) * (1.0 + dar2 + 0.5*dar4));
+            defines["INVCUT6"] = cu.doubleToString(invRCut6);
+            defines["MULTSHIFT6"] = cu.doubleToString(multShift6);
+        }
         if (cu.getContextIndex() == 0) {
             paramsDefines["INCLUDE_EWALD"] = "1";
             paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cu.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
@@ -766,13 +798,6 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
                     pmeDefines["RECIP_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(dispersionAlpha*dispersionAlpha));
                     pmeDefines["USE_LJPME"] = "1";
                     pmeDefines["CHARGE_FROM_SIGEPS"] = "1";
-                    double invRCut6 = pow(force.getCutoffDistance(), -6);
-                    double dalphaR = dispersionAlpha * force.getCutoffDistance();
-                    double dar2 = dalphaR*dalphaR;
-                    double dar4 = dar2*dar2;
-                    double multShift6 = -invRCut6*(1.0 - exp(-dar2) * (1.0 + dar2 + 0.5*dar4));
-                    defines["INVCUT6"] = cu.doubleToString(invRCut6);
-                    defines["MULTSHIFT6"] = cu.doubleToString(multShift6);
                     module = cu.createModule(HipKernelSources::vectorOps+CommonKernelSources::pme, pmeDefines);
                     pmeDispersionFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
                     pmeDispersionGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");
@@ -813,8 +838,8 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
 
                 if (usePmeStream) {
                     CHECK_RESULT(hipStreamCreateWithFlags(&pmeStream, hipStreamNonBlocking), "Error creating stream for NonbondedForce");
-                    CHECK_RESULT(hipEventCreateWithFlags(&pmeSyncEvent, hipEventDisableTiming), "Error creating event for NonbondedForce");
-                    CHECK_RESULT(hipEventCreateWithFlags(&paramsSyncEvent, hipEventDisableTiming), "Error creating event for NonbondedForce");
+                    CHECK_RESULT(hipEventCreateWithFlags(&pmeSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
+                    CHECK_RESULT(hipEventCreateWithFlags(&paramsSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
@@ -939,7 +964,8 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
             replacements["USE_PERIODIC"] = force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0";
             if (doLJPME)
                 replacements["EWALD_DISPERSION_ALPHA"] = cu.doubleToString(dispersionAlpha);
-            cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CommonKernelSources::pmeExclusions, replacements), force.getForceGroup());
+            if (force.getIncludeDirectSpace())
+                cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CommonKernelSources::pmeExclusions, replacements), force.getForceGroup());
         }
     }
 
@@ -959,7 +985,7 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         replacements["CHARGE1"] = prefix+"charge1";
         replacements["CHARGE2"] = prefix+"charge2";
     }
-    if (hasCoulomb)
+    if (hasCoulomb && !usePosqCharges)
         cu.getNonbondedUtilities().addParameter(HipNonbondedUtilities::ParameterInfo(prefix+"charge", "real", 1, charges.getElementSize(), charges.getDevicePointer()));
     sigmaEpsilon.initialize<float2>(cu, cu.getPaddedNumAtoms(), "sigmaEpsilon");
     if (hasLJ) {
@@ -968,7 +994,8 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         cu.getNonbondedUtilities().addParameter(HipNonbondedUtilities::ParameterInfo(prefix+"sigmaEpsilon", "float", 2, sizeof(float2), sigmaEpsilon.getDevicePointer()));
     }
     source = cu.replaceStrings(source, replacements);
-    cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), true);
+    if (force.getIncludeDirectSpace())
+        cu.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), true);
 
     // Initialize the exceptions.
 
@@ -993,13 +1020,14 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         map<string, string> replacements;
         replacements["APPLY_PERIODIC"] = (usePeriodic && force.getExceptionsUsePeriodicBoundaryConditions() ? "1" : "0");
         replacements["PARAMS"] = cu.getBondedUtilities().addArgument(exceptionParams.getDevicePointer(), "float4");
-        cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CommonKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
+        if (force.getIncludeDirectSpace())
+            cu.getBondedUtilities().addInteraction(atoms, cu.replaceStrings(CommonKernelSources::nonbondedExceptions, replacements), force.getForceGroup());
     }
 
     // Initialize parameter offsets.
 
     vector<vector<float4> > particleOffsetVec(force.getNumParticles());
-    vector<vector<float4> > exceptionOffsetVec(force.getNumExceptions());
+    vector<vector<float4> > exceptionOffsetVec(numExceptions);
     for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
         string param;
         int particle;
@@ -1020,6 +1048,9 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         int exception;
         double charge, sigma, epsilon;
         force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        int index = exceptionIndex[exception];
+        if (index < startIndex || index >= endIndex)
+            continue;
         auto paramPos = find(paramNames.begin(), paramNames.end(), param);
         int paramIndex;
         if (paramPos == paramNames.end()) {
@@ -1028,13 +1059,11 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         }
         else
             paramIndex = paramPos-paramNames.begin();
-        exceptionOffsetVec[exceptionIndex[exception]].push_back(make_float4(charge, sigma, epsilon, paramIndex));
+        exceptionOffsetVec[index-startIndex].push_back(make_float4(charge, sigma, epsilon, paramIndex));
     }
     paramValues.resize(paramNames.size(), 0.0);
     particleParamOffsets.initialize<float4>(cu, max(force.getNumParticleParameterOffsets(), 1), "particleParamOffsets");
-    exceptionParamOffsets.initialize<float4>(cu, max(force.getNumExceptionParameterOffsets(), 1), "exceptionParamOffsets");
     particleOffsetIndices.initialize<int>(cu, cu.getPaddedNumAtoms()+1, "particleOffsetIndices");
-    exceptionOffsetIndices.initialize<int>(cu, force.getNumExceptions()+1, "exceptionOffsetIndices");
     vector<int> particleOffsetIndicesVec, exceptionOffsetIndicesVec;
     vector<float4> p, e;
     for (int i = 0; i < particleOffsetVec.size(); i++) {
@@ -1054,7 +1083,9 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         particleParamOffsets.upload(p);
         particleOffsetIndices.upload(particleOffsetIndicesVec);
     }
-    if (force.getNumExceptionParameterOffsets() > 0) {
+    exceptionParamOffsets.initialize<float4>(cu, max((int) e.size(), 1), "exceptionParamOffsets");
+    exceptionOffsetIndices.initialize<int>(cu, exceptionOffsetIndicesVec.size(), "exceptionOffsetIndices");
+    if (e.size() > 0) {
         exceptionParamOffsets.upload(e);
         exceptionOffsetIndices.upload(exceptionOffsetIndicesVec);
     }
@@ -1075,6 +1106,7 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
 double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
     // Update particle and exception parameters.
 
+    ContextSelector selector(cu);
     bool paramChanged = false;
     for (int i = 0; i < paramNames.size(); i++) {
         double value = context.getParameter(paramNames[i]);
@@ -1089,7 +1121,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     }
     double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
     if (recomputeParams || hasOffsets) {
-        bool computeSelfEnergy = (includeEnergy && includeReciprocal);
+        int computeSelfEnergy = (includeEnergy && includeReciprocal);
         int numAtoms = cu.getPaddedNumAtoms();
         vector<void*> paramsArgs = {&cu.getEnergyBuffer().getDevicePointer(), &computeSelfEnergy, &globalParams.getDevicePointer(), &numAtoms,
                 &baseParticleParams.getDevicePointer(), &cu.getPosq().getDevicePointer(), &charges.getDevicePointer(), &sigmaEpsilon.getDevicePointer(),
@@ -1258,7 +1290,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
 void HipCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
     // Make sure the new parameters are acceptable.
 
-    cu.setAsCurrent();
+    ContextSelector selector(cu);
     if (force.getNumParticles() != cu.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     if (!hasCoulomb || !hasLJ) {
@@ -1271,20 +1303,28 @@ void HipCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
                 throw OpenMMException("updateParametersInContext: The nonbonded force kernel does not include Lennard-Jones interactions, because all epsilons were originally 0");
         }
     }
+    set<int> exceptionsWithOffsets;
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        exceptionsWithOffsets.insert(exception);
+    }
     vector<int> exceptions;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-        if (exceptionAtoms.size() > exceptions.size() && make_pair(particle1, particle2) == exceptionAtoms[exceptions.size()])
+        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
             exceptions.push_back(i);
-        else if (chargeProd != 0.0 || epsilon != 0.0)
-            throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
     }
     int numContexts = cu.getPlatformData().contexts.size();
     int startIndex = cu.getContextIndex()*exceptions.size()/numContexts;
     int endIndex = (cu.getContextIndex()+1)*exceptions.size()/numContexts;
     int numExceptions = endIndex-startIndex;
+    if (numExceptions != exceptionAtoms.size())
+        throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
 
     // Record the per-particle parameters.
 
@@ -1300,11 +1340,13 @@ void HipCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
     // Record the exceptions.
 
     if (numExceptions > 0) {
-        vector<vector<int> > atoms(numExceptions, vector<int>(2));
         vector<float4> baseExceptionParamsVec(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
+            int particle1, particle2;
             double chargeProd, sigma, epsilon;
-            force.getExceptionParameters(exceptions[startIndex+i], atoms[i][0], atoms[i][1], chargeProd, sigma, epsilon);
+            force.getExceptionParameters(exceptions[startIndex+i], particle1, particle2, chargeProd, sigma, epsilon);
+            if (make_pair(particle1, particle2) != exceptionAtoms[i])
+                throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
             baseExceptionParamsVec[i] = make_float4(chargeProd, sigma, epsilon, 0);
         }
         baseExceptionParams.upload(baseExceptionParamsVec);

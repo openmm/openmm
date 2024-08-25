@@ -9,8 +9,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
- * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
+ * Portions copyright (c) 2009-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2020-2022 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,7 +56,7 @@ public:
      * @param name              the name of the array
      */
     template <class T>
-    static HipArray* create(HipContext& context, int size, const std::string& name) {
+    static HipArray* create(HipContext& context, size_t size, const std::string& name) {
         return new HipArray(context, size, sizeof(T), name);
     }
     /**
@@ -72,7 +72,7 @@ public:
      * @param elementSize       the size of each element in bytes
      * @param name              the name of the array
      */
-    HipArray(HipContext& context, int size, int elementSize, const std::string& name);
+    HipArray(HipContext& context, size_t size, int elementSize, const std::string& name);
     ~HipArray();
     /**
      * Initialize this object.
@@ -82,7 +82,7 @@ public:
      * @param elementSize       the size of each element in bytes
      * @param name              the name of the array
      */
-    void initialize(ComputeContext& context, int size, int elementSize, const std::string& name);
+    void initialize(ComputeContext& context, size_t size, int elementSize, const std::string& name);
     /**
      * Initialize this object.  The template argument is the data type of each array element.
      *
@@ -91,13 +91,13 @@ public:
      * @param name              the name of the array
      */
     template <class T>
-    void initialize(ComputeContext& context, int size, const std::string& name) {
+    void initialize(ComputeContext& context, size_t size, const std::string& name) {
         initialize(context, size, sizeof(T), name);
     }
     /**
      * Recreate the internal storage to have a different size.
      */
-    void resize(int size);
+    void resize(size_t size);
     /**
      * Get whether this array has been initialized.
      */
@@ -107,7 +107,7 @@ public:
     /**
      * Get the number of elements in the array.
      */
-    int getSize() const {
+    size_t getSize() const {
         return size;
     }
     /**
@@ -183,7 +183,8 @@ public:
 private:
     HipContext* context;
     hipDeviceptr_t pointer;
-    int size, elementSize;
+    size_t size;
+    int elementSize;
     bool ownsMemory;
     std::string name;
 };

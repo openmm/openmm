@@ -6,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2019 Stanford University and the Authors.      *
- * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
+ * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,6 +39,7 @@
 #include "HipProgram.h"
 #include "HipFFT3D.h"
 #include "openmm/common/ComputeArray.h"
+#include "openmm/common/ContextSelector.h"
 #include "SHA1.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
@@ -184,13 +185,15 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
     }
 
     contextIsValid = true;
+    ContextSelector selector(*this);
     if (contextIndex > 0) {
         int canAccess;
         CHECK_RESULT(hipDeviceCanAccessPeer(&canAccess, getDevice(), platformData.contexts[0]->getDevice()));
         if (canAccess) {
-            platformData.contexts[0]->setAsCurrent();
-            CHECK_RESULT(hipDeviceEnablePeerAccess(getDevice(), 0));
-            setAsCurrent();
+            {
+                ContextSelector selector2(*platformData.contexts[0]);
+                CHECK_RESULT(hipDeviceEnablePeerAccess(getDevice(), 0));
+            }
             CHECK_RESULT(hipDeviceEnablePeerAccess(platformData.contexts[0]->getDevice(), 0));
         }
     }
@@ -345,7 +348,7 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
 }
 
 HipContext::~HipContext() {
-    setAsCurrent();
+    pushAsCurrent();
     for (auto force : forces)
         delete force;
     for (auto listener : reorderListeners)
@@ -366,28 +369,29 @@ HipContext::~HipContext() {
         delete nonbonded;
     for (auto module : loadedModules)
         hipModuleUnload(module);
+    popAsCurrent();
     contextIsValid = false;
 }
 
 void HipContext::initialize() {
-    hipSetDevice(device);
+    ContextSelector selector(*this);
     string errorMessage = "Error initializing Context";
     int numEnergyBuffers = max(numThreadBlocks*ThreadBlockSize, nonbonded->getNumEnergyBuffers());
     if (useDoublePrecision) {
         energyBuffer.initialize<double>(*this, numEnergyBuffers, "energyBuffer");
-        energySum.initialize<double>(*this, 1, "energySum");
+        energySum.initialize<double>(*this, multiprocessors, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
         CHECK_RESULT(hipHostMalloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), getHostMallocFlags()));
     }
     else if (useMixedPrecision) {
         energyBuffer.initialize<double>(*this, numEnergyBuffers, "energyBuffer");
-        energySum.initialize<double>(*this, 1, "energySum");
+        energySum.initialize<double>(*this, multiprocessors, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
         CHECK_RESULT(hipHostMalloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), getHostMallocFlags()));
     }
     else {
         energyBuffer.initialize<float>(*this, numEnergyBuffers, "energyBuffer");
-        energySum.initialize<float>(*this, 1, "energySum");
+        energySum.initialize<float>(*this, multiprocessors, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*6, numEnergyBuffers);
         CHECK_RESULT(hipHostMalloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), getHostMallocFlags()));
     }
@@ -421,6 +425,29 @@ void HipContext::initializeContexts() {
 void HipContext::setAsCurrent() {
     if (contextIsValid)
         hipSetDevice(device);
+}
+
+void HipContext::pushAsCurrent() {
+    if (contextIsValid) {
+        // Emulate cuCtxPushCurrent's behavior
+        hipDevice_t outerScopeDevice;
+        hipGetDevice(&outerScopeDevice);
+        outerScopeDevices.push(outerScopeDevice);
+        if (device != outerScopeDevice) {
+            hipSetDevice(device);
+        }
+    }
+}
+
+void HipContext::popAsCurrent() {
+    if (contextIsValid) {
+        // Emulate cuCtxPopCurrent's behavior
+        hipDevice_t outerScopeDevice = outerScopeDevices.top();
+        outerScopeDevices.pop();
+        if (outerScopeDevice != device) {
+            hipSetDevice(outerScopeDevice);
+        }
+    }
 }
 
 string HipContext::getTempFileName() const {
@@ -784,12 +811,18 @@ double HipContext::reduceEnergy() {
     int bufferSize = energyBuffer.getSize();
     int workGroupSize = getMaxThreadBlockSize();
     void* args[] = {&energyBuffer.getDevicePointer(), &energySum.getDevicePointer(), &bufferSize, &workGroupSize};
-    executeKernel(reduceEnergyKernel, args, workGroupSize, workGroupSize, workGroupSize*energyBuffer.getElementSize());
+    executeKernel(reduceEnergyKernel, args, workGroupSize*energySum.getSize(), workGroupSize, workGroupSize*energyBuffer.getElementSize());
     energySum.download(pinnedBuffer);
-    if (getUseDoublePrecision() || getUseMixedPrecision())
-        return *((double*) pinnedBuffer);
-    else
-        return *((float*) pinnedBuffer);
+    double result = 0;
+    if (getUseDoublePrecision() || getUseMixedPrecision()) {
+        for (int i = 0; i < energySum.getSize(); i++)
+            result += ((double*) pinnedBuffer)[i];
+    }
+    else {
+        for (int i = 0; i < energySum.getSize(); i++)
+            result += ((float*) pinnedBuffer)[i];
+    }
+    return result;
 }
 
 void HipContext::setCharges(const vector<double>& charges) {
@@ -848,6 +881,13 @@ vector<int> HipContext::getDevicePrecedence() {
     }
 
     return precedence;
+}
+
+unsigned int HipContext::getEventFlags() {
+    unsigned int flags = hipEventDisableTiming;
+    if (useBlockingSync)
+        flags += hipEventBlockingSync;
+    return flags;
 }
 
 unsigned int HipContext::getHostMallocFlags() {

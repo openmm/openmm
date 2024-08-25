@@ -91,7 +91,9 @@ private:
     long long* pinnedForceBuffer;
     hipFunction_t sumKernel;
     hipEvent_t event;
-    hipStream_t peerCopyStream;
+    std::vector<hipEvent_t> peerCopyEvent;
+    std::vector<hipEvent_t> peerCopyEventLocal;
+    std::vector<hipStream_t> peerCopyStream;
 };
 
 /**

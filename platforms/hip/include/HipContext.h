@@ -39,6 +39,7 @@
 
 
 #include <map>
+#include <stack>
 #include <string>
 #include <utility>
 #define __CL_ENABLE_EXCEPTIONS
@@ -99,10 +100,20 @@ public:
         return contextIsValid;
     }
     /**
-     * Set the hipCtx_t associated with this object to be the current context.  If the context is not
+     * Set the device associated with this object to be the current device.  If the context is not
      * valid, this returns without doing anything.
      */
     void setAsCurrent();
+    /**
+     * Push the device associated with this object to be the current device.  If the context is not
+     * valid, this returns without doing anything.
+     */
+    void pushAsCurrent();
+    /**
+     * Pop the device associated with this object off the stack of contexts.  If the context is not
+     * valid, this returns without doing anything.
+     */
+    void popAsCurrent();
     /**
      * Get the hipDevice_t associated with this object.
      */
@@ -583,6 +594,10 @@ public:
      */
     void flushQueue();
     /**
+     * Get the flags that should be used when creating hipEvent_t objects.
+     */
+    unsigned int getEventFlags();
+    /**
      * Get the flags that should be used when allocating pinned host memory.
      */
     unsigned int getHostMallocFlags();
@@ -610,6 +625,7 @@ private:
     std::map<std::string, std::string> compilationDefines;
     std::vector<hipModule_t> loadedModules;
     hipDevice_t device;
+    std::stack<hipDevice_t> outerScopeDevices;
     hipStream_t currentStream;
     hipFunction_t clearBufferKernel;
     hipFunction_t clearTwoBuffersKernel;

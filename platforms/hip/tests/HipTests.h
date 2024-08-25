@@ -41,4 +41,6 @@ OpenMM::HipPlatform platform;
 void initializeTests(int argc, char* argv[]) {
     if (argc > 1)
         platform.setPropertyDefaultValue("Precision", std::string(argv[1]));
+    if (argc > 2)
+        platform.setPropertyDefaultValue("DeviceIndex", std::string(argv[2]));
 }

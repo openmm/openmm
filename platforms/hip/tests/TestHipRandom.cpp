@@ -60,6 +60,7 @@ void testGaussian() {
             platform.getPropertyDefaultValue(HipPlatform::HipDisablePmeStream()), "false", 1, NULL);
     HipContext& context = *platformData.contexts[0];
     context.initialize();
+    context.setAsCurrent();
     context.getIntegrationUtilities().initRandomNumberGenerator(0);
     HipArray& random = context.getIntegrationUtilities().getRandom();
     context.getIntegrationUtilities().prepareRandomNumbers(random.getSize());
