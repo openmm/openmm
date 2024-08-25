@@ -542,14 +542,6 @@ HipCalcNonbondedForceKernel::~HipCalcNonbondedForceKernel() {
     if (pmeio != NULL)
         delete pmeio;
     if (hasInitializedFFT) {
-        if (useHipFFT) {
-            hipfftDestroy(fftForward);
-            hipfftDestroy(fftBackward);
-            if (doLJPME) {
-                hipfftDestroy(dispersionFftForward);
-                hipfftDestroy(dispersionFftBackward);
-            }
-        }
         if (usePmeStream) {
             hipStreamDestroy(pmeStream);
             hipEventDestroy(pmeSyncEvent);
@@ -696,15 +688,15 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         // Compute the PME parameters.
 
         NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ, false);
-        gridSizeX = HipFFT3D::findLegalDimension(gridSizeX);
-        gridSizeY = HipFFT3D::findLegalDimension(gridSizeY);
-        gridSizeZ = HipFFT3D::findLegalDimension(gridSizeZ);
+        gridSizeX = cu.findLegalFFTDimension(gridSizeX);
+        gridSizeY = cu.findLegalFFTDimension(gridSizeY);
+        gridSizeZ = cu.findLegalFFTDimension(gridSizeZ);
         if (doLJPME) {
             NonbondedForceImpl::calcPMEParameters(system, force, dispersionAlpha, dispersionGridSizeX,
                                                   dispersionGridSizeY, dispersionGridSizeZ, true);
-            dispersionGridSizeX = HipFFT3D::findLegalDimension(dispersionGridSizeX);
-            dispersionGridSizeY = HipFFT3D::findLegalDimension(dispersionGridSizeY);
-            dispersionGridSizeZ = HipFFT3D::findLegalDimension(dispersionGridSizeZ);
+            dispersionGridSizeX = cu.findLegalFFTDimension(dispersionGridSizeX);
+            dispersionGridSizeY = cu.findLegalFFTDimension(dispersionGridSizeY);
+            dispersionGridSizeZ = cu.findLegalFFTDimension(dispersionGridSizeZ);
         }
 
         defines["EWALD_ALPHA"] = cu.doubleToString(alpha);
@@ -724,9 +716,7 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
                 for (int i = 0; i < numParticles; i++)
                     ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
             }
-            char deviceName[100];
-            hipDeviceGetName(deviceName, 100, cu.getDevice());
-            usePmeStream = (!cu.getPlatformData().disablePmeStream && !cu.getPlatformData().useCpuPme && string(deviceName) != "GeForce GTX 980"); // Using a separate stream is slower on GTX 980
+            usePmeStream = (!cu.getPlatformData().disablePmeStream && !cu.getPlatformData().useCpuPme);
             map<string, string> pmeDefines;
             pmeDefines["PME_ORDER"] = cu.intToString(PmeOrder);
             pmeDefines["NUM_ATOMS"] = cu.intToString(numParticles);
@@ -818,45 +808,11 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
                 pmeEnergyBuffer.initialize(cu, cu.getNumThreadBlocks()*HipContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
                 cu.clearBuffer(pmeEnergyBuffer);
                 sort = new HipSort(cu, new SortTrait(), cu.getNumAtoms());
-                int cufftVersion;
-                hipfftGetVersion(&cufftVersion);
-                useHipFFT = (cufftVersion >= 7050); // There was a critical bug in version 7.0
-                if (useHipFFT) {
-                    hipfftResult result = hipfftPlan3d(&fftForward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? HIPFFT_D2Z : HIPFFT_R2C);
-                    if (result != HIPFFT_SUCCESS)
-                        throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
-                    result = hipfftPlan3d(&fftBackward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? HIPFFT_Z2D : HIPFFT_C2R);
-                    if (result != HIPFFT_SUCCESS)
-                        throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
-                    if (doLJPME) {
-                        result = hipfftPlan3d(&dispersionFftForward, dispersionGridSizeX, dispersionGridSizeY,
-                                                dispersionGridSizeZ, cu.getUseDoublePrecision() ? HIPFFT_D2Z : HIPFFT_R2C);
-                        if (result != HIPFFT_SUCCESS)
-                            throw OpenMMException("Error initializing disperison FFT: "+cu.intToString(result));
-                        result = hipfftPlan3d(&dispersionFftBackward, dispersionGridSizeX, dispersionGridSizeY,
-                                             dispersionGridSizeZ, cu.getUseDoublePrecision() ? HIPFFT_Z2D : HIPFFT_C2R);
-                        if (result != HIPFFT_SUCCESS)
-                            throw OpenMMException("Error initializing disperison FFT: "+cu.intToString(result));
-                    }
-                }
-                else {
-                    fft = new HipFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, true);
-                    if (doLJPME)
-                        dispersionFft = new HipFFT3D(cu, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
-                }
 
                 // Prepare for doing PME on its own stream.
 
                 if (usePmeStream) {
-                    hipStreamCreateWithFlags(&pmeStream, hipStreamNonBlocking);
-                    if (useHipFFT) {
-                        hipfftSetStream(fftForward, pmeStream);
-                        hipfftSetStream(fftBackward, pmeStream);
-                        if (doLJPME) {
-                            hipfftSetStream(dispersionFftForward, pmeStream);
-                            hipfftSetStream(dispersionFftBackward, pmeStream);
-                        }
-                    }
+                    CHECK_RESULT(hipStreamCreateWithFlags(&pmeStream, hipStreamNonBlocking), "Error creating stream for NonbondedForce");
                     CHECK_RESULT(hipEventCreateWithFlags(&pmeSyncEvent, hipEventDisableTiming), "Error creating event for NonbondedForce");
                     CHECK_RESULT(hipEventCreateWithFlags(&paramsSyncEvent, hipEventDisableTiming), "Error creating event for NonbondedForce");
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
@@ -865,6 +821,11 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
                     cu.addPreComputation(new SyncStreamPreComputation(cu, pmeStream, pmeSyncEvent, recipForceGroup));
                     cu.addPostComputation(new SyncStreamPostComputation(cu, pmeSyncEvent, cu.getKernel(module, "addEnergy"), pmeEnergyBuffer, recipForceGroup));
                 }
+
+                hipStream_t fftStream = usePmeStream ? pmeStream : cu.getCurrentStream();
+                fft = cu.createFFT(gridSizeX, gridSizeY, gridSizeZ, true, fftStream, pmeGrid1, pmeGrid2);
+                if (doLJPME)
+                    dispersionFft = cu.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true, fftStream, pmeGrid1, pmeGrid2);
                 hasInitializedFFT = true;
 
                 // Initialize the b-spline moduli.
@@ -1215,20 +1176,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             void* finishSpreadArgs[] = {&pmeGrid2.getDevicePointer(), &pmeGrid1.getDevicePointer()};
             cu.executeKernelFlat(pmeFinishSpreadChargeKernel, finishSpreadArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
 
-            if (useHipFFT) {
-                if (cu.getUseDoublePrecision()) {
-                    hipfftResult result = hipfftExecD2Z(fftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
-                    if (result != HIPFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                } else {
-                    hipfftResult result = hipfftExecR2C(fftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
-                    if (result != HIPFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                }
-            }
-            else {
-                fft->execFFT(pmeGrid1, pmeGrid2, true);
-            }
+            fft->execFFT(true);
 
             if (includeEnergy) {
                 void* computeEnergyArgs[] = {&pmeGrid2.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
@@ -1242,20 +1190,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeConvolutionKernel, convolutionArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
 
-            if (useHipFFT) {
-                if (cu.getUseDoublePrecision()) {
-                    hipfftResult result = hipfftExecZ2D(fftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
-                    if (result != HIPFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                } else {
-                    hipfftResult result = hipfftExecC2R(fftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*)  pmeGrid1.getDevicePointer());
-                    if (result != HIPFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                }
-            }
-            else {
-                fft->execFFT(pmeGrid2, pmeGrid1, false);
-            }
+            fft->execFFT(false);
 
             void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
@@ -1285,20 +1220,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             void* finishSpreadArgs[] = {&pmeGrid2.getDevicePointer(), &pmeGrid1.getDevicePointer()};
             cu.executeKernelFlat(pmeDispersionFinishSpreadChargeKernel, finishSpreadArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
 
-            if (useHipFFT) {
-                if (cu.getUseDoublePrecision()) {
-                    hipfftResult result = hipfftExecD2Z(dispersionFftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
-                    if (result != HIPFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                } else {
-                    hipfftResult result = hipfftExecR2C(dispersionFftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
-                    if (result != HIPFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                }
-            }
-            else {
-                dispersionFft->execFFT(pmeGrid1, pmeGrid2, true);
-            }
+            dispersionFft->execFFT(true);
 
             if (includeEnergy) {
                 void* computeEnergyArgs[] = {&pmeGrid2.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
@@ -1312,20 +1234,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeDispersionConvolutionKernel, convolutionArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
 
-            if (useHipFFT) {
-                if (cu.getUseDoublePrecision()) {
-                    hipfftResult result = hipfftExecZ2D(dispersionFftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
-                    if (result != HIPFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                } else {
-                    hipfftResult result = hipfftExecC2R(dispersionFftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*)  pmeGrid1.getDevicePointer());
-                    if (result != HIPFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                }
-            }
-            else {
-                dispersionFft->execFFT(pmeGrid2, pmeGrid1, false);
-            }
+            dispersionFft->execFFT(false);
 
             void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),

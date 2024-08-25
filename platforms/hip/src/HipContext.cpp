@@ -37,6 +37,7 @@
 #include "HipKernelSources.h"
 #include "HipNonbondedUtilities.h"
 #include "HipProgram.h"
+#include "HipFFT3D.h"
 #include "openmm/common/ComputeArray.h"
 #include "SHA1.h"
 #include "openmm/Platform.h"
@@ -85,7 +86,7 @@ bool HipContext::hasInitializedHip = false;
 HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& tempDir, HipPlatform::PlatformData& platformData,
         HipContext* originalContext) : ComputeContext(system), currentStream(0), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
         pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL),
-        supportsHardwareFloatGlobalAtomicAdd(false) {
+        useBlockingSync(useBlockingSync), supportsHardwareFloatGlobalAtomicAdd(false) {
     if (!hasInitializedHip) {
         CHECK_RESULT2(hipInit(0), "Error initializing HIP");
         hasInitializedHip = true;
@@ -647,6 +648,14 @@ HipArray* HipContext::createArray() {
 
 ComputeEvent HipContext::createEvent() {
     return shared_ptr<ComputeEventImpl>(new HipEvent(*this));
+}
+
+HipFFT3D* HipContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex, hipStream_t stream, HipArray& in, HipArray& out) {
+    return new HipFFT3D(*this, xsize, ysize, zsize, realToComplex, stream, in, out);
+}
+
+int HipContext::findLegalFFTDimension(int minimum) {
+    return HipFFT3D::findLegalDimension(minimum);
 }
 
 ComputeProgram HipContext::compileProgram(const std::string source, const std::map<std::string, std::string>& defines) {

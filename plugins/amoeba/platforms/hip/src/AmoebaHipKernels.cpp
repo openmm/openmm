@@ -37,7 +37,6 @@
 #include "openmm/internal/AmoebaVdwForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "HipBondedUtilities.h"
-#include "HipFFT3D.h"
 #include "HipForceInfo.h"
 #include "HipKernelSources.h"
 #include "SimTKOpenMMRealType.h"
@@ -52,70 +51,27 @@
 using namespace OpenMM;
 using namespace std;
 
-static void setPeriodicBoxArgs(ComputeContext& cc, ComputeKernel kernel, int index) {
-    Vec3 a, b, c;
-    cc.getPeriodicBoxVectors(a, b, c);
-    if (cc.getUseDoublePrecision()) {
-        kernel->setArg(index++, mm_double4(a[0], b[1], c[2], 0.0));
-        kernel->setArg(index++, mm_double4(1.0/a[0], 1.0/b[1], 1.0/c[2], 0.0));
-        kernel->setArg(index++, mm_double4(a[0], a[1], a[2], 0.0));
-        kernel->setArg(index++, mm_double4(b[0], b[1], b[2], 0.0));
-        kernel->setArg(index, mm_double4(c[0], c[1], c[2], 0.0));
-    }
-    else {
-        kernel->setArg(index++, mm_float4((float) a[0], (float) b[1], (float) c[2], 0.0f));
-        kernel->setArg(index++, mm_float4(1.0f/(float) a[0], 1.0f/(float) b[1], 1.0f/(float) c[2], 0.0f));
-        kernel->setArg(index++, mm_float4((float) a[0], (float) a[1], (float) a[2], 0.0f));
-        kernel->setArg(index++, mm_float4((float) b[0], (float) b[1], (float) b[2], 0.0f));
-        kernel->setArg(index, mm_float4((float) c[0], (float) c[1], (float) c[2], 0.0f));
-    }
-}
-
 /* -------------------------------------------------------------------------- *
  *                             AmoebaMultipole                                *
  * -------------------------------------------------------------------------- */
 
 HipCalcAmoebaMultipoleForceKernel::~HipCalcAmoebaMultipoleForceKernel() {
     cc.setAsCurrent();
-    if (hasInitializedFFT)
-        hipfftDestroy(fft);
+    if (fft != NULL)
+        delete fft;
 }
 
 void HipCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
     CommonCalcAmoebaMultipoleForceKernel::initialize(system, force);
     if (usePME) {
-        hipfftResult result = hipfftPlan3d(&fft, gridSizeX, gridSizeY, gridSizeZ, cc.getUseDoublePrecision() ? HIPFFT_Z2Z : HIPFFT_C2C);
-        if (result != HIPFFT_SUCCESS)
-            throw OpenMMException("Error initializing FFT: "+cc.intToString(result));
-        hasInitializedFFT = true;
+        HipArray& grid1 = cu.unwrap(pmeGrid1);
+        HipArray& grid2 = cu.unwrap(pmeGrid2);
+        fft = cu.createFFT(gridSizeX, gridSizeY, gridSizeZ, false, cu.getCurrentStream(), grid1, grid2);
     }
 }
 
 void HipCalcAmoebaMultipoleForceKernel::computeFFT(bool forward) {
-    HipArray& grid1 = dynamic_cast<HipContext&>(cc).unwrap(pmeGrid1);
-    HipArray& grid2 = dynamic_cast<HipContext&>(cc).unwrap(pmeGrid2);
-    if (forward) {
-        if (cc.getUseDoublePrecision()) {
-            hipfftResult result = hipfftExecZ2Z(fft, (double2*) grid1.getDevicePointer(), (double2*) grid2.getDevicePointer(), HIPFFT_FORWARD);
-            if (result != HIPFFT_SUCCESS)
-                throw OpenMMException("Error executing FFT: "+cc.intToString(result));
-        } else {
-            hipfftResult result = hipfftExecC2C(fft, (float2*) grid1.getDevicePointer(), (float2*) grid2.getDevicePointer(), HIPFFT_FORWARD);
-            if (result != HIPFFT_SUCCESS)
-                throw OpenMMException("Error executing FFT: "+cc.intToString(result));
-        }
-    }
-    else {
-        if (cc.getUseDoublePrecision()) {
-            hipfftResult result = hipfftExecZ2Z(fft, (double2*) grid2.getDevicePointer(), (double2*) grid1.getDevicePointer(), HIPFFT_BACKWARD);
-            if (result != HIPFFT_SUCCESS)
-                throw OpenMMException("Error executing FFT: "+cc.intToString(result));
-        } else {
-            hipfftResult result = hipfftExecC2C(fft, (float2*) grid2.getDevicePointer(), (float2*) grid1.getDevicePointer(), HIPFFT_BACKWARD);
-            if (result != HIPFFT_SUCCESS)
-                throw OpenMMException("Error executing FFT: "+cc.intToString(result));
-        }
-    }
+    fft->execFFT(forward);
 }
 
 /* -------------------------------------------------------------------------- *
@@ -126,60 +82,29 @@ HipCalcHippoNonbondedForceKernel::~HipCalcHippoNonbondedForceKernel() {
     cc.setAsCurrent();
     if (sort != NULL)
         delete sort;
-    if (hasInitializedFFT) {
-        hipfftDestroy(fftForward);
-        hipfftDestroy(fftBackward);
-        hipfftDestroy(dfftForward);
-        hipfftDestroy(dfftBackward);
-    }
+    if (fft != NULL)
+        delete fft;
+    if (dfft != NULL)
+        delete dfft;
 }
 
 void HipCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
     CommonCalcHippoNonbondedForceKernel::initialize(system, force);
     if (usePME) {
         sort = new HipSort(cu, new SortTrait(), cc.getNumAtoms());
-        hipfftResult result = hipfftPlan3d(&fftForward, gridSizeX, gridSizeY, gridSizeZ, cc.getUseDoublePrecision() ? HIPFFT_D2Z : HIPFFT_R2C);
-        if (result != HIPFFT_SUCCESS)
-            throw OpenMMException("Error initializing FFT: "+cc.intToString(result));
-        result = hipfftPlan3d(&fftBackward, gridSizeX, gridSizeY, gridSizeZ, cc.getUseDoublePrecision() ? HIPFFT_Z2D : HIPFFT_C2R);
-        if (result != HIPFFT_SUCCESS)
-            throw OpenMMException("Error initializing FFT: "+cc.intToString(result));
-        result = hipfftPlan3d(&dfftForward, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, cc.getUseDoublePrecision() ? HIPFFT_D2Z : HIPFFT_R2C);
-        if (result != HIPFFT_SUCCESS)
-            throw OpenMMException("Error initializing FFT: "+cc.intToString(result));
-        result = hipfftPlan3d(&dfftBackward, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, cc.getUseDoublePrecision() ? HIPFFT_Z2D : HIPFFT_C2R);
-        if (result != HIPFFT_SUCCESS)
-            throw OpenMMException("Error initializing FFT: "+cc.intToString(result));
-        hasInitializedFFT = true;
+        HipArray& grid1 = cu.unwrap(pmeGrid1);
+        HipArray& grid2 = cu.unwrap(pmeGrid2);
+        fft = cu.createFFT(gridSizeX, gridSizeY, gridSizeZ, true, cu.getCurrentStream(), grid1, grid2);
+        dfft = cu.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true, cu.getCurrentStream(), grid1, grid2);
     }
 }
 
 void HipCalcHippoNonbondedForceKernel::computeFFT(bool forward, bool dispersion) {
-    HipArray& grid1 = dynamic_cast<HipContext&>(cc).unwrap(pmeGrid1);
-    HipArray& grid2 = dynamic_cast<HipContext&>(cc).unwrap(pmeGrid2);
-    if (forward) {
-        hipfftHandle fft = dispersion ? dfftForward : fftForward;
-        if (cc.getUseDoublePrecision()) {
-            hipfftResult result = hipfftExecD2Z(fft, (double*) grid1.getDevicePointer(), (double2*) grid2.getDevicePointer());
-            if (result != HIPFFT_SUCCESS)
-                throw OpenMMException("Error executing FFT: "+cc.intToString(result));
-        } else {
-            hipfftResult result = hipfftExecR2C(fft, (float*) grid1.getDevicePointer(), (float2*) grid2.getDevicePointer());
-            if (result != HIPFFT_SUCCESS)
-                throw OpenMMException("Error executing FFT: "+cc.intToString(result));
-        }
+    if (dispersion) {
+        dfft->execFFT(forward);
     }
     else {
-        hipfftHandle fft = dispersion ? dfftBackward : fftBackward;
-        if (cc.getUseDoublePrecision()) {
-            hipfftResult result = hipfftExecZ2D(fft, (double2*) grid2.getDevicePointer(), (double*) grid1.getDevicePointer());
-            if (result != HIPFFT_SUCCESS)
-                throw OpenMMException("Error executing FFT: "+cc.intToString(result));
-        } else {
-            hipfftResult result = hipfftExecC2R(fft, (float2*) grid2.getDevicePointer(), (float*) grid1.getDevicePointer());
-            if (result != HIPFFT_SUCCESS)
-                throw OpenMMException("Error executing FFT: "+cc.intToString(result));
-        }
+        fft->execFFT(forward);
     }
 }
 

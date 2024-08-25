@@ -31,14 +31,13 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the Hip implementation of sorting.
+ * This tests the Hip implementation of FFT.
  */
 
 #include "openmm/internal/AssertionUtilities.h"
 #include "HipArray.h"
 #include "HipContext.h"
 #include "HipFFT3D.h"
-#include "HipSort.h"
 #include "fftpack.h"
 #include "sfmt/SFMT.h"
 #include "openmm/System.h"
@@ -52,7 +51,7 @@ using namespace std;
 static HipPlatform platform;
 
 template <class Real2>
-void testTransform(bool realToComplex, int xsize, int ysize, int zsize) {
+void testTransform(bool realToComplex, int xsize, int ysize, int zsize, double eps = 1) {
     System system;
     system.addParticle(0.0);
     HipPlatform::PlatformData platformData(NULL, system, "", "true", platform.getPropertyDefaultValue("HipPrecision"), "false",
@@ -60,6 +59,11 @@ void testTransform(bool realToComplex, int xsize, int ysize, int zsize) {
             platform.getPropertyDefaultValue(HipPlatform::HipDisablePmeStream()), "false", 1, NULL);
     HipContext& context = *platformData.contexts[0];
     context.initialize();
+    context.setAsCurrent();
+    xsize = context.findLegalFFTDimension(xsize);
+    ysize = context.findLegalFFTDimension(ysize);
+    zsize = context.findLegalFFTDimension(zsize);
+    cout << "realToComplex: " << realToComplex << " xsize: " << xsize << " ysize: " << ysize << " zsize: " << zsize << endl;
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     vector<Real2> original(xsize*ysize*zsize);
@@ -80,11 +84,11 @@ void testTransform(bool realToComplex, int xsize, int ysize, int zsize) {
     HipArray grid1(context, original.size(), sizeof(Real2), "grid1");
     HipArray grid2(context, original.size(), sizeof(Real2), "grid2");
     grid1.upload(original);
-    HipFFT3D fft(context, xsize, ysize, zsize, realToComplex);
+    HipFFT3D fft(context, xsize, ysize, zsize, realToComplex, context.getCurrentStream(), grid1, grid2);
 
     // Perform a forward FFT, then verify the result is correct.
 
-    fft.execFFT(grid1, grid2, true);
+    fft.execFFT(true);
     vector<Real2> result;
     grid2.download(result);
     fftpack_t plan;
@@ -96,22 +100,23 @@ void testTransform(bool realToComplex, int xsize, int ysize, int zsize) {
             for (int z = 0; z < outputZSize; z++) {
                 int index1 = x*ysize*zsize + y*zsize + z;
                 int index2 = x*ysize*outputZSize + y*outputZSize + z;
-                ASSERT_EQUAL_TOL(reference[index1].re, result[index2].x, 1e-3);
-                ASSERT_EQUAL_TOL(reference[index1].im, result[index2].y, 1e-3);
+                ASSERT_EQUAL_TOL(reference[index1].re, result[index2].x, 1e-3 * eps);
+                ASSERT_EQUAL_TOL(reference[index1].im, result[index2].y, 1e-3 * eps);
             }
     fftpack_destroy(plan);
 
     // Perform a backward transform and see if we get the original values.
 
-    fft.execFFT(grid2, grid1, false);
+    fft.execFFT(false);
     grid1.download(result);
     double scale = 1.0/(xsize*ysize*zsize);
     int valuesToCheck = (realToComplex ? original.size()/2 : original.size());
     for (int i = 0; i < valuesToCheck; ++i) {
-        ASSERT_EQUAL_TOL(original[i].x, scale*result[i].x, 1e-4);
-        ASSERT_EQUAL_TOL(original[i].y, scale*result[i].y, 1e-4);
+        ASSERT_EQUAL_TOL(original[i].x, scale*result[i].x, 1e-4 * eps);
+        ASSERT_EQUAL_TOL(original[i].y, scale*result[i].y, 1e-4 * eps);
     }
 }
+
 
 int main(int argc, char* argv[]) {
     try {
@@ -123,6 +128,17 @@ int main(int argc, char* argv[]) {
             testTransform<double2>(true, 25, 28, 25);
             testTransform<double2>(true, 25, 25, 28);
             testTransform<double2>(true, 21, 25, 27);
+            testTransform<double2>(true, 49, 98, 14);
+            testTransform<double2>(true, 7, 21, 98);
+            testTransform<double2>(true, 98, 21, 21);
+            testTransform<double2>(true, 18, 98, 6);
+            testTransform<double2>(true, 50, 50, 50);
+            testTransform<double2>(true, 60, 60, 60);
+            testTransform<double2>(false, 64, 64, 64);
+            testTransform<double2>(false, 100, 140, 88);
+            testTransform<double2>(true, 120, 243, 120);
+            testTransform<double2>(true, 216, 216, 116);
+            testTransform<double2>(true, 98, 98, 98);
         }
         else {
             testTransform<float2>(false, 28, 25, 30);
@@ -130,6 +146,17 @@ int main(int argc, char* argv[]) {
             testTransform<float2>(true, 25, 28, 25);
             testTransform<float2>(true, 25, 25, 28);
             testTransform<float2>(true, 21, 25, 27);
+            testTransform<float2>(true, 49, 98, 14);
+            testTransform<float2>(true, 7, 21, 98);
+            testTransform<float2>(true, 98, 21, 21);
+            testTransform<float2>(true, 18, 98, 6);
+            testTransform<float2>(true, 50, 50, 50);
+            testTransform<float2>(true, 60, 60, 60);
+            testTransform<float2>(false, 64, 64, 64);
+            testTransform<float2>(false, 100, 140, 88, 1e+1);
+            testTransform<float2>(true, 120, 243, 120, 1e+1);
+            testTransform<float2>(true, 216, 216, 116, 1e+1);
+            testTransform<float2>(true, 98, 98, 98, 1e+1);
         }
     }
     catch(const exception& e) {
