@@ -10,7 +10,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
- * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
+ * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -77,9 +77,11 @@ public:
      * @param trait      a SortTrait defining the type of data to sort.  It should have been allocated
      *                   on the heap with the "new" operator.  This object takes over ownership of it,
      *                   and deletes it when the HipSort is deleted.
-     * @param length     the length of the arrays this object will be used to sort
+     * @param length     the length of the arrays this object will be used to sort.
+     * @param uniform    whether the input data is expected to follow a uniform or nonuniform
+     *                   distribution.  This argument is used only as a hint.
      */
-    HipSort(HipContext& context, SortTrait* trait, unsigned int length);
+    HipSort(HipContext& context, SortTrait* trait, unsigned int length, bool uniform=true);
     ~HipSort();
     /**
      * Sort an array.
@@ -88,14 +90,15 @@ public:
 private:
     HipContext& context;
     SortTrait* trait;
+    HipArray counters;
     HipArray dataRange;
     HipArray bucketOfElement;
     HipArray offsetInBucket;
     HipArray bucketOffset;
     HipArray buckets;
     hipFunction_t shortListKernel, shortList2Kernel, computeRangeKernel, assignElementsKernel, computeBucketPositionsKernel, copyToBucketsKernel, sortBucketsKernel;
-    unsigned int dataLength, rangeKernelSize, positionsKernelSize, sortKernelSize;
-    bool isShortList;
+    unsigned int dataLength, rangeKernelBlocks, rangeKernelSize, positionsKernelSize, sortKernelSize;
+    bool isShortList, uniform;
 };
 
 /**

@@ -431,6 +431,9 @@ hipModule_t HipContext::createModule(const string source, const map<string, stri
     static_assert(8*sizeof(void*) == HipContext::TileSize);
     string bits = intToString(8*sizeof(void*));
     string options = (optimizationFlags == NULL ? defaultOptimizationOptions : string(optimizationFlags));
+    if (getMaxThreadBlockSize() < 1024) {
+        options += " --gpu-max-threads-per-block=" + std::to_string(getMaxThreadBlockSize());
+    }
     stringstream src;
     if (!options.empty())
         src << "// Compilation Options: " << options << endl << endl;
@@ -659,6 +662,18 @@ void HipContext::executeKernel(hipFunction_t kernel, void** arguments, int threa
     }
 }
 
+void HipContext::executeKernelFlat(hipFunction_t kernel, void** arguments, int threads, int blockSize, unsigned int sharedSize) {
+    if (blockSize == -1)
+        blockSize = ThreadBlockSize;
+    int gridSize = (threads+blockSize-1)/blockSize;
+    hipError_t result = hipModuleLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, currentStream, arguments, NULL);
+    if (result != hipSuccess) {
+        stringstream str;
+        str<<"Error invoking kernel: "<<getErrorString(result)<<" ("<<result<<")";
+        throw OpenMMException(str.str());
+    }
+}
+
 int HipContext::computeThreadBlockSize(double memory) const {
     int maxShared = this->sharedMemPerBlock;
     int max = (int) (maxShared/memory);
@@ -738,7 +753,7 @@ void HipContext::clearAutoclearBuffers() {
 
 double HipContext::reduceEnergy() {
     int bufferSize = energyBuffer.getSize();
-    int workGroupSize  = 512;
+    int workGroupSize = getMaxThreadBlockSize();
     void* args[] = {&energyBuffer.getDevicePointer(), &energySum.getDevicePointer(), &bufferSize, &workGroupSize};
     executeKernel(reduceEnergyKernel, args, workGroupSize, workGroupSize, workGroupSize*energyBuffer.getElementSize());
     energySum.download(pinnedBuffer);

@@ -7,7 +7,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2010-2018 Stanford University and the Authors.      *
- * Portions copyright (c) 2020 Advanced Micro Devices, Inc.                   *
+ * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,7 +33,8 @@
 using namespace OpenMM;
 using namespace std;
 
-HipSort::HipSort(HipContext& context, SortTrait* trait, unsigned int length) : context(context), trait(trait), dataLength(length) {
+HipSort::HipSort(HipContext& context, SortTrait* trait, unsigned int length, bool uniform) :
+        context(context), trait(trait), dataLength(length), uniform(uniform) {
     // Create kernels.
 
     map<string, string> replacements;
@@ -54,32 +55,34 @@ HipSort::HipSort(HipContext& context, SortTrait* trait, unsigned int length) : c
 
     // Work out the work group sizes for various kernels.
 
-    int maxBlockSize;
-    hipDeviceGetAttribute(&maxBlockSize, hipDeviceAttributeMaxBlockDimX, context.getDevice());
     int maxSharedMem;
     hipDeviceGetAttribute(&maxSharedMem, hipDeviceAttributeMaxSharedMemoryPerBlock, context.getDevice());
     int maxLocalBuffer = (maxSharedMem/trait->getDataSize())/2;
     int maxShortList = min(3000, max(maxLocalBuffer, HipContext::ThreadBlockSize*context.getNumThreadBlocks()));
     isShortList = (length <= maxShortList);
-    for (rangeKernelSize = 1; rangeKernelSize*2 <= maxBlockSize; rangeKernelSize *= 2)
-        ;
-    positionsKernelSize = rangeKernelSize;
-    sortKernelSize = (isShortList ? rangeKernelSize/2 : rangeKernelSize/4);
+    sortKernelSize = 256;
+    rangeKernelSize = 256;
     if (rangeKernelSize > length)
         rangeKernelSize = length;
+    rangeKernelBlocks = (length + rangeKernelSize - 1) / rangeKernelSize;
     if (sortKernelSize > maxLocalBuffer)
         sortKernelSize = maxLocalBuffer;
-    unsigned int targetBucketSize = sortKernelSize/2;
+    unsigned int targetBucketSize = uniform ? sortKernelSize/2 : sortKernelSize/8;
     unsigned int numBuckets = length/targetBucketSize;
     if (numBuckets < 1)
         numBuckets = 1;
+    // computeBucketPositions is executed as a single work group so larger block size is faster.
+    positionsKernelSize = 1024;
     if (positionsKernelSize > numBuckets)
         positionsKernelSize = numBuckets;
 
     // Create workspace arrays.
 
     if (!isShortList) {
-        dataRange.initialize(context, 2, trait->getKeySize(), "sortDataRange");
+        counters.initialize<unsigned int>(context, 1, "counters");
+        unsigned int zero = 0;
+        counters.upload(&zero);
+        dataRange.initialize(context, 2*rangeKernelBlocks, trait->getKeySize(), "sortDataRange");
         bucketOffset.initialize<uint1>(context, numBuckets, "bucketOffset");
         bucketOfElement.initialize<uint1>(context, length, "bucketOfElement");
         offsetInBucket.initialize<uint1>(context, length, "offsetInBucket");
@@ -101,7 +104,7 @@ void HipSort::sort(HipArray& data) {
 
         if (dataLength <= HipContext::ThreadBlockSize*context.getNumThreadBlocks()) {
             void* sortArgs[] = {&data.getDevicePointer(), &buckets.getDevicePointer(), &dataLength};
-            context.executeKernel(shortList2Kernel, sortArgs, dataLength);
+            context.executeKernel(shortList2Kernel, sortArgs, dataLength, HipContext::ThreadBlockSize, HipContext::ThreadBlockSize*trait->getKeySize());
             buckets.copyTo(data);
         }
         else {
@@ -113,8 +116,8 @@ void HipSort::sort(HipArray& data) {
         // Compute the range of data values.
 
         unsigned int numBuckets = bucketOffset.getSize();
-        void* rangeArgs[] = {&data.getDevicePointer(), &dataLength, &dataRange.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer()};
-        context.executeKernel(computeRangeKernel, rangeArgs, rangeKernelSize, rangeKernelSize, 2*rangeKernelSize*trait->getKeySize());
+        void* rangeArgs[] = {&data.getDevicePointer(), &dataLength, &dataRange.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer(), &counters.getDevicePointer()};
+        context.executeKernel(computeRangeKernel, rangeArgs, rangeKernelBlocks*rangeKernelSize, rangeKernelSize, 2*rangeKernelSize*trait->getKeySize());
 
         // Assign array elements to buckets.
 
@@ -124,7 +127,7 @@ void HipSort::sort(HipArray& data) {
 
         // Compute the position of each bucket.
 
-        void* computeArgs[] = {&numBuckets, &bucketOffset.getDevicePointer()};
+        void* computeArgs[] = {&numBuckets, &bucketOffset.getDevicePointer(), &counters.getDevicePointer()};
         context.executeKernel(computeBucketPositionsKernel, computeArgs, positionsKernelSize, positionsKernelSize, positionsKernelSize*sizeof(int));
 
         // Copy the data into the buckets.
@@ -135,7 +138,7 @@ void HipSort::sort(HipArray& data) {
 
         // Sort each bucket.
 
-        void* sortArgs[] = {&data.getDevicePointer(), &buckets.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer()};
-        context.executeKernel(sortBucketsKernel, sortArgs, ((data.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize, sortKernelSize*trait->getDataSize());
+        void* sortArgs[] = {&data.getDevicePointer(), &buckets.getDevicePointer(), &bucketOffset.getDevicePointer()};
+        context.executeKernelFlat(sortBucketsKernel, sortArgs, numBuckets*sortKernelSize, sortKernelSize, sortKernelSize*trait->getDataSize());
     }
 }

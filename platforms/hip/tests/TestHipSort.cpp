@@ -60,7 +60,7 @@ class SortTrait : public HipSort::SortTrait {
     const char* getSortKey() const {return "value";}
 };
 
-void verifySorting(vector<float> array) {
+void verifySorting(vector<float> array, bool uniform) {
     // Sort the array.
 
     System system;
@@ -72,7 +72,7 @@ void verifySorting(vector<float> array) {
     context.initialize();
     HipArray data(context, array.size(), 4, "sortData");
     data.upload(array);
-    HipSort sort(context, new SortTrait(), array.size());
+    HipSort sort(context, new SortTrait(), array.size(), uniform);
     sort.sort(data);
     vector<float> sorted;
     data.download(sorted);
@@ -93,30 +93,26 @@ void testUniformValues() {
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
 
-    vector<float> array(10000);
-    for (int i = 0; i < (int) array.size(); i++)
-        array[i] = (float) genrand_real2(sfmt);
-    verifySorting(array);
+    for (auto size : { 2, 63, 100, 1234, 10000, 60123, 876543}) {
+        vector<float> array(size);
+        for (int i = 0; i < (int) array.size(); i++)
+            array[i] = (float) genrand_real2(sfmt);
+        verifySorting(array, true);
+        verifySorting(array, false);
+    }
 }
 
 void testLogValues() {
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
 
-    vector<float> array(10000);
-    for (int i = 0; i < (int) array.size(); i++)
-        array[i] = (float) log(genrand_real2(sfmt));
-    verifySorting(array);
-}
-
-void testShortList() {
-    OpenMM_SFMT::SFMT sfmt;
-    init_gen_rand(0, sfmt);
-
-    vector<float> array(500);
-    for (int i = 0; i < (int) array.size(); i++)
-        array[i] = (float) log(genrand_real2(sfmt));
-    verifySorting(array);
+    for (auto size : { 2, 63, 100, 1234, 10000, 60123, 876543}) {
+        vector<float> array(size);
+        for (int i = 0; i < (int) array.size(); i++)
+            array[i] = (float) log(genrand_real2(sfmt));
+        verifySorting(array, true);
+        verifySorting(array, false);
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -125,7 +121,6 @@ int main(int argc, char* argv[]) {
             platform.setPropertyDefaultValue("HipPrecision", string(argv[1]));
         testUniformValues();
         testLogValues();
-        testShortList();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
