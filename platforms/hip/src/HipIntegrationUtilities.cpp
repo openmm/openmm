@@ -135,8 +135,9 @@ void HipIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, dou
 
 void HipIntegrationUtilities::distributeForcesFromVirtualSites() {
     ContextSelector selector(context);
-    if (numVsites > 0) {
+    for (int i = numVsiteStages-1; i >= 0; i--) {
         vsiteForceKernel->setArg(2, context.getLongForceBuffer());
+        vsiteForceKernel->setArg(15, i);
         vsiteForceKernel->execute(numVsites);
     }
 }

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2024 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -41,6 +41,7 @@
 #include "openmm/common/ComputeArray.h"
 #include "openmm/common/ContextSelector.h"
 #include "SHA1.h"
+#include "openmm/MonteCarloFlexibleBarostat.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include "openmm/VirtualSite.h"
@@ -286,6 +287,9 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
     boxIsTriclinic = (boxVectors[0][1] != 0.0 || boxVectors[0][2] != 0.0 ||
                       boxVectors[1][0] != 0.0 || boxVectors[1][2] != 0.0 ||
                       boxVectors[2][0] != 0.0 || boxVectors[2][1] != 0.0);
+    for (int i = 0; i < system.getNumForces(); i++)
+        if (dynamic_cast<const MonteCarloFlexibleBarostat*>(&system.getForce(i)) != NULL)
+            boxIsTriclinic = true;
     if (boxIsTriclinic) {
         compilationDefines["APPLY_PERIODIC_TO_DELTA(delta)"] =
             "{"
@@ -659,6 +663,13 @@ hipFunction_t HipContext::getKernel(hipModule_t& module, const string& name) {
         throw OpenMMException(m.str());
     }
     return function;
+}
+
+vector<ComputeContext*> HipContext::getAllContexts() {
+    vector<ComputeContext*> result;
+    for (HipContext* c : platformData.contexts)
+        result.push_back(c);
+    return result;
 }
 
 hipStream_t HipContext::getCurrentStream() {
