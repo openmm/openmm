@@ -376,6 +376,13 @@ public:
         return true;
     }
     /**
+     * Get whether the device being used supports 32 bit floating point atomic operations
+     * on global memory (fast hardware instructions, not a compare-and-swap loop implementation).
+     */
+    bool getSupportsHardwareFloatGlobalAtomicAdd() const {
+        return supportsHardwareFloatGlobalAtomicAdd;
+    }
+    /**
      * Get whether the device being used supports double precision math.
      */
     bool getSupportsDoublePrecision() const {
@@ -563,6 +570,7 @@ private:
     int simdWidth;
     int multiprocessors;
     int sharedMemPerBlock;
+    bool supportsHardwareFloatGlobalAtomicAdd;
     bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, boxIsTriclinic, hasCompilerKernel, isHipccAvailable, hasAssignedPosqCharges;
     bool isLinkedContext;
     std::string compiler, tempDir, cacheDir, gpuArchitecture;
