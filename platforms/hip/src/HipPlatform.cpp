@@ -107,6 +107,7 @@ HipPlatform::HipPlatform() {
     registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
     registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
+    registerKernelFactory(CalcATMForceKernel::Name(), factory);
     platformProperties.push_back(HipDeviceIndex());
     platformProperties.push_back(HipDeviceName());
     platformProperties.push_back(HipUseBlockingSync());

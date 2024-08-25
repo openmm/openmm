@@ -140,5 +140,7 @@ KernelImpl* HipKernelFactory::createKernelImpl(std::string name, const Platform&
         return new CommonApplyMonteCarloBarostatKernel(name, platform, cu);
     if (name == RemoveCMMotionKernel::Name())
         return new CommonRemoveCMMotionKernel(name, platform, cu);
+    if (name == CalcATMForceKernel::Name() )
+        return new HipCalcATMForceKernel(name, platform, cu);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

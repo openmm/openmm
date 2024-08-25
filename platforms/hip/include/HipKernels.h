@@ -339,6 +339,18 @@ public:
     }
 };
 
+/**
+ * This kernel is invoked by ATMForce to calculate the forces acting on the system and the energy of the system.
+ */
+class HipCalcATMForceKernel : public CommonCalcATMForceKernel {
+public:
+    HipCalcATMForceKernel(std::string name, const Platform& platform, ComputeContext& cc) : CommonCalcATMForceKernel(name, platform, cc) {
+    }
+    ComputeContext& getInnerComputeContext(ContextImpl& innerContext) {
+        return *reinterpret_cast<HipPlatform::PlatformData*>(innerContext.getPlatformData())->contexts[0];
+    }
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_HIPKERNELS_H_*/
