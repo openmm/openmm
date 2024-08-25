@@ -41,27 +41,6 @@
 namespace OpenMM {
 
 /**
- * This abstract class defines an interface for code that can compile CUDA kernels.  This allows a plugin to take advantage of runtime compilation
- * when running on recent versions of CUDA.
- */
-class HipCompilerKernel : public KernelImpl {
-public:
-    static std::string Name() {
-        return "HipCompilerKernel";
-    }
-    HipCompilerKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
-    }
-    /**
-     * Compile a kernel to PTX.
-     *
-     * @param source     the source code for the kernel
-     * @param options    the flags to be passed to the compiler
-     * @param cu         the HipContext for which the kernel is being compiled
-     */
-    virtual std::string createModule(const std::string& source, const std::string& flags, HipContext& cu) = 0;
-};
-
-/**
  * This kernel is invoked at the beginning and end of force and energy computations.  It gives the
  * Platform a chance to clear buffers and do other initialization at the beginning, and to do any
  * necessary work at the end to determine the final results.

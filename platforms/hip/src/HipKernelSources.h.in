@@ -28,9 +28,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#ifdef _MSC_VER
-#error "Windows unsupported for HIP platform"
-#endif
 #include "openmm/common/windowsExportCommon.h"
 #include <string>
 

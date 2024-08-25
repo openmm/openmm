@@ -26,9 +26,8 @@
  * -------------------------------------------------------------------------- */
 
 #ifdef WIN32
-  #error "Windows unsupported for HIP platform"
+  #define _USE_MATH_DEFINES // Needed to get M_PI
 #endif
-#include <cmath>
 #include "HipContext.h"
 #include "HipArray.h"
 #include "HipBondedUtilities.h"
@@ -46,15 +45,18 @@
 #include "HipExpressionUtilities.h"
 #include "openmm/internal/ContextImpl.h"
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <set>
 #include <sstream>
+#include <stack>
+#include <thread>
 #include <typeinfo>
 #include <sys/stat.h>
-#include <unistd.h>
+#include <hip/hiprtc.h>
 
 
 #define CHECK_RESULT(result) CHECK_RESULT2(result, errorMessage);
@@ -62,6 +64,13 @@
     if (result != hipSuccess) { \
         std::stringstream m; \
         m<<prefix<<": "<<getErrorString(result)<<" ("<<result<<")"<<" at "<<__FILE__<<":"<<__LINE__; \
+        throw OpenMMException(m.str());\
+    }
+
+#define HIPRTC_CHECK_RESULT(result, prefix) \
+    if (result != HIPRTC_SUCCESS) { \
+        stringstream m; \
+        m<<prefix<<": "<<hiprtcGetErrorString(result)<<" ("<<result<<")"<<" at "<<__FILE__<<":"<<__LINE__; \
         throw OpenMMException(m.str());\
     }
 
@@ -73,27 +82,10 @@ const int HipContext::TileSize = 32;
 bool HipContext::hasInitializedHip = false;
 
 
-HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& compiler,
-        const string& tempDir, const std::string& hostCompiler, HipPlatform::PlatformData& platformData, HipContext* originalContext) : ComputeContext(system), currentStream(0),
-        platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
-        hasCompilerKernel(false), isHipccAvailable(false), pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL),
+HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& tempDir, HipPlatform::PlatformData& platformData,
+        HipContext* originalContext) : ComputeContext(system), currentStream(0), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
+        pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL),
         supportsHardwareFloatGlobalAtomicAdd(false) {
-    // Determine what compiler to use.
-
-    this->compiler = "\""+compiler+"\"";
-    if (platformData.context != NULL) {
-        try {
-            compilerKernel = platformData.context->getPlatform().createKernel(HipCompilerKernel::Name(), *platformData.context);
-            hasCompilerKernel = true;
-        }
-        catch (...) {
-            // The runtime compiler plugin isn't available.
-        }
-    }
-    string testCompilerCommand = this->compiler+" --version > /dev/null 2> /dev/null";
-    int res = std::system(testCompilerCommand.c_str());
-    struct stat info;
-    isHipccAvailable = (res == 0 && stat(tempDir.c_str(), &info) == 0);
     if (!hasInitializedHip) {
         CHECK_RESULT2(hipInit(0), "Error initializing HIP");
         hasInitializedHip = true;
@@ -114,8 +106,13 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
         throw OpenMMException("Illegal value for Precision: "+precision);
     char* cacheVariable = getenv("OPENMM_CACHE_DIR");
     cacheDir = (cacheVariable == NULL ? tempDir : string(cacheVariable));
+#ifdef WIN32
+    this->tempDir = tempDir+"\\";
+    cacheDir = cacheDir+"\\";
+#else
     this->tempDir = tempDir+"/";
     cacheDir = cacheDir+"/";
+#endif
     contextIndex = platformData.contexts.size();
     string errorMessage = "Error initializing Context";
     if (originalContext == NULL) {
@@ -366,6 +363,8 @@ HipContext::~HipContext() {
         delete bonded;
     if (nonbonded != NULL)
         delete nonbonded;
+    for (auto module : loadedModules)
+        hipModuleUnload(module);
     contextIsValid = false;
 }
 
@@ -377,19 +376,19 @@ void HipContext::initialize() {
         energyBuffer.initialize<double>(*this, numEnergyBuffers, "energyBuffer");
         energySum.initialize<double>(*this, 1, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
-        CHECK_RESULT(hipHostMalloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
+        CHECK_RESULT(hipHostMalloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), getHostMallocFlags()));
     }
     else if (useMixedPrecision) {
         energyBuffer.initialize<double>(*this, numEnergyBuffers, "energyBuffer");
         energySum.initialize<double>(*this, 1, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*4, numEnergyBuffers);
-        CHECK_RESULT(hipHostMalloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), 0));
+        CHECK_RESULT(hipHostMalloc(&pinnedBuffer, pinnedBufferSize*sizeof(double), getHostMallocFlags()));
     }
     else {
         energyBuffer.initialize<float>(*this, numEnergyBuffers, "energyBuffer");
         energySum.initialize<float>(*this, 1, "energySum");
         int pinnedBufferSize = max(paddedNumAtoms*6, numEnergyBuffers);
-        CHECK_RESULT(hipHostMalloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), 0));
+        CHECK_RESULT(hipHostMalloc(&pinnedBuffer, pinnedBufferSize*sizeof(float), getHostMallocFlags()));
     }
     for (int i = 0; i < numAtoms; i++) {
         double mass = system.getParticleMass(i);
@@ -423,15 +422,46 @@ void HipContext::setAsCurrent() {
         hipSetDevice(device);
 }
 
+string HipContext::getTempFileName() const {
+    stringstream tempFileName;
+    tempFileName << tempDir;
+    tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
+    tempFileName << "_" << std::this_thread::get_id();
+    return tempFileName.str();
+}
+
+string HipContext::getHash(const string& src) const {
+    CSHA1 sha1;
+    sha1.Update((const UINT_8*) src.c_str(), src.size());
+    sha1.Final();
+    UINT_8 hash[20];
+    sha1.GetHash(hash);
+    stringstream cacheHash;
+    cacheHash.flags(ios::hex);
+    for (int i = 0; i < 20; i++)
+        cacheHash << setw(2) << setfill('0') << (int) hash[i];
+    return cacheHash.str();
+}
+
+string HipContext::getCacheFileName(const string& src) const {
+    stringstream cacheFile;
+    cacheFile << cacheDir << "openmm-hip-" << getHash(src + gpuArchitecture);
+    return cacheFile.str();
+}
+
 hipModule_t HipContext::createModule(const string source) {
     return createModule(source, map<string, string>());
 }
 
 hipModule_t HipContext::createModule(const string source, const map<string, string>& defines) {
     const char* saveTempsEnv = getenv("OPENMM_SAVE_TEMPS");
-    bool saveTemps = saveTempsEnv != nullptr;
-    string bits = intToString(8*sizeof(void*));
-    string options = "-ffast-math -munsafe-fp-atomics -Wall";
+    const bool saveTemps = saveTempsEnv != nullptr && string(saveTempsEnv) == "1";
+
+    int runtimeVersion;
+    CHECK_RESULT2(hipRuntimeGetVersion(&runtimeVersion), "Error getting HIP runtime version");
+
+    string options = "-O3 -ffast-math -munsafe-fp-atomics -Wall -Wno-hip-only";
+    options += " --offload-arch=" + gpuArchitecture;
     if (gpuArchitecture.find("gfx90a") == 0 ||
         gpuArchitecture.find("gfx94") == 0) {
         // HIP-TODO: Remove it when the compiler does a better job
@@ -442,9 +472,15 @@ hipModule_t HipContext::createModule(const string source, const map<string, stri
     if (getMaxThreadBlockSize() < 1024) {
         options += " --gpu-max-threads-per-block=" + std::to_string(getMaxThreadBlockSize());
     }
+    if (runtimeVersion < 60140092) {
+        // Workaround for operator* defined for complex types (typedefs for float2, double2) in
+        // ROCm 6.0 headers. This issue has been fixed in 6.1. hipRTC includes amd_hip_complex.h
+        // by default, we fool the include guard into thinking the header is already included.
+        options += " -D HIP_INCLUDE_HIP_AMD_DETAIL_HIP_COMPLEX_H";
+    }
     stringstream src;
-    if (!options.empty())
-        src << "// Compilation Options: " << options << endl << endl;
+    src << "// Compilation Options: " << options << endl << endl;
+    src << "// HIP Runtime Version: " << runtimeVersion << endl << endl;
     for (auto& pair : compilationDefines) {
         // Query defines to avoid duplicate variables
         if (defines.find(pair.first) == defines.end()) {
@@ -457,11 +493,6 @@ hipModule_t HipContext::createModule(const string source, const map<string, stri
     if (!compilationDefines.empty())
         src << endl;
 
-    // include the main header for built-in variables (threadIdx etc.) and functions
-    src << "#include \"hip/hip_runtime.h\"\n";
-
-    // include the vector types
-    src << "#include \"hip/hip_vector_types.h\"\n";
     if (useDoublePrecision) {
         src << "typedef double real;\n";
         src << "typedef double2 real2;\n";
@@ -501,113 +532,88 @@ hipModule_t HipContext::createModule(const string source, const map<string, stri
 
     // See whether we already have PTX for this kernel cached.
 
-    CSHA1 sha1;
-    sha1.Update((const UINT_8*) src.str().c_str(), src.str().size());
-    sha1.Final();
-    UINT_8 hash[20];
-    sha1.GetHash(hash);
-    stringstream cacheHash;
-    cacheHash.flags(ios::hex);
-    for (int i = 0; i < 20; i++)
-        cacheHash << setw(2) << setfill('0') << (int) hash[i];
-    stringstream cacheFile;
-    cacheFile << cacheDir << cacheHash.str() << '_' << gpuArchitecture << '_' << bits;
+    string cacheFile = getCacheFileName(src.str());
     hipModule_t module;
-    if (hipModuleLoad(&module, cacheFile.str().c_str()) == hipSuccess)
+    if (hipModuleLoad(&module, cacheFile.c_str()) == hipSuccess) {
+        loadedModules.push_back(module);
         return module;
+    }
 
     // Select names for the various temporary files.
 
-    stringstream tempFileName;
     if (saveTemps) {
-        tempFileName << saveTempsEnv;
+        stringstream tempFileName;
         const char* saveTempsPrefixEnv = getenv("OPENMM_SAVE_TEMPS_PREFIX");
         if (saveTempsPrefixEnv) {
             tempFileName << saveTempsPrefixEnv;
         }
-        tempFileName << cacheHash.str();
-    }
-    else {
-        tempFileName << tempDir;
-        tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
-        tempFileName << "_" << getpid();
-    }
-    string inputFile = (tempFileName.str()+".hip.cpp");
-    string outputFile = (tempFileName.str()+".hsaco");
-    string logFile = (tempFileName.str()+".log");
-    int res = 0;
+        tempFileName << getHash(src.str());
 
-    // If the runtime compiler plugin is available, use it.
+        options += " --save-temps";
 
-    if (hasCompilerKernel) {
-        string ptx = compilerKernel.getAs<HipCompilerKernel>().createModule(src.str(), options, *this);
-
-        // If possible, write the PTX out to a temporary file so we can cache it for later use.
-
-        bool wroteCache = false;
-        try {
-            ofstream out(outputFile.c_str());
-            out << ptx;
-            out.close();
-            if (!out.fail())
-                wroteCache = true;
-        }
-        catch (...) {
-            // Ignore.
-        }
-        if (!wroteCache) {
-            // An error occurred.  Possibly we don't have permission to write to the temp directory.  Just try to load the module directly.
-
-            CHECK_RESULT2(hipModuleLoadDataEx(&module, &ptx[0], 0, NULL, NULL), "Error loading HIP module");
-            return module;
-        }
-    }
-    else {
-        // Write out the source to a temporary file.
-
+        string inputFile = (tempFileName.str()+".hip");
+        std::cout << "Source code: " << inputFile << std::endl;
+        std::cout << "Compile options: " << options << std::endl;
         ofstream out(inputFile.c_str());
         out << src.str();
         out.close();
-        string command = compiler + " --genco --amdgpu-target=" + gpuArchitecture + " " + options + (saveTemps ? " -save-temps=obj" : "") +" -o \""+outputFile+"\" " + " \""+inputFile+"\" 2> \""+logFile+"\"";
-        res = std::system(command.c_str());
     }
-    try {
-        if (res != 0) {
-            // Load the error log.
 
-            stringstream error;
-            error << "Error launching HIP compiler: " << res;
-            ifstream log(logFile.c_str());
-            if (log.is_open()) {
-                string line;
-                while (!log.eof()) {
-                    getline(log, line);
-                    error << '\n' << line;
+    // Split the command line options into an array of options.
+
+    stringstream flagsStream(options);
+    string flag;
+    vector<string> splitFlags;
+    while (flagsStream >> flag)
+        splitFlags.push_back(flag);
+    int numOptions = splitFlags.size();
+    vector<const char*> optionsVec(numOptions);
+    for (int i = 0; i < numOptions; i++)
+        optionsVec[i] = &splitFlags[i][0];
+
+    // Compile the program to CO.
+
+    hiprtcProgram program;
+    HIPRTC_CHECK_RESULT(hiprtcCreateProgram(&program, src.str().c_str(), NULL, 0, NULL, NULL), "Error creating program");
+    try {
+        hiprtcResult result = hiprtcCompileProgram(program, optionsVec.size(), &optionsVec[0]);
+        if (result != HIPRTC_SUCCESS || saveTemps) {
+            size_t logSize;
+            hiprtcGetProgramLogSize(program, &logSize);
+            std::string log(logSize, '\0');
+            if (logSize > 0) {
+                hiprtcGetProgramLog(program, &log[0]);
+                if (saveTemps) {
+                    std::cout << "Log: " << log << std::endl;
                 }
-                log.close();
             }
-            throw OpenMMException(error.str());
+            if (result != HIPRTC_SUCCESS) {
+                throw OpenMMException("Error compiling program: "+log);
+            }
         }
-        hipError_t result = hipModuleLoad(&module, outputFile.c_str());
-        if (result != hipSuccess) {
-            std::stringstream m;
-            m<<"Error loading HIP module: "<<getErrorString(result)<<" ("<<result<<")";
-            throw OpenMMException(m.str());
+        size_t codeSize;
+        hiprtcGetCodeSize(program, &codeSize);
+        vector<char> code(codeSize);
+        hiprtcGetCode(program, &code[0]);
+        hiprtcDestroyProgram(&program);
+
+        // If possible, write the CO out to a cache file for later use.
+
+        try {
+            ofstream out(cacheFile.c_str(), ios::out | ios::binary);
+            out.write(&code[0], code.size());
+            out.close();
         }
-        if (!saveTemps) {
-            remove(inputFile.c_str());
-            remove(logFile.c_str());
+        catch (...) {
+            // An error occurred.  Possibly we don't have permission to write to the temp directory.
+            // Ignore.
         }
-        if (rename(outputFile.c_str(), cacheFile.str().c_str()) != 0 && !saveTemps)
-            remove(outputFile.c_str());
+        CHECK_RESULT2(hipModuleLoadDataEx(&module, &code[0], 0, NULL, NULL), "Error loading HIP module");
+        loadedModules.push_back(module);
         return module;
     }
     catch (...) {
-        if (!saveTemps) {
-            remove(inputFile.c_str());
-            remove(outputFile.c_str());
-            remove(logFile.c_str());
-        }
+        hiprtcDestroyProgram(&program);
         throw;
     }
 }
@@ -833,4 +839,12 @@ vector<int> HipContext::getDevicePrecedence() {
     }
 
     return precedence;
+}
+
+unsigned int HipContext::getHostMallocFlags() {
+#ifdef WIN32
+    return hipHostMallocDefault;
+#else
+    return hipHostMallocNumaUser;
+#endif
 }

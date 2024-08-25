@@ -77,7 +77,7 @@ __global__ void clearSixBuffers(int* __restrict__ buffer1, int size1, int* __res
  * Sum the energy buffer.
  */
 __global__ void reduceEnergy(const mixed* __restrict__ energyBuffer, mixed* __restrict__ result, int bufferSize, int workGroupSize) {
-    HIP_DYNAMIC_SHARED( mixed, tempBuffer)
+    extern __shared__ mixed tempBuffer[];
     const unsigned int thread = threadIdx.x;
     mixed sum = 0;
     for (unsigned int index = thread; index < bufferSize; index += blockDim.x)

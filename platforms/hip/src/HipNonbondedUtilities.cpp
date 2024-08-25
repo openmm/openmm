@@ -70,7 +70,7 @@ HipNonbondedUtilities::HipNonbondedUtilities(HipContext& context) : context(cont
 
     string errorMessage = "Error initializing nonbonded utilities";
     CHECK_RESULT(hipEventCreateWithFlags(&downloadCountEvent, context.getEventFlags()));
-    CHECK_RESULT(hipHostMalloc((void**) &pinnedCountBuffer, 2*sizeof(unsigned int), hipHostMallocPortable));
+    CHECK_RESULT(hipHostMalloc((void**) &pinnedCountBuffer, 2*sizeof(unsigned int), context.getHostMallocFlags()));
     numForceThreadBlocks = 5*4*context.getMultiprocessors();
     forceThreadBlockSize = 64;
     findInteractingBlocksThreadBlockSize = context.getSIMDWidth();

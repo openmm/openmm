@@ -42,7 +42,7 @@ using namespace std;
 HipIntegrationUtilities::HipIntegrationUtilities(HipContext& context, const System& system) : IntegrationUtilities(context, system),
         ccmaConvergedMemory(NULL) {
         CHECK_RESULT2(hipEventCreateWithFlags(&ccmaEvent, hipEventDisableTiming), "Error creating event for CCMA");
-        CHECK_RESULT2(hipHostMalloc((void**) &ccmaConvergedMemory, sizeof(int), hipHostMallocMapped), "Error allocating pinned memory");
+        CHECK_RESULT2(hipHostMalloc((void**) &ccmaConvergedMemory, sizeof(int), context.getHostMallocFlags()), "Error allocating pinned memory");
         CHECK_RESULT2(hipHostGetDevicePointer(&ccmaConvergedDeviceMemory, ccmaConvergedMemory, 0), "Error getting device address for pinned memory");
 }
 

@@ -4,7 +4,9 @@
 # Creates OpenMMHIP library.
 #
 # Windows:
-#   unsupported
+#   OpenMMHIP.dll
+#   OpenMMHIP.lib
+#   OpenMMHIP_static.lib
 # Unix:
 #   libOpenMMHIP.so
 #   libOpenMMHIP_static.a

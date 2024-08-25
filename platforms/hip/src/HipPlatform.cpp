@@ -39,7 +39,7 @@
 #include <sstream>
 #include <cstdio>
 #ifdef _MSC_VER
-    #error "Windows unsupported for HIP platform"
+    #include <Windows.h>
 #endif
 using namespace OpenMM;
 using namespace std;
@@ -112,9 +112,7 @@ HipPlatform::HipPlatform() {
     platformProperties.push_back(HipUseBlockingSync());
     platformProperties.push_back(HipPrecision());
     platformProperties.push_back(HipUseCpuPme());
-    platformProperties.push_back(HipCompiler());
     platformProperties.push_back(HipTempDirectory());
-    platformProperties.push_back(HipHostCompiler());
     platformProperties.push_back(HipDisablePmeStream());
     platformProperties.push_back(HipDeterministicForces());
     setPropertyDefaultValue(HipDeviceIndex(), "");
@@ -124,26 +122,20 @@ HipPlatform::HipPlatform() {
     setPropertyDefaultValue(HipUseCpuPme(), "false");
     setPropertyDefaultValue(HipDisablePmeStream(), "false");
     setPropertyDefaultValue(HipDeterministicForces(), "false");
-    char* compiler = getenv("OPENMM_HIP_COMPILER");
-    char* rocm_path = getenv("ROCM_PATH");
-    string hipcc;
-    if (rocm_path != NULL) {
-        hipcc = string(rocm_path) + "/bin/hipcc";
-    } else if (compiler != NULL) {
-        hipcc = compiler;
-    } else {
-        hipcc = "/opt/rocm/bin/hipcc";
-    }
-    setPropertyDefaultValue(HipCompiler(), hipcc);
+#ifdef _MSC_VER
+    setPropertyDefaultValue(HipTempDirectory(), string(getenv("TEMP")));
+#else
     char* tmpdir = getenv("TMPDIR");
     string tmp = (tmpdir == NULL ? string(P_tmpdir) : string(tmpdir));
     setPropertyDefaultValue(HipTempDirectory(), tmp);
-    char* hostCompiler = getenv("HIP_HOST_COMPILER");
-    setPropertyDefaultValue(HipHostCompiler(), (hostCompiler == NULL ? "" : string(hostCompiler)));
+#endif
 }
 
 double HipPlatform::getSpeed() const {
-    return 100;
+    // Reduce the speed of the HIP platform if there are no HIP devices in the system,
+    // so the OpenCL plaform can be selected as default
+    int numDevices;
+    return hipGetDeviceCount(&numDevices) != hipErrorNoDevice ? 100 : 40;
 }
 
 bool HipPlatform::supportsDoublePrecision() const {
@@ -174,12 +166,8 @@ void HipPlatform::contextCreated(ContextImpl& context, const map<string, string>
             getPropertyDefaultValue(HipPrecision()) : properties.find(HipPrecision())->second);
     string cpuPmePropValue = (properties.find(HipUseCpuPme()) == properties.end() ?
             getPropertyDefaultValue(HipUseCpuPme()) : properties.find(HipUseCpuPme())->second);
-    const string& compilerPropValue = (properties.find(HipCompiler()) == properties.end() ?
-            getPropertyDefaultValue(HipCompiler()) : properties.find(HipCompiler())->second);
     const string& tempPropValue = (properties.find(HipTempDirectory()) == properties.end() ?
             getPropertyDefaultValue(HipTempDirectory()) : properties.find(HipTempDirectory())->second);
-    const string& hostCompilerPropValue = (properties.find(HipHostCompiler()) == properties.end() ?
-            getPropertyDefaultValue(HipHostCompiler()) : properties.find(HipHostCompiler())->second);
     string pmeStreamPropValue = (properties.find(HipDisablePmeStream()) == properties.end() ?
             getPropertyDefaultValue(HipDisablePmeStream()) : properties.find(HipDisablePmeStream())->second);
     string deterministicForcesValue = (properties.find(HipDeterministicForces()) == properties.end() ?
@@ -197,8 +185,8 @@ void HipPlatform::contextCreated(ContextImpl& context, const map<string, string>
     char* threadsEnv = getenv("OPENMM_CPU_THREADS");
     if (threadsEnv != NULL)
         stringstream(threadsEnv) >> threads;
-    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue,
-            hostCompilerPropValue, pmeStreamPropValue, deterministicForcesValue, threads, NULL));
+    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, tempPropValue,
+            pmeStreamPropValue, deterministicForcesValue, threads, NULL));
 }
 
 void HipPlatform::linkedContextCreated(ContextImpl& context, ContextImpl& originalContext) const {
@@ -207,14 +195,12 @@ void HipPlatform::linkedContextCreated(ContextImpl& context, ContextImpl& origin
     string blockingPropValue = platform.getPropertyValue(originalContext.getOwner(), HipUseBlockingSync());
     string precisionPropValue = platform.getPropertyValue(originalContext.getOwner(), HipPrecision());
     string cpuPmePropValue = platform.getPropertyValue(originalContext.getOwner(), HipUseCpuPme());
-    string compilerPropValue = platform.getPropertyValue(originalContext.getOwner(), HipCompiler());
     string tempPropValue = platform.getPropertyValue(originalContext.getOwner(), HipTempDirectory());
-    string hostCompilerPropValue = platform.getPropertyValue(originalContext.getOwner(), HipHostCompiler());
     string pmeStreamPropValue = platform.getPropertyValue(originalContext.getOwner(), HipDisablePmeStream());
     string deterministicForcesValue = platform.getPropertyValue(originalContext.getOwner(), HipDeterministicForces());
     int threads = reinterpret_cast<PlatformData*>(originalContext.getPlatformData())->threads.getNumThreads();
-    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, compilerPropValue, tempPropValue,
-            hostCompilerPropValue, pmeStreamPropValue, deterministicForcesValue, threads, &originalContext));
+    context.setPlatformData(new PlatformData(&context, context.getSystem(), devicePropValue, blockingPropValue, precisionPropValue, cpuPmePropValue, tempPropValue,
+            pmeStreamPropValue, deterministicForcesValue, threads, &originalContext));
 }
 
 void HipPlatform::contextDestroyed(ContextImpl& context) const {
@@ -223,9 +209,10 @@ void HipPlatform::contextDestroyed(ContextImpl& context) const {
 }
 
 HipPlatform::PlatformData::PlatformData(ContextImpl* context, const System& system, const string& deviceIndexProperty, const string& blockingProperty, const string& precisionProperty,
-            const string& cpuPmeProperty, const string& compilerProperty, const string& tempProperty, const string& hostCompilerProperty, const string& pmeStreamProperty,
+            const string& cpuPmeProperty, const string& tempProperty, const string& pmeStreamProperty,
             const string& deterministicForcesProperty, int numThreads, ContextImpl* originalContext) :
-                context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false), threads(numThreads) {
+                context(context), removeCM(false), stepCount(0), computeForceCount(0), time(0.0), hasInitializedContexts(false),
+                threads(numThreads) {
     bool blocking = (blockingProperty == "true");
     vector<string> devices;
     size_t searchPos = 0, nextPos;
@@ -242,11 +229,11 @@ HipPlatform::PlatformData::PlatformData(ContextImpl* context, const System& syst
             if (devices[i].length() > 0) {
                 int deviceIndex;
                 stringstream(devices[i]) >> deviceIndex;
-                contexts.push_back(new HipContext(system, deviceIndex, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, *this, (originalData == NULL ? NULL : originalData->contexts[i])));
+                contexts.push_back(new HipContext(system, deviceIndex, blocking, precisionProperty, tempProperty, *this, (originalData == NULL ? NULL : originalData->contexts[i])));
             }
         }
         if (contexts.size() == 0)
-            contexts.push_back(new HipContext(system, -1, blocking, precisionProperty, compilerProperty, tempProperty, hostCompilerProperty, *this, (originalData == NULL ? NULL : originalData->contexts[0])));
+            contexts.push_back(new HipContext(system, -1, blocking, precisionProperty, tempProperty, *this, (originalData == NULL ? NULL : originalData->contexts[0])));
     }
     catch (...) {
         // If an exception was thrown, do our best to clean up memory.
@@ -275,9 +262,7 @@ HipPlatform::PlatformData::PlatformData(ContextImpl* context, const System& syst
     propertyValues[HipPlatform::HipUseBlockingSync()] = blocking ? "true" : "false";
     propertyValues[HipPlatform::HipPrecision()] = precisionProperty;
     propertyValues[HipPlatform::HipUseCpuPme()] = useCpuPme ? "true" : "false";
-    propertyValues[HipPlatform::HipCompiler()] = compilerProperty;
     propertyValues[HipPlatform::HipTempDirectory()] = tempProperty;
-    propertyValues[HipPlatform::HipHostCompiler()] = hostCompilerProperty;
     propertyValues[HipPlatform::HipDisablePmeStream()] = disablePmeStream ? "true" : "false";
     propertyValues[HipPlatform::HipDeterministicForces()] = deterministicForces ? "true" : "false";
     contextEnergy.resize(contexts.size());

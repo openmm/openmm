@@ -43,7 +43,6 @@ if (result != hipSuccess) { \
  * Get the current clock time, measured in microseconds.
  */
 #ifdef _MSC_VER
-    #error "Windows unsupported for HIP platform"
     #include <Windows.h>
     static long long getTime() {
         FILETIME ft;

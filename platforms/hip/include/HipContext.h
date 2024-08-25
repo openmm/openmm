@@ -43,7 +43,6 @@
 #include <utility>
 #define __CL_ENABLE_EXCEPTIONS
 #ifdef _MSC_VER
-    #error "Windows unsupported for HIP platform"
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
 #endif
@@ -85,8 +84,7 @@ public:
     static const int ThreadBlockSize;
     static const int TileSize;
     HipContext(const System& system, int deviceIndex, bool useBlockingSync, const std::string& precision,
-            const std::string& compiler, const std::string& tempDir, const std::string& hostCompiler, HipPlatform::PlatformData& platformData,
-            HipContext* originalContext);
+            const std::string& tempDir, HipPlatform::PlatformData& platformData, HipContext* originalContext);
     ~HipContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system
@@ -255,6 +253,18 @@ public:
     HipArray& getAtomIndexArray() {
         return atomIndexDevice;
     }
+    /**
+     * Get a file name in tempDir unique for the current process and context.
+     */
+    std::string getTempFileName() const;
+    /**
+     * Get src hash.
+     */
+    std::string getHash(const std::string& src) const;
+    /**
+     * Get a filename in cacheDir based on src hash.
+     */
+    std::string getCacheFileName(const std::string& src) const;
     /**
      * Create a HIP module from source code.
      *
@@ -555,6 +565,10 @@ public:
      * expense of reduced simulation performance.
      */
     void flushQueue();
+    /**
+     * Get the flags that should be used when allocating pinned host memory.
+     */
+    unsigned int getHostMallocFlags();
 private:
     /**
      * Compute a sorted list of device indices in decreasing order of desirability
@@ -571,12 +585,13 @@ private:
     int multiprocessors;
     int sharedMemPerBlock;
     bool supportsHardwareFloatGlobalAtomicAdd;
-    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, boxIsTriclinic, hasCompilerKernel, isHipccAvailable, hasAssignedPosqCharges;
+    bool useBlockingSync, useDoublePrecision, useMixedPrecision, contextIsValid, boxIsTriclinic, hasAssignedPosqCharges;
     bool isLinkedContext;
-    std::string compiler, tempDir, cacheDir, gpuArchitecture;
+    std::string tempDir, cacheDir, gpuArchitecture;
     float4 periodicBoxVecXFloat, periodicBoxVecYFloat, periodicBoxVecZFloat, periodicBoxSizeFloat, invPeriodicBoxSizeFloat;
     double4 periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ, periodicBoxSize, invPeriodicBoxSize;
     std::map<std::string, std::string> compilationDefines;
+    std::vector<hipModule_t> loadedModules;
     hipDevice_t device;
     hipStream_t currentStream;
     hipFunction_t clearBufferKernel;
@@ -605,7 +620,6 @@ private:
     HipExpressionUtilities* expression;
     HipBondedUtilities* bonded;
     HipNonbondedUtilities* nonbonded;
-    Kernel compilerKernel;
 };
 
 /**

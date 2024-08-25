@@ -92,20 +92,6 @@ public:
         return key;
     }
     /**
-     * This is the name of the parameter for specifying the path to the HIP compiler.
-     */
-    static const std::string& HipCompiler() {
-        static const std::string key = "HipCompiler";
-        return key;
-    }
-    /**
-     * This is the name of the parameter for specifying the host compiler for the HIP compiler to use.
-     */
-    static const std::string& HipHostCompiler() {
-        static const std::string key = "HipHostCompiler";
-        return key;
-    }
-    /**
      * This is the name of the parameter for specifying the path to the directory for creating temporary files.
      */
     static const std::string& HipTempDirectory() {
@@ -131,7 +117,7 @@ public:
 class OPENMM_EXPORT_COMMON HipPlatform::PlatformData {
 public:
     PlatformData(ContextImpl* context, const System& system, const std::string& deviceIndexProperty, const std::string& blockingProperty, const std::string& precisionProperty,
-            const std::string& cpuPmeProperty, const std::string& compilerProperty, const std::string& tempProperty, const std::string& hostCompilerProperty,
+            const std::string& cpuPmeProperty, const std::string& tempProperty,
             const std::string& pmeStreamProperty, const std::string& deterministicForcesProperty, int numThreads, ContextImpl* originalContext);
     ~PlatformData();
     void initializeContexts(const System& system);
