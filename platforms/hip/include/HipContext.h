@@ -284,7 +284,17 @@ public:
      * @param blockSize    the size of each thread block to use
      * @param sharedSize   the amount of dynamic shared memory to allocated for the kernel, in bytes
      */
-    void executeKernel(hipFunction_t kernel, void** arguments, int workUnits, int blockSize = -1, unsigned int sharedSize = 0);
+    void executeKernel(hipFunction_t kernel, void** arguments, int threads, int blockSize = -1, unsigned int sharedSize = 0);
+    /**
+     * Execute a kernel with full grid.
+     *
+     * @param kernel       the kernel to execute
+     * @param arguments    an array of pointers to the kernel arguments
+     * @param threads      the total number of threads that should be used
+     * @param blockSize    the size of each thread block to use
+     * @param sharedSize   the amount of dynamic shared memory to allocated for the kernel, in bytes
+     */
+    void executeKernelFlat(hipFunction_t kernel, void** arguments, int threads, int blockSize = -1, unsigned int sharedSize = 0);
     /**
      * Compute the largest thread block size that can be used for a kernel that requires a particular amount of
      * shared memory per thread.
