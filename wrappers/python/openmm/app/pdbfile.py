@@ -389,9 +389,11 @@ class PDBFile(object):
                     else:
                         atomName = atom.name
                     coords = positions[posIndex]
-                    line = "%s%5s %-4s %3s %s%4s%1s   %s%s%s  1.00  0.00          %2s  " % (
+                    if atom.formalCharge is not None:
+                        formalCharge = ("%+2d" % atom.formalCharge)[::-1]
+                    line = "%s%5s %-4s %3s %s%4s%1s   %s%s%s  1.00  0.00          %2s%2s" % (
                         recordName, _formatIndex(atomIndex, 5), atomName, resName, chainName, resId, resIC, _format_83(coords[0]),
-                        _format_83(coords[1]), _format_83(coords[2]), symbol)
+                        _format_83(coords[1]), _format_83(coords[2]), symbol, formalCharge)
                     if len(line) != 80:
                         raise ValueError('Fixed width overflow detected')
                     print(line, file=file)
