@@ -105,6 +105,28 @@ class TestPdbFile(unittest.TestCase):
             self.assertEqual(19, len(pdb.positions))
             self.assertEqual('ILE', list(pdb.topology.residues())[0].name)
 
+    def test_FormalCharges(self):
+        """Test reading, and writing and re-reading of a file containing formal charges."""
+        pdb = PDBFile('systems/formal-charges.pdb')
+        for atom in pdb.topology.atoms():
+            if atom.index == 8:
+                self.assertEqual(+1, atom.formalCharge)
+            elif atom.index == 29:
+                self.assertEqual(-1, atom.formalCharge)
+            else:
+                self.assertEqual(None, atom.formalCharge)
+        output = StringIO()
+        PDBFile.writeFile(pdb.topology, pdb.positions, output)
+        input = StringIO(output.getvalue())
+        pdb = PDBFile(input)
+        for atom in pdb.topology.atoms():
+            if atom.index == 8:
+                self.assertEqual(+1, atom.formalCharge)
+            elif atom.index == 29:
+                self.assertEqual(-1, atom.formalCharge)
+            else:
+                self.assertEqual(None, atom.formalCharge)
+
     def test_LargeFile(self):
         """Write and read a file with more than 100,000 atoms"""
         topology = Topology()
