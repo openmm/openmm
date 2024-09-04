@@ -47,6 +47,7 @@
 #include "openmm/serialization/XmlSerializer.h"
 #include "sfmt/SFMT.h"
 #include <algorithm>
+#include <random>
 #include <iostream>
 #include <vector>
 
@@ -240,47 +241,63 @@ void test2ParticlesSoftCore() {
     ASSERT_EQUAL_VEC(Vec3(-lmbd*df*displ[0], 0.0, 0.0), state.getForces()[1], 1e-6);
 }
 
-void test2ParticlesNonbonded() {
-
+void testNonbonded() {
     System system;
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-
-    NonbondedForce* nbforce = new NonbondedForce();
-    nbforce->addParticle( 1.0, 1.0, 1.0);
-    nbforce->addParticle(-1.0, 1.0, 1.0);
-
-    system.addForce(nbforce);
-
-    ATMForce* atm = new ATMForce(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
-    Vec3 nodispl = Vec3(0., 0., 0.);
-    Vec3   displ = Vec3(1., 0., 0.);
-    atm->addParticle( nodispl );
-    atm->addParticle(   displ );
-    atm->addForce(XmlSerializer::clone<Force>(*nbforce));
-    system.removeForce(0);
-    system.addForce(atm);
-
-    vector<Vec3> positions;
-    positions.push_back(Vec3(0., 0., 0.));
-    positions.push_back(Vec3(1., 0., 0.));
-
-    VerletIntegrator integrator(1.0);
-    Context context(system, integrator, platform);
-    context.setPositions(positions);
-
-    double lambda = 0.5;
-    context.setParameter(ATMForce::Lambda1(), lambda);
-    context.setParameter(ATMForce::Lambda2(), lambda);
-    State state = context.getState( State::Energy );
-    double epot = state.getPotentialEnergy();
     double u0, u1, energy;
-    atm->getPerturbationEnergy(context, u1, u0, energy);
-    double epert = u1 - u0;
-    ASSERT_EQUAL_TOL(-104.2320, epot,  1e-3);
-    ASSERT_EQUAL_TOL(  69.4062, epert, 1e-3);
-    // std::cout << "Nonbonded: epot = " << epot << std::endl;
-    // std::cout << "Nonbonded: epert = " << epert << std::endl;
+    double lambda = 0.5;
+    double width = 4.0;
+
+    system.setDefaultPeriodicBoxVectors(Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0, 0, width));
+    NonbondedForce* nbforce = new NonbondedForce();
+    nbforce->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nbforce->setCutoffDistance(0.7);
+    ATMForce* atm = new ATMForce(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+    double spacing = width/6.0;
+    double offset = spacing/5.0;
+    vector<Vec3> positions;
+    for (int i = 0; i < 6; i++)
+        for (int j = 0; j < 6; j++)
+            for (int k = 0; k < 6; k++) {
+	        positions.push_back(Vec3(spacing*i+offset, spacing*j+offset, spacing*k+offset));
+		system.addParticle(10.0);
+		nbforce->addParticle(0, 0.3, 1.0);
+		atm->addParticle(Vec3());
+            }
+    auto rng = std::default_random_engine {};
+    std::shuffle(std::begin(positions), std::end(positions), rng);
+    atm->setParticleParameters(0, Vec3(0.5, 0, 0), Vec3(0.0, 0, 0));
+
+    //in this scenario the non-bonded force is added to the System, a copy is added to ATMForce and
+    //the System's copy is disabled by giving it a force group that is not evaluated.
+    //This used to be needed to ensure atoms would be reordered.  It isn't anymore, but
+    //this test is left in to make sure it still works.
+    system.addForce(nbforce);
+    atm->addForce(XmlSerializer::clone<Force>(*nbforce));
+    nbforce->setForceGroup(1);
+    system.addForce(atm);
+    LangevinMiddleIntegrator integrator1(300, 1.0, 0.004);
+    Context context1(system, integrator1, platform);
+    context1.setPositions(positions);
+    context1.setParameter(ATMForce::Lambda1(), lambda);
+    context1.setParameter(ATMForce::Lambda2(), lambda);
+    State state1 = context1.getState( State::Energy, false, 0 );
+    double epot1 = state1.getPotentialEnergy();
+    atm->getPerturbationEnergy(context1, u1, u0, energy);
+    double epert1 = u1 - u0;
+
+    //in this second scenario the non-bonded force is remove from the System
+    system.removeForce(0);
+    LangevinMiddleIntegrator integrator2(300, 1.0, 0.004);
+    Context context2(system, integrator2, platform);
+    context2.setPositions(positions);
+    context2.setParameter(ATMForce::Lambda1(), lambda);
+    context2.setParameter(ATMForce::Lambda2(), lambda);
+    State state2 = context2.getState( State::Energy );
+    double epot2 = state2.getPotentialEnergy();
+    atm->getPerturbationEnergy(context2, u1, u0, energy);
+    double epert2 = u1 - u0;
+
+    ASSERT_EQUAL_TOL(epert1, epert2,  1e-3);
 }
 
 
@@ -393,6 +410,7 @@ void testLargeSystem() {
     
     int numParticles = 1000;
     System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 3, 0), Vec3(0, 0, 3));
     CustomExternalForce* external = new CustomExternalForce("x^2 + 2*y^2 + 3*z^2");
     ATMForce* atm = new ATMForce(0.0, 0.0, 0.1, 0.0, 0.0, 1e6, 5e5, 1.0/16, 1.0);
     atm->addForce(external);
@@ -409,19 +427,26 @@ void testLargeSystem() {
         atm->addParticle(d);
     }
 
-    // Also add a nonbonded force to trigger atom reordering on the GPU.
+    // Also add nonbonded forces to trigger atom reordering on the GPU.
 
     CustomNonbondedForce* nb = new CustomNonbondedForce("a*r^2");
     nb->addGlobalParameter("a", 0.0);
     for (int i = 0; i < numParticles; i++)
         nb->addParticle();
+    nb->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
     system.addForce(nb);
-    VerletIntegrator integrator(1.0);
-    Context context(system, integrator, platform);
-    context.setPositions(positions);
+    CustomNonbondedForce* nb1 = new CustomNonbondedForce("0");
+    nb1->addPerParticleParameter("b");
+    for (int i = 0; i < numParticles; i++)
+        nb1->addParticle({(double) (i%3)});
+    nb1->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
+    atm->addForce(nb1);
     
     // Evaluate the forces to see if the particles are at the correct positions.
 
+    VerletIntegrator integrator(1.0);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
     for (double lambda : {0.0, 1.0}) {
         context.setParameter(ATMForce::Lambda1(), lambda);
         context.setParameter(ATMForce::Lambda2(), lambda);
@@ -520,7 +545,7 @@ int main(int argc, char* argv[]) {
         test2Particles();
         test2Particles2Displacement0();
         test2ParticlesSoftCore();
-        test2ParticlesNonbonded();
+        testNonbonded();
         testParticlesCustomExpressionLinear();
         testParticlesCustomExpressionSoftplus();
         testLargeSystem();

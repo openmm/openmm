@@ -5,15 +5,10 @@ from openmm import *
 from openmm.unit import *
 import openmm.app.element as elem
 try:
-    from scipy.io import NetCDFFile
+    from scipy.io import netcdf_file
     SCIPY_IMPORT_FAILED = False
 except ImportError:
-    try:
-        # scipy < 1.8.0
-        from scipy.io import netcdf
-        SCIPY_IMPORT_FAILED = False
-    except:
-        SCIPY_IMPORT_FAILED = True
+    SCIPY_IMPORT_FAILED = True
 
 def compareByElement(array1, array2, cmp):
     for x, y in zip(array1, array2):

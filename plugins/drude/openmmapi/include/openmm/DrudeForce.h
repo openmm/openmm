@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -134,7 +134,7 @@ public:
      */
     int addScreenedPair(int particle1, int particle2, double thole);
     /**
-     * Get the force field parameters for screened pair.
+     * Get the force field parameters for a screened pair.
      *
      * @param index           the index of the pair for which to get parameters
      * @param[out] particle1  the index within this Force of the first particle involved in the interaction
@@ -143,7 +143,7 @@ public:
      */
     void getScreenedPairParameters(int index, int& particle1, int& particle2, double& thole) const;
     /**
-     * Set the force field parameters for screened pair.
+     * Set the force field parameters for a screened pair.
      *
      * @param index      the index of the pair for which to get parameters
      * @param particle1  the index within this Force of the first particle involved in the interaction
@@ -163,14 +163,18 @@ public:
      */
     void updateParametersInContext(Context& context);
     /**
+     * Set whether this force should apply periodic boundary conditions when calculating displacements.
+     * Usually this is not appropriate for bonded forces, but there are situations when it can be useful.
+     * 
+     * Periodic boundary conditions are only applied to screened pairs.  They are never used for the
+     * force between a Drude particle and its parent particle, regardless of this setting.
+     */
+    void setUsesPeriodicBoundaryConditions(bool periodic);
+    /**
      * Returns whether or not this force makes use of periodic boundary
      * conditions.
-     *
-     * @returns true if nonbondedMethod uses PBC and false otherwise
      */
-    bool usesPeriodicBoundaryConditions() const {
-        return false;
-    }
+    bool usesPeriodicBoundaryConditions() const;
 protected:
     ForceImpl* createImpl() const;
 private:
@@ -178,6 +182,7 @@ private:
     class ScreenedPairInfo;
     std::vector<ParticleInfo> particles;
     std::vector<ScreenedPairInfo> screenedPairs;
+    bool usePeriodic;
 };
 
 /**

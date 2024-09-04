@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2022 Stanford University and the Authors.
+Portions copyright (c) 2012-2024 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
 Contributors:
 
@@ -58,6 +58,12 @@ def _getDataDirectories():
         _dataDirectories = [os.path.join(os.path.dirname(__file__), 'data')]
         try:
             from importlib_metadata import entry_points
+        except:
+            try:
+                from importlib.metadata import entry_points
+            except:
+                pass
+        try:
             for entry in entry_points().select(group='openmm.forcefielddir'):
                 _dataDirectories.append(entry.load()())
         except:
@@ -436,6 +442,10 @@ class ForceField(object):
         """Register a new atom type."""
         name = parameters['name']
         if name in self._atomTypes:
+            #  allow multiple registrations of the same atom type provided the definitions are identical
+            existing = self._atomTypes[name]
+            if existing.atomClass == parameters['class'] and existing.mass == float(parameters['mass']) and existing.element.symbol == parameters['element']:
+                return
             raise ValueError('Found multiple definitions for atom type: '+name)
         atomClass = parameters['class']
         mass = _convertParameterToNumber(parameters['mass'])
@@ -3010,8 +3020,9 @@ class CustomNonbondedGenerator(object):
         # Create the exclusions.
 
         bondIndices = _findBondsForExclusions(data, sys)
-        nonbonded = [f for f in sys.getForces() if isinstance(f, mm.CustomNonbondedForce)][0]
-        nonbonded.createExclusionsFromBonds(bondIndices, self.bondCutoff)
+        for f in sys.getForces():
+            if isinstance(f, mm.CustomNonbondedForce) and f.getEnergyFunction() == self.energy:
+                f.createExclusionsFromBonds(bondIndices, self.bondCutoff)
 
 parsers["CustomNonbondedForce"] = CustomNonbondedGenerator.parseElement
 

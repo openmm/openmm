@@ -529,6 +529,38 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
         if (atomCounts[i] > 1)
             hasOverlappingVsites = true;
 
+    // Divide virtual sites into stages to resolve dependencies between them.
+
+    set<int> sites;
+    vector<int> vsiteStageVec(numAtoms, -1);
+    for (int i = 0; i < numAtoms; i++)
+        if (system.isVirtualSite(i)) {
+            sites.insert(i);
+            vsiteStageVec[i] = numAtoms;
+        }
+    numVsiteStages = 0;
+    int remainingSites = 0;
+    while (sites.size() > 0) {
+        if (sites.size() == remainingSites)
+            throw OpenMMException("Virtual site definitions are circular");
+        for (auto index = sites.begin(); index != sites.end();) {
+            const VirtualSite& site = system.getVirtualSite(*index);
+            bool canCompute = true;
+            for (int i = 0; i < site.getNumParticles(); i++)
+                if (vsiteStageVec[site.getParticle(i)] >= numVsiteStages)
+                    canCompute = false;
+            if (canCompute) {
+                vsiteStageVec[*index] = numVsiteStages;
+                index = sites.erase(index);
+            }
+            else
+                ++index;
+        }
+        numVsiteStages++;
+    }
+    vsiteStage.initialize<int>(context, vsiteStageVec.size(), "vsiteStages");
+    vsiteStage.upload(vsiteStageVec);
+
     // Create the kernels used by this class.
 
     map<string, string> defines;
@@ -542,6 +574,8 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     defines["PADDED_NUM_ATOMS"] = context.intToString(context.getPaddedNumAtoms());
     if (hasOverlappingVsites)
         defines["HAS_OVERLAPPING_VSITES"] = "1";
+    if (numVsiteStages > 1)
+        defines["MULTIPLE_VSITE_STAGES"] = "1";
     ComputeProgram program = context.compileProgram(CommonKernelSources::integrationUtilities, defines);
     settlePosKernel = program->createKernel("applySettleToPositions");
     settleVelKernel = program->createKernel("applySettleToVelocities");
@@ -577,6 +611,8 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     vsitePositionKernel->addArg(vsiteLocalCoordsWeights);
     vsitePositionKernel->addArg(vsiteLocalCoordsPos);
     vsitePositionKernel->addArg(vsiteLocalCoordsStartIndex);
+    vsitePositionKernel->addArg(vsiteStage);
+    vsitePositionKernel->addArg();
     vsiteForceKernel->addArg(context.getPosq());
     if (context.getUseMixedPrecision())
         vsiteForceKernel->addArg(context.getPosqCorrection());
@@ -594,6 +630,8 @@ IntegrationUtilities::IntegrationUtilities(ComputeContext& context, const System
     vsiteForceKernel->addArg(vsiteLocalCoordsWeights);
     vsiteForceKernel->addArg(vsiteLocalCoordsPos);
     vsiteForceKernel->addArg(vsiteLocalCoordsStartIndex);
+    vsiteForceKernel->addArg(vsiteStage);
+    vsiteForceKernel->addArg();
     for (int i = 0; i < 3; i++)
         vsiteSaveForcesKernel->addArg();
 
@@ -736,8 +774,10 @@ void IntegrationUtilities::applyVelocityConstraints(double tol) {
 
 void IntegrationUtilities::computeVirtualSites() {
     ContextSelector selector(context);
-    if (numVsites > 0)
+    for (int i = 0; i < numVsiteStages; i++) {
+        vsitePositionKernel->setArg(14, i);
         vsitePositionKernel->execute(numVsites);
+    }
 }
 
 void IntegrationUtilities::initRandomNumberGenerator(unsigned int randomNumberSeed) {

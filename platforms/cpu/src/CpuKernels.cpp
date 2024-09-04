@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -83,6 +83,11 @@ static Vec3* extractBoxVectors(ContextImpl& context) {
 static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *data->constraints;
+}
+
+static const ReferenceVirtualSites& extractVirtualSites(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return *data->virtualSites;
 }
 
 static map<string, double>& extractEnergyParameterDerivatives(ContextImpl& context) {
@@ -1434,47 +1439,6 @@ void CpuCalcGayBerneForceKernel::copyParametersToContext(ContextImpl& context, c
     ixn = new CpuGayBerneForce(force);
 }
 
-CpuIntegrateLangevinStepKernel::~CpuIntegrateLangevinStepKernel() {
-    if (dynamics)
-        delete dynamics;
-}
-
-void CpuIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
-    int numParticles = system.getNumParticles();
-    masses.resize(numParticles);
-    for (int i = 0; i < numParticles; ++i)
-        masses[i] = static_cast<double>(system.getParticleMass(i));
-    data.random.initialize(integrator.getRandomNumberSeed(), data.threads.getNumThreads());
-}
-
-void CpuIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
-    double temperature = integrator.getTemperature();
-    double friction = integrator.getFriction();
-    double stepSize = integrator.getStepSize();
-    vector<Vec3>& posData = extractPositions(context);
-    vector<Vec3>& velData = extractVelocities(context);
-    vector<Vec3>& forceData = extractForces(context);
-    if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
-        // Recreate the computation objects with the new parameters.
-        
-        if (dynamics)
-            delete dynamics;
-        dynamics = new CpuLangevinDynamics(context.getSystem().getNumParticles(), stepSize, friction, temperature, data.threads, data.random);
-        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
-        prevTemp = temperature;
-        prevFriction = friction;
-        prevStepSize = stepSize;
-    }
-    dynamics->update(context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance());
-    ReferencePlatform::PlatformData* refData = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    refData->time += stepSize;
-    refData->stepCount++;
-}
-
-double CpuIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
-}
-
 CpuIntegrateLangevinMiddleStepKernel::~CpuIntegrateLangevinMiddleStepKernel() {
     if (dynamics)
         delete dynamics;
@@ -1501,6 +1465,7 @@ void CpuIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, const L
             delete dynamics;
         dynamics = new CpuLangevinMiddleDynamics(context.getSystem().getNumParticles(), stepSize, friction, temperature, data.threads, data.random);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;

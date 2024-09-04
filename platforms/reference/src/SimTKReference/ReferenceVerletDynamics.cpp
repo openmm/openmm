@@ -114,6 +114,6 @@ void ReferenceVerletDynamics::update(const OpenMM::System& system, vector<Vec3>&
            }
    }
 
-   ReferenceVirtualSites::computePositions(system, atomCoordinates);
+   getVirtualSites().computePositions(system, atomCoordinates);
    incrementTimeStep();
 }

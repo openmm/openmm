@@ -122,6 +122,6 @@ void ReferenceLangevinMiddleDynamics::update(ContextImpl& context, vector<Vec3>&
 
     updatePart3(context, numberOfAtoms, atomCoordinates, velocities, inverseMasses, xPrime);
 
-    ReferenceVirtualSites::computePositions(context.getSystem(), atomCoordinates);
+    getVirtualSites().computePositions(context.getSystem(), atomCoordinates);
     incrementTimeStep();
 }

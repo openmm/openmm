@@ -468,7 +468,7 @@ void testOverlappingSites() {
     }
     VerletIntegrator i1(0.002);
     VerletIntegrator i2(0.002);
-    Context c1(system, i1, Platform::getPlatformByName("Reference"));
+    Context c1(system, i1, Platform::getPlatform("Reference"));
     Context c2(system, i2, platform);
     c1.setPositions(positions);
     c2.setPositions(positions);
@@ -480,6 +480,36 @@ void testOverlappingSites() {
         ASSERT_EQUAL_VEC(s1.getPositions()[i], s2.getPositions()[i], 1e-5);
     for (int i = 0; i < 3; i++)
         ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], 1e-5);
+}
+
+/**
+ * Test virtual sites that depend on other virtual sites.
+ */
+void testNestedSites() {
+    System system;
+    system.addParticle(1.0);
+    for (int i = 0; i < 3; i++)
+        system.addParticle(0.0);
+    system.addParticle(1.0);
+    system.setVirtualSite(2, new TwoParticleAverageSite(0, 4, 0.5, 0.5));
+    system.setVirtualSite(1, new TwoParticleAverageSite(0, 2, 0.5, 0.5));
+    system.setVirtualSite(3, new TwoParticleAverageSite(2, 4, 0.5, 0.5));
+    CustomExternalForce* force = new CustomExternalForce("-c*x");
+    force->addPerParticleParameter("c");
+    force->addParticle(1, {1.0});
+    force->addParticle(3, {2.0});
+    system.addForce(force);
+    vector<Vec3> positions(5);
+    positions[4] = Vec3(0, 0, 4.0);
+    VerletIntegrator integrator(0.002);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.computeVirtualSites();
+    State state = context.getState(State::Positions | State::Forces);
+    for (int i = 0; i < 5; i++)
+        ASSERT_EQUAL_VEC(Vec3(0, 0, i), state.getPositions()[i], 1e-6);
+    ASSERT_EQUAL_VEC(Vec3(1*0.75 + 2*0.25, 0, 0), state.getForces()[0], 1e-6);
+    ASSERT_EQUAL_VEC(Vec3(1*0.25 + 2*0.75, 0, 0), state.getForces()[4], 1e-6);
 }
 
 void runPlatformTests();
@@ -496,6 +526,7 @@ int main(int argc, char* argv[]) {
         testLocalCoordinates(4);
         testConservationLaws();
         testOverlappingSites();
+        testNestedSites();
         runPlatformTests();
     }
     catch(const exception& e) {

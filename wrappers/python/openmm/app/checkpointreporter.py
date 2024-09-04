@@ -149,7 +149,7 @@ class CheckpointReporter(object):
 
             self._file.seek(0)
             if self._writeState:
-                state = simulation.context.getState(getPositions=True, getVelocities=True, getParameters=True, getIntegratorParameters=True)
+                state = simulation.context.getState(positions=True, velocities=True, parameters=True, integratorParameters=True)
                 self._file.write(mm.XmlSerializer.serialize(state))
             else:
                 self._file.write(simulation.context.createCheckpoint())

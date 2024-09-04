@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -210,13 +210,14 @@ void ComputeContext::findMoleculeGroups() {
             atomBonds[particle2].push_back(particle1);
         }
         for (auto force : forces) {
+            vector<int> particles;
             for (int j = 0; j < force->getNumParticleGroups(); j++) {
-                vector<int> particles;
                 force->getParticlesInGroup(j, particles);
-                for (int k = 0; k < (int) particles.size(); k++)
-                    for (int m = 0; m < (int) particles.size(); m++)
-                        if (k != m)
-                            atomBonds[particles[k]].push_back(particles[m]);
+                for (int k = 1; k < (int) particles.size(); k++)
+                    for (int m = 0; m < k; m++) {
+                        atomBonds[particles[k]].push_back(particles[m]);
+                        atomBonds[particles[m]].push_back(particles[k]);
+                    }
             }
         }
 
@@ -242,13 +243,14 @@ void ComputeContext::findMoleculeGroups() {
             system.getConstraintParameters(i, particle1, particle2, distance);
             molecules[atomMolecule[particle1]].constraints.push_back(i);
         }
-        for (int i = 0; i < (int) forces.size(); i++)
+        for (int i = 0; i < (int) forces.size(); i++) {
+            vector<int> particles;
             for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
-                vector<int> particles;
                 forces[i]->getParticlesInGroup(j, particles);
                 if (particles.size() > 0)
                     molecules[atomMolecule[particles[0]]].groups[i].push_back(j);
             }
+        }
     }
 
     // Sort them into groups of identical molecules.
@@ -293,10 +295,10 @@ void ComputeContext::findMoleculeGroups() {
             for (int i = 0; i < (int) forces.size() && identical; i++) {
                 if (mol.groups[i].size() != mol2.groups[i].size())
                     identical = false;
+                vector<int> p1, p2;
                 for (int k = 0; k < (int) mol.groups[i].size() && identical; k++) {
                     if (!forces[i]->areGroupsIdentical(mol.groups[i][k], mol2.groups[i][k]))
                         identical = false;
-                    vector<int> p1, p2;
                     forces[i]->getParticlesInGroup(mol.groups[i][k], p1);
                     forces[i]->getParticlesInGroup(mol2.groups[i][k], p2);
                     for (int m = 0; m < p1.size(); m++)

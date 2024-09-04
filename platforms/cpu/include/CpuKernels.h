@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -38,7 +38,6 @@
 #include "CpuCustomNonbondedForce.h"
 #include "CpuGayBerneForce.h"
 #include "CpuGBSAOBCForce.h"
-#include "CpuLangevinDynamics.h"
 #include "CpuLangevinMiddleDynamics.h"
 #include "CpuNeighborList.h"
 #include "CpuNonbondedForce.h"
@@ -505,43 +504,6 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     CpuGayBerneForce* ixn;
-};
-
-/**
- * This kernel is invoked by LangevinIntegrator to take one time step.
- */
-class CpuIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
-public:
-    CpuIntegrateLangevinStepKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform),
-            data(data), dynamics(NULL) {
-    }
-    ~CpuIntegrateLangevinStepKernel();
-    /**
-     * Initialize the kernel, setting up the particle masses.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param integrator the LangevinIntegrator this kernel will be used for
-     */
-    void initialize(const System& system, const LangevinIntegrator& integrator);
-    /**
-     * Execute the kernel.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
-     */
-    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
-    /**
-     * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
-     */
-    double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator);
-private:
-    CpuPlatform::PlatformData& data;
-    CpuLangevinDynamics* dynamics;
-    std::vector<double> masses;
-    double prevTemp, prevFriction, prevStepSize;
 };
 
 /**

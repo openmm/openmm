@@ -142,8 +142,11 @@ class Simulation(object):
         """
         mm.LocalEnergyMinimizer.minimize(self.context, tolerance, maxIterations, reporter)
 
-    def step(self, steps):
+    def step(self, steps: int):
         """Advance the simulation by integrating a specified number of time steps."""
+        if int(steps) != steps:
+            raise TypeError(f'Expected an integer for steps, got {type(steps)}')
+            
         self._simulate(endStep=self.currentStep+steps)
 
     def runForClockTime(self, time, checkpointFile=None, stateFile=None, checkpointInterval=None):
@@ -262,8 +265,8 @@ class Simulation(object):
                 getForces = True
             if next[4]:
                 getEnergy = True
-        state = self.context.getState(getPositions=getPositions, getVelocities=getVelocities, getForces=getForces,
-                                      getEnergy=getEnergy, getParameters=True, enforcePeriodicBox=periodic,
+        state = self.context.getState(positions=getPositions, velocities=getVelocities, forces=getForces,
+                                      energy=getEnergy, parameters=True, enforcePeriodicBox=periodic,
                                       groups=self.context.getIntegrator().getIntegrationForceGroups())
         for reporter, next in reports:
             reporter.report(self, state)
@@ -325,7 +328,7 @@ class Simulation(object):
             a File-like object to write the state to, or alternatively a
             filename
         """
-        state = self.context.getState(getPositions=True, getVelocities=True, getParameters=True, getIntegratorParameters=True)
+        state = self.context.getState(positions=True, velocities=True, parameters=True, integratorParameters=True)
         xml = mm.XmlSerializer.serialize(state)
         if isinstance(file, str):
             with open(file, 'w') as f:

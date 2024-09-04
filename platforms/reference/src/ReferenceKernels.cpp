@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -61,7 +61,6 @@
 #include "ReferenceProperDihedralBond.h"
 #include "ReferenceRbDihedralBond.h"
 #include "ReferenceRMSDForce.h"
-#include "ReferenceStochasticDynamics.h"
 #include "ReferenceTabulatedFunction.h"
 #include "ReferenceVariableStochasticDynamics.h"
 #include "ReferenceVariableVerletDynamics.h"
@@ -121,6 +120,11 @@ static ReferenceConstraints& extractConstraints(ContextImpl& context) {
     return *data->constraints;
 }
 
+static const ReferenceVirtualSites& extractVirtualSites(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return *data->virtualSites;
+}
+
 static map<string, double>& extractEnergyParameterDerivatives(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *data->energyParameterDerivatives;
@@ -175,7 +179,7 @@ double ReferenceCalcForcesAndEnergyKernel::finishComputation(ContextImpl& contex
     if (!includeForces)
         extractForces(context) = savedForces; // Restore the forces so computing the energy doesn't overwrite the forces with incorrect values.
     else
-        ReferenceVirtualSites::distributeForces(context.getSystem(), extractPositions(context), extractForces(context));
+        extractVirtualSites(context).distributeForces(context.getSystem(), extractPositions(context), extractForces(context));
     return 0.0;
 }
 
@@ -341,7 +345,7 @@ ReferenceApplyConstraintsKernel::~ReferenceApplyConstraintsKernel() {
 void ReferenceApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
     vector<Vec3>& positions = extractPositions(context);
     extractConstraints(context).apply(positions, positions, inverseMasses, tol);
-    ReferenceVirtualSites::computePositions(context.getSystem(), positions);
+    extractVirtualSites(context).computePositions(context.getSystem(), positions);
 }
 
 void ReferenceApplyConstraintsKernel::applyToVelocities(ContextImpl& context, double tol) {
@@ -355,7 +359,7 @@ void ReferenceVirtualSitesKernel::initialize(const System& system) {
 
 void ReferenceVirtualSitesKernel::computePositions(ContextImpl& context) {
     vector<Vec3>& positions = extractPositions(context);
-    ReferenceVirtualSites::computePositions(context.getSystem(), positions);
+    extractVirtualSites(context).computePositions(context.getSystem(), positions);
 }
 
 void ReferenceCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
@@ -2290,6 +2294,7 @@ void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const Ver
             delete dynamics;
         dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), stepSize);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
         prevStepSize = stepSize;
     }
     dynamics->update(context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance());
@@ -2327,6 +2332,7 @@ void ReferenceIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const
             delete dynamics;
         dynamics = new ReferenceNoseHooverDynamics(context.getSystem().getNumParticles(), stepSize);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
         prevStepSize = stepSize;
     }
     dynamics->step1(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid,
@@ -2563,50 +2569,6 @@ void ReferenceIntegrateNoseHooverStepKernel::setChainStates(ContextImpl& context
     chainVelocities = velocities;
 }
 
-ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
-    if (dynamics)
-        delete dynamics;
-}
-
-void ReferenceIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
-    int numParticles = system.getNumParticles();
-    masses.resize(numParticles);
-    for (int i = 0; i < numParticles; ++i)
-        masses[i] = system.getParticleMass(i);
-    SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
-}
-
-void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
-    double temperature = integrator.getTemperature();
-    double friction = integrator.getFriction();
-    double stepSize = integrator.getStepSize();
-    vector<Vec3>& posData = extractPositions(context);
-    vector<Vec3>& velData = extractVelocities(context);
-    vector<Vec3>& forceData = extractForces(context);
-    if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
-        // Recreate the computation objects with the new parameters.
-        
-        if (dynamics)
-            delete dynamics;
-        dynamics = new ReferenceStochasticDynamics(
-                context.getSystem().getNumParticles(), 
-                stepSize, 
-                friction, 
-                temperature);
-        dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
-        prevTemp = temperature;
-        prevFriction = friction;
-        prevStepSize = stepSize;
-    }
-    dynamics->update(context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance());
-    data.time += stepSize;
-    data.stepCount++;
-}
-
-double ReferenceIntegrateLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator) {
-    return computeShiftedKineticEnergy(context, masses, 0.5*integrator.getStepSize());
-}
-
 ReferenceIntegrateLangevinMiddleStepKernel::~ReferenceIntegrateLangevinMiddleStepKernel() {
     if (dynamics)
         delete dynamics;
@@ -2637,6 +2599,7 @@ void ReferenceIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, c
                 friction, 
                 temperature);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
@@ -2681,6 +2644,7 @@ void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const B
                 friction, 
                 temperature);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
@@ -2721,6 +2685,7 @@ double ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& contex
             delete dynamics;
         dynamics = new ReferenceVariableStochasticDynamics(context.getSystem().getNumParticles(), friction, temperature, errorTol);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
         prevTemp = temperature;
         prevFriction = friction;
         prevErrorTol = errorTol;
@@ -2764,6 +2729,7 @@ double ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context,
             delete dynamics;
         dynamics = new ReferenceVariableVerletDynamics(context.getSystem().getNumParticles(), errorTol);
         dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+        dynamics->setVirtualSites(extractVirtualSites(context));
         prevErrorTol = errorTol;
     }
     double maxStepSize = maxTime-data.time;
@@ -2816,6 +2782,7 @@ void ReferenceIntegrateCustomStepKernel::execute(ContextImpl& context, CustomInt
     // Execute the step.
     
     dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+    dynamics->setVirtualSites(extractVirtualSites(context));
     dynamics->update(context, context.getSystem().getNumParticles(), posData, velData, forceData, masses, globals, perDofValues, forcesAreValid, integrator.getConstraintTolerance());
     
     // Record changed global variables.
@@ -2989,13 +2956,13 @@ void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& i
     vector<Vec3> pos0(pos);
     for (int i = 0; i < pos0.size(); i++)
         pos0[i] += displ0[i];
-    extractPositions(innerContext0) = pos0;
+    innerContext0.setPositions(pos0);
 
     //in the target state, particles are displaced by displ1
     vector<Vec3> pos1(pos);
     for (int i = 0; i < pos1.size(); i++)
         pos1[i] += displ1[i];
-    extractPositions(innerContext1) = pos1;
+    innerContext1.setPositions(pos1);
 
     Vec3 a, b, c;
     context.getPeriodicBoxVectors(a, b, c);

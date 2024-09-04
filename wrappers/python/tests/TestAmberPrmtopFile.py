@@ -177,7 +177,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         integrator = VerletIntegrator(1.0*femtoseconds)
         # Use reference platform, since it should always be present and
         # 'working', and the system is plenty small so this won't be too slow
-        sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatform('Reference'))
         # Check that the energy is about what we expect it to be
         sim.context.setPositions(inpcrd3.positions)
         ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
@@ -207,7 +207,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         integrator = VerletIntegrator(1.0*femtoseconds)
         # Use reference platform, since it should always be present and
         # 'working', and the system is plenty small so this won't be too slow
-        sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        sim = Simulation(prmtop3.topology, system, integrator, Platform.getPlatform('Reference'))
         # Check that the energy is about what we expect it to be
         sim.context.setPositions(inpcrd3.getPositions())
         ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
@@ -265,7 +265,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         integrator = VerletIntegrator(1.0*femtoseconds)
         # Use reference platform, since it should always be present and
         # 'working', and the system is plenty small so this won't be too slow
-        sim = Simulation(prmtop4.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        sim = Simulation(prmtop4.topology, system, integrator, Platform.getPlatform('Reference'))
         # Check that the energy is about what we expect it to be
         sim.context.setPositions(inpcrd4.positions)
         ene = sim.context.getState(getEnergy=True, enforcePeriodicBox=True).getPotentialEnergy()
@@ -310,7 +310,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         for i in range(5):
             system = prmtop2.createSystem(implicitSolvent=solventType[i], nonbondedMethod=nonbondedMethod[i], implicitSolventSaltConc=salt[i])
             integrator = VerletIntegrator(0.001)
-            context = Context(system, integrator, Platform.getPlatformByName("Reference"))
+            context = Context(system, integrator, Platform.getPlatform("Reference"))
             context.setPositions(pdb.positions)
             state1 = context.getState(getForces=True)
             with open('systems/alanine-dipeptide-implicit-forces/'+file[i]+'.xml') as infile:
@@ -380,7 +380,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
         for i,f in enumerate(system.getForces()):
             f.setForceGroup(i)
         integrator = VerletIntegrator(0.001)
-        context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+        context = Context(system, integrator, Platform.getPlatform('Reference'))
         context.setPositions(crd.positions)
         
         # Compare to energies computed with pytraj.energy_decomposition()
@@ -422,7 +422,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
                 if isinstance(f, CustomGBForce) or isinstance(f, GBSAOBCForce):
                     f.setForceGroup(1)
             integrator = VerletIntegrator(0.001)
-            context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+            context = Context(system, integrator, Platform.getPlatform('Reference'))
             context.setPositions(inpcrd.positions)
             energy = context.getState(getEnergy=True, groups={1}).getPotentialEnergy().value_in_unit(kilojoules_per_mole)
             self.assertAlmostEqual(energy, expectedEnergy, delta=5e-4*abs(energy))
@@ -460,7 +460,7 @@ class TestAmberPrmtopFile(unittest.TestCase):
             system = prmtop.createSystem(constraints=constraints)
             integrator = VerletIntegrator(0.001*picoseconds)
             # If a constraint was added to a massless particle, this will throw an exception.
-            context = Context(system, integrator, Platform.getPlatformByName('Reference'))
+            context = Context(system, integrator, Platform.getPlatform('Reference'))
 
     def testWaterBonds(self):
         """Test that water molecules have the right set of bonds"""
