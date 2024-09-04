@@ -574,10 +574,14 @@ void storeInteractionData(int x, __local int* buffer, __local int* sum, __local 
  */
 __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         __global unsigned int* restrict interactionCount, __global int* restrict interactingTiles, __global unsigned int* restrict interactingAtoms,
-        __global const real4* restrict posq, unsigned int maxTiles, unsigned int startBlockIndex, unsigned int numBlocks, __global real2* restrict sortedBlocks,
+        __global const real4* restrict posq, unsigned int maxTiles, unsigned int startBlockIndex, unsigned int numBlocks, __global unsigned int* restrict sortedBlocks,
         __global const real4* restrict sortedBlockCenter, __global const real4* restrict sortedBlockBoundingBox,
         __global const unsigned int* restrict exclusionIndices, __global const unsigned int* restrict exclusionRowIndices, __global real4* restrict oldPositions,
-        __global const int* restrict rebuildNeighborList) {
+        __global const int* restrict rebuildNeighborList
+#ifdef USE_LARGE_BLOCKS
+        , __global real4* restrict largeBlockCenter, __global real4* restrict largeBlockBoundingBox
+#endif
+        ) {
     __local int buffer[BUFFER_SIZE];
     __local int sum[BUFFER_SIZE];
     __local int2 temp[BUFFER_SIZE];
@@ -611,8 +615,7 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
     for (int i = startBlockIndex+get_group_id(0); i < startBlockIndex+numBlocks; i += get_num_groups(0)) {
         if (get_local_id(0) == get_local_size(0)-1)
             numAtoms = 0;
-        real2 sortedKey = sortedBlocks[i];
-        int x = (int) sortedKey.y;
+        unsigned int x = sortedBlocks[i] & BLOCK_INDEX_MASK;
         real4 blockCenterX = sortedBlockCenter[i];
         real4 blockSizeX = sortedBlockBoundingBox[i];
 
@@ -629,10 +632,9 @@ __kernel void findBlocksWithInteractions(real4 periodicBoxSize, real4 invPeriodi
 
         for (int base = i+1; base < NUM_BLOCKS; base += get_local_size(0)) {
             int j = base+get_local_id(0);
-            real2 sortedKey2 = (j < NUM_BLOCKS ? sortedBlocks[j] : (real2) 0);
             real4 blockCenterY = (j < NUM_BLOCKS ? sortedBlockCenter[j] : (real4) 0);
             real4 blockSizeY = (j < NUM_BLOCKS ? sortedBlockBoundingBox[j] : (real4) 0);
-            int y = (int) sortedKey2.y;
+            unsigned int y = (j < NUM_BLOCKS ? sortedBlocks[j] & BLOCK_INDEX_MASK : 0);
             real4 delta = blockCenterX-blockCenterY;
 #ifdef USE_PERIODIC
             APPLY_PERIODIC_TO_DELTA(delta)
