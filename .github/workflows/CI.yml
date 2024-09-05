@@ -290,6 +290,9 @@ jobs:
           # OpenCL should also be there for CUDA and, well, OpenCL
           if [[ "${{ matrix.cuda-version }}" != "" || ${{ matrix.OPENCL }} == true ]]; then
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMOpenCL.$SHLIB
+          # Check for HIP plugin
+          elif [[ ${{ matrix.env }} == *hip ]]; then
+            test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMHIP.$SHLIB
           # CPU builds should provide both CPU and PME
           else
             test -f ${CONDA_PREFIX}/lib/plugins/libOpenMMCPU.$SHLIB
