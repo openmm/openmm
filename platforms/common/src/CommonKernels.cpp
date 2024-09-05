@@ -352,6 +352,9 @@ void CommonUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Ve
 }
 
 void CommonUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) {
+    if (!cc.getBoxIsTriclinic() && (b[0] != 0 || c[0] != 0 || c[1] != 0))
+        throw OpenMMException("The box shape has changed from rectangular to triclinic.  To do this, you must call setDefaultPeriodicBoxVectors() on the System to specify a triclinic default box, then reinitialize the Context.");
+
     // If any particles have been wrapped to the first periodic box, we need to unwrap them
     // to avoid changing their positions.
 
@@ -8265,15 +8268,29 @@ void CommonCalcCustomCPPForceKernel::initialize(const System& system, CustomCPPF
     addForcesKernel->addArg(cc.getLongForceBuffer());
     addForcesKernel->addArg(cc.getAtomIndexArray());
     forceGroupFlag = (1<<force.getOwner().getForceGroup());
-    cc.addPreComputation(new StartCalculationPreComputation(*this));
-    cc.addPostComputation(new AddForcesPostComputation(*this));
+    if (cc.getNumContexts() == 1) {
+        cc.addPreComputation(new StartCalculationPreComputation(*this));
+        cc.addPostComputation(new AddForcesPostComputation(*this));
+    }
 }
 
 double CommonCalcCustomCPPForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-    // This method does nothing.  The actual calculation is started by the pre-computation, continued on
-    // the worker thread, and finished by the post-computation.
-    
-    return 0;
+    if (cc.getNumContexts() == 1) {
+        // This method does nothing.  The actual calculation is started by the pre-computation, continued on
+        // the worker thread, and finished by the post-computation.
+
+        return 0;
+    }
+
+    // When using multiple GPUs, this method is itself called from the worker thread.
+    // Submitting additional tasks and waiting for them to complete would lead to
+    // a deadlock.
+
+    if (cc.getContextIndex() != 0)
+        return 0.0;
+    contextImpl.getPositions(positionsVec);
+    executeOnWorkerThread(includeForces);
+    return addForces(includeForces, includeEnergy, -1);
 }
 
 void CommonCalcCustomCPPForceKernel::beginComputation(bool includeForces, bool includeEnergy, int groups) {
@@ -8310,7 +8327,8 @@ double CommonCalcCustomCPPForceKernel::addForces(bool includeForces, bool includ
 
     // Wait until executeOnWorkerThread() is finished.
     
-    cc.getWorkThread().flush();
+    if (cc.getNumContexts() == 1)
+        cc.getWorkThread().flush();
 
     // Add in the forces.
     

@@ -166,7 +166,7 @@ class Topology(object):
         chain._residues.append(residue)
         return residue
 
-    def addAtom(self, name, element, residue, id=None):
+    def addAtom(self, name, element, residue, id=None, formalCharge=None):
         """Create a new Atom and add it to the Topology.
 
         Parameters
@@ -180,7 +180,8 @@ class Topology(object):
         id : string=None
             An optional identifier for the atom.  If this is omitted, an id is
             generated based on the atom index.
-
+        formalCharge : int=None
+            An optional formal charge for the atom.
         Returns
         -------
         Atom
@@ -190,7 +191,7 @@ class Topology(object):
             raise ValueError('All atoms within a residue must be contiguous')
         if id is None:
             id = str(self._numAtoms+1)
-        atom = Atom(name, element, self._numAtoms, residue, id)
+        atom = Atom(name, element, self._numAtoms, residue, id, formalCharge=formalCharge)
         self._numAtoms += 1
         residue._atoms.append(atom)
         return atom
@@ -452,7 +453,7 @@ class Residue(object):
 class Atom(object):
     """An Atom object represents an atom within a Topology."""
 
-    def __init__(self, name, element, index, residue, id):
+    def __init__(self, name, element, index, residue, id, formalCharge=None):
         """Construct a new Atom.  You should call addAtom() on the Topology instead of calling this directly."""
         ## The name of the Atom
         self.name = name
@@ -464,6 +465,8 @@ class Atom(object):
         self.residue = residue
         ## A user defined identifier for this Atom
         self.id = id
+        ## An optional formal charge for this Atom
+        self.formalCharge = formalCharge
 
     def __repr__(self):
         return "<Atom %d (%s) of chain %d residue %d (%s)>" % (self.index, self.name, self.residue.chain.index, self.residue.index, self.residue.name)

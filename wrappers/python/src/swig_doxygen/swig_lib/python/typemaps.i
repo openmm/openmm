@@ -161,39 +161,42 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
     PyObject* item1 = NULL;
 
     if (isNumpyAvailable()) {
-        if (PyArray_Check(stripped) && PyArray_ISCARRAY_RO(stripped) && PyArray_NDIM(stripped) == 1) {
-            int type = PyArray_TYPE(stripped);
-            int length = PyArray_SIZE(stripped);
-            void* data = PyArray_DATA((PyArrayObject*) stripped);
-            if (type == NPY_DOUBLE) {
-                out.resize(length);
-                memcpy(&out[0], data, sizeof(double)*length);
-                Py_DECREF(stripped);
-                return SWIG_OK;
-            }
-            if (type == NPY_FLOAT) {
-                out.resize(length);
-                float* floatData = (float*) data;
-                for (int i = 0; i < length; i++)
-                    out[i] = floatData[i];
-                Py_DECREF(stripped);
-                return SWIG_OK;
-            }
-            if (type == NPY_INT32) {
-                out.resize(length);
-                int* intData = (int*) data;
-                for (int i = 0; i < length; i++)
-                    out[i] = intData[i];
-                Py_DECREF(stripped);
-                return SWIG_OK;
-            }
-            if (type == NPY_INT64) {
-                out.resize(length);
-                long long* longData = (long long*) data;
-                for (int i = 0; i < length; i++)
-                    out[i] = longData[i];
-                Py_DECREF(stripped);
-                return SWIG_OK;
+        if (PyArray_Check(stripped)) {
+            const PyArrayObject* array = (PyArrayObject*) stripped;
+            if (PyArray_ISCARRAY_RO(array) && PyArray_NDIM(array) == 1) {
+                int type = PyArray_TYPE(array);
+                int length = PyArray_SIZE(array);
+                void* data = PyArray_DATA(array);
+                if (type == NPY_DOUBLE) {
+                    out.resize(length);
+                    memcpy(&out[0], data, sizeof(double)*length);
+                    Py_DECREF(array);
+                    return SWIG_OK;
+                }
+                if (type == NPY_FLOAT) {
+                    out.resize(length);
+                    float* floatData = (float*) data;
+                    for (int i = 0; i < length; i++)
+                        out[i] = floatData[i];
+                    Py_DECREF(array);
+                    return SWIG_OK;
+                }
+                if (type == NPY_INT32) {
+                    out.resize(length);
+                    int* intData = (int*) data;
+                    for (int i = 0; i < length; i++)
+                        out[i] = intData[i];
+                    Py_DECREF(array);
+                    return SWIG_OK;
+                }
+                if (type == NPY_INT64) {
+                    out.resize(length);
+                    long long* longData = (long long*) data;
+                    for (int i = 0; i < length; i++)
+                        out[i] = longData[i];
+                    Py_DECREF(array);
+                    return SWIG_OK;
+                }
             }
         }
     }
@@ -233,39 +236,42 @@ int Py_SequenceToVecDouble(PyObject* obj, std::vector<double>& out) {
 int Py_SequenceToVecVec3(PyObject* obj, std::vector<Vec3>& out) {
     PyObject* stripped = Py_StripOpenMMUnits(obj);      // new reference
     if (isNumpyAvailable()) {
-        if (PyArray_Check(stripped) && PyArray_ISCARRAY_RO(stripped) && PyArray_NDIM(stripped) == 2 && PyArray_DIM(stripped, 1) == 3) {
-            int type = PyArray_TYPE(stripped);
-            int length = PyArray_DIM(stripped, 0);
-            void* data = PyArray_DATA((PyArrayObject*) stripped);
-            if (type == NPY_DOUBLE) {
-                out.resize(length);
-                memcpy(&out[0][0], data, 3*sizeof(double)*length);
-                Py_DECREF(stripped);
-                return SWIG_OK;
-            }
-            if (type == NPY_FLOAT) {
-                out.resize(length);
-                float* floatData = (float*) data;
-                for (int i = 0; i < length; i++)
-                    out[i] = Vec3(floatData[3*i], floatData[3*i+1], floatData[3*i+2]);
-                Py_DECREF(stripped);
-                return SWIG_OK;
-            }
-            if (type == NPY_INT32) {
-                out.resize(length);
-                int* intData = (int*) data;
-                for (int i = 0; i < length; i++)
-                    out[i] = Vec3(intData[3*i], intData[3*i+1], intData[3*i+2]);
-                Py_DECREF(stripped);
-                return SWIG_OK;
-            }
-            if (type == NPY_INT64) {
-                out.resize(length);
-                long long* longData = (long long*) data;
-                for (int i = 0; i < length; i++)
-                    out[i] = Vec3(longData[3*i], longData[3*i+1], longData[3*i+2]);
-                Py_DECREF(stripped);
-                return SWIG_OK;
+        if (PyArray_Check(stripped)) {
+            const PyArrayObject* array = (PyArrayObject*) stripped;
+            if (PyArray_ISCARRAY_RO(array) && PyArray_NDIM(array) == 2 && PyArray_DIM(array, 1) == 3) {
+                int type = PyArray_TYPE(array);
+                int length = PyArray_DIM(array, 0);
+                void* data = PyArray_DATA((PyArrayObject*) array);
+                if (type == NPY_DOUBLE) {
+                    out.resize(length);
+                    memcpy(&out[0][0], data, 3*sizeof(double)*length);
+                    Py_DECREF(array);
+                    return SWIG_OK;
+                }
+                if (type == NPY_FLOAT) {
+                    out.resize(length);
+                    float* floatData = (float*) data;
+                    for (int i = 0; i < length; i++)
+                        out[i] = Vec3(floatData[3*i], floatData[3*i+1], floatData[3*i+2]);
+                    Py_DECREF(array);
+                    return SWIG_OK;
+                }
+                if (type == NPY_INT32) {
+                    out.resize(length);
+                    int* intData = (int*) data;
+                    for (int i = 0; i < length; i++)
+                        out[i] = Vec3(intData[3*i], intData[3*i+1], intData[3*i+2]);
+                    Py_DECREF(array);
+                    return SWIG_OK;
+                }
+                if (type == NPY_INT64) {
+                    out.resize(length);
+                    long long* longData = (long long*) data;
+                    for (int i = 0; i < length; i++)
+                        out[i] = Vec3(longData[3*i], longData[3*i+1], longData[3*i+2]);
+                    Py_DECREF(array);
+                    return SWIG_OK;
+                }
             }
         }
     }

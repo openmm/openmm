@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Yutong Zhao                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,23 +36,20 @@ using namespace std;
 using namespace OpenMM;
 
 CustomIntegratorProxy::CustomIntegratorProxy() : SerializationProxy("CustomIntegrator") {
-
 }
 
 void CustomIntegratorProxy::serialize(const void* object, SerializationNode& node) const {
-    node.setIntProperty("version", 2);
+    node.setIntProperty("version", 3);
     const CustomIntegrator& integrator = *reinterpret_cast<const CustomIntegrator*>(object);
     SerializationNode& globalVariablesNode = node.createChildNode("GlobalVariables");
-    for (int i = 0; i < integrator.getNumGlobalVariables(); i++) {
-        globalVariablesNode.setDoubleProperty(integrator.getGlobalVariableName(i), integrator.getGlobalVariable(i));
-    }
+    for (int i = 0; i < integrator.getNumGlobalVariables(); i++)
+        globalVariablesNode.createChildNode("Variable").setStringProperty("name", integrator.getGlobalVariableName(i)).setDoubleProperty("value", integrator.getGlobalVariable(i));
     SerializationNode& perDofVariablesNode = node.createChildNode("PerDofVariables");
     for (int i = 0; i < integrator.getNumPerDofVariables(); i++) {
         SerializationNode& perDofValuesNode = perDofVariablesNode.createChildNode(integrator.getPerDofVariableName(i));
         vector<Vec3> perDofValues; integrator.getPerDofVariable(i, perDofValues);
-        for (int j = 0; j < perDofValues.size(); j++) {
-            perDofValuesNode.createChildNode("Value").setDoubleProperty("x",perDofValues[j][0]).setDoubleProperty("y",perDofValues[j][1]).setDoubleProperty("z",perDofValues[j][2]);
-        }
+        for (int j = 0; j < perDofValues.size(); j++)
+            perDofValuesNode.createChildNode("Value").setDoubleProperty("x", perDofValues[j][0]).setDoubleProperty("y", perDofValues[j][1]).setDoubleProperty("z", perDofValues[j][2]);
     }
     SerializationNode& computationsNode = node.createChildNode("Computations");
     for (int i = 0; i < integrator.getNumComputations(); i++) {
@@ -60,26 +57,30 @@ void CustomIntegratorProxy::serialize(const void* object, SerializationNode& nod
         string computationVariable;
         string computationExpression;
         integrator.getComputationStep(i, computationType, computationVariable, computationExpression);
-        computationsNode.createChildNode("Computation").setIntProperty("computationType",static_cast<int>(computationType))
-            .setStringProperty("computationVariable",computationVariable).setStringProperty("computationExpression",computationExpression);
+        computationsNode.createChildNode("Computation").setIntProperty("computationType", static_cast<int>(computationType))
+            .setStringProperty("computationVariable", computationVariable).setStringProperty("computationExpression", computationExpression);
     }
     SerializationNode& functions = node.createChildNode("Functions");
     for (int i = 0; i < integrator.getNumTabulatedFunctions(); i++)
         functions.createChildNode("Function", &integrator.getTabulatedFunction(i)).setStringProperty("name", integrator.getTabulatedFunctionName(i));
-    node.setStringProperty("kineticEnergyExpression",integrator.getKineticEnergyExpression());
-    node.setIntProperty("randomSeed",integrator.getRandomNumberSeed());
-    node.setDoubleProperty("stepSize",integrator.getStepSize());
-    node.setDoubleProperty("constraintTolerance",integrator.getConstraintTolerance());
+    node.setStringProperty("kineticEnergyExpression", integrator.getKineticEnergyExpression());
+    node.setIntProperty("randomSeed", integrator.getRandomNumberSeed());
+    node.setDoubleProperty("stepSize", integrator.getStepSize());
+    node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
 }
 
 void* CustomIntegratorProxy::deserialize(const SerializationNode& node) const {
     int version = node.getIntProperty("version");
-    if (version < 1 || version > 2)
+    if (version < 1 || version > 3)
         throw OpenMMException("Unsupported version number");
     CustomIntegrator* integrator = new CustomIntegrator(node.getDoubleProperty("stepSize"));
     const SerializationNode& globalVariablesNode = node.getChildNode("GlobalVariables");
-    for (auto& prop : globalVariablesNode.getProperties())
-        integrator->addGlobalVariable(prop.first, globalVariablesNode.getDoubleProperty(prop.first));
+    if (version < 3)
+        for (auto& prop : globalVariablesNode.getProperties())
+            integrator->addGlobalVariable(prop.first, globalVariablesNode.getDoubleProperty(prop.first));
+    else
+        for (auto& var : globalVariablesNode.getChildren())
+            integrator->addGlobalVariable(var.getStringProperty("name"), var.getDoubleProperty("value"));
     const SerializationNode& perDofVariablesNode = node.getChildNode("PerDofVariables");
     int count = 0;
     for (auto& var : perDofVariablesNode.getChildren()) {

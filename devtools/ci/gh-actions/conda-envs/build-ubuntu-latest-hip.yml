@@ -1,0 +1,16 @@
+name: build
+channels:
+- conda-forge
+dependencies:
+# build
+- cmake
+- make
+- ccache
+- sysroot_linux-64 2.17
+# host
+- python
+- doxygen 1.8.14
+- hip-devel
+- hipcc
+- rocm-cmake
+- rocm-device-libs
