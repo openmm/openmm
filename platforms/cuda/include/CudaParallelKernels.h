@@ -82,7 +82,7 @@ private:
     class FinishComputationTask;
     CudaPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
-    std::vector<long long> completionTimes;
+    std::vector<double> completionTimes;
     std::vector<double> contextNonbondedFractions;
     bool loadBalance;
     int2* interactionCounts;

@@ -83,7 +83,7 @@ private:
     class FinishComputationTask;
     HipPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
-    std::vector<long long> completionTimes;
+    std::vector<double> completionTimes;
     std::vector<double> contextNonbondedFractions;
     HipArray contextForces;
     void* pinnedPositionBuffer;

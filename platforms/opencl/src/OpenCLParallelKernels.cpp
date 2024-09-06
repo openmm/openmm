@@ -25,31 +25,10 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLParallelKernels.h"
+#include "openmm/internal/timer.h"
 
 using namespace OpenMM;
 using namespace std;
-
-/**
- * Get the current clock time, measured in microseconds.
- */
-#ifdef _MSC_VER
-    #include <Windows.h>
-    static long long getTime() {
-        FILETIME ft;
-        GetSystemTimeAsFileTime(&ft); // 100-nanoseconds since 1-1-1601
-        ULARGE_INTEGER result;
-        result.LowPart = ft.dwLowDateTime;
-        result.HighPart = ft.dwHighDateTime;
-        return result.QuadPart/10;
-    }
-#else
-    #include <sys/time.h> 
-    static long long getTime() {
-        struct timeval tod;
-        gettimeofday(&tod, 0);
-        return 1000000*tod.tv_sec+tod.tv_usec;
-    }
-#endif
 
 class OpenCLParallelCalcForcesAndEnergyKernel::BeginComputationTask : public OpenCLContext::WorkTask {
 public:
@@ -79,7 +58,7 @@ private:
 class OpenCLParallelCalcForcesAndEnergyKernel::FinishComputationTask : public OpenCLContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, OpenCLContext& cl, OpenCLCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, void* pinnedMemory, bool& valid, int& numTiles) :
+            bool includeForce, bool includeEnergy, int groups, double& energy, double& completionTime, void* pinnedMemory, bool& valid, int& numTiles) :
             context(context), cl(cl), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
             completionTime(completionTime), pinnedMemory(pinnedMemory), valid(valid), numTiles(numTiles) {
     }
@@ -97,7 +76,7 @@ public:
             else
                 cl.getQueue().finish();
         }
-        completionTime = getTime();
+        completionTime = getCurrentTime();
         if (cl.getNonbondedUtilities().getUsePeriodic() && numTiles > cl.getNonbondedUtilities().getInteractingTiles().getSize()) {
             valid = false;
             cl.getNonbondedUtilities().updateNeighborListSize();
@@ -110,7 +89,7 @@ private:
     bool includeForce, includeEnergy;
     int groups;
     double& energy;
-    long long& completionTime;
+    double& completionTime;
     void* pinnedMemory;
     bool& valid;
     int& numTiles;

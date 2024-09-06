@@ -82,7 +82,7 @@ private:
     class FinishComputationTask;
     OpenCLPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
-    std::vector<long long> completionTimes;
+    std::vector<double> completionTimes;
     std::vector<double> contextNonbondedFractions;
     std::vector<int> tileCounts;
     OpenCLArray contextForces;

@@ -27,6 +27,7 @@
 #include "CudaParallelKernels.h"
 #include "CudaKernelSources.h"
 #include "openmm/common/ContextSelector.h"
+#include "openmm/internal/timer.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -38,28 +39,6 @@ if (result != CUDA_SUCCESS) { \
     m<<prefix<<": "<<cu.getErrorString(result)<<" ("<<result<<")"<<" at "<<__FILE__<<":"<<__LINE__; \
     throw OpenMMException(m.str());\
 }
-
-/**
- * Get the current clock time, measured in microseconds.
- */
-#ifdef _MSC_VER
-    #include <Windows.h>
-    static long long getTime() {
-        FILETIME ft;
-        GetSystemTimeAsFileTime(&ft); // 100-nanoseconds since 1-1-1601
-        ULARGE_INTEGER result;
-        result.LowPart = ft.dwLowDateTime;
-        result.HighPart = ft.dwHighDateTime;
-        return result.QuadPart/10;
-    }
-#else
-    #include <sys/time.h> 
-    static long long getTime() {
-        struct timeval tod;
-        gettimeofday(&tod, 0);
-        return 1000000*tod.tv_sec+tod.tv_usec;
-    }
-#endif
 
 class CudaParallelCalcForcesAndEnergyKernel::BeginComputationTask : public CudaContext::WorkTask {
 public:
@@ -94,7 +73,7 @@ private:
 class CudaParallelCalcForcesAndEnergyKernel::FinishComputationTask : public CudaContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, CudaContext& cu, CudaCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, long long* pinnedMemory, CudaArray& contextForces,
+            bool includeForce, bool includeEnergy, int groups, double& energy, double& completionTime, long long* pinnedMemory, CudaArray& contextForces,
             bool& valid, int2& interactionCount, CUstream stream, CUevent event, CUevent localEvent, bool loadBalance) :
             context(context), cu(cu), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
             completionTime(completionTime), pinnedMemory(pinnedMemory), contextForces(contextForces), valid(valid), interactionCount(interactionCount),
@@ -109,7 +88,7 @@ public:
             // Record timing information for load balancing.  Since this takes time, only do it at the start of the simulation.
 
             CHECK_RESULT(cuCtxSynchronize(), "Error synchronizing CUDA context");
-            completionTime = getTime();
+            completionTime = getCurrentTime();
         }
         if (includeForce) {
             if (cu.getContextIndex() > 0) {
@@ -140,7 +119,7 @@ private:
     bool includeForce, includeEnergy, loadBalance;
     int groups;
     double& energy;
-    long long& completionTime;
+    double& completionTime;
     long long* pinnedMemory;
     CudaArray& contextForces;
     bool& valid;

@@ -28,6 +28,7 @@
 #include "HipParallelKernels.h"
 #include "HipKernelSources.h"
 #include "openmm/common/ContextSelector.h"
+#include "openmm/internal/timer.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -39,28 +40,6 @@ if (result != hipSuccess) { \
     m<<prefix<<": "<<cu.getErrorString(result)<<" ("<<result<<")"<<" at "<<__FILE__<<":"<<__LINE__; \
     throw OpenMMException(m.str());\
 }
-
-/**
- * Get the current clock time, measured in microseconds.
- */
-#ifdef _MSC_VER
-    #include <Windows.h>
-    static long long getTime() {
-        FILETIME ft;
-        GetSystemTimeAsFileTime(&ft); // 100-nanoseconds since 1-1-1601
-        ULARGE_INTEGER result;
-        result.LowPart = ft.dwLowDateTime;
-        result.HighPart = ft.dwHighDateTime;
-        return result.QuadPart/10;
-    }
-#else
-    #include <sys/time.h>
-    static long long getTime() {
-        struct timeval tod;
-        gettimeofday(&tod, 0);
-        return 1000000*tod.tv_sec+tod.tv_usec;
-    }
-#endif
 
 class HipParallelCalcForcesAndEnergyKernel::BeginComputationTask : public HipContext::WorkTask {
 public:
@@ -92,7 +71,7 @@ private:
 class HipParallelCalcForcesAndEnergyKernel::FinishComputationTask : public HipContext::WorkTask {
 public:
     FinishComputationTask(ContextImpl& context, HipContext& cu, HipCalcForcesAndEnergyKernel& kernel,
-            bool includeForce, bool includeEnergy, int groups, double& energy, long long& completionTime, long long* pinnedMemory, HipArray& contextForces,
+            bool includeForce, bool includeEnergy, int groups, double& energy, double& completionTime, long long* pinnedMemory, HipArray& contextForces,
             bool& valid, hipStream_t stream, hipEvent_t event, hipEvent_t localEvent) :
             context(context), cu(cu), kernel(kernel), includeForce(includeForce), includeEnergy(includeEnergy), groups(groups), energy(energy),
             completionTime(completionTime), pinnedMemory(pinnedMemory), contextForces(contextForces), valid(valid),
@@ -107,7 +86,7 @@ public:
             // Record timing information for load balancing.  Since this takes time, only do it at the start of the simulation.
 
             CHECK_RESULT(hipStreamSynchronize(cu.getCurrentStream()), "Error synchronizing HIP context");
-            completionTime = getTime();
+            completionTime = getCurrentTime();
         }
         if (includeForce) {
             if (cu.getContextIndex() > 0) {
@@ -133,7 +112,7 @@ private:
     bool includeForce, includeEnergy;
     int groups;
     double& energy;
-    long long& completionTime;
+    double& completionTime;
     long long* pinnedMemory;
     HipArray& contextForces;
     bool& valid;
