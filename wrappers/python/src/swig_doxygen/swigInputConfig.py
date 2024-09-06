@@ -242,8 +242,8 @@ UNITS = {
 # check getSurfaceAreaFactor
 ("AmoebaGeneralizedKirkwoodForce",       "getParticleParameters")                         :  (None, ('unit.elementary_charge', 'unit.nanometer', None, 'unit.nanometer', None)),
 ("AmoebaGeneralizedKirkwoodForce",       "getDielectricOffset")                           :  ( 'unit.nanometer', ()),
-("AmoebaGeneralizedKirkwoodForce",       "getSolventDielectric")                          :  ( 'unit.nanometer', ()),
-("AmoebaGeneralizedKirkwoodForce",       "getSoluteDielectric")                           :  ( 'unit.nanometer', ()),
+("AmoebaGeneralizedKirkwoodForce",       "getSolventDielectric")                          :  (None, ()),
+("AmoebaGeneralizedKirkwoodForce",       "getSoluteDielectric")                           :  (None, ()),
 ("AmoebaGeneralizedKirkwoodForce",       "getIncludeCavityTerm")                          :  ( None,()),
 ("AmoebaGeneralizedKirkwoodForce",       "getTanhRescaling")                              :  ( None,()),
 ("AmoebaGeneralizedKirkwoodForce",       "getTanhParameters")                              : ( None,(None, None, None)),
