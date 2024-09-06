@@ -793,7 +793,7 @@ class TestAPIUnits(unittest.TestCase):
         """ Tests the AmoebaWcaDispersionForce API features """
         force = AmoebaWcaDispersionForce()
 
-        self.assertEqual(force.getDispoff(), 0.26*nanometer)
+        self.assertEqual(force.getDispoff(), 0.1056*nanometer)
         self.assertEqual(force.getAwater(), 0.033428*nanometer**-3)
         self.assertEqual(force.getEpsh(), 0.0135*kilojoule_per_mole)
         self.assertEqual(force.getEpso(), 0.11*kilojoule_per_mole)
