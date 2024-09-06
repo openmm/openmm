@@ -260,6 +260,7 @@ private:
     std::vector<BondInfo> bonds;
     std::vector<int> energyParameterDerivatives;
     bool usePeriodic;
+    mutable int numContexts, firstChangedBond, lastChangedBond;
 };
 
 /**

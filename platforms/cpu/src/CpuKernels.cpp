@@ -337,13 +337,13 @@ double CpuCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool inclu
     return energy;
 }
 
-void CpuCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+void CpuCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force, int firstAngle, int lastAngle) {
     if (numAngles != force.getNumAngles())
         throw OpenMMException("updateParametersInContext: The number of angles has changed");
 
     // Record the values.
 
-    for (int i = 0; i < numAngles; ++i) {
+    for (int i = firstAngle; i <= lastAngle; ++i) {
         int particle1, particle2, particle3;
         double angle, k;
         force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
@@ -385,13 +385,13 @@ double CpuCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool inc
     return energy;
 }
 
-void CpuCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+void CpuCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force, int firstTorsion, int lastTorsion) {
     if (numTorsions != force.getNumTorsions())
         throw OpenMMException("updateParametersInContext: The number of torsions has changed");
 
     // Record the values.
 
-    for (int i = 0; i < numTorsions; ++i) {
+    for (int i = firstTorsion; i <= lastTorsion; ++i) {
         int particle1, particle2, particle3, particle4, periodicity;
         double phase, k;
         force.getTorsionParameters(i, particle1, particle2, particle3, particle4, periodicity, phase, k);
@@ -718,7 +718,7 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     return energy;
 }
 
-void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
     if (force.getNumParticles() != numParticles)
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
@@ -745,7 +745,7 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
 
     // Record the values.
 
-    for (int i = 0; i < numParticles; ++i)
+    for (int i = firstParticle; i <= lastParticle; ++i)
        force.getParticleParameters(i, baseParticleParams[i][0], baseParticleParams[i][1], baseParticleParams[i][2]);
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
@@ -1028,16 +1028,15 @@ double CpuCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool inc
     return energy;
 }
 
-void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
+void CpuCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) {
     if (numParticles != force.getNumParticles())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
 
     // Record the values.
 
     int numParameters = force.getNumPerParticleParameters();
-    vector<double> params;
-    for (int i = 0; i < numParticles; ++i) {
-        vector<double> parameters;
+    vector<double> parameters;
+    for (int i = firstParticle; i <= lastParticle; ++i) {
         force.getParticleParameters(i, parameters);
         for (int j = 0; j < numParameters; j++)
             particleParamArray[i][j] = parameters[j];

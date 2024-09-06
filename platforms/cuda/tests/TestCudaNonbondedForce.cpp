@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -83,12 +83,19 @@ void testParallelComputation(NonbondedForce::NonbondedMethod method) {
     for (int i = 0; i < numParticles; i++)
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
     
-    // Modify some particle parameters and see if they still agree.
+    // Modify some parameters and see if they still agree.
 
     for (int i = 0; i < numParticles; i += 5) {
         double charge, sigma, epsilon;
         force->getParticleParameters(i, charge, sigma, epsilon);
         force->setParticleParameters(i, 0.9*charge, sigma, epsilon);
+    }
+    for (int i = force->getNumExceptions()/2-10; i < force->getNumExceptions()/2+10; i++) {
+        int p1, p2;
+        double charge, sigma, epsilon;
+        force->getExceptionParameters(i, p1, p2, charge, sigma, epsilon);
+        if (epsilon != 0)
+            force->setExceptionParameters(i, p1, p2, charge, sigma, 2*epsilon);
     }
     force->updateParametersInContext(context1);
     force->updateParametersInContext(context2);
