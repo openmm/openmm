@@ -136,6 +136,11 @@ public:
      */
     virtual std::vector<ComputeContext*> getAllContexts() = 0;
     /**
+     * Get a workspace used for accumulating energy when a simulation is parallelized across
+     * multiple devices.
+     */
+    virtual double& getEnergyWorkspace() = 0;
+    /**
      * Construct an uninitialized array of the appropriate class for this platform.  The returned
      * value should be created on the heap with the "new" operator.
      */

@@ -658,6 +658,10 @@ vector<ComputeContext*> OpenCLContext::getAllContexts() {
     return result;
 }
 
+double& OpenCLContext::getEnergyWorkspace() {
+    return platformData.contextEnergy[contextIndex];
+}
+
 cl::CommandQueue& OpenCLContext::getQueue() {
     return currentQueue;
 }
