@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2024 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -125,8 +125,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the HarmonicBondForce to copy the parameters from
+     * @param firstBond  the index of the first bond whose parameters might have changed
+     * @param lastBond   the index of the last bond whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force);
+    void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force, int firstBond, int lastBond);
 private:
     class Task;
     HipPlatform::PlatformData& data;
@@ -163,8 +165,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomBondForce to copy the parameters from
+     * @param firstBond  the index of the first bond whose parameters might have changed
+     * @param lastBond   the index of the last bond whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomBondForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomBondForce& force, int firstBond, int lastBond);
 private:
     class Task;
     HipPlatform::PlatformData& data;
@@ -201,8 +205,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the HarmonicAngleForce to copy the parameters from
+     * @param firstAngle the index of the first bond whose parameters might have changed
+     * @param lastAngle  the index of the last bond whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
+    void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force, int firstAngle, int lastAngle);
 private:
     class Task;
     HipPlatform::PlatformData& data;
@@ -239,8 +245,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomAngleForce to copy the parameters from
+     * @param firstAngle the index of the first bond whose parameters might have changed
+     * @param lastAngle  the index of the last bond whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force, int firstAngle, int lastAngle);
 private:
     class Task;
     HipPlatform::PlatformData& data;
@@ -278,8 +286,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the PeriodicTorsionForce to copy the parameters from
+     * @param firstTorsion the index of the first torsion whose parameters might have changed
+     * @param lastTorsion  the index of the last torsion whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
+    void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force, int firstTorsion, int lastTorsion);
 private:
     HipPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
@@ -391,8 +401,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomTorsionForce to copy the parameters from
+     * @param firstTorsion the index of the first torsion whose parameters might have changed
+     * @param lastTorsion  the index of the last torsion whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force, int firstTorsion, int lastTorsion);
 private:
     class Task;
     HipPlatform::PlatformData& data;
@@ -431,8 +443,12 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the NonbondedForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
+     * @param firstException the index of the first exception whose parameters might have changed
+     * @param lastException  the index of the last exception whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
+    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException);
     /**
      * Get the parameters being used for PME.
      *
@@ -487,8 +503,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomNonbondedForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle);
 private:
     class Task;
     HipPlatform::PlatformData& data;
@@ -525,8 +543,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomExternalForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force, int firstParticle, int lastParticle);
 private:
     class Task;
     HipPlatform::PlatformData& data;
