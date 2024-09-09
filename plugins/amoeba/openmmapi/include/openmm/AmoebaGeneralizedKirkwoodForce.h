@@ -91,16 +91,6 @@ public:
 
     /**
      * Get the force field parameters for a particle.
-     * 
-     * @param      index          the index of the particle for which to get parameters
-     * @param[out] charge         the charge of the particle, measured in units of the proton charge
-     * @param[out] radius         the atomic radius of the particle, measured in nm
-     * @param[out] scalingFactor  the scaling factor for the particle
-     */
-    void getParticleParameters(int index, double& charge, double& radius, double& scalingFactor) const;
-
-    /**
-     * Get the force field parameters for a particle.
      *
      * @param      index          the index of the particle for which to get parameters
      * @param[out] charge         the charge of the particle, measured in units of the proton charge
@@ -110,16 +100,6 @@ public:
      * @param[out] neckFactor     the scaling factor for interstitial neck descreening (unitless)
     */
     void getParticleParameters(int index, double& charge, double& radius, double& scalingFactor, double& descreenRadius, double& neckFactor) const;
-
-    /**
-     * Set the force field parameters for a particle.
-     * 
-     * @param index          the index of the particle for which to set parameters
-     * @param charge         the charge of the particle, measured in units of the proton charge
-     * @param radius         the atomic radius of the particle, measured in nm
-     * @param scalingFactor  the scaling factor for the particle
-     */
-    void setParticleParameters(int index, double charge, double radius, double scalingFactor);
 
     /**
      * Set the force field parameters for a particle.

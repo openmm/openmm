@@ -7163,9 +7163,9 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm() {
     
     // Try changing the particle parameters and make sure it's still correct.
     for (int i = 0; i < numberOfParticles; i++) {
-        double charge, radius, scale;
-        amoebaGeneralizedKirkwoodForce->getParticleParameters(i, charge, radius, scale);
-        amoebaGeneralizedKirkwoodForce->setParticleParameters(i, charge, 0.9*radius, 1.1*scale);
+        double charge, radius, scale, descreen, neck;
+        amoebaGeneralizedKirkwoodForce->getParticleParameters(i, charge, radius, scale, descreen, neck);
+        amoebaGeneralizedKirkwoodForce->setParticleParameters(i, charge, 0.9*radius, 1.1*scale, 1.2*descreen, 1.3*neck);
     }
     LangevinIntegrator integrator2(0.0, 0.1, 0.01);
     Context context2(system, integrator2, context.getPlatform());

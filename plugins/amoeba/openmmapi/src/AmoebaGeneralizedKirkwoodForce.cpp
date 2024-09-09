@@ -52,25 +52,12 @@ int AmoebaGeneralizedKirkwoodForce::addParticle(double charge, double radius, do
     return particles.size()-1;
 }
 
-void AmoebaGeneralizedKirkwoodForce::getParticleParameters(int index, double& charge, double& radius, double& scalingFactor) const {
-    charge = particles[index].charge;
-    radius = particles[index].radius;
-    scalingFactor = particles[index].scalingFactor;
-}
-
 void AmoebaGeneralizedKirkwoodForce::getParticleParameters(int index, double& charge, double& radius, double& scalingFactor, double& descreenRadius, double& neckFactor) const {
     charge = particles[index].charge;
     radius = particles[index].radius;
     scalingFactor = particles[index].scalingFactor;
     descreenRadius = particles[index].descreenRadius;
     neckFactor = particles[index].neckFactor;
-}
-
-void AmoebaGeneralizedKirkwoodForce::setParticleParameters(int index, double charge, double radius, double scalingFactor) {
-    particles[index].charge = charge;
-    particles[index].radius = radius;
-    particles[index].scalingFactor = scalingFactor;
-    particles[index].descreenRadius = radius;
 }
 
 void AmoebaGeneralizedKirkwoodForce::setParticleParameters(int index, double charge, double radius, double scalingFactor, double descreenRadius, double neckFactor) {

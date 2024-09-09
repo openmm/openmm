@@ -1722,10 +1722,10 @@ public:
     ForceInfo(const AmoebaGeneralizedKirkwoodForce& force) : force(force) {
     }
     bool areParticlesIdentical(int particle1, int particle2) {
-        double charge1, charge2, radius1, radius2, scale1, scale2;
-        force.getParticleParameters(particle1, charge1, radius1, scale1);
-        force.getParticleParameters(particle2, charge2, radius2, scale2);
-        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2);
+        double charge1, charge2, radius1, radius2, scale1, scale2, descreen1, descreen2, neck1, neck2;
+        force.getParticleParameters(particle1, charge1, radius1, scale1, descreen1, neck1);
+        force.getParticleParameters(particle2, charge2, radius2, scale2, descreen2, neck2);
+        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2, descreen1 == descreen2, neck1 == neck2);
     }
 private:
     const AmoebaGeneralizedKirkwoodForce& force;
