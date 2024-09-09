@@ -639,14 +639,14 @@ class TestAPIUnits(unittest.TestCase):
 
         self.assertEqual(force.getNumParticles(), 2)
 
-        q, r, s = force.getParticleParameters(0)
+        q, r, s, d, k = force.getParticleParameters(0)
         self.assertAlmostEqualUnit(q, 1.0*coulomb)
         self.assertIs(q.unit, elementary_charge)
         self.assertEqual(r, 1.0*angstroms)
         self.assertIs(r.unit, nanometer)
         self.assertEqual(s, 0.5)
 
-        q, r, s = force.getParticleParameters(1)
+        q, r, s, d, k = force.getParticleParameters(1)
         self.assertAlmostEqualUnit(q, 1.0*elementary_charge)
         self.assertIs(q.unit, elementary_charge)
         self.assertEqual(r, 1.0*nanometer)
@@ -794,12 +794,12 @@ class TestAPIUnits(unittest.TestCase):
         force = AmoebaWcaDispersionForce()
 
         self.assertEqual(force.getDispoff(), 0.1056*nanometer)
-        self.assertEqual(force.getAwater(), 0.033428*nanometer**-3)
-        self.assertEqual(force.getEpsh(), 0.0135*kilojoule_per_mole)
-        self.assertEqual(force.getEpso(), 0.11*kilojoule_per_mole)
-        self.assertEqual(force.getRminh(), 1.3275*nanometer)
-        self.assertEqual(force.getRmino(), 1.7025*nanometer)
-        self.assertEqual(force.getShctd(), 0.81)
+        self.assertEqual(force.getAwater(), 33.428*nanometer**-3)
+        self.assertEqual(force.getEpsh(), 0.056484*kilojoule_per_mole)
+        self.assertEqual(force.getEpso(), 0.46024000000000004*kilojoule_per_mole)
+        self.assertEqual(force.getRminh(), 0.13275*nanometer)
+        self.assertEqual(force.getRmino(), 0.17025*nanometer)
+        self.assertEqual(force.getShctd(), 0.75)
         self.assertEqual(force.getSlevy(), 1.0)
 
         force.setDispoff(3*angstroms)
