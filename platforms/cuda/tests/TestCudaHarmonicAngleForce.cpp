@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -60,6 +60,21 @@ void testParallelComputation() {
     ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);
     for (int i = 0; i < numParticles; i++)
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
+
+    // Try updating some parameters and see if they still match.
+
+    for (int i = 95; i < 102; i++) {
+        int p1, p2, p3;
+        double angle, k;
+        force->getAngleParameters(i, p1, p2, p3, angle, k);
+        force->setAngleParameters(i, p1, p2, p3, angle+0.1, 2*k);
+    }
+    force->updateParametersInContext(context1);
+    force->updateParametersInContext(context2);
+    State state3 = context1.getState(State::Energy);
+    State state4 = context2.getState(State::Energy);
+    ASSERT_EQUAL_TOL(state3.getPotentialEnergy(), state4.getPotentialEnergy(), 1e-5);
+    ASSERT(fabs(state1.getPotentialEnergy()-state3.getPotentialEnergy()) > 0.1);
 }
 
 void runPlatformTests() {

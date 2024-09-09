@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2024 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2021 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -316,9 +316,9 @@ double HipParallelCalcHarmonicBondForceKernel::execute(ContextImpl& context, boo
     return 0.0;
 }
 
-void HipParallelCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force) {
+void HipParallelCalcHarmonicBondForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force, int firstBond, int lastBond) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstBond, lastBond);
 }
 
 class HipParallelCalcCustomBondForceKernel::Task : public HipContext::WorkTask {
@@ -357,9 +357,9 @@ double HipParallelCalcCustomBondForceKernel::execute(ContextImpl& context, bool 
     return 0.0;
 }
 
-void HipParallelCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force) {
+void HipParallelCalcCustomBondForceKernel::copyParametersToContext(ContextImpl& context, const CustomBondForce& force, int firstBond, int lastBond) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstBond, lastBond);
 }
 
 class HipParallelCalcHarmonicAngleForceKernel::Task : public HipContext::WorkTask {
@@ -398,9 +398,9 @@ double HipParallelCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bo
     return 0.0;
 }
 
-void HipParallelCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force) {
+void HipParallelCalcHarmonicAngleForceKernel::copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force, int firstAngle, int lastAngle) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstAngle, lastAngle);
 }
 
 class HipParallelCalcCustomAngleForceKernel::Task : public HipContext::WorkTask {
@@ -439,9 +439,9 @@ double HipParallelCalcCustomAngleForceKernel::execute(ContextImpl& context, bool
     return 0.0;
 }
 
-void HipParallelCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& context, const CustomAngleForce& force) {
+void HipParallelCalcCustomAngleForceKernel::copyParametersToContext(ContextImpl& context, const CustomAngleForce& force, int firstAngle, int lastAngle) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstAngle, lastAngle);
 }
 
 class HipParallelCalcPeriodicTorsionForceKernel::Task : public HipContext::WorkTask {
@@ -480,9 +480,9 @@ double HipParallelCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, 
     return 0.0;
 }
 
-void HipParallelCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force) {
+void HipParallelCalcPeriodicTorsionForceKernel::copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force, int firstTorsion, int lastTorsion) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstTorsion, lastTorsion);
 }
 
 class HipParallelCalcRBTorsionForceKernel::Task : public HipContext::WorkTask {
@@ -603,9 +603,9 @@ double HipParallelCalcCustomTorsionForceKernel::execute(ContextImpl& context, bo
     return 0.0;
 }
 
-void HipParallelCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force) {
+void HipParallelCalcCustomTorsionForceKernel::copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force, int firstTorsion, int lastTorsion) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstTorsion, lastTorsion);
 }
 
 class HipParallelCalcNonbondedForceKernel::Task : public HipContext::WorkTask {
@@ -644,9 +644,9 @@ double HipParallelCalcNonbondedForceKernel::execute(ContextImpl& context, bool i
     return 0.0;
 }
 
-void HipParallelCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+void HipParallelCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle, firstException, lastException);
 }
 
 void HipParallelCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
@@ -693,9 +693,9 @@ double HipParallelCalcCustomNonbondedForceKernel::execute(ContextImpl& context, 
     return 0.0;
 }
 
-void HipParallelCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force) {
+void HipParallelCalcCustomNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle);
 }
 
 class HipParallelCalcCustomExternalForceKernel::Task : public HipContext::WorkTask {
@@ -734,9 +734,9 @@ double HipParallelCalcCustomExternalForceKernel::execute(ContextImpl& context, b
     return 0.0;
 }
 
-void HipParallelCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& context, const CustomExternalForce& force) {
+void HipParallelCalcCustomExternalForceKernel::copyParametersToContext(ContextImpl& context, const CustomExternalForce& force, int firstParticle, int lastParticle) {
     for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force);
+        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle);
 }
 
 class HipParallelCalcCustomHbondForceKernel::Task : public HipContext::WorkTask {
