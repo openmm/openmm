@@ -645,6 +645,10 @@ vector<ComputeContext*> CudaContext::getAllContexts() {
     return result;
 }
 
+double& CudaContext::getEnergyWorkspace() {
+    return platformData.contextEnergy[contextIndex];
+}
+
 CUstream CudaContext::getCurrentStream() {
     return currentStream;
 }

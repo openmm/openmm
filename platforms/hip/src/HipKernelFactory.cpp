@@ -30,6 +30,7 @@
 #include "HipParallelKernels.h"
 #include "HipPlatform.h"
 #include "openmm/common/CommonKernels.h"
+#include "openmm/common/CommonParallelKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
@@ -37,39 +38,39 @@ using namespace OpenMM;
 
 KernelImpl* HipKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     HipPlatform::PlatformData& data = *static_cast<HipPlatform::PlatformData*>(context.getPlatformData());
+    HipContext& cu = *data.contexts[0];
     if (data.contexts.size() > 1) {
         // We are running in parallel on multiple devices, so we may want to create a parallel kernel.
 
         if (name == CalcForcesAndEnergyKernel::Name())
             return new HipParallelCalcForcesAndEnergyKernel(name, platform, data);
         if (name == CalcHarmonicBondForceKernel::Name())
-            return new HipParallelCalcHarmonicBondForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcHarmonicBondForceKernel(name, platform, cu, context.getSystem());
         if (name == CalcCustomBondForceKernel::Name())
-            return new HipParallelCalcCustomBondForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomBondForceKernel(name, platform, cu, context.getSystem());
         if (name == CalcHarmonicAngleForceKernel::Name())
-            return new HipParallelCalcHarmonicAngleForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcHarmonicAngleForceKernel(name, platform, cu, context.getSystem());
         if (name == CalcCustomAngleForceKernel::Name())
-            return new HipParallelCalcCustomAngleForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomAngleForceKernel(name, platform, cu, context.getSystem());
         if (name == CalcPeriodicTorsionForceKernel::Name())
-            return new HipParallelCalcPeriodicTorsionForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcPeriodicTorsionForceKernel(name, platform, cu, context.getSystem());
         if (name == CalcRBTorsionForceKernel::Name())
-            return new HipParallelCalcRBTorsionForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcRBTorsionForceKernel(name, platform, cu, context.getSystem());
         if (name == CalcCMAPTorsionForceKernel::Name())
-            return new HipParallelCalcCMAPTorsionForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCMAPTorsionForceKernel(name, platform, cu, context.getSystem());
         if (name == CalcCustomTorsionForceKernel::Name())
-            return new HipParallelCalcCustomTorsionForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomTorsionForceKernel(name, platform, cu, context.getSystem());
         if (name == CalcNonbondedForceKernel::Name())
             return new HipParallelCalcNonbondedForceKernel(name, platform, data, context.getSystem());
         if (name == CalcCustomNonbondedForceKernel::Name())
-            return new HipParallelCalcCustomNonbondedForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomNonbondedForceKernel(name, platform, cu, context.getSystem());
         if (name == CalcCustomExternalForceKernel::Name())
-            return new HipParallelCalcCustomExternalForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomExternalForceKernel(name, platform, cu, context.getSystem());
         if (name == CalcCustomHbondForceKernel::Name())
-            return new HipParallelCalcCustomHbondForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomHbondForceKernel(name, platform, cu, context.getSystem());
         if (name == CalcCustomCompoundBondForceKernel::Name())
-            return new HipParallelCalcCustomCompoundBondForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomCompoundBondForceKernel(name, platform, cu, context.getSystem());
     }
-    HipContext& cu = *data.contexts[0];
     if (name == CalcForcesAndEnergyKernel::Name())
         return new HipCalcForcesAndEnergyKernel(name, platform, cu);
     if (name == UpdateStateDataKernel::Name())

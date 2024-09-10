@@ -198,6 +198,11 @@ public:
      */
     std::vector<ComputeContext*> getAllContexts();
     /**
+     * Get a workspace used for accumulating energy when a simulation is parallelized across
+     * multiple devices.
+     */
+    double& getEnergyWorkspace();
+    /**
      * Get the cl::CommandQueue currently being used for execution.
      */
     cl::CommandQueue& getQueue();
