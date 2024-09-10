@@ -99,6 +99,8 @@ class XTCFile(object):
             raise ValueError(
                 "Particle position is infinite.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan"
             )
+        if (np.abs(positions * 1000) > (2 ** 31 - 1)).any():
+            raise ValueError("Particle position is too large for XTC format")
 
         self._modelCount += 1
         if (
