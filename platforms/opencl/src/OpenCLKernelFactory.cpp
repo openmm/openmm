@@ -27,6 +27,7 @@
 #include "OpenCLKernelFactory.h"
 #include "OpenCLParallelKernels.h"
 #include "openmm/common/CommonKernels.h"
+#include "openmm/common/CommonParallelKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
@@ -34,39 +35,39 @@ using namespace OpenMM;
 
 KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     OpenCLPlatform::PlatformData& data = *static_cast<OpenCLPlatform::PlatformData*>(context.getPlatformData());
+    OpenCLContext& cl = *data.contexts[0];
     if (data.contexts.size() > 1) {
         // We are running in parallel on multiple devices, so we may want to create a parallel kernel.
         
         if (name == CalcForcesAndEnergyKernel::Name())
             return new OpenCLParallelCalcForcesAndEnergyKernel(name, platform, data);
         if (name == CalcHarmonicBondForceKernel::Name())
-            return new OpenCLParallelCalcHarmonicBondForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcHarmonicBondForceKernel(name, platform, cl, context.getSystem());
         if (name == CalcCustomBondForceKernel::Name())
-            return new OpenCLParallelCalcCustomBondForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomBondForceKernel(name, platform, cl, context.getSystem());
         if (name == CalcHarmonicAngleForceKernel::Name())
-            return new OpenCLParallelCalcHarmonicAngleForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcHarmonicAngleForceKernel(name, platform, cl, context.getSystem());
         if (name == CalcCustomAngleForceKernel::Name())
-            return new OpenCLParallelCalcCustomAngleForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomAngleForceKernel(name, platform, cl, context.getSystem());
         if (name == CalcPeriodicTorsionForceKernel::Name())
-            return new OpenCLParallelCalcPeriodicTorsionForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcPeriodicTorsionForceKernel(name, platform, cl, context.getSystem());
         if (name == CalcRBTorsionForceKernel::Name())
-            return new OpenCLParallelCalcRBTorsionForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcRBTorsionForceKernel(name, platform, cl, context.getSystem());
         if (name == CalcCMAPTorsionForceKernel::Name())
-            return new OpenCLParallelCalcCMAPTorsionForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCMAPTorsionForceKernel(name, platform, cl, context.getSystem());
         if (name == CalcCustomTorsionForceKernel::Name())
-            return new OpenCLParallelCalcCustomTorsionForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomTorsionForceKernel(name, platform, cl, context.getSystem());
         if (name == CalcNonbondedForceKernel::Name())
             return new OpenCLParallelCalcNonbondedForceKernel(name, platform, data, context.getSystem());
         if (name == CalcCustomNonbondedForceKernel::Name())
-            return new OpenCLParallelCalcCustomNonbondedForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomNonbondedForceKernel(name, platform, cl, context.getSystem());
         if (name == CalcCustomExternalForceKernel::Name())
-            return new OpenCLParallelCalcCustomExternalForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomExternalForceKernel(name, platform, cl, context.getSystem());
         if (name == CalcCustomHbondForceKernel::Name())
-            return new OpenCLParallelCalcCustomHbondForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomHbondForceKernel(name, platform, cl, context.getSystem());
         if (name == CalcCustomCompoundBondForceKernel::Name())
-            return new OpenCLParallelCalcCustomCompoundBondForceKernel(name, platform, data, context.getSystem());
+            return new CommonParallelCalcCustomCompoundBondForceKernel(name, platform, cl, context.getSystem());
     }
-    OpenCLContext& cl = *data.contexts[0];
     if (name == CalcForcesAndEnergyKernel::Name())
         return new OpenCLCalcForcesAndEnergyKernel(name, platform, cl);
     if (name == UpdateStateDataKernel::Name())

@@ -29,6 +29,8 @@ class XTCReporter(object):
         self._enforcePeriodicBox = enforcePeriodicBox
         self._fileName = file
         self._xtc = None
+        if not append:
+            open(file, 'wb').close()
 
     def describeNextReport(self, simulation):
         """Get information about the next report this object will generate.

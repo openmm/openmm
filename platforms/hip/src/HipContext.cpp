@@ -672,6 +672,10 @@ vector<ComputeContext*> HipContext::getAllContexts() {
     return result;
 }
 
+double& HipContext::getEnergyWorkspace() {
+    return platformData.contextEnergy[contextIndex];
+}
+
 hipStream_t HipContext::getCurrentStream() {
     return currentStream;
 }

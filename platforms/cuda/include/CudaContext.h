@@ -154,6 +154,11 @@ public:
      */
     std::vector<ComputeContext*> getAllContexts();
     /**
+     * Get a workspace used for accumulating energy when a simulation is parallelized across
+     * multiple devices.
+     */
+    double& getEnergyWorkspace();
+    /**
      * Get the stream currently being used for execution.
      */
     CUstream getCurrentStream();
