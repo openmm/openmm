@@ -293,7 +293,7 @@ void AmoebaReferenceGeneralizedKirkwoodForce::calculateGrycukBornRadii(const vec
             _bornRadii[ii] = _atomicRadii[ii];
         }
 
-        // Maximum Born radius is 50.0 Angstroms.
+        // Maximum Born radius is 30.0 Angstroms.
         if (_bornRadii[ii] > MAX_RADIUS) {
             _bornRadii[ii] = MAX_RADIUS;
         }

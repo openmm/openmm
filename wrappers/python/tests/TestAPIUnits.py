@@ -799,7 +799,7 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(force.getEpso(), 0.46024000000000004*kilojoule_per_mole)
         self.assertEqual(force.getRminh(), 0.13275*nanometer)
         self.assertEqual(force.getRmino(), 0.17025*nanometer)
-        self.assertEqual(force.getShctd(), 0.75)
+        self.assertEqual(force.getShctd(), 0.82)
         self.assertEqual(force.getSlevy(), 1.0)
 
         force.setDispoff(3*angstroms)
