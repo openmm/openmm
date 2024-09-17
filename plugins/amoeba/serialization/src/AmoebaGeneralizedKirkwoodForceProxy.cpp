@@ -54,7 +54,11 @@ void AmoebaGeneralizedKirkwoodForceProxy::serialize(const void* object, Serializ
     node.setDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor", force.getSurfaceAreaFactor());
     node.setIntProperty(  "GeneralizedKirkwoodIncludeCavityTerm", force.getIncludeCavityTerm());
     node.setIntProperty("GeneralizedKirkwoodTanhRescaling", force.getTanhRescaling());
-
+    double b0, b1, b2;
+    force.getTanhParameters(b0, b1, b2);
+    node.setDoubleProperty("GeneralizedKirkwoodTanhB0", b0);
+    node.setDoubleProperty("GeneralizedKirkwoodTanhB1", b1);
+    node.setDoubleProperty("GeneralizedKirkwoodTanhB2", b2);
     SerializationNode& particles = node.createChildNode("GeneralizedKirkwoodParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
         double radius, charge, scalingFactor, descreenRadius, neckFactor;
@@ -78,16 +82,27 @@ void* AmoebaGeneralizedKirkwoodForceProxy::deserialize(const SerializationNode& 
         force->setProbeRadius(        node.getDoubleProperty("GeneralizedKirkwoodProbeRadius"));
         force->setSurfaceAreaFactor(  node.getDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor"));
         force->setIncludeCavityTerm(  node.getIntProperty(   "GeneralizedKirkwoodIncludeCavityTerm"));
-        force->setTanhRescaling(node.getIntProperty("GeneralizedKirkwoodTanhRescaling"));
+        if (version > 2) {
+            force->setTanhRescaling(node.getIntProperty("GeneralizedKirkwoodTanhRescaling"));
+            double b0 = node.getDoubleProperty("GeneralizedKirkwoodTanhB0");
+            double b1 = node.getDoubleProperty("GeneralizedKirkwoodTanhB1");
+            double b2 = node.getDoubleProperty("GeneralizedKirkwoodTanhB2");
+            force->setTanhParameters(b0, b1, b2);
+        }
 
         const SerializationNode& particles = node.getChildNode("GeneralizedKirkwoodParticles");
         for (unsigned int ii = 0; ii < particles.getChildren().size(); ii++) {
             const SerializationNode& particle = particles.getChildren()[ii];
+            double charge = particle.getDoubleProperty("charge");
             double radius = particle.getDoubleProperty("radius");
-            force->addParticle(particle.getDoubleProperty("charge"), radius,
-                               particle.getDoubleProperty("scaleFactor"),
-                               particle.getDoubleProperty("decreenRadius", radius),
-                               particle.getDoubleProperty("neckFactor", 0.0));
+            double scaleFactor = particle.getDoubleProperty("scaleFactor");
+            double descreenRadius = radius;
+            double neckFactor = 0.0;
+            if (version > 2) {
+                descreenRadius = particle.getDoubleProperty("descreenRadius");
+                neckFactor = particle.getDoubleProperty("neckFactor");
+            }
+            force->addParticle(charge, radius, scaleFactor, descreenRadius, neckFactor);
         }
     }
     catch (...) {

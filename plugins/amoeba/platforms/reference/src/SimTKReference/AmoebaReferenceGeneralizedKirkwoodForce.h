@@ -294,8 +294,6 @@ public:
      */
     void getSoluteIntegral(vector<double>& soluteIntegral) const;
 
-    static void getNeckConstants(double rhoDescreened, double rhoDescreening, double constants[]);
-
 private:
 
     int _numParticles;

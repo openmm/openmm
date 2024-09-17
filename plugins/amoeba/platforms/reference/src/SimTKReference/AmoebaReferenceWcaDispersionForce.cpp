@@ -65,7 +65,7 @@ integralBeforeRminDerivative(double ri, double eps, double rmin, double r, doubl
     return -eps * M_PI * (dl + du) / (4.0 * r2);
 }
 
-static double integratlAfterRmin(double eps, double rmin7, double r, double r2, double sk2,
+static double integralAfterRmin(double eps, double rmin7, double r, double r2, double sk2,
                                  double lik, double lik2, double lik3, double lik4, double lik5, double lik10,
                                  double lik11, double lik12, double uik, double uik2, double uik3, double uik4,
                                  double uik5, double uik10, double uik11, double uik12) {
@@ -83,7 +83,7 @@ static double integratlAfterRmin(double eps, double rmin7, double r, double r2, 
     return irep + idisp;
 }
 
-static double integratlAfterRminDerivative(double ri, double eps, double rmin, double rmin7, double rmax,
+static double integralAfterRminDerivative(double ri, double eps, double rmin, double rmin7, double rmax,
                                            double r, double r2, double r3, double sk, double sk2, double lik,
                                            double lik2, double lik3, double lik5, double lik6, double lik12,
                                            double lik13, double uik, double uik2, double uik3, double uik6,
@@ -160,12 +160,12 @@ static double interact(double factor, double ri, double sk, double rmix, double 
             double uik12 = uik11 * uik;
             double rmix3 = rmix * rmix * rmix;
             double rmix7 = rmix3 * rmix3 * rmix;
-            sum += integratlAfterRmin(emix, rmix7, r, r2, sk2, lik, lik2, lik3, lik4, lik5, lik10, lik11, lik12, uik,
+            sum += integralAfterRmin(emix, rmix7, r, r2, sk2, lik, lik2, lik3, lik4, lik5, lik10, lik11, lik12, uik,
                                       uik2, uik3, uik4, uik5, uik10, uik11, uik12);
             double lik13 = lik12 * lik;
             double uik6 = uik5 * uik;
             double uik13 = uik12 * uik;
-            de += integratlAfterRminDerivative(ri, emix, rmix, rmix7, iStart, r, r2, r3, sk, sk2, lik, lik2, lik3,
+            de += integralAfterRminDerivative(ri, emix, rmix, rmix7, iStart, r, r2, r3, sk, sk2, lik, lik2, lik3,
                                                lik5, lik6, lik12, lik13, uik, uik2, uik3, uik6, uik13);
         }
         // Increment the individual dispersion gradient components.

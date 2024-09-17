@@ -52,7 +52,7 @@ DEVICE real integralBeforeRminDerivative(real ri, real eps, real rmin, real r, r
     return -eps * M_PI * (dl + du) / (4 * r2);
 }
 
-DEVICE real integratlAfterRmin(real eps, real rmin7, real r, real r2, real sk2,
+DEVICE real integralAfterRmin(real eps, real rmin7, real r, real r2, real sk2,
                                real lik, real lik2, real lik3, real lik4, real lik5, real lik10,
                                 real lik11, real lik12, real uik, real uik2, real uik3, real uik4,
                                 real uik5, real uik10, real uik11, real uik12) {
@@ -70,7 +70,7 @@ DEVICE real integratlAfterRmin(real eps, real rmin7, real r, real r2, real sk2,
     return irep + idisp;
 }
 
-DEVICE real integratlAfterRminDerivative(real ri, real eps, real rmin, real rmin7, real rmax,
+DEVICE real integralAfterRminDerivative(real ri, real eps, real rmin, real rmin7, real rmax,
                                         real r, real r2, real r3, real sk, real sk2, real lik,
                                         real lik2, real lik3, real lik5, real lik6, real lik12,
                                         real lik13, real uik, real uik2, real uik3, real uik6,
@@ -146,12 +146,12 @@ DEVICE real interact(real factor, real ri, real sk, real rmix, real emix,
             real uik12 = uik11 * uik;
             real rmix3 = rmix * rmix * rmix;
             real rmix7 = rmix3 * rmix3 * rmix;
-            sum += integratlAfterRmin(emix, rmix7, r, r2, sk2, lik, lik2, lik3, lik4, lik5, lik10, lik11, lik12, uik,
+            sum += integralAfterRmin(emix, rmix7, r, r2, sk2, lik, lik2, lik3, lik4, lik5, lik10, lik11, lik12, uik,
                     uik2, uik3, uik4, uik5, uik10, uik11, uik12);
             real lik13 = lik12 * lik;
             real uik6 = uik5 * uik;
             real uik13 = uik12 * uik;
-            de += integratlAfterRminDerivative(ri, emix, rmix, rmix7, iStart, r, r2, r3, sk, sk2, lik, lik2, lik3,
+            de += integralAfterRminDerivative(ri, emix, rmix, rmix7, iStart, r, r2, r3, sk, sk2, lik, lik2, lik3,
                     lik5, lik6, lik12, lik13, uik, uik2, uik3, uik6, uik13);
         }
         // Increment the individual dispersion gradient components.

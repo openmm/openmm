@@ -62,6 +62,46 @@ public:
         return kernel;
     }
     void updateParametersInContext(ContextImpl& context);
+
+    /**
+     * Compute a "neck" descreening contribution.
+     * @param r separation distance.
+     * @param radius Radius of the current atom.
+     * @param radiusK Radius of the descreening atom.
+     * @param sneck The neck scale factor.
+     * @return
+     */
+    static double neckDescreen(double r, double radius, double radiusK, double sneck);
+
+    /**
+     * Get Neck Aij and Bij constants.
+     * @param radius Radius of the current atom.
+     * @param radiusK Radius of the descreening atom.
+     * @param constants
+     */
+    static void getNeckConstants(double radius, double radiusK, double constants[]);
+
+     /**
+      * The number of neck radius sizes that have been tabulated.
+      * @return The number of neck radii.
+      */
+     static int getNumNeckRadii();
+
+     /**
+      * The array of neck tabulated radii values.
+      */
+     static const float* getNeckRadii();
+
+     /**
+      * The tabulated Aij parameters.
+      */
+     static const float* getAij();
+
+     /**
+      * The tabulated Bij parameters.
+      */
+     static const float* getBij();
+
 private:
     const AmoebaGeneralizedKirkwoodForce& owner;
     Kernel kernel;

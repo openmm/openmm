@@ -23,6 +23,7 @@
  */
 
 #include "AmoebaReferenceMultipoleForce.h"
+#include "openmm/internal/AmoebaGeneralizedKirkwoodForceImpl.h"
 #include "SimTKOpenMMRealType.h"
 #include "jama_svd.h"
 #include <algorithm>
@@ -34,6 +35,7 @@
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
 #include "openmm/internal/MSVC_erfc.h"
+
 
 using std::vector;
 using namespace OpenMM;
@@ -4070,7 +4072,7 @@ static double neckDescreenDerivative(double r, double radius, double radiusK, do
 
     // Get Aij and Bij
     double constants[] = {0.0, 0.0};
-    AmoebaReferenceGeneralizedKirkwoodForce::getNeckConstants(radius, radiusK, constants);
+    AmoebaGeneralizedKirkwoodForceImpl::getNeckConstants(radius, radiusK, constants);
 
     double Aij = constants[0];
     double Bij = constants[1];

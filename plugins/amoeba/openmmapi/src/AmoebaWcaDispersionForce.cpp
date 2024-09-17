@@ -53,7 +53,7 @@ AmoebaWcaDispersionForce::AmoebaWcaDispersionForce() {
     awater = 0.033428e03;
     // No units.
     slevy = 1.0;
-    shctd = 0.75;
+    shctd = 0.82;
 }
 
 int AmoebaWcaDispersionForce::addParticle(double radius, double epsilon) {

@@ -1725,7 +1725,7 @@ public:
         double charge1, charge2, radius1, radius2, scale1, scale2, descreen1, descreen2, neck1, neck2;
         force.getParticleParameters(particle1, charge1, radius1, scale1, descreen1, neck1);
         force.getParticleParameters(particle2, charge2, radius2, scale2, descreen2, neck2);
-        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2, descreen1 == descreen2, neck1 == neck2);
+        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2 && descreen1 == descreen2 && neck1 == neck2);
     }
 private:
     const AmoebaGeneralizedKirkwoodForce& force;
@@ -1748,12 +1748,14 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     params.initialize<float>(cc, paddedNumAtoms * 4,"amoebaGkParams");
-    neckRadii.initialize<float>(cc, NUM_NECK_POINTS, "neckRadii");
-    neckRadii.upload(benchmarkedRadii);
-    neckA.initialize<float>( cc, NUM_NECK_POINTS * NUM_NECK_POINTS, "neckA");
-    neckA.upload(Aij);
-    neckB.initialize<float>( cc, NUM_NECK_POINTS * NUM_NECK_POINTS, "neckB");
-    neckB.upload(Bij);
+    int numNeckRadii = AmoebaGeneralizedKirkwoodForceImpl::getNumNeckRadii();
+    int numNeckRadii2 = numNeckRadii * numNeckRadii;
+    neckRadii.initialize<float>(cc, numNeckRadii, "neckRadii");
+    neckRadii.upload(AmoebaGeneralizedKirkwoodForceImpl::getNeckRadii());
+    neckA.initialize<float>( cc, numNeckRadii2, "neckA");
+    neckA.upload(AmoebaGeneralizedKirkwoodForceImpl::getAij());
+    neckB.initialize<float>( cc, numNeckRadii2, "neckB");
+    neckB.upload(AmoebaGeneralizedKirkwoodForceImpl::getBij());
     bornRadii.initialize(cc, paddedNumAtoms, elementSize, "bornRadii");
     field.initialize(cc, 3*paddedNumAtoms, sizeof(long long), "gkField");
     bornSum.initialize<long long>(cc, paddedNumAtoms, "bornSum");
