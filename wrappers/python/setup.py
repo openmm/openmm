@@ -154,6 +154,7 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     setupKeywords["package_data"]      = {"openmm" : [],
                                           "openmm.app" : ['data/*.xml', 'data/*.pdb', 'data/amber14/*.xml', 'data/charmm36/*.xml', 'data/implicit/*.xml'],
                                           "openmm.app.internal" : []}
+    setupKeywords["install_requires"]  = ["numpy"]
     setupKeywords["platforms"]         = ["Linux", "Mac OS X", "Windows"]
     setupKeywords["description"]       = \
     "Python wrapper for OpenMM (a C++ MD package)"
