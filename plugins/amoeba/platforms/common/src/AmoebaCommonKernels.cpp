@@ -1747,7 +1747,7 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-    params.initialize<float>(cc, paddedNumAtoms * 4,"amoebaGkParams");
+    params.initialize<mm_float4>(cc, paddedNumAtoms,"amoebaGkParams");
     int numNeckRadii = AmoebaGeneralizedKirkwoodForceImpl::getNumNeckRadii();
     int numNeckRadii2 = numNeckRadii * numNeckRadii;
     neckRadii.initialize<float>(cc, numNeckRadii, "neckRadii");
@@ -1770,15 +1770,11 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
     cc.addAutoclearBuffer(field);
     cc.addAutoclearBuffer(bornSum);
     cc.addAutoclearBuffer(bornForce);
-    vector<float> paramsVector(paddedNumAtoms * 4);
+    vector<mm_float4> paramsVector(paddedNumAtoms);
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge, radius, scalingFactor, descreenRadius, neckFactor;
         force.getParticleParameters(i, charge, radius, scalingFactor, descreenRadius, neckFactor);
-        int index = 4*i;
-        paramsVector[index] = (float) radius;
-        paramsVector[index+1] = (float) scalingFactor;
-        paramsVector[index+2] = (float) descreenRadius;
-        paramsVector[index+3] = (float) neckFactor;
+        paramsVector[i] = mm_float4((float) radius,(float) scalingFactor, (float) descreenRadius, (float) neckFactor);
         // Make sure the charge matches the one specified by the AmoebaMultipoleForce.
         double charge2, thole, damping, polarity;
         int axisType, atomX, atomY, atomZ;
@@ -2002,15 +1998,11 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::copyParametersToContext(Con
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     
     // Record the per-particle parameters.
-    vector<float> paramsVector(cc.getPaddedNumAtoms() * 4);
+    vector<mm_float4> paramsVector(cc.getPaddedNumAtoms());
     for (int i = 0; i < force.getNumParticles(); i++) {
         double charge, radius, scalingFactor, descreenRadius, neckFactor;
         force.getParticleParameters(i, charge, radius, scalingFactor, descreenRadius, neckFactor);
-        int index = 4 * i;
-        paramsVector[index] = (float) radius;
-        paramsVector[index+1] = (float) scalingFactor;
-        paramsVector[index+2] = (float) descreenRadius;
-        paramsVector[index+3] = (float) neckFactor;
+        paramsVector[i] = mm_float4((float) radius, (float) scalingFactor, (float) descreenRadius, (float) neckFactor);
     }
     params.upload(paramsVector);
     cc.invalidateMolecules();

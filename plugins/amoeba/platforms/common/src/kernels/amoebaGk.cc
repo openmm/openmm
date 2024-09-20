@@ -3,7 +3,7 @@
 /**
  * Reduce the Born sums to compute the Born radii.
  */
-KERNEL void reduceBornSum(GLOBAL const mm_long* RESTRICT bornSum, GLOBAL const float* RESTRICT params, GLOBAL real* RESTRICT bornRadii) {
+KERNEL void reduceBornSum(GLOBAL const mm_long* RESTRICT bornSum, GLOBAL const float4* RESTRICT params, GLOBAL real* RESTRICT bornRadii) {
 
     real RECIP_MAX_RADIUS3 = POW(BIG_RADIUS, (real) -3.0);
     real PI4_3 = 4.0 / 3.0 * M_PI;
@@ -15,7 +15,7 @@ KERNEL void reduceBornSum(GLOBAL const mm_long* RESTRICT bornSum, GLOBAL const f
         real sum = RECIP((real) 0x100000000)*bornSum[index];
         sum = sum * PI4_3;
 
-        real radius = params[index * 4];
+        real radius = params[index].x;
         real radius3 = radius * radius * radius;
         real ir3 = RECIP(radius3);
 
@@ -53,11 +53,11 @@ KERNEL void reduceBornSum(GLOBAL const mm_long* RESTRICT bornSum, GLOBAL const f
 /**
  * Apply the surface area term to the force and energy.
  */
-KERNEL void computeSurfaceAreaForce(GLOBAL mm_long* RESTRICT bornForce, GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const float* RESTRICT params, GLOBAL const real* RESTRICT bornRadii) {
+KERNEL void computeSurfaceAreaForce(GLOBAL mm_long* RESTRICT bornForce, GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const float4* RESTRICT params, GLOBAL const real* RESTRICT bornRadii) {
     mixed energy = 0;
     for (unsigned int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         real bornRadius = bornRadii[index];
-        float radius = params[index * 4];
+        float radius = params[index].x;
         real r = radius + DIELECTRIC_OFFSET + PROBE_RADIUS;
         real ratio6 = (radius+DIELECTRIC_OFFSET)/bornRadius;
         ratio6 = ratio6*ratio6*ratio6;
@@ -250,7 +250,7 @@ DEVICE real computeBornSumOneInteraction(AtomData1 atom1, AtomData1 atom2,
  * Compute the Born sum.
  */
 KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4* RESTRICT posq,
-        GLOBAL const float* RESTRICT params, unsigned int numTiles,
+        GLOBAL const float4* RESTRICT params, unsigned int numTiles,
         GLOBAL const float* RESTRICT neckRadii,
         GLOBAL const float* RESTRICT neckA,
         GLOBAL const float* RESTRICT neckB) {
@@ -276,20 +276,20 @@ KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4
             }
             unsigned int atom1 = x*TILE_SIZE + tgx;
             data.pos = trimTo3(posq[atom1]);
-            int index = atom1 * 4;
-            data.radius = params[index];
-            data.scaleFactor = params[index + 1];
-            data.descreenRadius = params[index + 2];
-            data.neckFactor = params[index + 3];
+            float4 params1 = params[atom1];
+            data.radius = params1.x;
+            data.scaleFactor = params1.y;
+            data.descreenRadius = params1.z;
+            data.neckFactor = params1.w;
             if (pos >= end)
                 ; // This warp is done.
             else if (x == y) {
                 // This tile is on the diagonal.
                 localData[LOCAL_ID].pos = data.pos;
-                localData[LOCAL_ID].radius = params[index];
-                localData[LOCAL_ID].scaleFactor = params[index+1];
-                localData[LOCAL_ID].descreenRadius = params[index+2];
-                localData[LOCAL_ID].neckFactor = params[index + 3];
+                localData[LOCAL_ID].radius = params1.x;
+                localData[LOCAL_ID].scaleFactor = params1.y;
+                localData[LOCAL_ID].descreenRadius = params1.z;
+                localData[LOCAL_ID].neckFactor = params1.w;
 
                 SYNC_WARPS;
                 for (unsigned int j = 0; j < TILE_SIZE; j++) {
@@ -308,11 +308,11 @@ KERNEL void computeBornSum(GLOBAL mm_ulong* RESTRICT bornSum, GLOBAL const real4
                     unsigned int j = y*TILE_SIZE + tgx;
                     real4 tempPosq = posq[j];
                     localData[LOCAL_ID].pos = trimTo3(tempPosq);
-                    int index = 4 * j;
-                    localData[LOCAL_ID].radius = params[index];
-                    localData[LOCAL_ID].scaleFactor = params[index + 1];
-                    localData[LOCAL_ID].descreenRadius = params[index + 2];
-                    localData[LOCAL_ID].neckFactor = params[index + 3];
+                    float4 paramsJ = params[j];
+                    localData[LOCAL_ID].radius = paramsJ.x;
+                    localData[LOCAL_ID].scaleFactor = paramsJ.y;
+                    localData[LOCAL_ID].descreenRadius = paramsJ.z;
+                    localData[LOCAL_ID].neckFactor = paramsJ.w;
                 }
                 localData[LOCAL_ID].bornSum = 0;
                 SYNC_WARPS;
@@ -604,18 +604,18 @@ typedef struct {
     real radius, scaleFactor, descreenRadius, neckFactor, bornSum, bornRadius, bornForce;
 } AtomData3;
 
-inline DEVICE AtomData3 loadAtomData3(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const float* RESTRICT params,
+inline DEVICE AtomData3 loadAtomData3(int atom, GLOBAL const real4* RESTRICT posq, GLOBAL const float4* RESTRICT params,
                                       GLOBAL const mm_long* RESTRICT bornSum,
                                       GLOBAL const real* RESTRICT bornRadius, GLOBAL const mm_long* RESTRICT bornForce) {
     AtomData3 data;
     data.pos = trimTo3(posq[atom]);
     data.bornRadius = bornRadius[atom];
     data.bornSum = bornSum[atom]/(real) 0x100000000;
-    int index = atom * 4;
-    data.radius = params[index];
-    data.scaleFactor = params[index + 1];
-    data.descreenRadius = params[index + 2];
-    data.neckFactor = params[index + 3];
+    float4 params1 = params[atom];
+    data.radius = params1.x;
+    data.scaleFactor = params1.y;
+    data.descreenRadius = params1.z;
+    data.neckFactor = params1.w;
     data.bornForce = bornForce[atom]/(real) 0x100000000;
     return data;
 }
@@ -761,7 +761,7 @@ DEVICE void computeBornChainRuleInteraction(AtomData3 atom1, AtomData3 atom2, re
  */
 KERNEL void computeChainRuleForce(
         GLOBAL mm_ulong* RESTRICT forceBuffers, GLOBAL const real4* RESTRICT posq, unsigned int startTileIndex, unsigned int numTileIndices,
-        GLOBAL const float* RESTRICT params,
+        GLOBAL const float4* RESTRICT params,
         GLOBAL const float* RESTRICT neckRadii,
         GLOBAL const float* RESTRICT neckA,
         GLOBAL const float* RESTRICT neckB,
