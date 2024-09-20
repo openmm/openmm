@@ -1,0 +1,60 @@
+<ForceField>
+  <Info>
+    <!-- Monovalent ion parameters for Ewald and TIP3P water from Joung & Cheatham JPCB (2008) -->
+    <DateGenerated>2022-09-11T06:28:33.558650</DateGenerated>
+    <Source Source="parm/frcmod.ionsjc_tip3p" md5hash="0e5e74a17e42382511afd4116f70ff16" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ionsjc_tip3p</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ionsjc_tip3p-Li+" element="Li" mass="6.94" name="ionsjc_tip3p-Li+"/><!--          0.029               lithium   pol: J. Phys. Chem. 11,1541,(1978) -->
+    <Type class="ionsjc_tip3p-Na+" element="Na" mass="22.99" name="ionsjc_tip3p-Na+"/><!--          0.250               sodium    pol: J. Phys. Chem. 11,1541,(1978) -->
+    <Type class="ionsjc_tip3p-K+" element="K" mass="39.10" name="ionsjc_tip3p-K+"/><!--          1.060               potassium -->
+    <Type class="ionsjc_tip3p-Rb+" element="Rb" mass="85.47" name="ionsjc_tip3p-Rb+"/><!--                              rubidium -->
+    <Type class="ionsjc_tip3p-Cs+" element="Cs" mass="132.91" name="ionsjc_tip3p-Cs+"/><!--                              cesium -->
+    <Type class="ionsjc_tip3p-F-" element="F" mass="19.00" name="ionsjc_tip3p-F-"/><!--          0.320               fluorine -->
+    <Type class="ionsjc_tip3p-Cl-" element="Cl" mass="35.45" name="ionsjc_tip3p-Cl-"/><!--          1.910               chlorine  (Applequist) -->
+    <Type class="ionsjc_tip3p-Br-" element="Br" mass="79.90" name="ionsjc_tip3p-Br-"/><!--          2.880               bromine   (Applequist) -->
+    <Type class="ionsjc_tip3p-I-" element="I" mass="126.9" name="ionsjc_tip3p-I-"/><!--          4.690               iodine    (Applequist) -->
+  </AtomTypes>
+  <Residues>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="ionsjc_tip3p-Br-"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="ionsjc_tip3p-Cl-"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="ionsjc_tip3p-Cs+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="ionsjc_tip3p-F-"/>
+    </Residue>
+    <Residue name="I">
+      <Atom charge="-1.0" name="I" type="ionsjc_tip3p-I-"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="ionsjc_tip3p-K+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="ionsjc_tip3p-Li+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="ionsjc_tip3p-Na+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="ionsjc_tip3p-Rb+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.1171084864" sigma="0.18263423721876956" type="ionsjc_tip3p-Li+"/>
+    <Atom epsilon="0.3658460312" sigma="0.2439280690268249" type="ionsjc_tip3p-Na+"/>
+    <Atom epsilon="0.8103692536" sigma="0.3037964628858557" type="ionsjc_tip3p-K+"/>
+    <Atom epsilon="1.3716068296000001" sigma="0.32303987519768707" type="ionsjc_tip3p-Rb+"/>
+    <Atom epsilon="1.7009608496" sigma="0.35208317340906214" type="ionsjc_tip3p-Cs+"/>
+    <Atom epsilon="0.014074976" sigma="0.4103479495754403" type="ionsjc_tip3p-F-"/>
+    <Atom epsilon="0.14891274399999999" sigma="0.4477656957373345" type="ionsjc_tip3p-Cl-"/>
+    <Atom epsilon="0.24541419360000002" sigma="0.46469277138200105" type="ionsjc_tip3p-Br-"/>
+    <Atom epsilon="0.22460381440000002" sigma="0.5095940667762741" type="ionsjc_tip3p-I-"/>
+  </NonbondedForce>
+</ForceField>
