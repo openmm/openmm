@@ -323,7 +323,7 @@ public:
      *
      *  @return tanhRescaling
      */
-    int getTanhRescaling() const;
+    bool getTanhRescaling() const;
 
     /**
      * Get Tanh parameters beta0, beta1 and beta2.
@@ -447,7 +447,7 @@ private:
     double probeRadius;
     double surfaceAreaFactor;
     int includeCavityTerm;
-    int tanhRescaling;
+    bool tanhRescaling;
     double beta0;
     double beta1;
     double beta2;

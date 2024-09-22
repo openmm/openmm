@@ -1748,10 +1748,11 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     int elementSize = (cc.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
     params.initialize<mm_float4>(cc, paddedNumAtoms,"amoebaGkParams");
-    int numNeckRadii = AmoebaGeneralizedKirkwoodForceImpl::getNumNeckRadii();
-    int numNeckRadii2 = numNeckRadii * numNeckRadii;
+    vector<float> neckRadiiVector = AmoebaGeneralizedKirkwoodForceImpl::getNeckRadii();
+    unsigned long numNeckRadii = neckRadiiVector.size();
+    unsigned long numNeckRadii2 = numNeckRadii * numNeckRadii;
     neckRadii.initialize<float>(cc, numNeckRadii, "neckRadii");
-    neckRadii.upload(AmoebaGeneralizedKirkwoodForceImpl::getNeckRadii());
+    neckRadii.upload(neckRadiiVector);
     neckA.initialize<float>( cc, numNeckRadii2, "neckA");
     neckA.upload(AmoebaGeneralizedKirkwoodForceImpl::getAij());
     neckB.initialize<float>( cc, numNeckRadii2, "neckB");
@@ -1825,14 +1826,14 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
     // Max Born radius is 3 nm (30 A).
     defines["BIG_RADIUS"] = cc.doubleToString(3.0);
     if (tanhRescaling) {
-        defines["TANH_RESCALING"] = cc.intToString(1);
+        defines["TANH_RESCALING"] = "true";
         double beta0, beta1, beta2;
         force.getTanhParameters(beta0, beta1, beta2);
         defines["BETA0"] = cc.doubleToString(beta0);
         defines["BETA1"] = cc.doubleToString(beta1);
         defines["BETA2"] = cc.doubleToString(beta2);
     } else {
-        defines["TANH_RESCALING"] = cc.intToString(0);
+        defines["TANH_RESCALING"] = "false";
         defines["BETA0"] = cc.doubleToString(0.0);
         defines["BETA1"] = cc.doubleToString(0.0);
         defines["BETA2"] = cc.doubleToString(0.0);

@@ -69,6 +69,10 @@ public:
      * Add the  parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
      *
+     * This method is provided for backwards compatibility. Compared to the alternative five parameter addParticle
+     * method, the descreenRadius parameter is set to base radius value and the neckFactor is set to zero
+     * (no neck descreening).
+     *
      * @param charge         the charge of the particle, measured in units of the proton charge
      * @param radius         the atomic radius of the particle, measured in nm
      * @param scalingFactor  the scaling factor for the particle
@@ -79,6 +83,19 @@ public:
     /**
      * Add the  parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
+     * <p>
+     * For generalized Born / generalized Kirkwood methods, the radius of each atom has two roles. The first
+     * is to define the base radius of the atom when computing its effective radius. This base radius is usually
+     * parameterized against solvation free energy differences. The second role is to describe how much continuum
+     * water is displaced when the atom descreens water for the calculation of the Born radii of other atoms.
+     * Separation of the two roles into the "radius" and "descreenRadius" parameters gives model developers more
+     * control over these separate roles.
+     * <p>
+     * For example, the fitting of base "radius" values will usually result in deviation from the force field's
+     * van der Waals definition of Rmin (or sigma). The descreenRadius can be defined separately using force field
+     * van der Waals Rmin values, which maintains consistency of atomic sizes during the HCT pairwise
+     * descreening integral. The "scalingFactor" is applied to the descreenRadius during the HCT pairwise
+     * descreening integral, while the neckFactor (if greater than zero) includes neck contributions to descreening.
      *
      * @param charge         the charge of the particle, measured in units of the proton charge
      * @param radius         the atomic radius of the particle, measured in nm
@@ -136,24 +153,28 @@ public:
 
     /**
      * Set the dielectric constant for the solute.
+     *
+     * @param dielectric The solute dielectric constant.
      */
     void setSoluteDielectric(double dielectric) {
         soluteDielectric = dielectric;
     }
 
     /**
-     * Get the flag signaling whether the solute integral is rescaled by a Tanh function
+     * Get the flag signaling whether the solute descreening integral is rescaled by a Tanh function
      * to account for interstitial spaces.
     */
-    int getTanhRescaling() const {
+    bool getTanhRescaling() const {
         return tanhRescaling;
     }
 
     /**
-     * Set the flag signaling whether the solute integral is rescaled by a Tanh function
+     * Set the flag signaling whether the solute descreening integral is rescaled by a Tanh function
      * to account for interstitial spaces.
+     *
+     * @param tanhRescale Zero to turn off Tanh rescaling; one to turn on.
     */
-    void setTanhRescaling(int tanhRescale) {
+    void setTanhRescaling(bool tanhRescale) {
         tanhRescaling = tanhRescale;
     }
 
@@ -169,6 +190,10 @@ public:
     /**
      * Set the flag signaling whether the solute integral is rescaled by a Tanh function
      * to account for interstitial spaces.
+     *
+     * @param b0 The first tanh parameter.
+     * @param b1 The second tanh parameter.
+     * @param b2 The third tanh parameter.
     */
     void setTanhParameters(double b0, double b1, double b2) {
         this->beta0 = b0;
@@ -182,7 +207,9 @@ public:
     int getIncludeCavityTerm() const;
 
     /**
-     * Set the flag signaling whether the cavity term should be included
+     * Set the flag signaling whether the cavity term should be included.
+     *
+     * @param includeCavityTerm Zero to turn off the cavity term; one to turn on.
      */
     void setIncludeCavityTerm(int includeCavityTerm);
 
@@ -193,6 +220,8 @@ public:
 
     /**
      * Set the probe radius (nm) used in SASA contribution
+     *
+     * @param probeRadius The probeRadius for the cavity term.
      */
     void setProbeRadius(double probeRadius);
 
@@ -203,6 +232,8 @@ public:
 
     /**
      * Set the offset added to the atomic radius of each atom that sets the beginning of the descreening integral.
+     *
+     * @param descreenOffet The descreening offset (nm).
      */
     void setDielectricOffset(double descreenOffet);
 
@@ -212,7 +243,9 @@ public:
     double getSurfaceAreaFactor() const;
 
     /**
-     * Set the surface area factor kJ/(nm*nm) used in SASA contribution
+     * Set the surface area factor kJ/(nm*nm) used in SASA contribution.
+     *
+     * @param surfaceAreaFactor The surface area factor in kJ/(nm*nm).
      */
     void setSurfaceAreaFactor(double surfaceAreaFactor);
     /**
@@ -239,7 +272,7 @@ protected:
 private:
     class ParticleInfo;
     int includeCavityTerm;
-    int tanhRescaling;
+    bool tanhRescaling;
     double solventDielectric, soluteDielectric, dielectricOffset,
            probeRadius, surfaceAreaFactor;
     double beta0, beta1, beta2;

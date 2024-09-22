@@ -5,10 +5,10 @@
  */
 KERNEL void reduceBornSum(GLOBAL const mm_long* RESTRICT bornSum, GLOBAL const float4* RESTRICT params, GLOBAL real* RESTRICT bornRadii) {
 
-    real RECIP_MAX_RADIUS3 = POW(BIG_RADIUS, (real) -3.0);
-    real PI4_3 = 4.0 / 3.0 * M_PI;
-    real INVERSE_PI4_3 = 1.0 / PI4_3;
-    real ONE_THIRD = 1.0 / 3.0;
+    real RECIP_MAX_RADIUS3 = POW(BIG_RADIUS, (real) -3);
+    real PI4_3 = 4 * M_PI / 3;
+    real INVERSE_PI4_3 = 1 / PI4_3;
+    real ONE_THIRD = 1 / (real) 3;
 
     for (unsigned int index = GLOBAL_ID; index < NUM_ATOMS; index += GLOBAL_SIZE) {
         // Get summed Born data
@@ -33,7 +33,7 @@ KERNEL void reduceBornSum(GLOBAL const mm_long* RESTRICT bornSum, GLOBAL const f
         // Now calculate Born radius.
         sum = PI4_3 * ir3 - sum;
 
-        // If the sum is less than zero, set the Born radius to 50.0 Angstroms.
+        // If the sum is less than zero, set the Born radius to 30.0 Angstroms.
         sum = (sum <= 0 ? BIG_RADIUS : POW(INVERSE_PI4_3 * sum, -ONE_THIRD));
         bornRadii[index] = sum;
 
@@ -87,73 +87,62 @@ DEVICE real interpolate2D(real x1, real x2, real y1, real y2, real x, real y,
     return (y2 - y) / (y2 - y1) * fxy1 + (y - y1) / (y2 - y1) * fxy2;
 }
 
-DEVICE void getBounds(real rho, int bounds[]) {
+DEVICE void getBounds(real rho, int* below, int* above) {
     // Note this function is in Angstroms.
-    real MINIMUM_RADIUS = 0.80;
-    real SPACING = 0.05;
+    real MINIMUM_RADIUS = 0.8f;
+    real SPACING = 0.05f;
     real calculateIndex = (rho - MINIMUM_RADIUS) / SPACING;
-    int below = (int) floor(calculateIndex);
-    int above = below + 1;
+    *below = (int) floor(calculateIndex);
+    *above = *below + 1;
     int NUM_POINTS = 45;
 
-    if (above >= NUM_POINTS) {
+    if (*above >= NUM_POINTS) {
         // Extrapolate up from the top table values.
-        below = NUM_POINTS - 1;
-        above = NUM_POINTS - 2;
-    } else if (below < 0) {
+        *below = NUM_POINTS - 1;
+        *above = NUM_POINTS - 2;
+    } else if (*below < 0) {
         // If below is less than 0, extrapolate down from the bottom table values.
-        below = 0;
-        above = 1;
+        *below = 0;
+        *above = 1;
     }
-
-    bounds[0] = below;
-    bounds[1] = above;
 }
 
-DEVICE void getNeckConstants(real rhoDescreened, real rhoDescreening, real constants[],
+DEVICE void getNeckConstants(real rhoDescreened, real rhoDescreening, real* aij, real *bij,
     GLOBAL const float* RESTRICT neckRadii,
     GLOBAL const float* RESTRICT neckA,
     GLOBAL const float* RESTRICT neckB) {
 
     // Convert the input radii from nm to A.
-    rhoDescreened *= 10.0;
-    rhoDescreening *= 10.0;
+    rhoDescreened *= 10;
+    rhoDescreening *= 10;
 
     // Determine low and high values for integration
-    int boundsI[] = {0, 1};
-    getBounds(rhoDescreened, boundsI);
-
-    int boundsJ[] = {0, 1};
-    getBounds(rhoDescreening, boundsJ);
-
-    int lowI = boundsI[0];
-    int highI = boundsI[1];
-    int lowJ = boundsJ[0];
-    int highJ = boundsJ[1];
-
+    int lowI, highI, lowJ, highJ;
+    getBounds(rhoDescreened, &lowI, &highI);
+    getBounds(rhoDescreening, &lowJ, &highJ);
     // Interpolate/Extrapolate Aij and Bij constant values
     int NUM_POINTS = 45;
     int lowOff = lowI * NUM_POINTS;
     int highOff = highI * NUM_POINTS;
-    real aij = interpolate2D(neckRadii[lowI], neckRadii[highI], neckRadii[lowJ], neckRadii[highJ],
+    *aij = interpolate2D(neckRadii[lowI], neckRadii[highI], neckRadii[lowJ], neckRadii[highJ],
                                rhoDescreened, rhoDescreening,
                                neckA[lowOff + lowJ], neckA[highOff + lowJ],
                                neckA[lowOff + highJ], neckA[highOff + highJ]);
 
-    real bij = interpolate2D(neckRadii[lowI], neckRadii[highI],neckRadii[lowJ], neckRadii[highJ],
+    *bij = interpolate2D(neckRadii[lowI], neckRadii[highI],neckRadii[lowJ], neckRadii[highJ],
                                rhoDescreened, rhoDescreening,
                                neckB[lowOff + lowJ], neckB[highOff + lowJ],
                                neckB[lowOff + highJ], neckB[highOff + highJ]);
 
     // Never let Aij be negative.
-    if (aij < 0.0) {
-        aij = 0.0;
+    if (*aij < 0.0f) {
+        *aij = 0.0f;
     }
 
     // Convert aij from A^(-11) to nm^(-11);
-    constants[0] = aij * 1.0e11;
+    *aij *= 1.0e11f;
     // Convert bij from A to nm.
-    constants[1] = bij * 0.1;
+    *bij *= 0.1f;
 }
 
 DEVICE real neckDescreen(real r, real radius, real radiusK, real sneck,
@@ -161,28 +150,24 @@ DEVICE real neckDescreen(real r, real radius, real radiusK, real sneck,
         GLOBAL const float* RESTRICT neckA,
         GLOBAL const float* RESTRICT neckB) {
 
-    real radiusWater = 0.14;
+    real radiusWater = 0.14f;
 
     // If atoms are too widely separated there is no neck formed.
-    if (r > radius + radiusK + 2.0 * radiusWater) {
-        return 0.0;
+    if (r > radius + radiusK + 2 * radiusWater) {
+        return 0.0f;
     }
 
     // Get Aij and Bij based on parameterization by Corrigan et al.
-    real constants[] = {0.0, 0.0};
-    getNeckConstants(radius, radiusK, constants, neckRadii, neckA, neckB);
-
-    real aij = constants[0];
-    real bij = constants[1];
-
+    real aij, bij;
+    getNeckConstants(radius, radiusK, &aij, &bij, neckRadii, neckA, neckB);
     real rMinusBij = r - bij;
-    real radiiMinusr = radius + radiusK + 2.0 * radiusWater - r;
+    real radiiMinusr = radius + radiusK + 2 * radiusWater - r;
     real power1 = rMinusBij * rMinusBij * rMinusBij * rMinusBij;
     real power2 = radiiMinusr * radiiMinusr * radiiMinusr * radiiMinusr;
 
     // Use Aij and Bij to get neck integral using Equations 13 and 14 from Aguilar/Onufriev 2010 paper
     // Sneck may be based on the number of heavy atoms bound to the atom being descreened.
-    real PI4_3 = 4.0 / 3.0 * M_PI;
+    real PI4_3 = 4 * M_PI / (real) 3;
     real neckIntegral = PI4_3 * sneck * aij * power1 * power2;
 
     return neckIntegral;
@@ -198,7 +183,7 @@ DEVICE real computeBornSumOneInteraction(AtomData1 atom1, AtomData1 atom2,
         return 0; // Ignore this interaction
 
     float sk = atom2.scaleFactor * atom2.descreenRadius;
-    if (sk <= 0.0)
+    if (sk <= 0.0f)
         return 0; // No descreening.
 
     real3 delta = atom2.pos - atom1.pos;
@@ -231,15 +216,15 @@ DEVICE real computeBornSumOneInteraction(AtomData1 atom1, AtomData1 atom2,
     real u4 = u2*u2;
     real ur = uik*r;
     real u4r = u4*r;
-    real term = (3.0*(r2-sk2)+6.0*u2-8.0*ur)/u4r - (3.0*(r2-sk2)+6.0*l2-8.0*lr)/l4r;
-    term = term/16.0;
+    real term = (3*(r2-sk2)+6*u2-8*ur)/u4r - (3*(r2-sk2)+6*l2-8*lr)/l4r;
+    term = term / (real) 16;
 
     real neck1 = atom1.neckFactor;
     real neck2 = atom2.neckFactor;
-    real mixedNeckScale = 0.5 * (neck1 + neck2);
-    if (mixedNeckScale > 0.0 && atom2.scaleFactor > 0.0) {
+    real mixedNeckScale = 0.5f * (neck1 + neck2);
+    if (mixedNeckScale > 0 && atom2.scaleFactor > 0) {
         real ret = neckDescreen(r, baseRadius, atom2.descreenRadius, mixedNeckScale, neckRadii, neckA, neckB);
-        real pi43 = 4.0 / 3.0 * M_PI;
+        real pi43 = 4 * M_PI / (real) 3;
         term += ret / pi43;
     }
 
@@ -679,41 +664,38 @@ DEVICE real neckDescreenDerivative(real r, real radius, real radiusK, real sneck
                                    GLOBAL const float* RESTRICT neckA,
                                    GLOBAL const float* RESTRICT neckB) {
 
-    real radiusWater = 0.14;
+    real radiusWater = 0.14f;
 
-    if (r > radius + radiusK + 2.0 * radiusWater) {
-        return 0.0;
+    if (r > radius + radiusK + 2 * radiusWater) {
+        return 0;
     }
 
     // Get Aij and Bij
-    real constants[] = {0.0, 0.0};
-    getNeckConstants(radius, radiusK, constants, neckRadii, neckA, neckB);
-
-    real Aij = constants[0];
-    real Bij = constants[1];
+    real Aij, Bij;
+    getNeckConstants(radius, radiusK, &Aij, &Bij, neckRadii, neckA, neckB);
 
     // Use Aij and Bij to get neck value using derivative of Equation 13 from Aguilar/Onufriev 2010 paper
     real rMinusBij = r - Bij;
     real rMinusBij3 = rMinusBij * rMinusBij * rMinusBij;
     real rMinusBij4 = rMinusBij3 * rMinusBij;
-    real radiiMinusr = radius + radiusK + 2.0 * radiusWater - r;
+    real radiiMinusr = radius + radiusK + 2 * radiusWater - r;
     real radiiMinusr3 = radiiMinusr * radiiMinusr * radiiMinusr;
     real radiiMinusr4 = radiiMinusr3 * radiiMinusr;
 
-    real PI4_3 = 4.0 / 3.0 * M_PI;
+    real PI4_3 = 4 * M_PI / (real) 3;
 
-    return 4.0 * PI4_3 * (sneck * Aij * rMinusBij3 * radiiMinusr4 - sneck * Aij * rMinusBij4 * radiiMinusr3);
+    return 4 * PI4_3 * (sneck * Aij * rMinusBij3 * radiiMinusr4 - sneck * Aij * rMinusBij4 * radiiMinusr3);
 }
 
 DEVICE void computeBornChainRuleInteraction(AtomData3 atom1, AtomData3 atom2, real3* force,
                                             GLOBAL const float* RESTRICT neckRadii,
                                             GLOBAL const float* RESTRICT neckA,
                                             GLOBAL const float* RESTRICT neckB) {
-    real third = 1.0 / (real) 3.0;
-    real pi43 = 4.0 * third * M_PI;
-    real factor = -POW(M_PI, third)*POW((real) 6.0, (real) 2.0 * third) / 9.0;
+    real third = 1 / (real) 3;
+    real pi43 = 4 * third * M_PI;
+    real factor = -POW(M_PI, third)*POW((real) 6.0f, (real) 2 * third) / (real) 9;
     real term = pi43/(atom1.bornRadius*atom1.bornRadius*atom1.bornRadius);
-    term = factor/POW(term, (real) 4.0 * third);
+    term = factor/POW(term, (real) 4 * third);
 
     if (TANH_RESCALING) {
         real bornSum = atom1.bornSum * pi43;
@@ -726,17 +708,17 @@ DEVICE void computeBornChainRuleInteraction(AtomData3 atom1, AtomData3 atom2, re
         real rhoi9Psi2 = rhoi6Psi2 * rhoi3;
         real tanhTerm = tanh(BETA0 * rhoi3Psi - BETA1 * rhoi6Psi2 + BETA2 * rhoi9Psi3);
         real tanh2 = tanhTerm * tanhTerm;
-        real chainRuleTerm = BETA0 * rhoi3 - 2.0 * BETA1 * rhoi6Psi + 3.0 * BETA2 * rhoi9Psi2;
-        real recipBigRad = 1.0 / BIG_RADIUS;
+        real chainRuleTerm = BETA0 * rhoi3 - 2 * BETA1 * rhoi6Psi + 3 * BETA2 * rhoi9Psi2;
+        real recipBigRad = 1 / (real) BIG_RADIUS;
         real recipBigRad3 = recipBigRad * recipBigRad * recipBigRad;
-        real tanh_constant = pi43 * ((1.0 / rhoi3) - recipBigRad3);
-        term = term * tanh_constant * chainRuleTerm * (1.0 - tanh2);
+        real tanh_constant = pi43 * ((1 / (real) rhoi3) - recipBigRad3);
+        term = term * tanh_constant * chainRuleTerm * (1.0f - tanh2);
     }
 
-    real de = 0.0;
+    real de = 0.0f;
     real3 delta = atom2.pos-atom1.pos;
     real sk = atom2.scaleFactor;
-    if (sk <= 0.0 || atom1.bornRadius >= BIG_RADIUS || atom2.descreenRadius <= 0.0) {
+    if (sk <= 0 || atom1.bornRadius >= BIG_RADIUS || atom2.descreenRadius <= 0) {
         *force = delta * de;
         return;
     }
@@ -746,8 +728,8 @@ DEVICE void computeBornChainRuleInteraction(AtomData3 atom1, AtomData3 atom2, re
     real r = SQRT(r2);
     de = pairIntegralDerivative(r, r2, baseRadius, sk * atom2.descreenRadius);
 
-    real mixedNeckScale = 0.5 * (atom1.neckFactor + atom2.neckFactor);
-    if (mixedNeckScale > 0.0) {
+    real mixedNeckScale = 0.5f * (atom1.neckFactor + atom2.neckFactor);
+    if (mixedNeckScale > 0) {
         de += neckDescreenDerivative(r, baseRadius, atom2.descreenRadius, mixedNeckScale, neckRadii, neckA, neckB);
     }
 

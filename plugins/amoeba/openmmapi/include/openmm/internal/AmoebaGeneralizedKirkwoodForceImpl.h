@@ -37,6 +37,8 @@
 #include "openmm/Kernel.h"
 #include <string>
 
+using std::vector;
+
 namespace OpenMM {
 
 /**
@@ -65,11 +67,15 @@ public:
 
     /**
      * Compute a "neck" descreening contribution.
+     * <p>
+     * Using the tabulated Aij and Bij values, compute the neck integral
+     * using Equations 13 and 14 from Aguilar, Shadrach and Onufriev (10.1021/ct100392h).
+     *
      * @param r separation distance.
      * @param radius Radius of the current atom.
      * @param radiusK Radius of the descreening atom.
      * @param sneck The neck scale factor.
-     * @return
+     * @return The integral value.
      */
     static double neckDescreen(double r, double radius, double radiusK, double sneck);
 
@@ -77,30 +83,27 @@ public:
      * Get Neck Aij and Bij constants.
      * @param radius Radius of the current atom.
      * @param radiusK Radius of the descreening atom.
-     * @param constants
+     * @param aij The Aij neck constant.
+     * @param bij the Bij neck constant.
      */
-    static void getNeckConstants(double radius, double radiusK, double constants[]);
-
-     /**
-      * The number of neck radius sizes that have been tabulated.
-      * @return The number of neck radii.
-      */
-     static int getNumNeckRadii();
+    static void getNeckConstants(double radius, double radiusK, double &aij, double &bij);
 
      /**
       * The array of neck tabulated radii values.
       */
-     static const float* getNeckRadii();
+    static const vector<float>& getNeckRadii();
 
-     /**
-      * The tabulated Aij parameters.
-      */
-     static const float* getAij();
+    const static int NUM_NECK_RADII = 45;
+
+    /**
+     * The tabulated Aij parameters.
+     */
+    const static float (&getAij())[NUM_NECK_RADII][NUM_NECK_RADII];
 
      /**
       * The tabulated Bij parameters.
       */
-     static const float* getBij();
+     const static float (&getBij())[NUM_NECK_RADII][NUM_NECK_RADII];
 
 private:
     const AmoebaGeneralizedKirkwoodForce& owner;

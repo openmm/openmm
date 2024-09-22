@@ -69,9 +69,7 @@ void AmoebaGeneralizedKirkwoodForceImpl::updateParametersInContext(ContextImpl& 
     context.systemChanged();
 }
 
-const static int NUM_NECK_RADII = 45;
-
-const static float NECK_RADII[NUM_NECK_RADII] = {
+const static vector<float> NECK_RADII = {
         0.80, 0.85, 0.90, 0.95, 1.00, 1.05, 1.10, 1.15, 1.20, 1.25,
         1.30, 1.35, 1.40, 1.45, 1.50, 1.55, 1.60, 1.65, 1.70, 1.75,
         1.80, 1.85, 1.90, 1.95, 2.00, 2.05, 2.10, 2.15, 2.20, 2.25,
@@ -82,7 +80,7 @@ const static double MINIMUM_RADIUS = 0.80;
 const static double MAXIMUM_RADIUS = 3.00;
 const static double SPACING = 0.05;
 
-const static float Aij[NUM_NECK_RADII][NUM_NECK_RADII] = {
+const static float Aij[AmoebaGeneralizedKirkwoodForceImpl::NUM_NECK_RADII][AmoebaGeneralizedKirkwoodForceImpl::NUM_NECK_RADII] = {
         {0.0000577616, 0.0000584661, 0.0000363925, 0.0000395472, 0.0000443202, 0.0000485507, 0.0000430862,
                 0.0000485067, 0.0000244504, 0.0000278293, 0.0000329908, 0.0000292135, 0.0000343621, 0.0000393724,
                 0.0000352501, 0.0000303823, 0.0000360595, 0.0000418690, 0.0000365804, 0.0000248824, 0.0000375656,
@@ -400,7 +398,7 @@ const static float Aij[NUM_NECK_RADII][NUM_NECK_RADII] = {
                 0.0000002115, 0.0000003004, 0.0000001533}
 };
 
-const static float Bij[NUM_NECK_RADII][NUM_NECK_RADII] = {
+const static float Bij[AmoebaGeneralizedKirkwoodForceImpl::NUM_NECK_RADII][AmoebaGeneralizedKirkwoodForceImpl::NUM_NECK_RADII] = {
         {-1.20, -1.05, -1.30, -1.15, -1.00, -0.85, -0.90, -0.75, -1.20, -1.05, -0.90, -0.95, -0.80, -0.65, -0.70,
             -0.75, -0.60, -0.45, -0.50, -0.75, -0.40, -0.25, -0.30, -0.15, -0.20, -0.25, 0.10,  0.05, 0.20,-0.05,
             0.30, 0.25, 0.40, 0.15,  0.10, 0.25, 0.60, 0.55, 0.70, 0.45, 0.80, 0.55, 0.90, 0.65, 1.00},
@@ -538,22 +536,19 @@ const static float Bij[NUM_NECK_RADII][NUM_NECK_RADII] = {
             1.70, 1.65, 1.80,1.95,  2.10, 1.85, 2.00, 2.55, 2.10, 1.85, 2.40, 2.35, 2.50, 2.85, 2.40}
 };
 
-static void getBounds(double rho, int bounds[]) {
+static void getBounds(double rho, int& below, int& above) {
     double calculateIndex = (rho - MINIMUM_RADIUS) / SPACING;
-    int below = (int) floor(calculateIndex);
-    int above = below + 1;
-    if (above >= NUM_NECK_RADII) {
+    below = (int) floor(calculateIndex);
+    above = below + 1;
+    if (above >= AmoebaGeneralizedKirkwoodForceImpl::NUM_NECK_RADII) {
         // Extrapolate up from the top table values.
-        below = NUM_NECK_RADII - 1;
-        above = NUM_NECK_RADII - 2;
+        below = AmoebaGeneralizedKirkwoodForceImpl::NUM_NECK_RADII - 1;
+        above = AmoebaGeneralizedKirkwoodForceImpl::NUM_NECK_RADII - 2;
     } else if (below < 0) {
         // If below is less than 0, extrapolate down from the bottom table values.
         below = 0;
         above = 1;
     }
-
-    bounds[0] = below;
-    bounds[1] = above;
 }
 
 static double interpolate2D(double x1, double x2, double y1, double y2, double x, double y,
@@ -564,28 +559,21 @@ static double interpolate2D(double x1, double x2, double y1, double y2, double x
     return (y2 - y) / (y2 - y1) * fxy1 + (y - y1) / (y2 - y1) * fxy2;
 }
 
-void AmoebaGeneralizedKirkwoodForceImpl::getNeckConstants(double radius, double radiusK, double constants[]) {
+void AmoebaGeneralizedKirkwoodForceImpl::getNeckConstants(double radius, double radiusK, double &aij, double &bij) {
     // Convert the radii values from nm to A.
     radius = radius * 10.0;
     radiusK = radiusK * 10.0;
 
     // Determine low and high values for integration
-    int boundsI[] = {0, 1};
-    getBounds(radius, boundsI);
-
-    int boundsJ[] = {0, 1};
-    getBounds(radiusK, boundsJ);
-
-    int lowI = boundsI[0];
-    int highI = boundsI[1];
-    int lowJ = boundsJ[0];
-    int highJ = boundsJ[1];
+    int lowI, highI, lowJ, highJ;
+    getBounds(radius, lowI, highI);
+    getBounds(radiusK, lowJ, highJ);
 
     // Interpolate/Extrapolate Aij and Bij constant values
-    double aij = interpolate2D(NECK_RADII[lowI], NECK_RADII[highI], NECK_RADII[lowJ], NECK_RADII[highJ],
+    aij = interpolate2D(NECK_RADII[lowI], NECK_RADII[highI], NECK_RADII[lowJ], NECK_RADII[highJ],
                                radius, radiusK, Aij[lowI][lowJ], Aij[highI][lowJ], Aij[lowI][highJ], Aij[highI][highJ]);
 
-    double bij = interpolate2D(NECK_RADII[lowI], NECK_RADII[highI], NECK_RADII[lowJ], NECK_RADII[highJ],
+    bij = interpolate2D(NECK_RADII[lowI], NECK_RADII[highI], NECK_RADII[lowJ], NECK_RADII[highJ],
                                radius, radiusK, Bij[lowI][lowJ], Bij[highI][lowJ], Bij[lowI][highJ], Bij[highI][highJ]);
 
     // Never let Aij be negative.
@@ -594,9 +582,9 @@ void AmoebaGeneralizedKirkwoodForceImpl::getNeckConstants(double radius, double 
     }
 
     // Convert aij from Ang(-11) to nm(-11)
-    constants[0] = aij * 1.0e11;
+    aij = aij * 1.0e11;
     // Convert bij from A to nm.
-    constants[1] = bij * 0.1;
+    bij = bij * 0.1;
 }
 
 double AmoebaGeneralizedKirkwoodForceImpl::neckDescreen(double r, double radius, double radiusK, double sneck) {
@@ -610,10 +598,8 @@ double AmoebaGeneralizedKirkwoodForceImpl::neckDescreen(double r, double radius,
     }
 
     // Get Aij and Bij based on parameterization by Corrigan et al.
-    double constants[] = {0.0, 0.0};
-    getNeckConstants(radius, radiusK, constants);
-    double aij = constants[0];
-    double bij = constants[1];
+    double aij, bij;
+    getNeckConstants(radius, radiusK, aij, bij);
     double rMinusBij = r - bij;
     double radiiMinusr = radius + radiusK + 2.0 * radiusWater - r;
     double power1 = rMinusBij * rMinusBij * rMinusBij * rMinusBij;
@@ -627,30 +613,22 @@ double AmoebaGeneralizedKirkwoodForceImpl::neckDescreen(double r, double radius,
 }
 
 /**
- * The number of neck radius sizes that have been tabulated.
- * @return The number of neck radii.
- */
-int AmoebaGeneralizedKirkwoodForceImpl::getNumNeckRadii() {
-    return NUM_NECK_RADII;
-}
-
-/**
  * The array of neck tabulated radii values.
  */
-const float* AmoebaGeneralizedKirkwoodForceImpl::getNeckRadii() {
+const vector<float>& AmoebaGeneralizedKirkwoodForceImpl::getNeckRadii() {
     return NECK_RADII;
 }
 
 /**
  * The tabulated Aij parameters.
  */
-const float* AmoebaGeneralizedKirkwoodForceImpl::getAij() {
-    return reinterpret_cast<const float *>(Aij);
+const float (&AmoebaGeneralizedKirkwoodForceImpl::getAij())[NUM_NECK_RADII][NUM_NECK_RADII]  {
+    return Aij;
 }
 
 /**
  * The tabulated Bij parameters.
  */
-const float* AmoebaGeneralizedKirkwoodForceImpl::getBij() {
-    return reinterpret_cast<const float *>(Bij);
+const float (&AmoebaGeneralizedKirkwoodForceImpl::getBij())[NUM_NECK_RADII][NUM_NECK_RADII]  {
+    return Bij;
 }

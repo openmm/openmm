@@ -4071,12 +4071,8 @@ static double neckDescreenDerivative(double r, double radius, double radiusK, do
     }
 
     // Get Aij and Bij
-    double constants[] = {0.0, 0.0};
-    AmoebaGeneralizedKirkwoodForceImpl::getNeckConstants(radius, radiusK, constants);
-
-    double Aij = constants[0];
-    double Bij = constants[1];
-
+    double Aij, Bij;
+    AmoebaGeneralizedKirkwoodForceImpl::getNeckConstants(radius, radiusK, Aij, Bij);
     // Use Aij and Bij to get neck value using derivative of Equation 13 from Aguilar/Onufriev 2010 paper
     double rMinusBij = r - Bij;
     double rMinusBij3 = rMinusBij * rMinusBij * rMinusBij;
@@ -4179,6 +4175,7 @@ void AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateGrycukChainRuleP
 
     forces[iIndex] -= deltaR * de;
     forces[jIndex] += deltaR * de;
+
 }
 
 

@@ -543,7 +543,7 @@ int ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getIncludeCavityTerm() co
     return includeCavityTerm;
 }
 
-int ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getTanhRescaling() const {
+bool ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getTanhRescaling() const {
     return tanhRescaling;
 }
 

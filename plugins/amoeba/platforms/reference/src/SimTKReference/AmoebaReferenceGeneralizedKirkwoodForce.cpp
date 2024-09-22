@@ -33,10 +33,10 @@ AmoebaReferenceGeneralizedKirkwoodForce::AmoebaReferenceGeneralizedKirkwoodForce
                                                                                      _directPolarization(0),
                                                                                      _soluteDielectric(1.0),
                                                                                      _solventDielectric(78.3),
-                                                                                     _dielectricOffset(0.09),
+                                                                                     _dielectricOffset(0.009),
                                                                                      _probeRadius(0.14),
                                                                                      _surfaceAreaFactor(0.0054),
-                                                                                     _tanhRescaling(0),
+                                                                                     _tanhRescaling(false),
                                                                                      _beta0(0.9563),
                                                                                      _beta1(0.2578),
                                                                                      _beta2(0.0810) {
@@ -58,11 +58,11 @@ int AmoebaReferenceGeneralizedKirkwoodForce::getIncludeCavityTerm() const {
     return _includeCavityTerm;
 }
 
-void AmoebaReferenceGeneralizedKirkwoodForce::setTanhRescaling(int tanhRescaling) {
+void AmoebaReferenceGeneralizedKirkwoodForce::setTanhRescaling(bool tanhRescaling) {
     _tanhRescaling = tanhRescaling;
 }
 
-int AmoebaReferenceGeneralizedKirkwoodForce::getTanhRescaling() const {
+bool AmoebaReferenceGeneralizedKirkwoodForce::getTanhRescaling() const {
     return _tanhRescaling;
 }
 
@@ -298,4 +298,5 @@ void AmoebaReferenceGeneralizedKirkwoodForce::calculateGrycukBornRadii(const vec
             _bornRadii[ii] = MAX_RADIUS;
         }
     }
+
 }

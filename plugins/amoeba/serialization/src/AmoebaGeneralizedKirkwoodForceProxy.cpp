@@ -78,11 +78,11 @@ void* AmoebaGeneralizedKirkwoodForceProxy::deserialize(const SerializationNode& 
         force->setName(node.getStringProperty("name", force->getName()));
         force->setSolventDielectric(  node.getDoubleProperty("GeneralizedKirkwoodSolventDielectric"));
         force->setSoluteDielectric(   node.getDoubleProperty("GeneralizedKirkwoodSoluteDielectric"));
-        force->setDielectricOffset(   node.getDoubleProperty("GeneralizedKirkwoodDielectricOffset"));
         force->setProbeRadius(        node.getDoubleProperty("GeneralizedKirkwoodProbeRadius"));
         force->setSurfaceAreaFactor(  node.getDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor"));
         force->setIncludeCavityTerm(  node.getIntProperty(   "GeneralizedKirkwoodIncludeCavityTerm"));
         if (version > 2) {
+            force->setDielectricOffset(   node.getDoubleProperty("GeneralizedKirkwoodDielectricOffset"));
             force->setTanhRescaling(node.getIntProperty("GeneralizedKirkwoodTanhRescaling"));
             double b0 = node.getDoubleProperty("GeneralizedKirkwoodTanhB0");
             double b1 = node.getDoubleProperty("GeneralizedKirkwoodTanhB1");

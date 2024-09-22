@@ -86,7 +86,7 @@ public:
      *
      * @return tanhRescaling
      */
-    int getTanhRescaling() const;
+    bool getTanhRescaling() const;
 
     /**
      * Get Tanh parameters beta0, beta1 and beta2.
@@ -104,7 +104,7 @@ public:
      *
      *  @param tanhRescaling flag indicating whether tanh rescaling of the solute integral is performed.
      */
-    void setTanhRescaling(int tanhRescaling);
+    void setTanhRescaling(bool tanhRescaling);
 
     /**
      *  Get directPolarization flag 
@@ -299,7 +299,7 @@ private:
     int _numParticles;
     int _includeCavityTerm;
     int _directPolarization;
-    int _tanhRescaling;
+    bool _tanhRescaling;
 
     double _soluteDielectric;
     double _solventDielectric;
