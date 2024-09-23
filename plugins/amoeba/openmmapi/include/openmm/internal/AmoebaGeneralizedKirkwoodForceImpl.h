@@ -37,8 +37,6 @@
 #include "openmm/Kernel.h"
 #include <string>
 
-using std::vector;
-
 namespace OpenMM {
 
 /**
@@ -91,7 +89,7 @@ public:
      /**
       * The array of neck tabulated radii values.
       */
-    static const vector<float>& getNeckRadii();
+    static const std::vector<float>& getNeckRadii();
 
     const static int NUM_NECK_RADII = 45;
 

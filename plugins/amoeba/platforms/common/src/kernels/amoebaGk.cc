@@ -140,9 +140,9 @@ DEVICE void getNeckConstants(real rhoDescreened, real rhoDescreening, real* aij,
     }
 
     // Convert aij from A^(-11) to nm^(-11);
-    *aij *= 1.0e11f;
+    *aij /= 10;
     // Convert bij from A to nm.
-    *bij *= 0.1f;
+    *bij /= 10;
 }
 
 DEVICE real neckDescreen(real r, real radius, real radiusK, real sneck,
