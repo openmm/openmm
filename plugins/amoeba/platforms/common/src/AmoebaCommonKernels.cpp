@@ -1821,7 +1821,7 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
         defines["MUTUAL_POLARIZATION"] = "";
     else if (polarizationType == AmoebaMultipoleForce::Extrapolated)
         defines["EXTRAPOLATED_POLARIZATION"] = "";
-    defines["DIELECTRIC_OFFSET"] = cc.doubleToString(force.getDielectricOffset());
+    defines["DESCREEN_OFFSET"] = cc.doubleToString(force.getDescreenOffset());
     tanhRescaling = force.getTanhRescaling();
     // Max Born radius is 3 nm (30 A).
     defines["BIG_RADIUS"] = cc.doubleToString(3.0);

@@ -298,6 +298,7 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
         double beta0, beta1, beta2;
         gkKernel->getTanhParameters(beta0, beta1, beta2);
         amoebaReferenceGeneralizedKirkwoodForce->setTanhParameters(beta0, beta1, beta2);
+        amoebaReferenceGeneralizedKirkwoodForce->setDescreenOffset(gkKernel->getDescreenOffset());
 
         vector<double> parameters; 
         gkKernel->getAtomicRadii(parameters);
@@ -553,6 +554,10 @@ void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getTanhParameters(double
     b2 = beta2;
 }
 
+double ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getDescreenOffset() const {
+    return descreenOffset;
+}
+
 int ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getDirectPolarization() const {
     return directPolarization;
 }
@@ -647,6 +652,7 @@ void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System&
     beta0 = b0;
     beta1 = b1;
     beta2 = b2;
+    descreenOffset     = force.getDescreenOffset();
     soluteDielectric   = force.getSoluteDielectric();
     solventDielectric  = force.getSolventDielectric();
     dielectricOffset   = force.getDielectricOffset();

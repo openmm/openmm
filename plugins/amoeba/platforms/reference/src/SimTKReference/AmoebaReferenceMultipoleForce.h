@@ -1239,9 +1239,15 @@ public:
      * Get dielectric offset.
      *
      * @return dielectric offset
-     *
      */
     double getDielectricOffset() const;
+
+    /**
+     * Get the descreen offset.
+     *
+     * @return descreen offset.
+     */
+    double getDescreenOffset() const;
 
 private:
 
@@ -1277,6 +1283,7 @@ private:
     double _surfaceAreaFactor;
     double _dielectricOffset;
     double _tanhRescaling;
+    double _descreenOffset;
 
     /**
      * Zero fixed multipole fields.

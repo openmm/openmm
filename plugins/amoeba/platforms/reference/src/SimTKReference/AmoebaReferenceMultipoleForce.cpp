@@ -2140,6 +2140,7 @@ AmoebaReferenceGeneralizedKirkwoodMultipoleForce::AmoebaReferenceGeneralizedKirk
     _dielectricOffset = _amoebaReferenceGeneralizedKirkwoodForce->getDielectricOffset();
     _tanhRescaling = _amoebaReferenceGeneralizedKirkwoodForce->getTanhRescaling();
     _amoebaReferenceGeneralizedKirkwoodForce->getTanhParameters(_beta0, _beta1, _beta2);
+    _descreenOffset = _amoebaReferenceGeneralizedKirkwoodForce->getDescreenOffset();
 }
 
 AmoebaReferenceGeneralizedKirkwoodMultipoleForce::~AmoebaReferenceGeneralizedKirkwoodMultipoleForce()
@@ -2166,6 +2167,12 @@ double AmoebaReferenceGeneralizedKirkwoodMultipoleForce::getDielectricOffset() c
 {
      return _dielectricOffset;
 };
+
+double AmoebaReferenceGeneralizedKirkwoodMultipoleForce::getDescreenOffset() const
+{
+    return _descreenOffset;
+};
+
 
 void AmoebaReferenceGeneralizedKirkwoodMultipoleForce::zeroFixedMultipoleFields()
 {
@@ -4131,7 +4138,7 @@ void AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateGrycukChainRuleP
     double r = sqrt(r2);
     double de = 0.0;
 
-    double baseRadiusI = max(_atomicRadii[iIndex], _descreenRadii[iIndex]) + _dielectricOffset;
+    double baseRadiusI = max(_atomicRadii[iIndex], _descreenRadii[iIndex]) + _descreenOffset;
     // If atom index engulfs the descreening atom, then there is no descreening.
     if (baseRadiusI > r + sk) return;
 

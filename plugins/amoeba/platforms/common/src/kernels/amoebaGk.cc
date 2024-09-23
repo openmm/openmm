@@ -189,7 +189,7 @@ DEVICE real computeBornSumOneInteraction(AtomData1 atom1, AtomData1 atom2,
     real3 delta = atom2.pos - atom1.pos;
     real r2 = dot(delta, delta);
     real r = SQRT(r2);
-    real baseRadius = max(atom1.radius, atom1.descreenRadius) + DIELECTRIC_OFFSET;
+    real baseRadius = max(atom1.radius, atom1.descreenRadius) + DESCREEN_OFFSET;
 
     if (baseRadius > r + sk)
         return 0; // No descreening due to atom1 engulfing atom2.
@@ -723,7 +723,7 @@ DEVICE void computeBornChainRuleInteraction(AtomData3 atom1, AtomData3 atom2, re
         return;
     }
 
-    real baseRadius = max(atom1.radius, atom1.descreenRadius) + DIELECTRIC_OFFSET;
+    real baseRadius = max(atom1.radius, atom1.descreenRadius) + DESCREEN_OFFSET;
     real r2 = dot(delta, delta);
     real r = SQRT(r2);
     de = pairIntegralDerivative(r, r2, baseRadius, sk * atom2.descreenRadius);

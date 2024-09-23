@@ -39,7 +39,8 @@ AmoebaReferenceGeneralizedKirkwoodForce::AmoebaReferenceGeneralizedKirkwoodForce
                                                                                      _tanhRescaling(false),
                                                                                      _beta0(0.9563),
                                                                                      _beta1(0.2578),
-                                                                                     _beta2(0.0810) {
+                                                                                     _beta2(0.0810),
+                                                                                     _descreenOffset(0.0) {
 }
 
 void AmoebaReferenceGeneralizedKirkwoodForce::setNumParticles(int numParticles) {
@@ -83,6 +84,14 @@ void AmoebaReferenceGeneralizedKirkwoodForce::setTanhParameters(double b0, doubl
     _beta0 = b0;
     _beta1 = b1;
     _beta2 = b2;
+}
+
+void AmoebaReferenceGeneralizedKirkwoodForce::setDescreenOffset(double descreenOffset) {
+    _descreenOffset  = descreenOffset;
+}
+
+double AmoebaReferenceGeneralizedKirkwoodForce::getDescreenOffset() const {
+    return _descreenOffset;
 }
 
 void AmoebaReferenceGeneralizedKirkwoodForce::setDirectPolarization(int directPolarization) {
@@ -208,7 +217,7 @@ void AmoebaReferenceGeneralizedKirkwoodForce::calculateGrycukBornRadii(const vec
             continue;
         }
 
-        double integralStartI = max(_atomicRadii[ii], _descreenRadii[ii]) + _dielectricOffset;
+        double integralStartI = max(_atomicRadii[ii], _descreenRadii[ii]) + _descreenOffset;
 
         double bornSum = 0.0;
         double neckSum = 0.0;

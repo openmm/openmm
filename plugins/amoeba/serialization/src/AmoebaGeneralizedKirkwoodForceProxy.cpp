@@ -59,6 +59,7 @@ void AmoebaGeneralizedKirkwoodForceProxy::serialize(const void* object, Serializ
     node.setDoubleProperty("GeneralizedKirkwoodTanhB0", b0);
     node.setDoubleProperty("GeneralizedKirkwoodTanhB1", b1);
     node.setDoubleProperty("GeneralizedKirkwoodTanhB2", b2);
+    node.setDoubleProperty("GeneralizedKirkwoodDescreenOffset", force.getDescreenOffset());
     SerializationNode& particles = node.createChildNode("GeneralizedKirkwoodParticles");
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force.getNumParticles()); ii++) {
         double radius, charge, scalingFactor, descreenRadius, neckFactor;
@@ -88,6 +89,8 @@ void* AmoebaGeneralizedKirkwoodForceProxy::deserialize(const SerializationNode& 
             double b1 = node.getDoubleProperty("GeneralizedKirkwoodTanhB1");
             double b2 = node.getDoubleProperty("GeneralizedKirkwoodTanhB2");
             force->setTanhParameters(b0, b1, b2);
+            force->setDescreenOffset(node.getDoubleProperty("GeneralizedKirkwoodDescreenOffset"));
+
         }
 
         const SerializationNode& particles = node.getChildNode("GeneralizedKirkwoodParticles");

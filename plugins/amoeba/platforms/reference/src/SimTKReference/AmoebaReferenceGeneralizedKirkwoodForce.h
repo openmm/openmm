@@ -107,6 +107,21 @@ public:
     void setTanhRescaling(bool tanhRescaling);
 
     /**
+     *  Get the descreen offset for calculating Born radii.
+     *
+     *  @return descreenOffset
+     */
+    double getDescreenOffset() const;
+
+    /**
+     * Set descreen offset for calculating Born radii.
+     *
+     * @param descreenOffset descreen offset
+     *
+     */
+    void setDescreenOffset(double descreenOffset);
+
+    /**
      *  Get directPolarization flag 
      *
      *  @return directPolarization
@@ -153,7 +168,7 @@ public:
     void setSolventDielectric(double solventDielectric);
 
     /**
-     *  Get dielectric offset
+     *  Get dielectric offset for the cavity term.
      *
      *  @return dielectricOffset
      *
@@ -161,7 +176,7 @@ public:
     double getDielectricOffset() const;
 
     /**
-     * Set dielectric offset
+     * Set dielectric offset for the cavity term.
      *
      * @param dielectricOffset dielectric offset
      *
@@ -300,6 +315,7 @@ private:
     int _includeCavityTerm;
     int _directPolarization;
     bool _tanhRescaling;
+    double _descreenOffset;
 
     double _soluteDielectric;
     double _solventDielectric;

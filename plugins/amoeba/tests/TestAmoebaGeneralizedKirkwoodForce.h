@@ -75,8 +75,7 @@ static void checkFiniteDifferences(vector<Vec3> forces, Context &context, vector
     State state2 = context.getState(State::Energy);
     context.setPositions(positions3);
     State state3 = context.getState(State::Energy);
-
-    ASSERT_EQUAL_TOL(state3.getPotentialEnergy()+norm*stepSize, state2.getPotentialEnergy(), 1.0e-4);
+    ASSERT_EQUAL_TOL(state3.getPotentialEnergy()+norm*stepSize, state2.getPotentialEnergy(), 1e-4);
 }
 
 // setup for 2 ammonia molecules
@@ -282,18 +281,13 @@ static void setupMultipoleAmmonia(System& system, AmoebaGeneralizedKirkwoodForce
     system.addForce(amoebaMultipoleForce);
 
     // GK force
+
     amoebaGeneralizedKirkwoodForce->setSolventDielectric(  7.8300000e+01);
     amoebaGeneralizedKirkwoodForce->setSoluteDielectric(   1.0000000e+00);
     amoebaGeneralizedKirkwoodForce->setIncludeCavityTerm(includeCavityTerm);
-    amoebaGeneralizedKirkwoodForce->setTanhRescaling(false);
-
-    // The default dielectric offset is 0.009 nm (from the 1990 JACS paper by Still et al.)
-    // Here we set it to 0.0 for backwards compatibility of the tests.
-    // Prior to OpenMM 8.2, the dielectric offset was only used for the non-polar cavity term.
-    // After OpenMM 8.2, it's applied to both calculation of Born radii AND the non-polar cavity term.
-    amoebaGeneralizedKirkwoodForce->setDielectricOffset(0.0);
 
     // addParticle: charge, radius, scalingFactor
+
     for (unsigned int ii = 0; ii < 2; ii++) {
         amoebaGeneralizedKirkwoodForce->addParticle(  -5.7960000e-01,   1.5965000e-01,   6.9000000e-01, 1.5965000e-01, 0.0f);
         amoebaGeneralizedKirkwoodForce->addParticle(  1.9320000e-01,   1.2360000e-01,   6.9000000e-01, 1.2360000e-01, 0.0f);
@@ -321,6 +315,7 @@ static void getForcesEnergyMultipoleAmmonia(Context& context, std::vector<Vec3>&
     energy                           = state.getPotentialEnergy();
     
     // Check that the forces and energy are consistent.
+    
     checkFiniteDifferences(forces, context, positions);
 }
 
@@ -5777,7 +5772,6 @@ static void setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::Polariz
     AmoebaGeneralizedKirkwoodForce* amoebaGeneralizedKirkwoodForce  = new AmoebaGeneralizedKirkwoodForce();
     amoebaGeneralizedKirkwoodForce->setSolventDielectric(  7.8300000e+01);
     amoebaGeneralizedKirkwoodForce->setSoluteDielectric(   1.0000000e+00);
-    amoebaGeneralizedKirkwoodForce->setDielectricOffset(0.0);
     amoebaGeneralizedKirkwoodForce->setIncludeCavityTerm(includeCavityTerm);
 
     // addParticle: charge, radius, scalingFactor
@@ -7016,7 +7010,6 @@ static void compareForcesEnergy(std::string& testName, double expectedEnergy, do
                                 const std::vector<Vec3>& expectedForces,
                                 const std::vector<Vec3>& forces, double tolerance) {
     for (unsigned int ii = 0; ii < forces.size(); ii++) {
-        // printf("expectedForces[%d]         = Vec3( %11.8e, %11.8e, %11.8e);\n", ii, forces[ii][0], forces[ii][1], forces[ii][2]);
         ASSERT_EQUAL_VEC(expectedForces[ii], forces[ii], tolerance);
     }
     ASSERT_EQUAL_TOL_MOD(expectedEnergy, energy, tolerance, testName);
@@ -7096,16 +7089,12 @@ static void testGeneralizedKirkwoodAmmoniaExtrapolatedPolarization() {
 
     System system;
     AmoebaGeneralizedKirkwoodForce* amoebaGeneralizedKirkwoodForce  = new AmoebaGeneralizedKirkwoodForce();
-
-    // The following test passes for the AmoebaReferenceGeneralizedKirkwoodForce, but fails for OpenCL platform.
-    // setupMultipoleAmmonia(system, amoebaGeneralizedKirkwoodForce, AmoebaMultipoleForce::Extrapolated, 0);
-
-    // It's not clear why the code below references "direct" instead of extrapolated?
     setupMultipoleAmmonia(system, amoebaGeneralizedKirkwoodForce, AmoebaMultipoleForce::Direct, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     Context context(system, integrator, platform);
 
     // We don't have reference values for this case, but at least check that force and energy are consistent.
+
     getForcesEnergyMultipoleAmmonia(context, forces, energy);
 }
 
@@ -7161,14 +7150,8 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm() {
     getForcesEnergyMultipoleAmmonia(context, forces, energy);
     std::vector<Vec3> expectedForces(numberOfParticles);
 
-
-    // The default dielectric offset is 0.009 nm (from the 1990 JACS paper by Still et al.)
-    // Prior to OpenMM 8.2, the dielectric offset was only used for the non-polar cavity term.
-    // After OpenMM 8.2, it's applied to both calculation of Born radii AND the non-polar cavity term.
-
-    /*
-    // Energy and forces prior to OpenMM 8.2
     double expectedEnergy     = -6.0434582e+01;
+
     expectedForces[0]         = Vec3( -7.8323218e+02,  -1.0097644e+01,   1.0256890e+02);
     expectedForces[1]         = Vec3(  1.7078480e+02,  -7.1896701e+01,   2.0840172e+01);
     expectedForces[2]         = Vec3(  1.7394089e+02,   7.3488594e+01,   1.1484648e+01);
@@ -7177,19 +7160,16 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm() {
     expectedForces[5]         = Vec3(  8.7397444e+00,   7.3330990e+01,   1.6016898e+02);
     expectedForces[6]         = Vec3(  4.8684950e+02,   4.8937161e-01,   1.4137061e+02);
     expectedForces[7]         = Vec3(  7.9205382e+00,  -7.3716473e+01,   1.5960993e+02);
-    */
-
-    // Expected energy for OpenMM 8.2.
-    double expectedEnergy        = -6.68016e+01;
-    getForcesEnergyMultipoleAmmonia(context, forces, energy);
 
     double tolerance          = 1.0e-04;
-
+    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
+    
     // Try changing the particle parameters and make sure it's still correct.
+    
     for (int i = 0; i < numberOfParticles; i++) {
-        double charge, radius, scale, descreen, neck;
-        amoebaGeneralizedKirkwoodForce->getParticleParameters(i, charge, radius, scale, descreen, neck);
-        amoebaGeneralizedKirkwoodForce->setParticleParameters(i, charge, 0.9*radius, 1.1*scale, 1.2*descreen, 1.3*neck);
+        double charge, radius, scale, descreenRadius, neckscale;
+        amoebaGeneralizedKirkwoodForce->getParticleParameters(i, charge, radius, scale, descreenRadius, neckscale);
+        amoebaGeneralizedKirkwoodForce->setParticleParameters(i, charge, 0.9*radius, 1.1*scale, 1.2*descreenRadius, 1.3*neckscale);
     }
     LangevinIntegrator integrator2(0.0, 0.1, 0.01);
     Context context2(system, integrator2, context.getPlatform());
@@ -7204,7 +7184,7 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm() {
     catch (std::exception ex) {
         exceptionThrown = true;
     }
-    ASSERT(exceptionThrown)
+    ASSERT(exceptionThrown);
     amoebaGeneralizedKirkwoodForce->updateParametersInContext(context);
     state1 = context.getState(State::Forces | State::Energy);
     compareForcesEnergy(testName, state2.getPotentialEnergy(), state1.getPotentialEnergy(), state2.getForces(), state1.getForces(), tolerance);
@@ -7843,7 +7823,7 @@ static void testGeneralizedKirkwoodVillinExtrapolatedPolarization() {
     double energy;
 
     // We don't have reference values for this case, but at least check that force and energy are consistent.
-    // double expectedEnergy = -8650.43;
+    
     setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::Extrapolated, 0, forces, energy);
 }
 
@@ -8480,6 +8460,7 @@ int main(int argc, char* argv[]) {
 
         // test direct and mutual polarization cases and
         // mutual polarization w/ the cavity term
+
         testGeneralizedKirkwoodAmmoniaDirectPolarization();
         testGeneralizedKirkwoodAmmoniaMutualPolarization();
         testGeneralizedKirkwoodAmmoniaExtrapolatedPolarization();

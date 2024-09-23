@@ -175,7 +175,7 @@ public:
      * @param tanhRescale Zero to turn off Tanh rescaling; one to turn on.
     */
     void setTanhRescaling(bool tanhRescale) {
-        tanhRescaling = tanhRescale;
+        this->tanhRescaling = tanhRescale;
     }
 
     /**
@@ -202,6 +202,20 @@ public:
     }
 
     /**
+    * Get the offset added to the atomic radius of each atom that sets the beginning of the
+     * descreening integral when calculating effective Born radii.
+    */
+    double getDescreenOffset() const;
+
+    /**
+     * Get the offset added to the atomic radius of each atom that sets the beginning of the
+     * descreening integral when calculating effective Born radii.
+     *
+     * @param descreenOffet The descreening offset (nm).
+     */
+    void setDescreenOffset(double descreenOffet);
+
+    /**
      * Get the flag signaling whether the cavity term should be included
      */
     int getIncludeCavityTerm() const;
@@ -214,28 +228,28 @@ public:
     void setIncludeCavityTerm(int includeCavityTerm);
 
     /**
-     * Get the probe radius (nm) used in SASA contribution
+     * Get the probe radius (nm) used for the cavity contribution.
      */
     double getProbeRadius() const;
 
     /**
-     * Set the probe radius (nm) used in SASA contribution
+     * Set the probe radius (nm) used for the cavity contribution.
      *
      * @param probeRadius The probeRadius for the cavity term.
      */
     void setProbeRadius(double probeRadius);
 
     /**
-     * Get the offset added to the atomic radius of each atom that sets the beginning of the descreening integral.
+     * Get the dielectric offset (nm) used for cavity contribution.
      */
     double getDielectricOffset() const;
 
     /**
-     * Set the offset added to the atomic radius of each atom that sets the beginning of the descreening integral.
+     * Set the dielectric offset (nm) used for cavity contribution.
      *
-     * @param descreenOffet The descreening offset (nm).
+     * @param dielectricOffset The dielectric offset (nm).
      */
-    void setDielectricOffset(double descreenOffet);
+    void setDielectricOffset(double dielectricOffset);
 
     /**
      * Get the surface area factor kJ/(nm*nm) used in SASA contribution
@@ -275,7 +289,7 @@ private:
     bool tanhRescaling;
     double solventDielectric, soluteDielectric, dielectricOffset,
            probeRadius, surfaceAreaFactor;
-    double beta0, beta1, beta2;
+    double beta0, beta1, beta2, descreenOffset;
     std::vector<ParticleInfo> particles;
 };
 
