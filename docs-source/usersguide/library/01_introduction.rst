@@ -46,7 +46,7 @@ license.  This is a very permissive license which allows them to be used in
 almost any way, requiring only that you retain the copyright notice and
 disclaimer when distributing them.
 
-The CUDA and OpenCL platforms are distributed under the GNU Lesser General
+The CUDA, HIP, and OpenCL platforms are distributed under the GNU Lesser General
 Public License (LGPL).  This also allows you to use, modify, and distribute them
 in any way you want, but it requires you to also distribute the source code for
 your modifications.  This restriction applies only to modifications to OpenMM
@@ -280,8 +280,8 @@ simulation; it is a fairly generic computational API.  In addition to defining
 the generic classes, OpenMM also defines abstract subclasses of KernelImpl
 corresponding to specific calculations.  For example, there is a class called
 CalcHarmonicBondForceKernel to implement HarmonicBondForce and a class called
-IntegrateLangevinStepKernel to implement LangevinIntegrator.  It is these
-classes for which each Platform must provide a concrete subclass.
+IntegrateLangevinMiddleStepKernel to implement LangevinMiddleIntegrator.  It is
+these classes for which each Platform must provide a concrete subclass.
 
 This architecture is designed to allow easy extensibility.  To support a new
 hardware platform, for example, you create concrete subclasses of all the
@@ -330,6 +330,9 @@ conventional CPUs.
 **CudaPlatform**\ : This platform is implemented using the CUDA language, and
 performs calculations on Nvidia GPUs.
 
+**HipPlatform**\ : This platform is implemented using the HIP language, and
+performs calculations on ROCm-compatible AMD GPUs.
+
 **OpenCLPlatform**\ : This platform is implemented using the OpenCL language,
 and performs calculations on a variety of types of GPUs and CPUs.
 
@@ -343,8 +346,8 @@ The choice of which platform to use for a simulation depends on various factors:
    some older computers.  Also, for simulations that use certain features
    (primarily the various “custom” force classes), it may be faster to use the
    OpenCL platform running on the CPU.
-#. The CUDA platform can only be used with NVIDIA GPUs.  For using an AMD or
-   Intel GPU, use the OpenCL platform.
-#. The AMOEBA force field only works with the CUDA platform, not with the OpenCL
-   platform.  It also works with the Reference and CPU platforms, but the performance
-   is usually too slow to be useful on those platforms.
+#. The CUDA platform can be used with NVIDIA GPUs.  For using an AMD GPU,
+   use the HIP platform (or the OpenCL platform which is usually slower), for
+   using an Intel GPU, use the OpenCL platform.
+#. The AMOEBA force field works with all platforms, but the performance
+   of the Reference and CPU platforms is usually too slow to be useful.

@@ -281,6 +281,18 @@ add_custom_target(PythonSdist
     COMMENT "Packaging source distribution package (sdist)..."
 )
 
+# Wheel
+set(PYTHON_SETUP_COMMAND bdist_wheel)
+configure_file(pysetup.cmake.in
+    "${CMAKE_CURRENT_BINARY_DIR}/pysetupbdist_wheel.cmake" @ONLY)
+add_custom_target(PythonBdistWheel
+    COMMAND ${CMAKE_COMMAND}
+        -P "${CMAKE_CURRENT_BINARY_DIR}/pysetupbdist_wheel.cmake"
+    DEPENDS ${STAGING_OUTPUT_FILES} "${CMAKE_CURRENT_BINARY_DIR}/pysetupbdist_wheel.cmake"
+    WORKING_DIRECTORY ${OPENMM_PYTHON_STAGING_DIR}
+    COMMENT "Packaging wheel (bdist_wheel)..."
+)
+
 set(OPENMM_PYTHON_USER_INSTALL OFF CACHE BOOL
     "Whether to install OpenMM Python binary module into the user site-packages directory")
 mark_as_advanced(OPENMM_PYTHON_USER_INSTALL)

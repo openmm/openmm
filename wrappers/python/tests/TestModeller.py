@@ -1,5 +1,6 @@
 from collections import defaultdict
 import unittest
+import random
 
 from validateModeller import *
 from openmm.app import *
@@ -980,6 +981,33 @@ class TestModeller(unittest.TestCase):
             names1 = sorted([a.name for a in res1.atoms()])
             names2 = sorted([a.name for a in res2.atoms()])
             self.assertEqual(names1, names2)
+        # Reset the loaded definitions so we don't affect other tests.
+        Modeller._residueHydrogens = {}
+        Modeller._hasLoadedStandardHydrogens = False
+
+    def test_addSpecificHydrogens(self):
+        """Test specifying exactly which hydrogens to add."""
+        pdb = PDBFile('systems/glycopeptide.pdb')
+        variants = [None]*pdb.topology.getNumResidues()
+        for residue in pdb.topology.residues():
+            if residue.name != 'ALA':
+                var = []
+                for atom1, atom2 in residue.bonds():
+                    if atom1.element == element.hydrogen:
+                        var.append((atom1.name, atom2.name))
+                    elif atom2.element == element.hydrogen:
+                        var.append((atom2.name, atom1.name))
+                variants[residue.index] = var
+        modeller = Modeller(pdb.topology, pdb.positions)
+        hydrogens = [a for a in modeller.topology.atoms() if a.element == element.hydrogen and random.random() < 0.7]
+        modeller.delete(hydrogens)
+        self.assertTrue(modeller.topology.getNumAtoms() < pdb.topology.getNumAtoms())
+        modeller.addHydrogens(variants=variants)
+        self.assertEqual(modeller.topology.getNumAtoms(), pdb.topology.getNumAtoms())
+        for res1, res2 in zip(pdb.topology.residues(), modeller.topology.residues()):
+            names1 = sorted([a.name for a in res1.atoms()])
+            names2 = sorted([a.name for a in res2.atoms()])
+            self.assertEqual(names1, names2)
 
     def test_removeExtraHydrogens(self):
         """Test that addHydrogens() can remove hydrogens that shouldn't be there. """
@@ -1269,6 +1297,49 @@ class TestModeller(unittest.TestCase):
             # None and Double from topology; other Nones and Single from topology_to_add
             {(None, None), (Single, 1.0), (Double, 2.0)}
         )
+
+    def test_residueTemplates(self):
+        """Test the residueTemplates argument to Modeller methods"""
+
+        # Create a Topology and ForceField involving residues that match multiple templates.
+
+        topology = Topology()
+        chain = topology.addChain()
+        residue1 = topology.addResidue('Fe', chain)
+        topology.addAtom('Fe', element.iron, residue1)
+        residue2 = topology.addResidue('Fe', chain)
+        topology.addAtom('Fe', element.iron, residue2)
+        positions = [Vec3(0, 0, 0), Vec3(1, 0, 0)]*nanometers
+        ff = ForceField('amber14/tip3pfb.xml', 'amber14/lipid17.xml')
+        residueTemplates = {residue1: 'FE2', residue2: 'FE'}
+
+        # Test addSolvent().
+
+        modeller = Modeller(topology, positions)
+        with self.assertRaises(Exception):
+            modeller.addSolvent(ff, padding=1*nanometer)
+        modeller.addSolvent(ff, padding=1*nanometer, residueTemplates=residueTemplates)
+
+        # Test addHydrogens().
+
+        modeller = Modeller(topology, positions)
+        with self.assertRaises(Exception):
+            modeller.addHydrogens(ff)
+        modeller.addHydrogens(ff, residueTemplates=residueTemplates)
+
+        # Test addExtraParticles().
+
+        modeller = Modeller(topology, positions)
+        with self.assertRaises(Exception):
+            modeller.addExtraParticles(ff)
+        modeller.addExtraParticles(ff, residueTemplates=residueTemplates)
+
+        # Test addMembrane().
+
+        modeller = Modeller(topology, positions)
+        with self.assertRaises(Exception):
+            modeller.addMembrane(ff)
+        modeller.addMembrane(ff, residueTemplates=residueTemplates)
 
     def assertVecAlmostEqual(self, p1, p2, tol=1e-7):
         scale = max(1.0, norm(p1),)

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2015 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -31,35 +31,6 @@
 
 #include "CudaTests.h"
 #include "TestCustomAngleForce.h"
-
-void testParallelComputation() {
-    System system;
-    const int numParticles = 200;
-    for (int i = 0; i < numParticles; i++)
-        system.addParticle(1.0);
-    CustomAngleForce* force = new CustomAngleForce("(theta-1.1)^2");
-    vector<double> params;
-    for (int i = 2; i < numParticles; i++)
-        force->addAngle(i-2, i-1, i, params);
-    system.addForce(force);
-    vector<Vec3> positions(numParticles);
-    for (int i = 0; i < numParticles; i++)
-        positions[i] = Vec3(i, i%2, 0);
-    VerletIntegrator integrator1(0.01);
-    Context context1(system, integrator1, platform);
-    context1.setPositions(positions);
-    State state1 = context1.getState(State::Forces | State::Energy);
-    VerletIntegrator integrator2(0.01);
-    string deviceIndex = platform.getPropertyValue(context1, CudaPlatform::CudaDeviceIndex());
-    map<string, string> props;
-    props[CudaPlatform::CudaDeviceIndex()] = deviceIndex+","+deviceIndex;
-    Context context2(system, integrator2, platform, props);
-    context2.setPositions(positions);
-    State state2 = context2.getState(State::Forces | State::Energy);
-    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);
-    for (int i = 0; i < numParticles; i++)
-        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
-}
 
 void runPlatformTests() {
     testParallelComputation();

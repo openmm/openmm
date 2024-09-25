@@ -515,7 +515,7 @@ carbohydrates, include that file as well:
     forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml', 'amber14/GLYCAM_06j-1.xml')
 
 Be aware that GLYCAM works somewhat differently from most force fields.  It uses
-its own nonstandard `naming convention <http://glycam.org/docs/forcefield/glycam-naming-2>`_
+its own nonstandard `naming convention <https://glycam.org/docs/forcefield/glycam-naming-2/index.html>`_
 for carbohydrates, and requires your input file to follow it.  If any residues have
 names different from what it expects, GLYCAM will be unable to assign parameters
 to them.

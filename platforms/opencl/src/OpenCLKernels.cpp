@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -449,11 +449,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 // Create required data structures.
 
                 int elementSize = (cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-                int roundedZSize = PmeOrder*(int) ceil(gridSizeZ/(double) PmeOrder);
-                int gridElements = gridSizeX*gridSizeY*roundedZSize;
+                int gridElements = gridSizeX*gridSizeY*gridSizeZ;
                 if (doLJPME) {
-                    roundedZSize = PmeOrder*(int) ceil(dispersionGridSizeZ/(double) PmeOrder);
-                    gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*roundedZSize);
+                    gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
                 }
                 pmeGrid1.initialize(cl, gridElements, 2*elementSize, "pmeGrid1");
                 pmeGrid2.initialize(cl, gridElements, 2*elementSize, "pmeGrid2");
@@ -1071,7 +1069,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     return energy;
 }
 
-void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force) {
+void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
     // Make sure the new parameters are acceptable.
 
     if (force.getNumParticles() != cl.getNumAtoms())
@@ -1111,17 +1109,32 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
 
     // Record the per-particle parameters.
 
-    vector<mm_float4> baseParticleParamVec(cl.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-    for (int i = 0; i < force.getNumParticles(); i++) {
-        double charge, sigma, epsilon;
-        force.getParticleParameters(i, charge, sigma, epsilon);
-        baseParticleParamVec[i] = mm_float4(charge, sigma, epsilon, 0);
+    if (firstParticle <= lastParticle) {
+        vector<mm_float4> baseParticleParamVec(cl.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+        for (int i = 0; i < force.getNumParticles(); i++) {
+            double charge, sigma, epsilon;
+            force.getParticleParameters(i, charge, sigma, epsilon);
+            baseParticleParamVec[i] = mm_float4(charge, sigma, epsilon, 0);
+        }
+        baseParticleParams.uploadSubArray(&baseParticleParamVec[firstParticle], firstParticle, lastParticle-firstParticle+1);
+
+        // Compute the self energy.
+
+        ewaldSelfEnergy = 0.0;
+        if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
+            if (cl.getContextIndex() == 0) {
+                for (int i = 0; i < force.getNumParticles(); i++) {
+                    ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                    if (doLJPME)
+                        ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
+                }
+            }
+        }
     }
-    baseParticleParams.upload(baseParticleParamVec);
     
     // Record the exceptions.
-    
-    if (numExceptions > 0) {
+
+    if (firstException <= lastException) {
         vector<mm_float4> baseExceptionParamsVec(numExceptions);
         for (int i = 0; i < numExceptions; i++) {
             int particle1, particle2;
@@ -1136,19 +1149,9 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
     
     // Compute other values.
     
-    ewaldSelfEnergy = 0.0;
-    if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
-        if (cl.getContextIndex() == 0) {
-            for (int i = 0; i < force.getNumParticles(); i++) {
-                ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
-                if (doLJPME)
-                    ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
-            }
-        }
-    }
     if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
-    cl.invalidateMolecules(info);
+    cl.invalidateMolecules(info, firstParticle <= lastParticle, firstException <= lastException);
     recomputeParams = true;
 }
 

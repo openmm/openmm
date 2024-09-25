@@ -2604,10 +2604,8 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
 
         // Create required data structures.
 
-        int roundedZSize = PmeOrder*(int) ceil(gridSizeZ/(double) PmeOrder);
-        int gridElements = gridSizeX*gridSizeY*roundedZSize;
-        roundedZSize = PmeOrder*(int) ceil(dispersionGridSizeZ/(double) PmeOrder);
-        gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*roundedZSize);
+        int gridElements = gridSizeX*gridSizeY*gridSizeZ;
+        gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
         pmeGrid1.initialize(cc, gridElements, elementSize, "pmeGrid1");
         pmeGrid2.initialize(cc, gridElements, 2*elementSize, "pmeGrid2");
         if (useFixedPointChargeSpreading()) {
@@ -2785,9 +2783,11 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
         pmeDefines["CHARGE"] = "charges[atom]";
         pmeDefines["USE_LJPME"] = "1";
         program = cc.compileProgram(CommonKernelSources::pme, pmeDefines);
-        dpmeFinishSpreadChargeKernel = program->createKernel("finishSpreadCharge");
-        dpmeFinishSpreadChargeKernel->addArg(pmeGrid2);
-        dpmeFinishSpreadChargeKernel->addArg(pmeGrid1);
+        if (useFixedPointChargeSpreading()) {
+            dpmeFinishSpreadChargeKernel = program->createKernel("finishSpreadCharge");
+            dpmeFinishSpreadChargeKernel->addArg(pmeGrid2);
+            dpmeFinishSpreadChargeKernel->addArg(pmeGrid1);
+        }
         dpmeGridIndexKernel = program->createKernel("findAtomGridIndex");
         dpmeGridIndexKernel->addArg(cc.getPosq());
         dpmeGridIndexKernel->addArg(pmeAtomGridIndex);
@@ -2795,7 +2795,10 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
             dpmeGridIndexKernel->addArg();
         dpmeSpreadChargeKernel = program->createKernel("gridSpreadCharge");
         dpmeSpreadChargeKernel->addArg(cc.getPosq());
-        dpmeSpreadChargeKernel->addArg(pmeGrid2);
+        if (useFixedPointChargeSpreading())
+            dpmeSpreadChargeKernel->addArg(pmeGrid2);
+        else
+            dpmeSpreadChargeKernel->addArg(pmeGrid1);
         for (int i = 0; i < 8; i++)
             dpmeSpreadChargeKernel->addArg();
         dpmeSpreadChargeKernel->addArg(pmeAtomGridIndex);
@@ -3266,9 +3269,13 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
 
         dpmeGridIndexKernel->execute(cc.getNumAtoms());
         sortGridIndex();
-        cc.clearBuffer(pmeGrid2);
-        dpmeSpreadChargeKernel->execute(cc.getNumAtoms(), 128);
-        dpmeFinishSpreadChargeKernel->execute(dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
+        if (useFixedPointChargeSpreading())
+            cc.clearBuffer(pmeGrid2);
+        else
+            cc.clearBuffer(pmeGrid1);
+        dpmeSpreadChargeKernel->execute(PmeOrder*cc.getNumAtoms(), 128);
+        if (useFixedPointChargeSpreading())
+            dpmeFinishSpreadChargeKernel->execute(dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
         computeFFT(true, true);
         if (includeEnergy)
             dpmeEvalEnergyKernel->execute(dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2011-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2011-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,6 +36,7 @@
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceConstraints.h"
 #include "ReferenceVirtualSites.h"
+#include "ReferenceForce.h"
 #include <set>
 
 using namespace OpenMM;
@@ -54,6 +55,11 @@ static vector<Vec3>& extractVelocities(ContextImpl& context) {
 static vector<Vec3>& extractForces(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *data->forces;
+}
+
+static Vec3* extractBoxVectors(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return data->periodicBoxVectors;
 }
 
 static ReferenceConstraints& extractConstraints(ContextImpl& context) {
@@ -103,6 +109,7 @@ void ReferenceCalcDrudeForceKernel::initialize(const System& system, const Drude
     pairThole.resize(numPairs);
     for (int i = 0; i < numPairs; i++)
         force.getScreenedPairParameters(i, pair1[i], pair2[i], pairThole[i]);
+    periodic = force.usesPeriodicBoundaryConditions();
 }
 
 double ReferenceCalcDrudeForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
@@ -170,6 +177,7 @@ double ReferenceCalcDrudeForceKernel::execute(ContextImpl& context, bool include
     // Compute the screened interaction between bonded dipoles.
     
     int numPairs = pair1.size();
+    Vec3* boxVectors = extractBoxVectors(context);
     for (int i = 0; i < numPairs; i++) {
         int dipole1 = pair1[i];
         int dipole2 = pair2[i];
@@ -181,8 +189,13 @@ double ReferenceCalcDrudeForceKernel::execute(ContextImpl& context, bool include
                 int p1 = dipole1Particles[j];
                 int p2 = dipole2Particles[k];
                 double chargeProduct = charge[dipole1]*charge[dipole2]*(j == k ? 1 : -1);
-                Vec3 delta = pos[p1]-pos[p2];
-                double r = sqrt(delta.dot(delta));
+                double deltaR[ReferenceForce::LastDeltaRIndex];
+                if (periodic)
+                    ReferenceForce::getDeltaRPeriodic(pos[p2], pos[p1], boxVectors, deltaR);
+                else
+                    ReferenceForce::getDeltaR(pos[p2], pos[p1], deltaR);
+                Vec3 delta(deltaR[ReferenceForce::XIndex], deltaR[ReferenceForce::YIndex], deltaR[ReferenceForce::ZIndex]);
+                double r = deltaR[ReferenceForce::RIndex];
                 double u = r*uscale;
                 double screening = 1.0 - (1.0+0.5*u)*exp(-u);
                 energy += ONE_4PI_EPS0*chargeProduct*screening/r;

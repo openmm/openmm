@@ -1,19 +1,16 @@
 name: build
 channels:
 - conda-forge
-- bioconda
 dependencies:
 # build
 - cmake
+- make
 - ccache
+- sysroot_linux-64 2.17
 # host
 - python
-- cython
-- swig
-- numpy
 - doxygen 1.8.14
-# test
-- pytest
-- pytest-xdist
-- pytest-timeout
-- gromacs
+- hip-devel
+- hipcc
+- rocm-cmake
+- rocm-device-libs

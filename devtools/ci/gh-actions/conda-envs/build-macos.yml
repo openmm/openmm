@@ -11,7 +11,7 @@ dependencies:
 - cython
 - swig
 - numpy
-- doxygen 1.9.1
+- doxygen 1.8.14
 # test
 - pytest
 - pytest-xdist

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2019 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Yutong Zhao                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -154,8 +154,8 @@ void testSerializeCustomIntegrator() {
     intg->addGlobalVariable("oute", 0);
     intg->addGlobalVariable("oute1", 0);
     intg->addGlobalVariable("oute2", 0);
-    intg->addGlobalVariable("oute3_conditional_v1", 0);// HACK: need addGlobals to be alphabetical to work around bug
     intg->addGlobalVariable("oute3_conditional_v2", 0);
+    intg->addGlobalVariable("oute3_conditional_v1", 0);
     intg->addComputePerDof("outf", "f");
     intg->addComputePerDof("outf1", "f1");
     intg->addComputePerDof("outf2", "f2");
