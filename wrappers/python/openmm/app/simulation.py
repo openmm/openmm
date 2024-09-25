@@ -207,8 +207,14 @@ class Simulation(object):
             anyReport = False
             for i, reporter in enumerate(self.reporters):
                 nextReport[i] = reporter.describeNextReport(self)
-                if nextReport[i][0] > 0 and nextReport[i][0] <= nextSteps:
-                    nextSteps = nextReport[i][0]
+                # Allow to pass either a dictionary, or a tuple from the reporter for backwards compatibility
+                if isinstance(nextReport[i], dict):
+                    steps = nextReport[i]['steps']
+                else:
+                    steps = nextReport[i][0]
+
+                if steps > 0 and steps <= nextSteps:
+                    nextSteps = steps
                     anyReport = True
             stepsToGo = nextSteps
             while stepsToGo > 10:
@@ -226,19 +232,33 @@ class Simulation(object):
                 unwrapped = []
                 either = []
                 for reporter, report in zip(self.reporters, nextReport):
-                    if report[0] == nextSteps:
-                        if len(report) > 5:
-                            wantWrap = report[5]
-                            if wantWrap is None:
+                    if isinstance(report, dict):
+                        if report['steps'] == nextSteps:
+                            wantWrap = self._usesPBC if report['periodic'] is None else report['periodic']
+
+                            if not 'positions' in report['include']: # if no positions are requested, we don't care about pbc
+                                either.append((reporter, report))
+                            elif wantWrap:
+                                wrapped.append((reporter, report))
+                            else:
+                                unwrapped.append((reporter, report))
+
+                    else:
+                        if report[0] == nextSteps:
+                            if len(report) > 5:
+                                wantWrap = report[5]
+                                if wantWrap is None:
+                                    wantWrap = self._usesPBC
+                            else:
                                 wantWrap = self._usesPBC
-                        else:
-                            wantWrap = self._usesPBC
-                        if not report[1]:
-                            either.append((reporter, report))
-                        elif wantWrap:
-                            wrapped.append((reporter, report))
-                        else:
-                            unwrapped.append((reporter, report))
+
+                            if not report[1]:
+                                either.append((reporter, report))
+                            elif wantWrap:
+                                wrapped.append((reporter, report))
+                            else:
+                                unwrapped.append((reporter, report))
+
                 if len(wrapped) > len(unwrapped):
                     wrapped += either
                 else:
@@ -252,23 +272,43 @@ class Simulation(object):
                     self._generate_reports(unwrapped, False)
     
     def _generate_reports(self, reports, periodic):
-        getPositions = False
-        getVelocities = False
-        getForces = False
-        getEnergy = False
-        for reporter, next in reports:
-            if next[1]:
-                getPositions = True
-            if next[2]:
-                getVelocities = True
-            if next[3]:
-                getForces = True
-            if next[4]:
-                getEnergy = True
-        state = self.context.getState(positions=getPositions, velocities=getVelocities, forces=getForces,
-                                      energy=getEnergy, parameters=True, enforcePeriodicBox=periodic,
+        '''
+        reports is a tuple of (reporter, nextReport)
+        reporter is the corresponding reporter object
+        nextReport is a description on what the reporter needs in the context. This can either be a dict, or a tuple (old).
+        '''
+        # Separate into new and old format for reports
+        oldReports = []
+        newReports = []
+        for report in reports:
+            if isinstance(report[1], dict):
+                newReports.append(report)
+            else:
+                oldReports.append(report)
+
+        # Check if any reporter needs positions, velocities,...
+        # will return False if newReports is empty
+        positions = any(['positions' in report[1]['include'] for report in newReports])
+        velocities = any(['velocities' in report[1]['include'] for report in newReports])
+        forces = any(['forces' in report[1]['include'] for report in newReports])
+        energy = any(['energy' in report[1]['include'] for report in newReports])
+        integratorParameters = any(['integratorParameters' in report[1]['include'] for report in newReports])
+        parameterDerivatives = any(['parameterDerivatives' in report[1]['include'] for report in newReports])
+
+        for reporter, nextReport in oldReports:
+            if nextReport[1]:
+                positions = True
+            if nextReport[2]:
+                velocities = True
+            if nextReport[3]:
+                forces = True
+            if nextReport[4]:
+                energy = True
+
+        state = self.context.getState(positions=positions, velocities=velocities, forces=forces,
+                                      energy=energy, parameters=True, integratorParameters=integratorParameters, parameterDerivatives=parameterDerivatives, enforcePeriodicBox=periodic,
                                       groups=self.context.getIntegrator().getIntegrationForceGroups())
-        for reporter, next in reports:
+        for reporter, nextReport in reports:
             reporter.report(self, state)
 
     def saveCheckpoint(self, file):
