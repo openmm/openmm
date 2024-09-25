@@ -96,6 +96,6 @@ CUDA version it was compiled with.
     python -m openmm.testInstallation
 
 This command confirms that OpenMM is installed, checks whether GPU acceleration
-is available (via the OpenCL and/or CUDA platforms), and verifies that all
+is available (via the CUDA, OpenCL, and/or HIP platforms), and verifies that all
 platforms produce consistent results.
 

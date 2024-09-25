@@ -106,6 +106,12 @@ values.  For example,
 
 This tells it to use both devices 0 and 1, splitting the work between them.
 
+HIP Platform
+************
+
+The HIP Platform recognizes exactly the same Platform-specific properties as
+the CUDA platform.
+
 CPU Platform
 ************
 

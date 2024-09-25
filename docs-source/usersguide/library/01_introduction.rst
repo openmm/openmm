@@ -347,7 +347,7 @@ The choice of which platform to use for a simulation depends on various factors:
    (primarily the various “custom” force classes), it may be faster to use the
    OpenCL platform running on the CPU.
 #. The CUDA platform can be used with NVIDIA GPUs.  For using an AMD GPU,
-   use the HIP platform (or the OpenCL platform which is usually slower), for
-   using an Intel GPU, use the OpenCL platform.
+   use the HIP platform (or the OpenCL platform which is usually slower).  For
+   using an Intel or Apple GPU, use the OpenCL platform.
 #. The AMOEBA force field works with all platforms, but the performance
    of the Reference and CPU platforms is usually too slow to be useful.
