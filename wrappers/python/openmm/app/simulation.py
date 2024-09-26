@@ -206,12 +206,20 @@ class Simulation(object):
             
             anyReport = False
             for i, reporter in enumerate(self.reporters):
-                nextReport[i] = reporter.describeNextReport(self)
-                # Allow to pass either a dictionary, or a tuple from the reporter for backwards compatibility
-                if isinstance(nextReport[i], dict):
-                    steps = nextReport[i]['steps']
-                else:
-                    steps = nextReport[i][0]
+                report = reporter.describeNextReport(self)
+                # convert to new dict format if the report is in the old tuple format
+                if isinstance(report, tuple):
+                    report_dict = {'steps': report[0]}
+
+                    if len(report) > 5:
+                        report_dict['periodic'] = report[5]
+
+                    includes = ['positions', 'velocities', 'forces', 'energy']
+                    report_dict['include'] = [includes[i] for i in range(4) if report[i+1]]
+                    report = report_dict
+                nextReport[i] = report
+                
+                steps = nextReport[i]['steps']
 
                 if steps > 0 and steps <= nextSteps:
                     nextSteps = steps
@@ -232,32 +240,15 @@ class Simulation(object):
                 unwrapped = []
                 either = []
                 for reporter, report in zip(self.reporters, nextReport):
-                    if isinstance(report, dict):
-                        if report['steps'] == nextSteps:
-                            wantWrap = self._usesPBC if report['periodic'] is None else report['periodic']
+                    if report['steps'] == nextSteps:
+                        wantWrap = report['periodic'] if 'periodic' in report else self._usesPBC
 
-                            if not 'positions' in report['include']: # if no positions are requested, we don't care about pbc
-                                either.append((reporter, report))
-                            elif wantWrap:
-                                wrapped.append((reporter, report))
-                            else:
-                                unwrapped.append((reporter, report))
-
-                    else:
-                        if report[0] == nextSteps:
-                            if len(report) > 5:
-                                wantWrap = report[5]
-                                if wantWrap is None:
-                                    wantWrap = self._usesPBC
-                            else:
-                                wantWrap = self._usesPBC
-
-                            if not report[1]:
-                                either.append((reporter, report))
-                            elif wantWrap:
-                                wrapped.append((reporter, report))
-                            else:
-                                unwrapped.append((reporter, report))
+                        if not 'positions' in report['include']: # if no positions are requested, we don't care about pbc
+                            either.append((reporter, report))
+                        elif wantWrap:
+                            wrapped.append((reporter, report))
+                        else:
+                            unwrapped.append((reporter, report))
 
                 if len(wrapped) > len(unwrapped):
                     wrapped += either
@@ -277,37 +268,11 @@ class Simulation(object):
         reporter is the corresponding reporter object
         nextReport is a description on what the reporter needs in the context. This can either be a dict, or a tuple (old).
         '''
-        # Separate into new and old format for reports
-        oldReports = []
-        newReports = []
-        for report in reports:
-            if isinstance(report[1], dict):
-                newReports.append(report)
-            else:
-                oldReports.append(report)
+        
+        includes = {property for report in reports for property in report[1].get('include', [])}
+        includeArgs = {property:True for property in includes}
 
-        # Check if any reporter needs positions, velocities,...
-        # will return False if newReports is empty
-        positions = any(['positions' in report[1]['include'] for report in newReports])
-        velocities = any(['velocities' in report[1]['include'] for report in newReports])
-        forces = any(['forces' in report[1]['include'] for report in newReports])
-        energy = any(['energy' in report[1]['include'] for report in newReports])
-        integratorParameters = any(['integratorParameters' in report[1]['include'] for report in newReports])
-        parameterDerivatives = any(['parameterDerivatives' in report[1]['include'] for report in newReports])
-
-        for reporter, nextReport in oldReports:
-            if nextReport[1]:
-                positions = True
-            if nextReport[2]:
-                velocities = True
-            if nextReport[3]:
-                forces = True
-            if nextReport[4]:
-                energy = True
-
-        state = self.context.getState(positions=positions, velocities=velocities, forces=forces,
-                                      energy=energy, parameters=True, integratorParameters=integratorParameters, parameterDerivatives=parameterDerivatives, enforcePeriodicBox=periodic,
-                                      groups=self.context.getIntegrator().getIntegrationForceGroups())
+        state = self.context.getState(groups=self.context.getIntegrator().getIntegrationForceGroups(), enforcePeriodicBox=periodic, parameters=True, **includeArgs)
         for reporter, nextReport in reports:
             reporter.report(self, state)
 
