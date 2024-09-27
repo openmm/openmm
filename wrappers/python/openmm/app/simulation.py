@@ -263,10 +263,15 @@ class Simulation(object):
                     self._generate_reports(unwrapped, False)
     
     def _generate_reports(self, reports, periodic):
-        '''
-        reports is a tuple of (reporter, nextReport)
-        reporter is the corresponding reporter object
-        nextReport is a description on what the reporter needs in the context. This can either be a dict, or a tuple (old).
+        '''Generate reports for all requested reporters
+
+        Parameters
+        ----------
+        reports :  list of tuples
+                each tuple in the list contains a reporter object and a description of the next report produced by reporter.describeNextReport().
+                Note that the old format of returning a tuple from reporter.describeNextReport() is not supported in this function.
+        periodic : bool
+                Specifies whether particle positions should be translated so the center of every molecule lies in the same periodic box.
         '''
         
         includes = {property for report in reports for property in report[1].get('include', [])}
