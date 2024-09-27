@@ -56,19 +56,25 @@ changing, may contain bugs, and should never be used for production work.  If
 you want a stable, well tested version of OpenMM, you should download the source
 code for the latest release as described above.
 
-CUDA or OpenCL Support
-----------------------
+CUDA, OpenCL, or HIP Support
+----------------------------
 
 If you want to compile OpenMM with support for running on GPUs, you will need
-CUDA and/or OpenCL.  MacOS comes with OpenCL built in, so nothing else needs to
+CUDA, HIP, or OpenCL.  MacOS comes with OpenCL built in, so nothing else needs to
 be installed.  For Linux, you need an appropriate SDK.
 
-The easiest way is to install the most recent CUDA Toolkit from https://developer.nvidia.com/cuda-downloads.
+The most recent CUDA Toolkit can be obtained from https://developer.nvidia.com/cuda-downloads.
 It includes the headers and libraries needed to compile both CUDA and OpenCL
 applications.  In addition, it has runtime libraries that are needed for running
 CUDA applications.  The runtime components for OpenCL applications are included
 with the GPU drivers from NVIDIA, AMD, and Intel, so make sure you have an
 up-to-date driver.
+
+The headers and libraries needed to build the HIP platform can be installed with
+conda using the following command.
+::
+
+    conda install -c conda-forge hip-devel hipcc rocm-cmake rocm-device-libs
 
 Other Required Software
 -----------------------
@@ -130,7 +136,7 @@ Build OpenMM with the command::
 Step 3: Test your build
 =======================
 
-This step is optional but recommended. Tests can take up to several minutes depending on your
+This step is optional but recommended. Tests can take a while depending on your
 hardware configuration.
 
 It is recommended that you make sure your local build of OpenMM works before trying
@@ -241,16 +247,20 @@ changing, may contain bugs, and should never be used for production work.  If
 you want a stable, well tested version of OpenMM, you should download the source
 code for the latest release as described above.
 
-CUDA or OpenCL Support
-----------------------
+CUDA, OpenCL, or HIP Support
+----------------------------
 
 If you want to compile OpenMM with support for running on GPUs, you will need
-CUDA and/or OpenCL.  Install the most recent CUDA Toolkit from https://developer.nvidia.com/cuda-downloads.
+CUDA, HIP, or OpenCL.
+
+The most recent CUDA Toolkit can be obtained from https://developer.nvidia.com/cuda-downloads.
 It includes the headers and libraries needed to compile both CUDA and OpenCL
 applications.  In addition, it has runtime libraries that are needed for running
 CUDA applications.  The runtime components for OpenCL applications are included
 with the GPU drivers from NVIDIA, AMD, and Intel, so make sure you have an
 up-to-date driver.
+
+To build the HIP platform, install the HIP SDK from https://rocm.docs.amd.com/projects/install-on-windows.
 
 Other Required Software
 -----------------------
@@ -304,6 +314,10 @@ There are several variables that can be adjusted in the CMake interface:
   "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.4/include", except
   with the correct version number for the toolkit you installed) and
   OPENCL_LIBRARY to point to the library (usually "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.4/lib/x64/OpenCL.lib").
+* If you are building the HIP platform, the SDK may be found automatically.  If
+  it is not, set HIP_DIR to "C:\AMD\ROCm\6.1\lib\cmake\hip" and HIPRTC_DIR to
+  "C:\AMD\ROCm\6.1\lib\cmake\hiprtc" (substituting the correct version number
+  for the SDK you installed).
 
 Press "Configure" again.  Adjust any variables that cause an error.
 
