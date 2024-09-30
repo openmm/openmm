@@ -179,7 +179,7 @@ class TestSimulation(unittest.TestCase):
                 
             def describeNextReport(self, simulation):
                 steps = self.interval - simulation.currentStep%self.interval
-                return (steps, True, False, False, False, self.periodic)
+                return {'steps':steps, 'periodic':self.periodic, 'include':['positions']}
         
             def report(self, simulation, state):
                 state2 = simulation.context.getState(getPositions=True, enforcePeriodicBox=self.periodic)

@@ -241,7 +241,7 @@ class Simulation(object):
                 either = []
                 for reporter, report in zip(self.reporters, nextReport):
                     if report['steps'] == nextSteps:
-                        wantWrap = report['periodic'] if 'periodic' in report else self._usesPBC
+                        wantWrap = self._usesPBC if report.get('periodic') is None else report['periodic']
 
                         if not 'positions' in report['include']: # if no positions are requested, we don't care about pbc
                             either.append((reporter, report))
