@@ -274,7 +274,7 @@ class Simulation(object):
                 Specifies whether particle positions should be translated so the center of every molecule lies in the same periodic box.
         '''
         
-        includes = set.union(*[set(report['include']) for report in reports[1]])
+        includes = set.union(*[set(report[1]['include']) for report in reports])
         includeArgs = {property:True for property in includes}
 
         state = self.context.getState(groups=self.context.getIntegrator().getIntegrationForceGroups(), enforcePeriodicBox=periodic, parameters=True, **includeArgs)
