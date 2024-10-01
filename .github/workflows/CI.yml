@@ -191,7 +191,7 @@ jobs:
           activate-environment: build
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.env }}.yml
           auto-activate-base: false
-          miniforge-version: Miniforge-pypy3
+          miniforge-variant: Miniforge-pypy3
           use-mamba: true
 
       - uses: conda-incubator/setup-miniconda@v3
@@ -202,7 +202,7 @@ jobs:
           activate-environment: build
           environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.env }}.yml
           auto-activate-base: false
-          miniforge-version: Miniforge3
+          miniforge-variant: Miniforge3
           use-mamba: true
 
       - name: "Install CUDA on Ubuntu (if needed)"
