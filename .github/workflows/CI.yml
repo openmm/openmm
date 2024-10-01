@@ -184,7 +184,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v3
         name: "Prepare base dependencies"
         if: matrix.python-version == 'pypy'
         with:
@@ -194,7 +194,7 @@ jobs:
           miniforge-version: Miniforge-pypy3
           use-mamba: true
 
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v3
         name: "Prepare base dependencies"
         if: matrix.python-version != 'pypy'
         with:
