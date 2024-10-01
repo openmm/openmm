@@ -13,7 +13,7 @@ dependencies:
 - cython
 - swig
 - numpy
-- doxygen 1.8.14
+- doxygen
 - khronos-opencl-icd-loader
 # test
 - pytest

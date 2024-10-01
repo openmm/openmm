@@ -14,7 +14,7 @@ dependencies:
 - swig
 - numpy
 - ocl-icd-system
-- doxygen 1.8.14
+- doxygen
 # test
 - pytest
 - pytest-xdist
