@@ -163,8 +163,7 @@ will be needed to generate it.  The return value should be a dictionary with the
   *(report interval)*\ -\ *(current step)*\ %\ *(report interval)*\ .  For
   example, if we want a report every 100 steps and the simulation is currently on
   step 530, we will return 100-(530%100) = 70.
-* :code:`include` (list of strings): Whether the next report will need :code:`positions`, :code:`velocities`, :code:`forces`, :code:`energy`, :code:`parameterDerivatives`,...
-  All keywords from :meth:`openmm.openmm.Context.getState()` are supported.
+* :code:`include` (list of strings): The types of information that need to be included in the next report. The values in the list correspond to arguments to :meth:`Context.getState()`. Allowed values include :code:`'positions'`, :code:`'velocities'`, :code:`'forces'`, :code:`'energy'`, :code:`'parameters'`, :code:`'parameterDerivatives'`, and :code:`'integratorParameters'`.
 * :code:`periodic` (bool, optional): Whether the positions should be wrapped to the periodic box.  If None or not set, it will
   automatically decide whether to wrap positions based on whether the System uses
   periodic boundary conditions.
