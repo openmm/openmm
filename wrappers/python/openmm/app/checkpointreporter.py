@@ -110,14 +110,11 @@ class CheckpointReporter(object):
 
         Returns
         -------
-        tuple
-            A five element tuple. The first element is the number of steps
-            until the next report. The remaining elements specify whether
-            that report will require positions, velocities, forces, and
-            energies respectively.
+        dict
+            A dictionary describing the required information for the next report
         """
         steps = self._reportInterval - simulation.currentStep%self._reportInterval
-        return (steps, False, False, False, False)
+        return {'steps':steps, 'periodic':None, 'include':[]}
 
     def report(self, simulation, state):
         """Generate a report.
