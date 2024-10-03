@@ -1333,9 +1333,9 @@ specify if you want further control over the minimization.  First, you can
 specify a tolerance for when the energy should be considered to have converged:
 ::
 
-    simulation.minimizeEnergy(tolerance=5*kilojoule/mole)
+    simulation.minimizeEnergy(tolerance=5*kilojoule/nanometer*mole)
 
-If you do not specify this parameter, a default tolerance of 10 kJ/mole is used.
+If you do not specify this parameter, a default tolerance of 10 kJ/nanometer mole is used.
 
 Second, you can specify a maximum number of iterations:
 ::
@@ -1350,7 +1350,7 @@ iterations it takes.
 These options are independent.  You can specify both if you want:
 ::
 
-    simulation.minimizeEnergy(tolerance=0.1*kilojoule/mole, maxIterations=500)
+    simulation.minimizeEnergy(tolerance=0.1*kilojoule/nanometer*mole, maxIterations=500)
 
 Removing Center of Mass Motion
 ==============================
