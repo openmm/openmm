@@ -27,6 +27,7 @@
 #include "openmm/common/BondedUtilities.h"
 #include "openmm/common/ComputeContext.h"
 #include "openmm/OpenMMException.h"
+#include "CommonKernelSources.h"
 #include <iostream>
 
 using namespace OpenMM;
@@ -102,6 +103,7 @@ void BondedUtilities::initialize(const System& system) {
     // Create the kernel.
 
     stringstream s;
+    s<<CommonKernelSources::bonded;
     for (int i = 0; i < (int) prefixCode.size(); i++)
         s<<prefixCode[i];
     s<<"KERNEL void computeBondedForces(GLOBAL mm_ulong* RESTRICT forceBuffer, GLOBAL mixed* RESTRICT energyBuffer, GLOBAL const real4* RESTRICT posq, int groups, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ";
@@ -159,10 +161,26 @@ string BondedUtilities::createForceSource(int forceIndex, int numBonds, int numA
         startAtom += indexWidth;
     }
     s<<computeForce<<"\n";
+    const int simdWidth = context.getSIMDWidth();
     for (int i = 0; i < numAtoms; i++) {
-        s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".x));\n";
-        s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".y));\n";
-        s<<"    ATOMIC_ADD(&forceBuffer[atom"<<(i+1)<<"+PADDED_NUM_ATOMS*2], (mm_ulong) realToFixedPoint(force"<<(i+1)<<".z));\n";
+        // Calculate the average number of intra-warp atomic conflicts
+        int conflicts = 0;
+        int prevAtom = -1;
+        for (int bond = 0; bond < numBonds; bond++) {
+            if (bond % simdWidth == 0) {
+                prevAtom = -1;
+            }
+            const int atom = forceAtoms[forceIndex][bond][i];
+            if (atom == prevAtom) {
+                conflicts++;
+            }
+            prevAtom = atom;
+        }
+        const double avgConflicts = double(conflicts) / ((numBonds + simdWidth - 1) / simdWidth);
+        if (avgConflicts > 4)
+            s<<"    saveBondedForceWithConflicts(index, "<<numBonds<<", forceBuffer, atom"<<(i+1)<<", force"<<(i+1)<<");\n";
+        else
+            s<<"    saveBondedForce(forceBuffer, atom"<<(i+1)<<", force"<<(i+1)<<");\n";
         s<<"    MEM_FENCE;\n";
     }
     s<<"}\n";
