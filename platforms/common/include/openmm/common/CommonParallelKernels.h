@@ -29,6 +29,7 @@
 
 #include "openmm/common/ComputeContext.h"
 #include "openmm/common/CommonKernels.h"
+#include "openmm/common/PuremdInterface.h"
 
 namespace OpenMM {
 
@@ -70,6 +71,7 @@ namespace OpenMM {
         ComputeContext& cc;
         std::vector<Kernel> kernels;
     };
+
 
     /**
      * This kernel is invoked by CustomBondForce to calculate the forces acting on the system and the energy of the system.

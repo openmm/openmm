@@ -1,0 +1,84 @@
+# PuReMD
+*.log
+*.prs
+*.pot
+*.trj
+*.res*
+
+# TeX
+*.aux
+*.log
+*.pyg
+*.synctex.gz
+*.nav
+*.snm
+*.out
+*.bbl
+*.blg
+*.log
+*.toc
+*.pdf
+_minted-*
+
+# ViM, emacs, nano, leafpad
+tags
+*.swp
+*~
+tags
+
+# Python
+*.pyc
+*.pyo
+
+# Libreoffice
+.~lock.*
+
+# Autotools
+.deps
+.dirstamp
+aclocal.m4
+autom4te.cache
+ar-lib
+compile
+confdefs.h
+config.log
+config.guess
+config.h
+config.h.in
+config.status
+config.sub
+configure
+depcomp
+install-sh
+libtool
+ltmain.sh
+Makefile
+Makefile.in
+missing
+stamp-h1
+test-driver
+*.lo
+*.la
+
+# Compiled languages (C,C++,Fortran,...)
+*.o
+*.so
+*.a
+
+# flex/bison files
+*.yy.c
+*.yy.h
+*.tab.c
+*.tab.h
+
+# PBS/torque job logs
+*.o[0-9]*
+*.e[0-9]*
+
+# General
+*.tar.gz
+*.pdf
+*/bin
+*/lib
+*.txt
+*.zip

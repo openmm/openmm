@@ -60,6 +60,11 @@ static vector<Vec3>& extractPositions(ContextImpl& context) {
     return *data->positions;
 }
 
+static vector<double>& extractCharges(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return *data->;
+}
+
 static vector<Vec3>& extractVelocities(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *data->velocities;
@@ -1477,4 +1482,43 @@ void CpuIntegrateLangevinMiddleStepKernel::execute(ContextImpl& context, const L
 
 double CpuIntegrateLangevinMiddleStepKernel::computeKineticEnergy(ContextImpl& context, const LangevinMiddleIntegrator& integrator) {
     return computeShiftedKineticEnergy(context, masses, 0.0);
+}
+
+
+void CpuCalcExternalPuremdForceKernel::initialize(const System& system, const ExternalPuremdForce& force) {
+    //does nothing
+}
+
+double CpuCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    // need extract all of the data.
+    vector<Vec3>& posData = extractPositions(context);
+    vector<double>& chargeData = extractCharges(context);
+    vector<Vec3>& forceData = extractForces(context);
+    // need seperate QM from MM
+
+    // need to call the PuremdInterface method
+
+    double energy = 0;
+    ReferenceAngleBondIxn angleBond;
+    if (usePeriodic)
+        angleBond.setPeriodic(extractBoxVectors(context));
+    bondForce.calculateForce(posData, angleParamArray, forceData, includeEnergy ? &energy : NULL, angleBond);
+    return energy;
+}
+
+void CpuCalcExternalPuremdForceKernel::copyParametersToContext(ContextImpl& context, const ExternalPuremdForce& force, int firstAngle, int lastAngle) {
+    if (numAngles != force.getNumAngles())
+        throw OpenMMException("updateParametersInContext: The number of angles has changed");
+
+    // Record the values.
+
+    for (int i = firstAngle; i <= lastAngle; ++i) {
+        int particle1, particle2, particle3;
+        double angle, k;
+        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
+        if (particle1 != angleIndexArray[i][0] || particle2 != angleIndexArray[i][1] || particle3 != angleIndexArray[i][2])
+            throw OpenMMException("updateParametersInContext: The set of particles in an angle has changed");
+        angleParamArray[i][0] = angle;
+        angleParamArray[i][1] = k;
+    }
 }

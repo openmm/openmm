@@ -31,6 +31,7 @@
 #include "CudaContext.h"
 #include "CudaKernels.h"
 #include "openmm/common/CommonKernels.h"
+#include "openmm/common/PuremdInterface.h"
 
 namespace OpenMM {
 
@@ -156,6 +157,21 @@ private:
     class Task;
     CudaPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
+};
+class CudaCalcExternalPuremdForceKernel: public CalcExternalPuremdForceKernel{
+  public:
+    CudaCalcExternalPuremdForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData&, const System& system);
+    virtual void initialize(const System& system, const ExternalPuremdForce& force) ;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    virtual void copyParametersToContext(ContextImpl& context, const ExternalPuremdForce& force, int firstBond, int lastBond) = 0;
+  private:
+    CudaPlatform::PlatformData& data;
+    CudaContext& cu;
+    CudaArray& posq;
+    std::vector<Kernel> kernels;
+    std::vector<int> atoms;
+    int numAllAtoms;
+    PuremdInterface Interface;
 };
 
 } // namespace OpenMM

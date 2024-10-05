@@ -318,3 +318,41 @@ void CudaParallelCalcNonbondedForceKernel::getPMEParameters(double& alpha, int& 
 void CudaParallelCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
     dynamic_cast<const CudaCalcNonbondedForceKernel&>(kernels[0].getImpl()).getLJPMEParameters(alpha, nx, ny, nz);
 }
+
+CudaCalcExternalPuremdForceKernel::CudaCalcExternalPuremdForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
+                                                                                                                                                                           CalcExternalPuremdForceKernel(name, platform), data(data) {
+    //dont do anything
+}
+
+void CudaCalcExternalPuremdForceKernel::initialize(const System& system, const ExternalPuremdForce& force) {
+    //still dont do anything
+    atoms.resize(force.getNumAtoms());
+    numAllAtoms = system.getNumParticles();
+    for(int i=0; i<force.getNumAtoms(); i++) force.getAtom(i, atoms[i]);
+}
+
+double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    //get positins, charges, etc.
+    mm_double4* posqBuff = (mm_double4*)  cu.getPinnedBuffer();
+
+    cu.getPosq().download(posqBuff, false);
+
+    std::vector<double> qm_pos(atoms.size()*3);
+    std::vector<double> mm_pos_q((numAllAtoms-atoms.size())*4);
+    for(int i=0; i<atoms.size();i++)
+    {
+          qm_pos
+    }
+    mm_double4
+
+
+    Interface.getReaxffPuremdForces(atoms.size(), QM_SYMBOLS, qm_pos,
+                                        numAllAtoms-atoms.size(),MM_SYMBOLS, mm_pos_q,
+                                        Force, )
+    return 0.0;
+}
+
+void CudaCalcExternalPuremdForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
+    for (int i = 0; i < (int) kernels.size(); i++)
+        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle, firstException, lastException);
+}

@@ -45,6 +45,7 @@
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
+#include "openmm/common/PurendInterface.h"
 #include <array>
 #include <tuple>
 
@@ -549,6 +550,18 @@ private:
     CpuLangevinMiddleDynamics* dynamics;
     std::vector<double> masses;
     double prevTemp, prevFriction, prevStepSize;
+};
+class CpuCalcExternalPuremdForceKernel: public CalcExternalPuremdForceKernel{
+  public:
+    CpuCalcExternalPuremdForceKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data): CalcExternalPuremdForceKernel(name, platform),
+              data(data) {
+    }
+    virtual void initialize(const System& system, const ExternalPuremdForce& force) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const ExternalPuremdForce& force, int firstBond, int lastBond) = 0;
+  private:
+    CpuPlatform::PlatformData& data;
+    PuremdInterface Interface;
 };
 
 } // namespace OpenMM

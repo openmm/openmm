@@ -508,3 +508,5 @@ void CommonParallelCalcCustomCompoundBondForceKernel::copyParametersToContext(Co
     for (int i = 0; i < (int) kernels.size(); i++)
         getKernel(i).copyParametersToContext(context, force);
 }
+
+
