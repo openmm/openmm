@@ -11,17 +11,19 @@
 using namespace OpenMM;
 using namespace std;
 
-ExternalPuremdForce::ExternalPuremdForce() : usePeriodic(false), numContexts(0) {
+ExternalPuremdForce::ExternalPuremdForce(const std::string& ffield_file, const std::string& control_file) :usePeriodic(false), numContexts(0), ffield_file(ffield_file), control_file(control_file) {
 }
 
-int ExternalPuremdForce::addAtom(int particle) {
-    atoms.push_back(AtomInfo(particle));
+int ExternalPuremdForce::addAtom(int particle, char symbol, bool isQM) {
+    atoms.push_back(AtomInfo(particle, symbol, isQM));
     return atoms.size()-1;
 }
 
-void ExternalPuremdForce::getAtom(int index, int &particle) const {
+void ExternalPuremdForce::getParticleParameters(int index, int &particle, char &symbol, int &isQM)  const {
     ASSERT_VALID_INDEX(index, atoms)
     particle = atoms[index].particle;
+    symbol = atoms[index].symbol;
+    isQM = static_cast<int>(atoms[index].isQM);
 }
 
 ForceImpl*ExternalPuremdForce::createImpl() const {

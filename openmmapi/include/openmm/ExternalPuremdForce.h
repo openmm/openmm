@@ -18,7 +18,7 @@ namespace OpenMM {
     /**
      * Create a ExternalPuremdForce.
      */
-      ExternalPuremdForce();
+      ExternalPuremdForce(const std::string& ffield_file, const std::string& control_file);
     /**
      * Get the number of harmonic bond stretch terms in the potential function
      */
@@ -26,19 +26,30 @@ namespace OpenMM {
         return atoms.size();
     }
     /**
+     * Gets the filenames used by the force field
+     *
+     * @param ffieldFile Force field file.
+     * @param controlFile Control file.
+     */
+    void getFileNames(std::string& ffieldFile, std::string& controlFile) const
+    {
+        ffieldFile = ffield_file;
+        controlFile = control_file;
+    }
+    /**
      * Add a bond term to the force field.
      *
      * @param particle the index of the particle
      * @return the index of the bond that was added
      */
-    int addAtom(int particle);
+    int addAtom(int particle, char symbol, bool isQM);
     /**
      * Get the bonding atom
      *
      * @param index the index of the atoms
      * @particle the particle index is going to be saved here
      */
-    void getAtom(int index, int& particle) const;
+    void getParticleParameters(int index, int& particle, char& symbol, int& isQM) const;
     /**
      * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
@@ -53,7 +64,12 @@ namespace OpenMM {
     ForceImpl* createImpl() const;
     private:
     class AtomInfo;
+    //called for each atom contains index, symbol and if its reactive
     std::vector<AtomInfo> atoms;
+    //params for puremd
+    std::string ffield_file;
+    std::string control_file;
+    //unused
     bool usePeriodic;
     mutable int numContexts, firstChangedBond, lastChangedBond;
 };
@@ -65,11 +81,16 @@ namespace OpenMM {
 class ExternalPuremdForce::AtomInfo {
 public:
     int particle;
+    char symbol;
+    bool isQM;
+
     AtomInfo() {
         particle = -1;
+        symbol = '\0';
+        isQM = false;
     }
-    AtomInfo(int particle) :
-            particle(particle) {
+    AtomInfo(int particle, char symbol, bool isQM) :
+            particle(particle), symbol(symbol), isQM(isQM) {
     }
 };
 

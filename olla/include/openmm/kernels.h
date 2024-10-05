@@ -67,6 +67,7 @@
 #include "openmm/NoseHooverChain.h"
 #include "openmm/ATMForce.h"
 #include "openmm/internal/CustomCPPForceImpl.h"
+#include "openmm/ExternalPuremdForce.h"
 #include <iosfwd>
 #include <set>
 #include <string>
@@ -364,6 +365,18 @@ public:
      * @param lastBond   the index of the last bond whose parameters might have changed
      */
     virtual void copyParametersToContext(ContextImpl& context, const CustomBondForce& force, int firstBond, int lastBond) = 0;
+};
+
+class CalcExternalPuremdForceKernel: public KernelImpl{
+  public:
+    static std::string Name(){
+        return "CalcExternalPuremdForce";
+    }
+    CalcExternalPuremdForceKernel(std::string name, const Platform& platform): KernelImpl(name, platform){
+    }
+    virtual void initialize(const System& system, const ExternalPuremdForce& force) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const ExternalPuremdForce& force, int firstBond, int lastBond) = 0;
 };
 
 /**

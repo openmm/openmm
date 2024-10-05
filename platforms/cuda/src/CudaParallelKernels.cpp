@@ -28,6 +28,8 @@
 #include "CudaKernelSources.h"
 #include "openmm/common/ContextSelector.h"
 #include "openmm/internal/timer.h"
+#include<numeric>
+
 
 using namespace OpenMM;
 using namespace std;
@@ -320,39 +322,107 @@ void CudaParallelCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int
 }
 
 CudaCalcExternalPuremdForceKernel::CudaCalcExternalPuremdForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
-                                                                                                                                                                           CalcExternalPuremdForceKernel(name, platform), data(data) {
-    //dont do anything
+                                                                                                                                                                           CalcExternalPuremdForceKernel(name, platform), data(data), cu() {
 }
 
 void CudaCalcExternalPuremdForceKernel::initialize(const System& system, const ExternalPuremdForce& force) {
-    //still dont do anything
+    std::string ffieldFile, controlFile;
+    force.getFileNames(ffieldFile, controlFile);
+    Interface.setInputFileNames(ffieldFile, controlFile);
+
+    //load atom parameters that wont change over time
     atoms.resize(force.getNumAtoms());
-    numAllAtoms = system.getNumParticles();
-    for(int i=0; i<force.getNumAtoms(); i++) force.getAtom(i, atoms[i]);
+    symbols.resize(force.getNumAtoms());
+    isQM.resize(force.getNumAtoms());
+
+    for(int i=0; i<force.getNumAtoms(); i++)
+    {
+        force.getParticleParameters(i, atoms[i], symbols[i], isQM[i]);
+    };
+    numQMAtoms = std::accumulate(isQM.begin(), isQM.end(), 0);
+    numMMAtoms = force.getNumAtoms()-numQMAtoms;
+    // simulation box info format change
+    simBoxInfo.resize(6);
+    std::vector<Vec3> pVecs(3);
+    system.getDefaultPeriodicBoxVectors(pVecs[0], pVecs[1], pVecs[2]);
+    for (int i=0; i<3; i++)
+    {
+        simBoxInfo[i] = std::sqrt(pVecs[i].dot(pVecs[i]));
+    }
+    simBoxInfo[3] = std::acos(pVecs[1].dot(pVecs[2])/(simBoxInfo[1]*simBoxInfo[2]))*180.0/M_PI;
+    simBoxInfo[4] =  std::acos(pVecs[0].dot(pVecs[2])/(simBoxInfo[0]*simBoxInfo[2]))*180.0/M_PI;
+    simBoxInfo[5] =  std::acos(pVecs[0].dot(pVecs[1])/(simBoxInfo[0]*simBoxInfo[1]))*180.0/M_PI;
 }
 
 double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    CudaContext& cu = *data.contexts[0];
+    ContextSelector selector(cu);
     //get positins, charges, etc.
-    mm_double4* posqBuff = (mm_double4*)  cu.getPinnedBuffer();
-
+    auto posqBuff = (mm_double4*)  cu.getPinnedBuffer();
     cu.getPosq().download(posqBuff, false);
 
-    std::vector<double> qm_pos(atoms.size()*3);
-    std::vector<double> mm_pos_q((numAllAtoms-atoms.size())*4);
+    //flattened vectors
+    std::vector<double> qm_pos(numQMAtoms*3);
+    std::vector<double> mm_pos_q(numMMAtoms*4);
+    std::vector<char> mmSymbols(atoms.size()), qmSymbols(atoms.size());
     for(int i=0; i<atoms.size();i++)
     {
-          qm_pos
+        if (0 != isQM[i])
+        {
+            qm_pos[i] = posqBuff[i].x;
+            qm_pos[i+1] = posqBuff[i].y;
+            qm_pos[i+2] = posqBuff[i].z;
+            qmSymbols[i] = symbols[i];
+        }
+        else
+        {
+            mm_pos_q[i] = posqBuff[i].x;
+            mm_pos_q[i+1] = posqBuff[i].y;
+            mm_pos_q[i+2] = posqBuff[i].z;
+            mm_pos_q[i+3] = posqBuff[i].w;
+            mmSymbols[i] = symbols[i];
+        }
     }
-    mm_double4
 
+    std::vector<double> qmForces, mmForces, qm_q;
 
-    Interface.getReaxffPuremdForces(atoms.size(), QM_SYMBOLS, qm_pos,
-                                        numAllAtoms-atoms.size(),MM_SYMBOLS, mm_pos_q,
-                                        Force, )
+    double energy;
+
+    Interface.getReaxffPuremdForces(numQMAtoms, qmSymbols, qm_pos,
+                                    numMMAtoms, mmSymbols, mm_pos_q,
+                                    simBoxInfo,
+                                    qmForces, mmForces, qm_q, energy);
+    // now we need to add the results to the forces in the context
+    auto forces = (mm_double4*) cu.getPinnedBuffer();
+    cu.getLongForceBuffer().download(forces, false);
+    int qmIndex = 0;
+    int mmIndex = 0;
+    for(int i=0; i<atoms.size(); i++)
+    {
+        if(0!=isQM[i])
+        {
+            forces[i].x += qmForces[qmIndex];
+            forces[i].y += qmForces[qmIndex+1];
+            forces[i].z += qmForces[qmIndex+2];
+            //charges got recalculated
+            posqBuff[i].w = qm_q[qmIndex];
+            ++qmIndex;
+        }
+        else
+        {
+            forces[i].x += mmForces[mmIndex];
+            forces[i].y += mmForces[mmIndex+1];
+            forces[i].z += mmForces[mmIndex+2];
+            ++mmIndex;
+        }
+    }
+    //update everything. it should work now.
+    cu.getLongForceBuffer().upload(forces);
+    cu.getPosq().upload(posqBuff);
+
     return 0.0;
 }
 
-void CudaCalcExternalPuremdForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
-    for (int i = 0; i < (int) kernels.size(); i++)
-        getKernel(i).copyParametersToContext(context, force, firstParticle, lastParticle, firstException, lastException);
+void CudaCalcExternalPuremdForceKernel::copyParametersToContext(ContextImpl& context, const ExternalPuremdForce& force, int firstParticle, int lastParticle) {
+ // for now leave this empty.
 }

@@ -161,16 +161,17 @@ private:
 class CudaCalcExternalPuremdForceKernel: public CalcExternalPuremdForceKernel{
   public:
     CudaCalcExternalPuremdForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData&, const System& system);
-    virtual void initialize(const System& system, const ExternalPuremdForce& force) ;
-    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    virtual void copyParametersToContext(ContextImpl& context, const ExternalPuremdForce& force, int firstBond, int lastBond) = 0;
+    void initialize(const System& system, const ExternalPuremdForce& force) ;
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+    void copyParametersToContext(ContextImpl& context, const ExternalPuremdForce& force, int firstBond, int lastBond);
   private:
     CudaPlatform::PlatformData& data;
-    CudaContext& cu;
-    CudaArray& posq;
     std::vector<Kernel> kernels;
     std::vector<int> atoms;
-    int numAllAtoms;
+    std::vector<char> symbols;
+    std::vector<int> isQM;
+    std::vector<double> simBoxInfo;
+    int numMMAtoms, numQMAtoms;
     PuremdInterface Interface;
 };
 

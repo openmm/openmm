@@ -8,10 +8,18 @@
 #include "spuremd.h"
 
 using namespace OpenMM;
-PuremdInterface::PuremdInterface( const std::vector<double> & sim_box_info, const std::string &ffield_filename, const std::string &control_filename): firstCall(true), sim_box_info(sim_box_info), ffield_filename(ffield_filename), control_filename(control_filename) {}
+PuremdInterface::PuremdInterface(): firstCall(true) {}
 
-void PuremdInterface::getReaxffPuremdForces(int num_qm_atoms, std::string &qm_symbols, const std::vector<double> & qm_pos,
-                                            int num_mm_atoms, const std::string &mm_symbols, const std::vector<double> & mm_pos_q,
+
+void PuremdInterface::setInputFileNames(const std::string &ffieldFilename, const std::string &controlFilename) {
+
+  ffield_filename = ffieldFilename;
+  control_filename = ffieldFilename;
+}
+
+void PuremdInterface::getReaxffPuremdForces(int num_qm_atoms,  const std::vector<char> &qm_symbols, const std::vector<double> & qm_pos,
+                                            int num_mm_atoms, const  std::vector<char> &mm_symbols, const std::vector<double> & mm_pos_q,
+                                            const std::vector<double> & sim_box_info,
                                             std::vector<double>& qm_forces, std::vector<double>& mm_forces, std::vector<double> qm_q, double& totalEnergy) {
   qm_forces.resize(num_qm_atoms);
   mm_forces.resize(num_mm_atoms);
