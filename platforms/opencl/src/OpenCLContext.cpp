@@ -77,6 +77,7 @@ static void CL_CALLBACK errorCallback(const char* errinfo, const void* private_i
 static bool isSupported(cl::Platform platform) {
     string vendor = platform.getInfo<CL_PLATFORM_VENDOR>();
     return (vendor.find("NVIDIA") == 0 ||
+            vendor.find("AMD") == 0 ||
             vendor.find("Advanced Micro Devices") == 0 ||
             vendor.find("Apple") == 0 ||
             vendor.find("Intel") == 0);
@@ -147,8 +148,12 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                 }
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
                 int processingElementsPerComputeUnit = 8;
+                string deviceVendor = devices[i].getInfo<CL_DEVICE_VENDOR>();
                 if (devices[i].getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {
                     processingElementsPerComputeUnit = 1;
+                }
+                else if (deviceVendor.size() >= 5 && deviceVendor.substr(0, 5) == "Apple") {
+                  processingElementsPerComputeUnit = 4 * 32;
                 }
                 else if (devices[i].getInfo<CL_DEVICE_EXTENSIONS>().find("cl_nv_device_attribute_query") != string::npos) {
                     cl_uint computeCapabilityMajor;
@@ -177,6 +182,18 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                         // Runtime does not support the queries so use default.
                     }
                 }
+#if __APPLE__
+                // macOS doesn't have the APP SDK or `cl_amd_device_attribute_query`.
+                // macOS also labels AMD GPUs as "AMD" instead of "Advanced Micro Devices".
+                else if ((deviceVendor.size() >= 3 && deviceVendor.substr(0, 3) == "AMD") ||
+                         (deviceVendor.size() >= 28 && deviceVendor.substr(0, 28) == "Advanced Micro Devices, Inc.")) {
+                  // On RDNA, macOS reports single CUs; Windows reports dual CUs.
+                  // GCN single CU: 4 * 16 = 64
+                  // RDNA single CU: 2 * 32 = 64
+                  // RDNA dual CU: 4 * 32 = 128
+                  processingElementsPerComputeUnit = 4 * 16;
+                }
+#endif
                 int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*processingElementsPerComputeUnit*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
                 if (maxSize >= minThreadBlockSize && (speed > bestSpeed || (supported && !bestSupported))) {
                     bestDevice = i;
@@ -221,6 +238,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             simdWidth = 32;
 
             // 768 threads per GPU core.
+            // Up to 512 bytes of register file per thread.
             numThreadBlocksPerComputeUnit = 12;
         }
         else if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
@@ -244,13 +262,24 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                 }
             }
         }
-        else if (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.") {
+        else if ((vendor.size() >= 3 && vendor.substr(0, 3) == "AMD") ||
+                 (vendor.size() >= 28 && vendor.substr(0, 28) == "Advanced Micro Devices, Inc.")) {
             if (device.getInfo<CL_DEVICE_TYPE>() != CL_DEVICE_TYPE_GPU) {
                 /// \todo Is 6 a good value for the OpenCL CPU device?
                 // numThreadBlocksPerComputeUnit = ?;
                 simdWidth = 1;
             }
             else {
+#if __APPLE__
+                // macOS doesn't have the APP SDK or `cl_amd_device_attribute_query`.
+                // Since most Mac users have GCN, treat RDNA GPUs the same. This will slow
+                // down certain algorithms but shouldn't create incorrect behavior.
+                simdWidth = 64;
+              
+                // 1024 threads per single CU.
+                // Up to 256 bytes of vector register file per thread.
+                numThreadBlocksPerComputeUnit = 16;
+#else
                 bool amdPostSdk2_4 = false;
                 // Default to 1 which will use the default kernels.
                 simdWidth = 1;
@@ -267,9 +296,15 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                         // set instead of the VLIW instruction set. It therefore needs more thread blocks per
                         // compute unit to hide memory latency.
                         if (simdPerComputeUnit > 1) {
+                            // On both GCN and RDNA, simdPerComputeUnit will always return 4.
                             if (simdWidth == 32)
-                                numThreadBlocksPerComputeUnit = 6*simdPerComputeUnit; // Navi seems to like more thread blocks than older GPUs
+                                // 768 threads per single CU.
+                                // 1536 threads per dual CU.
+                                // Up to 341 bytes of vector register file per thread.
+                                numThreadBlocksPerComputeUnit = 6*simdPerComputeUnit; 
                             else
+                                // 1024 threads per single CU.
+                                // Up to 256 bytes of vector register file per thread.
                                 numThreadBlocksPerComputeUnit = 4*simdPerComputeUnit;
                         }
 
@@ -284,6 +319,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
                 // AMD APP SDK 2.4 has a performance problem with atomics. Enable the work around. This is fixed after SDK 2.4.
                 if (!amdPostSdk2_4)
                     compilationDefines["AMD_ATOMIC_WORK_AROUND"] = "";
+#endif
             }
         }
         else
