@@ -14,17 +14,13 @@ PuremdInterface::PuremdInterface(): firstCall(true) {}
 void PuremdInterface::setInputFileNames(const std::string &ffieldFilename, const std::string &controlFilename) {
 
   ffield_filename = ffieldFilename;
-  control_filename = ffieldFilename;
+  control_filename = controlFilename;
 }
 
 void PuremdInterface::getReaxffPuremdForces(int num_qm_atoms,  const std::vector<char> &qm_symbols, const std::vector<double> & qm_pos,
                                             int num_mm_atoms, const  std::vector<char> &mm_symbols, const std::vector<double> & mm_pos_q,
                                             const std::vector<double> & sim_box_info,
                                             std::vector<double>& qm_forces, std::vector<double>& mm_forces, std::vector<double> qm_q, double& totalEnergy) {
-  qm_forces.resize(num_qm_atoms);
-  mm_forces.resize(num_mm_atoms);
-  qm_q.resize(num_qm_atoms);
-
 
   if(firstCall)
   {
@@ -32,14 +28,14 @@ void PuremdInterface::getReaxffPuremdForces(int num_qm_atoms,  const std::vector
       handlePuremd = setup_qmmm(
           num_qm_atoms, qm_symbols.data(), qm_pos.data(), num_mm_atoms,
           mm_symbols.data(), mm_pos_q.data(), sim_box_info.data(),
-          ffield_filename.data(), control_filename.data());
+          ffield_filename.c_str(), control_filename.c_str());
     }
     else
     {
       handlePuremd = setup_qmmm(
           num_qm_atoms, qm_symbols.data(), qm_pos.data(), num_mm_atoms,
           mm_symbols.data(), mm_pos_q.data(), sim_box_info.data(),
-          ffield_filename.data(), NULL);
+          ffield_filename.c_str(), NULL);
 
       retPuremd = simulate(handlePuremd);
       if (0 != retPuremd) throw OpenMMException("Error at PuReMD simulation.");

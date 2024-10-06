@@ -107,6 +107,7 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
     registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
+    registerKernelFactory(CalcExternalPuremdForceKernel::Name(), factory);
     platformProperties.push_back(CudaDeviceIndex());
     platformProperties.push_back(CudaDeviceName());
     platformProperties.push_back(CudaUseBlockingSync());

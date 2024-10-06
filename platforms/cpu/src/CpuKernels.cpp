@@ -60,11 +60,6 @@ static vector<Vec3>& extractPositions(ContextImpl& context) {
     return *data->positions;
 }
 
-static vector<double>& extractCharges(ContextImpl& context) {
-    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    return *data->;
-}
-
 static vector<Vec3>& extractVelocities(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *data->velocities;

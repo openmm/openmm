@@ -16,15 +16,16 @@ ExternalPuremdForce::ExternalPuremdForce() {}
 ExternalPuremdForce::ExternalPuremdForce(const std::string& ffieldFile, const std::string& controlFile) :usePeriodic(false), numContexts(0), ffield_file(ffieldFile), control_file(controlFile) {
 }
 
-int ExternalPuremdForce::addAtom(int particle, char symbol, bool isQM) {
+int ExternalPuremdForce::addAtom(int particle, const std::string symbol, bool isQM) {
     atoms.push_back(AtomInfo(particle, symbol, isQM));
     return atoms.size()-1;
 }
 
-void ExternalPuremdForce::getParticleParameters(int index, int &particle, char &symbol, int &isQM)  const {
+void ExternalPuremdForce::getParticleParameters(int index, int &particle, char& symbol1, char&symbol2, int &isQM)  const {
     ASSERT_VALID_INDEX(index, atoms)
     particle = atoms[index].particle;
-    symbol = atoms[index].symbol;
+    symbol1 = atoms[index].symbol1;
+    symbol2 = atoms[index].symbol2;
     isQM = static_cast<int>(atoms[index].isQM);
 }
 

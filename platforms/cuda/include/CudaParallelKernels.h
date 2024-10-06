@@ -172,7 +172,7 @@ class CudaCalcExternalPuremdForceKernel: public CalcExternalPuremdForceKernel{
     std::vector<int> isQM;
     std::vector<double> simBoxInfo;
     int numMMAtoms, numQMAtoms;
-    PuremdInterface Interface;
+    PuremdInterface* Interface;
 };
 
 } // namespace OpenMM

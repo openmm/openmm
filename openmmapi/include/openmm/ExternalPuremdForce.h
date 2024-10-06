@@ -56,16 +56,17 @@ namespace OpenMM {
      * @param isQM is it reactive
      * @return the index of the bond that was added
      */
-    int addAtom(int particle, char symbol, bool isQM);
+    int addAtom(int particle, const std::string symbol, bool isQM);
     /**
      * Get the bonding atom
      *
      * @param index the index of the atoms
      * @param particle the particle index is going to be saved here
-     * @param symbol symbol of the atom
+     * @param symbol1 symbol of the atom
+     * @param symbol2 symbol other
      * @param isQM is it reactive
      */
-    void getParticleParameters(int index, int& particle, char& symbol, int& isQM) const;
+    void getParticleParameters(int index, int& particle, char& symbol1, char& symbol2, int& isQM) const;
     /**
      * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
@@ -99,16 +100,21 @@ namespace OpenMM {
 class ExternalPuremdForce::AtomInfo {
 public:
     int particle;
-    char symbol;
+    char symbol1, symbol2;
     bool isQM;
 
     AtomInfo() {
         particle = -1;
-        symbol = '\0';
+        symbol1 = symbol2 = '\0';
         isQM = false;
     }
-    AtomInfo(int particle, char symbol, bool isQM) :
-            particle(particle), symbol(symbol), isQM(isQM) {
+    AtomInfo(int particle, std::string symbol, bool isQM) :
+            particle(particle), symbol1(symbol[0]), isQM(isQM) {
+        if(symbol.size()>1){ symbol2 = symbol[1];}
+        else
+        {
+          symbol2 = '\0';
+        }
     }
 };
 

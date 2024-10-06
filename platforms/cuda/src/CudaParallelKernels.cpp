@@ -326,18 +326,21 @@ CudaCalcExternalPuremdForceKernel::CudaCalcExternalPuremdForceKernel(std::string
 }
 
 void CudaCalcExternalPuremdForceKernel::initialize(const System& system, const ExternalPuremdForce& force) {
+    Interface = new PuremdInterface();
     std::string ffieldFile, controlFile;
     force.getFileNames(ffieldFile, controlFile);
-    Interface.setInputFileNames(ffieldFile, controlFile);
+    Interface->setInputFileNames(ffieldFile, controlFile);
 
     //load atom parameters that wont change over time
     atoms.resize(force.getNumAtoms());
-    symbols.resize(force.getNumAtoms());
+    symbols.resize(force.getNumAtoms()*2);
     isQM.resize(force.getNumAtoms());
-
+    char temp;
+    int j = 0;
     for(int i=0; i<force.getNumAtoms(); i++)
     {
-        force.getParticleParameters(i, atoms[i], symbols[i], isQM[i]);
+        force.getParticleParameters(i, atoms[i], symbols[j], symbols[j+1], isQM[i]);
+        j+=2;
     };
     numQMAtoms = std::accumulate(isQM.begin(), isQM.end(), 0);
     numMMAtoms = force.getNumAtoms()-numQMAtoms;
@@ -358,43 +361,53 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
     CudaContext& cu = *data.contexts[0];
     ContextSelector selector(cu);
     //get positins, charges, etc.
-    auto posqBuff = (mm_double4*)  cu.getPinnedBuffer();
-    cu.getPosq().download(posqBuff, false);
-
+    std::vector<mm_float4> posqBuff(cu.getPaddedNumAtoms());
+    cu.getPosq().download(posqBuff);
     //flattened vectors
     std::vector<double> qm_pos(numQMAtoms*3);
     std::vector<double> mm_pos_q(numMMAtoms*4);
-    std::vector<char> mmSymbols(atoms.size()), qmSymbols(atoms.size());
+    std::vector<char> mmSymbols(numMMAtoms*2), qmSymbols(numQMAtoms*2);
+    int j =0;
+    int qm_j=0, mm_j=0;
+    int qm_index = 0, mm_index = 0;
     for(int i=0; i<atoms.size();i++)
     {
         if (0 != isQM[i])
         {
-            qm_pos[i] = posqBuff[i].x;
-            qm_pos[i+1] = posqBuff[i].y;
-            qm_pos[i+2] = posqBuff[i].z;
-            qmSymbols[i] = symbols[i];
+            qm_pos[qm_index] = posqBuff[i].x;
+            qm_pos[qm_index+1] = posqBuff[i].y;
+            qm_pos[qm_index+2] = posqBuff[i].z;
+            qmSymbols[qm_j] = symbols[j];
+            qmSymbols[qm_j+1] = symbols[j+1];
+            qm_index+=3;
+            qm_j+=2;
         }
         else
         {
-            mm_pos_q[i] = posqBuff[i].x;
-            mm_pos_q[i+1] = posqBuff[i].y;
-            mm_pos_q[i+2] = posqBuff[i].z;
-            mm_pos_q[i+3] = posqBuff[i].w;
-            mmSymbols[i] = symbols[i];
+            mm_pos_q[mm_index] = posqBuff[i].x;
+            mm_pos_q[mm_index+1] = posqBuff[i].y;
+            mm_pos_q[mm_index+2] = posqBuff[i].z;
+            mm_pos_q[mm_index+3] = posqBuff[i].w;
+            mmSymbols[mm_j] = symbols[j];
+            mmSymbols[mm_j+1] = symbols[j+1];
+            mm_index+=4;
+            mm_j+=2;
         }
+       j+=2;
     }
 
-    std::vector<double> qmForces, mmForces, qm_q;
+    std::vector<double> qmForces(numQMAtoms), mmForces(numMMAtoms), qm_q(numQMAtoms);
 
     double energy;
 
-    Interface.getReaxffPuremdForces(numQMAtoms, qmSymbols, qm_pos,
+    Interface->getReaxffPuremdForces(numQMAtoms, qmSymbols, qm_pos,
                                     numMMAtoms, mmSymbols, mm_pos_q,
                                     simBoxInfo,
                                     qmForces, mmForces, qm_q, energy);
+
     // now we need to add the results to the forces in the context
-    auto forces = (mm_double4*) cu.getPinnedBuffer();
-    cu.getLongForceBuffer().download(forces, false);
+    std::vector<mm_float4> forces(cu.getPaddedNumAtoms());
+    cu.getLongForceBuffer().download(forces);
     int qmIndex = 0;
     int mmIndex = 0;
     for(int i=0; i<atoms.size(); i++)
@@ -406,14 +419,14 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
             forces[i].z += qmForces[qmIndex+2];
             //charges got recalculated
             posqBuff[i].w = qm_q[qmIndex];
-            ++qmIndex;
+            qmIndex+=3;
         }
         else
         {
             forces[i].x += mmForces[mmIndex];
             forces[i].y += mmForces[mmIndex+1];
             forces[i].z += mmForces[mmIndex+2];
-            ++mmIndex;
+            mmIndex+=3;
         }
     }
     //update everything. it should work now.

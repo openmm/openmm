@@ -21,16 +21,21 @@ ExternalPuremdForceImpl::~ExternalPuremdForceImpl() {
 void ExternalPuremdForceImpl::initialize(ContextImpl& context) {
     const System& system = context.getSystem();
     for (int i = 0; i < owner.getNumAtoms(); i++) {
+
         int particle;
+        char symbol1;
+        char symbol2;
+        int isQM;
+        owner.getParticleParameters(i, particle, symbol1, symbol2,  isQM);
         if (particle < 0 || particle >= system.getNumParticles())
         {
                 stringstream msg;
-                msg << "HarmonicBondForce: Illegal particle index for a bond: ";
+                msg << "ExternalPureMDForce: Illegal particle index for a bond: ";
                 msg << particle;
                 throw OpenMMException(msg.str());
         }
     }
-    kernel = context.getPlatform().createKernel(CalcHarmonicBondForceKernel::Name(), context);
+    kernel = context.getPlatform().createKernel(CalcExternalPuremdForceKernel::Name(), context);
     kernel.getAs<CalcExternalPuremdForceKernel>().initialize(context.getSystem(), owner);
 }
 
@@ -49,10 +54,10 @@ std::vector<std::string> ExternalPuremdForceImpl::getKernelNames() {
 vector<int> ExternalPuremdForceImpl::getSimulatedParticles() const {
     int numBonds = owner.getNumAtoms();
     vector<int> atoms(numBonds);
-    vector<char> symbols(numBonds);
+    vector<char> symbols(numBonds*2);
     vector<int> isQM(numBonds);
     for (int i = 0; i < numBonds; i++) {
-        owner.getParticleParameters(i, atoms[i], symbols[i], isQM[i]);
+        owner.getParticleParameters(i, atoms[i], symbols[i], symbols[i+1], isQM[i]);
     }
     return atoms;
 }
