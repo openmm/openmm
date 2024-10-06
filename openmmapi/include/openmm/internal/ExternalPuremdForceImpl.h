@@ -16,8 +16,6 @@ namespace OpenMM {
 /**
  * This is the internal implementation of ExternalPuremdForce.
  */
-
-
     class ExternalPuremdForceImpl : public ForceImpl {
     public:
       ExternalPuremdForceImpl(const ExternalPuremdForce & owner);

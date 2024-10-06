@@ -1,7 +1,7 @@
 
 cmake_minimum_required(VERSION 3.15)
 
-set(command "./configure;--libdir=/home/babaid/mambaforge/envs/openmm_build/include/openmm/lib;--enable-openmp=no;--enable-serial=yes;--enable-qmmm=yes;CC=/home/babaid/mambaforge/envs/openmm_build/bin/gcc")
+set(command "./configure;--libdir=/home/babaid/mambaforge/envs/openmm_build/include/openmm/lib;--enable-openmp=no;--enable-serial=yes;--enable-qmmm=yes;CC=/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-cc")
 set(log_merged "")
 set(log_output_on_failure "")
 set(stdout_log "/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/src/reaxff_puremd_build-stamp/reaxff_puremd_build-configure-out.log")

@@ -11,7 +11,9 @@
 using namespace OpenMM;
 using namespace std;
 
-ExternalPuremdForce::ExternalPuremdForce(const std::string& ffield_file, const std::string& control_file) :usePeriodic(false), numContexts(0), ffield_file(ffield_file), control_file(control_file) {
+ExternalPuremdForce::ExternalPuremdForce() {}
+
+ExternalPuremdForce::ExternalPuremdForce(const std::string& ffieldFile, const std::string& controlFile) :usePeriodic(false), numContexts(0), ffield_file(ffieldFile), control_file(controlFile) {
 }
 
 int ExternalPuremdForce::addAtom(int particle, char symbol, bool isQM) {

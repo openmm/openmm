@@ -1,4 +1,4 @@
-set(CMAKE_CXX_COMPILER "/home/babaid/mambaforge/envs/openmm_build/bin/c++")
+set(CMAKE_CXX_COMPILER "/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-c++")
 set(CMAKE_CXX_COMPILER_ARG1 "")
 set(CMAKE_CXX_COMPILER_ID "GNU")
 set(CMAKE_CXX_COMPILER_VERSION "12.4.0")
@@ -25,11 +25,11 @@ set(CMAKE_CXX_COMPILER_SYSROOT "/home/babaid/mambaforge/envs/openmm_build/bin/..
 set(CMAKE_COMPILER_SYSROOT "/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr")
 
 
-set(CMAKE_AR "/home/babaid/mambaforge/envs/openmm_build/bin/ar")
-set(CMAKE_CXX_COMPILER_AR "/home/babaid/mambaforge/envs/openmm_build/bin/gcc-ar")
-set(CMAKE_RANLIB "/home/babaid/mambaforge/envs/openmm_build/bin/ranlib")
-set(CMAKE_CXX_COMPILER_RANLIB "/home/babaid/mambaforge/envs/openmm_build/bin/gcc-ranlib")
-set(CMAKE_LINKER "/home/babaid/mambaforge/envs/openmm_build/bin/ld")
+set(CMAKE_AR "/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-ar")
+set(CMAKE_CXX_COMPILER_AR "/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-gcc-ar")
+set(CMAKE_RANLIB "/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-ranlib")
+set(CMAKE_CXX_COMPILER_RANLIB "/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-gcc-ranlib")
+set(CMAKE_LINKER "/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-ld")
 set(CMAKE_LINKER_LINK "")
 set(CMAKE_LINKER_LLD "")
 set(CMAKE_CXX_COMPILER_LINKER "/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/ld")
@@ -88,9 +88,9 @@ endif()
 
 
 
-set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES "/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/x86_64-conda-linux-gnu;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/backward;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/include")
+set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES "/home/babaid/mambaforge/envs/openmm_build/include;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/x86_64-conda-linux-gnu;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/backward;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/include")
 set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "stdc++;m;gcc_s;gcc;c;gcc_s;gcc")
-set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0;/home/babaid/mambaforge/envs/openmm_build/lib/gcc;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/lib;/home/babaid/mambaforge/envs/openmm_build/lib;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/lib;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib")
+set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "/home/babaid/mambaforge/envs/openmm_build/lib;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0;/home/babaid/mambaforge/envs/openmm_build/lib/gcc;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/lib;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/lib;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib")
 set(CMAKE_CXX_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "")
 set(CMAKE_CXX_COMPILER_CLANG_RESOURCE_DIR "")
 

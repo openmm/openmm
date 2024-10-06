@@ -1,8 +1,8 @@
 //
 // Created by babaid on 05.10.24.
 //
-#ifndef OPENMM_EXTERNALPUREMDFORCE_H
-#define OPENMM_EXTERNALPUREMDFORCE_H
+#ifndef OPENMM_EXTERNALPUREMDFORCE_H_
+#define OPENMM_EXTERNALPUREMDFORCE_H_
 
 #include "Force.h"
 #include "Vec3.h"
@@ -13,14 +13,26 @@
 
 namespace OpenMM {
 
+/**
+ * A class that introduces a puremd qmmm force.
+ */
     class OPENMM_EXPORT ExternalPuremdForce : public Force {
     public:
     /**
-     * Create a ExternalPuremdForce.
+     * Create a puremd force
      */
-      ExternalPuremdForce(const std::string& ffield_file, const std::string& control_file);
+      ExternalPuremdForce();
     /**
-     * Get the number of harmonic bond stretch terms in the potential function
+     * Create a ExternalPuremdForce.
+     *
+     * @param ffieldFile force field file.
+     * @param controlFile control file.
+     */
+      ExternalPuremdForce(const std::string& ffieldfile, const std::string& controlFile);
+    /**
+     * Get the number of atoms being simulated by puremd
+     *
+     * @return the number of atoms
      */
     int getNumAtoms() const {
         return atoms.size();
@@ -40,6 +52,8 @@ namespace OpenMM {
      * Add a bond term to the force field.
      *
      * @param particle the index of the particle
+     * @param symbol symbol of the particle
+     * @param isQM is it reactive
      * @return the index of the bond that was added
      */
     int addAtom(int particle, char symbol, bool isQM);
@@ -47,7 +61,9 @@ namespace OpenMM {
      * Get the bonding atom
      *
      * @param index the index of the atoms
-     * @particle the particle index is going to be saved here
+     * @param particle the particle index is going to be saved here
+     * @param symbol symbol of the atom
+     * @param isQM is it reactive
      */
     void getParticleParameters(int index, int& particle, char& symbol, int& isQM) const;
     /**
@@ -58,6 +74,8 @@ namespace OpenMM {
      *
      * The only information this method updates is the values of per-bond parameters.  The set of particles involved
      * in a bond cannot be changed, nor can new bonds be added.
+     *
+     * @param context the context
      */
     void updateParametersInContext(Context& context);
     protected:
@@ -97,4 +115,4 @@ public:
 } // namespace OpenMM
 
 
-#endif //OPENMM_EXTERNALPUREMDFORCE_H
+#endif //OPENMM_EXTERNALPUREMDFORCE_H_

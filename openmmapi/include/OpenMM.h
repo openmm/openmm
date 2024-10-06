@@ -54,6 +54,7 @@
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/HarmonicBondForce.h"
+#include "openmm/ExternalPuremdForce.h"
 #include "openmm/Integrator.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/LangevinMiddleIntegrator.h"
@@ -82,5 +83,4 @@
 #include "openmm/Platform.h"
 #include "openmm/serialization/XmlSerializer.h"
 #include "openmm/ATMForce.h"
-
 #endif /*OPENMM_H_*/

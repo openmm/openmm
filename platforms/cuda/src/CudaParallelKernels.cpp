@@ -322,7 +322,7 @@ void CudaParallelCalcNonbondedForceKernel::getLJPMEParameters(double& alpha, int
 }
 
 CudaCalcExternalPuremdForceKernel::CudaCalcExternalPuremdForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, const System& system) :
-                                                                                                                                                                           CalcExternalPuremdForceKernel(name, platform), data(data), cu() {
+                                                                                                                                                                           CalcExternalPuremdForceKernel(name, platform), data(data) {
 }
 
 void CudaCalcExternalPuremdForceKernel::initialize(const System& system, const ExternalPuremdForce& force) {

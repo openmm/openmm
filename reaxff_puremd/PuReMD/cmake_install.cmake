@@ -39,7 +39,7 @@ endif()
 
 # Set path to fallback-tool for dependency-resolution.
 if(NOT DEFINED CMAKE_OBJDUMP)
-  set(CMAKE_OBJDUMP "/home/babaid/mambaforge/envs/openmm_build/bin/objdump")
+  set(CMAKE_OBJDUMP "/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-objdump")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT)

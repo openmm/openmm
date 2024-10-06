@@ -1,7 +1,7 @@
 
 cmake_minimum_required(VERSION 3.15)
 
-set(command "/usr/bin/make;clean;all;AR_FLAGS=cr;CFLAGS=-O2 -fPIC")
+set(command "/home/babaid/mambaforge/envs/openmm_build/bin/make;clean;all;AR_FLAGS=cr;CFLAGS=-O2 -fPIC")
 set(log_merged "")
 set(log_output_on_failure "")
 set(stdout_log "/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/src/reaxff_puremd_build-stamp/reaxff_puremd_build-build-out.log")

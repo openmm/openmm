@@ -4,526 +4,6 @@ events:
   -
     kind: "message-v1"
     backtrace:
-      - "/usr/share/cmake/Modules/CMakeDetermineSystem.cmake:205 (message)"
-      - "CMakeLists.txt:4 (project)"
-    message: |
-      The system is: Linux - 6.6.49-1-lts - x86_64
-  -
-    kind: "message-v1"
-    backtrace:
-      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
-      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
-      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
-      - "CMakeLists.txt:4 (project)"
-    message: |
-      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
-      Compiler: /usr/bin/gcc 
-      Build flags: 
-      Id flags:  
-      
-      The output was:
-      0
-      
-      
-      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
-      
-      The C compiler identification is GNU, found in:
-        /home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/3.30.3/CompilerIdC/a.out
-      
-  -
-    kind: "message-v1"
-    backtrace:
-      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
-      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
-      - "/usr/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
-      - "CMakeLists.txt:4 (project)"
-    message: |
-      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
-      Compiler: /usr/bin/c++ 
-      Build flags: 
-      Id flags:  
-      
-      The output was:
-      0
-      
-      
-      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
-      
-      The CXX compiler identification is GNU, found in:
-        /home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/3.30.3/CompilerIdCXX/a.out
-      
-  -
-    kind: "try_compile-v1"
-    backtrace:
-      - "/usr/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
-      - "/usr/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:4 (project)"
-    checks:
-      - "Detecting C compiler ABI info"
-    directories:
-      source: "/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-QCfC9F"
-      binary: "/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-QCfC9F"
-    cmakeVariables:
-      CMAKE_C_FLAGS: ""
-      CMAKE_C_FLAGS_DEBUG: "-g"
-      CMAKE_EXE_LINKER_FLAGS: ""
-    buildResult:
-      variable: "CMAKE_C_ABI_COMPILED"
-      cached: true
-      stdout: |
-        Change Dir: '/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-QCfC9F'
-        
-        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_052c2/fast
-        /usr/bin/make  -f CMakeFiles/cmTC_052c2.dir/build.make CMakeFiles/cmTC_052c2.dir/build
-        make[1]: Entering directory '/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-QCfC9F'
-        Building C object CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o
-        /usr/bin/gcc   -v -o CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake/Modules/CMakeCCompilerABI.c
-        Using built-in specs.
-        COLLECT_GCC=/usr/bin/gcc
-        Target: x86_64-pc-linux-gnu
-        Configured with: /build/gcc/src/gcc/configure --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust --enable-bootstrap --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/gcc/-/issues --with-build-config=bootstrap-lto --with-linker-hash-style=gnu --with-system-zlib --enable-__cxa_atexit --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-libstdcxx-backtrace --enable-link-serialization=1 --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-werror
-        Thread model: posix
-        Supported LTO compression algorithms: zlib zstd
-        gcc version 14.2.1 20240805 (GCC) 
-        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_052c2.dir/'
-         /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/cc1 -quiet -v /usr/share/cmake/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_052c2.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=x86-64 -version -o /tmp/ccCpZ9vW.s
-        GNU C17 (GCC) version 14.2.1 20240805 (x86_64-pc-linux-gnu)
-        	compiled by GNU C version 14.2.1 20240805, GMP version 6.3.0, MPFR version 4.2.1, MPC version 1.3.1, isl version isl-0.27-GMP
-        
-        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
-        ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../x86_64-pc-linux-gnu/include"
-        #include "..." search starts here:
-        #include <...> search starts here:
-         /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include
-         /usr/local/include
-         /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include-fixed
-         /usr/include
-        End of search list.
-        Compiler executable checksum: faa3163d33b78b77071c76eebeab3034
-        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_052c2.dir/'
-         as -v --64 -o CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o /tmp/ccCpZ9vW.s
-        GNU assembler version 2.43.0 (x86_64-pc-linux-gnu) using BFD version (GNU Binutils) 2.43.0
-        COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/
-        LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../:/lib/:/usr/lib/
-        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.'
-        Linking C executable cmTC_052c2
-        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_052c2.dir/link.txt --verbose=1
-        /usr/bin/gcc  -v -Wl,-v CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o -o cmTC_052c2
-        Using built-in specs.
-        COLLECT_GCC=/usr/bin/gcc
-        COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper
-        Target: x86_64-pc-linux-gnu
-        Configured with: /build/gcc/src/gcc/configure --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust --enable-bootstrap --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/gcc/-/issues --with-build-config=bootstrap-lto --with-linker-hash-style=gnu --with-system-zlib --enable-__cxa_atexit --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-libstdcxx-backtrace --enable-link-serialization=1 --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-werror
-        Thread model: posix
-        Supported LTO compression algorithms: zlib zstd
-        gcc version 14.2.1 20240805 (GCC) 
-        COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/
-        LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../:/lib/:/usr/lib/
-        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_052c2' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_052c2.'
-         /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccDFkcUa.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_052c2 /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../.. -v CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o
-        collect2 version 14.2.1 20240805
-        /usr/bin/ld -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccDFkcUa.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_052c2 /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../.. -v CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o
-        GNU ld (GNU Binutils) 2.43.0
-        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_052c2' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_052c2.'
-        make[1]: Leaving directory '/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-QCfC9F'
-        
-      exitCode: 0
-  -
-    kind: "message-v1"
-    backtrace:
-      - "/usr/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
-      - "/usr/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:4 (project)"
-    message: |
-      Parsed C implicit include dir info: rv=done
-        found start of include info
-        found start of implicit include info
-          add: [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include]
-          add: [/usr/local/include]
-          add: [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include-fixed]
-          add: [/usr/include]
-        end of search list found
-        collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include] ==> [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include]
-        collapse include dir [/usr/local/include] ==> [/usr/local/include]
-        collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include-fixed] ==> [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include-fixed]
-        collapse include dir [/usr/include] ==> [/usr/include]
-        implicit include dirs: [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include;/usr/local/include;/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include-fixed;/usr/include]
-      
-      
-  -
-    kind: "message-v1"
-    backtrace:
-      - "/usr/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
-      - "/usr/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:4 (project)"
-    message: |
-      Parsed C implicit link information:
-        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
-        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
-        ignore line: [Change Dir: '/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-QCfC9F']
-        ignore line: []
-        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_052c2/fast]
-        ignore line: [/usr/bin/make  -f CMakeFiles/cmTC_052c2.dir/build.make CMakeFiles/cmTC_052c2.dir/build]
-        ignore line: [make[1]: Entering directory '/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-QCfC9F']
-        ignore line: [Building C object CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o]
-        ignore line: [/usr/bin/gcc   -v -o CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake/Modules/CMakeCCompilerABI.c]
-        ignore line: [Using built-in specs.]
-        ignore line: [COLLECT_GCC=/usr/bin/gcc]
-        ignore line: [Target: x86_64-pc-linux-gnu]
-        ignore line: [Configured with: /build/gcc/src/gcc/configure --enable-languages=ada c c++ d fortran go lto m2 objc obj-c++ rust --enable-bootstrap --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/gcc/-/issues --with-build-config=bootstrap-lto --with-linker-hash-style=gnu --with-system-zlib --enable-__cxa_atexit --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-libstdcxx-backtrace --enable-link-serialization=1 --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-werror]
-        ignore line: [Thread model: posix]
-        ignore line: [Supported LTO compression algorithms: zlib zstd]
-        ignore line: [gcc version 14.2.1 20240805 (GCC) ]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_052c2.dir/']
-        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/cc1 -quiet -v /usr/share/cmake/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_052c2.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=x86-64 -version -o /tmp/ccCpZ9vW.s]
-        ignore line: [GNU C17 (GCC) version 14.2.1 20240805 (x86_64-pc-linux-gnu)]
-        ignore line: [	compiled by GNU C version 14.2.1 20240805  GMP version 6.3.0  MPFR version 4.2.1  MPC version 1.3.1  isl version isl-0.27-GMP]
-        ignore line: []
-        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
-        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../x86_64-pc-linux-gnu/include"]
-        ignore line: [#include "..." search starts here:]
-        ignore line: [#include <...> search starts here:]
-        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include]
-        ignore line: [ /usr/local/include]
-        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include-fixed]
-        ignore line: [ /usr/include]
-        ignore line: [End of search list.]
-        ignore line: [Compiler executable checksum: faa3163d33b78b77071c76eebeab3034]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_052c2.dir/']
-        ignore line: [ as -v --64 -o CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o /tmp/ccCpZ9vW.s]
-        ignore line: [GNU assembler version 2.43.0 (x86_64-pc-linux-gnu) using BFD version (GNU Binutils) 2.43.0]
-        ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/]
-        ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../:/lib/:/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.']
-        ignore line: [Linking C executable cmTC_052c2]
-        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_052c2.dir/link.txt --verbose=1]
-        ignore line: [/usr/bin/gcc  -v -Wl -v CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o -o cmTC_052c2]
-        ignore line: [Using built-in specs.]
-        ignore line: [COLLECT_GCC=/usr/bin/gcc]
-        ignore line: [COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper]
-        ignore line: [Target: x86_64-pc-linux-gnu]
-        ignore line: [Configured with: /build/gcc/src/gcc/configure --enable-languages=ada c c++ d fortran go lto m2 objc obj-c++ rust --enable-bootstrap --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/gcc/-/issues --with-build-config=bootstrap-lto --with-linker-hash-style=gnu --with-system-zlib --enable-__cxa_atexit --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-libstdcxx-backtrace --enable-link-serialization=1 --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-werror]
-        ignore line: [Thread model: posix]
-        ignore line: [Supported LTO compression algorithms: zlib zstd]
-        ignore line: [gcc version 14.2.1 20240805 (GCC) ]
-        ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/]
-        ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../:/lib/:/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_052c2' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_052c2.']
-        link line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccDFkcUa.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_052c2 /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../.. -v CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o]
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/collect2] ==> ignore
-          arg [-plugin] ==> ignore
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/liblto_plugin.so] ==> ignore
-          arg [-plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper] ==> ignore
-          arg [-plugin-opt=-fresolution=/tmp/ccDFkcUa.res] ==> ignore
-          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
-          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
-          arg [-plugin-opt=-pass-through=-lc] ==> ignore
-          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
-          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
-          arg [--build-id] ==> ignore
-          arg [--eh-frame-hdr] ==> ignore
-          arg [--hash-style=gnu] ==> ignore
-          arg [-m] ==> ignore
-          arg [elf_x86_64] ==> ignore
-          arg [-dynamic-linker] ==> ignore
-          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
-          arg [-pie] ==> ignore
-          arg [-o] ==> ignore
-          arg [cmTC_052c2] ==> ignore
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o]
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o]
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o]
-          arg [-L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1] ==> dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1]
-          arg [-L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib] ==> dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib]
-          arg [-L/lib/../lib] ==> dir [/lib/../lib]
-          arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
-          arg [-L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../..] ==> dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../..]
-          arg [-v] ==> ignore
-          arg [CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o] ==> ignore
-          arg [-lgcc] ==> lib [gcc]
-          arg [--push-state] ==> ignore
-          arg [--as-needed] ==> ignore
-          arg [-lgcc_s] ==> lib [gcc_s]
-          arg [--pop-state] ==> ignore
-          arg [-lc] ==> lib [c]
-          arg [-lgcc] ==> lib [gcc]
-          arg [--push-state] ==> ignore
-          arg [--as-needed] ==> ignore
-          arg [-lgcc_s] ==> lib [gcc_s]
-          arg [--pop-state] ==> ignore
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o]
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o]
-        ignore line: [collect2 version 14.2.1 20240805]
-        ignore line: [/usr/bin/ld -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccDFkcUa.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_052c2 /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../.. -v CMakeFiles/cmTC_052c2.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o]
-        linker tool for 'C': /usr/bin/ld
-        collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o] ==> [/usr/lib/Scrt1.o]
-        collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o] ==> [/usr/lib/crti.o]
-        collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o] ==> [/usr/lib/crtn.o]
-        collapse library dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1] ==> [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1]
-        collapse library dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib] ==> [/usr/lib]
-        collapse library dir [/lib/../lib] ==> [/lib]
-        collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
-        collapse library dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../..] ==> [/usr/lib]
-        implicit libs: [gcc;gcc_s;c;gcc;gcc_s]
-        implicit objs: [/usr/lib/Scrt1.o;/usr/lib/crti.o;/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o;/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o;/usr/lib/crtn.o]
-        implicit dirs: [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1;/usr/lib;/lib]
-        implicit fwks: []
-      
-      
-  -
-    kind: "message-v1"
-    backtrace:
-      - "/usr/share/cmake/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
-      - "/usr/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
-      - "/usr/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:4 (project)"
-    message: |
-      Running the C compiler's linker: "/usr/bin/ld" "-v"
-      GNU ld (GNU Binutils) 2.43.0
-  -
-    kind: "try_compile-v1"
-    backtrace:
-      - "/usr/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:74 (try_compile)"
-      - "/usr/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:4 (project)"
-    checks:
-      - "Detecting CXX compiler ABI info"
-    directories:
-      source: "/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-d7XZnI"
-      binary: "/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-d7XZnI"
-    cmakeVariables:
-      CMAKE_CXX_FLAGS: ""
-      CMAKE_CXX_FLAGS_DEBUG: "-g"
-      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
-      CMAKE_EXE_LINKER_FLAGS: ""
-    buildResult:
-      variable: "CMAKE_CXX_ABI_COMPILED"
-      cached: true
-      stdout: |
-        Change Dir: '/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-d7XZnI'
-        
-        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_c8fad/fast
-        /usr/bin/make  -f CMakeFiles/cmTC_c8fad.dir/build.make CMakeFiles/cmTC_c8fad.dir/build
-        make[1]: Entering directory '/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-d7XZnI'
-        Building CXX object CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o
-        /usr/bin/c++   -v -o CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake/Modules/CMakeCXXCompilerABI.cpp
-        Using built-in specs.
-        COLLECT_GCC=/usr/bin/c++
-        Target: x86_64-pc-linux-gnu
-        Configured with: /build/gcc/src/gcc/configure --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust --enable-bootstrap --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/gcc/-/issues --with-build-config=bootstrap-lto --with-linker-hash-style=gnu --with-system-zlib --enable-__cxa_atexit --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-libstdcxx-backtrace --enable-link-serialization=1 --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-werror
-        Thread model: posix
-        Supported LTO compression algorithms: zlib zstd
-        gcc version 14.2.1 20240805 (GCC) 
-        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_c8fad.dir/'
-         /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/cc1plus -quiet -v -D_GNU_SOURCE /usr/share/cmake/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_c8fad.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -o /tmp/ccPSljKB.s
-        GNU C++17 (GCC) version 14.2.1 20240805 (x86_64-pc-linux-gnu)
-        	compiled by GNU C version 14.2.1 20240805, GMP version 6.3.0, MPFR version 4.2.1, MPC version 1.3.1, isl version isl-0.27-GMP
-        
-        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
-        ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../x86_64-pc-linux-gnu/include"
-        #include "..." search starts here:
-        #include <...> search starts here:
-         /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../include/c++/14.2.1
-         /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../include/c++/14.2.1/x86_64-pc-linux-gnu
-         /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../include/c++/14.2.1/backward
-         /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include
-         /usr/local/include
-         /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include-fixed
-         /usr/include
-        End of search list.
-        Compiler executable checksum: 438deb6040cbc4b51ad3ab8b369917b9
-        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_c8fad.dir/'
-         as -v --64 -o CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccPSljKB.s
-        GNU assembler version 2.43.0 (x86_64-pc-linux-gnu) using BFD version (GNU Binutils) 2.43.0
-        COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/
-        LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../:/lib/:/usr/lib/
-        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.'
-        Linking CXX executable cmTC_c8fad
-        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c8fad.dir/link.txt --verbose=1
-        /usr/bin/c++  -v -Wl,-v CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_c8fad
-        Using built-in specs.
-        COLLECT_GCC=/usr/bin/c++
-        COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper
-        Target: x86_64-pc-linux-gnu
-        Configured with: /build/gcc/src/gcc/configure --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust --enable-bootstrap --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/gcc/-/issues --with-build-config=bootstrap-lto --with-linker-hash-style=gnu --with-system-zlib --enable-__cxa_atexit --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-libstdcxx-backtrace --enable-link-serialization=1 --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-werror
-        Thread model: posix
-        Supported LTO compression algorithms: zlib zstd
-        gcc version 14.2.1 20240805 (GCC) 
-        COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/
-        LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../:/lib/:/usr/lib/
-        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_c8fad' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_c8fad.'
-         /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccgmcJFs.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_c8fad /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../.. -v CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o
-        collect2 version 14.2.1 20240805
-        /usr/bin/ld -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccgmcJFs.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_c8fad /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../.. -v CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o
-        GNU ld (GNU Binutils) 2.43.0
-        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_c8fad' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_c8fad.'
-        make[1]: Leaving directory '/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-d7XZnI'
-        
-      exitCode: 0
-  -
-    kind: "message-v1"
-    backtrace:
-      - "/usr/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:182 (message)"
-      - "/usr/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:4 (project)"
-    message: |
-      Parsed CXX implicit include dir info: rv=done
-        found start of include info
-        found start of implicit include info
-          add: [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../include/c++/14.2.1]
-          add: [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../include/c++/14.2.1/x86_64-pc-linux-gnu]
-          add: [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../include/c++/14.2.1/backward]
-          add: [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include]
-          add: [/usr/local/include]
-          add: [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include-fixed]
-          add: [/usr/include]
-        end of search list found
-        collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../include/c++/14.2.1] ==> [/usr/include/c++/14.2.1]
-        collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../include/c++/14.2.1/x86_64-pc-linux-gnu] ==> [/usr/include/c++/14.2.1/x86_64-pc-linux-gnu]
-        collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../include/c++/14.2.1/backward] ==> [/usr/include/c++/14.2.1/backward]
-        collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include] ==> [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include]
-        collapse include dir [/usr/local/include] ==> [/usr/local/include]
-        collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include-fixed] ==> [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include-fixed]
-        collapse include dir [/usr/include] ==> [/usr/include]
-        implicit include dirs: [/usr/include/c++/14.2.1;/usr/include/c++/14.2.1/x86_64-pc-linux-gnu;/usr/include/c++/14.2.1/backward;/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include;/usr/local/include;/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include-fixed;/usr/include]
-      
-      
-  -
-    kind: "message-v1"
-    backtrace:
-      - "/usr/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:218 (message)"
-      - "/usr/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:4 (project)"
-    message: |
-      Parsed CXX implicit link information:
-        link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
-        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
-        ignore line: [Change Dir: '/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-d7XZnI']
-        ignore line: []
-        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_c8fad/fast]
-        ignore line: [/usr/bin/make  -f CMakeFiles/cmTC_c8fad.dir/build.make CMakeFiles/cmTC_c8fad.dir/build]
-        ignore line: [make[1]: Entering directory '/home/babaid/Downloads/amber22_src/AmberTools/src/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-d7XZnI']
-        ignore line: [Building CXX object CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o]
-        ignore line: [/usr/bin/c++   -v -o CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake/Modules/CMakeCXXCompilerABI.cpp]
-        ignore line: [Using built-in specs.]
-        ignore line: [COLLECT_GCC=/usr/bin/c++]
-        ignore line: [Target: x86_64-pc-linux-gnu]
-        ignore line: [Configured with: /build/gcc/src/gcc/configure --enable-languages=ada c c++ d fortran go lto m2 objc obj-c++ rust --enable-bootstrap --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/gcc/-/issues --with-build-config=bootstrap-lto --with-linker-hash-style=gnu --with-system-zlib --enable-__cxa_atexit --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-libstdcxx-backtrace --enable-link-serialization=1 --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-werror]
-        ignore line: [Thread model: posix]
-        ignore line: [Supported LTO compression algorithms: zlib zstd]
-        ignore line: [gcc version 14.2.1 20240805 (GCC) ]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_c8fad.dir/']
-        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/cc1plus -quiet -v -D_GNU_SOURCE /usr/share/cmake/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_c8fad.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -o /tmp/ccPSljKB.s]
-        ignore line: [GNU C++17 (GCC) version 14.2.1 20240805 (x86_64-pc-linux-gnu)]
-        ignore line: [	compiled by GNU C version 14.2.1 20240805  GMP version 6.3.0  MPFR version 4.2.1  MPC version 1.3.1  isl version isl-0.27-GMP]
-        ignore line: []
-        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
-        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../x86_64-pc-linux-gnu/include"]
-        ignore line: [#include "..." search starts here:]
-        ignore line: [#include <...> search starts here:]
-        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../include/c++/14.2.1]
-        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../include/c++/14.2.1/x86_64-pc-linux-gnu]
-        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../include/c++/14.2.1/backward]
-        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include]
-        ignore line: [ /usr/local/include]
-        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/include-fixed]
-        ignore line: [ /usr/include]
-        ignore line: [End of search list.]
-        ignore line: [Compiler executable checksum: 438deb6040cbc4b51ad3ab8b369917b9]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_c8fad.dir/']
-        ignore line: [ as -v --64 -o CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccPSljKB.s]
-        ignore line: [GNU assembler version 2.43.0 (x86_64-pc-linux-gnu) using BFD version (GNU Binutils) 2.43.0]
-        ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/]
-        ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../:/lib/:/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.']
-        ignore line: [Linking CXX executable cmTC_c8fad]
-        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c8fad.dir/link.txt --verbose=1]
-        ignore line: [/usr/bin/c++  -v -Wl -v CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_c8fad]
-        ignore line: [Using built-in specs.]
-        ignore line: [COLLECT_GCC=/usr/bin/c++]
-        ignore line: [COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper]
-        ignore line: [Target: x86_64-pc-linux-gnu]
-        ignore line: [Configured with: /build/gcc/src/gcc/configure --enable-languages=ada c c++ d fortran go lto m2 objc obj-c++ rust --enable-bootstrap --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/gcc/-/issues --with-build-config=bootstrap-lto --with-linker-hash-style=gnu --with-system-zlib --enable-__cxa_atexit --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-libstdcxx-backtrace --enable-link-serialization=1 --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-werror]
-        ignore line: [Thread model: posix]
-        ignore line: [Supported LTO compression algorithms: zlib zstd]
-        ignore line: [gcc version 14.2.1 20240805 (GCC) ]
-        ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/]
-        ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../:/lib/:/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_c8fad' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_c8fad.']
-        link line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccgmcJFs.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_c8fad /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../.. -v CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o]
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/collect2] ==> ignore
-          arg [-plugin] ==> ignore
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/liblto_plugin.so] ==> ignore
-          arg [-plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper] ==> ignore
-          arg [-plugin-opt=-fresolution=/tmp/ccgmcJFs.res] ==> ignore
-          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
-          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
-          arg [-plugin-opt=-pass-through=-lc] ==> ignore
-          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
-          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
-          arg [--build-id] ==> ignore
-          arg [--eh-frame-hdr] ==> ignore
-          arg [--hash-style=gnu] ==> ignore
-          arg [-m] ==> ignore
-          arg [elf_x86_64] ==> ignore
-          arg [-dynamic-linker] ==> ignore
-          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
-          arg [-pie] ==> ignore
-          arg [-o] ==> ignore
-          arg [cmTC_c8fad] ==> ignore
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o]
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o]
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o]
-          arg [-L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1] ==> dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1]
-          arg [-L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib] ==> dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib]
-          arg [-L/lib/../lib] ==> dir [/lib/../lib]
-          arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
-          arg [-L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../..] ==> dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../..]
-          arg [-v] ==> ignore
-          arg [CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
-          arg [-lstdc++] ==> lib [stdc++]
-          arg [-lm] ==> lib [m]
-          arg [-lgcc_s] ==> lib [gcc_s]
-          arg [-lgcc] ==> lib [gcc]
-          arg [-lc] ==> lib [c]
-          arg [-lgcc_s] ==> lib [gcc_s]
-          arg [-lgcc] ==> lib [gcc]
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o]
-          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o]
-        ignore line: [collect2 version 14.2.1 20240805]
-        ignore line: [/usr/bin/ld -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccgmcJFs.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_c8fad /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../.. -v CMakeFiles/cmTC_c8fad.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o]
-        linker tool for 'CXX': /usr/bin/ld
-        collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/Scrt1.o] ==> [/usr/lib/Scrt1.o]
-        collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crti.o] ==> [/usr/lib/crti.o]
-        collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib/crtn.o] ==> [/usr/lib/crtn.o]
-        collapse library dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1] ==> [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1]
-        collapse library dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../../../lib] ==> [/usr/lib]
-        collapse library dir [/lib/../lib] ==> [/lib]
-        collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
-        collapse library dir [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/../../..] ==> [/usr/lib]
-        implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
-        implicit objs: [/usr/lib/Scrt1.o;/usr/lib/crti.o;/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtbeginS.o;/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1/crtendS.o;/usr/lib/crtn.o]
-        implicit dirs: [/usr/lib/gcc/x86_64-pc-linux-gnu/14.2.1;/usr/lib;/lib]
-        implicit fwks: []
-      
-      
-  -
-    kind: "message-v1"
-    backtrace:
-      - "/usr/share/cmake/Modules/Internal/CMakeDetermineLinkerId.cmake:40 (message)"
-      - "/usr/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:255 (cmake_determine_linker_id)"
-      - "/usr/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
-      - "CMakeLists.txt:4 (project)"
-    message: |
-      Running the CXX compiler's linker: "/usr/bin/ld" "-v"
-      GNU ld (GNU Binutils) 2.43.0
-...
-
----
-events:
-  -
-    kind: "message-v1"
-    backtrace:
       - "/home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeDetermineSystem.cmake:205 (message)"
       - "CMakeLists.txt:4 (project)"
     message: |
@@ -537,8 +17,8 @@ events:
       - "CMakeLists.txt:4 (project)"
     message: |
       Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
-      Compiler: /home/babaid/mambaforge/envs/openmm_build/bin/gcc 
-      Build flags: 
+      Compiler: /home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-cc 
+      Build flags: -march=nocona;-mtune=haswell;-ftree-vectorize;-fPIC;-fstack-protector-strong;-fno-plt;-O2;-ffunction-sections;-pipe;-isystem;/home/babaid/mambaforge/envs/openmm_build/include
       Id flags:  
       
       The output was:
@@ -559,8 +39,8 @@ events:
       - "CMakeLists.txt:4 (project)"
     message: |
       Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
-      Compiler: /home/babaid/mambaforge/envs/openmm_build/bin/c++ 
-      Build flags: 
+      Compiler: /home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-c++ 
+      Build flags: -fvisibility-inlines-hidden;-fmessage-length=0;-march=nocona;-mtune=haswell;-ftree-vectorize;-fPIC;-fstack-protector-strong;-fno-plt;-O2;-ffunction-sections;-pipe;-isystem;/home/babaid/mambaforge/envs/openmm_build/include
       Id flags:  
       
       The output was:
@@ -581,33 +61,35 @@ events:
     checks:
       - "Detecting C compiler ABI info"
     directories:
-      source: "/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-5uqcdJ"
-      binary: "/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-5uqcdJ"
+      source: "/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-ZlL4y7"
+      binary: "/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-ZlL4y7"
     cmakeVariables:
-      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS: "-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/babaid/mambaforge/envs/openmm_build/include"
       CMAKE_C_FLAGS_DEBUG: "-g"
-      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_EXE_LINKER_FLAGS: "-Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/babaid/mambaforge/envs/openmm_build/lib -Wl,-rpath-link,/home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/lib"
     buildResult:
       variable: "CMAKE_C_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-5uqcdJ'
+        Change Dir: '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-ZlL4y7'
         
-        Run Build Command(s): /home/babaid/mambaforge/envs/openmm_build/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_d2cac/fast
-        /usr/bin/make  -f CMakeFiles/cmTC_d2cac.dir/build.make CMakeFiles/cmTC_d2cac.dir/build
-        make[1]: Entering directory '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-5uqcdJ'
-        Building C object CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o
-        /home/babaid/mambaforge/envs/openmm_build/bin/gcc   -fdiagnostics-color=always   -v -o CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o -c /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCCompilerABI.c
+        Run Build Command(s): /home/babaid/mambaforge/envs/openmm_build/bin/cmake -E env VERBOSE=1 /home/babaid/mambaforge/envs/openmm_build/bin/make -f Makefile cmTC_8c244/fast
+        /home/babaid/mambaforge/envs/openmm_build/bin/make  -f CMakeFiles/cmTC_8c244.dir/build.make CMakeFiles/cmTC_8c244.dir/build
+        make[1]: Entering directory '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-ZlL4y7'
+        Building C object CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o
+        /home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-cc   -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/babaid/mambaforge/envs/openmm_build/include    -v -o CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o -c /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCCompilerABI.c
         Reading specs from /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/specs
         could not find specs file conda.specs
-        COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/gcc
+        COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-cc
         Target: x86_64-conda-linux-gnu
         Configured with: ../configure --prefix=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho --with-slibdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --libdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --mandir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/man --build=x86_64-conda-linux-gnu --host=x86_64-conda-linux-gnu --target=x86_64-conda-linux-gnu --enable-languages=c,c++,fortran,objc,obj-c++ --enable-__cxa_atexit --disable-libmudflap --enable-libgomp --disable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-target-optspace --enable-plugin --enable-gold --disable-nls --disable-bootstrap --disable-multilib --enable-long-long --with-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/x86_64-conda-linux-gnu/sysroot --with-build-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/work/cf-compilers/x86_64-conda-linux-gnu/sysroot --with-native-system-header-dir=/usr/include --with-gxx-include-dir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++ --with-pkgversion='conda-forge gcc 12.4.0-0' --with-bugurl=https://github.com/conda-forge/ctng-compilers-feedstock/issues/new/choose --enable-libsanitizer --enable-default-pie --enable-threads=posix
         Thread model: posix
         Supported LTO compression algorithms: zlib
         gcc version 12.4.0 (conda-forge gcc 12.4.0-0) 
-        COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_d2cac.dir/'
-         /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/cc1 -quiet -v -iprefix /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/ -isysroot /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_d2cac.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=x86-64 -version -fdiagnostics-color=always -o /tmp/cccwYFXh.s
+        COLLECT_GCC_OPTIONS='-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-v' '-o' 'CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o' '-c' '-dumpdir' 'CMakeFiles/cmTC_8c244.dir/'
+         /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/cc1 -quiet -v -iprefix /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/ -isysroot /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot -isystem /home/babaid/mambaforge/envs/openmm_build/include /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_8c244.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -march=nocona -mtune=haswell -O2 -version -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -ffunction-sections -o - |
+         /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/as -v --64 -o CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o
+        GNU assembler version 2.40 (x86_64-conda-linux-gnu) using BFD version (GNU Binutils) 2.40
         GNU C17 (conda-forge gcc 12.4.0-0) version 12.4.0 (x86_64-conda-linux-gnu)
         	compiled by GNU C version 13.2.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
         
@@ -619,6 +101,7 @@ events:
         ignoring nonexistent directory "/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/../../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/include"
         #include "..." search starts here:
         #include <...> search starts here:
+         /home/babaid/mambaforge/envs/openmm_build/include
          /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include
          /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed
          /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/include
@@ -628,18 +111,15 @@ events:
         
         GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
         Compiler executable checksum: 7fdc1bc3a52375e1142786dc5ad7753a
-        COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_d2cac.dir/'
-         /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/as -v --64 -o CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o /tmp/cccwYFXh.s
-        GNU assembler version 2.40 (x86_64-conda-linux-gnu) using BFD version (GNU Binutils) 2.40
         COMPILER_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/
         LIBRARY_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/
-        COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.'
-        Linking C executable cmTC_d2cac
-        /home/babaid/mambaforge/envs/openmm_build/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d2cac.dir/link.txt --verbose=1
-        /home/babaid/mambaforge/envs/openmm_build/bin/gcc  -v -Wl,-v CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o -o cmTC_d2cac
+        COLLECT_GCC_OPTIONS='-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-v' '-o' 'CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o' '-c' '-dumpdir' 'CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.'
+        Linking C executable cmTC_8c244
+        /home/babaid/mambaforge/envs/openmm_build/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8c244.dir/link.txt --verbose=1
+        /home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-cc -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/babaid/mambaforge/envs/openmm_build/include  -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/babaid/mambaforge/envs/openmm_build/lib -Wl,-rpath-link,/home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/lib -v -Wl,-v CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o -o cmTC_8c244
         Reading specs from /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/specs
         could not find specs file conda.specs
-        COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/gcc
+        COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-cc
         COLLECT_LTO_WRAPPER=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper
         Target: x86_64-conda-linux-gnu
         Configured with: ../configure --prefix=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho --with-slibdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --libdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --mandir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/man --build=x86_64-conda-linux-gnu --host=x86_64-conda-linux-gnu --target=x86_64-conda-linux-gnu --enable-languages=c,c++,fortran,objc,obj-c++ --enable-__cxa_atexit --disable-libmudflap --enable-libgomp --disable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-target-optspace --enable-plugin --enable-gold --disable-nls --disable-bootstrap --disable-multilib --enable-long-long --with-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/x86_64-conda-linux-gnu/sysroot --with-build-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/work/cf-compilers/x86_64-conda-linux-gnu/sysroot --with-native-system-header-dir=/usr/include --with-gxx-include-dir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++ --with-pkgversion='conda-forge gcc 12.4.0-0' --with-bugurl=https://github.com/conda-forge/ctng-compilers-feedstock/issues/new/choose --enable-libsanitizer --enable-default-pie --enable-threads=posix
@@ -648,13 +128,13 @@ events:
         gcc version 12.4.0 (conda-forge gcc 12.4.0-0) 
         COMPILER_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/
         LIBRARY_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/
-        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_d2cac' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_d2cac.'
-         /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/collect2 -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cctMZ7C5.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_d2cac /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -v CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib
+        COLLECT_GCC_OPTIONS='-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-L/home/babaid/mambaforge/envs/openmm_build/lib' '-v' '-o' 'cmTC_8c244' '-dumpdir' 'cmTC_8c244.'
+         /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/collect2 -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccI0n2bR.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_8c244 /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -O2 --sort-common --as-needed -z relro -z now --disable-new-dtags --gc-sections --allow-shlib-undefined -rpath /home/babaid/mambaforge/envs/openmm_build/lib -rpath-link /home/babaid/mambaforge/envs/openmm_build/lib -v CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib
         collect2 version 12.4.0
-        /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/ld -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cctMZ7C5.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_d2cac /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -v CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib
+        /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/ld -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccI0n2bR.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_8c244 /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -O2 --sort-common --as-needed -z relro -z now --disable-new-dtags --gc-sections --allow-shlib-undefined -rpath /home/babaid/mambaforge/envs/openmm_build/lib -rpath-link /home/babaid/mambaforge/envs/openmm_build/lib -v CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib
         GNU ld (GNU Binutils) 2.40
-        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_d2cac' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_d2cac.'
-        make[1]: Leaving directory '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-5uqcdJ'
+        COLLECT_GCC_OPTIONS='-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-L/home/babaid/mambaforge/envs/openmm_build/lib' '-v' '-o' 'cmTC_8c244' '-dumpdir' 'cmTC_8c244.'
+        make[1]: Leaving directory '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-ZlL4y7'
         
       exitCode: 0
   -
@@ -667,14 +147,16 @@ events:
       Parsed C implicit include dir info: rv=done
         found start of include info
         found start of implicit include info
+          add: [/home/babaid/mambaforge/envs/openmm_build/include]
           add: [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include]
           add: [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed]
           add: [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/include]
         end of search list found
+        collapse include dir [/home/babaid/mambaforge/envs/openmm_build/include] ==> [/home/babaid/mambaforge/envs/openmm_build/include]
         collapse include dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include]
         collapse include dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed]
         collapse include dir [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/include] ==> [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/include]
-        implicit include dirs: [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/include]
+        implicit include dirs: [/home/babaid/mambaforge/envs/openmm_build/include;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/include]
       
       
   -
@@ -687,23 +169,25 @@ events:
       Parsed C implicit link information:
         link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
         linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
-        ignore line: [Change Dir: '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-5uqcdJ']
+        ignore line: [Change Dir: '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-ZlL4y7']
         ignore line: []
-        ignore line: [Run Build Command(s): /home/babaid/mambaforge/envs/openmm_build/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_d2cac/fast]
-        ignore line: [/usr/bin/make  -f CMakeFiles/cmTC_d2cac.dir/build.make CMakeFiles/cmTC_d2cac.dir/build]
-        ignore line: [make[1]: Entering directory '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-5uqcdJ']
-        ignore line: [Building C object CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o]
-        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/gcc   -fdiagnostics-color=always   -v -o CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o -c /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCCompilerABI.c]
+        ignore line: [Run Build Command(s): /home/babaid/mambaforge/envs/openmm_build/bin/cmake -E env VERBOSE=1 /home/babaid/mambaforge/envs/openmm_build/bin/make -f Makefile cmTC_8c244/fast]
+        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/make  -f CMakeFiles/cmTC_8c244.dir/build.make CMakeFiles/cmTC_8c244.dir/build]
+        ignore line: [make[1]: Entering directory '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-ZlL4y7']
+        ignore line: [Building C object CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o]
+        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-cc   -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/babaid/mambaforge/envs/openmm_build/include    -v -o CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o -c /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCCompilerABI.c]
         ignore line: [Reading specs from /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/specs]
         ignore line: [could not find specs file conda.specs]
-        ignore line: [COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/gcc]
+        ignore line: [COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-cc]
         ignore line: [Target: x86_64-conda-linux-gnu]
         ignore line: [Configured with: ../configure --prefix=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho --with-slibdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --libdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --mandir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/man --build=x86_64-conda-linux-gnu --host=x86_64-conda-linux-gnu --target=x86_64-conda-linux-gnu --enable-languages=c c++ fortran objc obj-c++ --enable-__cxa_atexit --disable-libmudflap --enable-libgomp --disable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-target-optspace --enable-plugin --enable-gold --disable-nls --disable-bootstrap --disable-multilib --enable-long-long --with-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/x86_64-conda-linux-gnu/sysroot --with-build-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/work/cf-compilers/x86_64-conda-linux-gnu/sysroot --with-native-system-header-dir=/usr/include --with-gxx-include-dir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++ --with-pkgversion='conda-forge gcc 12.4.0-0' --with-bugurl=https://github.com/conda-forge/ctng-compilers-feedstock/issues/new/choose --enable-libsanitizer --enable-default-pie --enable-threads=posix]
         ignore line: [Thread model: posix]
         ignore line: [Supported LTO compression algorithms: zlib]
         ignore line: [gcc version 12.4.0 (conda-forge gcc 12.4.0-0) ]
-        ignore line: [COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_d2cac.dir/']
-        ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/cc1 -quiet -v -iprefix /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/ -isysroot /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_d2cac.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=x86-64 -version -fdiagnostics-color=always -o /tmp/cccwYFXh.s]
+        ignore line: [COLLECT_GCC_OPTIONS='-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-v' '-o' 'CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o' '-c' '-dumpdir' 'CMakeFiles/cmTC_8c244.dir/']
+        ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/cc1 -quiet -v -iprefix /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/ -isysroot /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot -isystem /home/babaid/mambaforge/envs/openmm_build/include /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_8c244.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -march=nocona -mtune=haswell -O2 -version -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -ffunction-sections -o - |]
+        ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/as -v --64 -o CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o]
+        ignore line: [GNU assembler version 2.40 (x86_64-conda-linux-gnu) using BFD version (GNU Binutils) 2.40]
         ignore line: [GNU C17 (conda-forge gcc 12.4.0-0) version 12.4.0 (x86_64-conda-linux-gnu)]
         ignore line: [	compiled by GNU C version 13.2.0  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version isl-0.24-GMP]
         ignore line: []
@@ -715,6 +199,7 @@ events:
         ignore line: [ignoring nonexistent directory "/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/../../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/include"]
         ignore line: [#include "..." search starts here:]
         ignore line: [#include <...> search starts here:]
+        ignore line: [ /home/babaid/mambaforge/envs/openmm_build/include]
         ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include]
         ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed]
         ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/include]
@@ -724,18 +209,15 @@ events:
         ignore line: []
         ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
         ignore line: [Compiler executable checksum: 7fdc1bc3a52375e1142786dc5ad7753a]
-        ignore line: [COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_d2cac.dir/']
-        ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/as -v --64 -o CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o /tmp/cccwYFXh.s]
-        ignore line: [GNU assembler version 2.40 (x86_64-conda-linux-gnu) using BFD version (GNU Binutils) 2.40]
         ignore line: [COMPILER_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/]
         ignore line: [LIBRARY_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.']
-        ignore line: [Linking C executable cmTC_d2cac]
-        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d2cac.dir/link.txt --verbose=1]
-        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/gcc  -v -Wl -v CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o -o cmTC_d2cac]
+        ignore line: [COLLECT_GCC_OPTIONS='-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-v' '-o' 'CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o' '-c' '-dumpdir' 'CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.']
+        ignore line: [Linking C executable cmTC_8c244]
+        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/cmake -E cmake_link_script CMakeFiles/cmTC_8c244.dir/link.txt --verbose=1]
+        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-cc -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/babaid/mambaforge/envs/openmm_build/include  -Wl -O2 -Wl --sort-common -Wl --as-needed -Wl -z relro -Wl -z now -Wl --disable-new-dtags -Wl --gc-sections -Wl --allow-shlib-undefined -Wl -rpath /home/babaid/mambaforge/envs/openmm_build/lib -Wl -rpath-link /home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/lib -v -Wl -v CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o -o cmTC_8c244]
         ignore line: [Reading specs from /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/specs]
         ignore line: [could not find specs file conda.specs]
-        ignore line: [COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/gcc]
+        ignore line: [COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-cc]
         ignore line: [COLLECT_LTO_WRAPPER=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper]
         ignore line: [Target: x86_64-conda-linux-gnu]
         ignore line: [Configured with: ../configure --prefix=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho --with-slibdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --libdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --mandir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/man --build=x86_64-conda-linux-gnu --host=x86_64-conda-linux-gnu --target=x86_64-conda-linux-gnu --enable-languages=c c++ fortran objc obj-c++ --enable-__cxa_atexit --disable-libmudflap --enable-libgomp --disable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-target-optspace --enable-plugin --enable-gold --disable-nls --disable-bootstrap --disable-multilib --enable-long-long --with-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/x86_64-conda-linux-gnu/sysroot --with-build-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/work/cf-compilers/x86_64-conda-linux-gnu/sysroot --with-native-system-header-dir=/usr/include --with-gxx-include-dir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1719535637166/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++ --with-pkgversion='conda-forge gcc 12.4.0-0' --with-bugurl=https://github.com/conda-forge/ctng-compilers-feedstock/issues/new/choose --enable-libsanitizer --enable-default-pie --enable-threads=posix]
@@ -744,13 +226,13 @@ events:
         ignore line: [gcc version 12.4.0 (conda-forge gcc 12.4.0-0) ]
         ignore line: [COMPILER_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/]
         ignore line: [LIBRARY_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_d2cac' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_d2cac.']
-        link line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/collect2 -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cctMZ7C5.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_d2cac /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -v CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib]
+        ignore line: [COLLECT_GCC_OPTIONS='-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-L/home/babaid/mambaforge/envs/openmm_build/lib' '-v' '-o' 'cmTC_8c244' '-dumpdir' 'cmTC_8c244.']
+        link line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/collect2 -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccI0n2bR.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_8c244 /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -O2 --sort-common --as-needed -z relro -z now --disable-new-dtags --gc-sections --allow-shlib-undefined -rpath /home/babaid/mambaforge/envs/openmm_build/lib -rpath-link /home/babaid/mambaforge/envs/openmm_build/lib -v CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib]
           arg [/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/collect2] ==> ignore
           arg [-plugin] ==> ignore
           arg [/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so] ==> ignore
           arg [-plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper] ==> ignore
-          arg [-plugin-opt=-fresolution=/tmp/cctMZ7C5.res] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/ccI0n2bR.res] ==> ignore
           arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
           arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
           arg [-plugin-opt=-pass-through=-lc] ==> ignore
@@ -764,10 +246,11 @@ events:
           arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
           arg [-pie] ==> ignore
           arg [-o] ==> ignore
-          arg [cmTC_d2cac] ==> ignore
+          arg [cmTC_8c244] ==> ignore
           arg [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o] ==> obj [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o]
           arg [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o] ==> obj [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o]
           arg [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o] ==> obj [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o]
+          arg [-L/home/babaid/mambaforge/envs/openmm_build/lib] ==> dir [/home/babaid/mambaforge/envs/openmm_build/lib]
           arg [-L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0] ==> dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0]
           arg [-L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc] ==> dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc]
           arg [-L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib] ==> dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib]
@@ -778,8 +261,20 @@ events:
           arg [-L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../..] ==> dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../..]
           arg [-L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib] ==> dir [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib]
           arg [-L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib] ==> dir [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib]
+          arg [-O2] ==> ignore
+          arg [--sort-common] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-znow] ==> ignore
+          arg [--disable-new-dtags] ==> ignore
+          arg [--gc-sections] ==> ignore
+          arg [--allow-shlib-undefined] ==> ignore
+          arg [-rpath] ==> ignore
+          arg [/home/babaid/mambaforge/envs/openmm_build/lib] ==> ignore
+          arg [-rpath-link] ==> ignore
+          arg [/home/babaid/mambaforge/envs/openmm_build/lib] ==> ignore
           arg [-v] ==> ignore
-          arg [CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o] ==> ignore
           arg [-lgcc] ==> lib [gcc]
           arg [--push-state] ==> ignore
           arg [--as-needed] ==> ignore
@@ -796,13 +291,14 @@ events:
           arg [-rpath] ==> ignore
           arg [/home/babaid/mambaforge/envs/openmm_build/lib] ==> ignore
         ignore line: [collect2 version 12.4.0]
-        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/ld -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cctMZ7C5.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_d2cac /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -v CMakeFiles/cmTC_d2cac.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib]
+        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/ld -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccI0n2bR.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_8c244 /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -O2 --sort-common --as-needed -z relro -z now --disable-new-dtags --gc-sections --allow-shlib-undefined -rpath /home/babaid/mambaforge/envs/openmm_build/lib -rpath-link /home/babaid/mambaforge/envs/openmm_build/lib -v CMakeFiles/cmTC_8c244.dir/CMakeCCompilerABI.c.o -lgcc --push-state --as-needed -lgcc_s --pop-state -lc -lgcc --push-state --as-needed -lgcc_s --pop-state /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib]
         linker tool for 'C': /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/ld
         collapse obj [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o] ==> [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib/Scrt1.o]
         collapse obj [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o] ==> [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib/crti.o]
         collapse obj [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o]
         collapse obj [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o]
         collapse obj [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o] ==> [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib/crtn.o]
+        collapse library dir [/home/babaid/mambaforge/envs/openmm_build/lib] ==> [/home/babaid/mambaforge/envs/openmm_build/lib]
         collapse library dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0]
         collapse library dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc]
         collapse library dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib] ==> [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/lib]
@@ -815,7 +311,7 @@ events:
         collapse library dir [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib] ==> [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib]
         implicit libs: [gcc;gcc_s;c;gcc;gcc_s]
         implicit objs: [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib/Scrt1.o;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib/crti.o;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib/crtn.o]
-        implicit dirs: [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0;/home/babaid/mambaforge/envs/openmm_build/lib/gcc;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/lib;/home/babaid/mambaforge/envs/openmm_build/lib;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/lib;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib]
+        implicit dirs: [/home/babaid/mambaforge/envs/openmm_build/lib;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0;/home/babaid/mambaforge/envs/openmm_build/lib/gcc;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/lib;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/lib;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib]
         implicit fwks: []
       
       
@@ -838,34 +334,36 @@ events:
     checks:
       - "Detecting CXX compiler ABI info"
     directories:
-      source: "/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-Sb2Qbf"
-      binary: "/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-Sb2Qbf"
+      source: "/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-GNvs5f"
+      binary: "/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-GNvs5f"
     cmakeVariables:
-      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS: "-fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/babaid/mambaforge/envs/openmm_build/include"
       CMAKE_CXX_FLAGS_DEBUG: "-g"
       CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
-      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_EXE_LINKER_FLAGS: "-Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/babaid/mambaforge/envs/openmm_build/lib -Wl,-rpath-link,/home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/lib"
     buildResult:
       variable: "CMAKE_CXX_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-Sb2Qbf'
+        Change Dir: '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-GNvs5f'
         
-        Run Build Command(s): /home/babaid/mambaforge/envs/openmm_build/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_223fc/fast
-        /usr/bin/make  -f CMakeFiles/cmTC_223fc.dir/build.make CMakeFiles/cmTC_223fc.dir/build
-        make[1]: Entering directory '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-Sb2Qbf'
-        Building CXX object CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o
-        /home/babaid/mambaforge/envs/openmm_build/bin/c++   -fdiagnostics-color=always   -v -o CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o -c /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp
+        Run Build Command(s): /home/babaid/mambaforge/envs/openmm_build/bin/cmake -E env VERBOSE=1 /home/babaid/mambaforge/envs/openmm_build/bin/make -f Makefile cmTC_bd5d6/fast
+        /home/babaid/mambaforge/envs/openmm_build/bin/make  -f CMakeFiles/cmTC_bd5d6.dir/build.make CMakeFiles/cmTC_bd5d6.dir/build
+        make[1]: Entering directory '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-GNvs5f'
+        Building CXX object CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o
+        /home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-c++   -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/babaid/mambaforge/envs/openmm_build/include    -v -o CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o -c /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp
         Reading specs from /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/specs
         could not find specs file conda.specs
-        COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/c++
+        COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-c++
         Target: x86_64-conda-linux-gnu
         Configured with: ../configure --prefix=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho --with-slibdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --libdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --mandir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/man --build=x86_64-conda-linux-gnu --host=x86_64-conda-linux-gnu --target=x86_64-conda-linux-gnu --enable-languages=c,c++,fortran,objc,obj-c++ --enable-__cxa_atexit --disable-libmudflap --enable-libgomp --disable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-target-optspace --enable-plugin --enable-gold --disable-nls --disable-bootstrap --disable-multilib --enable-long-long --with-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/x86_64-conda-linux-gnu/sysroot --with-build-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/work/cf-compilers/x86_64-conda-linux-gnu/sysroot --with-native-system-header-dir=/usr/include --with-gxx-include-dir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++ --with-pkgversion='conda-forge gcc 12.4.0-0' --with-bugurl=https://github.com/conda-forge/ctng-compilers-feedstock/issues/new/choose --enable-libsanitizer --enable-default-pie --enable-threads=posix
         Thread model: posix
         Supported LTO compression algorithms: zlib
         gcc version 12.4.0 (conda-forge gcc 12.4.0-0) 
-        COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_223fc.dir/'
-         /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/cc1plus -quiet -v -iprefix /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/ -isysroot /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot -D_GNU_SOURCE /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_223fc.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fdiagnostics-color=always -o /tmp/cc3VxqJ0.s
+        COLLECT_GCC_OPTIONS='-fvisibility-inlines-hidden' '-fmessage-length=0' '-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-v' '-o' 'CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-dumpdir' 'CMakeFiles/cmTC_bd5d6.dir/'
+         /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/cc1plus -quiet -v -iprefix /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/ -isysroot /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot -D_GNU_SOURCE -isystem /home/babaid/mambaforge/envs/openmm_build/include /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_bd5d6.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -march=nocona -mtune=haswell -O2 -version -fvisibility-inlines-hidden -fmessage-length=0 -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -ffunction-sections -o - |
+         /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/as -v --64 -o CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o
+        GNU assembler version 2.40 (x86_64-conda-linux-gnu) using BFD version (GNU Binutils) 2.40
         GNU C++17 (conda-forge gcc 12.4.0-0) version 12.4.0 (x86_64-conda-linux-gnu)
         	compiled by GNU C version 14.1.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
         
@@ -880,6 +378,7 @@ events:
         ignoring nonexistent directory "/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/../../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/include"
         #include "..." search starts here:
         #include <...> search starts here:
+         /home/babaid/mambaforge/envs/openmm_build/include
          /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++
          /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/x86_64-conda-linux-gnu
          /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/backward
@@ -892,18 +391,15 @@ events:
         
         GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
         Compiler executable checksum: 42268fe421ecaa34fd7bf84a32ff8ab3
-        COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_223fc.dir/'
-         /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/as -v --64 -o CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o /tmp/cc3VxqJ0.s
-        GNU assembler version 2.40 (x86_64-conda-linux-gnu) using BFD version (GNU Binutils) 2.40
         COMPILER_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/
         LIBRARY_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/
-        COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.'
-        Linking CXX executable cmTC_223fc
-        /home/babaid/mambaforge/envs/openmm_build/bin/cmake -E cmake_link_script CMakeFiles/cmTC_223fc.dir/link.txt --verbose=1
-        /home/babaid/mambaforge/envs/openmm_build/bin/c++  -v -Wl,-v CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_223fc
+        COLLECT_GCC_OPTIONS='-fvisibility-inlines-hidden' '-fmessage-length=0' '-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-v' '-o' 'CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-dumpdir' 'CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.'
+        Linking CXX executable cmTC_bd5d6
+        /home/babaid/mambaforge/envs/openmm_build/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bd5d6.dir/link.txt --verbose=1
+        /home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-c++ -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/babaid/mambaforge/envs/openmm_build/include  -Wl,-O2 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now -Wl,--disable-new-dtags -Wl,--gc-sections -Wl,--allow-shlib-undefined -Wl,-rpath,/home/babaid/mambaforge/envs/openmm_build/lib -Wl,-rpath-link,/home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/lib -v -Wl,-v CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_bd5d6
         Reading specs from /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/specs
         could not find specs file conda.specs
-        COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/c++
+        COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-c++
         COLLECT_LTO_WRAPPER=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper
         Target: x86_64-conda-linux-gnu
         Configured with: ../configure --prefix=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho --with-slibdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --libdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --mandir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/man --build=x86_64-conda-linux-gnu --host=x86_64-conda-linux-gnu --target=x86_64-conda-linux-gnu --enable-languages=c,c++,fortran,objc,obj-c++ --enable-__cxa_atexit --disable-libmudflap --enable-libgomp --disable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-target-optspace --enable-plugin --enable-gold --disable-nls --disable-bootstrap --disable-multilib --enable-long-long --with-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/x86_64-conda-linux-gnu/sysroot --with-build-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/work/cf-compilers/x86_64-conda-linux-gnu/sysroot --with-native-system-header-dir=/usr/include --with-gxx-include-dir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++ --with-pkgversion='conda-forge gcc 12.4.0-0' --with-bugurl=https://github.com/conda-forge/ctng-compilers-feedstock/issues/new/choose --enable-libsanitizer --enable-default-pie --enable-threads=posix
@@ -912,13 +408,13 @@ events:
         gcc version 12.4.0 (conda-forge gcc 12.4.0-0) 
         COMPILER_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/
         LIBRARY_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/
-        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_223fc' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_223fc.'
-         /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/collect2 -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cctsuTl5.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_223fc /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -v CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib
+        COLLECT_GCC_OPTIONS='-fvisibility-inlines-hidden' '-fmessage-length=0' '-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-L/home/babaid/mambaforge/envs/openmm_build/lib' '-v' '-o' 'cmTC_bd5d6' '-shared-libgcc' '-dumpdir' 'cmTC_bd5d6.'
+         /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/collect2 -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccmNs6Ej.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_bd5d6 /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -O2 --sort-common --as-needed -z relro -z now --disable-new-dtags --gc-sections --allow-shlib-undefined -rpath /home/babaid/mambaforge/envs/openmm_build/lib -rpath-link /home/babaid/mambaforge/envs/openmm_build/lib -v CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib
         collect2 version 12.4.0
-        /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/ld -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cctsuTl5.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_223fc /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -v CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib
+        /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/ld -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccmNs6Ej.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_bd5d6 /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -O2 --sort-common --as-needed -z relro -z now --disable-new-dtags --gc-sections --allow-shlib-undefined -rpath /home/babaid/mambaforge/envs/openmm_build/lib -rpath-link /home/babaid/mambaforge/envs/openmm_build/lib -v CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib
         GNU ld (GNU Binutils) 2.40
-        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_223fc' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_223fc.'
-        make[1]: Leaving directory '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-Sb2Qbf'
+        COLLECT_GCC_OPTIONS='-fvisibility-inlines-hidden' '-fmessage-length=0' '-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-L/home/babaid/mambaforge/envs/openmm_build/lib' '-v' '-o' 'cmTC_bd5d6' '-shared-libgcc' '-dumpdir' 'cmTC_bd5d6.'
+        make[1]: Leaving directory '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-GNvs5f'
         
       exitCode: 0
   -
@@ -931,6 +427,7 @@ events:
       Parsed CXX implicit include dir info: rv=done
         found start of include info
         found start of implicit include info
+          add: [/home/babaid/mambaforge/envs/openmm_build/include]
           add: [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++]
           add: [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/x86_64-conda-linux-gnu]
           add: [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/backward]
@@ -938,13 +435,14 @@ events:
           add: [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed]
           add: [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/include]
         end of search list found
+        collapse include dir [/home/babaid/mambaforge/envs/openmm_build/include] ==> [/home/babaid/mambaforge/envs/openmm_build/include]
         collapse include dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++]
         collapse include dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/x86_64-conda-linux-gnu] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/x86_64-conda-linux-gnu]
         collapse include dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/backward] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/backward]
         collapse include dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include]
         collapse include dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed]
         collapse include dir [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/include] ==> [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/include]
-        implicit include dirs: [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/x86_64-conda-linux-gnu;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/backward;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/include]
+        implicit include dirs: [/home/babaid/mambaforge/envs/openmm_build/include;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/x86_64-conda-linux-gnu;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/backward;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include-fixed;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/include]
       
       
   -
@@ -957,23 +455,25 @@ events:
       Parsed CXX implicit link information:
         link line regex: [^( *|.*[/\\])(ld[0-9]*(\\.[a-z]+)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
         linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(\\.[a-z]+)?))("|,| |$)]
-        ignore line: [Change Dir: '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-Sb2Qbf']
+        ignore line: [Change Dir: '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-GNvs5f']
         ignore line: []
-        ignore line: [Run Build Command(s): /home/babaid/mambaforge/envs/openmm_build/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_223fc/fast]
-        ignore line: [/usr/bin/make  -f CMakeFiles/cmTC_223fc.dir/build.make CMakeFiles/cmTC_223fc.dir/build]
-        ignore line: [make[1]: Entering directory '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-Sb2Qbf']
-        ignore line: [Building CXX object CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o]
-        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/c++   -fdiagnostics-color=always   -v -o CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o -c /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Run Build Command(s): /home/babaid/mambaforge/envs/openmm_build/bin/cmake -E env VERBOSE=1 /home/babaid/mambaforge/envs/openmm_build/bin/make -f Makefile cmTC_bd5d6/fast]
+        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/make  -f CMakeFiles/cmTC_bd5d6.dir/build.make CMakeFiles/cmTC_bd5d6.dir/build]
+        ignore line: [make[1]: Entering directory '/home/babaid/repos/openmm-puremd/reaxff_puremd/PuReMD/CMakeFiles/CMakeScratch/TryCompile-GNvs5f']
+        ignore line: [Building CXX object CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-c++   -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/babaid/mambaforge/envs/openmm_build/include    -v -o CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o -c /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp]
         ignore line: [Reading specs from /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/specs]
         ignore line: [could not find specs file conda.specs]
-        ignore line: [COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/c++]
+        ignore line: [COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-c++]
         ignore line: [Target: x86_64-conda-linux-gnu]
         ignore line: [Configured with: ../configure --prefix=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho --with-slibdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --libdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --mandir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/man --build=x86_64-conda-linux-gnu --host=x86_64-conda-linux-gnu --target=x86_64-conda-linux-gnu --enable-languages=c c++ fortran objc obj-c++ --enable-__cxa_atexit --disable-libmudflap --enable-libgomp --disable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-target-optspace --enable-plugin --enable-gold --disable-nls --disable-bootstrap --disable-multilib --enable-long-long --with-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/x86_64-conda-linux-gnu/sysroot --with-build-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/work/cf-compilers/x86_64-conda-linux-gnu/sysroot --with-native-system-header-dir=/usr/include --with-gxx-include-dir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++ --with-pkgversion='conda-forge gcc 12.4.0-0' --with-bugurl=https://github.com/conda-forge/ctng-compilers-feedstock/issues/new/choose --enable-libsanitizer --enable-default-pie --enable-threads=posix]
         ignore line: [Thread model: posix]
         ignore line: [Supported LTO compression algorithms: zlib]
         ignore line: [gcc version 12.4.0 (conda-forge gcc 12.4.0-0) ]
-        ignore line: [COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_223fc.dir/']
-        ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/cc1plus -quiet -v -iprefix /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/ -isysroot /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot -D_GNU_SOURCE /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_223fc.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fdiagnostics-color=always -o /tmp/cc3VxqJ0.s]
+        ignore line: [COLLECT_GCC_OPTIONS='-fvisibility-inlines-hidden' '-fmessage-length=0' '-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-v' '-o' 'CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-dumpdir' 'CMakeFiles/cmTC_bd5d6.dir/']
+        ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/cc1plus -quiet -v -iprefix /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/ -isysroot /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot -D_GNU_SOURCE -isystem /home/babaid/mambaforge/envs/openmm_build/include /home/babaid/mambaforge/envs/openmm_build/share/cmake-3.30/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_bd5d6.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -march=nocona -mtune=haswell -O2 -version -fvisibility-inlines-hidden -fmessage-length=0 -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -ffunction-sections -o - |]
+        ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/as -v --64 -o CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [GNU assembler version 2.40 (x86_64-conda-linux-gnu) using BFD version (GNU Binutils) 2.40]
         ignore line: [GNU C++17 (conda-forge gcc 12.4.0-0) version 12.4.0 (x86_64-conda-linux-gnu)]
         ignore line: [	compiled by GNU C version 14.1.0  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version isl-0.24-GMP]
         ignore line: []
@@ -988,6 +488,7 @@ events:
         ignore line: [ignoring nonexistent directory "/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/../../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/include"]
         ignore line: [#include "..." search starts here:]
         ignore line: [#include <...> search starts here:]
+        ignore line: [ /home/babaid/mambaforge/envs/openmm_build/include]
         ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++]
         ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/x86_64-conda-linux-gnu]
         ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++/backward]
@@ -1000,18 +501,15 @@ events:
         ignore line: []
         ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
         ignore line: [Compiler executable checksum: 42268fe421ecaa34fd7bf84a32ff8ab3]
-        ignore line: [COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_223fc.dir/']
-        ignore line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/as -v --64 -o CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o /tmp/cc3VxqJ0.s]
-        ignore line: [GNU assembler version 2.40 (x86_64-conda-linux-gnu) using BFD version (GNU Binutils) 2.40]
         ignore line: [COMPILER_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/]
         ignore line: [LIBRARY_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-v' '-o' 'CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.']
-        ignore line: [Linking CXX executable cmTC_223fc]
-        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/cmake -E cmake_link_script CMakeFiles/cmTC_223fc.dir/link.txt --verbose=1]
-        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/c++  -v -Wl -v CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_223fc]
+        ignore line: [COLLECT_GCC_OPTIONS='-fvisibility-inlines-hidden' '-fmessage-length=0' '-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-v' '-o' 'CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-dumpdir' 'CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.']
+        ignore line: [Linking CXX executable cmTC_bd5d6]
+        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bd5d6.dir/link.txt --verbose=1]
+        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-c++ -fvisibility-inlines-hidden -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O2 -ffunction-sections -pipe -isystem /home/babaid/mambaforge/envs/openmm_build/include  -Wl -O2 -Wl --sort-common -Wl --as-needed -Wl -z relro -Wl -z now -Wl --disable-new-dtags -Wl --gc-sections -Wl --allow-shlib-undefined -Wl -rpath /home/babaid/mambaforge/envs/openmm_build/lib -Wl -rpath-link /home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/lib -v -Wl -v CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_bd5d6]
         ignore line: [Reading specs from /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/specs]
         ignore line: [could not find specs file conda.specs]
-        ignore line: [COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/c++]
+        ignore line: [COLLECT_GCC=/home/babaid/mambaforge/envs/openmm_build/bin/x86_64-conda-linux-gnu-c++]
         ignore line: [COLLECT_LTO_WRAPPER=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper]
         ignore line: [Target: x86_64-conda-linux-gnu]
         ignore line: [Configured with: ../configure --prefix=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho --with-slibdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --libdir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib --mandir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/man --build=x86_64-conda-linux-gnu --host=x86_64-conda-linux-gnu --target=x86_64-conda-linux-gnu --enable-languages=c c++ fortran objc obj-c++ --enable-__cxa_atexit --disable-libmudflap --enable-libgomp --disable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-target-optspace --enable-plugin --enable-gold --disable-nls --disable-bootstrap --disable-multilib --enable-long-long --with-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/x86_64-conda-linux-gnu/sysroot --with-build-sysroot=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/work/cf-compilers/x86_64-conda-linux-gnu/sysroot --with-native-system-header-dir=/usr/include --with-gxx-include-dir=/home/conda/feedstock_root/build_artifacts/gcc_compilers_1722861960826/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placeho/lib/gcc/x86_64-conda-linux-gnu/12.4.0/include/c++ --with-pkgversion='conda-forge gcc 12.4.0-0' --with-bugurl=https://github.com/conda-forge/ctng-compilers-feedstock/issues/new/choose --enable-libsanitizer --enable-default-pie --enable-threads=posix]
@@ -1020,13 +518,13 @@ events:
         ignore line: [gcc version 12.4.0 (conda-forge gcc 12.4.0-0) ]
         ignore line: [COMPILER_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/]
         ignore line: [LIBRARY_PATH=/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/:/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_223fc' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_223fc.']
-        link line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/collect2 -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cctsuTl5.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_223fc /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -v CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib]
+        ignore line: [COLLECT_GCC_OPTIONS='-fvisibility-inlines-hidden' '-fmessage-length=0' '-march=nocona' '-mtune=haswell' '-ftree-vectorize' '-fPIC' '-fstack-protector-strong' '-fno-plt' '-O2' '-ffunction-sections' '-pipe' '-isystem' '/home/babaid/mambaforge/envs/openmm_build/include' '-L/home/babaid/mambaforge/envs/openmm_build/lib' '-v' '-o' 'cmTC_bd5d6' '-shared-libgcc' '-dumpdir' 'cmTC_bd5d6.']
+        link line: [ /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/collect2 -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccmNs6Ej.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_bd5d6 /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -O2 --sort-common --as-needed -z relro -z now --disable-new-dtags --gc-sections --allow-shlib-undefined -rpath /home/babaid/mambaforge/envs/openmm_build/lib -rpath-link /home/babaid/mambaforge/envs/openmm_build/lib -v CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib]
           arg [/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/collect2] ==> ignore
           arg [-plugin] ==> ignore
           arg [/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so] ==> ignore
           arg [-plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper] ==> ignore
-          arg [-plugin-opt=-fresolution=/tmp/cctsuTl5.res] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/ccmNs6Ej.res] ==> ignore
           arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
           arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
           arg [-plugin-opt=-pass-through=-lc] ==> ignore
@@ -1040,10 +538,11 @@ events:
           arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
           arg [-pie] ==> ignore
           arg [-o] ==> ignore
-          arg [cmTC_223fc] ==> ignore
+          arg [cmTC_bd5d6] ==> ignore
           arg [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o] ==> obj [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o]
           arg [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o] ==> obj [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o]
           arg [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o] ==> obj [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o]
+          arg [-L/home/babaid/mambaforge/envs/openmm_build/lib] ==> dir [/home/babaid/mambaforge/envs/openmm_build/lib]
           arg [-L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0] ==> dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0]
           arg [-L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc] ==> dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc]
           arg [-L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib] ==> dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib]
@@ -1054,8 +553,20 @@ events:
           arg [-L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../..] ==> dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../..]
           arg [-L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib] ==> dir [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib]
           arg [-L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib] ==> dir [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib]
+          arg [-O2] ==> ignore
+          arg [--sort-common] ==> ignore
+          arg [--as-needed] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [-znow] ==> ignore
+          arg [--disable-new-dtags] ==> ignore
+          arg [--gc-sections] ==> ignore
+          arg [--allow-shlib-undefined] ==> ignore
+          arg [-rpath] ==> ignore
+          arg [/home/babaid/mambaforge/envs/openmm_build/lib] ==> ignore
+          arg [-rpath-link] ==> ignore
+          arg [/home/babaid/mambaforge/envs/openmm_build/lib] ==> ignore
           arg [-v] ==> ignore
-          arg [CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
           arg [-lstdc++] ==> lib [stdc++]
           arg [-lm] ==> lib [m]
           arg [-lgcc_s] ==> lib [gcc_s]
@@ -1068,13 +579,14 @@ events:
           arg [-rpath] ==> ignore
           arg [/home/babaid/mambaforge/envs/openmm_build/lib] ==> ignore
         ignore line: [collect2 version 12.4.0]
-        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/ld -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/cctsuTl5.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_223fc /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -v CMakeFiles/cmTC_223fc.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib]
+        ignore line: [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/ld -plugin /home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/liblto_plugin.so -plugin-opt=/home/babaid/mambaforge/envs/openmm_build/bin/../libexec/gcc/x86_64-conda-linux-gnu/12.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccmNs6Ej.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --sysroot=/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_bd5d6 /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o -L/home/babaid/mambaforge/envs/openmm_build/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0 -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../.. -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/lib -L/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib -O2 --sort-common --as-needed -z relro -z now --disable-new-dtags --gc-sections --allow-shlib-undefined -rpath /home/babaid/mambaforge/envs/openmm_build/lib -rpath-link /home/babaid/mambaforge/envs/openmm_build/lib -v CMakeFiles/cmTC_bd5d6.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o /home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o -rpath /home/babaid/mambaforge/envs/openmm_build/lib]
         linker tool for 'CXX': /home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/bin/ld
         collapse obj [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/Scrt1.o] ==> [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib/Scrt1.o]
         collapse obj [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crti.o] ==> [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib/crti.o]
         collapse obj [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o]
         collapse obj [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o]
         collapse obj [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib/../lib/crtn.o] ==> [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib/crtn.o]
+        collapse library dir [/home/babaid/mambaforge/envs/openmm_build/lib] ==> [/home/babaid/mambaforge/envs/openmm_build/lib]
         collapse library dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0]
         collapse library dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc] ==> [/home/babaid/mambaforge/envs/openmm_build/lib/gcc]
         collapse library dir [/home/babaid/mambaforge/envs/openmm_build/bin/../lib/gcc/x86_64-conda-linux-gnu/12.4.0/../../../../x86_64-conda-linux-gnu/lib/../lib] ==> [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/lib]
@@ -1087,7 +599,7 @@ events:
         collapse library dir [/home/babaid/mambaforge/envs/openmm_build/bin/../x86_64-conda-linux-gnu/sysroot/usr/lib] ==> [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib]
         implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
         implicit objs: [/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib/Scrt1.o;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib/crti.o;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtbeginS.o;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0/crtendS.o;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib/crtn.o]
-        implicit dirs: [/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0;/home/babaid/mambaforge/envs/openmm_build/lib/gcc;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/lib;/home/babaid/mambaforge/envs/openmm_build/lib;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/lib;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib]
+        implicit dirs: [/home/babaid/mambaforge/envs/openmm_build/lib;/home/babaid/mambaforge/envs/openmm_build/lib/gcc/x86_64-conda-linux-gnu/12.4.0;/home/babaid/mambaforge/envs/openmm_build/lib/gcc;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/lib;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/lib;/home/babaid/mambaforge/envs/openmm_build/x86_64-conda-linux-gnu/sysroot/usr/lib]
         implicit fwks: []
       
       

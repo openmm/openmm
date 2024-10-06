@@ -36,7 +36,7 @@ void ExternalPuremdForceImpl::initialize(ContextImpl& context) {
 
 double ExternalPuremdForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
     if ((groups&(1<<forceGroup)) != 0)
-        return kernel.getAs<CalcHarmonicBondForceKernel>().execute(context, includeForces, includeEnergy);
+        return kernel.getAs<CalcExternalPuremdForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
 
@@ -49,13 +49,15 @@ std::vector<std::string> ExternalPuremdForceImpl::getKernelNames() {
 vector<int> ExternalPuremdForceImpl::getSimulatedParticles() const {
     int numBonds = owner.getNumAtoms();
     vector<int> atoms(numBonds);
+    vector<char> symbols(numBonds);
+    vector<int> isQM(numBonds);
     for (int i = 0; i < numBonds; i++) {
-        owner.getAtom(i, atoms[i]);
+        owner.getParticleParameters(i, atoms[i], symbols[i], isQM[i]);
     }
     return atoms;
 }
 
 void ExternalPuremdForceImpl::updateParametersInContext(ContextImpl& context, int firstBond, int lastBond) {
-    kernel.getAs<CalcHarmonicBondForceKernel>().copyParametersToContext(context, owner, firstBond, lastBond);
+    kernel.getAs<CalcExternalPuremdForceKernel>().copyParametersToContext(context, owner, firstBond, lastBond);
     context.systemChanged();
 }

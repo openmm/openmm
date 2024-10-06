@@ -43,6 +43,7 @@ SKIP_METHODS = [('State', 'getPositions'),
                 ('CalcGBSAOBCForceKernel',),
                 ('CalcHarmonicAngleForceKernel',),
                 ('CalcHarmonicBondForceKernel',),
+                ('CalcExternalPuremdForceKernel',)
                 ('CalcNonbondedForceKernel',),
                 ('CalcPeriodicTorsionForceKernel',),
                 ('CalcRBTorsionForceKernel',),
