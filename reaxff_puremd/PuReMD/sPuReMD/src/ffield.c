@@ -450,8 +450,10 @@ void Read_Force_Field( const char * const ffield_file,
             if ( reax->sbp[i].mass < 21.0
                     && reax->sbp[i].valency_val != reax->sbp[i].valency_boc )
             {
+                /* Commenting this out because writing to stderr causes segfaults in GCC 11.4.0 on CI.
                 fprintf( stderr, "[WARNING] changed valency_val to valency_boc for %s\n",
                          reax->sbp[i].name );
+                */
                 reax->sbp[i].valency_val = reax->sbp[i].valency_boc;
             }
         }
