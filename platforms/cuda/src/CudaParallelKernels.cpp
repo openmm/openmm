@@ -422,7 +422,7 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
                                      new_qm_pos, new_mm_pos,
                                     qmForces, mmForces, qm_q, energy);
 
-    double conversionFactor = 9.10938356e-9; // Convert forces to atomic units
+    double conversionFactor = 1.66053906660e-21; // Convert forces to atomic units
     // now we need to add the results to the forces in the context
     long long* force= (long long*) cu.getPinnedBuffer();
     long long scale =   0x100000000LL;
