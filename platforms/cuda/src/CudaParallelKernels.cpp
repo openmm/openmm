@@ -422,48 +422,36 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
                                      new_qm_pos, new_mm_pos,
                                     qmForces, mmForces, qm_q, energy);
 
+    double conversionFactor = 9.10938356e-9; // Convert forces to atomic units
     // now we need to add the results to the forces in the context
-    std::vector<double> forces(cu.getPaddedNumAtoms()*3);
-    cu.getLongForceBuffer().download(forces);
+    long long* force= (long long*) cu.getPinnedBuffer();
+    long long scale =   0x100000000LL;
+    int numPaddedParticles = cu.getPaddedNumAtoms();
+    cu.getLongForceBuffer().download(force);
+
+    // set forces
     int qmIndex = 0;
     int mmIndex = 0;
     for(int i=0; i<atoms.size(); i++)
     {
-        if(1==isQM[i])
-        {
-            forces[order[i]*3] += qmForces[qmIndex];
-            forces[order[i]*3+1] += qmForces[qmIndex+1];
-            forces[order[i]*3+2] += qmForces[qmIndex+2];
-            //charges got recalculated
-            posqBuff[order[i]].x = new_qm_pos[qmIndex];
-            posqBuff[order[i]].y = new_qm_pos[qmIndex+1];
-            posqBuff[order[i]].z = new_qm_pos[qmIndex+2];
+        if(1==isQM[i]){
+            //convert force representations
+            force[order[i]] += scale*static_cast<long long>(conversionFactor*qmForces[qmIndex]);
+            force[order[i] + numPaddedParticles] += scale*static_cast<long long>(conversionFactor*qmForces[qmIndex+1]);
+            force[order[i] + numPaddedParticles*2] += scale*static_cast<long long>(conversionFactor*qmForces[qmIndex+2]);
             posqBuff[order[i]].w = qm_q[qmIndex];
             qmIndex+=3;
         }
         else
         {
-            forces[order[i]*3] += mmForces[mmIndex];
-            forces[order[i]*3+1] += mmForces[mmIndex+1];
-            forces[order[i]*3+2] += mmForces[mmIndex+2];
-            posqBuff[order[i]].x = new_mm_pos[mmIndex];
-            posqBuff[order[i]].y = new_mm_pos[mmIndex+1];
-            posqBuff[order[i]].z = new_mm_pos[mmIndex+2];
+            force[order[i]] += scale*static_cast<long long>(conversionFactor*mmForces[mmIndex]);
+            force[order[i] + numPaddedParticles] += scale*static_cast<long long>(conversionFactor*mmForces[mmIndex+1]);
+            force[order[i] + numPaddedParticles*2] += scale*static_cast<long long>(conversionFactor*mmForces[mmIndex+2]);
             mmIndex+=3;
         }
-        std::cout << forces[i*3] << std::endl;
     }
-    std::transform(posqBuff.begin(), posqBuff.end(), posqBuff.begin(),
-                   [&](mm_float4 elem) {
-                     mm_float4 temp;
-                     temp.x = elem.x/10;
-                     temp.y = elem.y/10;
-                     temp.z = elem.z/10;
-                     temp.w = elem.w;
-                     return temp;
-                   });
-    //update everything. it should work now.
-    //cu.getLongForceBuffer().upload(forces);
+     //update everything. it should work now.
+    cu.getLongForceBuffer().upload(force);
     cu.getPosq().upload(posqBuff);
 
     return energy;
