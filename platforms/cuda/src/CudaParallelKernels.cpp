@@ -351,7 +351,8 @@ void CudaCalcExternalPuremdForceKernel::initialize(const System& system, const E
     system.getDefaultPeriodicBoxVectors(pVecs[0], pVecs[1], pVecs[2]);
     for (int i=0; i<3; i++)
     {
-        simBoxInfo[i] = std::sqrt(pVecs[i].dot(pVecs[i]));
+        //AA
+        simBoxInfo[i] = std::sqrt(pVecs[i].dot(pVecs[i]))*10;
     }
     simBoxInfo[3] = std::acos(pVecs[1].dot(pVecs[2])/(simBoxInfo[1]*simBoxInfo[2]))*180.0/M_PI;
     simBoxInfo[4] =  std::acos(pVecs[0].dot(pVecs[2])/(simBoxInfo[0]*simBoxInfo[2]))*180.0/M_PI;
