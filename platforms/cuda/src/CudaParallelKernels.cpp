@@ -361,6 +361,9 @@ void CudaCalcExternalPuremdForceKernel::initialize(const System& system, const E
 double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     CudaContext& cu = *data.contexts[0];
     ContextSelector selector(cu);
+
+    //atoms have an order
+    std::vector<int> order = cu.getAtomIndex();
     //get positins, charges, etc.
     std::vector<mm_float4> posqBuff(cu.getPaddedNumAtoms());
     cu.getPosq().download(posqBuff);
@@ -386,9 +389,9 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
     {
         if (0 != isQM[i])
         {
-            qm_pos[qm_index] = posqBuff[i].x;
-            qm_pos[qm_index+1] = posqBuff[i].y;
-            qm_pos[qm_index+2] = posqBuff[i].z;
+            qm_pos[qm_index] = posqBuff[order[i]].x;
+            qm_pos[qm_index+1] = posqBuff[order[i]].y;
+            qm_pos[qm_index+2] = posqBuff[order[i]].z;
             qmSymbols[qm_j] = symbols[j];
             qmSymbols[qm_j+1] = symbols[j+1];
             qm_index+=3;
@@ -396,10 +399,10 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
         }
         else
         {
-            mm_pos_q[mm_index] = posqBuff[i].x;
-            mm_pos_q[mm_index+1] = posqBuff[i].y;
-            mm_pos_q[mm_index+2] = posqBuff[i].z;
-            mm_pos_q[mm_index+3] = posqBuff[i].w;
+            mm_pos_q[mm_index] = posqBuff[order[i]].x;
+            mm_pos_q[mm_index+1] = posqBuff[order[i]].y;
+            mm_pos_q[mm_index+2] = posqBuff[order[i]].z;
+            mm_pos_q[mm_index+3] = posqBuff[order[i]].w;
             mmSymbols[mm_j] = symbols[j];
             mmSymbols[mm_j+1] = symbols[j+1];
             mm_index+=4;
@@ -427,26 +430,27 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
     {
         if(1==isQM[i])
         {
-            forces[i*3] += qmForces[qmIndex];
-            forces[i*3+1] += qmForces[qmIndex+1];
-            forces[i*3+2] += qmForces[qmIndex+2];
+            forces[order[i]*3] += qmForces[qmIndex];
+            forces[order[i]*3+1] += qmForces[qmIndex+1];
+            forces[order[i]*3+2] += qmForces[qmIndex+2];
             //charges got recalculated
-            posqBuff[i].x = new_qm_pos[qmIndex];
-            posqBuff[i].y = new_qm_pos[qmIndex+1];
-            posqBuff[i].z = new_qm_pos[qmIndex+2];
-            posqBuff[i].w = qm_q[qmIndex];
+            posqBuff[order[i]].x = new_qm_pos[qmIndex];
+            posqBuff[order[i]].y = new_qm_pos[qmIndex+1];
+            posqBuff[order[i]].z = new_qm_pos[qmIndex+2];
+            posqBuff[order[i]].w = qm_q[qmIndex];
             qmIndex+=3;
         }
         else
         {
-            forces[i*3] += mmForces[mmIndex];
-            forces[i*3+1] += mmForces[mmIndex+1];
-            forces[i*3+2] += mmForces[mmIndex+2];
-            posqBuff[i].x = new_mm_pos[mmIndex];
-            posqBuff[i].y = new_mm_pos[mmIndex+1];
-            posqBuff[i].z = new_mm_pos[mmIndex+2];
+            forces[order[i]*3] += mmForces[mmIndex];
+            forces[order[i]*3+1] += mmForces[mmIndex+1];
+            forces[order[i]*3+2] += mmForces[mmIndex+2];
+            posqBuff[order[i]].x = new_mm_pos[mmIndex];
+            posqBuff[order[i]].y = new_mm_pos[mmIndex+1];
+            posqBuff[order[i]].z = new_mm_pos[mmIndex+2];
             mmIndex+=3;
         }
+        std::cout << forces[i*3] << std::endl;
     }
     std::transform(posqBuff.begin(), posqBuff.end(), posqBuff.begin(),
                    [&](mm_float4 elem) {
@@ -458,7 +462,7 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
                      return temp;
                    });
     //update everything. it should work now.
-    cu.getLongForceBuffer().upload(forces);
+    //cu.getLongForceBuffer().upload(forces);
     cu.getPosq().upload(posqBuff);
 
     return energy;
