@@ -37,11 +37,6 @@ void PuremdInterface::getReaxffPuremdForces(int num_qm_atoms,  const std::vector
           num_qm_atoms, qm_symbols.data(), qm_pos.data(), num_mm_atoms,
           mm_symbols.data(), mm_pos_q.data(), sim_box_info.data(),
           ffield_filename.c_str(), NULL);
-
-
-
-
-
     }
     firstCall = false;
   }
@@ -50,7 +45,7 @@ void PuremdInterface::getReaxffPuremdForces(int num_qm_atoms,  const std::vector
       retPuremd = reset_qmmm(handlePuremd, num_qm_atoms, qm_symbols.data(),  qm_pos.data(),
                      num_mm_atoms, mm_symbols.data(), mm_pos_q.data(),
                      sim_box_info.data(),
-                     NULL, NULL);
+                     NULL, control_filename.c_str());
       if(0 != retPuremd) throw OpenMMException("Issue with PuReMD function reset_qmmm.");
   }
 
@@ -60,5 +55,6 @@ void PuremdInterface::getReaxffPuremdForces(int num_qm_atoms,  const std::vector
   retPuremd = get_atom_charges_qmmm(handlePuremd, qm_q.data(), NULL);
   retPuremd = get_system_info(handlePuremd, NULL, NULL, &totalEnergy, NULL, NULL, NULL);
   retPuremd = get_atom_positions_qmmm(handlePuremd, new_qm_pos.data(), new_mm_pos.data());
+  if(0!=retPuremd) throw OpenMMException("Error in parameter extraction.");
 }
 
