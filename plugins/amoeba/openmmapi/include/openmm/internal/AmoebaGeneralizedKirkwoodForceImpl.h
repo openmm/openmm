@@ -62,6 +62,47 @@ public:
         return kernel;
     }
     void updateParametersInContext(ContextImpl& context);
+
+    /**
+     * Compute a "neck" descreening contribution.
+     * <p>
+     * Using the tabulated Aij and Bij values, compute the neck integral
+     * using Equations 13 and 14 from Aguilar, Shadrach and Onufriev (10.1021/ct100392h).
+     *
+     * @param r separation distance.
+     * @param radius Radius of the current atom.
+     * @param radiusK Radius of the descreening atom.
+     * @param sneck The neck scale factor.
+     * @return The integral value.
+     */
+    static double neckDescreen(double r, double radius, double radiusK, double sneck);
+
+    /**
+     * Get Neck Aij and Bij constants.
+     * @param radius Radius of the current atom.
+     * @param radiusK Radius of the descreening atom.
+     * @param aij The Aij neck constant.
+     * @param bij the Bij neck constant.
+     */
+    static void getNeckConstants(double radius, double radiusK, double &aij, double &bij);
+
+     /**
+      * The array of neck tabulated radii values.
+      */
+    static const std::vector<float>& getNeckRadii();
+
+    const static int NUM_NECK_RADII = 45;
+
+    /**
+     * The tabulated Aij parameters.
+     */
+    const static float (&getAij())[NUM_NECK_RADII][NUM_NECK_RADII];
+
+     /**
+      * The tabulated Bij parameters.
+      */
+     const static float (&getBij())[NUM_NECK_RADII][NUM_NECK_RADII];
+
 private:
     const AmoebaGeneralizedKirkwoodForce& owner;
     Kernel kernel;

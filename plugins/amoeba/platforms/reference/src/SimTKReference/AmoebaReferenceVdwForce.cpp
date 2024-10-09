@@ -49,6 +49,7 @@ void AmoebaReferenceVdwForce::initialize(const AmoebaVdwForce& force) {
     int numParticles = force.getNumParticles();
     indexIVs.resize(numParticles);
     reductions.resize(numParticles);
+    scaleFactors.resize(numParticles);
     isAlchemical.resize(numParticles);
     allExclusions.clear();
     allExclusions.resize(numParticles);
@@ -57,7 +58,7 @@ void AmoebaReferenceVdwForce::initialize(const AmoebaVdwForce& force) {
         double sigma, epsilon;
         bool alchemical;
         vector<int> exclusions;
-        force.getParticleParameters(i, indexIVs[i], sigma, epsilon, reductions[i], alchemical, type);
+        force.getParticleParameters(i, indexIVs[i], sigma, epsilon, reductions[i], alchemical, type, scaleFactors[i]);
         isAlchemical[i] = alchemical;
         force.getParticleExclusions(i, exclusions);
         for (unsigned int j = 0; j < exclusions.size(); j++)
@@ -224,6 +225,9 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
                 double combinedEpsilon = epsilonMatrix[particleType[ii]][particleType[jj]];
                 double softcore = 0.0;
 
+                // Apply per particle scale factors (for CpHMD).
+                combinedEpsilon *= scaleFactors[ii] * scaleFactors[jj];
+
                 if (this->_alchemicalMethod == AmoebaVdwForce::Decouple && (isAlchemicalI != isAlchemical[jj])) {
                    combinedEpsilon *= pow(lambda, this->_n);
                    softcore = this->_alpha * pow(1.0 - lambda, 2);
@@ -286,6 +290,9 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
 
         double combinedSigma = sigmaMatrix[particleType[siteI]][particleType[siteJ]];
         double combinedEpsilon = epsilonMatrix[particleType[siteI]][particleType[siteJ]];
+
+        // Apply per particle scale factors (for CpHMD).
+        combinedEpsilon *= scaleFactors[siteI] * scaleFactors[siteJ];
 
         double softcore        = 0.0;
         int isAlchemicalI      = isAlchemical[siteI];

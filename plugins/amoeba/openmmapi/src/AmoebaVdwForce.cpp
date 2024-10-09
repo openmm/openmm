@@ -44,23 +44,23 @@ AmoebaVdwForce::AmoebaVdwForce() : nonbondedMethod(NoCutoff), potentialFunction(
         useTypes(false), alchemicalMethod(None), n(5), alpha(0.7) {
 }
 
-int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical) {
+int AmoebaVdwForce::addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical, double scaleFactor) {
     if (useTypes)
         throw OpenMMException("AmoebaVdwForce: must use the same version of addParticle() for all particles");
-    parameters.push_back(VdwInfo(parentIndex, sigma, epsilon, -1, reductionFactor, isAlchemical));
+    parameters.push_back(VdwInfo(parentIndex, sigma, epsilon, -1, reductionFactor, isAlchemical, scaleFactor));
     return parameters.size()-1;
 }
 
-int AmoebaVdwForce::addParticle(int parentIndex, int typeIndex, double reductionFactor, bool isAlchemical) {
+int AmoebaVdwForce::addParticle(int parentIndex, int typeIndex, double reductionFactor, bool isAlchemical, double scaleFactor) {
     if (parameters.size() > 0 && !useTypes)
         throw OpenMMException("AmoebaVdwForce: must use the same version of addParticle() for all particles");
     useTypes = true;
-    parameters.push_back(VdwInfo(parentIndex, 1.0, 0.0, typeIndex, reductionFactor, isAlchemical));
+    parameters.push_back(VdwInfo(parentIndex, 1.0, 0.0, typeIndex, reductionFactor, isAlchemical, scaleFactor));
     return parameters.size()-1;
 }
 
-void AmoebaVdwForce::getParticleParameters(int particleIndex, int& parentIndex,
-                                           double& sigma, double& epsilon, double& reductionFactor, bool& isAlchemical, int& typeIndex) const {
+void AmoebaVdwForce::getParticleParameters(int particleIndex, int& parentIndex,double& sigma, double& epsilon, double& reductionFactor,
+                                           bool& isAlchemical, int& typeIndex, double& scaleFactor) const {
     ASSERT_VALID_INDEX(particleIndex, parameters);
     parentIndex     = parameters[particleIndex].parentIndex;
     sigma           = parameters[particleIndex].sigma;
@@ -68,10 +68,11 @@ void AmoebaVdwForce::getParticleParameters(int particleIndex, int& parentIndex,
     reductionFactor = parameters[particleIndex].reductionFactor;
     isAlchemical    = parameters[particleIndex].isAlchemical;
     typeIndex       = parameters[particleIndex].typeIndex;
+    scaleFactor     = parameters[particleIndex].scaleFactor;
 }
 
-void AmoebaVdwForce::setParticleParameters(int particleIndex, int parentIndex,
-                                           double sigma, double epsilon, double reductionFactor, bool isAlchemical, int typeIndex) {
+void AmoebaVdwForce::setParticleParameters(int particleIndex, int parentIndex,double sigma, double epsilon, double reductionFactor,
+                                           bool isAlchemical, int typeIndex, double scaleFactor) {
     ASSERT_VALID_INDEX(particleIndex, parameters);
     parameters[particleIndex].parentIndex     = parentIndex;
     parameters[particleIndex].sigma           = sigma;
@@ -79,6 +80,7 @@ void AmoebaVdwForce::setParticleParameters(int particleIndex, int parentIndex,
     parameters[particleIndex].reductionFactor = reductionFactor;
     parameters[particleIndex].isAlchemical    = isAlchemical;
     parameters[particleIndex].typeIndex       = typeIndex;
+    parameters[particleIndex].scaleFactor     = scaleFactor;
 }
 
 int AmoebaVdwForce::addParticleType(double sigma, double epsilon) {

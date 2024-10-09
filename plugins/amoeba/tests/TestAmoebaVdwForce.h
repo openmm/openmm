@@ -133,12 +133,12 @@ void testVdw() {
     }
     for (int ii = 0; ii < amoebaVdwForce->getNumParticles();  ii++) {
         int indexIV, type;
-        double sigma, epsilon, reduction;
+        double sigma, epsilon, reduction, scaleFactor;
         bool isAlchemical;
-        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical, type);
+        amoebaVdwForce->getParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical, type, scaleFactor);
         sigma        *= AngstromToNm;
         epsilon      *= CalToJoule;
-        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical, type);
+        amoebaVdwForce->setParticleParameters(ii, indexIV, sigma, epsilon, reduction, isAlchemical, type, scaleFactor);
     }
     Context context(system, integrator, platform);
 
@@ -163,10 +163,10 @@ void testVdw() {
     
     for (int i = 0; i < numberOfParticles; i++) {
         int indexIV, type;
-        double mass, sigma, epsilon, reduction;
+        double mass, sigma, epsilon, reduction, scaleFactor;
         bool isAlchemical;
-        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction, isAlchemical, type);
-        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction, isAlchemical, type);
+        amoebaVdwForce->getParticleParameters(i, indexIV, sigma, epsilon, reduction, isAlchemical, type, scaleFactor);
+        amoebaVdwForce->setParticleParameters(i, indexIV, 0.9*sigma, 2.0*epsilon, 0.95*reduction, isAlchemical, type, scaleFactor);
     }
     LangevinIntegrator integrator2(0.0, 0.1, 0.01);
     Context context2(system, integrator2, platform);
