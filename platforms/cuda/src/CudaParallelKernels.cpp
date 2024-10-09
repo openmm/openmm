@@ -408,7 +408,7 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
        j+=2;
     }
 
-    std::vector<double> qmForces(numQMAtoms*3), mmForces(numMMAtoms*3), qm_q(numQMAtoms), new_qm_pos, new_mm_pos;
+    std::vector<double> qmForces(numQMAtoms*3), mmForces(numMMAtoms*3), qm_q(numQMAtoms), new_qm_pos(numQMAtoms*3), new_mm_pos(numMMAtoms*3);
 
     double energy;
 
@@ -425,15 +425,15 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
     int mmIndex = 0;
     for(int i=0; i<atoms.size(); i++)
     {
-        if(0!=isQM[i])
+        if(1==isQM[i])
         {
             forces[i*3] += qmForces[qmIndex];
             forces[i*3+1] += qmForces[qmIndex+1];
             forces[i*3+2] += qmForces[qmIndex+2];
             //charges got recalculated
-            posqBuff[i].x = new_qm_pos[qm_index];
-            posqBuff[i].y = new_qm_pos[qm_index+1];
-            posqBuff[i].z = new_qm_pos[qm_index+2];
+            posqBuff[i].x = new_qm_pos[qmIndex];
+            posqBuff[i].y = new_qm_pos[qmIndex+1];
+            posqBuff[i].z = new_qm_pos[qmIndex+2];
             posqBuff[i].w = qm_q[qmIndex];
             qmIndex+=3;
         }
