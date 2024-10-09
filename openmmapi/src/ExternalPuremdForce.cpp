@@ -16,8 +16,8 @@ ExternalPuremdForce::ExternalPuremdForce() {}
 ExternalPuremdForce::ExternalPuremdForce(const std::string& ffieldFile, const std::string& controlFile) :usePeriodic(false), numContexts(0), ffield_file(ffieldFile), control_file(controlFile) {
 }
 
-int ExternalPuremdForce::addAtom(int particle, const std::string symbol, bool isQM) {
-    atoms.push_back(AtomInfo(particle, symbol, isQM));
+int ExternalPuremdForce::addAtom(int particle, char* symbol, bool isQM) {
+    atoms.push_back(AtomInfo(particle, std::string(symbol), isQM));
     return atoms.size()-1;
 }
 

@@ -29,6 +29,7 @@
 #include "openmm/common/ContextSelector.h"
 #include "openmm/internal/timer.h"
 #include<numeric>
+#include<algorithm>
 
 
 using namespace OpenMM;
@@ -363,6 +364,17 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
     //get positins, charges, etc.
     std::vector<mm_float4> posqBuff(cu.getPaddedNumAtoms());
     cu.getPosq().download(posqBuff);
+
+    // openmm saves positions in nm, puremd needs AA
+    std::transform(posqBuff.begin(), posqBuff.end(), posqBuff.begin(),
+                   [&](mm_float4 elem) {
+                        mm_float4 temp;
+                        temp.x = elem.x*10;
+                        temp.y = elem.y*10;
+                        temp.z = elem.z*10;
+                        temp.w = elem.w;
+                        return temp;
+                   });
     //flattened vectors
     std::vector<double> qm_pos(numQMAtoms*3);
     std::vector<double> mm_pos_q(numMMAtoms*4);
@@ -396,17 +408,18 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
        j+=2;
     }
 
-    std::vector<double> qmForces(numQMAtoms), mmForces(numMMAtoms), qm_q(numQMAtoms);
+    std::vector<double> qmForces(numQMAtoms*3), mmForces(numMMAtoms*3), qm_q(numQMAtoms), new_qm_pos, new_mm_pos;
 
     double energy;
 
     Interface->getReaxffPuremdForces(numQMAtoms, qmSymbols, qm_pos,
                                     numMMAtoms, mmSymbols, mm_pos_q,
                                     simBoxInfo,
+                                     new_qm_pos, new_mm_pos,
                                     qmForces, mmForces, qm_q, energy);
 
     // now we need to add the results to the forces in the context
-    std::vector<mm_float4> forces(cu.getPaddedNumAtoms());
+    std::vector<double> forces(cu.getPaddedNumAtoms()*3);
     cu.getLongForceBuffer().download(forces);
     int qmIndex = 0;
     int mmIndex = 0;
@@ -414,26 +427,41 @@ double CudaCalcExternalPuremdForceKernel::execute(ContextImpl& context, bool inc
     {
         if(0!=isQM[i])
         {
-            forces[i].x += qmForces[qmIndex];
-            forces[i].y += qmForces[qmIndex+1];
-            forces[i].z += qmForces[qmIndex+2];
+            forces[i*3] += qmForces[qmIndex];
+            forces[i*3+1] += qmForces[qmIndex+1];
+            forces[i*3+2] += qmForces[qmIndex+2];
             //charges got recalculated
+            posqBuff[i].x = new_qm_pos[qm_index];
+            posqBuff[i].y = new_qm_pos[qm_index+1];
+            posqBuff[i].z = new_qm_pos[qm_index+2];
             posqBuff[i].w = qm_q[qmIndex];
             qmIndex+=3;
         }
         else
         {
-            forces[i].x += mmForces[mmIndex];
-            forces[i].y += mmForces[mmIndex+1];
-            forces[i].z += mmForces[mmIndex+2];
+            forces[i*3] += mmForces[mmIndex];
+            forces[i*3+1] += mmForces[mmIndex+1];
+            forces[i*3+2] += mmForces[mmIndex+2];
+            posqBuff[i].x = new_mm_pos[mmIndex];
+            posqBuff[i].y = new_mm_pos[mmIndex+1];
+            posqBuff[i].z = new_mm_pos[mmIndex+2];
             mmIndex+=3;
         }
     }
+    std::transform(posqBuff.begin(), posqBuff.end(), posqBuff.begin(),
+                   [&](mm_float4 elem) {
+                     mm_float4 temp;
+                     temp.x = elem.x/10;
+                     temp.y = elem.y/10;
+                     temp.z = elem.z/10;
+                     temp.w = elem.w;
+                     return temp;
+                   });
     //update everything. it should work now.
     cu.getLongForceBuffer().upload(forces);
     cu.getPosq().upload(posqBuff);
 
-    return 0.0;
+    return energy;
 }
 
 void CudaCalcExternalPuremdForceKernel::copyParametersToContext(ContextImpl& context, const ExternalPuremdForce& force, int firstParticle, int lastParticle) {

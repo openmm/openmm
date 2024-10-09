@@ -1,0 +1,71 @@
+simulation_name         AVE           ! output files will carry this name + their specific extension
+ensemble_type           0                       ! 0: NVE, 1: Berendsen NVT, 2: nose-Hoover NVT, 3: semi-isotropic NPT, 4: isotropic NPT, 5: anisotropic NPT
+nsteps                  1000                       ! number of simulation steps
+dt                      0.25                    ! time step in fs
+periodic_boundaries     1                       ! 0: no periodic boundaries, 1: periodic boundaries
+
+reposition_atoms        0                       ! 0: just fit to periodic boundaries, 1: CoM to the center of box, 3: CoM to the origin
+restrict_bonds          0                       ! enforce the bonds given in CONECT lines of pdb file for this many steps
+tabulate_long_range     0                       ! denotes the granularity of long range tabulation, 0 means no tabulation
+energy_update_freq      1
+remove_CoM_vel          500                     ! remove the translational and rotational vel around the center of mass at every 'this many' steps
+
+vlist_buffer            2.5
+nbrhood_cutoff          5.0                     ! near neighbors cutoff for bond calculations (Angstroms)
+bond_graph_cutoff       0.3                     ! bond strength cutoff for bond graphs (Angstroms)
+thb_cutoff              0.005                   ! cutoff value for three body interactions (Angstroms)
+hbond_cutoff            7.5                     ! cutoff distance for hydrogen bond interactions (Angstroms)
+
+charge_method                 1             ! charge method: 0 = QEq, 1 = EEM, 2 = ACKS2
+cm_q_net                      0.0           ! net system charge
+cm_solver_type                2             ! iterative linear solver for charge method: 0 = GMRES(k), 1 = GMRES_H(k), 2 = CG, 3 = SDM
+cm_solver_max_iters          200            ! max solver iterations
+cm_solver_restart             100           ! inner iterations of before restarting (GMRES(k)/GMRES_H(k))
+cm_solver_q_err               1.0e-14          ! relative residual norm threshold used in solver
+cm_domain_sparsity            1.0           ! scalar for scaling cut-off distance, used to sparsify charge matrix (between 0.0 and 1.0)
+cm_init_guess_extrap1         3             ! order of spline extrapolation for initial guess (s)
+cm_init_guess_extrap2         2             ! order of spline extrapolation for initial guess (t)
+cm_solver_pre_comp_type           1             ! method used to compute preconditioner, if applicable
+cm_solver_pre_comp_refactor       1          ! number of steps before recomputing preconditioner (-1 for dynamic refactoring)
+cm_solver_pre_comp_droptol        0.0           ! threshold tolerance for dropping values in preconditioner computation (ICHOLT/ILUT/FG-ILUT)
+cm_solver_pre_comp_sweeps         3             ! number of sweeps used to compute preconditioner (FG-ILUT)
+cm_solver_pre_comp_sai_thres      0.1           ! ratio of charge matrix NNZ's used to compute preconditioner (SAI)
+cm_solver_pre_app_type            1             ! method used to apply preconditioner (ICHOLT/ILUT/FG-ILUT)
+cm_solver_pre_app_jacobi_iters    50            ! num. Jacobi iterations used for applying precondition (ICHOLT/ILUT/FG-ILUT)
+
+random_vel              0
+temp_init               0.0                     ! desired initial temperature of the simulated system
+temp_final              300.0                   ! desired final temperature of the simulated system
+t_mass                  0.16666                 ! 0.16666 for Nose-Hoover nvt ! 100.0 for npt! in fs, thermal inertia parameter
+t_mode                  0                       ! 0: T-coupling only, 1: step-wise, 2: constant slope
+t_rate                  -100.0                  ! in K
+t_freq                  4.0                     ! in ps
+
+pressure                0.000101325             ! desired pressure of the simulated system in GPa, 1atm = 0.000101325 GPa
+p_mass                  5000.00                 ! in fs, pressure inertia parameter
+compress                0.008134                ! in ps^2 * A / amu ( 4.5X10^(-5) bar^(-1) )
+press_mode              0                       ! 0: internal + external pressure, 1: ext only, 2: int only
+
+geo_format              2                       ! 0: custom, 1: pdb, 2: bgf
+write_freq              0                       ! write trajectory after so many steps
+traj_compress           0                       ! 0: no compression  1: uses zlib to compress trajectory output
+traj_format             2                       ! 0: our own format (below options apply to this only), 1: xyz, 2: bgf, 3: pdb
+traj_title              AVE                 ! (no white spaces)
+atom_info               1                       ! 0: no atom info, 1: print basic atom info in the trajectory file
+atom_forces             1                       ! 0: basic atom format, 1: print force on each atom in the trajectory file
+atom_velocities         0                       ! 0: basic atom format, 1: print the velocity of each atom in the trajectory file
+bond_info               0                       ! 0: do not print bonds, 1: print bonds in the trajectory file
+angle_info              0                       ! 0: do not print angles, 1: print angles in the trajectory file
+test_forces             0                       ! 0: normal run, 1: at every timestep print each force type into a different file
+
+molec_anal              0                       ! 1: outputs newly formed molecules as the simulation progresses
+freq_molec_anal         0                       ! perform molecular analysis at every 'this many' timesteps
+dipole_anal             0                       ! 1: calculate a electric dipole moment of the system
+freq_dipole_anal        1                       ! calculate electric dipole moment at every 'this many' steps
+diffusion_coef          0                       ! 1: calculate diffusion coefficient of the system
+freq_diffusion_coef     1                       ! calculate diffusion coefficient at every 'this many' steps
+restrict_type           2                       ! -1: all types of atoms, 0 and up: only this type of atoms
+
+restart_format          1                       ! 0: restarts in ASCII  1: restarts in binary
+restart_freq            0                       ! 0: do not output any restart files. >0: output a restart file at every 'this many' steps
+

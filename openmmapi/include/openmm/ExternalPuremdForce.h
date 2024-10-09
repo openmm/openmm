@@ -10,7 +10,7 @@
 #include <vector>
 #include "internal/windowsExport.h"
 
-
+using namespace OpenMM;
 namespace OpenMM {
 
 /**
@@ -56,7 +56,7 @@ namespace OpenMM {
      * @param isQM is it reactive
      * @return the index of the bond that was added
      */
-    int addAtom(int particle, const std::string symbol, bool isQM);
+    int addAtom(int particle, char* symbol, bool isQM);
     /**
      * Get the bonding atom
      *
