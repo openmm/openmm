@@ -21,7 +21,8 @@ int ExternalPuremdForce::addAtom(int particle, char* symbol, bool isQM) {
     bool hasLen = std::strlen(symbol) > 1;
     allAtoms.push_back(particle);
     allIsQM.push_back(isQM);
-    if (hasLen) {
+    allSymbols.push_back(symbol[0]);
+    if (hasLen){
       allSymbols.push_back(symbol[1]);
     }
     else

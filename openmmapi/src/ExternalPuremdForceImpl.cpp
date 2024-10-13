@@ -14,10 +14,13 @@ using namespace OpenMM;
 using namespace std;
 ExternalPuremdForceImpl::ExternalPuremdForceImpl(const ExternalPuremdForce &owner): CustomCPPForceImpl(owner), owner(owner)
 {
+  std::string ffield_file, control_file;
+  owner.getFileNames(ffield_file, control_file);
+  Interface.setInputFileNames(ffield_file, control_file);
     for(int i = 0; i<owner.getNumAtoms(); ++i)
     {
       int particle;
-      char* symbol;
+      char symbol[2];
       int isqm;
       owner.getParticleParameters(i, particle, symbol, isqm);
       if(isqm)
@@ -82,8 +85,8 @@ double ExternalPuremdForceImpl::computeForce(ContextImpl& context, const std::ve
   std::vector<double> simBoxInfo(6);
   getBoxInfo(context, simBoxInfo);
 
-  std::vector<double> qmForces, mmForces;
-  std::vector<double> qmQ;
+  std::vector<double> qmForces(numQm*3), mmForces(numMm*3);
+  std::vector<double> qmQ(numQm);
   double energy;
   Interface.getReaxffPuremdForces(numQm, qmSymbols, qmPos,
                                   numMm, mmSymbols, mmPos_q,
