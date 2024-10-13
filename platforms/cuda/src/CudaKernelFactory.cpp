@@ -142,7 +142,5 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CommonApplyMonteCarloBarostatKernel(name, platform, cu);
     if (name == RemoveCMMotionKernel::Name())
         return new CommonRemoveCMMotionKernel(name, platform, cu);
-    if(name==CalcExternalPuremdForceKernel::Name())
-        return new CudaCalcExternalPuremdForceKernel(name, platform, data, context.getSystem());
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }
