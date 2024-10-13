@@ -162,6 +162,10 @@ public:
      * @param positions  a vector containg the particle positions
      */
     void setPositions(ContextImpl& context, const std::vector<Vec3>& positions);
+
+    void getCharges(ContextImpl& context, std::vector<double>& charges);
+
+    void setCharges(ContextImpl& context, const std::vector<double>& charges);
     /**
      * Get the velocities of all particles.
      *

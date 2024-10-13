@@ -95,6 +95,11 @@ static vector<Vec3>& extractPositions(ContextImpl& context) {
     return *data->positions;
 }
 
+static vector<double>& extractCharges(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return *data->charges;
+}
+
 static vector<Vec3>& extractVelocities(ContextImpl& context) {
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *data->velocities;
@@ -129,6 +134,7 @@ static map<string, double>& extractEnergyParameterDerivatives(ContextImpl& conte
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     return *data->energyParameterDerivatives;
 }
+
 
 /**
  * Make sure an expression doesn't use any undefined variables.
@@ -221,6 +227,22 @@ void ReferenceUpdateStateDataKernel::setPositions(ContextImpl& context, const st
         posData[i][0] = positions[i][0];
         posData[i][1] = positions[i][1];
         posData[i][2] = positions[i][2];
+    }
+}
+
+void ReferenceUpdateStateDataKernel::getCharges(ContextImpl& context, std::vector<double>& charges) {
+    int numParticles = context.getSystem().getNumParticles();
+    vector<double>& chargeData = extractCharges(context);
+    charges.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        charges[i] = chargeData[i];
+}
+
+void ReferenceUpdateStateDataKernel::setCharges(ContextImpl& context, const std::vector<double>& charges) {
+    int numParticles = context.getSystem().getNumParticles();
+    vector<double>& chargeData = extractCharges(context);
+    for (int i = 0; i < numParticles; ++i) {
+        chargeData[i] = charges[i];
     }
 }
 

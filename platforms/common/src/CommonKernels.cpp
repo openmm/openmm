@@ -245,6 +245,113 @@ void CommonUpdateStateDataKernel::setPositions(ContextImpl& context, const vecto
     cc.reorderAtoms();
 }
 
+void CommonUpdateStateDataKernel::setCharges(ContextImpl& context, const vector<double>& charges) {
+    ContextSelector selector(cc);
+    const vector<int>& order = cc.getAtomIndex();
+    int numParticles = context.getSystem().getNumParticles();
+    if (cc.getUseDoublePrecision()) {
+        mm_double4* posq = (mm_double4*) cc.getPinnedBuffer();
+        cc.getPosq().download(posq);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_double4& pos = posq[i];
+            const double charge = charges[order[i]];
+            pos.w = charge;
+        }
+        for (int i = numParticles; i < cc.getPaddedNumAtoms(); i++)
+            posq[i] = mm_double4(0.0, 0.0, 0.0, 0.0);
+        cc.getPosq().upload(posq);
+    }
+    else {
+        mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
+        cc.getPosq().download(posq);
+        for (int i = 0; i < numParticles; ++i) {
+            mm_float4& pos = posq[i];
+            const double charge = charges[order[i]];
+            pos.w = (float) charge;
+        }
+        for (int i = numParticles; i < cc.getPaddedNumAtoms(); i++)
+            posq[i] = mm_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        cc.getPosq().upload(posq);
+    }
+    if (cc.getUseMixedPrecision()) {
+        mm_float4* posCorrection = (mm_float4*) cc.getPinnedBuffer();
+        for (int i = 0; i < numParticles; ++i) {
+            mm_float4& c = posCorrection[i];
+            const double charge = charges[order[i]];
+            c.x = 0;
+            c.y = 0;
+            c.z = 0;
+            c.w = (float) (charge - (float)charge);
+        }
+        for (int i = numParticles; i < cc.getPaddedNumAtoms(); i++)
+            posCorrection[i] = mm_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        cc.getPosqCorrection().upload(posCorrection);
+    }
+    for (auto& offset : cc.getPosCellOffsets())
+        offset = mm_int4(0, 0, 0, 0);
+    cc.reorderAtoms();
+}
+
+void CommonUpdateStateDataKernel::getCharges(ContextImpl& context, vector<double>& charges) {
+    ContextSelector selector(cc);
+    int numParticles = context.getSystem().getNumParticles();
+    charges.resize(numParticles);
+    vector<mm_float4> posCorrection;
+    if (cc.getUseDoublePrecision()) {
+        mm_double4* posq = (mm_double4*) cc.getPinnedBuffer();
+        cc.getPosq().download(posq);
+    }
+    else if (cc.getUseMixedPrecision()) {
+        mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
+        cc.getPosq().download(posq, false);
+        posCorrection.resize(numParticles);
+        cc.getPosqCorrection().download(posCorrection);
+    }
+    else {
+        mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
+        cc.getPosq().download(posq);
+    }
+
+    // Filling in the output array is done in parallel for speed.
+
+    cc.getThreadPool().execute([&] (ThreadPool& threads, int threadIndex) {
+      // Compute the position of each particle to return to the user.  This is done in parallel for speed.
+
+      const vector<int>& order = cc.getAtomIndex();
+      int numParticles = cc.getNumAtoms();
+      Vec3 boxVectors[3];
+      cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+      int numThreads = threads.getNumThreads();
+      int start = threadIndex*numParticles/numThreads;
+      int end = (threadIndex+1)*numParticles/numThreads;
+      if (cc.getUseDoublePrecision()) {
+        mm_double4* posq = (mm_double4*) cc.getPinnedBuffer();
+        for (int i = start; i < end; ++i) {
+          mm_double4 pos = posq[i];
+          charges[order[i]] = pos.w;
+        }
+      }
+      else if (cc.getUseMixedPrecision()) {
+        mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
+        for (int i = start; i < end; ++i) {
+          mm_float4 pos1 = posq[i];
+          mm_float4 pos2 = posCorrection[i];
+          mm_int4 offset = cc.getPosCellOffsets()[i];
+          charges[order[i]] = (double) pos1.w + (double)pos2.w;
+        }
+      }
+      else {
+        mm_float4* posq = (mm_float4*) cc.getPinnedBuffer();
+        for (int i = start; i < end; ++i) {
+          mm_float4 pos = posq[i];
+          mm_int4 offset = cc.getPosCellOffsets()[i];
+          charges[order[i]] = pos.w;
+        }
+      }
+    });
+    cc.getThreadPool().waitForThreads();
+}
+
 void CommonUpdateStateDataKernel::getVelocities(ContextImpl& context, vector<Vec3>& velocities) {
     ContextSelector selector(cc);
     const vector<int>& order = cc.getAtomIndex();
@@ -8341,3 +8448,4 @@ double CommonCalcCustomCPPForceKernel::addForces(bool includeForces, bool includ
     
     return energy;
 }
+

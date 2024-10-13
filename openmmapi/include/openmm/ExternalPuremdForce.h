@@ -5,6 +5,7 @@
 #define OPENMM_EXTERNALPUREMDFORCE_H_
 
 #include "Force.h"
+#include "internal/CustomCPPForceImpl.h"
 #include "Vec3.h"
 #include <map>
 #include <vector>
@@ -35,7 +36,7 @@ namespace OpenMM {
      * @return the number of atoms
      */
     int getNumAtoms() const {
-        return atoms.size();
+        return allAtoms.size();
     }
     /**
      * Gets the filenames used by the force field
@@ -66,7 +67,7 @@ namespace OpenMM {
      * @param symbol2 symbol other
      * @param isQM is it reactive
      */
-    void getParticleParameters(int index, int& particle, char& symbol1, char& symbol2, int& isQM) const;
+    void getParticleParameters(int index, int& particle, char* symbol, int& isQM) const;
     /**
      * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
      * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
@@ -78,44 +79,19 @@ namespace OpenMM {
      *
      * @param context the context
      */
-    void updateParametersInContext(Context& context);
+
     protected:
     ForceImpl* createImpl() const;
     private:
-    class AtomInfo;
-    //called for each atom contains index, symbol and if its reactive
-    std::vector<AtomInfo> atoms;
-    //params for puremd
-    std::string ffield_file;
-    std::string control_file;
+      std::vector<int> allAtoms;
+      std::vector<char> allSymbols;
+      std::vector<bool> allIsQM;
+
+      std::string ffield_file;
+      std::string control_file;
     //unused
     bool usePeriodic;
     mutable int numContexts, firstChangedBond, lastChangedBond;
-};
-
-/**
- * This is an internal class used to record information about a bond.
- * @private
- */
-class ExternalPuremdForce::AtomInfo {
-public:
-    int particle;
-    char symbol1, symbol2;
-    bool isQM;
-
-    AtomInfo() {
-        particle = -1;
-        symbol1 = symbol2 = '\0';
-        isQM = false;
-    }
-    AtomInfo(int particle, std::string symbol, bool isQM) :
-            particle(particle), symbol1(symbol[0]), isQM(isQM) {
-        if(symbol.size()>1){ symbol2 = symbol[1];}
-        else
-        {
-          symbol2 = '\0';
-        }
-    }
 };
 
 } // namespace OpenMM

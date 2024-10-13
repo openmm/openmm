@@ -45,6 +45,7 @@ private:
     double& energy;
 };
 
+
 CommonParallelCalcHarmonicBondForceKernel::CommonParallelCalcHarmonicBondForceKernel(std::string name, const Platform& platform, ComputeContext& cc, const System& system) :
         CalcHarmonicBondForceKernel(name, platform), cc(cc) {
     for (ComputeContext* context : cc.getAllContexts())

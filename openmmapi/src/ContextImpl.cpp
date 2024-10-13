@@ -243,6 +243,15 @@ void ContextImpl::setVelocities(const std::vector<Vec3>& velocities) {
     updateStateDataKernel.getAs<UpdateStateDataKernel>().setVelocities(*this, velocities);
     integrator.stateChanged(State::Velocities);
 }
+void ContextImpl::getCharges(std::vector<double>& charges) {
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().getCharges(*this, charges);
+}
+
+void ContextImpl::setCharges(const std::vector<double>& charges) {
+    hasSetPositions = true;
+    updateStateDataKernel.getAs<UpdateStateDataKernel>().setCharges(*this, charges);
+    integrator.stateChanged(State::Positions);
+}
 
 void ContextImpl::getForces(std::vector<Vec3>& forces) {
     updateStateDataKernel.getAs<UpdateStateDataKernel>().getForces(*this, forces);

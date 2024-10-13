@@ -27,11 +27,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "CudaPlatform.h"
 #include "CudaContext.h"
 #include "CudaKernels.h"
+#include "CudaPlatform.h"
+#include "openmm/PuremdInterface.h"
 #include "openmm/common/CommonKernels.h"
-#include "openmm/common/PuremdInterface.h"
 
 namespace OpenMM {
 
@@ -158,23 +158,6 @@ private:
     CudaPlatform::PlatformData& data;
     std::vector<Kernel> kernels;
 };
-class CudaCalcExternalPuremdForceKernel: public CalcExternalPuremdForceKernel{
-  public:
-    CudaCalcExternalPuremdForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData&, const System& system);
-    void initialize(const System& system, const ExternalPuremdForce& force) ;
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    void copyParametersToContext(ContextImpl& context, const ExternalPuremdForce& force, int firstBond, int lastBond);
-  private:
-    CudaPlatform::PlatformData& data;
-    std::vector<Kernel> kernels;
-    std::vector<int> atoms;
-    std::vector<char> symbols;
-    std::vector<int> isQM;
-    std::vector<double> simBoxInfo;
-    int numMMAtoms, numQMAtoms;
-    PuremdInterface* Interface;
-};
-
 } // namespace OpenMM
 
 #endif /*OPENMM_CUDAPARALLELKERNELS_H_*/

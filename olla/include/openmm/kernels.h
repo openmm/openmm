@@ -235,6 +235,14 @@ public:
      * @param stream    an input stream the checkpoint data should be read from
      */
     virtual void loadCheckpoint(ContextImpl& context, std::istream& stream) = 0;
+    /** Getting charges. This only makes sense if there is a Nonbonded force.
+     *
+     **/
+    virtual void getCharges(ContextImpl& context, std::vector<double>& charges) = 0;
+    /** Setting charges. This only makes sense if there is a Nonbonded force.
+     *
+     **/
+    virtual void setCharges(ContextImpl& context, const std::vector<double>& charges) = 0;
 };
 
 /**

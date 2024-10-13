@@ -192,6 +192,12 @@ void Context::setPositions(const vector<Vec3>& positions) {
     impl->setPositions(positions);
 }
 
+void Context::setCharges(const vector<double>& charges) {
+    if ((int) charges.size() != impl->getSystem().getNumParticles())
+        throw OpenMMException("Called setPositions() on a Context with the wrong number of positions");
+    impl->setCharges(charges);
+}
+
 void Context::setVelocities(const vector<Vec3>& velocities) {
     if ((int) velocities.size() != impl->getSystem().getNumParticles())
         throw OpenMMException("Called setVelocities() on a Context with the wrong number of velocities");

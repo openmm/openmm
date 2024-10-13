@@ -152,6 +152,14 @@ public:
      * @param stream    an input stream the checkpoint data should be read from
      */
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
+    /**
+     * Get charges.
+     */
+    void getCharges(ContextImpl& context, std::vector<double>& charges);
+    /**
+     * Set charges
+     */
+    void setCharges(ContextImpl& context, const std::vector<double>& charges);
 private:
     ComputeContext& cc;
 };

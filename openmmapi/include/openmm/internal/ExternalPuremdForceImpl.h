@@ -4,39 +4,44 @@
 
 #ifndef OPENMM_EXTERNALPUREMDFORCEIMPL_H
 #define OPENMM_EXTERNALPUREMDFORCEIMPL_H
-#include "ForceImpl.h"
+#include "CustomCPPForceImpl.h"
 #include "openmm/ExternalPuremdForce.h"
 #include "openmm/Kernel.h"
+#include "openmm/PuremdInterface.h"
+#include<vector>
 #include <set>
 #include <string>
 #include <utility>
 
+
 namespace OpenMM {
+
+
 
 /**
  * This is the internal implementation of ExternalPuremdForce.
  */
-    class ExternalPuremdForceImpl : public ForceImpl {
+    class ExternalPuremdForceImpl : public CustomCPPForceImpl {
     public:
-      ExternalPuremdForceImpl(const ExternalPuremdForce & owner);
-        ~ExternalPuremdForceImpl();
-        void initialize(ContextImpl& context);
-        const ExternalPuremdForce & getOwner() const {
-            return owner;
-        }
-        void updateContextState(ContextImpl& context, bool& forcesInvalid) {
-            // This force field doesn't update the state directly.
-        }
-        double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
-        std::map<std::string, double> getDefaultParameters() {
-            return std::map<std::string, double>(); // This force field doesn't define any parameters.
-        }
-        std::vector<std::string> getKernelNames();
-        std::vector<int> getSimulatedParticles() const;
-        void updateParametersInContext(ContextImpl& context, int firstBond, int lastBond);
+      ExternalPuremdForceImpl(const ExternalPuremdForce &owner);
+      ~ExternalPuremdForceImpl() = default;
+      double computeForce(ContextImpl& context, const std::vector<Vec3> &positions, std::vector<Vec3>& forces) override;
+      const ExternalPuremdForce& getOwner() const{
+        return owner;
+      }
     private:
-        const ExternalPuremdForce & owner;
-        Kernel kernel;
+      std::vector<char> qmSymbols;
+      std::vector<char> mmSymbols;
+      std::vector<int> qmParticles;
+      std::vector<int> mmParticles;
+      /**@private
+       *
+       * @param context
+       * @param simBoxInfo
+       */
+      static void getBoxInfo(ContextImpl& context, std::vector<double>& simBoxInfo);
+      const ExternalPuremdForce & owner;
+      PuremdInterface Interface;
     };
 
 } // namespace OpenMM

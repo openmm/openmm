@@ -125,6 +125,16 @@ public:
      */
     void setVelocities(const std::vector<Vec3>& velocities);
     /**
+     * Get the charges of each particle in the context
+     * @param charges
+     */
+    void getCharges(std::vector<double>& charges);
+    /**
+     * Set the charge of each particle in the context.
+     * @param charges
+     */
+    void setCharges(const std::vector<double>& charges);
+    /**
      * Get the current forces on all particles.
      *
      * @param forces  on exit, this contains the forces

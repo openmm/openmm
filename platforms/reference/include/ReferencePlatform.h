@@ -70,6 +70,7 @@ public:
     std::vector<Vec3>* positions;
     std::vector<Vec3>* velocities;
     std::vector<Vec3>* forces;
+    std::vector<double>* charges;
     Vec3* periodicBoxSize;
     Vec3* periodicBoxVectors;
     ReferenceConstraints* constraints;

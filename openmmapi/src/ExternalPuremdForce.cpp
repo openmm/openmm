@@ -8,6 +8,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/internal/ExternalPuremdForceImpl.h"
 
+#include <cstring>
 using namespace OpenMM;
 using namespace std;
 
@@ -17,35 +18,34 @@ ExternalPuremdForce::ExternalPuremdForce(const std::string& ffieldFile, const st
 }
 
 int ExternalPuremdForce::addAtom(int particle, char* symbol, bool isQM) {
-    atoms.push_back(AtomInfo(particle, std::string(symbol), isQM));
-    return atoms.size()-1;
+    bool hasLen = std::strlen(symbol) > 1;
+    allAtoms.push_back(particle);
+    allIsQM.push_back(isQM);
+    if (hasLen) {
+      allSymbols.push_back(symbol[1]);
+    }
+    else
+    {
+      allSymbols.push_back('\0');
+    }
+    return allAtoms.size();
 }
 
-void ExternalPuremdForce::getParticleParameters(int index, int &particle, char& symbol1, char&symbol2, int &isQM)  const {
-    ASSERT_VALID_INDEX(index, atoms)
-    particle = atoms[index].particle;
-    symbol1 = atoms[index].symbol1;
-    symbol2 = atoms[index].symbol2;
-    isQM = static_cast<int>(atoms[index].isQM);
+void ExternalPuremdForce::getParticleParameters(int index, int &particle, char* symbol, int &isQM)  const {
+    particle = allAtoms[index];
+    symbol[0] = allSymbols[index*2];
+    symbol[1] = allSymbols[index*2 + 1];
+    isQM = allIsQM[index];
 }
 
 ForceImpl*ExternalPuremdForce::createImpl() const {
     if (numContexts == 0) {
         // Begin tracking changes to atoms.
-        firstChangedBond = atoms.size();
+        firstChangedBond = allAtoms.size();
         lastChangedBond = -1;
     }
     numContexts++;
     return new ExternalPuremdForceImpl(*this);
 }
 
-void ExternalPuremdForce::updateParametersInContext(Context& context) {
-    dynamic_cast<ExternalPuremdForceImpl &>(getImplInContext(context)).updateParametersInContext(getContextImpl(context), firstChangedBond, lastChangedBond);
-    if (numContexts == 1) {
-        // We just updated the only existing context for this force, so we can reset
-        // the tracking of changed atoms.
-        firstChangedBond = atoms.size();
-        lastChangedBond = -1;
-    }
-}
 
