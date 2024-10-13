@@ -15,8 +15,6 @@
 
 namespace OpenMM {
 
-
-
 /**
  * This is the internal implementation of ExternalPuremdForce.
  */

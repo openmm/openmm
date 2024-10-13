@@ -63,22 +63,10 @@ namespace OpenMM {
      *
      * @param index the index of the atoms
      * @param particle the particle index is going to be saved here
-     * @param symbol1 symbol of the atom
-     * @param symbol2 symbol other
+     * @param symbol symbol of the atom
      * @param isQM is it reactive
      */
     void getParticleParameters(int index, int& particle, char* symbol, int& isQM) const;
-    /**
-     * Update the per-bond parameters in a Context to match those stored in this Force object.  This method provides
-     * an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
-     * Simply call setBondParameters() to modify this object's parameters, then call updateParametersInContext()
-     * to copy them over to the Context.
-     *
-     * The only information this method updates is the values of per-bond parameters.  The set of particles involved
-     * in a bond cannot be changed, nor can new bonds be added.
-     *
-     * @param context the context
-     */
 
     protected:
     ForceImpl* createImpl() const;
