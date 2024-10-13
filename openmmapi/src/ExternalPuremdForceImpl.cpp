@@ -118,8 +118,10 @@ double ExternalPuremdForceImpl::computeForce(ContextImpl& context, const std::ve
   //update charges
   context.setCharges(charges);
   //copy forces and transform from Angstroms * Daltons / ps^2 to kJ/mol/nm
-  double conversionFactor = 2.76E-7;
+  double conversionFactor = 1.66053906892 * 6.02214076/100.0;
   for(size_t i =0;i<forces.size();++i) forces[i] = transformedForces[i]*conversionFactor;
   //done
-  return energy;
+  //kCal -> kJ
+  double energyFactor = 4.184;
+  return energy*energyFactor;
 }
