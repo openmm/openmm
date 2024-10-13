@@ -28,7 +28,6 @@
 #include "CudaKernelSources.h"
 #include "openmm/common/ContextSelector.h"
 #include "openmm/internal/timer.h"
-#include<numeric>
 #include<algorithm>
 
 

@@ -27,9 +27,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/PuremdInterface.h"
 #include "openmm/common/CommonKernels.h"
 #include "openmm/common/ComputeContext.h"
+#include "openmm/internal/PuremdInterface.h"
 
 namespace OpenMM {
 

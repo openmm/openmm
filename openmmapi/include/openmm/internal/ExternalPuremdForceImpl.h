@@ -5,14 +5,13 @@
 #ifndef OPENMM_EXTERNALPUREMDFORCEIMPL_H
 #define OPENMM_EXTERNALPUREMDFORCEIMPL_H
 #include "CustomCPPForceImpl.h"
+#include "PuremdInterface.h"
 #include "openmm/ExternalPuremdForce.h"
 #include "openmm/Kernel.h"
-#include "openmm/PuremdInterface.h"
-#include<vector>
 #include <set>
 #include <string>
 #include <utility>
-
+#include <vector>
 
 namespace OpenMM {
 

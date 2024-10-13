@@ -30,7 +30,6 @@
 #include "CudaContext.h"
 #include "CudaKernels.h"
 #include "CudaPlatform.h"
-#include "openmm/PuremdInterface.h"
 #include "openmm/common/CommonKernels.h"
 
 namespace OpenMM {

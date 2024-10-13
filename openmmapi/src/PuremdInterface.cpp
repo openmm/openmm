@@ -2,7 +2,7 @@
 // Created by babaid on 05.10.24.
 //
 
-#include "openmm/PuremdInterface.h"
+#include "openmm/internal/PuremdInterface.h"
 #include "openmm/OpenMMException.h"
 
 #include "spuremd.h"

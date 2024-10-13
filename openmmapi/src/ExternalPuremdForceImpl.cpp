@@ -5,11 +5,10 @@
 #include "openmm/internal/ExternalPuremdForceImpl.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/PuremdInterface.h"
 #include "openmm/kernels.h"
-#include <sstream>
 #include <algorithm>
-#include "openmm/PuremdInterface.h"
-
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
