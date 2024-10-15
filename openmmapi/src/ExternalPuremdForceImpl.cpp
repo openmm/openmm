@@ -9,6 +9,7 @@
 #include "openmm/kernels.h"
 #include <algorithm>
 #include <sstream>
+#include<iostream>
 
 using namespace OpenMM;
 using namespace std;
@@ -41,42 +42,42 @@ void ExternalPuremdForceImpl::getBoxInfo(ContextImpl& context, std::vector<doubl
 {
   std::vector<Vec3> PeriodicBoxVectors(3);
   context.getPeriodicBoxVectors(PeriodicBoxVectors[0], PeriodicBoxVectors[1], PeriodicBoxVectors[2]);
+
   for (int i=0; i<3; i++)
   {
     //AA
     simBoxInfo[i] = std::sqrt(PeriodicBoxVectors[i].dot(PeriodicBoxVectors[i]))*10;
   }
-  simBoxInfo[3] = std::acos(PeriodicBoxVectors[1].dot(PeriodicBoxVectors[2])/(simBoxInfo[1]*simBoxInfo[2]))*180.0/M_PI;
-  simBoxInfo[4] =  std::acos(PeriodicBoxVectors[0].dot(PeriodicBoxVectors[2])/(simBoxInfo[0]*simBoxInfo[2]))*180.0/M_PI;
-  simBoxInfo[5] =  std::acos(PeriodicBoxVectors[0].dot(PeriodicBoxVectors[1])/(simBoxInfo[0]*simBoxInfo[1]))*180.0/M_PI;
+  simBoxInfo[3] = std::acos(PeriodicBoxVectors[1].dot(PeriodicBoxVectors[2])/(simBoxInfo[1]*simBoxInfo[2])) * 180.0 / M_PI;
+  simBoxInfo[4] =  std::acos(PeriodicBoxVectors[0].dot(PeriodicBoxVectors[2])/(simBoxInfo[0]*simBoxInfo[2])) * 180.0 / M_PI;
+  simBoxInfo[5] =  std::acos(PeriodicBoxVectors[0].dot(PeriodicBoxVectors[1])/(simBoxInfo[0]*simBoxInfo[1])) * 180.0 / M_PI;
 }
 
 
 double ExternalPuremdForceImpl::computeForce(ContextImpl& context, const std::vector<Vec3> &positions, std::vector<Vec3>& forces)
 {
   // need to seperate positions
-  std::vector<Vec3> transoformedPositions;
+  constexpr double nmaa = 10;
   //next we need to seperate and flatten the QM/MM positions and convert to AA
   int numQm = qmParticles.size(), numMm = mmParticles.size();
   std::vector<double> qmPos, mmPos_q;
 
   std::for_each(qmParticles.begin(), qmParticles.end(), [&](int Index){
-    qmPos.emplace_back(positions[Index][0]*10);
-    qmPos.emplace_back(positions[Index][1]*10);
-    qmPos.emplace_back(positions[Index][2]*10);
+    qmPos.emplace_back(positions[Index][0]*nmaa);
+    qmPos.emplace_back(positions[Index][1]*nmaa);
+    qmPos.emplace_back(positions[Index][2]*nmaa);
   });
-
-
 
   //retrieve charges from the context. Had to introduce some changes to classes Context, ContextImpl,
   // UpdateStateDataKernel, CommonUpdateStateDataKernel
   std::vector<double> charges;
   context.getCharges(charges);
 
+  //std::cout << "Last charge: " << charges.back() << std::endl;
   std::for_each(mmParticles.begin(), mmParticles.end(), [&](int Index){
-    mmPos_q.emplace_back(positions[Index][0]*10);
-    mmPos_q.emplace_back(positions[Index][1]*10);
-    mmPos_q.emplace_back(positions[Index][2]*10);
+    mmPos_q.emplace_back(positions[Index][0]*nmaa);
+    mmPos_q.emplace_back(positions[Index][1]*nmaa);
+    mmPos_q.emplace_back(positions[Index][2]*nmaa);
     mmPos_q.emplace_back(charges[Index]);
   });
 
@@ -95,33 +96,30 @@ double ExternalPuremdForceImpl::computeForce(ContextImpl& context, const std::ve
 
   // merge the qm and mm forces, additionally transform the scale
   std::vector<Vec3> transformedForces(owner.getNumAtoms());
-  int Index;
+
 
   for (size_t i=0; i<qmParticles.size(); ++i)
   {
-      Index = qmParticles[i];
-
-      transformedForces[Index][0] = qmForces[i*3];
-      transformedForces[Index][1] = qmForces[i*3 + 1];
-      transformedForces[Index][2] = qmForces[i*3 + 2];
-      charges[Index] = qmQ[i];
+      transformedForces[qmParticles[i]][0] = qmForces[i*3];
+      transformedForces[qmParticles[i]][1] = qmForces[i*3 + 1];
+      transformedForces[qmParticles[i]][2] = qmForces[i*3 + 2];
+      charges[qmParticles[i]] = qmQ[i];
   }
 
   for (size_t i=0; i<mmParticles.size(); ++i)
   {
-      Index = mmParticles[i];
-      transformedForces[Index][0] = mmForces[i*3];
-      transformedForces[Index][1] = mmForces[i*3 + 1];
-      transformedForces[Index][2] = mmForces[i*3 + 2];
+      transformedForces[mmParticles[i]][0] = mmForces[i*3];
+      transformedForces[mmParticles[i]][1] = mmForces[i*3 + 1];
+      transformedForces[mmParticles[i]][2] = mmForces[i*3 + 2];
   }
 
   //update charges
   context.setCharges(charges);
   //copy forces and transform from Angstroms * Daltons / ps^2 to kJ/mol/nm
-  double conversionFactor = 1.66053906892 * 6.02214076/100.0;
+  constexpr double conversionFactor = 1.66053906892 * 6.02214076/100;
   for(size_t i =0;i<forces.size();++i) forces[i] = transformedForces[i]*conversionFactor;
   //done
   //kCal -> kJ
-  double energyFactor = 4.184;
+  constexpr double energyFactor = 4.184;
   return energy*energyFactor;
 }

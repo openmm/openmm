@@ -20,23 +20,14 @@ void PuremdInterface::setInputFileNames(const std::string &ffieldFilename, const
 void PuremdInterface::getReaxffPuremdForces(int num_qm_atoms,  const std::vector<char> &qm_symbols, const std::vector<double> & qm_pos,
                                             int num_mm_atoms, const  std::vector<char> &mm_symbols, const std::vector<double> & mm_pos_q,
                                             const std::vector<double> & sim_box_info,
-                                            std::vector<double>& qm_forces, std::vector<double>& mm_forces, std::vector<double> qm_q, double& totalEnergy) {
+                                            std::vector<double>& qm_forces, std::vector<double>& mm_forces, std::vector<double>& qm_q, double& totalEnergy) {
 
   if(firstCall)
   {
-    if (!control_filename.empty()) {
-      handlePuremd = setup_qmmm(
+    handlePuremd = setup_qmmm(
           num_qm_atoms, qm_symbols.data(), qm_pos.data(), num_mm_atoms,
           mm_symbols.data(), mm_pos_q.data(), sim_box_info.data(),
           ffield_filename.c_str(), control_filename.c_str());
-    }
-    else
-    {
-      handlePuremd = setup_qmmm(
-          num_qm_atoms, qm_symbols.data(), qm_pos.data(), num_mm_atoms,
-          mm_symbols.data(), mm_pos_q.data(), sim_box_info.data(),
-          ffield_filename.c_str(), NULL);
-    }
     firstCall = false;
   }
   else
@@ -44,7 +35,7 @@ void PuremdInterface::getReaxffPuremdForces(int num_qm_atoms,  const std::vector
       retPuremd = reset_qmmm(handlePuremd, num_qm_atoms, qm_symbols.data(),  qm_pos.data(),
                      num_mm_atoms, mm_symbols.data(), mm_pos_q.data(),
                      sim_box_info.data(),
-                     NULL, control_filename.c_str());
+                     ffield_filename.c_str(), control_filename.c_str());
       if(0 != retPuremd) throw OpenMMException("Issue with PuReMD function reset_qmmm.");
   }
 

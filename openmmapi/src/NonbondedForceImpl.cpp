@@ -68,6 +68,7 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
         if (owner.getSwitchingDistance() < 0 || owner.getSwitchingDistance() >= owner.getCutoffDistance())
             throw OpenMMException("NonbondedForce: Switching distance must satisfy 0 <= r_switch < r_cutoff");
     }
+
     for (int i = 0; i < owner.getNumParticles(); i++) {
         double charge, sigma, epsilon;
         owner.getParticleParameters(i, charge, sigma, epsilon);
