@@ -10,6 +10,7 @@ dependencies:
 # host
 - python
 - doxygen
+- setuptools
 - hip-devel
 - hipcc
 - rocm-cmake
