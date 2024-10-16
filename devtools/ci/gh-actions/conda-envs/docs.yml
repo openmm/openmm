@@ -12,6 +12,7 @@ dependencies:
 - cython
 - swig
 - doxygen
+- setuptools
 - sphinx==4.0.2
 - sphinxcontrib-bibtex
 - breathe>=4.30,<5.0
