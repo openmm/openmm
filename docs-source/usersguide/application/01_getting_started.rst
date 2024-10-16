@@ -56,12 +56,14 @@ Anaconda or Miniconda.
 modern drivers from your vendor.
 
   * If you have an Nvidia GPU, download the latest drivers from
-    https://www.nvidia.com/Download/index.aspx. CUDA itself will be provided by
-    the :code:`cudatoolkit` package when you install :code:`openmm` in the next steps.
+    https://www.nvidia.com/Download/index.aspx. CUDA itself will be installed
+    automatically when you install :code:`openmm` in the next steps.
   * If you have an AMD GPU and are using Linux or Windows, download the latest
-    version of the drivers from https://support.amd.com.  On OS X, OpenCL
-    is included with the operating system and is supported on OS X 10.10.3 or
-    later.
+    version of the drivers from https://support.amd.com.  To use the HIP
+    platform (recommended), you also need to install HIP/ROCm by following the
+    instructions at https://rocm.docs.amd.com.
+  * On macOS, OpenCL is included with the operating system and is supported on
+    macOS 10.10.3 or later.
 
 3. Open a command line terminal and type the following command
 ::
@@ -74,13 +76,12 @@ Alternatively you can request a version that is compiled for a specific CUDA
 version with the command
 ::
 
-    conda install -c conda-forge openmm cudatoolkit=10.0
+    conda install -c conda-forge openmm cuda-version=12
 
-where :code:`10.0` should be replaced with the particular CUDA version
-you want to target.  We build packages for CUDA 9.2 and above on Linux,
-and CUDA 10.0 and above on Windows.  Because different CUDA releases are
-not binary compatible with each other, OpenMM can only work with the particular
-CUDA version it was compiled with.
+where :code:`12` should be replaced with the particular CUDA version
+you want to target.  We build packages for CUDA 11 and above.  Because different
+CUDA releases are not binary compatible with each other, OpenMM can only work
+with the particular CUDA version it was compiled with.
 
 .. note::
 
