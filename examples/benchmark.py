@@ -352,8 +352,8 @@ def runOneTest(testName, options):
         properties['DeviceIndex'] = options.device
         if ',' in options.device or ' ' in options.device:
             initialSteps = 250
-    if options.disable_pme_stream is not None:
-        properties['DisablePmeStream'] = options.disable_pme_stream
+    if options.disable_pme_stream:
+        properties['DisablePmeStream'] = 'true'
     if options.opencl_platform is not None and 'OpenCLPlatformIndex' in platform.getPropertyNames():
         properties['OpenCLPlatformIndex'] = options.opencl_platform
     if (options.precision is not None) and ('Precision' in platform.getPropertyNames()):
@@ -480,7 +480,7 @@ parser.add_argument('--seconds', default=60, dest='seconds', type=float, help='t
 parser.add_argument('--polarization', default='mutual', dest='polarization', choices=POLARIZATION_MODES, help=f'the polarization method for AMOEBA: {POLARIZATION_MODES} [default: mutual]')
 parser.add_argument('--mutual-epsilon', default=1e-5, dest='epsilon', type=float, help='mutual induced epsilon for AMOEBA [default: 1e-5]')
 parser.add_argument('--bond-constraints', default='hbonds', dest='bond_constraints', help=f'hbonds: constrain bonds to hydrogen, use 1.5*amu H mass; allbonds: constrain all bonds, use 4*amu H mass, and use larger timestep. This option is ignored for AMOEBA: {BOND_CONSTRAINTS} [default: hbonds]')
-parser.add_argument('--disable-pme-stream', default=None, dest='disable_pme_stream', help='if specified, override platform default for separate PME stream')
+parser.add_argument('--disable-pme-stream', default=False, action='store_true', dest='disable_pme_stream', help='disable use of a separate GPU stream for PME')
 parser.add_argument('--device', default=None, dest='device', help='device index for CUDA, HIP, or OpenCL')
 parser.add_argument('--opencl-platform', default=None, dest='opencl_platform', help='platform index for OpenCL')
 parser.add_argument('--precision', default='single', dest='precision', help=f'precision modes for CUDA, HIP, or OpenCL: {PRECISIONS} [default: single]')
