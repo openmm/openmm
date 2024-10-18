@@ -319,6 +319,25 @@ public:
     int getIncludeCavityTerm() const;
 
     /**
+     *  Get the 'tanh rescaling' flag.
+     *
+     *  @return tanhRescaling
+     */
+    bool getTanhRescaling() const;
+
+    /**
+     * Get Tanh parameters beta0, beta1 and beta2.
+     */
+    void getTanhParameters(double& b0, double& b1, double& b2) const;
+
+    /**
+     *  Get the descreen offset for computing effective Born radii.
+     *
+     *  @return descreenOffset
+     */
+    double getDescreenOffset() const;
+
+    /**
      *  Get the number of particles.
      *
      *  @return number of particles
@@ -350,10 +369,9 @@ public:
     double getSolventDielectric() const;
 
     /**
-     *  Get the dielectric offset.
+     *  Get the dielectric offset for the cavity term.
      *
      *  @return dielectricOffset
-     *
      */
     double getDielectricOffset() const;
 
@@ -398,6 +416,22 @@ public:
     void getCharges(std::vector<double>& charges) const;
 
     /**
+     *  Get the vector of descreening radii.
+     *
+     *  @param descreenRadii vector of descreening radii
+     *
+     */
+    void getDescreenRadii(std::vector<double>& descreenRadii) const;
+
+    /**
+     *  Get the vector of neck scaling factors.
+     *
+     *  @param neckFactors vector of neck scaling factors.
+     *
+     */
+    void getNeckFactors(std::vector<double>& neckFactors) const;
+
+    /**
      * Copy changed parameters over to a context.
      *
      * @param context    the context to copy parameters to
@@ -411,12 +445,19 @@ private:
     std::vector<double> atomicRadii;
     std::vector<double> scaleFactors;
     std::vector<double> charges;
+    std::vector<double> descreenRadii;
+    std::vector<double> neckFactors;
     double soluteDielectric;
     double solventDielectric;
     double dielectricOffset;
     double probeRadius;
     double surfaceAreaFactor;
     int includeCavityTerm;
+    bool tanhRescaling;
+    double beta0;
+    double beta1;
+    double beta2;
+    double descreenOffset;
     int directPolarization;
     const System& system;
 };

@@ -47,46 +47,48 @@ void testSerialization() {
     AmoebaGeneralizedKirkwoodForce force1;
     force1.setForceGroup(3);
     force1.setName("custom name");
-    force1.setSolventDielectric(  80.0);
-    force1.setSoluteDielectric(   1.0);
-    //force1.setDielectricOffset(   0.09);
-    force1.setProbeRadius(        1.40);
-    force1.setSurfaceAreaFactor(  0.888);
-    force1.setIncludeCavityTerm(  1);
+    force1.setSolventDielectric(80.0);
+    force1.setSoluteDielectric(1.0);
+    force1.setDielectricOffset(   0.09);
+    force1.setProbeRadius(1.40);
+    force1.setSurfaceAreaFactor(0.888);
+    force1.setIncludeCavityTerm(1);
+    force1.setTanhRescaling(0);
 
-    force1.addParticle(1.0, 2.0, 0.9);
-    force1.addParticle(-1.1,2.1, 0.8);
-    force1.addParticle(0.1, 2.2, 0.7);
+    force1.addParticle(1.0, 2.0, 0.9, 2.0, 0.0);
+    force1.addParticle(-1.1, 2.1, 0.8, 2.1, 0.0);
+    force1.addParticle(0.1, 2.2, 0.7, 2.2, 0.0);
 
     // Serialize and then deserialize it.
 
     stringstream buffer;
     XmlSerializer::serialize<AmoebaGeneralizedKirkwoodForce>(&force1, "Force", buffer);
-    AmoebaGeneralizedKirkwoodForce* copy = XmlSerializer::deserialize<AmoebaGeneralizedKirkwoodForce>(buffer);
+    AmoebaGeneralizedKirkwoodForce *copy = XmlSerializer::deserialize<AmoebaGeneralizedKirkwoodForce>(buffer);
 
     // Compare the two forces to see if they are identical.  
-    AmoebaGeneralizedKirkwoodForce& force2 = *copy;
+    AmoebaGeneralizedKirkwoodForce &force2 = *copy;
     ASSERT_EQUAL(force1.getForceGroup(), force2.getForceGroup());
     ASSERT_EQUAL(force1.getName(), force2.getName());
-    ASSERT_EQUAL(force1.getSolventDielectric(),    force2.getSolventDielectric());
-    ASSERT_EQUAL(force1.getSoluteDielectric(),     force2.getSoluteDielectric());
-    //ASSERT_EQUAL(force1.getDielectricOffset(),     force2.getDielectricOffset());
-    ASSERT_EQUAL(force1.getProbeRadius(),          force2.getProbeRadius());
-    ASSERT_EQUAL(force1.getSurfaceAreaFactor(),    force2.getSurfaceAreaFactor());
-    ASSERT_EQUAL(force1.getIncludeCavityTerm(),    force2.getIncludeCavityTerm());
+    ASSERT_EQUAL(force1.getSolventDielectric(), force2.getSolventDielectric());
+    ASSERT_EQUAL(force1.getSoluteDielectric(), force2.getSoluteDielectric());
+    ASSERT_EQUAL(force1.getDielectricOffset(),     force2.getDielectricOffset());
+    ASSERT_EQUAL(force1.getProbeRadius(), force2.getProbeRadius());
+    ASSERT_EQUAL(force1.getSurfaceAreaFactor(), force2.getSurfaceAreaFactor());
+    ASSERT_EQUAL(force1.getIncludeCavityTerm(), force2.getIncludeCavityTerm());
 
     ASSERT_EQUAL(force1.getNumParticles(), force2.getNumParticles());
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(force1.getNumParticles()); ii++) {
 
-        double radius1, charge1, scaleFactor1;
-        double radius2, charge2, scaleFactor2;
+        double radius1, charge1, scaleFactor1, descreen1, neckFactor1;
+        double radius2, charge2, scaleFactor2, descreen2, neckFactor2;
 
-        force1.getParticleParameters(ii, charge1, radius1, scaleFactor1);
-        force2.getParticleParameters(ii, charge2, radius2, scaleFactor2);
+        force1.getParticleParameters(ii, charge1, radius1, scaleFactor1, descreen1, neckFactor1);
+        force2.getParticleParameters(ii, charge2, radius2, scaleFactor2, descreen2, neckFactor2);
 
-        ASSERT_EQUAL(charge1,      charge2);
-        ASSERT_EQUAL(radius1,      radius2);
-        ASSERT_EQUAL(scaleFactor1, scaleFactor2);
+        ASSERT_EQUAL(charge1, charge2)
+        ASSERT_EQUAL(radius1, radius2)
+        ASSERT_EQUAL(scaleFactor1, scaleFactor2)
+        ASSERT_EQUAL(descreen1, descreen2)
     }
 }
 
@@ -95,7 +97,7 @@ int main() {
         registerAmoebaSerializationProxies();
         testSerialization();
     }
-    catch(const exception& e) {
+    catch (const exception &e) {
         cout << "exception: " << e.what() << endl;
         return 1;
     }
