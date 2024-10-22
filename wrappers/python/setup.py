@@ -128,9 +128,10 @@ def buildKeywordDictionary(major_version_num=MAJOR_VERSION_NUM,
     from setuptools import Extension
     setupKeywords = {}
     setupKeywords["name"]              = "OpenMM"
-    setupKeywords["version"]           = "%s.%s.%s" % (major_version_num,
+    setupKeywords["version"]           = "%s.%s.%s%s" % (major_version_num,
                                                        minor_version_num,
-                                                       build_info)
+                                                       build_info,
+                                                       os.getenv('VERSION_SUFFIX', ''))
     setupKeywords["author"]            = "Peter Eastman"
     setupKeywords["license"]           = \
     "Python Software Foundation License (BSD-like)"
