@@ -14,6 +14,26 @@
 
 using namespace OpenMM;
 using namespace std;
+
+constexpr double conversionFactor = 1.66053906892 * 6.02214076/100;
+
+inline void transformPosQM(const std::vector<Vec3>& positions, const std::vector<int> indices, std::vector<double> out){
+  std::for_each(indices.begin(), indices.end(), [&](int Index){
+    out.emplace_back(positions[Index][0]*AngstromsPerNm);
+    out.emplace_back(positions[Index][1]*AngstromsPerNm);
+    out.emplace_back(positions[Index][2]*AngstromsPerNm);
+  });
+}
+
+inline void transformPosqMM(const std::vector<Vec3>& positions, const std::vector<double> charges, const std::vector<int> indices, std::vector<double> out){
+  std::for_each(indices.begin(), indices.end(), [&](int Index){
+    out.emplace_back(positions[Index][0]*AngstromsPerNm);
+    out.emplace_back(positions[Index][1]*AngstromsPerNm);
+    out.emplace_back(positions[Index][2]*AngstromsPerNm);
+    out.emplace_back(charges[Index]);
+  });
+}
+
 ExternalPuremdForceImpl::ExternalPuremdForceImpl(const ExternalPuremdForce &owner): CustomCPPForceImpl(owner), owner(owner)
 {
   std::string ffield_file, control_file;
@@ -39,6 +59,10 @@ ExternalPuremdForceImpl::ExternalPuremdForceImpl(const ExternalPuremdForce &owne
       }
     }
 }
+
+/**
+This calculates the box size and angles. For now it is not needed because we assume that there are 90 degree angles.
+*/
 void ExternalPuremdForceImpl::getBoxInfo(ContextImpl& context, std::vector<double>& simBoxInfo)
 {
   std::vector<Vec3> PeriodicBoxVectors(3);
@@ -54,41 +78,36 @@ void ExternalPuremdForceImpl::getBoxInfo(ContextImpl& context, std::vector<doubl
   simBoxInfo[5] =  std::acos(PeriodicBoxVectors[0].dot(PeriodicBoxVectors[1])/(simBoxInfo[0]*simBoxInfo[1])) * 180.0 / M_PI;
 }
 
-
 double ExternalPuremdForceImpl::computeForce(ContextImpl& context, const std::vector<Vec3> &positions, std::vector<Vec3>& forces)
 {
   // need to seperate positions
-  //next we need to seperate and flatten the QM/MM positions and convert to AA
+  //next we need to seperate and flatten the QM/MM positions and convert to AA#
+  int N = owner.getNumAtoms();
   int numQm = qmParticles.size(), numMm = mmParticles.size();
   std::vector<double> qmPos, mmPos_q;
-
-  std::for_each(qmParticles.begin(), qmParticles.end(), [&](int Index){
-    qmPos.emplace_back(positions[Index][0]*AngstromsPerNm);
-    qmPos.emplace_back(positions[Index][1]*AngstromsPerNm);
-    qmPos.emplace_back(positions[Index][2]*AngstromsPerNm);
-  });
-
-  //retrieve charges from the context. Had to introduce some changes to classes Context, ContextImpl,
-  // UpdateStateDataKernel, CommonUpdateStateDataKernel
-  std::vector<double> charges;
-  context.getCharges(charges);
-
-  //std::cout << "Last charge: " << charges.back() << std::endl;
-  std::for_each(mmParticles.begin(), mmParticles.end(), [&](int Index){
-    mmPos_q.emplace_back(positions[Index][0]*AngstromsPerNm);
-    mmPos_q.emplace_back(positions[Index][1]*AngstromsPerNm);
-    mmPos_q.emplace_back(positions[Index][2]*AngstromsPerNm);
-    mmPos_q.emplace_back(charges[Index]);
-  });
-
-
   //get the box size. move this into a function
+  
   std::vector<double> simBoxInfo(6);
   getBoxInfo(context, simBoxInfo);
 
+  qmPos.reserve(numQm*3);
+  mmPos_q.reserve(numMm*3);
+  
+  transformPosQM(positions, qmParticles, qmPos);
+
+  //retrieve charges from the context. Had to introduce some changes to classes Context, ContextImpl,
+  // UpdateStateDataKernel, CommonUpdateStateDataKernel  
+  std::vector<double> charges;
+  charges.reserve(N);
+  context.getCharges(charges);
+
+  transformPosqMM(positions, charges, mmParticles, mmPos_q);
+
+  // OUTPUT VARIABLES
   std::vector<double> qmForces(numQm*3), mmForces(numMm*3);
   std::vector<double> qmQ(numQm, 0);
   double energy;
+
   Interface.getReaxffPuremdForces(numQm, qmSymbols, qmPos,
                                   numMm, mmSymbols, mmPos_q,
                                   simBoxInfo, qmForces, mmForces, qmQ,
@@ -116,7 +135,7 @@ double ExternalPuremdForceImpl::computeForce(ContextImpl& context, const std::ve
   //update charges
   context.setCharges(charges);
   //copy forces and transform from Angstroms * Daltons / ps^2 to kJ/mol/nm
-  constexpr double conversionFactor = 1.66053906892 * 6.02214076/100;
+
   for(size_t i =0;i<forces.size();++i) {
       forces[i] = -transformedForces[i] * conversionFactor;
   }
