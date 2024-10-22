@@ -1,11 +1,11 @@
 //
 // Created by babaid on 05.10.24.
 //
-
 #include "openmm/internal/PuremdInterface.h"
 #include "openmm/OpenMMException.h"
 
 #include "spuremd.h"
+#include<iostream>
 
 using namespace OpenMM;
 PuremdInterface::PuremdInterface(): firstCall(true) {}
@@ -38,12 +38,16 @@ void PuremdInterface::getReaxffPuremdForces(int num_qm_atoms,  const std::vector
                      ffield_filename.c_str(), control_filename.c_str());
       if(0 != retPuremd) throw OpenMMException("Issue with PuReMD function reset_qmmm.");
   }
-
   retPuremd = simulate(handlePuremd);
   if (0 != retPuremd) throw OpenMMException("Error at PuReMD simulation.");
   retPuremd = get_atom_forces_qmmm(handlePuremd, qm_forces.data(), mm_forces.data());
   retPuremd = get_atom_charges_qmmm(handlePuremd, qm_q.data(), NULL);
   retPuremd = get_system_info(handlePuremd, NULL, NULL, &totalEnergy, NULL, NULL, NULL);
   if(0!=retPuremd) throw OpenMMException("Error in parameter extraction.");
+  //double be, vdwe, ele, pol;
+  //retPuremd = get_energies_qmmm(handlePuremd, &be, &vdwe, &ele, &pol);
+
+//std::cout << "Bonding energy: " << be << " vdW energy: " << vdwe << std::endl << " ele energy: " << ele << " pol en: "<< pol<< std::endl;
+
 }
 

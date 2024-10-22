@@ -7,6 +7,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/PuremdInterface.h"
 #include "openmm/kernels.h"
+#include "openmm/Units.h"
 #include <algorithm>
 #include <sstream>
 #include<iostream>
@@ -46,7 +47,7 @@ void ExternalPuremdForceImpl::getBoxInfo(ContextImpl& context, std::vector<doubl
   for (int i=0; i<3; i++)
   {
     //AA
-    simBoxInfo[i] = std::sqrt(PeriodicBoxVectors[i].dot(PeriodicBoxVectors[i]))*10;
+    simBoxInfo[i] = std::sqrt(PeriodicBoxVectors[i].dot(PeriodicBoxVectors[i]))*AngstromsPerNm*10;
   }
   simBoxInfo[3] = std::acos(PeriodicBoxVectors[1].dot(PeriodicBoxVectors[2])/(simBoxInfo[1]*simBoxInfo[2])) * 180.0 / M_PI;
   simBoxInfo[4] =  std::acos(PeriodicBoxVectors[0].dot(PeriodicBoxVectors[2])/(simBoxInfo[0]*simBoxInfo[2])) * 180.0 / M_PI;
@@ -57,15 +58,14 @@ void ExternalPuremdForceImpl::getBoxInfo(ContextImpl& context, std::vector<doubl
 double ExternalPuremdForceImpl::computeForce(ContextImpl& context, const std::vector<Vec3> &positions, std::vector<Vec3>& forces)
 {
   // need to seperate positions
-  constexpr double nmaa = 10;
   //next we need to seperate and flatten the QM/MM positions and convert to AA
   int numQm = qmParticles.size(), numMm = mmParticles.size();
   std::vector<double> qmPos, mmPos_q;
 
   std::for_each(qmParticles.begin(), qmParticles.end(), [&](int Index){
-    qmPos.emplace_back(positions[Index][0]*nmaa);
-    qmPos.emplace_back(positions[Index][1]*nmaa);
-    qmPos.emplace_back(positions[Index][2]*nmaa);
+    qmPos.emplace_back(positions[Index][0]*AngstromsPerNm);
+    qmPos.emplace_back(positions[Index][1]*AngstromsPerNm);
+    qmPos.emplace_back(positions[Index][2]*AngstromsPerNm);
   });
 
   //retrieve charges from the context. Had to introduce some changes to classes Context, ContextImpl,
@@ -75,9 +75,9 @@ double ExternalPuremdForceImpl::computeForce(ContextImpl& context, const std::ve
 
   //std::cout << "Last charge: " << charges.back() << std::endl;
   std::for_each(mmParticles.begin(), mmParticles.end(), [&](int Index){
-    mmPos_q.emplace_back(positions[Index][0]*nmaa);
-    mmPos_q.emplace_back(positions[Index][1]*nmaa);
-    mmPos_q.emplace_back(positions[Index][2]*nmaa);
+    mmPos_q.emplace_back(positions[Index][0]*AngstromsPerNm);
+    mmPos_q.emplace_back(positions[Index][1]*AngstromsPerNm);
+    mmPos_q.emplace_back(positions[Index][2]*AngstromsPerNm);
     mmPos_q.emplace_back(charges[Index]);
   });
 
@@ -87,7 +87,7 @@ double ExternalPuremdForceImpl::computeForce(ContextImpl& context, const std::ve
   getBoxInfo(context, simBoxInfo);
 
   std::vector<double> qmForces(numQm*3), mmForces(numMm*3);
-  std::vector<double> qmQ(numQm);
+  std::vector<double> qmQ(numQm, 0);
   double energy;
   Interface.getReaxffPuremdForces(numQm, qmSymbols, qmPos,
                                   numMm, mmSymbols, mmPos_q,
@@ -100,9 +100,9 @@ double ExternalPuremdForceImpl::computeForce(ContextImpl& context, const std::ve
 
   for (size_t i=0; i<qmParticles.size(); ++i)
   {
-      transformedForces[qmParticles[i]][0] = qmForces[i*3];
-      transformedForces[qmParticles[i]][1] = qmForces[i*3 + 1];
-      transformedForces[qmParticles[i]][2] = qmForces[i*3 + 2];
+      transformedForces[qmParticles[i]][0] = qmForces.at(3*i);
+      transformedForces[qmParticles[i]][1] = qmForces.at(3*i + 1);
+      transformedForces[qmParticles[i]][2] = qmForces.at(3*i + 2);
       charges[qmParticles[i]] = qmQ[i];
   }
 
@@ -117,9 +117,11 @@ double ExternalPuremdForceImpl::computeForce(ContextImpl& context, const std::ve
   context.setCharges(charges);
   //copy forces and transform from Angstroms * Daltons / ps^2 to kJ/mol/nm
   constexpr double conversionFactor = 1.66053906892 * 6.02214076/100;
-  for(size_t i =0;i<forces.size();++i) forces[i] = transformedForces[i]*conversionFactor;
+  for(size_t i =0;i<forces.size();++i) {
+      forces[i] = -transformedForces[i] * conversionFactor;
+  }
+
   //done
   //kCal -> kJ
-  constexpr double energyFactor = 4.184;
-  return energy*energyFactor;
+  return energy*KJPerKcal;
 }
