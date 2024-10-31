@@ -213,11 +213,10 @@ void ComputeContext::findMoleculeGroups() {
             vector<int> particles;
             for (int j = 0; j < force->getNumParticleGroups(); j++) {
                 force->getParticlesInGroup(j, particles);
-                for (int k = 1; k < (int) particles.size(); k++)
-                    for (int m = 0; m < k; m++) {
-                        atomBonds[particles[k]].push_back(particles[m]);
-                        atomBonds[particles[m]].push_back(particles[k]);
-                    }
+                for (int k = 1; k < (int) particles.size(); k++) {
+                    atomBonds[particles[k]].push_back(particles[k-1]);
+                    atomBonds[particles[k-1]].push_back(particles[k]);
+                }
             }
         }
 
