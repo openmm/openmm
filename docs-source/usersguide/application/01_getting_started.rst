@@ -35,27 +35,21 @@ the results.
 Installing OpenMM
 *****************
 
-OpenMM is installed using the Conda package manager (https://docs.conda.io).
-Conda is included as part of the Anaconda Python distribution, which you can
-download from https://docs.continuum.io/anaconda/install.  This is a Python
-distribution specifically designed for scientific applications, with many of the
-most popular mathematical and scientific packages preinstalled.  Alternatively
-you can use Miniconda (available from https://docs.conda.io/en/latest/miniconda.html),
-which includes only Python itself, plus the Conda package manager.  That offers
-a much smaller initial download, with the ability to then install only the
-packages you want.
+OpenMM is installed using either the pip or conda package manager.  Pip is
+normally included with all Python distributions.  The easiest way to get conda
+is to use Miniconda (available from https://docs.conda.io/en/latest/miniconda.html),
+a Python distribution with conda preinstalled.
 
-(A third option is to compile OpenMM from source.  This provides more flexibility,
+(Another option is to compile OpenMM from source.  This provides more flexibility,
 but it is much more work, and there is rarely a need for anyone but advanced users
 to compile from source.  Detailed instruction are in Chapter :numref:`compiling-openmm-from-source-code`.)
 
-\1. Begin by installing the most recent 64 bit, Python 3.x version of either
-Anaconda or Miniconda.
+\1. Begin by installing the most recent 64 bit, Python 3.x version of Miniconda.
 
 \2. (Optional) If you want to run OpenMM on a GPU, make sure you have installed
 modern drivers from your vendor.
 
-  * If you have an Nvidia GPU, download the latest drivers from
+  * If you have an NVIDIA GPU, download the latest drivers from
     https://www.nvidia.com/Download/index.aspx. CUDA itself will be installed
     automatically when you install :code:`openmm` in the next steps.
   * If you have an AMD GPU and are using Linux or Windows, download the latest
@@ -65,7 +59,7 @@ modern drivers from your vendor.
   * On macOS, OpenCL is included with the operating system and is supported on
     macOS 10.10.3 or later.
 
-3. Open a command line terminal and type the following command
+3.a. To install with conda, open a command line terminal and type the following command
 ::
 
     conda install -c conda-forge openmm
@@ -83,13 +77,27 @@ you want to target.  We build packages for CUDA 11 and above.  Because different
 CUDA releases are not binary compatible with each other, OpenMM can only work
 with the particular CUDA version it was compiled with.
 
-.. note::
+The conda package does not include the HIP platform.  If you have a recent AMD
+GPU, we recommend installing with pip instead.
 
-    Prior to v7.5, conda packages for OpenMM where distributed through the
-    :code:`omnia` channel (https://anaconda.org/omnia). Starting with v7.5,
-    OpenMM will use the :code:`conda-forge` channel. Check the documentation
-    for previous versions in case you want to install older packages.
+3.b. To install with pip, open a command line terminal and type the following command
+::
 
+    pip install openmm
+
+The package installed with that command includes the OpenCL, CPU, and Reference
+platforms.  To also install the CUDA platform (recommended if you have an NVIDIA
+GPU), type
+::
+
+    pip install openmm[cuda12]
+
+This will install a copy of the CUDA platform compiled with CUDA 12.  Alternatively,
+if you have an AMD GPU, use this command to include the HIP platform (compiled
+with HIP version 6)
+::
+
+    pip install openmm[hip6]
 
 4. Verify your installation by typing the following command:
 ::
