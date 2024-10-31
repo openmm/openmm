@@ -38,6 +38,7 @@
 #include "openmm/internal/AmoebaVdwForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "HipBondedUtilities.h"
+#include "HipFFT3D.h"
 #include "HipForceInfo.h"
 #include "HipKernelSources.h"
 #include "SimTKOpenMMRealType.h"
@@ -68,7 +69,7 @@ void HipCalcAmoebaMultipoleForceKernel::initialize(const System& system, const A
         ContextSelector selector(cc);
         HipArray& grid1 = cu.unwrap(pmeGrid1);
         HipArray& grid2 = cu.unwrap(pmeGrid2);
-        fft = cu.createFFT(gridSizeX, gridSizeY, gridSizeZ, false, cu.getCurrentStream(), grid1, grid2);
+        fft = new HipFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, false, cu.getCurrentStream(), grid1, grid2);
     }
 }
 
@@ -97,8 +98,8 @@ void HipCalcHippoNonbondedForceKernel::initialize(const System& system, const Hi
         sort = new HipSort(cu, new SortTrait(), cc.getNumAtoms());
         HipArray& grid1 = cu.unwrap(pmeGrid1);
         HipArray& grid2 = cu.unwrap(pmeGrid2);
-        fft = cu.createFFT(gridSizeX, gridSizeY, gridSizeZ, true, cu.getCurrentStream(), grid1, grid2);
-        dfft = cu.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true, cu.getCurrentStream(), grid1, grid2);
+        fft = new HipFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, true, cu.getCurrentStream(), grid1, grid2);
+        dfft = new HipFFT3D(cu, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true, cu.getCurrentStream(), grid1, grid2);
     }
 }
 
