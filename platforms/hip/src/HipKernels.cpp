@@ -34,6 +34,7 @@
 #include "CommonKernelSources.h"
 #include "HipBondedUtilities.h"
 #include "HipExpressionUtilities.h"
+#include "HipFFT3D.h"
 #include "HipIntegrationUtilities.h"
 #include "HipNonbondedUtilities.h"
 #include "HipKernelSources.h"
@@ -508,9 +509,9 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
                 }
 
                 hipStream_t fftStream = usePmeStream ? pmeStream : cu.getCurrentStream();
-                fft = cu.createFFT(gridSizeX, gridSizeY, gridSizeZ, true, fftStream, pmeGrid1, pmeGrid2);
+                fft = new HipFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, true, fftStream, pmeGrid1, pmeGrid2);
                 if (doLJPME)
-                    dispersionFft = cu.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true, fftStream, pmeGrid1, pmeGrid2);
+                    dispersionFft = new HipFFT3D(cu, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true, fftStream, pmeGrid1, pmeGrid2);
                 hasInitializedFFT = true;
 
                 // Initialize the b-spline moduli.

@@ -55,7 +55,6 @@
 #include "HipIntegrationUtilities.h"
 #include "HipNonbondedUtilities.h"
 #include "HipPlatform.h"
-#include "HipFFT3D.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/common/ComputeContext.h"
 #include "openmm/Kernel.h"
@@ -183,18 +182,6 @@ public:
      * Construct a ComputeEvent object of the appropriate class for this platform.
      */
     ComputeEvent createEvent();
-    /**
-     * Create a new HipFFT3D.
-     *
-     * @param xsize   the first dimension of the data sets on which FFTs will be performed
-     * @param ysize   the second dimension of the data sets on which FFTs will be performed
-     * @param zsize   the third dimension of the data sets on which FFTs will be performed
-     * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
-     * @param stream  HIP stream
-     * @param in      the data to transform, ordered such that in[x*ysize*zsize + y*zsize + z] contains element (x, y, z)
-     * @param out     on exit, this contains the transformed data
-     */
-    HipFFT3D* createFFT(int xsize, int ysize, int zsize, bool realToComplex, hipStream_t stream, HipArray& in, HipArray& out);
     /**
      * Get the smallest legal size for a dimension of the grid supported by the FFT.
      */
