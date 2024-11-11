@@ -35,6 +35,7 @@
 #include <cmath>
 #include <set>
 #include <sstream>
+#include <unordered_set>
 #include <utility>
 
 using namespace OpenMM;
@@ -201,25 +202,27 @@ void ComputeContext::findMoleculeGroups() {
 
         // First make a list of every other atom to which each atom is connect by a constraint or force group.
 
-        vector<vector<int> > atomBonds(system.getNumParticles());
+        vector<unordered_set<int> > atomBondSets(system.getNumParticles());
         for (int i = 0; i < system.getNumConstraints(); i++) {
             int particle1, particle2;
             double distance;
             system.getConstraintParameters(i, particle1, particle2, distance);
-            atomBonds[particle1].push_back(particle2);
-            atomBonds[particle2].push_back(particle1);
+            atomBondSets[particle1].insert(particle2);
+            atomBondSets[particle2].insert(particle1);
         }
         for (auto force : forces) {
             vector<int> particles;
             for (int j = 0; j < force->getNumParticleGroups(); j++) {
                 force->getParticlesInGroup(j, particles);
-                for (int k = 1; k < (int) particles.size(); k++)
-                    for (int m = 0; m < k; m++) {
-                        atomBonds[particles[k]].push_back(particles[m]);
-                        atomBonds[particles[m]].push_back(particles[k]);
-                    }
+                for (int k = 1; k < (int) particles.size(); k++) {
+                    atomBondSets[particles[k]].insert(particles[k-1]);
+                    atomBondSets[particles[k-1]].insert(particles[k]);
+                }
             }
         }
+        vector<vector<int> > atomBonds(system.getNumParticles());
+        for (int i = 0; i < system.getNumParticles(); i++)
+            atomBonds[i].insert(atomBonds[i].begin(), atomBondSets[i].begin(),atomBondSets[i].end());
 
         // Now identify atoms by which molecule they belong to.
 
