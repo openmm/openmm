@@ -1048,7 +1048,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
     return energy;
 }
 
-void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
+void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException, int firstOffset, int lastOffset) {
     // Make sure the new parameters are acceptable.
     
     ContextSelector selector(cu);

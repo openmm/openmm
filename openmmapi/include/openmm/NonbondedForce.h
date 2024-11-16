@@ -637,7 +637,7 @@ private:
     std::vector<ParticleOffsetInfo> particleOffsets;
     std::vector<ExceptionOffsetInfo> exceptionOffsets;
     std::map<std::pair<int, int>, int> exceptionMap;
-    mutable int numContexts, firstChangedParticle, lastChangedParticle, firstChangedException, lastChangedException;
+    mutable int numContexts, firstChangedParticle, lastChangedParticle, firstChangedException, lastChangedException, firstChangedOffset, lastChangedOffset;
 };
 
 /**

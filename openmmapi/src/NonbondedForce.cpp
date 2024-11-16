@@ -203,11 +203,13 @@ void NonbondedForce::setExceptionParameters(int index, int particle1, int partic
 
 ForceImpl* NonbondedForce::createImpl() const {
     if (numContexts == 0) {
-        // Begin tracking changes to particles and exceptions.
+        // Begin tracking changes to particles, exceptions and offsets.
         firstChangedParticle = particles.size();
         lastChangedParticle = -1;
         firstChangedException = exceptions.size();
         lastChangedException = -1;
+        firstChangedOffset = particleOffsets.size();
+        lastChangedOffset = -1;
     }
     numContexts++;
     return new NonbondedForceImpl(*this);
@@ -318,7 +320,11 @@ void NonbondedForce::setParticleParameterOffset(int index, const std::string& pa
     particleOffsets[index].chargeScale = chargeScale;
     particleOffsets[index].sigmaScale = sigmaScale;
     particleOffsets[index].epsilonScale = epsilonScale;
-}
+    if (numContexts > 0) {
+        firstChangedOffset = min(index, firstChangedOffset);
+        lastChangedOffset = max(index, lastChangedOffset);
+    }
+    }
 
 int NonbondedForce::addExceptionParameterOffset(const std::string& parameter, int exceptionIndex, double chargeProdScale, double sigmaScale, double epsilonScale) {
     exceptionOffsets.push_back(ExceptionOffsetInfo(getGlobalParameterIndex(parameter), exceptionIndex, chargeProdScale, sigmaScale, epsilonScale));
@@ -363,7 +369,7 @@ void NonbondedForce::setIncludeDirectSpace(bool include) {
 
 void NonbondedForce::updateParametersInContext(Context& context) {
     dynamic_cast<NonbondedForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context),
-            firstChangedParticle, lastChangedParticle, firstChangedException, lastChangedException);
+            firstChangedParticle, lastChangedParticle, firstChangedException, lastChangedException, firstChangedOffset, lastChangedOffset);
     if (numContexts == 1) {
         // We just updated the only existing context for this force, so we can reset
         // the tracking of changed particles and exceptions.
@@ -371,6 +377,8 @@ void NonbondedForce::updateParametersInContext(Context& context) {
         lastChangedParticle = -1;
         firstChangedException = exceptions.size();
         lastChangedException = -1;
+        firstChangedOffset = particleOffsets.size();
+        lastChangedOffset = -1;
     }
 }
 

@@ -629,8 +629,11 @@ public:
      * @param lastParticle   the index of the last particle whose parameters might have changed
      * @param firstException the index of the first exception whose parameters might have changed
      * @param lastException  the index of the last exception whose parameters might have changed
+     * @param firstOffset    the index of the first offset whose parameters might have changed
+     * @param lastOffset     the index of the last offset whose parameters might have changed
+     * 
      */
-    virtual void copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) = 0;
+    virtual void copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException, int firstOffset, int lastOffset) = 0;
     /**
      * Get the parameters being used for PME.
      *
