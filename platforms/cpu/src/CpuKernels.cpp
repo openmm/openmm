@@ -759,7 +759,15 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
         int particle;
         double charge, sigma, epsilon;
         force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
-        particleParamOffsets[make_pair(param, particle)] = {charge, sigma, epsilon};
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        int paramIndex;
+        if (paramPos == paramNames.end()) {
+            paramIndex = paramNames.size();
+            paramNames.push_back(param);
+        }
+        else
+            paramIndex = paramPos-paramNames.begin();
+        particleParamOffsets[particle].push_back(make_tuple(charge, sigma, epsilon, paramIndex));
     }
 
     computeParameters(context, false);

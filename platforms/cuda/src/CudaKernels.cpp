@@ -1126,6 +1126,24 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
         }
         baseExceptionParams.upload(baseExceptionParamsVec);
     }
+
+    if (firstOffset <= lastOffset) {
+        <vector<vector<float4> > particleOffsetVec(force.getNumParticles());
+
+        string param;
+        int particle;
+        double charge, sigma, epsilon;
+        force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        int paramIndex;
+        if (paramPos == paramNames.end()) {
+            paramIndex = paramNames.size();
+            paramNames.push_back(param);
+        }
+        else
+            paramIndex = paramPos-paramNames.begin();
+        particleOffsetVec[particle].push_back(make_float4(charge, sigma, epsilon, paramIndex));
+    }
     
     // Compute other values.
     

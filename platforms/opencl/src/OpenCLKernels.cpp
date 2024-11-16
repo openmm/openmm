@@ -1069,7 +1069,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     return energy;
 }
 
-void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
+void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException, int firstOffset, int lastOffset) {
     // Make sure the new parameters are acceptable.
 
     if (force.getNumParticles() != cl.getNumAtoms())
@@ -1146,7 +1146,41 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
         }
         baseExceptionParams.upload(baseExceptionParamsVec);
     }
-    
+
+    if (firstOffset <= lastOffset) {
+        vector<vector<mm_float4> > particleOffsetVec(force.getNumParticles());
+        vector<vector<mm_float4> > exceptionOffsetVec(numExceptions);
+        for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+            string param;
+            int particle;
+            double charge, sigma, epsilon;
+            force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
+            auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+            int paramIndex;
+            if (paramPos == paramNames.end()) {
+                paramIndex = paramNames.size();
+                paramNames.push_back(param);
+            }
+            else
+                paramIndex = paramPos-paramNames.begin();
+            particleOffsetVec[particle].push_back(mm_float4(charge, sigma, epsilon, paramIndex));
+        }
+        paramValues.resize(paramNames.size(), 0.0);
+        vector<cl_int> particleOffsetIndicesVec;
+        vector<mm_float4> p;
+        for (int i = 0; i < particleOffsetVec.size(); i++) {
+            particleOffsetIndicesVec.push_back(p.size());
+            for (int j = 0; j < particleOffsetVec[i].size(); j++)
+                p.push_back(particleOffsetVec[i][j]);
+        }
+        while (particleOffsetIndicesVec.size() < particleOffsetIndices.getSize())
+            particleOffsetIndicesVec.push_back(p.size());
+        if (force.getNumParticleParameterOffsets() > 0) {
+            particleParamOffsets.upload(p);
+            particleOffsetIndices.upload(particleOffsetIndicesVec);
+        }
+    }
+
     // Compute other values.
     
     if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
