@@ -616,10 +616,10 @@ inline DEVICE AtomData3 loadAtomData3(int atom, GLOBAL const real4* RESTRICT pos
  */
 DEVICE real pairIntegralDerivative(real r, real r2, real radius, real scaledRadius) {
 
-        real de = 0.0;
+        real de = 0.0f;
         // Descreen only if the scaledRadius is greater than zero.
         // and atom I does not engulf atom K.
-        if (scaledRadius > 0.0 && (radius < r + scaledRadius)) {
+        if (scaledRadius > 0.0f && (radius < r + scaledRadius)) {
             // Atom i is engulfed by atom k.
             if (radius + r < scaledRadius) {
                 real uik = scaledRadius - r;

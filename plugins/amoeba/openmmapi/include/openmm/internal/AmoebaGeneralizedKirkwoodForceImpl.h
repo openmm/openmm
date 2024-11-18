@@ -79,6 +79,13 @@ public:
 
     /**
      * Get Neck Aij and Bij constants.
+     *
+     * Based on the radii of two input atoms ("radius" for the atom being descreened
+     * and "radiusK" for the descreening atom), the neck parameters Aij and Bij are
+     * interpolated from tabulated values. The definitions of Aij and Bij are defined by
+     * Eq. 11 from Corrigan et al. (10.1063/5.0158914) while Figure 2 describes
+     * a neck descreening region.
+     *
      * @param radius Radius of the current atom.
      * @param radiusK Radius of the descreening atom.
      * @param aij The Aij neck constant.
