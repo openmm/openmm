@@ -414,7 +414,7 @@ Platforms
 =========
 
 When creating a :class:`Simulation`, you can optionally tell it what :class:`Platform` to use.
-OpenMM includes four platforms: :class:`Reference`, :class:`CPU`, :class:`CUDA`, and :class:`OpenCL`.  For a
+OpenMM includes five platforms: :class:`Reference`, :class:`CPU`, :class:`CUDA`, :class:`OpenCL`, and :class:`HIP`.  For a
 description of the differences between them, see Section :numref:`platforms`.  There are three ways in which
 the :class:`Platform` can be chosen:
 
@@ -431,7 +431,7 @@ of the :class:`Platform` to use.  This overrides the default logic.
     platform = Platform.getPlatform('CUDA')
     simulation = Simulation(prmtop.topology, system, integrator, platform)
 
-The platform name should be one of :code:`OpenCL`, :code:`CUDA`, :code:`CPU`, or
+The platform name should be one of :code:`OpenCL`, :code:`CUDA`, :code:`HIP`, :code:`CPU`, or
 :code:`Reference`.
 
 You also can specify platform-specific properties that customize how
@@ -1333,9 +1333,9 @@ specify if you want further control over the minimization.  First, you can
 specify a tolerance for when the energy should be considered to have converged:
 ::
 
-    simulation.minimizeEnergy(tolerance=5*kilojoule/mole)
+    simulation.minimizeEnergy(tolerance=5*kilojoule/mole/nanometer)
 
-If you do not specify this parameter, a default tolerance of 10 kJ/mole is used.
+If you do not specify this parameter, a default tolerance of 10 kilojoule/mole/nanometer is used.
 
 Second, you can specify a maximum number of iterations:
 ::
@@ -1350,7 +1350,7 @@ iterations it takes.
 These options are independent.  You can specify both if you want:
 ::
 
-    simulation.minimizeEnergy(tolerance=0.1*kilojoule/mole, maxIterations=500)
+    simulation.minimizeEnergy(tolerance=0.1*kilojoule/mole/nanometer, maxIterations=500)
 
 Removing Center of Mass Motion
 ==============================

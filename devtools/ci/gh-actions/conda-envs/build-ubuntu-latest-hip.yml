@@ -9,7 +9,8 @@ dependencies:
 - sysroot_linux-64 2.17
 # host
 - python
-- doxygen 1.8.14
+- doxygen
+- setuptools
 - hip-devel
 - hipcc
 - rocm-cmake

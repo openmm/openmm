@@ -25,9 +25,6 @@ typedef unsigned long long mm_ulong;
 
 #define SUPPORTS_DOUBLE_PRECISION 1
 
-#define LAUNCH_BOUNDS_EXACT(WORK_GROUP_SIZE, WAVES_PER_EU) \
-    __attribute__((amdgpu_flat_work_group_size(WORK_GROUP_SIZE, WORK_GROUP_SIZE), amdgpu_waves_per_eu(WAVES_PER_EU, WAVES_PER_EU)))
-
 #ifdef USE_DOUBLE_PRECISION
 
 __device__ inline long long realToFixedPoint(double x) {

@@ -89,7 +89,7 @@ private:
 class HipCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     HipCalcNonbondedForceKernel(std::string name, const Platform& platform, HipContext& cu, const System& system) : CalcNonbondedForceKernel(name, platform),
-            cu(cu), hasInitializedFFT(false), sort(NULL), dispersionFft(NULL), fft(NULL), pmeio(NULL), usePmeStream(false) {
+            cu(cu), hasInitializedFFT(false), sort(NULL), dispersionFft(NULL), fft(NULL), pmeio(NULL), useFixedPointChargeSpreading(false), usePmeStream(false) {
     }
     ~HipCalcNonbondedForceKernel();
     /**
@@ -211,7 +211,7 @@ private:
     int interpolateForceThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    bool hasCoulomb, hasLJ, usePmeStream, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
+    bool hasCoulomb, hasLJ, useFixedPointChargeSpreading, usePmeStream, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
     NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;
 };

@@ -137,7 +137,7 @@ Here is the definition of the :class:`ForceReporter` class:
 
             def describeNextReport(self, simulation):
                 steps = self._reportInterval - simulation.currentStep%self._reportInterval
-                return (steps, False, False, True, False, None)
+                return = {'steps': steps, 'periodic': None, 'include':['forces']}
 
             def report(self, simulation, state):
                 forces = state.getForces().value_in_unit(kilojoules/mole/nanometer)
@@ -157,18 +157,14 @@ We then have two methods that every reporter must implement:
 :meth:`describeNextReport()` and :meth:`report()`.  A Simulation object
 periodically calls :meth:`describeNextReport()` on each of its reporters to
 find out when that reporter will next generate a report, and what information
-will be needed to generate it.  The return value should be a six element tuple,
-whose elements are as follows:
+will be needed to generate it.  The return value should be a dictionary with the following content:
 
-* The number of time steps until the next report.  We calculate this as
+* :code:`steps` (int): The number of time steps until the next report.  We calculate this as
   *(report interval)*\ -\ *(current step)*\ %\ *(report interval)*\ .  For
   example, if we want a report every 100 steps and the simulation is currently on
   step 530, we will return 100-(530%100) = 70.
-* Whether the next report will need particle positions.
-* Whether the next report will need particle velocities.
-* Whether the next report will need forces.
-* Whether the next report will need energies.
-* Whether the positions should be wrapped to the periodic box.  If None, it will
+* :code:`include` (list of strings): The types of information that need to be included in the next report. The values in the list correspond to arguments to :meth:`Context.getState()`. Allowed values include :code:`'positions'`, :code:`'velocities'`, :code:`'forces'`, :code:`'energy'`, :code:`'parameters'`, :code:`'parameterDerivatives'`, and :code:`'integratorParameters'`.
+* :code:`periodic` (bool, optional): Whether the positions should be wrapped to the periodic box.  If None or not set, it will
   automatically decide whether to wrap positions based on whether the System uses
   periodic boundary conditions.
 

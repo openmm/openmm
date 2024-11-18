@@ -427,7 +427,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             pmeDefines["GRID_SIZE_Z"] = cu.intToString(gridSizeZ);
             pmeDefines["EPSILON_FACTOR"] = cu.doubleToString(sqrt(ONE_4PI_EPS0));
             pmeDefines["M_PI"] = cu.doubleToString(M_PI);
-            if (cu.getUseDoublePrecision() || cu.getPlatformData().deterministicForces)
+            useFixedPointChargeSpreading = cu.getUseDoublePrecision() || cu.getPlatformData().deterministicForces;
+            if (useFixedPointChargeSpreading)
                 pmeDefines["USE_FIXED_POINT_CHARGE_SPREADING"] = "1";
             if (usePmeStream)
                 pmeDefines["USE_PME_STREAM"] = "1";
@@ -455,7 +456,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 pmeConvolutionKernel = cu.getKernel(module, "reciprocalConvolution");
                 pmeInterpolateForceKernel = cu.getKernel(module, "gridInterpolateForce");
                 pmeEvalEnergyKernel = cu.getKernel(module, "gridEvaluateEnergy");
-                pmeFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
+                if (useFixedPointChargeSpreading)
+                    pmeFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
                 cuFuncSetCacheConfig(pmeSpreadChargeKernel, CU_FUNC_CACHE_PREFER_SHARED);
                 cuFuncSetCacheConfig(pmeInterpolateForceKernel, CU_FUNC_CACHE_PREFER_L1);
                 if (doLJPME) {
@@ -466,10 +468,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                     pmeDefines["RECIP_EXP_FACTOR"] = cu.doubleToString(M_PI*M_PI/(dispersionAlpha*dispersionAlpha));
                     pmeDefines["USE_LJPME"] = "1";
                     pmeDefines["CHARGE_FROM_SIGEPS"] = "1";
-                    if (cu.getUseDoublePrecision() || cu.getPlatformData().deterministicForces)
-                        pmeDefines["USE_FIXED_POINT_CHARGE_SPREADING"] = "1";
                     module = cu.createModule(CudaKernelSources::vectorOps+CommonKernelSources::pme, pmeDefines);
-                    pmeDispersionFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
+                    if (useFixedPointChargeSpreading)
+                        pmeDispersionFinishSpreadChargeKernel = cu.getKernel(module, "finishSpreadCharge");
                     pmeDispersionGridIndexKernel = cu.getKernel(module, "findAtomGridIndex");
                     pmeDispersionSpreadChargeKernel = cu.getKernel(module, "gridSpreadCharge");
                     pmeDispersionConvolutionKernel = cu.getKernel(module, "reciprocalConvolution");
@@ -481,15 +482,16 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 // Create required data structures.
 
                 int elementSize = (cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-                int roundedZSize = PmeOrder*(int) ceil(gridSizeZ/(double) PmeOrder);
-                int gridElements = gridSizeX*gridSizeY*roundedZSize;
+                int gridElements = gridSizeX*gridSizeY*gridSizeZ;
                 if (doLJPME) {
-                    roundedZSize = PmeOrder*(int) ceil(dispersionGridSizeZ/(double) PmeOrder);
-                    gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*roundedZSize);
+                    gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
                 }
                 pmeGrid1.initialize(cu, gridElements, 2*elementSize, "pmeGrid1");
                 pmeGrid2.initialize(cu, gridElements, 2*elementSize, "pmeGrid2");
-                cu.addAutoclearBuffer(pmeGrid2);
+                if (useFixedPointChargeSpreading)
+                    cu.addAutoclearBuffer(pmeGrid2);
+                else
+                    cu.addAutoclearBuffer(pmeGrid1);
                 pmeBsplineModuliX.initialize(cu, gridSizeX, elementSize, "pmeBsplineModuliX");
                 pmeBsplineModuliY.initialize(cu, gridSizeY, elementSize, "pmeBsplineModuliY");
                 pmeBsplineModuliZ.initialize(cu, gridSizeZ, elementSize, "pmeBsplineModuliZ");
@@ -890,6 +892,10 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
 
         // Execute the reciprocal space kernels.
 
+        // With fixed point charge spreading, finishSpreadCharge kernel is not needed as
+        // gridSpreadCharge can write directly to pmeGrid1.
+        CudaArray& pmeSpreadDstGrid = useFixedPointChargeSpreading ? pmeGrid2 : pmeGrid1;
+
         if (hasCoulomb) {
             void* gridIndexArgs[] = {&cu.getPosq().getDevicePointer(), &pmeAtomGridIndex.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
@@ -898,14 +904,16 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
 
             sort->sort(pmeAtomGridIndex);
 
-            void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &pmeGrid2.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+            void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &pmeSpreadDstGrid.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer(),
                     &charges.getDevicePointer()};
-            cu.executeKernel(pmeSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), 128);
+            cu.executeKernel(pmeSpreadChargeKernel, spreadArgs, PmeOrder*cu.getNumAtoms(), 128);
 
-            void* finishSpreadArgs[] = {&pmeGrid2.getDevicePointer(), &pmeGrid1.getDevicePointer()};
-            cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
+            if (useFixedPointChargeSpreading) {
+                void* finishSpreadArgs[] = {&pmeGrid2.getDevicePointer(), &pmeGrid1.getDevicePointer()};
+                cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
+            }
 
             if (useCudaFFT) {
                 if (cu.getUseDoublePrecision()) {
@@ -967,15 +975,17 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                 cu.clearBuffer(pmeEnergyBuffer);
             }
 
-            cu.clearBuffer(pmeGrid2);
-            void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &pmeGrid2.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
+            cu.clearBuffer(pmeSpreadDstGrid);
+            void* spreadArgs[] = {&cu.getPosq().getDevicePointer(), &pmeSpreadDstGrid.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2], &pmeAtomGridIndex.getDevicePointer(),
                     &sigmaEpsilon.getDevicePointer()};
-            cu.executeKernel(pmeDispersionSpreadChargeKernel, spreadArgs, cu.getNumAtoms(), 128);
+            cu.executeKernel(pmeDispersionSpreadChargeKernel, spreadArgs, PmeOrder*cu.getNumAtoms(), 128);
 
-            void* finishSpreadArgs[] = {&pmeGrid2.getDevicePointer(), &pmeGrid1.getDevicePointer()};
-            cu.executeKernel(pmeDispersionFinishSpreadChargeKernel, finishSpreadArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
+            if (useFixedPointChargeSpreading) {
+                void* finishSpreadArgs[] = {&pmeGrid2.getDevicePointer(), &pmeGrid1.getDevicePointer()};
+                cu.executeKernel(pmeDispersionFinishSpreadChargeKernel, finishSpreadArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
+            }
 
             if (useCudaFFT) {
                 if (cu.getUseDoublePrecision()) {

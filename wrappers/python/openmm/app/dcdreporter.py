@@ -78,15 +78,11 @@ class DCDReporter(object):
 
         Returns
         -------
-        tuple
-            A six element tuple. The first element is the number of steps
-            until the next report. The next four elements specify whether
-            that report will require positions, velocities, forces, and
-            energies respectively.  The final element specifies whether
-            positions should be wrapped to lie in a single periodic box.
+        dict
+            A dictionary describing the required information for the next report
         """
         steps = self._reportInterval - simulation.currentStep%self._reportInterval
-        return (steps, True, False, False, False, self._enforcePeriodicBox)
+        return {'steps':steps, 'periodic':self._enforcePeriodicBox, 'include':['positions']}
 
     def report(self, simulation, state):
         """Generate a report.

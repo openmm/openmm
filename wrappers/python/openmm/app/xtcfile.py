@@ -91,6 +91,7 @@ class XTCFile(object):
         if is_quantity(positions):
             positions = positions.value_in_unit(nanometers)
         import numpy as np
+        positions = np.asarray(positions)
         if np.isnan(positions).any():
             raise ValueError(
                 "Particle position is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan"

@@ -449,11 +449,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 // Create required data structures.
 
                 int elementSize = (cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float));
-                int roundedZSize = PmeOrder*(int) ceil(gridSizeZ/(double) PmeOrder);
-                int gridElements = gridSizeX*gridSizeY*roundedZSize;
+                int gridElements = gridSizeX*gridSizeY*gridSizeZ;
                 if (doLJPME) {
-                    roundedZSize = PmeOrder*(int) ceil(dispersionGridSizeZ/(double) PmeOrder);
-                    gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*roundedZSize);
+                    gridElements = max(gridElements, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
                 }
                 pmeGrid1.initialize(cl, gridElements, 2*elementSize, "pmeGrid1");
                 pmeGrid2.initialize(cl, gridElements, 2*elementSize, "pmeGrid2");
