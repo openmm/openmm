@@ -299,22 +299,11 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
         gkKernel->getTanhParameters(beta0, beta1, beta2);
         amoebaReferenceGeneralizedKirkwoodForce->setTanhParameters(beta0, beta1, beta2);
         amoebaReferenceGeneralizedKirkwoodForce->setDescreenOffset(gkKernel->getDescreenOffset());
-
-        vector<double> parameters; 
-        gkKernel->getAtomicRadii(parameters);
-        amoebaReferenceGeneralizedKirkwoodForce->setAtomicRadii(parameters);
-
-        gkKernel->getScaleFactors(parameters);
-        amoebaReferenceGeneralizedKirkwoodForce->setScaleFactors(parameters);
-
-        gkKernel->getCharges(parameters);
-        amoebaReferenceGeneralizedKirkwoodForce->setCharges(parameters);
-
-        gkKernel->getDescreenRadii(parameters);
-        amoebaReferenceGeneralizedKirkwoodForce->setDescreenRadii(parameters);
-
-        gkKernel->getNeckFactors(parameters);
-        amoebaReferenceGeneralizedKirkwoodForce->setNeckFactors(parameters);
+        amoebaReferenceGeneralizedKirkwoodForce->setAtomicRadii(gkKernel->getAtomicRadii());
+        amoebaReferenceGeneralizedKirkwoodForce->setScaleFactors(gkKernel->getScaleFactors());
+        amoebaReferenceGeneralizedKirkwoodForce->setCharges(gkKernel->getCharges());
+        amoebaReferenceGeneralizedKirkwoodForce->setDescreenRadii(gkKernel->getDescreenRadii());
+        amoebaReferenceGeneralizedKirkwoodForce->setNeckFactors(gkKernel->getNeckFactors());
 
         // calculate Grycuk Born radii
         vector<Vec3>& posData   = extractPositions(context);
@@ -582,29 +571,24 @@ double ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getSurfaceAreaFactor()
     return surfaceAreaFactor;
 }
 
-void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getAtomicRadii(vector<double>& outputAtomicRadii) const {
-    outputAtomicRadii.resize(atomicRadii.size());
-    copy(atomicRadii.begin(), atomicRadii.end(), outputAtomicRadii.begin());
+const vector<double>& ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getAtomicRadii() const {
+    return atomicRadii;
 }
 
-void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getScaleFactors(vector<double>& outputScaleFactors) const {
-    outputScaleFactors.resize(scaleFactors.size());
-    copy(scaleFactors.begin(), scaleFactors.end(), outputScaleFactors.begin());
+const vector<double>& ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getCharges() const {
+    return charges;
 }
 
-void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getCharges(vector<double>& outputCharges) const {
-    outputCharges.resize(charges.size());
-    copy(charges.begin(), charges.end(), outputCharges.begin());
+const vector<double>& ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getScaleFactors() const {
+    return scaleFactors;
 }
 
-void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getDescreenRadii(vector<double>& outputDescreenRadii) const {
-    outputDescreenRadii.resize(descreenRadii.size());
-    copy(descreenRadii.begin(), descreenRadii.end(), outputDescreenRadii.begin());
+const vector<double>& ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getDescreenRadii() const {
+    return descreenRadii;
 }
 
-void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getNeckFactors(std::vector<double> &outputNeckFactors) const {
-    outputNeckFactors.resize(neckFactors.size());
-    copy(neckFactors.begin(), neckFactors.end(), outputNeckFactors.begin());
+const vector<double>& ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getNeckFactors() const {
+    return neckFactors;
 }
 
 void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force) {

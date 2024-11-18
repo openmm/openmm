@@ -393,43 +393,28 @@ public:
 
     /**
      *  Get the vector of particle radii.
-     *
-     *  @param atomicRadii vector of atomic radii
-     *
      */
-    void getAtomicRadii(std::vector<double>& atomicRadii) const;
+    const vector<double>& getAtomicRadii() const;
 
     /**
      *  Get the vector of scale factors.
-     *
-     *  @param scaleFactors vector of scale factors
-     *
      */
-    void getScaleFactors(std::vector<double>& scaleFactors) const;
+    const vector<double>& getScaleFactors() const;
 
     /**
      *  Get the vector of charges.
-     *
-     *  @param charges vector of charges
-     *
      */
-    void getCharges(std::vector<double>& charges) const;
+    const vector<double>& getCharges() const;
 
     /**
      *  Get the vector of descreening radii.
-     *
-     *  @param descreenRadii vector of descreening radii
-     *
      */
-    void getDescreenRadii(std::vector<double>& descreenRadii) const;
+    const vector<double>& getDescreenRadii() const;
 
     /**
      *  Get the vector of neck scaling factors.
-     *
-     *  @param neckFactors vector of neck scaling factors.
-     *
      */
-    void getNeckFactors(std::vector<double>& neckFactors) const;
+    const vector<double>& getNeckFactors() const;
 
     /**
      * Copy changed parameters over to a context.

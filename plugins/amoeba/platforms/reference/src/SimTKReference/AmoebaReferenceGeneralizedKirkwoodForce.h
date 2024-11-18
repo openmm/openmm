@@ -94,8 +94,7 @@ public:
     void getTanhParameters(double& b0, double& b1, double& b2) const;
 
     /**
-     * Set the flag signaling whether the solute integral is rescaled by a Tanh function
-     * to account for interstitial spaces.
+     * Set the tanh rescaling parameters beta0, beta1 and beta2.
     */
     void setTanhParameters(double b0, double b1, double b2);
 

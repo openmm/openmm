@@ -105,7 +105,7 @@ double AmoebaGeneralizedKirkwoodForce::getDescreenOffset() const {
 }
 
 void AmoebaGeneralizedKirkwoodForce::setDescreenOffset(double inputDescreenOffet) {
-    dielectricOffset = inputDescreenOffet;
+    descreenOffset = inputDescreenOffet;
 }
 
 ForceImpl* AmoebaGeneralizedKirkwoodForce::createImpl() const {

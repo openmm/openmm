@@ -172,7 +172,7 @@ public:
      * Set the flag signaling whether the solute descreening integral is rescaled by a Tanh function
      * to account for interstitial spaces.
      *
-     * @param tanhRescale Zero to turn off Tanh rescaling; one to turn on.
+     * @param tanhRescale False to turn off Tanh rescaling; true to turn on.
     */
     void setTanhRescaling(bool tanhRescale) {
         this->tanhRescaling = tanhRescale;

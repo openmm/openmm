@@ -53,7 +53,7 @@ void AmoebaGeneralizedKirkwoodForceProxy::serialize(const void* object, Serializ
     node.setDoubleProperty("GeneralizedKirkwoodProbeRadius",       force.getProbeRadius());
     node.setDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor", force.getSurfaceAreaFactor());
     node.setIntProperty(  "GeneralizedKirkwoodIncludeCavityTerm", force.getIncludeCavityTerm());
-    node.setIntProperty("GeneralizedKirkwoodTanhRescaling", force.getTanhRescaling());
+    node.setBoolProperty("GeneralizedKirkwoodTanhRescaling", force.getTanhRescaling());
     double b0, b1, b2;
     force.getTanhParameters(b0, b1, b2);
     node.setDoubleProperty("GeneralizedKirkwoodTanhB0", b0);
@@ -77,14 +77,14 @@ void* AmoebaGeneralizedKirkwoodForceProxy::deserialize(const SerializationNode& 
     try {
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setName(node.getStringProperty("name", force->getName()));
-        force->setSolventDielectric(  node.getDoubleProperty("GeneralizedKirkwoodSolventDielectric"));
-        force->setSoluteDielectric(   node.getDoubleProperty("GeneralizedKirkwoodSoluteDielectric"));
-        force->setProbeRadius(        node.getDoubleProperty("GeneralizedKirkwoodProbeRadius"));
-        force->setSurfaceAreaFactor(  node.getDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor"));
-        force->setIncludeCavityTerm(  node.getIntProperty(   "GeneralizedKirkwoodIncludeCavityTerm"));
+        force->setSolventDielectric(node.getDoubleProperty("GeneralizedKirkwoodSolventDielectric"));
+        force->setSoluteDielectric(node.getDoubleProperty("GeneralizedKirkwoodSoluteDielectric"));
+        force->setProbeRadius(node.getDoubleProperty("GeneralizedKirkwoodProbeRadius"));
+        force->setSurfaceAreaFactor(node.getDoubleProperty("GeneralizedKirkwoodSurfaceAreaFactor"));
+        force->setIncludeCavityTerm(node.getIntProperty("GeneralizedKirkwoodIncludeCavityTerm"));
         if (version > 2) {
-            force->setDielectricOffset(   node.getDoubleProperty("GeneralizedKirkwoodDielectricOffset"));
-            force->setTanhRescaling(node.getIntProperty("GeneralizedKirkwoodTanhRescaling"));
+            force->setDielectricOffset(node.getDoubleProperty("GeneralizedKirkwoodDielectricOffset"));
+            force->setTanhRescaling(node.getBoolProperty("GeneralizedKirkwoodTanhRescaling"));
             double b0 = node.getDoubleProperty("GeneralizedKirkwoodTanhB0");
             double b1 = node.getDoubleProperty("GeneralizedKirkwoodTanhB1");
             double b2 = node.getDoubleProperty("GeneralizedKirkwoodTanhB2");
