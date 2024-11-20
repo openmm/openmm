@@ -932,6 +932,7 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         bonded14IndexArray[i][0] = particle1;
         bonded14IndexArray[i][1] = particle2;
     }
+    numOffsets = force.getNumParticleParameterOffsets();
     for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
         string param;
         int particle;
@@ -1070,6 +1071,9 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
         bonded14IndexArray[i][0] = particle1;
         bonded14IndexArray[i][1] = particle2;
     }
+    if (force.getNumParticleParameterOffsets() != numOffsets)
+        throw OpenMMException("updateParametersInContext: The number of particles with Offsets has changed");
+
     for (int i = firstOffset; i <= lastOffset; ++i) {
         // Update particle parameter offsets
         string param;

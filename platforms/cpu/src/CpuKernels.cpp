@@ -548,6 +548,7 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     hasExceptionOffsets = (force.getNumExceptionParameterOffsets() > 0);
     particleParamOffsets.resize(force.getNumParticles());
     exceptionParamOffsets.resize(force.getNumExceptions());
+    numOffsets = force.getNumParticleParameterOffsets();
     for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
         string param;
         int particle;
@@ -753,6 +754,9 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
         bonded14IndexArray[i][0] = particle1;
         bonded14IndexArray[i][1] = particle2;
     }
+
+    if (force.getNumParticleParameterOffsets() != numOffsets)
+        throw OpenMMException("updateParametersInContext: The number of particles with Offsets has changed");
     for (int i = firstOffset; i <= lastOffset; ++i) {
         // Update particle parameter offsets
         string param;

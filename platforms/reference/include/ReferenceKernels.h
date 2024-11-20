@@ -659,7 +659,7 @@ public:
     void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
     void computeParameters(ContextImpl& context);
-    int numParticles, num14;
+    int numParticles, num14, numOffsets;
     std::vector<std::vector<int> >bonded14IndexArray;
     std::vector<std::vector<double> > particleParamArray, bonded14ParamArray;
     std::vector<std::array<double, 3> > baseParticleParams, baseExceptionParams;

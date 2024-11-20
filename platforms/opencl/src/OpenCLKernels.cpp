@@ -1149,7 +1149,6 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
 
     if (firstOffset <= lastOffset) {
         vector<vector<mm_float4> > particleOffsetVec(force.getNumParticles());
-        vector<vector<mm_float4> > exceptionOffsetVec(numExceptions);
         for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
             string param;
             int particle;
@@ -1177,7 +1176,7 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
             particleOffsetIndicesVec.push_back(p.size());
         if (force.getNumParticleParameterOffsets() > 0) {
             particleParamOffsets.upload(p);
-            particleOffsetIndices.upload(particleOffsetIndicesVec);
+            particleOffsetIndices.uploadSubArray(&particleOffsetIndicesVec[firstOffset], firstOffset, lastOffset-firstOffset+1);
         }
     }
 
