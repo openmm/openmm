@@ -289,10 +289,10 @@ static void setupMultipoleAmmonia(System& system, AmoebaGeneralizedKirkwoodForce
     // addParticle: charge, radius, scalingFactor
 
     for (unsigned int ii = 0; ii < 2; ii++) {
-        amoebaGeneralizedKirkwoodForce->addParticle( -5.7960000e-01,   1.5965000e-01,   6.9000000e-01);
-        amoebaGeneralizedKirkwoodForce->addParticle(  1.9320000e-01,   1.2360000e-01,   6.9000000e-01);
-        amoebaGeneralizedKirkwoodForce->addParticle(  1.9320000e-01,   1.2360000e-01,   6.9000000e-01);
-        amoebaGeneralizedKirkwoodForce->addParticle(  1.9320000e-01,   1.2360000e-01,   6.9000000e-01);
+        amoebaGeneralizedKirkwoodForce->addParticle(  -5.7960000e-01,   1.5965000e-01,   6.9000000e-01, 1.5965000e-01, 0.0f);
+        amoebaGeneralizedKirkwoodForce->addParticle(  1.9320000e-01,   1.2360000e-01,   6.9000000e-01, 1.2360000e-01, 0.0f);
+        amoebaGeneralizedKirkwoodForce->addParticle(  1.9320000e-01,   1.2360000e-01,   6.9000000e-01, 1.2360000e-01, 0.0f);
+        amoebaGeneralizedKirkwoodForce->addParticle(  1.9320000e-01,   1.2360000e-01,   6.9000000e-01, 1.2360000e-01, 0.0f);
     }
     system.addForce(amoebaGeneralizedKirkwoodForce);
 }
@@ -7167,9 +7167,9 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm() {
     // Try changing the particle parameters and make sure it's still correct.
     
     for (int i = 0; i < numberOfParticles; i++) {
-        double charge, radius, scale;
-        amoebaGeneralizedKirkwoodForce->getParticleParameters(i, charge, radius, scale);
-        amoebaGeneralizedKirkwoodForce->setParticleParameters(i, charge, 0.9*radius, 1.1*scale);
+        double charge, radius, scale, descreenRadius, neckscale;
+        amoebaGeneralizedKirkwoodForce->getParticleParameters(i, charge, radius, scale, descreenRadius, neckscale);
+        amoebaGeneralizedKirkwoodForce->setParticleParameters(i, charge, 0.9*radius, 1.1*scale, 1.2*descreenRadius, 1.3*neckscale);
     }
     LangevinIntegrator integrator2(0.0, 0.1, 0.01);
     Context context2(system, integrator2, context.getPlatform());

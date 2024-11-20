@@ -61,66 +61,66 @@ double AmoebaWcaDispersionForceImpl::calcForcesAndEnergy(ContextImpl& context, b
         return kernel.getAs<CalcAmoebaWcaDispersionForceKernel>().execute(context, includeForces, includeEnergy);
     return 0.0;
 }
-void AmoebaWcaDispersionForceImpl::getMaximumDispersionEnergy(const AmoebaWcaDispersionForce& force, int particleIndex, double& maxDispersionEnergy) {
 
-    const double pi  = 3.1415926535897;
+static double tailCorrection(double ri, double eps, double rmin) {
+    if (ri < rmin) {
+        double r3 = ri * ri * ri;
+        double rmin3 = rmin * rmin * rmin;
+        return -eps * 4.0e0 * M_PI * (rmin3 - r3) / 3.0e0 - eps * M_PI * 18.0e0 * rmin3 / 11.0e0;
+    } else {
+        double ri2 = ri * ri;
+        double ri4 = ri2 * ri2;
+        double ri7 = ri * ri2 * ri4;
+        double ri11 = ri7 * ri4;
+        double rmin2 = rmin * rmin;
+        double rmin4 = rmin2 * rmin2;
+        double rmin7 = rmin * rmin2 * rmin4;
+        return 2.0e0 * M_PI * eps * rmin7 * (2.0e0 * rmin7 - 11.0e0 * ri7) / (11.0e0 * ri11);
+    }
+}
 
-    // from last loop in subroutine knp in ksolv.f
+void AmoebaWcaDispersionForceImpl::getMaximumDispersionEnergy(const AmoebaWcaDispersionForce &force, int particleIndex,
+                                                              double &maxDispersionEnergy) {
 
-    double rdisp, epsi;
-    force.getParticleParameters(particleIndex, rdisp, epsi);
-    if (epsi <= 0.0 || rdisp <= 0.0) {
+    // Atom i parameters
+    double rmini, epsi;
+    force.getParticleParameters(particleIndex, rmini, epsi);
+    if (epsi <= 0.0 || rmini <= 0.0) {
         maxDispersionEnergy = 0.0;
         return;
     }
-    double rmini     = rdisp;
-    rdisp           += force.getDispoff();
-    double epso      = force.getEpso();
-    double emixo     = std::sqrt(epso) + std::sqrt(epsi);
-           emixo     = 4.0*epso*epsi/(emixo*emixo);
+    double rmini2 = rmini * rmini;
+    double sepsi = std::sqrt(epsi);
 
-    double rmino     = force.getRmino();
-    double rmino2    = rmino*rmino;
-    double rmini2    = rmini*rmini;
-    double rmixo     = 2.0*(rmino2*rmino + rmini2*rmini) / (rmino2 + rmini2);
+    // Atom i with water oxygen.
+    double epso = force.getEpso();
+    double emixo = std::sqrt(epso) + sepsi;
+    emixo = 4.0 * epso * epsi / (emixo * emixo);
 
-    double rmixo3    = rmixo*rmixo*rmixo;
-    double rmixo7    = rmixo*rmixo3*rmixo3;
-    double ao        = emixo*rmixo7;
+    double rmino = force.getRmino();
+    double rmino2 = rmino * rmino;
+    double rmixo = 2.0 * (rmino2 * rmino + rmini2 * rmini) / (rmino2 + rmini2);
 
-    double epsh      = force.getEpsh();
-    double emixh     = std::sqrt(epsh) + std::sqrt(epsi);
-           emixh     = 4.0*epsh*epsi/(emixh*emixh);
-    double rminh     = force.getRminh();
-    double rminh2    = rminh*rminh;
-    double rmixh     = rminh*rminh + rmini2;
-           rmixh     = 2.0 * (rminh2*rminh + rmini2*rmini) / (rminh2 + rmini2);
-    double rmixh3    = rmixh*rmixh*rmixh;
-    double rmixh7    = rmixh3*rmixh3*rmixh;
-    double ah        = emixh*rmixh7;
+    // Atom i with water hydrogen.
+    double epsh = force.getEpsh();
+    double emixh = std::sqrt(epsh) + sepsi;
+    emixh = 4.0 * epsh * epsi / (emixh * emixh);
 
-    double rdisp3    = rdisp*rdisp*rdisp;
-    double rdisp7    = rdisp*rdisp3*rdisp3;
-    double rdisp11   = rdisp7*rdisp3*rdisp;
+    double rminh = force.getRminh();
+    double rminh2 = rminh * rminh;
+    double rmixh = 2.0 * (rminh2 * rminh + rmini2 * rmini) / (rminh2 + rmini2);
 
-    double cdisp;
-    if (rdisp < rmixh) {
-        cdisp = -4.0*pi*emixh*(rmixh3-rdisp3)/3.0 - emixh*18.0/11.0*rmixh3*pi;
-    } else {
-        cdisp = 2.0*pi*(2.0*rmixh7-11.0*rdisp7)*ah/ (11.0*rdisp11);
-    }
-    cdisp *= 2.0;
-    if (rdisp < rmixo) {
-        cdisp -= 4.0*pi*emixo*(rmixo3-rdisp3)/3.0;
-        cdisp -= emixo*18.0/11.0*rmixo3*pi;
-    } else {
-        cdisp += 2.0*pi*(2.0*rmixo7-11.0*rdisp7) * ao/(11.0*rdisp11);
-    }
-    maxDispersionEnergy = force.getSlevy()*force.getAwater()*cdisp;
+    // Compute the tail correction (i.e. the dispersion integral in the absence of any other solute atoms).
+    double dispersionOffest = force.getDispoff();
+    double riO = rmixo / 2.0e0 + dispersionOffest;
+    double cdisp = tailCorrection(riO, emixo, rmixo);
+    double riH = rmixh / 2.0e0 + dispersionOffest;
+    cdisp += 2.0e0 * tailCorrection(riH, emixh, rmixh);
+
+    maxDispersionEnergy = force.getSlevy() * force.getAwater() * cdisp;
 }
 
-double AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(const AmoebaWcaDispersionForce& force) {
-
+double AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy(const AmoebaWcaDispersionForce &force) {
     double totalMaximumDispersionEnergy = 0.0;
     for (int ii = 0; ii < force.getNumParticles(); ii++) {
         double maximumDispersionEnergy;
