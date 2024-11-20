@@ -162,7 +162,7 @@ public:
 
     /**
      * Get the flag signaling whether the solute descreening integral is rescaled by a Tanh function
-     * to account for interstitial spaces.
+     * to account for interstitial spaces. If True then tanh rescaling is used.
     */
     bool getTanhRescaling() const {
         return tanhRescaling;
@@ -203,7 +203,7 @@ public:
 
     /**
     * Get the offset added to the atomic radius of each atom that sets the beginning of the
-     * descreening integral when calculating effective Born radii.
+    * descreening integral when calculating effective Born radii.
     */
     double getDescreenOffset() const;
 

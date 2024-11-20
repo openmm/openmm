@@ -82,11 +82,18 @@ public:
     void setIncludeCavityTerm(int includeCavityTerm);
 
     /**
-     * Get tanhRescaling flag
+     * Get the tanhRescaling flag, which controls whether tanh rescaling of the solute integral is performed.
      *
-     * @return tanhRescaling
+     * @return tanhRescaling The value tanhRescaling flag.
      */
     bool getTanhRescaling() const;
+
+    /**
+     *  Set the tanhRescaling flag.
+     *
+     *  @param tanhRescaling if true, tanh rescaling of the solute integral is performed.
+     */
+    void setTanhRescaling(bool tanhRescaling);
 
     /**
      * Get Tanh parameters beta0, beta1 and beta2.
@@ -97,13 +104,6 @@ public:
      * Set the tanh rescaling parameters beta0, beta1 and beta2.
     */
     void setTanhParameters(double b0, double b1, double b2);
-
-    /**
-     *  Set tanhRescaling flag
-     *
-     *  @param tanhRescaling flag indicating whether tanh rescaling of the solute integral is performed.
-     */
-    void setTanhRescaling(bool tanhRescaling);
 
     /**
      *  Get the descreen offset for calculating Born radii.
