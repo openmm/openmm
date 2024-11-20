@@ -96,13 +96,21 @@ public:
     void setTanhRescaling(bool tanhRescaling);
 
     /**
-     * Get Tanh parameters beta0, beta1 and beta2.
+     * Get Tanh parameters b0, b1 and b2.
+     *
+     * @param b0 The first tanh parameter.
+     * @param b1 The second tanh parameter.
+     * @param b2 The third tanh parameter.
     */
     void getTanhParameters(double& b0, double& b1, double& b2) const;
 
     /**
-     * Set the tanh rescaling parameters beta0, beta1 and beta2.
-    */
+     * Set the the Tanh function parameters that account for interstitial spaces.
+     *
+     * @param b0 The first tanh parameter.
+     * @param b1 The second tanh parameter.
+     * @param b2 The third tanh parameter.
+     */
     void setTanhParameters(double b0, double b1, double b2);
 
     /**

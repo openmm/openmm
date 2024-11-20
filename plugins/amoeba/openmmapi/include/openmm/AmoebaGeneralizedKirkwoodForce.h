@@ -179,7 +179,11 @@ public:
     }
 
     /**
-     * Get Tanh parameters beta0, beta1 and beta2.
+     * Get Tanh function parameters b0, b1 and b2.
+     *
+     * @param b0 The first tanh parameter.
+     * @param b1 The second tanh parameter.
+     * @param b2 The third tanh parameter.
      */
     void getTanhParameters(double& b0, double& b1, double& b2) const {
         b0 = this->beta0;
@@ -188,13 +192,12 @@ public:
     }
 
     /**
-     * Set the flag signaling whether the solute integral is rescaled by a Tanh function
-     * to account for interstitial spaces.
+     * Set the the Tanh function parameters to account for interstitial spaces.
      *
      * @param b0 The first tanh parameter.
      * @param b1 The second tanh parameter.
      * @param b2 The third tanh parameter.
-    */
+     */
     void setTanhParameters(double b0, double b1, double b2) {
         this->beta0 = b0;
         this->beta1 = b1;
