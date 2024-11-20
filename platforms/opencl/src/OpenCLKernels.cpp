@@ -257,7 +257,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     }
     vector<pair<int, int> > exclusions;
     vector<int> exceptions;
-    map<int, int> exceptionIndex;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
@@ -1146,9 +1145,54 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
         }
         baseExceptionParams.upload(baseExceptionParamsVec);
     }
-    
+
+    // Record parameter offsets.
+
+    vector<vector<mm_float4> > particleOffsetVec(force.getNumParticles());
+    vector<vector<mm_float4> > exceptionOffsetVec(numExceptions);
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        string param;
+        int particle;
+        double charge, sigma, epsilon;
+        force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        if (paramPos == paramNames.end())
+            throw OpenMMException("updateParametersInContext: The parameter of a particle parameter offset has changed");
+        int paramIndex = paramPos-paramNames.begin();
+        particleOffsetVec[particle].push_back(mm_float4(charge, sigma, epsilon, paramIndex));
+    }
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        int index = exceptionIndex[exception];
+        if (index < startIndex || index >= endIndex)
+            continue;
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        if (paramPos == paramNames.end())
+            throw OpenMMException("updateParametersInContext: The parameter of an exception parameter offset has changed");
+        int paramIndex = paramPos-paramNames.begin();
+        exceptionOffsetVec[index-startIndex].push_back(mm_float4(charge, sigma, epsilon, paramIndex));
+    }
+    if (max(force.getNumParticleParameterOffsets(), 1) != particleParamOffsets.getSize())
+        throw OpenMMException("updateParametersInContext: The number of particle parameter offsets has changed");
+    vector<mm_float4> p, e;
+    for (int i = 0; i < particleOffsetVec.size(); i++)
+        for (int j = 0; j < particleOffsetVec[i].size(); j++)
+            p.push_back(particleOffsetVec[i][j]);
+    for (int i = 0; i < exceptionOffsetVec.size(); i++)
+        for (int j = 0; j < exceptionOffsetVec[i].size(); j++)
+            e.push_back(exceptionOffsetVec[i][j]);
+    if (force.getNumParticleParameterOffsets() > 0)
+        particleParamOffsets.upload(p);
+    if (max((int) e.size(), 1) != exceptionParamOffsets.getSize())
+        throw OpenMMException("updateParametersInContext: The number of exception parameter offsets has changed");
+    if (e.size() > 0)
+        exceptionParamOffsets.upload(e);
+
     // Compute other values.
-    
+
     if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
     cl.invalidateMolecules(info, firstParticle <= lastParticle, firstException <= lastException);

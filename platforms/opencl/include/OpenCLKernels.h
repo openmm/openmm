@@ -214,6 +214,7 @@ private:
     std::vector<std::pair<int, int> > exceptionAtoms;
     std::vector<std::string> paramNames;
     std::vector<double> paramValues;
+    std::map<int, int> exceptionIndex;
     double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
