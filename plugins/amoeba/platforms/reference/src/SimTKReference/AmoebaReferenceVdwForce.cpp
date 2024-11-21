@@ -72,7 +72,8 @@ void AmoebaReferenceVdwForce::setTaperCoefficients(double cutoff) {
         _taperCoefficients[C3] = 10.0/pow(_taperCutoff - cutoff, 3.0);
         _taperCoefficients[C4] = 15.0/pow(_taperCutoff - cutoff, 4.0);
         _taperCoefficients[C5] =  6.0/pow(_taperCutoff - cutoff, 5.0);
-    } else {
+    }
+    else {
         _taperCoefficients[C3] = 0.0;
         _taperCoefficients[C4] = 0.0;
         _taperCoefficients[C5] = 0.0;
@@ -231,7 +232,8 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
                 if (this->_alchemicalMethod == AmoebaVdwForce::Decouple && (isAlchemicalI != isAlchemical[jj])) {
                    combinedEpsilon *= pow(lambda, this->_n);
                    softcore = this->_alpha * pow(1.0 - lambda, 2);
-                } else if (this->_alchemicalMethod == AmoebaVdwForce::Annihilate && (isAlchemicalI || isAlchemical[jj])) {
+                }
+                else if (this->_alchemicalMethod == AmoebaVdwForce::Annihilate && (isAlchemicalI || isAlchemical[jj])) {
                    combinedEpsilon *= pow(lambda, this->_n);
                    softcore = this->_alpha * pow(1.0 - lambda, 2);
                 }
@@ -244,14 +246,16 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
                     forces[ii][0] -= force[0];
                     forces[ii][1] -= force[1];
                     forces[ii][2] -= force[2];
-                } else {
+                }
+                else {
                     addReducedForce(ii, indexIVs[ii], reductions[ii], -1.0, force, forces);
                 }
                 if (indexIVs[jj] == jj) {
                     forces[jj][0] += force[0];
                     forces[jj][1] += force[1];
                     forces[jj][2] += force[2];
-                } else {
+                }
+                else {
                     addReducedForce(jj, indexIVs[jj], reductions[jj], 1.0, force, forces);
                 }
 
@@ -301,7 +305,8 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
         if (this->_alchemicalMethod == AmoebaVdwForce::Decouple && (isAlchemicalI != isAlchemicalJ)) {
            combinedEpsilon *= pow(lambda, this->_n);
            softcore = this->_alpha * pow(1.0 - lambda, 2);
-        } else if (this->_alchemicalMethod == AmoebaVdwForce::Annihilate && (isAlchemicalI || isAlchemicalJ)) {
+        }
+        else if (this->_alchemicalMethod == AmoebaVdwForce::Annihilate && (isAlchemicalI || isAlchemicalJ)) {
            combinedEpsilon *= pow(lambda, this->_n);
            softcore = this->_alpha * pow(1.0 - lambda, 2);
         }
@@ -314,14 +319,16 @@ double AmoebaReferenceVdwForce::calculateForceAndEnergy(int numParticles, double
             forces[siteI][0] -= force[0];
             forces[siteI][1] -= force[1];
             forces[siteI][2] -= force[2];
-        } else {
+        }
+        else {
             addReducedForce(siteI, indexIVs[siteI], reductions[siteI], -1.0, force, forces);
         }
         if (indexIVs[siteJ] == siteJ) {
             forces[siteJ][0] += force[0];
             forces[siteJ][1] += force[1];
             forces[siteJ][2] += force[2];
-        } else {
+        }
+        else {
             addReducedForce(siteJ, indexIVs[siteJ], reductions[siteJ], 1.0, force, forces);
         }
     }

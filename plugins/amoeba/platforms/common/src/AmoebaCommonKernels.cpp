@@ -440,7 +440,8 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
             gridSizeX = cc.findLegalFFTDimension(gridSizeX);
             gridSizeY = cc.findLegalFFTDimension(gridSizeY);
             gridSizeZ = cc.findLegalFFTDimension(gridSizeZ);
-        } else {
+        }
+        else {
             gridSizeX = cc.findLegalFFTDimension(nx);
             gridSizeY = cc.findLegalFFTDimension(ny);
             gridSizeZ = cc.findLegalFFTDimension(nz);
@@ -1753,9 +1754,9 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
     unsigned long numNeckRadii2 = numNeckRadii * numNeckRadii;
     neckRadii.initialize<float>(cc, numNeckRadii, "neckRadii");
     neckRadii.upload(neckRadiiVector);
-    neckA.initialize<float>( cc, numNeckRadii2, "neckA");
+    neckA.initialize<float>(cc, numNeckRadii2, "neckA");
     neckA.upload(AmoebaGeneralizedKirkwoodForceImpl::getAij());
-    neckB.initialize<float>( cc, numNeckRadii2, "neckB");
+    neckB.initialize<float>(cc, numNeckRadii2, "neckB");
     neckB.upload(AmoebaGeneralizedKirkwoodForceImpl::getBij());
     bornRadii.initialize(cc, paddedNumAtoms, elementSize, "bornRadii");
     field.initialize(cc, 3*paddedNumAtoms, sizeof(long long), "gkField");
@@ -1832,7 +1833,8 @@ void CommonCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& sy
         defines["BETA0"] = cc.doubleToString(beta0);
         defines["BETA1"] = cc.doubleToString(beta1);
         defines["BETA2"] = cc.doubleToString(beta2);
-    } else {
+    }
+    else {
         defines["TANH_RESCALING"] = "false";
         defines["BETA0"] = cc.doubleToString(0.0);
         defines["BETA1"] = cc.doubleToString(0.0);
@@ -2569,7 +2571,8 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
             gridSizeX = cc.findLegalFFTDimension(gridSizeX);
             gridSizeY = cc.findLegalFFTDimension(gridSizeY);
             gridSizeZ = cc.findLegalFFTDimension(gridSizeZ);
-        } else {
+        }
+        else {
             gridSizeX = cc.findLegalFFTDimension(nx);
             gridSizeY = cc.findLegalFFTDimension(ny);
             gridSizeZ = cc.findLegalFFTDimension(nz);
@@ -2583,7 +2586,8 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
             dispersionGridSizeX = cc.findLegalFFTDimension(dispersionGridSizeX);
             dispersionGridSizeY = cc.findLegalFFTDimension(dispersionGridSizeY);
             dispersionGridSizeZ = cc.findLegalFFTDimension(dispersionGridSizeZ);
-        } else {
+        }
+        else {
             dispersionGridSizeX = cc.findLegalFFTDimension(nx);
             dispersionGridSizeY = cc.findLegalFFTDimension(ny);
             dispersionGridSizeZ = cc.findLegalFFTDimension(nz);

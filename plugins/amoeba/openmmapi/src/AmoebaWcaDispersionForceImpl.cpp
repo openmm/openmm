@@ -66,8 +66,9 @@ static double tailCorrection(double ri, double eps, double rmin) {
     if (ri < rmin) {
         double r3 = ri * ri * ri;
         double rmin3 = rmin * rmin * rmin;
-        return -eps * 4.0e0 * M_PI * (rmin3 - r3) / 3.0e0 - eps * M_PI * 18.0e0 * rmin3 / 11.0e0;
-    } else {
+        return -eps * 4.0 * M_PI * (rmin3 - r3) / 3.0 - eps * M_PI * 18.0 * rmin3 / 11.0;
+    }
+    else {
         double ri2 = ri * ri;
         double ri4 = ri2 * ri2;
         double ri7 = ri * ri2 * ri4;
@@ -75,7 +76,7 @@ static double tailCorrection(double ri, double eps, double rmin) {
         double rmin2 = rmin * rmin;
         double rmin4 = rmin2 * rmin2;
         double rmin7 = rmin * rmin2 * rmin4;
-        return 2.0e0 * M_PI * eps * rmin7 * (2.0e0 * rmin7 - 11.0e0 * ri7) / (11.0e0 * ri11);
+        return 2.0 * M_PI * eps * rmin7 * (2.0 * rmin7 - 11.0 * ri7) / (11.0 * ri11);
     }
 }
 
@@ -112,10 +113,10 @@ void AmoebaWcaDispersionForceImpl::getMaximumDispersionEnergy(const AmoebaWcaDis
 
     // Compute the tail correction (i.e. the dispersion integral in the absence of any other solute atoms).
     double dispersionOffest = force.getDispoff();
-    double riO = rmixo / 2.0e0 + dispersionOffest;
+    double riO = rmixo / 2.0 + dispersionOffest;
     double cdisp = tailCorrection(riO, emixo, rmixo);
-    double riH = rmixh / 2.0e0 + dispersionOffest;
-    cdisp += 2.0e0 * tailCorrection(riH, emixh, rmixh);
+    double riH = rmixh / 2.0 + dispersionOffest;
+    cdisp += 2.0 * tailCorrection(riH, emixh, rmixh);
 
     maxDispersionEnergy = force.getSlevy() * force.getAwater() * cdisp;
 }
