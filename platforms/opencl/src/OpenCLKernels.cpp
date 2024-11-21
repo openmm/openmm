@@ -104,8 +104,35 @@ double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, 
 class OpenCLCalcNonbondedForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
     ForceInfo(int requiredBuffers, const NonbondedForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+        particleOffset.resize(force.getNumParticles(), -1);
+        exceptionOffset.resize(force.getNumExceptions(), -1);
+        for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+            string parameter;
+            int particleIndex;
+            double chargeScale, sigmaScale, epsilonScale;
+            force.getParticleParameterOffset(i, parameter, particleIndex, chargeScale, sigmaScale, epsilonScale);
+            particleOffset[particleIndex] = i;
+        }
+        for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+            string parameter;
+            int exceptionIndex;
+            double chargeProdScale, sigmaScale, epsilonScale;
+            force.getExceptionParameterOffset(i, parameter, exceptionIndex, chargeProdScale, sigmaScale, epsilonScale);
+            exceptionOffset[exceptionIndex] = i;
+        }
     }
     bool areParticlesIdentical(int particle1, int particle2) {
+        if (particleOffset[particle1] != -1 || particleOffset[particle2] != -1) {
+            if (particleOffset[particle1] == -1 || particleOffset[particle2] == -1)
+                return false;
+            string parameter1, parameter2;
+            int particleIndex1, particleIndex2;
+            double chargeScale1, sigmaScale1, epsilonScale1, chargeScale2, sigmaScale2, epsilonScale2;
+            force.getParticleParameterOffset(particleOffset[particle1], parameter1, particleIndex1, chargeScale1, sigmaScale1, epsilonScale1);
+            force.getParticleParameterOffset(particleOffset[particle2], parameter2, particleIndex2, chargeScale2, sigmaScale2, epsilonScale2);
+            if (parameter1 != parameter2 || chargeScale1 != chargeScale2 || sigmaScale1 != sigmaScale2 || epsilonScale1 != epsilonScale2)
+                return false;
+        }
         double charge1, charge2, sigma1, sigma2, epsilon1, epsilon2;
         force.getParticleParameters(particle1, charge1, sigma1, epsilon1);
         force.getParticleParameters(particle2, charge2, sigma2, epsilon2);
@@ -123,6 +150,17 @@ public:
         particles[1] = particle2;
     }
     bool areGroupsIdentical(int group1, int group2) {
+        if (exceptionOffset[group1] != -1 || exceptionOffset[group2] != -1) {
+            if (exceptionOffset[group1] == -1 || exceptionOffset[group2] == -1)
+                return false;
+            string parameter1, parameter2;
+            int exceptionIndex1, exceptionIndex2;
+            double chargeProdScale1, sigmaScale1, epsilonScale1, chargeProdScale2, sigmaScale2, epsilonScale2;
+            force.getExceptionParameterOffset(exceptionOffset[group1], parameter1, exceptionIndex1, chargeProdScale1, sigmaScale1, epsilonScale1);
+            force.getExceptionParameterOffset(exceptionOffset[group2], parameter2, exceptionIndex2, chargeProdScale2, sigmaScale2, epsilonScale2);
+            if (parameter1 != parameter2 || chargeProdScale1 != chargeProdScale2 || sigmaScale1 != sigmaScale2 || epsilonScale1 != epsilonScale2)
+                return false;
+        }
         int particle1, particle2;
         double chargeProd1, chargeProd2, sigma1, sigma2, epsilon1, epsilon2;
         force.getExceptionParameters(group1, particle1, particle2, chargeProd1, sigma1, epsilon1);
@@ -131,6 +169,7 @@ public:
     }
 private:
     const NonbondedForce& force;
+    vector<int> particleOffset, exceptionOffset;
 };
 
 class OpenCLCalcNonbondedForceKernel::PmeIO : public CalcPmeReciprocalForceKernel::IO {
@@ -1195,7 +1234,8 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
 
     if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
-    cl.invalidateMolecules(info, firstParticle <= lastParticle, firstException <= lastException);
+    cl.invalidateMolecules(info, firstParticle <= lastParticle || force.getNumParticleParameterOffsets() > 0,
+                           firstException <= lastException || force.getNumExceptionParameterOffsets() > 0);
     recomputeParams = true;
 }
 
