@@ -78,14 +78,14 @@ DEVICE real integralAfterRminDerivative(real ri, real eps, real rmin, real rmin7
     real upperTerm = uik2 * r + r3 - r * sk2;
 
     real dl;
-    if (ri > r - sk || rmax < rmin) {
+    if (ri > r - sk || rmax < rmin)
         dl = -(-5 * lik2 + 3 * r2 + 3 * sk2) / lik5;
     else
         dl = (5 * lik3 - 33 * lik * r2 - 3 * lik * sk2 + 15 * lowerTerm) / lik6;
     real du = -(5 * uik3 - 33 * uik * r2 - 3 * uik * sk2 + 15 * upperTerm) / uik6;
     real de = -2 * M_PI * er7 * (dl + du) / (15 * r2);
 
-    if (ri > r - sk || rmax < rmin) {
+    if (ri > r - sk || rmax < rmin)
         dl = -(-6 * lik2 + 5 * r2 + 5 * sk2) / lik12;
     else
         dl = (6 * lik3 - 125 * lik * r2 - 5 * lik * sk2 + 60 * lowerTerm) / lik13;
