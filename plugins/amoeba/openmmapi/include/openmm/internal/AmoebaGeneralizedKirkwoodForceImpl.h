@@ -43,7 +43,7 @@ namespace OpenMM {
  * This is the internal implementation of AmoebaGeneralizedKirkwoodForce.
  */
 
-class AmoebaGeneralizedKirkwoodForceImpl : public ForceImpl {
+class OPENMM_EXPORT_AMOEBA AmoebaGeneralizedKirkwoodForceImpl : public ForceImpl {
 public:
     AmoebaGeneralizedKirkwoodForceImpl(const AmoebaGeneralizedKirkwoodForce& owner);
     void initialize(ContextImpl& context);

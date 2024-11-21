@@ -49,7 +49,7 @@ AmoebaReferenceMultipoleForce::AmoebaReferenceMultipoleForce() :
                                                    _mutualInducedDipoleIterations(0),
                                                    _maximumMutualInducedDipoleIterations(100),
                                                    _mutualInducedDipoleEpsilon(1.0e+50),
-                                                   _mutualInducedDipoleTargetEpsilon(1.0e-04),
+                                                   _mutualInducedDipoleTargetEpsilon(1.0e-4),
                                                    _debye(48.033324)
 {
     initialize();
@@ -64,7 +64,7 @@ AmoebaReferenceMultipoleForce::AmoebaReferenceMultipoleForce(NonbondedMethod non
                                                    _mutualInducedDipoleIterations(0),
                                                    _maximumMutualInducedDipoleIterations(100),
                                                    _mutualInducedDipoleEpsilon(1.0e+50),
-                                                   _mutualInducedDipoleTargetEpsilon(1.0e-04),
+                                                   _mutualInducedDipoleTargetEpsilon(1.0e-4),
                                                    _debye(48.033324)
 {
     initialize();
@@ -251,11 +251,10 @@ double AmoebaReferenceMultipoleForce::getMultipoleScaleFactor(unsigned int parti
 
     MapIntRealOpenMM  scaleMap   = _scaleMaps[particleI][scaleType];
     MapIntRealOpenMMCI isPresent = scaleMap.find(particleJ);
-    if (isPresent != scaleMap.end()) {
+    if (isPresent != scaleMap.end())
         return isPresent->second;
-    } else {
+    else
         return 1.0;
-    }
 }
 
 void AmoebaReferenceMultipoleForce::getDScaleAndPScale(unsigned int particleI, unsigned int particleJ, double& dScale, double& pScale) const
@@ -770,11 +769,10 @@ void AmoebaReferenceMultipoleForce::calculateFixedMultipoleField(const vector<Mu
             // otherwise add unmodified field and fieldPolar to particle fields
 
             double dScale, pScale;
-            if (jj <= _maxScaleIndex[ii]) {
+            if (jj <= _maxScaleIndex[ii])
                 getDScaleAndPScale(ii, jj, dScale, pScale);
-            } else {
+            else
                 dScale = pScale = 1.0;
-            }
             calculateFixedMultipoleFieldPairIxn(particleData[ii], particleData[jj], dScale, pScale);
         }
     }
@@ -1526,11 +1524,10 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
     norms[V] = normalizeVec3(vectorV);
 
     Vec3 vectorW;
-    if (particleW && (axisType == AmoebaMultipoleForce::ZBisect || axisType == AmoebaMultipoleForce::ThreeFold)) {
+    if (particleW && (axisType == AmoebaMultipoleForce::ZBisect || axisType == AmoebaMultipoleForce::ThreeFold))
          vectorW = particleW->position - particleI.position;
-    } else {
+    else
          vectorW = vectorU.cross(vectorV);
-    }
     norms[W]  = normalizeVec3(vectorW);
 
     Vec3 vectorUV, vectorUW, vectorVW;
@@ -1577,7 +1574,8 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
         if (axisType == AmoebaMultipoleForce::Bisector) {
             factor2    *= half;
             factor4     = half*dphi[W]/(norms[V]);
-        } else {
+        }
+        else {
             factor4     = 0.0;
         }
 
@@ -1591,7 +1589,8 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
             forces[particleI.particleIndex][ii]                 +=  (forceU + forceV);
         }
 
-    } else if (axisType == AmoebaMultipoleForce::ZBisect) {
+    }
+    else if (axisType == AmoebaMultipoleForce::ZBisect) {
 
         Vec3 vectorR          = vectorV + vectorW;
         Vec3 vectorS          = vectorU.cross(vectorR);
@@ -1652,7 +1651,8 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
 
         forces[particleI.particleIndex]        += (forceU + forceV + forceW);
 
-    } else if (axisType == AmoebaMultipoleForce::ThreeFold) {
+    }
+    else if (axisType == AmoebaMultipoleForce::ThreeFold) {
 
         // 3-fold
 
@@ -1684,7 +1684,8 @@ void AmoebaReferenceMultipoleForce::mapTorqueToForceForParticle(const MultipoleP
             forces[particleI.particleIndex][ii] += (du + dv + dw);
         }
 
-    } else if (axisType == AmoebaMultipoleForce::ZOnly) {
+    }
+    else if (axisType == AmoebaMultipoleForce::ZOnly) {
 
         // z-only
 
@@ -4155,12 +4156,14 @@ void AmoebaReferenceGeneralizedKirkwoodMultipoleForce::calculateGrycukChainRuleP
         lik4 = lik * lik;
         lik4 = lik4 * lik4;
         de += 0.25 * M_PI * (sk2 - 4.0 * sk * r + 17.0 * r2) / (r2 * lik4);
-    } else if (r < (baseRadiusI + sk)) {
+    }
+    else if (r < (baseRadiusI + sk)) {
         lik = baseRadiusI;
         lik4 = lik * lik;
         lik4 = lik4 * lik4;
         de += 0.25 * M_PI * (2.0 * baseRadiusI * baseRadiusI - sk2 - r2) / (r2 * lik4);
-    } else {
+    }
+    else {
         lik = r - sk;
         lik4 = lik * lik;
         lik4 = lik4 * lik4;
@@ -5038,7 +5041,8 @@ void AmoebaReferencePmeMultipoleForce::getDampedInverseDistances(const Multipole
     dampedDInverseDistances[2] = 15.0*(1.0-dampedDScale[2])/r7;
     if (pscale == dscale) {
         dampedPInverseDistances = dampedDInverseDistances;
-    } else {
+    }
+    else {
         Vec3 dampedPScale = scaleFactor*pscale;
         dampedPInverseDistances[0] =      (1.0-dampedPScale[0])/r3;
         dampedPInverseDistances[1] =  3.0*(1.0-dampedPScale[1])/r5;

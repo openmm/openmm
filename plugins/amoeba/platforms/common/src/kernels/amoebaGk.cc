@@ -100,7 +100,8 @@ DEVICE void getBounds(real rho, int* below, int* above) {
         // Extrapolate up from the top table values.
         *below = NUM_POINTS - 1;
         *above = NUM_POINTS - 2;
-    } else if (*below < 0) {
+    }
+    else if (*below < 0) {
         // If below is less than 0, extrapolate down from the bottom table values.
         *below = 0;
         *above = 1;
@@ -636,13 +637,15 @@ DEVICE real pairIntegralDerivative(real r, real r2, real radius, real scaledRadi
                 real lik2 = lik * lik;
                 real lik4 = lik2 * lik2;
                 de = de + 0.25f * M_PI * (sk2 - 4.0f * scaledRadius * r + 17.0f * r2) / (r2 * lik4);
-            } else if (r < radius + scaledRadius) {
+            }
+            else if (r < radius + scaledRadius) {
                 // Atoms are overlapped, begin integration from ri.
                 real lik = radius;
                 real lik2 = lik * lik;
                 real lik4 = lik2 * lik2;
                 de = de + 0.25f * M_PI * (2.0f * radius * radius - sk2 - r2) / (r2 * lik4);
-            } else {
+            }
+            else {
                 // No overlap between atoms.
                 real lik = r - scaledRadius;
                 real lik2 = lik * lik;

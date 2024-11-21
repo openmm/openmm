@@ -21,6 +21,9 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "AmoebaReferenceGeneralizedKirkwoodForce.h"
 #include "openmm/internal/AmoebaGeneralizedKirkwoodForceImpl.h"
 #include <cmath>
@@ -249,13 +252,12 @@ void AmoebaReferenceGeneralizedKirkwoodForce::calculateGrycukBornRadii(const vec
 
             double uik = r + sk;
             double lik;
-            if ((integralStartI + r) < sk) {
+            if ((integralStartI + r) < sk)
                 lik = sk - r;
-            } else if (r < (integralStartI + sk)) {
+            else if (r < (integralStartI + sk))
                 lik = integralStartI;
-            } else {
+            else
                 lik = r - sk;
-            }
 
             double l2 = lik * lik;
             double l4 = l2 * l2;

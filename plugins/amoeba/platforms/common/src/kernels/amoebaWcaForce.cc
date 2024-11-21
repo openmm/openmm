@@ -38,17 +38,15 @@ DEVICE real integralBeforeRminDerivative(real ri, real eps, real rmin, real r, r
                                          real r3, real sk, real sk2, real lik, real lik2,
                                          real lik3, real uik, real uik2, real uik3) {
     real dl;
-    if (ri > r - sk) {
+    if (ri > r - sk)
         dl = (-lik2 + 2 * r2 + 2 * sk2) * lik2;
-    } else {
+    else
         dl = (-lik3 + 4 * lik2 * r - 6 * lik * r2 + 2 * lik * sk2 + 4 * r3 - 4 * r * sk2) * lik;
-    }
     real du;
-    if (r + sk > rmin) {
+    if (r + sk > rmin)
         du = -(-uik2 + 2 * r2 + 2 * sk2) * uik2;
-    } else {
+    else
         du = -(-uik3 + 4 * uik2 * r - 6 * uik * r2 + 2 * uik * sk2 + 4 * r3 - 4 * r * sk2) * uik;
-    }
     return -eps * M_PI * (dl + du) / (4 * r2);
 }
 
@@ -80,19 +78,17 @@ DEVICE real integralAfterRminDerivative(real ri, real eps, real rmin, real rmin7
     real upperTerm = uik2 * r + r3 - r * sk2;
 
     real dl;
-    if (ri > r - sk || rmax < rmin) {
+    if (ri > r - sk || rmax < rmin)
         dl = -(-5 * lik2 + 3 * r2 + 3 * sk2) / lik5;
-    } else {
+    else
         dl = (5 * lik3 - 33 * lik * r2 - 3 * lik * sk2 + 15 * lowerTerm) / lik6;
-    }
     real du = -(5 * uik3 - 33 * uik * r2 - 3 * uik * sk2 + 15 * upperTerm) / uik6;
     real de = -2 * M_PI * er7 * (dl + du) / (15 * r2);
 
-    if (ri > r - sk || rmax < rmin) {
+    if (ri > r - sk || rmax < rmin)
         dl = -(-6 * lik2 + 5 * r2 + 5 * sk2) / lik12;
-    } else {
+    else
         dl = (6 * lik3 - 125 * lik * r2 - 5 * lik * sk2 + 60 * lowerTerm) / lik13;
-    }
     du = -(6 * uik3 - 125 * uik * r2 - 5 * uik * sk2 + 60 * upperTerm) / uik13;
     de += M_PI * er7 * rmin7 * (dl + du) / (60 * r2);
     return de;

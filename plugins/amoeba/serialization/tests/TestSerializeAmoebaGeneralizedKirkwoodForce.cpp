@@ -49,7 +49,7 @@ void testSerialization() {
     force1.setName("custom name");
     force1.setSolventDielectric(80.0);
     force1.setSoluteDielectric(1.0);
-    force1.setDielectricOffset(   0.09);
+    force1.setDielectricOffset(0.09);
     force1.setProbeRadius(1.40);
     force1.setSurfaceAreaFactor(0.888);
     force1.setIncludeCavityTerm(1);

@@ -138,7 +138,8 @@ void* AmoebaVdwForceProxy::deserialize(const SerializationNode& node) const {
                                        particle.getDoubleProperty("epsilon"),
                                        particle.getDoubleProperty("reductionFactor"),
                                        particle.getBoolProperty("isAlchemical"));
-            } else {
+            }
+            else {
                 // Version 5 includes per particle scale factor for CpHMD.
                 if (useTypes)
                     force->addParticle(particle.getIntProperty("ivIndex"), particle.getIntProperty("type"),

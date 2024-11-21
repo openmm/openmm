@@ -131,7 +131,8 @@ void ReferenceCalcAmoebaTorsionTorsionForceKernel::initialize(const System& syst
                     for (unsigned int ll = 0; ll < grid[ll][jj].size(); ll++) {
                         torsionTorsionGrids[ii][kk][jj][ll] = reorderedGrid[kk][jj][ll];
                     }
-                } else {
+                }
+                else {
                     for (unsigned int ll = 0; ll < grid[ll][jj].size(); ll++) {
                         torsionTorsionGrids[ii][kk][jj][ll] = grid[kk][jj][ll];
                     }
@@ -234,7 +235,8 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
     if (polarizationType == AmoebaMultipoleForce::Mutual) {
         mutualInducedMaxIterations = force.getMutualInducedMaxIterations();
         mutualInducedTargetEpsilon = force.getMutualInducedTargetEpsilon();
-    } else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+    }
+    else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
         extrapolationCoefficients = force.getExtrapolationCoefficients();
     }
 
@@ -256,7 +258,8 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
             pmeGridDimension[1] = gridSizeY;
             pmeGridDimension[2] = gridSizeZ;
         }    
-    } else {
+    }
+    else {
         usePme = false;
     }
     return;
@@ -311,7 +314,8 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
 
         amoebaReferenceMultipoleForce = new AmoebaReferenceGeneralizedKirkwoodMultipoleForce(amoebaReferenceGeneralizedKirkwoodForce);
 
-    } else if (usePme) {
+    }
+    else if (usePme) {
 
         AmoebaReferencePmeMultipoleForce* amoebaReferencePmeMultipoleForce = new AmoebaReferencePmeMultipoleForce();
         amoebaReferencePmeMultipoleForce->setAlphaEwald(alphaEwald);
@@ -325,7 +329,8 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
         amoebaReferencePmeMultipoleForce->setPeriodicBoxSize(boxVectors);
         amoebaReferenceMultipoleForce = static_cast<AmoebaReferenceMultipoleForce*>(amoebaReferencePmeMultipoleForce);
 
-    } else {
+    }
+    else {
          amoebaReferenceMultipoleForce = new AmoebaReferenceMultipoleForce(AmoebaReferenceMultipoleForce::NoCutoff);
     }
 
@@ -335,12 +340,15 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
         amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::Mutual);
         amoebaReferenceMultipoleForce->setMutualInducedDipoleTargetEpsilon(mutualInducedTargetEpsilon);
         amoebaReferenceMultipoleForce->setMaximumMutualInducedDipoleIterations(mutualInducedMaxIterations);
-    } else if (polarizationType == AmoebaMultipoleForce::Direct) {
+    }
+    else if (polarizationType == AmoebaMultipoleForce::Direct) {
         amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::Direct);
-    } else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+    }
+    else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
         amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::Extrapolated);
         amoebaReferenceMultipoleForce->setExtrapolationCoefficients(extrapolationCoefficients);
-    } else {
+    }
+    else {
         throw OpenMMException("Polarization type not recognzied.");
     }
 

@@ -79,10 +79,12 @@ void AmoebaReferenceTorsionTorsionForce::loadGridValuesFromEnclosingRectangle(
        int gridY = Y_gridIndex;
        if (ii == 1) {
            gridX++;
-       } else if (ii == 2) {
+       }
+       else if (ii == 2) {
            gridX++;
            gridY++;
-       } else if (ii == 3) {
+       }
+       else if (ii == 3) {
            gridY++;
        }
            
@@ -363,18 +365,16 @@ double AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const Vec3
            cosine1    /= rTrU;
  
     double angle1;
-    if (cosine1 <= -1.0) {
+    if (cosine1 <= -1.0)
        angle1 = M_PI*RADIAN;
-    } else if (cosine1 >= 1.0) {
+    else if (cosine1 >= 1.0)
        angle1 = 0.0;
-    } else {
+    else
        angle1 = RADIAN*acos(cosine1);
-    }
  
     double sign = AmoebaReferenceForce::getDotProduct3(deltaR[BA], deltaR[U]);
-    if (sign < 0.0) {
+    if (sign < 0.0)
        angle1 = -angle1; 
-    }
  
     // value1 = angle1;
  
@@ -383,18 +383,16 @@ double AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const Vec3
            cosine2    /= rUrV;
  
     double angle2;
-    if (cosine2 <= -1.0) {
+    if (cosine2 <= -1.0)
        angle2 = M_PI*RADIAN;
-    } else if (cosine1 >= 1.0) {
+    else if (cosine1 >= 1.0)
        angle2 = 0.0;
-    } else {
+    else
        angle2 = RADIAN*acos(cosine2);
-    }
  
     sign = AmoebaReferenceForce::getDotProduct3(deltaR[CB], deltaR[V]);
-    if (sign < 0.0) {
+    if (sign < 0.0)
        angle2 = -angle2; 
-    }
  
     // swap signs of angles if chirality at central atom
     // is 'negative'
@@ -405,7 +403,8 @@ double AmoebaReferenceTorsionTorsionForce::calculateTorsionTorsionIxn(const Vec3
            angle1 = -angle1;
            angle2 = -angle2;
         }
-    } else {
+    }
+    else {
         sign = 1.0;
     }
 
@@ -553,11 +552,10 @@ double AmoebaReferenceTorsionTorsionForce::calculateForceAndEnergy(int numTorsio
 
         Vec3 forces[5];
         Vec3* chiralCheckAtom;
-        if (chiralCheckAtomIndex > -1) {
+        if (chiralCheckAtomIndex > -1)
             chiralCheckAtom = &posData[chiralCheckAtomIndex];
-        } else {
+        else
             chiralCheckAtom = NULL;
-        }
         energy                 += calculateTorsionTorsionIxn(posData[particle1Index], posData[particle2Index],
                                                              posData[particle3Index], posData[particle4Index],
                                                              posData[particle5Index], chiralCheckAtom, torsionTorsionGrids[gridIndex],

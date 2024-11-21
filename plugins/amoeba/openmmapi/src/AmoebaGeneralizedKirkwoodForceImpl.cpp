@@ -29,9 +29,13 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "openmm/internal/AmoebaGeneralizedKirkwoodForceImpl.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/amoebaKernels.h"
+#include <cmath>
 
 using namespace OpenMM;
 
@@ -543,7 +547,8 @@ static void getBounds(double rho, int& below, int& above) {
         // Extrapolate up from the top table values.
         below = AmoebaGeneralizedKirkwoodForceImpl::NUM_NECK_RADII - 1;
         above = AmoebaGeneralizedKirkwoodForceImpl::NUM_NECK_RADII - 2;
-    } else if (below < 0) {
+    }
+    else if (below < 0) {
         // If below is less than 0, extrapolate down from the bottom table values.
         below = 0;
         above = 1;

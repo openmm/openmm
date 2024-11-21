@@ -43,14 +43,14 @@ AmoebaWcaDispersionForce::AmoebaWcaDispersionForce() {
     // vdw           2               2.6550     0.0135      0.910
 
     // Convert kcal/mol to kJ/mol
-    epso = 0.1100 * 4.184e0;
-    epsh = 0.0135 * 4.184e0;
+    epso = 0.1100 * 4.184;
+    epsh = 0.0135 * 4.184;
     // Convert A to nm.
-    rmino = 1.7025e-01;
-    rminh = 1.3275e-01;
-    dispoff = 1.056e-01;
+    rmino = 1.7025e-1;
+    rminh = 1.3275e-1;
+    dispoff = 1.056e-1;
     // Convert water number density from water / A^3 to water / nm^3.
-    awater = 0.033428e03;
+    awater = 0.033428e3;
     // No units.
     slevy = 1.0;
     shctd = 0.82;

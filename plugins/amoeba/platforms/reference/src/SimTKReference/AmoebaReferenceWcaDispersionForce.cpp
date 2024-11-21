@@ -43,25 +43,23 @@ AmoebaReferenceWcaDispersionForce::AmoebaReferenceWcaDispersionForce(double epso
 static double integralBeforeRMin(double eps, double r, double r2, double sk2,
                                  double lik2, double lik3, double lik4,
                                  double uik2, double uik3, double uik4) {
-    return -eps * (4.0e0 * M_PI / (48.0e0 * r) *
-                   (3.0e0 * (lik4 - uik4) - 8.0e0 * r * (lik3 - uik3) + 6.0e0 * (r2 - sk2) * (lik2 - uik2)));
+    return -eps * (4.0 * M_PI / (48.0 * r) *
+                   (3.0 * (lik4 - uik4) - 8.0 * r * (lik3 - uik3) + 6.0 * (r2 - sk2) * (lik2 - uik2)));
 }
 
 static double
 integralBeforeRminDerivative(double ri, double eps, double rmin, double r, double r2, double r3, double sk, double sk2,
                              double lik, double lik2, double lik3, double uik, double uik2, double uik3) {
     double dl;
-    if (ri > r - sk) {
+    if (ri > r - sk)
         dl = (-lik2 + 2.0 * r2 + 2.0 * sk2) * lik2;
-    } else {
+    else
         dl = (-lik3 + 4.0 * lik2 * r - 6.0 * lik * r2 + 2.0 * lik * sk2 + 4.0 * r3 - 4.0 * r * sk2) * lik;
-    }
     double du;
-    if (r + sk > rmin) {
+    if (r + sk > rmin)
         du = -(-uik2 + 2.0 * r2 + 2.0 * sk2) * uik2;
-    } else {
+    else
         du = -(-uik3 + 4.0 * uik2 * r - 6.0 * uik * r2 + 2.0 * uik * sk2 + 4.0 * r3 - 4.0 * r * sk2) * uik;
-    }
     return -eps * M_PI * (dl + du) / (4.0 * r2);
 }
 
@@ -93,19 +91,17 @@ static double integralAfterRminDerivative(double ri, double eps, double rmin, do
     double upperTerm = uik2 * r + r3 - r * sk2;
 
     double dl;
-    if (ri > r - sk || rmax < rmin) {
+    if (ri > r - sk || rmax < rmin)
         dl = -(-5.0 * lik2 + 3.0 * r2 + 3.0 * sk2) / lik5;
-    } else {
+    else
         dl = (5.0 * lik3 - 33.0 * lik * r2 - 3.0 * lik * sk2 + 15.0 * lowerTerm) / lik6;
-    }
     double du = -(5.0 * uik3 - 33.0 * uik * r2 - 3.0 * uik * sk2 + 15.0 * upperTerm) / uik6;
     double de = -2.0 * M_PI * er7 * (dl + du) / (15.0 * r2);
 
-    if (ri > r - sk || rmax < rmin) {
+    if (ri > r - sk || rmax < rmin)
         dl = -(-6.0 * lik2 + 5.0 * r2 + 5.0 * sk2) / lik12;
-    } else {
+    else
         dl = (6.0 * lik3 - 125.0 * lik * r2 - 5.0 * lik * sk2 + 60.0 * lowerTerm) / lik13;
-    }
     du = -(6.0 * uik3 - 125.0 * uik * r2 - 5.0 * uik * sk2 + 60.0 * upperTerm) / uik13;
     de += M_PI * er7 * rmin7 * (dl + du) / (60.0 * r2);
 
@@ -199,12 +195,12 @@ double AmoebaReferenceWcaDispersionForce::calculatePairIxn(double radiusJ,
     double emixh = intermediateValues[EMIXH];
 
     // Start of integration of dispersion for atom i with water oxygen.
-    double riO = rmixo / 2.0e0 + _dispoff;
-    double nO = 1.0e0;
+    double riO = rmixo / 2.0 + _dispoff;
+    double nO = 1.0;
 
     // Start of integration of dispersion for atom i with water hydrogen.
-    double riH = rmixh / 2.0e0 + _dispoff;
-    double nH = 2.0e0;
+    double riH = rmixh / 2.0 + _dispoff;
+    double nH = 2.0;
 
     // Atom k blocks the interaction of atom i with solvent.
     double sJ = radiusJ * _shctd;
