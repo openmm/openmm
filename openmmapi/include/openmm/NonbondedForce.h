@@ -572,11 +572,13 @@ public:
      * Simply call setParticleParameters() and setExceptionParameters() to modify this object's parameters, then call
      * updateParametersInContext() to copy them over to the Context.
      *
-     * This method has several limitations.  The only information it updates is the parameters of particles and exceptions.
-     * All other aspects of the Force (the nonbonded method, the cutoff distance, etc.) are unaffected and can only be
-     * changed by reinitializing the Context.  Furthermore, only the chargeProd, sigma, and epsilon values of an exception
-     * can be changed; the pair of particles involved in the exception cannot change.  Finally, this method cannot be used
-     * to add new particles or exceptions, only to change the parameters of existing ones.
+     * This method has several limitations.  The only information it updates is the parameters of particles and exceptions,
+     * as well as parameter offsets for particles and exceptions.  All other aspects of the Force (the nonbonded method,
+     * the cutoff distance, etc.) are unaffected and can only be changed by reinitializing the Context.  Furthermore,
+     * only the chargeProd, sigma, and epsilon values of an exception can be changed; the pair of particles involved in the
+     * exception cannot change.  Likewise, it can update charge, sigma and epsilon for a parameter offset, but not the
+     * identify of the particle or exception the offset is applied to, or which global parameter it is based on.  Finally,
+     * this method cannot be used to add new particles or exceptions, only to change the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
     /**

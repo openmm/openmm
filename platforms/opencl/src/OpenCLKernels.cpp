@@ -104,8 +104,35 @@ double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, 
 class OpenCLCalcNonbondedForceKernel::ForceInfo : public OpenCLForceInfo {
 public:
     ForceInfo(int requiredBuffers, const NonbondedForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+        particleOffset.resize(force.getNumParticles(), -1);
+        exceptionOffset.resize(force.getNumExceptions(), -1);
+        for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+            string parameter;
+            int particleIndex;
+            double chargeScale, sigmaScale, epsilonScale;
+            force.getParticleParameterOffset(i, parameter, particleIndex, chargeScale, sigmaScale, epsilonScale);
+            particleOffset[particleIndex] = i;
+        }
+        for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+            string parameter;
+            int exceptionIndex;
+            double chargeProdScale, sigmaScale, epsilonScale;
+            force.getExceptionParameterOffset(i, parameter, exceptionIndex, chargeProdScale, sigmaScale, epsilonScale);
+            exceptionOffset[exceptionIndex] = i;
+        }
     }
     bool areParticlesIdentical(int particle1, int particle2) {
+        if (particleOffset[particle1] != -1 || particleOffset[particle2] != -1) {
+            if (particleOffset[particle1] == -1 || particleOffset[particle2] == -1)
+                return false;
+            string parameter1, parameter2;
+            int particleIndex1, particleIndex2;
+            double chargeScale1, sigmaScale1, epsilonScale1, chargeScale2, sigmaScale2, epsilonScale2;
+            force.getParticleParameterOffset(particleOffset[particle1], parameter1, particleIndex1, chargeScale1, sigmaScale1, epsilonScale1);
+            force.getParticleParameterOffset(particleOffset[particle2], parameter2, particleIndex2, chargeScale2, sigmaScale2, epsilonScale2);
+            if (parameter1 != parameter2 || chargeScale1 != chargeScale2 || sigmaScale1 != sigmaScale2 || epsilonScale1 != epsilonScale2)
+                return false;
+        }
         double charge1, charge2, sigma1, sigma2, epsilon1, epsilon2;
         force.getParticleParameters(particle1, charge1, sigma1, epsilon1);
         force.getParticleParameters(particle2, charge2, sigma2, epsilon2);
@@ -123,6 +150,17 @@ public:
         particles[1] = particle2;
     }
     bool areGroupsIdentical(int group1, int group2) {
+        if (exceptionOffset[group1] != -1 || exceptionOffset[group2] != -1) {
+            if (exceptionOffset[group1] == -1 || exceptionOffset[group2] == -1)
+                return false;
+            string parameter1, parameter2;
+            int exceptionIndex1, exceptionIndex2;
+            double chargeProdScale1, sigmaScale1, epsilonScale1, chargeProdScale2, sigmaScale2, epsilonScale2;
+            force.getExceptionParameterOffset(exceptionOffset[group1], parameter1, exceptionIndex1, chargeProdScale1, sigmaScale1, epsilonScale1);
+            force.getExceptionParameterOffset(exceptionOffset[group2], parameter2, exceptionIndex2, chargeProdScale2, sigmaScale2, epsilonScale2);
+            if (parameter1 != parameter2 || chargeProdScale1 != chargeProdScale2 || sigmaScale1 != sigmaScale2 || epsilonScale1 != epsilonScale2)
+                return false;
+        }
         int particle1, particle2;
         double chargeProd1, chargeProd2, sigma1, sigma2, epsilon1, epsilon2;
         force.getExceptionParameters(group1, particle1, particle2, chargeProd1, sigma1, epsilon1);
@@ -131,6 +169,7 @@ public:
     }
 private:
     const NonbondedForce& force;
+    vector<int> particleOffset, exceptionOffset;
 };
 
 class OpenCLCalcNonbondedForceKernel::PmeIO : public CalcPmeReciprocalForceKernel::IO {
@@ -257,7 +296,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     }
     vector<pair<int, int> > exclusions;
     vector<int> exceptions;
-    map<int, int> exceptionIndex;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
@@ -1146,12 +1184,58 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
         }
         baseExceptionParams.upload(baseExceptionParamsVec);
     }
-    
+
+    // Record parameter offsets.
+
+    vector<vector<mm_float4> > particleOffsetVec(force.getNumParticles());
+    vector<vector<mm_float4> > exceptionOffsetVec(numExceptions);
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        string param;
+        int particle;
+        double charge, sigma, epsilon;
+        force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        if (paramPos == paramNames.end())
+            throw OpenMMException("updateParametersInContext: The parameter of a particle parameter offset has changed");
+        int paramIndex = paramPos-paramNames.begin();
+        particleOffsetVec[particle].push_back(mm_float4(charge, sigma, epsilon, paramIndex));
+    }
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        int index = exceptionIndex[exception];
+        if (index < startIndex || index >= endIndex)
+            continue;
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        if (paramPos == paramNames.end())
+            throw OpenMMException("updateParametersInContext: The parameter of an exception parameter offset has changed");
+        int paramIndex = paramPos-paramNames.begin();
+        exceptionOffsetVec[index-startIndex].push_back(mm_float4(charge, sigma, epsilon, paramIndex));
+    }
+    if (max(force.getNumParticleParameterOffsets(), 1) != particleParamOffsets.getSize())
+        throw OpenMMException("updateParametersInContext: The number of particle parameter offsets has changed");
+    vector<mm_float4> p, e;
+    for (int i = 0; i < particleOffsetVec.size(); i++)
+        for (int j = 0; j < particleOffsetVec[i].size(); j++)
+            p.push_back(particleOffsetVec[i][j]);
+    for (int i = 0; i < exceptionOffsetVec.size(); i++)
+        for (int j = 0; j < exceptionOffsetVec[i].size(); j++)
+            e.push_back(exceptionOffsetVec[i][j]);
+    if (force.getNumParticleParameterOffsets() > 0)
+        particleParamOffsets.upload(p);
+    if (max((int) e.size(), 1) != exceptionParamOffsets.getSize())
+        throw OpenMMException("updateParametersInContext: The number of exception parameter offsets has changed");
+    if (e.size() > 0)
+        exceptionParamOffsets.upload(e);
+
     // Compute other values.
-    
+
     if (force.getUseDispersionCorrection() && cl.getContextIndex() == 0 && (nonbondedMethod == CutoffPeriodic || nonbondedMethod == Ewald || nonbondedMethod == PME))
         dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(context.getSystem(), force);
-    cl.invalidateMolecules(info, firstParticle <= lastParticle, firstException <= lastException);
+    cl.invalidateMolecules(info, firstParticle <= lastParticle || force.getNumParticleParameterOffsets() > 0,
+                           firstException <= lastException || force.getNumExceptionParameterOffsets() > 0);
     recomputeParams = true;
 }
 

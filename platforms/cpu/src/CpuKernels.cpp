@@ -506,7 +506,6 @@ void CpuCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     numParticles = force.getNumParticles();
     exclusions.resize(numParticles);
     vector<int> nb14s;
-    map<int, int> nb14Index;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
@@ -752,6 +751,32 @@ void CpuCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
         force.getExceptionParameters(nb14s[i], particle1, particle2, baseExceptionParams[i][0], baseExceptionParams[i][1], baseExceptionParams[i][2]);
         bonded14IndexArray[i][0] = particle1;
         bonded14IndexArray[i][1] = particle2;
+    }
+    particleParamOffsets.clear();
+    exceptionParamOffsets.clear();
+    particleParamOffsets.resize(force.getNumParticles());
+    exceptionParamOffsets.resize(force.getNumExceptions());
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        string param;
+        int particle;
+        double charge, sigma, epsilon;
+        force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        if (paramPos == paramNames.end())
+            throw OpenMMException("updateParametersInContext: The parameter of a particle parameter offset has changed");
+        int paramIndex = paramPos-paramNames.begin();
+        particleParamOffsets[particle].push_back(make_tuple(charge, sigma, epsilon, paramIndex));
+    }
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        auto paramPos = find(paramNames.begin(), paramNames.end(), param);
+        if (paramPos == paramNames.end())
+            throw OpenMMException("updateParametersInContext: The parameter of an exception parameter offset has changed");
+        int paramIndex = paramPos-paramNames.begin();
+        exceptionParamOffsets[nb14Index[exception]].push_back(make_tuple(charge, sigma, epsilon, paramIndex));
     }
     computeParameters(context, false);
     

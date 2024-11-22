@@ -278,6 +278,7 @@ private:
     int numParticles, num14, chargePosqIndex, ljPosqIndex;
     std::vector<std::vector<int> > bonded14IndexArray;
     std::vector<std::vector<double> > bonded14ParamArray;
+    std::map<int, int> nb14Index;
     double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, ewaldSelfEnergy, dispersionCoefficient;
     int kmax[3], gridSize[3], dispersionGridSize[3];
     bool useSwitchingFunction, exceptionsArePeriodic, useOptimizedPme, hasInitializedPme, hasInitializedDispersionPme, hasParticleOffsets, hasExceptionOffsets;

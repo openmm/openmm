@@ -903,7 +903,6 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
     numParticles = force.getNumParticles();
     exclusions.resize(numParticles);
     vector<int> nb14s;
-    map<int, int> nb14Index;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
@@ -1038,6 +1037,18 @@ double ReferenceCalcNonbondedForceKernel::execute(ContextImpl& context, bool inc
 void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
     if (force.getNumParticles() != numParticles)
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    if (force.getNumParticleParameterOffsets() != particleParamOffsets.size())
+        throw OpenMMException("updateParametersInContext: The number of particle parameter offsets has changed");
+    if (force.getNumExceptionParameterOffsets() != exceptionParamOffsets.size())
+        throw OpenMMException("updateParametersInContext: The number of exception parameter offsets has changed");
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        string param;
+        int particle;
+        double charge, sigma, epsilon;
+        force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
+        if (particleParamOffsets.find(make_pair(param, particle)) == particleParamOffsets.end())
+            throw OpenMMException("updateParametersInContext: The parameter or particle index of a particle parameter offset has changed");
+    }
 
     // Identify which exceptions are 1-4 interactions.
 
@@ -1048,6 +1059,8 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
         double charge, sigma, epsilon;
         force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
         exceptionsWithOffsets.insert(exception);
+        if (exceptionParamOffsets.find(make_pair(param, nb14Index[exception])) == exceptionParamOffsets.end())
+            throw OpenMMException("updateParametersInContext: The parameter or exception index of an exception parameter offset has changed");
     }
     vector<int> nb14s;
     for (int i = 0; i < force.getNumExceptions(); i++) {
@@ -1069,6 +1082,22 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
         force.getExceptionParameters(nb14s[i], particle1, particle2, baseExceptionParams[i][0], baseExceptionParams[i][1], baseExceptionParams[i][2]);
         bonded14IndexArray[i][0] = particle1;
         bonded14IndexArray[i][1] = particle2;
+    }
+    particleParamOffsets.clear();
+    exceptionParamOffsets.clear();
+    for (int i = 0; i < force.getNumParticleParameterOffsets(); i++) {
+        string param;
+        int particle;
+        double charge, sigma, epsilon;
+        force.getParticleParameterOffset(i, param, particle, charge, sigma, epsilon);
+        particleParamOffsets[make_pair(param, particle)] = {charge, sigma, epsilon};
+    }
+    for (int i = 0; i < force.getNumExceptionParameterOffsets(); i++) {
+        string param;
+        int exception;
+        double charge, sigma, epsilon;
+        force.getExceptionParameterOffset(i, param, exception, charge, sigma, epsilon);
+        exceptionParamOffsets[make_pair(param, nb14Index[exception])] = {charge, sigma, epsilon};
     }
     
     // Recompute the coefficient for the dispersion correction.
