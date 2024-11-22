@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Yutong Zhao                                        *
  * Contributors:                                                              *
  *                                                                            *
@@ -44,6 +44,7 @@ void VerletIntegratorProxy::serialize(const void* object, SerializationNode& nod
     const VerletIntegrator& integrator = *reinterpret_cast<const VerletIntegrator*>(object);
     node.setDoubleProperty("stepSize", integrator.getStepSize());
     node.setDoubleProperty("constraintTolerance", integrator.getConstraintTolerance());
+    node.setIntProperty("integrationForceGroups", integrator.getIntegrationForceGroups());
 }
 
 void* VerletIntegratorProxy::deserialize(const SerializationNode& node) const {
@@ -51,5 +52,6 @@ void* VerletIntegratorProxy::deserialize(const SerializationNode& node) const {
         throw OpenMMException("Unsupported version number");
     VerletIntegrator *integrator = new VerletIntegrator(node.getDoubleProperty("stepSize"));
     integrator->setConstraintTolerance(node.getDoubleProperty("constraintTolerance"));
+    integrator->setIntegrationForceGroups(node.getIntProperty("integrationForceGroups", 0xFFFFFFFF));
     return integrator;
 }
