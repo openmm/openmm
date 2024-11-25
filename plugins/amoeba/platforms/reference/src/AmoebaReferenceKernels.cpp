@@ -131,7 +131,8 @@ void ReferenceCalcAmoebaTorsionTorsionForceKernel::initialize(const System& syst
                     for (unsigned int ll = 0; ll < grid[ll][jj].size(); ll++) {
                         torsionTorsionGrids[ii][kk][jj][ll] = reorderedGrid[kk][jj][ll];
                     }
-                } else {
+                }
+                else {
                     for (unsigned int ll = 0; ll < grid[ll][jj].size(); ll++) {
                         torsionTorsionGrids[ii][kk][jj][ll] = grid[kk][jj][ll];
                     }
@@ -234,7 +235,8 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
     if (polarizationType == AmoebaMultipoleForce::Mutual) {
         mutualInducedMaxIterations = force.getMutualInducedMaxIterations();
         mutualInducedTargetEpsilon = force.getMutualInducedTargetEpsilon();
-    } else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+    }
+    else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
         extrapolationCoefficients = force.getExtrapolationCoefficients();
     }
 
@@ -256,7 +258,8 @@ void ReferenceCalcAmoebaMultipoleForceKernel::initialize(const System& system, c
             pmeGridDimension[1] = gridSizeY;
             pmeGridDimension[2] = gridSizeZ;
         }    
-    } else {
+    }
+    else {
         usePme = false;
     }
     return;
@@ -294,25 +297,25 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
         amoebaReferenceGeneralizedKirkwoodForce->setSurfaceAreaFactor(gkKernel->getSurfaceAreaFactor());
         amoebaReferenceGeneralizedKirkwoodForce->setIncludeCavityTerm(gkKernel->getIncludeCavityTerm());
         amoebaReferenceGeneralizedKirkwoodForce->setDirectPolarization(gkKernel->getDirectPolarization());
-
-        vector<double> parameters; 
-        gkKernel->getAtomicRadii(parameters);
-        amoebaReferenceGeneralizedKirkwoodForce->setAtomicRadii(parameters);
-
-        gkKernel->getScaleFactors(parameters);
-        amoebaReferenceGeneralizedKirkwoodForce->setScaleFactors(parameters);
-
-        gkKernel->getCharges(parameters);
-        amoebaReferenceGeneralizedKirkwoodForce->setCharges(parameters);
+        amoebaReferenceGeneralizedKirkwoodForce->setTanhRescaling(gkKernel->getTanhRescaling());
+        double beta0, beta1, beta2;
+        gkKernel->getTanhParameters(beta0, beta1, beta2);
+        amoebaReferenceGeneralizedKirkwoodForce->setTanhParameters(beta0, beta1, beta2);
+        amoebaReferenceGeneralizedKirkwoodForce->setDescreenOffset(gkKernel->getDescreenOffset());
+        amoebaReferenceGeneralizedKirkwoodForce->setAtomicRadii(gkKernel->getAtomicRadii());
+        amoebaReferenceGeneralizedKirkwoodForce->setScaleFactors(gkKernel->getScaleFactors());
+        amoebaReferenceGeneralizedKirkwoodForce->setCharges(gkKernel->getCharges());
+        amoebaReferenceGeneralizedKirkwoodForce->setDescreenRadii(gkKernel->getDescreenRadii());
+        amoebaReferenceGeneralizedKirkwoodForce->setNeckFactors(gkKernel->getNeckFactors());
 
         // calculate Grycuk Born radii
-
         vector<Vec3>& posData   = extractPositions(context);
         amoebaReferenceGeneralizedKirkwoodForce->calculateGrycukBornRadii(posData);
 
         amoebaReferenceMultipoleForce = new AmoebaReferenceGeneralizedKirkwoodMultipoleForce(amoebaReferenceGeneralizedKirkwoodForce);
 
-    } else if (usePme) {
+    }
+    else if (usePme) {
 
         AmoebaReferencePmeMultipoleForce* amoebaReferencePmeMultipoleForce = new AmoebaReferencePmeMultipoleForce();
         amoebaReferencePmeMultipoleForce->setAlphaEwald(alphaEwald);
@@ -326,7 +329,8 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
         amoebaReferencePmeMultipoleForce->setPeriodicBoxSize(boxVectors);
         amoebaReferenceMultipoleForce = static_cast<AmoebaReferenceMultipoleForce*>(amoebaReferencePmeMultipoleForce);
 
-    } else {
+    }
+    else {
          amoebaReferenceMultipoleForce = new AmoebaReferenceMultipoleForce(AmoebaReferenceMultipoleForce::NoCutoff);
     }
 
@@ -336,12 +340,15 @@ AmoebaReferenceMultipoleForce* ReferenceCalcAmoebaMultipoleForceKernel::setupAmo
         amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::Mutual);
         amoebaReferenceMultipoleForce->setMutualInducedDipoleTargetEpsilon(mutualInducedTargetEpsilon);
         amoebaReferenceMultipoleForce->setMaximumMutualInducedDipoleIterations(mutualInducedMaxIterations);
-    } else if (polarizationType == AmoebaMultipoleForce::Direct) {
+    }
+    else if (polarizationType == AmoebaMultipoleForce::Direct) {
         amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::Direct);
-    } else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
+    }
+    else if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
         amoebaReferenceMultipoleForce->setPolarizationType(AmoebaReferenceMultipoleForce::Extrapolated);
         amoebaReferenceMultipoleForce->setExtrapolationCoefficients(extrapolationCoefficients);
-    } else {
+    }
+    else {
         throw OpenMMException("Polarization type not recognzied.");
     }
 
@@ -534,6 +541,20 @@ int ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getIncludeCavityTerm() co
     return includeCavityTerm;
 }
 
+bool ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getTanhRescaling() const {
+    return tanhRescaling;
+}
+
+void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getTanhParameters(double &b0, double &b1, double &b2) const {
+    b0 = beta0;
+    b1 = beta1;
+    b2 = beta2;
+}
+
+double ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getDescreenOffset() const {
+    return descreenOffset;
+}
+
 int ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getDirectPolarization() const {
     return directPolarization;
 }
@@ -558,19 +579,24 @@ double ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getSurfaceAreaFactor()
     return surfaceAreaFactor;
 }
 
-void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getAtomicRadii(vector<double>& outputAtomicRadii) const {
-    outputAtomicRadii.resize(atomicRadii.size());
-    copy(atomicRadii.begin(), atomicRadii.end(), outputAtomicRadii.begin());
+const vector<double>& ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getAtomicRadii() const {
+    return atomicRadii;
 }
 
-void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getScaleFactors(vector<double>& outputScaleFactors) const {
-    outputScaleFactors.resize(scaleFactors.size());
-    copy(scaleFactors.begin(), scaleFactors.end(), outputScaleFactors.begin());
+const vector<double>& ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getCharges() const {
+    return charges;
 }
 
-void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getCharges(vector<double>& outputCharges) const {
-    outputCharges.resize(charges.size());
-    copy(charges.begin(), charges.end(), outputCharges.begin());
+const vector<double>& ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getScaleFactors() const {
+    return scaleFactors;
+}
+
+const vector<double>& ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getDescreenRadii() const {
+    return descreenRadii;
+}
+
+const vector<double>& ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::getNeckFactors() const {
+    return neckFactors;
 }
 
 void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force) {
@@ -593,13 +619,13 @@ void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System&
     numParticles = system.getNumParticles();
 
     for (int ii = 0; ii < numParticles; ii++) {
-
-        double particleCharge, particleRadius, scalingFactor;
-        force.getParticleParameters(ii, particleCharge, particleRadius, scalingFactor);
+        double particleCharge, particleRadius, scalingFactor, descreenRadius, neckFactor;
+        force.getParticleParameters(ii, particleCharge, particleRadius, scalingFactor, descreenRadius, neckFactor);
         atomicRadii.push_back(particleRadius);
         scaleFactors.push_back(scalingFactor);
         charges.push_back(particleCharge);
-
+        descreenRadii.push_back(descreenRadius);
+        neckFactors.push_back(neckFactor);
         // Make sure the charge matches the one specified by the AmoebaMultipoleForce.
 
         double charge2, thole, damping, polarity;
@@ -610,13 +636,20 @@ void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System&
             throw OpenMMException("AmoebaGeneralizedKirkwoodForce and AmoebaMultipoleForce must specify the same charge for every atom.");
         }
 
-    }   
+    }
     includeCavityTerm  = force.getIncludeCavityTerm();
+    tanhRescaling      = force.getTanhRescaling();
+    double b0, b1, b2;
+    force.getTanhParameters(b0, b1, b2);
+    beta0 = b0;
+    beta1 = b1;
+    beta2 = b2;
+    descreenOffset     = force.getDescreenOffset();
     soluteDielectric   = force.getSoluteDielectric();
     solventDielectric  = force.getSolventDielectric();
-    dielectricOffset   = 0.009;
-    probeRadius        = force.getProbeRadius(), 
-    surfaceAreaFactor  = force.getSurfaceAreaFactor(); 
+    dielectricOffset   = force.getDielectricOffset();
+    probeRadius        = force.getProbeRadius();
+    surfaceAreaFactor  = force.getSurfaceAreaFactor();
     directPolarization = amoebaMultipoleForce->getPolarizationType() == AmoebaMultipoleForce::Direct ? 1 : 0;
 }
 
@@ -632,11 +665,13 @@ void ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel::copyParametersToContext(
     // Record the values.
 
     for (int i = 0; i < numParticles; ++i) {
-        double particleCharge, particleRadius, scalingFactor;
-        force.getParticleParameters(i, particleCharge, particleRadius, scalingFactor);
+        double particleCharge, particleRadius, scalingFactor, descreenRadius, neckFactor;
+        force.getParticleParameters(i, particleCharge, particleRadius, scalingFactor, descreenRadius, neckFactor);
         atomicRadii[i] = particleRadius;
         scaleFactors[i] = scalingFactor;
         charges[i] = particleCharge;
+        descreenRadii[i] = descreenRadius;
+        neckFactors[i] = neckFactor;
     }
 }
 

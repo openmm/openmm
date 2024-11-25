@@ -92,7 +92,7 @@ class DCDFile(object):
                 raise ValueError('Cannot append to a DCD file that contains a different number of atoms')
         else:
             header = struct.pack('<i4c9if', 84, b'C', b'O', b'R', b'D', 0, firstStep, interval, 0, 0, 0, 0, 0, 0, dt)
-            header += struct.pack('<13i', boxFlag, 0, 0, 0, 0, 0, 0, 0, 0, 21, 84, 164, 2)
+            header += struct.pack('<13i', boxFlag, 0, 0, 0, 0, 0, 0, 0, 0, 24, 84, 164, 2)
             header += struct.pack('<80s', b'Created by OpenMM')
             header += struct.pack('<80s', b'Created '+time.asctime(time.localtime(time.time())).encode('ascii'))
             header += struct.pack('<4i', 164, 4, len(list(topology.atoms())), 4)
@@ -122,6 +122,7 @@ class DCDFile(object):
         if is_quantity(positions):
             positions = positions.value_in_unit(nanometers)
         import numpy as np
+        positions = np.asarray(positions)
         if np.isnan(positions).any():
             raise ValueError('Particle position is NaN.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
         if np.isinf(positions).any():

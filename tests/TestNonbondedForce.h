@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -901,6 +901,39 @@ void testParameterOffsets() {
             energy += ONE_4PI_EPS0*pairChargeProd[i][j]/dist + 4.0*pairEpsilon[i][j]*(pow(x, 12.0)-pow(x, 6.0));
         }
     ASSERT_EQUAL_TOL(energy, context.getState(State::Energy).getPotentialEnergy(), 1e-5);
+
+    // Update the offsets and see if the energy is still correct.
+
+    force->setParticleParameterOffset(0, "p1", 0, 2.0, 0.6, 0.6);
+    force->setParticleParameterOffset(1, "p2", 1, 1.1, 1.1, 2.1);
+    force->setExceptionParameterOffset(0, "p1", 1, 0.4, 0.4, 1.4);
+    force->updateParametersInContext(context);
+    particleCharge = {0.0+2.0*0.5, 1.0+1.1*1.5, -1.0, 0.5};
+    particleSigma = {1.0+0.6*0.5, 0.5+1.1*1.5, 2.0, 2.0};
+    particleEpsilon = {0.5+0.6*0.5, 0.6+2.1*1.5, 0.7, 0.8};
+    for (int i = 0; i < 4; i++)
+        for (int j = i+1; j < 4; j++) {
+            pairChargeProd[i][j] = particleCharge[i]*particleCharge[j];
+            pairSigma[i][j] = 0.5*(particleSigma[i]+particleSigma[j]);
+            pairEpsilon[i][j] = sqrt(particleEpsilon[i]*particleEpsilon[j]);
+        }
+    pairChargeProd[0][3] = 0.0;
+    pairSigma[0][3] = 1.0;
+    pairEpsilon[0][3] = 0.0;
+    pairChargeProd[2][3] = 0.5+0.4*0.5;
+    pairSigma[2][3] = 1.0+0.4*0.5;
+    pairEpsilon[2][3] = 1.5+1.4*0.5;
+    pairChargeProd[0][1] = 1.0;
+    pairSigma[0][1] = 1.5;
+    pairEpsilon[0][1] = 1.0;
+    energy = 0.0;
+    for (int i = 0; i < 4; i++)
+        for (int j = i+1; j < 4; j++) {
+            double dist = j-i;
+            double x = pairSigma[i][j]/dist;
+            energy += ONE_4PI_EPS0*pairChargeProd[i][j]/dist + 4.0*pairEpsilon[i][j]*(pow(x, 12.0)-pow(x, 6.0));
+        }
+    ASSERT_EQUAL_TOL(energy, context.getState(State::Energy).getPotentialEnergy(), 1e-5);
 }
 
 void testEwaldExceptions() {
@@ -985,6 +1018,105 @@ void testDirectAndReciprocal() {
     context.reinitialize(true);
     double e4 = context.getState(State::Energy).getPotentialEnergy();
     ASSERT_EQUAL_TOL(e3, e4, 1e-5);
+}
+
+void testParallelComputation(NonbondedForce::NonbondedMethod method) {
+    System system;
+    const int numParticles = 200;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    NonbondedForce* force = new NonbondedForce();
+    for (int i = 0; i < numParticles; i++)
+        force->addParticle(i%2-0.5, 0.5, 1.0);
+    force->setNonbondedMethod(method);
+    system.addForce(force);
+    system.setDefaultPeriodicBoxVectors(Vec3(5,0,0), Vec3(0,5,0), Vec3(0,0,5));
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        positions[i] = Vec3(5*genrand_real2(sfmt), 5*genrand_real2(sfmt), 5*genrand_real2(sfmt));
+    force->addGlobalParameter("scale", 0.5);
+    for (int i = 0; i < numParticles; ++i)
+        for (int j = 0; j < i; ++j) {
+            Vec3 delta = positions[i]-positions[j];
+            if (delta.dot(delta) < 0.1) {
+                force->addException(i, j, 0, 1, 0);
+            }
+            else if (delta.dot(delta) < 0.2) {
+                int index = force->addException(i, j, 0.5, 1, 1.0);
+                force->addExceptionParameterOffset("scale", index, 0.5, 0.4, 0.3);
+            }
+        }
+    
+    // Create two contexts, one with a single device and one with two devices.
+    
+    VerletIntegrator integrator1(0.01);
+    Context context1(system, integrator1, platform);
+    context1.setPositions(positions);
+    State state1 = context1.getState(State::Forces | State::Energy);
+    VerletIntegrator integrator2(0.01);
+    string deviceIndex = platform.getPropertyValue(context1, "DeviceIndex");
+    map<string, string> props;
+    props["DeviceIndex"] = deviceIndex+","+deviceIndex;
+    Context context2(system, integrator2, platform, props);
+    context2.setPositions(positions);
+    State state2 = context2.getState(State::Forces | State::Energy);
+    
+    // See if they agree.
+    
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
+    
+    // Modify some parameters and see if they still agree.
+
+    for (int i = 0; i < numParticles; i += 5) {
+        double charge, sigma, epsilon;
+        force->getParticleParameters(i, charge, sigma, epsilon);
+        force->setParticleParameters(i, 0.9*charge, sigma, epsilon);
+    }
+    for (int i = force->getNumExceptions()/2-10; i < force->getNumExceptions()/2+10; i++) {
+        int p1, p2;
+        double charge, sigma, epsilon;
+        force->getExceptionParameters(i, p1, p2, charge, sigma, epsilon);
+        if (epsilon != 0)
+            force->setExceptionParameters(i, p1, p2, charge, sigma, 2*epsilon);
+    }
+    force->updateParametersInContext(context1);
+    force->updateParametersInContext(context2);
+    state1 = context1.getState(State::Forces | State::Energy);
+    state2 = context2.getState(State::Forces | State::Energy);
+    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-5);
+    for (int i = 0; i < numParticles; i++)
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-5);
+}
+
+void testReordering() {
+    // Check that reordering of atoms doesn't alter their positions.
+    
+    const int numParticles = 200;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(2.1, 6, 0), Vec3(-1.5, -0.5, 6));
+    NonbondedForce *nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    system.addForce(nonbonded);
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(0.0, 0.0, 0.0);
+        positions.push_back(Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5)*20);
+    }
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    integrator.step(1);
+    State state = context.getState(State::Positions | State::Velocities);
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL_VEC(positions[i], state.getPositions()[i], 1e-6);
+    }
 }
 
 void runPlatformTests();

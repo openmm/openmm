@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012 Stanford University and the Authors.           *
+ * Portions copyright (c) 2012-2023 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,14 +40,17 @@ namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceVirtualSites {
 public:
+    ReferenceVirtualSites(const System& system);
     /**
      * Compute the positions of all virtual sites.
      */
-    static void computePositions(const OpenMM::System& system, std::vector<OpenMM::Vec3>& atomCoordinates);
+    void computePositions(const System& system, std::vector<Vec3>& atomCoordinates) const;
     /**
      * Distribute forces from virtual sites to the atoms they are based on.
      */
-    static void distributeForces(const OpenMM::System& system, const std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& forces);
+    void distributeForces(const System& system, const std::vector<Vec3>& atomCoordinates, std::vector<Vec3>& forces) const;
+private:
+    std::vector<int> order;
 };
 
 } // namespace OpenMM

@@ -69,7 +69,7 @@ class TestPdbxFile(unittest.TestCase):
         parm = AmberPrmtopFile('systems/alanine-dipeptide-implicit.prmtop')
         system = parm.createSystem()
         sim = Simulation(parm.topology, system, VerletIntegrator(1*femtoseconds),
-                         Platform.getPlatformByName('Reference'))
+                         Platform.getPlatform('Reference'))
         sim.context.setPositions(PDBFile('systems/alanine-dipeptide-implicit.pdb').getPositions())
         sim.reporters.append(PDBxReporter('test.cif', 1))
         sim.step(10)
@@ -101,7 +101,7 @@ class TestPdbxFile(unittest.TestCase):
         parm = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
         system = parm.createSystem(nonbondedCutoff=1.0, nonbondedMethod=PME)
         sim = Simulation(parm.topology, system, VerletIntegrator(1*femtoseconds),
-                         Platform.getPlatformByName('Reference'))
+                         Platform.getPlatform('Reference'))
         orig_pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
         sim.context.setPositions(orig_pdb.getPositions())
         sim.context.setPeriodicBoxVectors(*parm.topology.getPeriodicBoxVectors())

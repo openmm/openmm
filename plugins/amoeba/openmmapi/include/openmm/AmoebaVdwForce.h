@@ -173,10 +173,11 @@ public:
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
      * @param isAlchemical    if true, this vdW particle is undergoing an alchemical change.
-     * @param typeIndex       the index of the particle type for this particle
+     * @param typeIndex       the index of the particle type for this particle.
+     * @param scaleFactor     a scale factor to apply to all interactions involving this particle (used for CpHMD).
      */
     void setParticleParameters(int particleIndex, int parentIndex, double sigma, double epsilon, 
-                               double reductionFactor, bool isAlchemical=false, int typeIndex=-1);
+                               double reductionFactor, bool isAlchemical=false, int typeIndex=-1, double scaleFactor = 1.0);
 
     /**
      * Get the force field parameters for a vdw particle.
@@ -189,9 +190,10 @@ public:
      *                             at which the interaction site should be placed
      * @param[out] isAlchemical    if true, this vdW particle is undergoing an alchemical change.
      * @param[out] typeIndex       the index of the particle type for this particle
+     * @param[out] scaleFactor     a scale factor to apply to all interactions involving this particle (used for CpHMD).
      */
     void getParticleParameters(int particleIndex, int& parentIndex, double& sigma, double& epsilon, 
-                               double& reductionFactor, bool& isAlchemical, int& typeIndex) const;
+                               double& reductionFactor, bool& isAlchemical, int& typeIndex, double& scaleFactor) const;
 
     /**
      * Add the force field parameters for a vdw particle.  This version is used when parameters
@@ -203,9 +205,10 @@ public:
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
      * @param isAlchemical    if true, this vdW particle is undergoing an alchemical change.
+     * @param scaleFactor     a scale factor to apply to all interactions involving this particle (used for CpHMD).
      * @return index of added particle
      */
-    int addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical = false);
+    int addParticle(int parentIndex, double sigma, double epsilon, double reductionFactor, bool isAlchemical = false, double scaleFactor = 1.0);
 
     /**
      * Add the force field parameters for a vdw particle. This version is used when parameters
@@ -216,9 +219,10 @@ public:
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
      * @param isAlchemical    if true, this vdW particle is undergoing an alchemical change.
+     * @param scaleFactor     a scale factor to apply to all interactions involving this particle (used for CpHMD).
      * @return index of added particle
      */
-    int addParticle(int parentIndex, int typeIndex, double reductionFactor, bool isAlchemical = false);
+    int addParticle(int parentIndex, int typeIndex, double reductionFactor, bool isAlchemical = false, double scaleFactor = 1.0);
 
     /**
      * Add a particle type.
@@ -489,17 +493,20 @@ private:
 class AmoebaVdwForce::VdwInfo {
 public:
     int parentIndex, typeIndex;
-    double reductionFactor, sigma, epsilon, cutoff;
+    double reductionFactor, sigma, epsilon, scaleFactor;
     bool isAlchemical;
     VdwInfo() {
         parentIndex = -1;
+        typeIndex   = -1;
         reductionFactor      = 0.0;
         sigma                = 1.0;
         epsilon              = 0.0;
+        scaleFactor          = 1.0;
         isAlchemical         = false;
     }
-    VdwInfo(int parentIndex, double sigma, double epsilon, int typeIndex, double reductionFactor, bool isAlchemical) :
-        parentIndex(parentIndex), reductionFactor(reductionFactor), sigma(sigma), epsilon(epsilon), typeIndex(typeIndex), isAlchemical(isAlchemical) {
+    VdwInfo(int parentIndex, double sigma, double epsilon, int typeIndex, double reductionFactor, bool isAlchemical, double scaleFactor) :
+        parentIndex(parentIndex), reductionFactor(reductionFactor), sigma(sigma), epsilon(epsilon),
+        typeIndex(typeIndex), isAlchemical(isAlchemical), scaleFactor(scaleFactor) {
     }
 };
 

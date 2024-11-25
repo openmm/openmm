@@ -129,7 +129,7 @@ for (lambda_index, lambda_value) in enumerate(lambda_values):
       integrator.step(nprod_steps)
 
       # Get coordinates.
-      state = context.getState(getPositions=True)
+      state = context.getState(positions=True)
       positions = state.getPositions(asNumpy=True)
 
       # Store positions.
@@ -149,7 +149,7 @@ for (lambda_index, lambda_value) in enumerate(lambda_values):
       # Compute reduced potentials of all snapshots.
       for n in range(nprod_iterations):
          context.setPositions(position_history[n])
-         state = context.getState(getEnergy=True)
+         state = context.getState(energy=True)
          u_kln[lambda_index, l, n] = beta * state.getPotentialEnergy()
 
       # Clean up.

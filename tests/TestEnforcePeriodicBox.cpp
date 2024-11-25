@@ -70,7 +70,7 @@ void testTruncatedOctahedron() {
     system.addForce(force);
     
     VerletIntegrator integrator(0.01);
-    Context context(system, integrator, Platform::getPlatformByName("Reference"));
+    Context context(system, integrator, Platform::getPlatform("Reference"));
     context.setPositions(positions);
     State initialState = context.getState(State::Positions | State::Energy, true);
     for (int i = 0; i < numMolecules; i++) {

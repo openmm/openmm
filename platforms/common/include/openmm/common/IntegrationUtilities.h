@@ -176,7 +176,8 @@ protected:
     ComputeArray vsiteLocalCoordsWeights;
     ComputeArray vsiteLocalCoordsPos;
     ComputeArray vsiteLocalCoordsStartIndex;
-    int randomPos, lastSeed, numVsites;
+    ComputeArray vsiteStage;
+    int randomPos, lastSeed, numVsites, numVsiteStages;
     bool hasOverlappingVsites;
     mm_double2 lastStepSize;
     struct ShakeCluster;

@@ -603,7 +603,7 @@ void testLargeSystem() {
     system.addForce(force);
     VerletIntegrator integrator1(0.001);
     VerletIntegrator integrator2(0.001);
-    Context context1(system, integrator1, Platform::getPlatformByName("Reference"));
+    Context context1(system, integrator1, Platform::getPlatform("Reference"));
     Context context2(system, integrator2, platform);
     context1.setPositions(positions);
     context2.setPositions(positions);
@@ -698,7 +698,7 @@ void testCentralParticleModeLargeSystem() {
     system.addForce(force);
     VerletIntegrator integrator1(0.001);
     VerletIntegrator integrator2(0.001);
-    Context context1(system, integrator1, Platform::getPlatformByName("Reference"));
+    Context context1(system, integrator1, Platform::getPlatform("Reference"));
     Context context2(system, integrator2, platform);
     context1.setPositions(positions);
     context2.setPositions(positions);

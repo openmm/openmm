@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -242,8 +242,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the HarmonicBondForce to copy the parameters from
+     * @param firstBond  the index of the first bond whose parameters might have changed
+     * @param lastBond   the index of the last bond whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force);
+    void copyParametersToContext(ContextImpl& context, const HarmonicBondForce& force, int firstBond, int lastBond);
 private:
     class ForceInfo;
     int numBonds;
@@ -284,8 +286,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomBondForce to copy the parameters from
+     * @param firstBond  the index of the first bond whose parameters might have changed
+     * @param lastBond   the index of the last bond whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomBondForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomBondForce& force, int firstBond, int lastBond);
 private:
     class ForceInfo;
     int numBonds;
@@ -328,8 +332,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the HarmonicAngleForce to copy the parameters from
+     * @param firstAngle the index of the first bond whose parameters might have changed
+     * @param lastAngle  the index of the last bond whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
+    void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force, int firstAngle, int lastAngle);
 private:
     class ForceInfo;
     int numAngles;
@@ -370,8 +376,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomAngleForce to copy the parameters from
+     * @param firstAngle the index of the first bond whose parameters might have changed
+     * @param lastAngle  the index of the last bond whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomAngleForce& force, int firstAngle, int lastAngle);
 private:
     class ForceInfo;
     int numAngles;
@@ -412,10 +420,12 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the PeriodicTorsionForce to copy the parameters from
+     * @param context      the context to copy parameters to
+     * @param force        the PeriodicTorsionForce to copy the parameters from
+     * @param firstTorsion the index of the first torsion whose parameters might have changed
+     * @param lastTorsion  the index of the last torsion whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
+    void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force, int firstTorsion, int lastTorsion);
 private:
     class ForceInfo;
     int numTorsions;
@@ -496,10 +506,12 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomTorsionForce to copy the parameters from
+     * @param context      the context to copy parameters to
+     * @param force        the CustomTorsionForce to copy the parameters from
+     * @param firstTorsion the index of the first torsion whose parameters might have changed
+     * @param lastTorsion  the index of the last torsion whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomTorsionForce& force, int firstTorsion, int lastTorsion);
 private:
     class ForceInfo;
     int numTorsions;
@@ -585,10 +597,12 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the CustomExternalForce to copy the parameters from
+     * @param context        the context to copy parameters to
+     * @param force          the CustomExternalForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomExternalForce& force, int firstParticle, int lastParticle);
 private:
     class ForceInfo;
     int numParticles;
@@ -730,8 +744,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomNonbondedForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle);
 private:
     class ForceInfo;
     class LongRangePostComputation;
@@ -893,7 +909,7 @@ public:
 private:
     class ForceInfo;
     int numDonors, numAcceptors;
-    bool hasInitializedKernel;
+    bool hasInitializedKernel, useBoundingBoxes;
     ComputeContext& cc;
     ForceInfo* info;
     ComputeParameterSet* donorParams;
@@ -903,12 +919,13 @@ private:
     ComputeArray acceptors;
     ComputeArray donorExclusions;
     ComputeArray acceptorExclusions;
+    ComputeArray donorBlockCenter, donorBlockSize, acceptorBlockCenter, acceptorBlockSize;
     std::vector<std::string> globalParamNames;
     std::vector<float> globalParamValues;
     std::vector<ComputeArray> tabulatedFunctionArrays;
     std::map<std::string, int> tabulatedFunctionUpdateCount;
     const System& system;
-    ComputeKernel kernel;
+    ComputeKernel blockBoundsKernel, forceKernel;
 };
 
 /**
@@ -1111,43 +1128,6 @@ public:
 private:
     ComputeContext& cc;
     bool hasInitializedKernels;
-    ComputeKernel kernel1, kernel2;
-};
-
-/**
- * This kernel is invoked by LangevinIntegrator to take one time step.
- */
-class CommonIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
-public:
-    CommonIntegrateLangevinStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateLangevinStepKernel(name, platform), cc(cc),
-            hasInitializedKernels(false) {
-    }
-    /**
-     * Initialize the kernel, setting up the particle masses.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param integrator the LangevinIntegrator this kernel will be used for
-     */
-    void initialize(const System& system, const LangevinIntegrator& integrator);
-    /**
-     * Execute the kernel.
-     *
-     * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
-     */
-    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
-    /**
-     * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
-     */
-    double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator);
-private:
-    ComputeContext& cc;
-    double prevTemp, prevFriction, prevStepSize;
-    bool hasInitializedKernels;
-    ComputeArray params;
     ComputeKernel kernel1, kernel2;
 };
 
@@ -1411,8 +1391,8 @@ private:
     ComputeContext& cc;
     bool hasInitializedKernels;
     int blockSize;
-    ComputeArray params;
-    ComputeKernel kernel1, kernel2, selectSizeKernel;
+    ComputeArray params, oldDelta;
+    ComputeKernel kernel1, kernel2, kernel3, selectSizeKernel;
     double prevTemp, prevFriction, prevErrorTol;
 };
 
@@ -1750,19 +1730,15 @@ public:
     virtual ComputeContext& getInnerComputeContext(ContextImpl& innerContext) = 0;
     
 private:
-    class ForceInfo;
     class ReorderListener;
     
     void initKernels(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1);
     
     bool hasInitializedKernel;
     ComputeContext& cc;
-
-    std::vector<mm_float4> displVector1;
-    std::vector<mm_float4> displVector0;
-
     ComputeArray displ1;
     ComputeArray displ0;
+    ComputeArray invAtomOrder, inner0InvAtomOrder, inner1InvAtomOrder;
     ComputeKernel copyStateKernel;
     ComputeKernel hybridForceKernel;
 

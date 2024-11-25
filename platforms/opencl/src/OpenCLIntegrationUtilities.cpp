@@ -131,8 +131,9 @@ void OpenCLIntegrationUtilities::applyConstraintsImpl(bool constrainVelocities, 
 }
 
 void OpenCLIntegrationUtilities::distributeForcesFromVirtualSites() {
-    if (numVsites > 0) {
+    for (int i = numVsiteStages-1; i >= 0; i--) {
         vsiteForceKernel->setArg(2, context.getLongForceBuffer());
+        vsiteForceKernel->setArg(15, i);
         vsiteForceKernel->execute(numVsites);
         vsiteSaveForcesKernel->setArg(0, context.getLongForceBuffer());
         vsiteSaveForcesKernel->setArg(1, context.getForceBuffers());

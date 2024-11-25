@@ -17,7 +17,7 @@ class TestSimulation(unittest.TestCase):
 
         # Create a Simulation.
 
-        simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatform('Reference'))
         simulation.context.setPositions(pdb.positions)
         simulation.context.setVelocitiesToTemperature(300*kelvin)
         initialState = simulation.context.getState(getPositions=True, getVelocities=True)
@@ -74,7 +74,7 @@ class TestSimulation(unittest.TestCase):
 
         # Create a Simulation.
 
-        simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatform('Reference'))
         simulation.context.setPositions(pdb.positions)
         simulation.context.setVelocitiesToTemperature(300*kelvin)
         initialState = simulation.context.getState(getPositions=True, getVelocities=True)
@@ -107,7 +107,7 @@ class TestSimulation(unittest.TestCase):
 
         # Create a Simulation.
 
-        simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatform('Reference'))
         simulation.context.setPositions(pdb.positions)
         simulation.context.setVelocitiesToTemperature(300*kelvin)
         self.assertEqual(0, simulation.currentStep)
@@ -130,7 +130,7 @@ class TestSimulation(unittest.TestCase):
 
         # Create a Simulation.
 
-        simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatformByName('Reference'))
+        simulation = Simulation(pdb.topology, system, integrator, Platform.getPlatform('Reference'))
         simulation.context.setPositions(pdb.positions)
         simulation.context.setVelocitiesToTemperature(300*kelvin)
         self.assertEqual(0, simulation.currentStep)
@@ -179,7 +179,7 @@ class TestSimulation(unittest.TestCase):
                 
             def describeNextReport(self, simulation):
                 steps = self.interval - simulation.currentStep%self.interval
-                return (steps, True, False, False, False, self.periodic)
+                return {'steps':steps, 'periodic':self.periodic, 'include':['positions']}
         
             def report(self, simulation, state):
                 state2 = simulation.context.getState(getPositions=True, enforcePeriodicBox=self.periodic)

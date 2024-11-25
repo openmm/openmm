@@ -27,7 +27,7 @@ class TestATMForce(unittest.TestCase):
         system.addForce(atmforce)
 
         integrator = VerletIntegrator(1.0)
-        platform = Platform.getPlatformByName('Reference')
+        platform = Platform.getPlatform('Reference')
         context = Context(system, integrator, platform)
 
         positions = []

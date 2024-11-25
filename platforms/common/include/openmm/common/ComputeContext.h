@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -135,6 +135,11 @@ public:
      * one ComputeContext is created for each device.
      */
     virtual std::vector<ComputeContext*> getAllContexts() = 0;
+    /**
+     * Get a workspace used for accumulating energy when a simulation is parallelized across
+     * multiple devices.
+     */
+    virtual double& getEnergyWorkspace() = 0;
     /**
      * Construct an uninitialized array of the appropriate class for this platform.  The returned
      * value should be created on the heap with the "new" operator.
@@ -513,7 +518,7 @@ public:
      * may be invalid.  This should be called whenever force field parameters change.  It will cause the
      * definitions and order to be revalidated.
      */
-    bool invalidateMolecules(ComputeForceInfo* force);
+    bool invalidateMolecules(ComputeForceInfo* force, bool checkAtoms=true, bool checkGroups=true);
     /**
      * Make sure the current atom order is valid, based on the forces.  If not, perform reordering
      * to generate a new valid order.  This method is only needed in very unusual situations.

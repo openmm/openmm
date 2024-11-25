@@ -8,7 +8,7 @@ class TestBytes(unittest.TestCase):
         system.addParticle(1.0)
         refPositions = [(0,0,0)]
 
-        platform = mm.Platform.getPlatformByName('Reference')
+        platform = mm.Platform.getPlatform('Reference')
         context = mm.Context(system, mm.VerletIntegrator(0), platform)
         context.setPositions(refPositions)
         chk = context.createCheckpoint()

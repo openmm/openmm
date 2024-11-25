@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -38,7 +38,6 @@
 #include "CpuCustomNonbondedForce.h"
 #include "CpuGayBerneForce.h"
 #include "CpuGBSAOBCForce.h"
-#include "CpuLangevinDynamics.h"
 #include "CpuLangevinMiddleDynamics.h"
 #include "CpuNeighborList.h"
 #include "CpuNonbondedForce.h"
@@ -123,10 +122,10 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the HarmonicAngleForce to copy the parameters from
+     * @param firstAngle the index of the first bond whose parameters might have changed
+     * @param lastAngle  the index of the last bond whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force);
+    void copyParametersToContext(ContextImpl& context, const HarmonicAngleForce& force, int firstAngle, int lastAngle);
 private:
     CpuPlatform::PlatformData& data;
     int numAngles;
@@ -163,10 +162,12 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the PeriodicTorsionForce to copy the parameters from
+     * @param context      the context to copy parameters to
+     * @param force        the PeriodicTorsionForce to copy the parameters from
+     * @param firstTorsion the index of the first torsion whose parameters might have changed
+     * @param lastTorsion  the index of the last torsion whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force);
+    void copyParametersToContext(ContextImpl& context, const PeriodicTorsionForce& force, int firstTorsion, int lastTorsion);
 private:
     CpuPlatform::PlatformData& data;
     int numTorsions;
@@ -244,10 +245,14 @@ public:
     /**
      * Copy changed parameters over to a context.
      *
-     * @param context    the context to copy parameters to
-     * @param force      the NonbondedForce to copy the parameters from
+     * @param context        the context to copy parameters to
+     * @param force          the NonbondedForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
+     * @param firstException the index of the first exception whose parameters might have changed
+     * @param lastException  the index of the last exception whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force);
+    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException);
     /**
      * Get the parameters being used for PME.
      *
@@ -273,6 +278,7 @@ private:
     int numParticles, num14, chargePosqIndex, ljPosqIndex;
     std::vector<std::vector<int> > bonded14IndexArray;
     std::vector<std::vector<double> > bonded14ParamArray;
+    std::map<int, int> nb14Index;
     double nonbondedCutoff, switchingDistance, rfDielectric, ewaldAlpha, ewaldDispersionAlpha, ewaldSelfEnergy, dispersionCoefficient;
     int kmax[3], gridSize[3], dispersionGridSize[3];
     bool useSwitchingFunction, exceptionsArePeriodic, useOptimizedPme, hasInitializedPme, hasInitializedDispersionPme, hasParticleOffsets, hasExceptionOffsets;
@@ -318,8 +324,10 @@ public:
      *
      * @param context    the context to copy parameters to
      * @param force      the CustomNonbondedForce to copy the parameters from
+     * @param firstParticle  the index of the first particle whose parameters might have changed
+     * @param lastParticle   the index of the last particle whose parameters might have changed
      */
-    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force);
+    void copyParametersToContext(ContextImpl& context, const CustomNonbondedForce& force, int firstParticle, int lastParticle);
 private:
     void createInteraction(const CustomNonbondedForce& force);
     CpuPlatform::PlatformData& data;
@@ -505,43 +513,6 @@ public:
 private:
     CpuPlatform::PlatformData& data;
     CpuGayBerneForce* ixn;
-};
-
-/**
- * This kernel is invoked by LangevinIntegrator to take one time step.
- */
-class CpuIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
-public:
-    CpuIntegrateLangevinStepKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform),
-            data(data), dynamics(NULL) {
-    }
-    ~CpuIntegrateLangevinStepKernel();
-    /**
-     * Initialize the kernel, setting up the particle masses.
-     * 
-     * @param system     the System this kernel will be applied to
-     * @param integrator the LangevinIntegrator this kernel will be used for
-     */
-    void initialize(const System& system, const LangevinIntegrator& integrator);
-    /**
-     * Execute the kernel.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
-     */
-    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
-    /**
-     * Compute the kinetic energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @param integrator the LangevinIntegrator this kernel is being used for
-     */
-    double computeKineticEnergy(ContextImpl& context, const LangevinIntegrator& integrator);
-private:
-    CpuPlatform::PlatformData& data;
-    CpuLangevinDynamics* dynamics;
-    std::vector<double> masses;
-    double prevTemp, prevFriction, prevStepSize;
 };
 
 /**

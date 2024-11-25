@@ -298,15 +298,19 @@ public:
      * @param force      the AmoebaGeneralizedKirkwoodForce to copy the parameters from
      */
     void copyParametersToContext(ContextImpl& context, const AmoebaGeneralizedKirkwoodForce& force);
+
 private:
     class ForceInfo;
     ComputeContext& cc;
     const System& system;
-    bool includeSurfaceArea, hasInitializedKernels;
+    bool includeSurfaceArea, tanhRescaling, hasInitializedKernels;
     int computeBornSumThreads, gkForceThreads, chainRuleThreads, ediffThreads;
     AmoebaMultipoleForce::PolarizationType polarizationType;
     std::map<std::string, std::string> defines;
     ComputeArray params;
+    ComputeArray neckRadii;
+    ComputeArray neckA;
+    ComputeArray neckB;
     ComputeArray bornSum;
     ComputeArray bornRadii;
     ComputeArray bornForce;
@@ -362,6 +366,8 @@ private:
     float currentVdwLambda;
     // Per particle alchemical flag.
     ComputeArray isAlchemical;
+    // Per particle scale factor.
+    ComputeArray scaleFactors;
 
     double dispersionCoefficient;
     ComputeArray sigmaEpsilon, atomType;

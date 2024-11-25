@@ -785,8 +785,15 @@ class Atom(object):
         # segment id, element_symbol, and formal_charge are not always present
         self.segment_id = pdb_line[72:76].strip()
         self.element_symbol = pdb_line[76:78].strip()
-        try: self.formal_charge = int(pdb_line[78:80])
-        except ValueError: self.formal_charge = None
+        try:
+            # formal_charge should always be a one digit followed by a sign, eg "2-", "3+"
+            # this is a bit more permissive, it will also read "-2", "+3", or "3 "
+            formal_charge = pdb_line[78:80]
+            if formal_charge.endswith('+') or formal_charge.endswith('-'):
+                formal_charge = formal_charge[::-1]
+            self.formal_charge = int(formal_charge)
+        except ValueError:
+            self.formal_charge = None
         # figure out atom element
         if self.element_symbol == extraParticleIdentifier:
             self.element = 'EP'
@@ -904,7 +911,7 @@ class Atom(object):
         end =  "%-4s%2s" % (\
             self.segment_id, self.element_symbol)
         formal_charge = "  "
-        if (self.formal_charge != None): formal_charge = "%+2d" % self.formal_charge
+        if (self.formal_charge is not None): formal_charge = ("%+2d" % self.formal_charge)[::-1]
         return names+numbers+end+formal_charge
 
     def __str__(self):

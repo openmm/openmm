@@ -2616,7 +2616,8 @@ void testTorsionTorsion(int systemId) {
 
         expectedEnergy        = -2.699654759E+00;
 
-    } else if (systemId == 1) {
+    }
+    else if (systemId == 1) {
 
         // villin: 158    176    177    178    183     -1      0
         chiralCheckAtomIndex  = -1;
