@@ -45,6 +45,7 @@ void assertIntegratorsEqual(const NoseHooverIntegrator& integrator1, const NoseH
     ASSERT_EQUAL(integrator1.getConstraintTolerance(), integrator2.getConstraintTolerance());
     ASSERT_EQUAL(integrator1.getMaximumPairDistance(), integrator2.getMaximumPairDistance());
     ASSERT_EQUAL(integrator1.getNumThermostats(), integrator2.getNumThermostats());
+    ASSERT_EQUAL(integrator1.getIntegrationForceGroups(), integrator2.getIntegrationForceGroups());
     for (int i = 0; i < integrator1.getNumThermostats(); i++) {
         const auto &thermostat1 = integrator1.getThermostat(i);
         const auto &thermostat2 = integrator2.getThermostat(i);
@@ -82,6 +83,7 @@ void testSerialization() {
     integrator_sub.addSubsystemThermostat(
         {0,1,2,3,4,7}, {{0,7}}, 301.1, 1.1, 1.2, 1.3, 9, 2, 5
     );
+    integrator_sub.setIntegrationForceGroups(3);
 
     // Serialize and then deserialize it.
 
