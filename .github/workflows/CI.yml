@@ -70,7 +70,7 @@ jobs:
               -DCUDA_TOOLKIT_INCLUDE=/usr/local/cuda-11.2/include \
               -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-11.2/ \
 
-          - name: Linux AMD OpenCL
+          - name: Linux Intel OpenCL
             os: ubuntu-latest
             env: ubuntu-latest
             python-version: "3.13"
@@ -88,8 +88,6 @@ jobs:
               -DOPENMM_BUILD_PYTHON_WRAPPERS=OFF \
               -DOPENMM_BUILD_C_AND_FORTRAN_WRAPPERS=OFF \
               -DOPENMM_BUILD_EXAMPLES=OFF \
-              -DOPENCL_INCLUDE_DIR=${GITHUB_WORKSPACE}/AMDAPPSDK/include \
-              -DOPENCL_LIBRARY=${GITHUB_WORKSPACE}/AMDAPPSDK/lib/x86_64/libOpenCL.so \
 
           - name: Linux HIP
             os: ubuntu-latest
@@ -213,7 +211,7 @@ jobs:
 
       - name: "Install OpenCL on Ubuntu (if needed)"
         if: matrix.OPENCL == true && startsWith(matrix.os, 'ubuntu')
-        run: source devtools/ci/gh-actions/scripts/install_amd_opencl.sh
+        run: source devtools/ci/gh-actions/scripts/install_intel_opencl.sh
 
       - name: "Install conda-forge compilers on Ubuntu or M1 (if needed)"
         if: matrix.compilers == 'conda-forge'
@@ -278,6 +276,9 @@ jobs:
         run: |
           set -x
           cd build
+          if [[ ${{ matrix.OPENCL }} == true ]]; then
+            source /opt/intel/oneapi/setvars.sh
+          fi
           python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 900 --attempts 3
 
           if [[ ${{ matrix.os }} == ubuntu-* ]]; then SHLIB=so; else SHLIB=dylib; fi

@@ -125,7 +125,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             string platformVendor = platforms[j].getInfo<CL_PLATFORM_VENDOR>();
             vector<cl::Device> devices;
             try {
-                platforms[j].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+                platforms[j].getDevices(CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_CPU, &devices);
             }
             catch (...) {
                 // There are no devices available for this platform.
@@ -197,7 +197,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
             cout << "WARNING: Using an unsupported OpenCL implementation.  Results may be incorrect." << endl;
 
         vector<cl::Device> devices;
-        platforms[bestPlatform].getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        platforms[bestPlatform].getDevices(CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_CPU, &devices);
         string platformVendor = platforms[bestPlatform].getInfo<CL_PLATFORM_VENDOR>();
         device = devices[bestDevice];
 
