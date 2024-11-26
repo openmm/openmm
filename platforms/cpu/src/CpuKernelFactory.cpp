@@ -39,8 +39,11 @@ using namespace OpenMM;
 
 KernelImpl* CpuKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
+    ReferencePlatform::PlatformData& refdata = *static_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     if (name == CalcForcesAndEnergyKernel::Name())
         return new CpuCalcForcesAndEnergyKernel(name, platform, data, context);
+    if (name == UpdateStateDataKernel::Name())
+        return new CpuUpdateStateDataKernel(name, platform, data, refdata);
     if (name == CalcHarmonicAngleForceKernel::Name())
         return new CpuCalcHarmonicAngleForceKernel(name, platform, data);
     if (name == CalcPeriodicTorsionForceKernel::Name())

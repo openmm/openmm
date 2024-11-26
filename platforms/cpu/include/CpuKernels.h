@@ -42,6 +42,7 @@
 #include "CpuNeighborList.h"
 #include "CpuNonbondedForce.h"
 #include "CpuPlatform.h"
+#include "ReferenceKernels.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
@@ -93,6 +94,31 @@ private:
     CpuPlatform::PlatformData& data;
     Kernel referenceKernel;
     std::vector<Vec3> lastPositions;
+};
+
+/**
+ * This kernel provides methods for setting and retrieving various state data: time, positions,
+ * velocities, and forces.
+ */
+class CpuUpdateStateDataKernel : public ReferenceUpdateStateDataKernel {
+public:
+    CpuUpdateStateDataKernel(std::string name, const Platform& platform, CpuPlatform::PlatformData& data, ReferencePlatform::PlatformData& refdata) :
+            ReferenceUpdateStateDataKernel(name, platform, refdata), data(data) {
+    }
+    /**
+     * Create a checkpoint recording the current state of the Context.
+     * 
+     * @param stream    an output stream the checkpoint data should be written to
+     */
+    void createCheckpoint(ContextImpl& context, std::ostream& stream);
+    /**
+     * Load a checkpoint that was written by createCheckpoint().
+     * 
+     * @param stream    an input stream the checkpoint data should be read from
+     */
+    void loadCheckpoint(ContextImpl& context, std::istream& stream);
+private:
+    CpuPlatform::PlatformData& data;
 };
 
 /**

@@ -308,6 +308,16 @@ double CpuCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, boo
     return referenceKernel.getAs<ReferenceCalcForcesAndEnergyKernel>().finishComputation(context, includeForce, includeEnergy, groups, valid);
 }
 
+void CpuUpdateStateDataKernel::createCheckpoint(ContextImpl& context, ostream& stream) {
+    ReferenceUpdateStateDataKernel::createCheckpoint(context, stream);
+    data.random.createCheckpoint(stream);
+}
+
+void CpuUpdateStateDataKernel::loadCheckpoint(ContextImpl& context, istream& stream) {
+    ReferenceUpdateStateDataKernel::loadCheckpoint(context, stream);
+    data.random.loadCheckpoint(stream);
+}
+
 void CpuCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
     numAngles = force.getNumAngles();
     angleIndexArray.resize(numAngles, vector<int>(3));
