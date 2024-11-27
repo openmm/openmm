@@ -36,6 +36,7 @@
 #include "openmm/kernels.h"
 #include "openmm/internal/CustomCPPForceImpl.h"
 #include "openmm/internal/CustomNonbondedForceImpl.h"
+#include "openmm/internal/windowsExport.h"
 #include "SimTKOpenMMRealType.h"
 #include "ReferenceNeighborList.h"
 #include "lepton/CompiledExpression.h"
@@ -116,7 +117,7 @@ private:
  * This kernel provides methods for setting and retrieving various state data: time, positions,
  * velocities, and forces.
  */
-class ReferenceUpdateStateDataKernel : public UpdateStateDataKernel {
+class OPENMM_EXPORT ReferenceUpdateStateDataKernel : public UpdateStateDataKernel {
 public:
     ReferenceUpdateStateDataKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : UpdateStateDataKernel(name, platform), data(data) {
     }

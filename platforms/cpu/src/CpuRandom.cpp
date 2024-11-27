@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2013 Stanford University and Simbios.
+/* Portions copyright (c) 2013-2024 Stanford University and Simbios.
  * Authors: Peter Eastman
  * Contributors: 
  *
@@ -26,6 +26,7 @@
 #include "openmm/internal/OSRngSeed.h"
 #include "openmm/OpenMMException.h"
 #include <cmath>
+#include <iostream>
 
 using namespace std;
 using namespace OpenMM;
@@ -86,4 +87,37 @@ float CpuRandom::getGaussianRandom(int threadIndex) {
 
 float CpuRandom::getUniformRandom(int threadIndex) {
     return genrand_real2(*threadRandom[threadIndex]);
+}
+
+void CpuRandom::createCheckpoint(std::ostream& stream) {
+    int initialized = hasInitialized;
+    stream.write((char*) &initialized, sizeof(int));
+    if (hasInitialized) {
+        stream.write((char*) &randomSeed, sizeof(int));
+        int numThreads = threadRandom.size();
+        stream.write((char*) &numThreads, sizeof(int));
+        stream.write((char*) nextGaussian.data(), sizeof(float)*numThreads);
+        stream.write((char*) nextGaussianIsValid.data(), sizeof(int)*numThreads);
+        for (int i = 0; i < numThreads; i++)
+            threadRandom[i]->createCheckpoint(stream);
+    }
+}
+
+void CpuRandom::loadCheckpoint(std::istream& stream) {
+    int initialized;
+    stream.read((char*) &initialized, sizeof(int));
+    hasInitialized = false;
+    threadRandom.clear();
+    nextGaussian.clear();
+    nextGaussianIsValid.clear();
+    if (initialized) {
+        int seed, numThreads;
+        stream.read((char*) &seed, sizeof(int));
+        stream.read((char*) &numThreads, sizeof(int));
+        initialize(seed, numThreads);
+        stream.read((char*) nextGaussian.data(), sizeof(float)*numThreads);
+        stream.read((char*) nextGaussianIsValid.data(), sizeof(float)*numThreads);
+        for (int i = 0; i < numThreads; i++)
+            threadRandom[i]->loadCheckpoint(stream);
+    }
 }
