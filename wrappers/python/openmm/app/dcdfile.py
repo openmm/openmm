@@ -88,14 +88,14 @@ class DCDFile(object):
             self._modelCount = struct.unpack('<i', file.read(4))[0]
             file.seek(268, os.SEEK_SET)
             numAtoms = struct.unpack('<i', file.read(4))[0]
-            if numAtoms != len(list(topology.atoms())):
+            if numAtoms != topology.getNumAtoms():
                 raise ValueError('Cannot append to a DCD file that contains a different number of atoms')
         else:
             header = struct.pack('<i4c9if', 84, b'C', b'O', b'R', b'D', 0, firstStep, interval, 0, 0, 0, 0, 0, 0, dt)
             header += struct.pack('<13i', boxFlag, 0, 0, 0, 0, 0, 0, 0, 0, 24, 84, 164, 2)
             header += struct.pack('<80s', b'Created by OpenMM')
             header += struct.pack('<80s', b'Created '+time.asctime(time.localtime(time.time())).encode('ascii'))
-            header += struct.pack('<4i', 164, 4, len(list(topology.atoms())), 4)
+            header += struct.pack('<4i', 164, 4, topology.getNumAtoms(), 4)
             file.write(header)
 
     def writeModel(self, positions, unitCellDimensions=None, periodicBoxVectors=None):

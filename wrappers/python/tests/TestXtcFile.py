@@ -194,6 +194,43 @@ class TestXtcFile(unittest.TestCase):
             del simulation
             del xtc
 
+    def testAtomSubset(self):
+        """Test writing an XTC file containing a subset of atoms"""
+        with tempfile.TemporaryDirectory() as temp:
+            fname = os.path.join(temp, 'traj.xtc')
+            pdb = app.PDBFile("systems/alanine-dipeptide-explicit.pdb")
+            ff = app.ForceField("amber99sb.xml", "tip3p.xml")
+            system = ff.createSystem(pdb.topology)
+
+            # Create a simulation and write some frames to a XTC file.
+
+            integrator = mm.VerletIntegrator(1e-10 * unit.picoseconds)
+            simulation = app.Simulation(
+                pdb.topology,
+                system,
+                integrator,
+                mm.Platform.getPlatform("Reference"),
+            )
+            atomSubset = [atom.index for atom in next(pdb.topology.chains()).atoms()]
+            xtc = app.XTCReporter(fname, 2, atomSubset=atomSubset)
+            simulation.reporters.append(xtc)
+            simulation.context.setPositions(pdb.positions)
+            simulation.context.setVelocitiesToTemperature(300 * unit.kelvin)
+            simulation.step(10)
+            self.assertEqual(5, xtc._xtc._modelCount)
+            self.assertEqual(5, xtc._xtc._getNumFrames())
+
+            # The  XTCFile class  does not  provide a  way to  read the
+            # trajectory back, but the underlying XTC library does
+            coords_read, box_read, time, step = read_xtc(fname.encode("utf-8"))
+            self.assertEqual(coords_read.shape, (22, 3, 5))
+            self.assertEqual(box_read.shape, (3, 3, 5))
+            self.assertEqual(len(time), 5)
+            self.assertEqual(len(step), 5)
+            coords = [pdb.positions[i].value_in_unit(unit.nanometers) for i in atomSubset]
+            self.assertTrue(np.allclose(coords_read[:,:,0], coords, atol=1e-3))
+            self.assertTrue(np.allclose(box_read[:,:,0], pdb.topology.getPeriodicBoxVectors().value_in_unit(unit.nanometers), atol=1e-3))
+
 
 if __name__ == "__main__":
     unittest.main()
