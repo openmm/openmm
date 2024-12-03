@@ -69,11 +69,13 @@ public:
     /**
      * Create a MonteCarloBarostat.
      *
-     * @param defaultPressure     the default pressure acting on the system (in bar)
-     * @param defaultTemperature  the default temperature at which the system is being maintained (in Kelvin)
-     * @param frequency           the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param defaultPressure         the default pressure acting on the system (in bar)
+     * @param defaultTemperature      the default temperature at which the system is being maintained (in Kelvin)
+     * @param frequency               the frequency at which Monte Carlo pressure changes should be attempted (in time steps)
+     * @param scaleMoleculesAsRigid   if true, coordinate scaling keeps molecules rigid, scaling only the center of mass
+     *                                of each one. If false, every constrained atom group is scaled independently.
      */
-    MonteCarloBarostat(double defaultPressure, double defaultTemperature, int frequency = 25);
+    MonteCarloBarostat(double defaultPressure, double defaultTemperature, int frequency = 25, bool scaleMoleculesAsRigid = true);
     /**
      * Get the default pressure acting on the system (in bar).
      *
@@ -143,9 +145,26 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return false;
     }
+    /**
+     * Get whether scaling is applied to the centroid of each molecule while keeping
+     * the molecules rigid, or to each atom independently.
+     *
+     * @returns true if scaling is applied to molecule centroids, false if it is applied to each atom independently.
+     */
+    bool getScaleMoleculesAsRigid() const {
+        return scaleMoleculesAsRigid;
+    }
+    /**
+     * Set whether scaling is applied to the centroid of each molecule while keeping
+     * the molecules rigid, or to each atom independently.
+     */
+    void setScaleMoleculesAsRigid(bool rigid) {
+        scaleMoleculesAsRigid = rigid;
+    }
 protected:
     ForceImpl* createImpl() const;
 private:
+    bool scaleMoleculesAsRigid;
     double defaultPressure, defaultTemperature;
     int frequency, randomNumberSeed;
 };
