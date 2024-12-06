@@ -1,0 +1,315 @@
+<ForceField>
+  <Info>
+    <!-- Li/Merz ion parameters of atomic ions for the TIP3P-FB water model (12-6 HFE set) -->
+    <DateGenerated>2022-09-11T06:28:33.629045</DateGenerated>
+    <Source Source="parm/frcmod.ionslm_hfe_fb3" md5hash="761b5825882b76da3520597c2607d412" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">parm/frcmod.ionslm_hfe_fb3</Source>
+    <Source Source="lib/atomic_ions.lib" md5hash="e900cee0c71ec2795d25b3555de486e1" sourcePackage="AmberTools" sourcePackageVersion="22.0-py38h6177452_1">lib/atomic_ions.lib</Source>
+  </Info>
+  <AtomTypes>
+    <Type class="ionslm_hfe_fb3-Li+" element="Li" mass="6.94" name="ionslm_hfe_fb3-Li+"/>
+    <Type class="ionslm_hfe_fb3-Na+" element="Na" mass="22.99" name="ionslm_hfe_fb3-Na+"/>
+    <Type class="ionslm_hfe_fb3-K+" element="K" mass="39.10" name="ionslm_hfe_fb3-K+"/>
+    <Type class="ionslm_hfe_fb3-Rb+" element="Rb" mass="85.47" name="ionslm_hfe_fb3-Rb+"/>
+    <Type class="ionslm_hfe_fb3-Cs+" element="Cs" mass="132.91" name="ionslm_hfe_fb3-Cs+"/>
+    <Type class="ionslm_hfe_fb3-Tl+" element="Tl" mass="204.38" name="ionslm_hfe_fb3-Tl+"/>
+    <Type class="ionslm_hfe_fb3-Cu+" element="Cu" mass="63.55" name="ionslm_hfe_fb3-Cu+"/>
+    <Type class="ionslm_hfe_fb3-Ag+" element="Ag" mass="107.87" name="ionslm_hfe_fb3-Ag+"/>
+    <Type class="ionslm_hfe_fb3-F-" element="F" mass="19.00" name="ionslm_hfe_fb3-F-"/>
+    <Type class="ionslm_hfe_fb3-Cl-" element="Cl" mass="35.45" name="ionslm_hfe_fb3-Cl-"/>
+    <Type class="ionslm_hfe_fb3-Br-" element="Br" mass="79.90" name="ionslm_hfe_fb3-Br-"/>
+    <Type class="ionslm_hfe_fb3-I-" element="I" mass="126.9" name="ionslm_hfe_fb3-I-"/>
+    <Type class="ionslm_hfe_fb3-Be2+" element="Be" mass="9.01" name="ionslm_hfe_fb3-Be2+"/>
+    <Type class="ionslm_hfe_fb3-Cu2+" element="Cu" mass="63.55" name="ionslm_hfe_fb3-Cu2+"/>
+    <Type class="ionslm_hfe_fb3-Ni2+" element="Ni" mass="58.69" name="ionslm_hfe_fb3-Ni2+"/>
+    <Type class="ionslm_hfe_fb3-Pt2+" element="Pt" mass="195.08" name="ionslm_hfe_fb3-Pt2+"/>
+    <Type class="ionslm_hfe_fb3-Zn2+" element="Zn" mass="65.4" name="ionslm_hfe_fb3-Zn2+"/>
+    <Type class="ionslm_hfe_fb3-Co2+" element="Co" mass="58.93" name="ionslm_hfe_fb3-Co2+"/>
+    <Type class="ionslm_hfe_fb3-Pd2+" element="Pd" mass="106.42" name="ionslm_hfe_fb3-Pd2+"/>
+    <Type class="ionslm_hfe_fb3-Ag2+" element="Ag" mass="107.87" name="ionslm_hfe_fb3-Ag2+"/>
+    <Type class="ionslm_hfe_fb3-Cr2+" element="Cr" mass="52.00" name="ionslm_hfe_fb3-Cr2+"/>
+    <Type class="ionslm_hfe_fb3-Fe2+" element="Fe" mass="55.85" name="ionslm_hfe_fb3-Fe2+"/>
+    <Type class="ionslm_hfe_fb3-Mg2+" element="Mg" mass="24.305" name="ionslm_hfe_fb3-Mg2+"/>
+    <Type class="ionslm_hfe_fb3-V2+" element="V" mass="50.94" name="ionslm_hfe_fb3-V2+"/>
+    <Type class="ionslm_hfe_fb3-Mn2+" element="Mn" mass="54.94" name="ionslm_hfe_fb3-Mn2+"/>
+    <Type class="ionslm_hfe_fb3-Hg2+" element="Hg" mass="200.59" name="ionslm_hfe_fb3-Hg2+"/>
+    <Type class="ionslm_hfe_fb3-Cd2+" element="Cd" mass="112.41" name="ionslm_hfe_fb3-Cd2+"/>
+    <Type class="ionslm_hfe_fb3-Yb2+" element="Yb" mass="173.05" name="ionslm_hfe_fb3-Yb2+"/>
+    <Type class="ionslm_hfe_fb3-Ca2+" element="Ca" mass="40.08" name="ionslm_hfe_fb3-Ca2+"/>
+    <Type class="ionslm_hfe_fb3-Sn2+" element="Sn" mass="118.71" name="ionslm_hfe_fb3-Sn2+"/>
+    <Type class="ionslm_hfe_fb3-Pb2+" element="Pb" mass="207.2" name="ionslm_hfe_fb3-Pb2+"/>
+    <Type class="ionslm_hfe_fb3-Eu2+" element="Eu" mass="151.96" name="ionslm_hfe_fb3-Eu2+"/>
+    <Type class="ionslm_hfe_fb3-Sr2+" element="Sr" mass="87.62" name="ionslm_hfe_fb3-Sr2+"/>
+    <Type class="ionslm_hfe_fb3-Sm2+" element="Sm" mass="150.36" name="ionslm_hfe_fb3-Sm2+"/>
+    <Type class="ionslm_hfe_fb3-Ba2+" element="Ba" mass="137.33" name="ionslm_hfe_fb3-Ba2+"/>
+    <Type class="ionslm_hfe_fb3-Ra2+" element="Ra" mass="226.03" name="ionslm_hfe_fb3-Ra2+"/>
+    <Type class="ionslm_hfe_fb3-Al3+" element="Al" mass="26.98" name="ionslm_hfe_fb3-Al3+"/>
+    <Type class="ionslm_hfe_fb3-Fe3+" element="Fe" mass="55.85" name="ionslm_hfe_fb3-Fe3+"/>
+    <Type class="ionslm_hfe_fb3-Cr3+" element="Cr" mass="52.00" name="ionslm_hfe_fb3-Cr3+"/>
+    <Type class="ionslm_hfe_fb3-In3+" element="In" mass="114.82" name="ionslm_hfe_fb3-In3+"/>
+    <Type class="ionslm_hfe_fb3-Tl3+" element="Tl" mass="204.38" name="ionslm_hfe_fb3-Tl3+"/>
+    <Type class="ionslm_hfe_fb3-Y3+" element="Y" mass="88.91" name="ionslm_hfe_fb3-Y3+"/>
+    <Type class="ionslm_hfe_fb3-La3+" element="La" mass="138.91" name="ionslm_hfe_fb3-La3+"/>
+    <Type class="ionslm_hfe_fb3-Ce3+" element="Ce" mass="140.12" name="ionslm_hfe_fb3-Ce3+"/>
+    <Type class="ionslm_hfe_fb3-Pr3+" element="Pr" mass="140.91" name="ionslm_hfe_fb3-Pr3+"/>
+    <Type class="ionslm_hfe_fb3-Nd3+" element="Nd" mass="144.24" name="ionslm_hfe_fb3-Nd3+"/>
+    <Type class="ionslm_hfe_fb3-Sm3+" element="Sm" mass="150.36" name="ionslm_hfe_fb3-Sm3+"/>
+    <Type class="ionslm_hfe_fb3-Eu3+" element="Eu" mass="151.96" name="ionslm_hfe_fb3-Eu3+"/>
+    <Type class="ionslm_hfe_fb3-Gd3+" element="Gd" mass="157.25" name="ionslm_hfe_fb3-Gd3+"/>
+    <Type class="ionslm_hfe_fb3-Tb3+" element="Tb" mass="158.93" name="ionslm_hfe_fb3-Tb3+"/>
+    <Type class="ionslm_hfe_fb3-Dy3+" element="Dy" mass="162.5" name="ionslm_hfe_fb3-Dy3+"/>
+    <Type class="ionslm_hfe_fb3-Er3+" element="Er" mass="167.26" name="ionslm_hfe_fb3-Er3+"/>
+    <Type class="ionslm_hfe_fb3-Tm3+" element="Tm" mass="168.93" name="ionslm_hfe_fb3-Tm3+"/>
+    <Type class="ionslm_hfe_fb3-Lu3+" element="Lu" mass="174.97" name="ionslm_hfe_fb3-Lu3+"/>
+    <Type class="ionslm_hfe_fb3-Hf4+" element="Hf" mass="178.49" name="ionslm_hfe_fb3-Hf4+"/>
+    <Type class="ionslm_hfe_fb3-Zr4+" element="Zr" mass="91.22" name="ionslm_hfe_fb3-Zr4+"/>
+    <Type class="ionslm_hfe_fb3-Ce4+" element="Ce" mass="140.12" name="ionslm_hfe_fb3-Ce4+"/>
+    <Type class="ionslm_hfe_fb3-U4+" element="U" mass="238.03" name="ionslm_hfe_fb3-U4+"/>
+    <Type class="ionslm_hfe_fb3-Pu4+" element="Pu" mass="244.06" name="ionslm_hfe_fb3-Pu4+"/>
+    <Type class="ionslm_hfe_fb3-Th4+" element="Th" mass="232.04" name="ionslm_hfe_fb3-Th4+"/>
+  </AtomTypes>
+  <Residues>
+    <Residue name="AG">
+      <Atom charge="1.0" name="AG" type="ionslm_hfe_fb3-Ag+"/>
+    </Residue>
+    <Residue name="Ag">
+      <Atom charge="2.0" name="Ag" type="ionslm_hfe_fb3-Ag2+"/>
+    </Residue>
+    <Residue name="AL">
+      <Atom charge="3.0" name="AL" type="ionslm_hfe_fb3-Al3+"/>
+    </Residue>
+    <Residue name="BA">
+      <Atom charge="2.0" name="BA" type="ionslm_hfe_fb3-Ba2+"/>
+    </Residue>
+    <Residue name="Be">
+      <Atom charge="2.0" name="Be" type="ionslm_hfe_fb3-Be2+"/>
+    </Residue>
+    <Residue name="BR">
+      <Atom charge="-1.0" name="BR" type="ionslm_hfe_fb3-Br-"/>
+    </Residue>
+    <Residue name="CA">
+      <Atom charge="2.0" name="CA" type="ionslm_hfe_fb3-Ca2+"/>
+    </Residue>
+    <Residue name="CD">
+      <Atom charge="2.0" name="CD" type="ionslm_hfe_fb3-Cd2+"/>
+    </Residue>
+    <Residue name="CE">
+      <Atom charge="3.0" name="CE" type="ionslm_hfe_fb3-Ce3+"/>
+    </Residue>
+    <Residue name="Ce">
+      <Atom charge="4.0" name="Ce" type="ionslm_hfe_fb3-Ce4+"/>
+    </Residue>
+    <Residue name="CL">
+      <Atom charge="-1.0" name="CL" type="ionslm_hfe_fb3-Cl-"/>
+    </Residue>
+    <Residue name="CO">
+      <Atom charge="2.0" name="CO" type="ionslm_hfe_fb3-Co2+"/>
+    </Residue>
+    <Residue name="Cr">
+      <Atom charge="2.0" name="Cr" type="ionslm_hfe_fb3-Cr2+"/>
+    </Residue>
+    <Residue name="CR">
+      <Atom charge="3.0" name="CR" type="ionslm_hfe_fb3-Cr3+"/>
+    </Residue>
+    <Residue name="CS">
+      <Atom charge="1.0" name="CS" type="ionslm_hfe_fb3-Cs+"/>
+    </Residue>
+    <Residue name="CU1">
+      <Atom charge="1.0" name="CU1" type="ionslm_hfe_fb3-Cu+"/>
+    </Residue>
+    <Residue name="CU">
+      <Atom charge="2.0" name="CU" type="ionslm_hfe_fb3-Cu2+"/>
+    </Residue>
+    <Residue name="Dy">
+      <Atom charge="3.0" name="Dy" type="ionslm_hfe_fb3-Dy3+"/>
+    </Residue>
+    <Residue name="Er">
+      <Atom charge="3.0" name="Er" type="ionslm_hfe_fb3-Er3+"/>
+    </Residue>
+    <Residue name="EU">
+      <Atom charge="2.0" name="EU" type="ionslm_hfe_fb3-Eu2+"/>
+    </Residue>
+    <Residue name="EU3">
+      <Atom charge="3.0" name="EU3" type="ionslm_hfe_fb3-Eu3+"/>
+    </Residue>
+    <Residue name="F">
+      <Atom charge="-1.0" name="F" type="ionslm_hfe_fb3-F-"/>
+    </Residue>
+    <Residue name="FE2">
+      <Atom charge="2.0" name="FE2" type="ionslm_hfe_fb3-Fe2+"/>
+    </Residue>
+    <Residue name="FE">
+      <Atom charge="3.0" name="FE" type="ionslm_hfe_fb3-Fe3+"/>
+    </Residue>
+    <Residue name="GD">
+      <Atom charge="3.0" name="GD" type="ionslm_hfe_fb3-Gd3+"/>
+    </Residue>
+    <Residue name="Hf">
+      <Atom charge="4.0" name="Hf" type="ionslm_hfe_fb3-Hf4+"/>
+    </Residue>
+    <Residue name="HG">
+      <Atom charge="2.0" name="HG" type="ionslm_hfe_fb3-Hg2+"/>
+    </Residue>
+    <Residue name="I">
+      <Atom charge="-1.0" name="I" type="ionslm_hfe_fb3-I-"/>
+    </Residue>
+    <Residue name="IN">
+      <Atom charge="3.0" name="IN" type="ionslm_hfe_fb3-In3+"/>
+    </Residue>
+    <Residue name="K">
+      <Atom charge="1.0" name="K" type="ionslm_hfe_fb3-K+"/>
+    </Residue>
+    <Residue name="LA">
+      <Atom charge="3.0" name="LA" type="ionslm_hfe_fb3-La3+"/>
+    </Residue>
+    <Residue name="LI">
+      <Atom charge="1.0" name="LI" type="ionslm_hfe_fb3-Li+"/>
+    </Residue>
+    <Residue name="LU">
+      <Atom charge="3.0" name="LU" type="ionslm_hfe_fb3-Lu3+"/>
+    </Residue>
+    <Residue name="MG">
+      <Atom charge="2.0" name="MG" type="ionslm_hfe_fb3-Mg2+"/>
+    </Residue>
+    <Residue name="MN">
+      <Atom charge="2.0" name="MN" type="ionslm_hfe_fb3-Mn2+"/>
+    </Residue>
+    <Residue name="NA">
+      <Atom charge="1.0" name="NA" type="ionslm_hfe_fb3-Na+"/>
+    </Residue>
+    <Residue name="Nd">
+      <Atom charge="3.0" name="Nd" type="ionslm_hfe_fb3-Nd3+"/>
+    </Residue>
+    <Residue name="NI">
+      <Atom charge="2.0" name="NI" type="ionslm_hfe_fb3-Ni2+"/>
+    </Residue>
+    <Residue name="PB">
+      <Atom charge="2.0" name="PB" type="ionslm_hfe_fb3-Pb2+"/>
+    </Residue>
+    <Residue name="PD">
+      <Atom charge="2.0" name="PD" type="ionslm_hfe_fb3-Pd2+"/>
+    </Residue>
+    <Residue name="PR">
+      <Atom charge="3.0" name="PR" type="ionslm_hfe_fb3-Pr3+"/>
+    </Residue>
+    <Residue name="PT">
+      <Atom charge="2.0" name="PT" type="ionslm_hfe_fb3-Pt2+"/>
+    </Residue>
+    <Residue name="Pu">
+      <Atom charge="4.0" name="Pu" type="ionslm_hfe_fb3-Pu4+"/>
+    </Residue>
+    <Residue name="Ra">
+      <Atom charge="2.0" name="Ra" type="ionslm_hfe_fb3-Ra2+"/>
+    </Residue>
+    <Residue name="RB">
+      <Atom charge="1.0" name="RB" type="ionslm_hfe_fb3-Rb+"/>
+    </Residue>
+    <Residue name="Sm">
+      <Atom charge="2.0" name="Sm" type="ionslm_hfe_fb3-Sm2+"/>
+    </Residue>
+    <Residue name="SM">
+      <Atom charge="3.0" name="SM" type="ionslm_hfe_fb3-Sm3+"/>
+    </Residue>
+    <Residue name="Sn">
+      <Atom charge="2.0" name="Sn" type="ionslm_hfe_fb3-Sn2+"/>
+    </Residue>
+    <Residue name="SR">
+      <Atom charge="2.0" name="SR" type="ionslm_hfe_fb3-Sr2+"/>
+    </Residue>
+    <Residue name="TB">
+      <Atom charge="3.0" name="TB" type="ionslm_hfe_fb3-Tb3+"/>
+    </Residue>
+    <Residue name="Th">
+      <Atom charge="4.0" name="Th" type="ionslm_hfe_fb3-Th4+"/>
+    </Residue>
+    <Residue name="TL">
+      <Atom charge="1.0" name="TL" type="ionslm_hfe_fb3-Tl+"/>
+    </Residue>
+    <Residue name="Tl">
+      <Atom charge="3.0" name="Tl" type="ionslm_hfe_fb3-Tl3+"/>
+    </Residue>
+    <Residue name="Tm">
+      <Atom charge="3.0" name="Tm" type="ionslm_hfe_fb3-Tm3+"/>
+    </Residue>
+    <Residue name="U">
+      <Atom charge="4.0" name="U" type="ionslm_hfe_fb3-U4+"/>
+    </Residue>
+    <Residue name="V2+">
+      <Atom charge="2.0" name="V2+" type="ionslm_hfe_fb3-V2+"/>
+    </Residue>
+    <Residue name="Y">
+      <Atom charge="3.0" name="Y" type="ionslm_hfe_fb3-Y3+"/>
+    </Residue>
+    <Residue name="YB2">
+      <Atom charge="2.0" name="YB2" type="ionslm_hfe_fb3-Yb2+"/>
+    </Residue>
+    <Residue name="ZN">
+      <Atom charge="2.0" name="ZN" type="ionslm_hfe_fb3-Zn2+"/>
+    </Residue>
+    <Residue name="Zr">
+      <Atom charge="4.0" name="Zr" type="ionslm_hfe_fb3-Zr4+"/>
+    </Residue>
+  </Residues>
+  <NonbondedForce coulomb14scale="0.8333333333333334" lj14scale="0.5">
+    <UseAttributeFromResidue name="charge"/>
+    <Atom epsilon="0.011806411200000002" sigma="0.22450647697136553" type="ionslm_hfe_fb3-Li+"/><!--     HFE set for the TIP3P-FB water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.11545547168" sigma="0.25996424595335105" type="ionslm_hfe_fb3-Na+"/><!--     HFE set for the TIP3P-FB water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.59238168208" sigma="0.3037964628858557" type="ionslm_hfe_fb3-K+"/><!--     HFE set for the TIP3P-FB water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.8985523254400001" sigma="0.3210798980177783" type="ionslm_hfe_fb3-Rb+"/><!--     HFE set for the TIP3P-FB water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="1.51533597416" sigma="0.3510140949472937" type="ionslm_hfe_fb3-Cs+"/><!--     HFE set for the TIP3P-FB water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.51230787168" sigma="0.29862925032064175" type="ionslm_hfe_fb3-Tl+"/><!--     HFE set for the TIP3P-FB water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.00403312496" sigma="0.2123902544046569" type="ionslm_hfe_fb3-Cu+"/><!--     HFE set for the TIP3P-FB water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="0.029271431360000003" sigma="0.23662269953807413" type="ionslm_hfe_fb3-Ag+"/><!--     HFE set for the TIP3P-FB water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="1.01002663744" sigma="0.3267816498138765" type="ionslm_hfe_fb3-F-"/><!--     HFE set for the TIP3P-FB water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="2.66953145272" sigma="0.4098134103445561" type="ionslm_hfe_fb3-Cl-"/><!--     HFE set for the TIP3P-FB water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="3.13914779672" sigma="0.4420639439412363" type="ionslm_hfe_fb3-Br-"/><!--     HFE set for the TIP3P-FB water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="3.59848597736" sigma="0.48856885702816205" type="ionslm_hfe_fb3-I-"/><!--     HFE set for the TIP3P-FB water model from Sengupta et al., JCIM, 2021, 61, 869 -->
+    <Atom epsilon="4.2258400000000005e-06" sigma="0.16285628567605404" type="ionslm_hfe_fb3-Be2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00199769264" sigma="0.20544124440316225" type="ionslm_hfe_fb3-Cu2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.0026870066400000005" sigma="0.20829212030121133" type="ionslm_hfe_fb3-Ni2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.0030480021600000004" sigma="0.2095393785066078" type="ionslm_hfe_fb3-Pt2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00321502744" sigma="0.210073917737492" type="ionslm_hfe_fb3-Zn2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00641582928" sigma="0.21737928722624278" type="ionslm_hfe_fb3-Co2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.00641582928" sigma="0.21737928722624278" type="ionslm_hfe_fb3-Pd2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.013433485120000001" sigma="0.2261100946640181" type="ionslm_hfe_fb3-Ag2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.01524151704" sigma="0.22771371235667073" type="ionslm_hfe_fb3-Cr2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.01655449808" sigma="0.22878279081843914" type="ionslm_hfe_fb3-Fe2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.01748020808" sigma="0.2294955097929514" type="ionslm_hfe_fb3-Mg2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.01844784176" sigma="0.23020822876746372" type="ionslm_hfe_fb3-V2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.033437523840000004" sigma="0.23858267671798283" type="ionslm_hfe_fb3-Mn2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.033437523840000004" sigma="0.23858267671798283" type="ionslm_hfe_fb3-Hg2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.0346516788" sigma="0.2391172159488671" type="ionslm_hfe_fb3-Cd2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.19079901904000002" sigma="0.2708332103146632" type="ionslm_hfe_fb3-Yb2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.19817206384" sigma="0.2717241090328035" type="ionslm_hfe_fb3-Ca2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.221430878" sigma="0.2743968051872245" type="ionslm_hfe_fb3-Sn2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.34672264080000004" sigma="0.28633484801030507" type="ionslm_hfe_fb3-Pb2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.45310058976" sigma="0.2945311162171962" type="ionslm_hfe_fb3-Eu2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.46816830344000004" sigma="0.2956001946789646" type="ionslm_hfe_fb3-Sr2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.48092975447999997" sigma="0.29649109339710494" type="ionslm_hfe_fb3-Sm2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.97474350936" sigma="0.3249998523775958" type="ionslm_hfe_fb3-Ba2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="0.97474350936" sigma="0.3249998523775958" type="ionslm_hfe_fb3-Ra2+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2020, 16, 4429 -->
+    <Atom epsilon="2.673576e-05" sigma="0.17319071080648196" type="ionslm_hfe_fb3-Al3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.0006706115200000001" sigma="0.19581953824724657" type="ionslm_hfe_fb3-Fe3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.00439211216" sigma="0.21328115312279727" type="ionslm_hfe_fb3-Cr3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.00554580832" sigma="0.21577566953359018" type="ionslm_hfe_fb3-In3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.00554580832" sigma="0.21577566953359018" type="ionslm_hfe_fb3-Tl3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.08927271096" sigma="0.25497521313176513" type="ionslm_hfe_fb3-Y3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.38412827024" sigma="0.2893639036519822" type="ionslm_hfe_fb3-La3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.30959110520000005" sigma="0.28312761262499986" type="ionslm_hfe_fb3-Ce3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.25690960808" sigma="0.2781385798034139" type="ionslm_hfe_fb3-Pr3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.221430878" sigma="0.2743968051872245" type="ionslm_hfe_fb3-Nd3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.17939205432000002" sigma="0.2694077723656386" type="ionslm_hfe_fb3-Sm3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.15293570184000002" sigma="0.26584417749307726" type="ionslm_hfe_fb3-Eu3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.14435620064" sigma="0.2645969192876808" type="ionslm_hfe_fb3-Gd3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.11545547168" sigma="0.25996424595335105" type="ionslm_hfe_fb3-Tb3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.10268711704000001" sigma="0.25764790928618614" type="ionslm_hfe_fb3-Dy3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.07644268416000001" sigma="0.252124337233716" type="ionslm_hfe_fb3-Er3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.07419972544" sigma="0.2515897980028318" type="ionslm_hfe_fb3-Tm3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.07419972544" sigma="0.2515897980028318" type="ionslm_hfe_fb3-Lu3+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.00083002192" sigma="0.19760133568352725" type="ionslm_hfe_fb3-Hf4+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.0018871932" sigma="0.20490670517227805" type="ionslm_hfe_fb3-Zr4+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.03895266344" sigma="0.24089901338514777" type="ionslm_hfe_fb3-Ce4+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.0067303824" sigma="0.21791382645712704" type="ionslm_hfe_fb3-U4+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.01678206584" sigma="0.22896097056206718" type="ionslm_hfe_fb3-Pu4+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+    <Atom epsilon="0.11041584368" sigma="0.25907334723521064" type="ionslm_hfe_fb3-Th4+"/><!--     HFE set for the TIP3P-FB water model from Li et al., JCTC, 2021, 17, 2342 -->
+  </NonbondedForce>
+</ForceField>
