@@ -1255,14 +1255,18 @@ class ForceField(object):
         # Find the template matching each residue and assign atom types.
 
         templateForResidue = self._matchAllResiduesToTemplates(data, topology, residueTemplates, ignoreExternalBonds)
+        HOH=False
         for res in topology.residues():
             if res.name == 'HOH':
                 # Determine whether this should be a rigid water.
-
+                
+                HOH=True
                 if rigidWater is None:
                     rigidResidue[res.index] = templateForResidue[res.index].rigidWater
                 elif rigidWater:
                     rigidResidue[res.index] = True
+        if rigidWater and not HOH:
+            warnings.warn("`rigidWater` was set to True but no `HOH` residues found.")
 
         # Create the System and add atoms
 
