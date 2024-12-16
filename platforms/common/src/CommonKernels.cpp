@@ -5895,7 +5895,7 @@ void CommonIntegrateNoseHooverStepKernel::initialize(const System& system, const
         energyBuffer.initialize<mm_float2>(cc, energyBufferSize, "energyBuffer");
 }
 
-void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
+void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator) {
     ContextSelector selector(cc);
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
@@ -5904,7 +5904,8 @@ void CommonIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const No
 
     // If the atom reordering has occured, the forces from the previous step are permuted and thus invalid.
     // They need to be either sorted or recomputed; here we choose the latter.
-    if (!forcesAreValid || cc.getAtomsWereReordered()) context.calcForcesAndEnergy(true, false, integrator.getIntegrationForceGroups());
+    if (cc.getAtomsWereReordered())
+        context.calcForcesAndEnergy(true, false, integrator.getIntegrationForceGroups());
 
     const auto& atomList = integrator.getAllThermostatedIndividualParticles();
     const auto& pairList = integrator.getAllThermostatedPairs();

@@ -1124,10 +1124,8 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      * @param integrator the NoseHooverIntegrator this kernel is being used for
-     * @param forcesAreValid a reference to the parent integrator's boolean for keeping
-     *                       track of the validity of the current forces.
      */
-    virtual void execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) = 0;
+    virtual void execute(ContextImpl& context, const NoseHooverIntegrator& integrator) = 0;
     /**
      * Compute the kinetic energy.
      * 
