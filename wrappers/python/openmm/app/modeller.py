@@ -1575,7 +1575,11 @@ class Modeller(object):
 
         needExtraWater = (boxSizeZ > patchSize[2])
         if needExtraWater:
-            modeller.addSolvent(forcefield, neutralize=False, residueTemplates=residueTemplates)
+            newResidueTemplates = {}
+            for r1, r2 in zip(self.topology.residues(), modeller.topology.residues()):
+                if r1 in residueTemplates:
+                    newResidueTemplates[r2] = residueTemplates[r1]
+            modeller.addSolvent(forcefield, neutralize=False, residueTemplates=newResidueTemplates)
 
         # Record the positions of all waters that have been added.
 
