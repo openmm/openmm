@@ -34,18 +34,34 @@ from __future__ import absolute_import
 __author__ = "Joao Morado"
 
 import datetime
+import io
 import math
 import os
 import re
 import shlex
 import xml.etree.ElementTree as etree
 from functools import wraps
-from typing import List, Union
+from typing import Any, Dict, List, Set, Tuple, Union
+
+HBonds = forcefield.HBonds
+AllBonds = forcefield.AllBonds
+HAngles = forcefield.HAngles
 
 from openmm.app.internal.unitcell import computePeriodicBoxVectors
 from openmm.unit import Quantity, nanometers
 from openmm.vec3 import Vec3
 
+from . import (
+    LJPME,
+    PME,
+    AllBonds,
+    CutoffNonPeriodic,
+    CutoffPeriodic,
+    Ewald,
+    HAngles,
+    HBonds,
+    NoCutoff,
+)
 from . import element as elem
 from . import forcefield as ff
 from . import topology as top
@@ -75,12 +91,154 @@ def numpy_protector(func):
 class TinkerFiles:
     """TinkerFiles parses Tinker files (.xyz, .prm, .key), constructs a Topology, and (optionally) an OpenMM System from it."""
 
+    # fmt: off
+    RESIDUE_MAPPING = {
+        "ALA": {"loc": "middle", "type": "protein", "tinkerLookupName": "Alanine", "fullName": "Alanine"},
+        "ARG": {"loc": "middle", "type": "protein", "tinkerLookupName": "Arginine", "fullName": "Arginine"},
+        "ASN": {"loc": "middle", "type": "protein", "tinkerLookupName": "Asparagine", "fullName": "Asparagine"},
+        "ASP": {"loc": "middle", "type": "protein", "tinkerLookupName": "Aspartic Acid", "fullName": "Aspartic Acid"},
+        "ASH": {"loc": "middle", "type": "protein", "tinkerLookupName": "Aspartic Acid (COOH)", "fullName": "Aspartic Acid"},
+        "CYS": {"loc": "middle", "type": "protein", "tinkerLookupName": "Cysteine (SH)", "fullName": "Cysteine"},
+        "CYD": {"loc": "middle", "type": "protein", "tinkerLookupName": "Cysteine (S-)", "fullName": "Cysteine"},
+        "CYX": {"loc": "middle", "type": "protein", "tinkerLookupName": "Cystine (SS)", "fullName": "Cystine"},
+        "GLN": {"loc": "middle", "type": "protein", "tinkerLookupName": "Glutamine", "fullName": "Glutamine"},
+        "GLU": {"loc": "middle", "type": "protein", "tinkerLookupName": "Glutamic Acid", "fullName": "Glutamic Acid"},
+        "GLH": {"loc": "middle", "type": "protein", "tinkerLookupName": "Glutamic Acid (COOH)", "fullName": "Glutamic Acid"},
+        "GLY": {"loc": "middle", "type": "protein", "tinkerLookupName": "Glycine", "fullName": "Glycine"},
+        "HIS": {"loc": "middle", "type": "protein", "tinkerLookupName": "Histidine (+)", "fullName": "Histidine"},
+        "HID": {"loc": "middle", "type": "protein", "tinkerLookupName": "Histidine (HD)", "fullName": "Histidine"},
+        "HIE": {"loc": "middle", "type": "protein", "tinkerLookupName": "Histidine (HE)", "fullName": "Histidine"},
+        "HOH": {"loc": "middle", "type": "AmoebaWater", "tinkerLookupName": "Water", "fullName": "Water"},
+        "ILE": {"loc": "middle", "type": "protein", "tinkerLookupName": "Isoleucine", "fullName": "Isoleucine"},
+        "LEU": {"loc": "middle", "type": "protein", "tinkerLookupName": "Leucine", "fullName": "Leucine"},
+        "LYS": {"loc": "middle", "type": "protein", "tinkerLookupName": "Lysine", "fullName": "Lysine"},
+        "LYD": {"loc": "middle", "type": "protein", "tinkerLookupName": "Lysine (NH2)", "fullName": "Lysine"},
+        "MET": {"loc": "middle", "type": "protein", "tinkerLookupName": "Methionine", "fullName": "Methionine"},
+        "PHE": {"loc": "middle", "type": "protein", "tinkerLookupName": "Phenylalanine", "fullName": "Phenylalanine"},
+        "PRO": {"loc": "middle", "type": "protein", "tinkerLookupName": "Proline", "fullName": "Proline"},
+        "SER": {"loc": "middle", "type": "protein", "tinkerLookupName": "Serine", "fullName": "Serine"},
+        "THR": {"loc": "middle", "type": "protein", "tinkerLookupName": "Threonine", "fullName": "Threonine"},
+        "TRP": {"loc": "middle", "type": "protein", "tinkerLookupName": "Tryptophan", "fullName": "Tryptophan"},
+        "TYR": {"loc": "middle", "type": "protein", "tinkerLookupName": "Tyrosine", "fullName": "Tyrosine"},
+        "TYD": {"loc": "middle", "type": "protein", "tinkerLookupName": "Tyrosine (O-)", "fullName": "Tyrosine"},
+        "VAL": {"loc": "middle", "type": "protein", "tinkerLookupName": "Valine", "fullName": "Valine"},
+        "DA": {"loc": "middle", "type": "dna", "tinkerLookupName": "Deoxyadenosine", "fullName": "Deoxyadenosine"},
+        "DA3": {"loc": "3", "type": "dna", "tinkerLookupName": "Deoxyadenosine", "fullName": "Deoxyadenosine"},
+        "DA5": {"loc": "5", "type": "dna", "tinkerLookupName": "Deoxyadenosine", "fullName": "Deoxyadenosine"},
+        "DAN": {"loc": "N", "type": "dna", "tinkerLookupName": "Deoxyadenosine", "fullName": "Deoxyadenosine"},
+        "DC": {"loc": "middle", "type": "dna", "tinkerLookupName": "Deoxycytidine", "fullName": "Deoxycytidine"},
+        "DC3": {"loc": "3", "type": "dna", "tinkerLookupName": "Deoxycytidine", "fullName": "Deoxycytidine"},
+        "DC5": {"loc": "5", "type": "dna", "tinkerLookupName": "Deoxycytidine", "fullName": "Deoxycytidine"},
+        "DCN": {"loc": "N", "type": "dna", "tinkerLookupName": "Deoxycytidine", "fullName": "Deoxycytidine"},
+        "DG": {"loc": "middle", "type": "dna", "tinkerLookupName": "Deoxyguanosine", "fullName": "Deoxyguanosine"},
+        "DG3": {"loc": "3", "type": "dna", "tinkerLookupName": "Deoxyguanosine", "fullName": "Deoxyguanosine"},
+        "DG5": {"loc": "5", "type": "dna", "tinkerLookupName": "Deoxyguanosine", "fullName": "Deoxyguanosine"},
+        "DGN": {"loc": "N", "type": "dna", "tinkerLookupName": "Deoxyguanosine", "fullName": "Deoxyguanosine"},
+        "DT": {"loc": "middle", "type": "dna", "tinkerLookupName": "Deoxythymidine", "fullName": "Deoxythymidine"},
+        "DT3": {"loc": "3", "type": "dna", "tinkerLookupName": "Deoxythymidine", "fullName": "Deoxythymidine"},
+        "DT5": {"loc": "5", "type": "dna", "tinkerLookupName": "Deoxythymidine", "fullName": "Deoxythymidine"},
+        "DTN": {"loc": "N", "type": "dna", "tinkerLookupName": "Deoxythymidine", "fullName": "Deoxythymidine"},
+        "RA": {"loc": "middle", "type": "rna", "tinkerLookupName": "Adenosine", "fullName": "Adenosine"},
+        "RA3": {"loc": "3", "type": "rna", "tinkerLookupName": "Adenosine", "fullName": "Adenosine"},
+        "RA5": {"loc": "5", "type": "rna", "tinkerLookupName": "Adenosine", "fullName": "Adenosine"},
+        "RAN": {"loc": "N", "type": "rna", "tinkerLookupName": "Adenosine", "fullName": "Adenosine"},
+        "RC": {"loc": "middle", "type": "rna", "tinkerLookupName": "Cytidine", "fullName": "Cytidine"},
+        "RC3": {"loc": "3", "type": "rna", "tinkerLookupName": "Cytidine", "fullName": "Cytidine"},
+        "RC5": {"loc": "5", "type": "rna", "tinkerLookupName": "Cytidine", "fullName": "Cytidine"},
+        "RCN": {"loc": "N", "type": "rna", "tinkerLookupName": "Cytidine", "fullName": "Cytidine"},
+        "RG": {"loc": "middle", "type": "rna", "tinkerLookupName": "Guanosine", "fullName": "Guanosine"},
+        "RG3": {"loc": "3", "type": "rna", "tinkerLookupName": "Guanosine", "fullName": "Guanosine"},
+        "RG5": {"loc": "5", "type": "rna", "tinkerLookupName": "Guanosine", "fullName": "Guanosine"},
+        "RGN": {"loc": "N", "type": "rna", "tinkerLookupName": "Guanosine", "fullName": "Guanosine"},
+        "RU": {"loc": "middle", "type": "rna", "tinkerLookupName": "Uridine", "fullName": "Uridine"},
+        "RU3": {"loc": "3", "type": "rna", "tinkerLookupName": "Uridine", "fullName": "Uridine"},
+        "RU5": {"loc": "5", "type": "rna", "tinkerLookupName": "Uridine", "fullName": "Uridine"},
+        "RUN": {"loc": "N", "type": "rna", "tinkerLookupName": "Uridine", "fullName": "Uridine"},
+        "LI": {"loc": None, "type": "ion", "tinkerLookupName": "Lithium Ion", "fullName": "Lithium Ion"},
+        "NA": {"loc": None, "type": "ion", "tinkerLookupName": "Sodium Ion", "fullName": "Sodium Ion"},
+        "K": {"loc": None, "type": "ion", "tinkerLookupName": "Potassium Ion", "fullName": "Potassium Ion"},
+        "RB": {"loc": None, "type": "ion", "tinkerLookupName": "Rubidium Ion", "fullName": "Rubidium Ion"},
+        "CS": {"loc": None, "type": "ion", "tinkerLookupName": "Cesium Ion", "fullName": "Cesium Ion"},
+        "BE": {"loc": None, "type": "ion", "tinkerLookupName": "Beryllium Ion", "fullName": "Beryllium Ion"},
+        "MG": {"loc": None, "type": "ion", "tinkerLookupName": "Magnesium Ion", "fullName": "Magnesium Ion"},
+        "CA": {"loc": None, "type": "ion", "tinkerLookupName": "Calcium Ion", "fullName": "Calcium Ion"},
+        "ZN": {"loc": None, "type": "ion", "tinkerLookupName": "Zinc Ion", "fullName": "Zinc Ion"},
+        "F": {"loc": None, "type": "ion", "tinkerLookupName": "Fluoride Ion", "fullName": "Fluoride Ion"},
+        "CL": {"loc": None, "type": "ion", "tinkerLookupName": "Chloride Ion", "fullName": "Chloride Ion"},
+        "BR": {"loc": None, "type": "ion", "tinkerLookupName": "Bromide Ion", "fullName": "Bromide Ion"},
+        "I": {"loc": None, "type": "ion", "tinkerLookupName": "Iodide Ion", "fullName": "Iodide Ion"},
+    } 
+    # fmt: on
+
+    RECOGNIZED_FORCES: Dict[str, Any] = {
+        "bond": 1,
+        "angle": 1,
+        "anglep": 1,
+        "strbnd": 1,
+        "ureybrad": 1,
+        "opbend": 1,
+        "torsion": 1,
+        "pitors": 1,
+        "strtors": 1,
+        "angtors": 1,
+        "vdw": 1,
+        "vdwpr": 1,
+        "polarize": 1,
+        "tortors": None,
+        "multipole": None,
+    }
+
+    RECOGNIZED_SCALARS: Dict[str, str] = {
+        "forcefield": "-2.55",
+        "bond-cubic": "-2.55",
+        "bond-quartic": "3.793125",
+        "angle-cubic": "-0.014",
+        "angle-quartic": "0.000056",
+        "angle-pentic": "-0.0000007",
+        "angle-sextic": "0.000000022",
+        "opbendtype": "ALLINGER",
+        "opbend-cubic": "-0.014",
+        "opbend-quartic": "0.000056",
+        "opbend-pentic": "-0.0000007",
+        "opbend-sextic": "0.000000022",
+        "torsionunit": "0.5",
+        "vdwtype": "BUFFERED-14-7",
+        "radiusrule": "CUBIC-MEAN",
+        "radiustype": "R-MIN",
+        "radiussize": "DIAMETER",
+        "epsilonrule": "HHG",
+        "dielectric": "1.0",
+        "polarization": "MUTUAL",
+        "vdw-13-scale": "0.0",
+        "vdw-14-scale": "1.0",
+        "vdw-15-scale": "1.0",
+        "mpole-12-scale": "0.0",
+        "mpole-13-scale": "0.0",
+        "mpole-14-scale": "0.4",
+        "mpole-15-scale": "0.8",
+        "polar-12-scale": "0.0",
+        "polar-13-scale": "0.0",
+        "polar-14-scale": "1.0",
+        "polar-15-scale": "1.0",
+        "polar-14-intra": "0.5",
+        "direct-11-scale": "0.0",
+        "direct-12-scale": "1.0",
+        "direct-13-scale": "1.0",
+        "direct-14-scale": "1.0",
+        "mutual-11-scale": "1.0",
+        "mutual-12-scale": "1.0",
+        "mutual-13-scale": "1.0",
+        "mutual-14-scale": "1.0",
+    }
+
     def __init__(
         self,
         xyz: str,
         key: str,
         periodicBoxVectors=None,
         unitCellDimensions=None,
+        writeXmlFiles: bool = False,
+        filePrefix: str = "tinkerFiles",
     ):
         """
         Load exactly one .xyz file and one or more .key or .prm files.
@@ -98,37 +256,62 @@ class TinkerFiles:
             The dimensions of the crystallographic unit cell.
             For non-rectangular unit cells, specify periodicBoxVectors instead.
             If provided, this overwrites the box information from the xyz file.
+        writeXmlFiles : bool, optional, default=False
+            If True, the residue and force field XML files are written to disk.
+        filePrefix : str, optional, default="tinkerFiles"
+            The prefix to use for the XML files written to
+            disk if writeXmlFiles is True.
         """
+        # ----------------------- INTERNAL VARIABLES -----------------------
+        # Populate parser functions for the recognized forces
+        self.RECOGNIZED_FORCES["tortors"] = TinkerFiles.__addTorTor
+        self.RECOGNIZED_FORCES["multipole"] = TinkerFiles.__addMultipole
+
+        # Store the input parameters
+        self._writeXmlFiles = writeXmlFiles
+        self._filePrefix = filePrefix
+        self._XmlFilesList = None
+
+        # Topology
+        self.topology = None
+
         # Position and box information
         self.positions = None
         self.boxVectors = None
         self._numpyPositions = None
         self._numpyBoxVectors = None
 
-        # Internal variables to store the data from the xyz file
-        self._symbols = []
-        self._names = []
-        self._bonds = []
-        self._atomTypes = []
+        # Internal variable to store the data from the xyz file
+        self._xyzDict = None
 
-        # Internal variables to store the data from the key file
-        self._atomTypesDict = {}
-        self._residueAtomTypes = None
-        self._residues = None
-        self._residueNames = None
+        # Internal variables to store the data from the key file(s)
+        self._atomTypes, self._bioTypes, self._forces, self._scalars = [], [], [], []
 
-        # Load the key/prm file(s)
+        # Internal variable to store the combined atom data
+        self._atomData = None
+
+        # ----------------------- LOAD FILES -----------------------
+        # Load the .key or .prm file(s)
         key = key if isinstance(key, list) else [key]
         for keyFile in key:
-            self._loadKeyFile(keyFile)
+            atomTypes, bioTypes, forces, scalars = self._loadKeyFile(keyFile)
+            self._atomTypes.append(atomTypes)
+            self._bioTypes.append(bioTypes)
+            self._forces.append(forces)
+            self._scalars.append(scalars)
 
-        # Load the xyz file
-        self._loadXyzFile(xyz)
+        # Load the .xyz file
+        self._xyzDict, self.boxVectors, self.positions = self._loadXyzFile(xyz)
         self.positions = Quantity(self.positions, nanometers)
 
+        # Combine the data from the .xyz and .key files
+        self._atomData = TinkerFiles._combineXyzAndKeyData(
+            self._xyzDict, self._atomTypes, self._bioTypes
+        )
+
+        # ----------------------- CREATE TOPOLOGY -----------------------
         # Create the topology
-        self.topology = top.Topology()
-        self._createTopology()
+        self.topology = self._createTopology(self._atomData)
 
         # Set the periodic box vectors as specified in the xyz file
         if self.boxVectors is not None:
@@ -145,36 +328,61 @@ class TinkerFiles:
         else:
             self.topology.setUnitCellDimensions(unitCellDimensions)
 
-        # Create the XML file for the residues and the residue dictionary
-        residueXmlFile = self._createResidueXmlFiles()
-        residueDict = TinkerXmlFileWriter.createResidueDict(
-            residueXmlFile, self._residueAtomTypes
-        )
-
-        # Create the XML files
-        xmlFilesList = []
-        for keyFile in key:
-            atomTypes, bioTypes, forces, scalars = TinkerXmlFileWriter.processKeyFile(
-                keyFile, residueDict
+        # ----------------------- CREATE XML FILES -----------------------
+        self._XmlFilesList = []
+        for keyFile, atomTypes, bioTypes, forces, scalars in zip(
+            key, self._atomTypes, self._bioTypes, self._forces, self._scalars
+        ):
+            xmlFile = self._createXmlFile(
+                keyFile, atomTypes, bioTypes, forces, scalars, self._atomData
             )
-            xmlFiles = TinkerXmlFileWriter.createXmlFiles(
-                keyFile, atomTypes, bioTypes, forces, residueDict, scalars
-            )
-            xmlFilesList.extend(xmlFiles)
+            self._XmlFilesList.extend(f for f in xmlFile if f is not None)
 
     def createSystem(
         self,
-        nonbondedMethod=ff.NoCutoff,
-        nonbondedCutoff=1.0 * nanometers,
-        constraints=None,
-        rigidWater=True,
-        removeCMMotion=True,
-        hydrogenMass=None,
-    ):
-        forcefield = ff.ForceField(
-            "/home/joaomorado/tests/amoeba-poltype/SolvE0.1_V1/AMOEBA-BIO-2018.xml",
-            "/home/joaomorado/tests/amoeba-poltype/SolvE0.1_V1/final.xml",
-        )
+        nonbondedMethod: Union[
+            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, PME, LJPME
+        ] = PME,
+        nonbondedCutoff: Quantity = 1.0 * nanometers,
+        constraints: Union[None, HBonds, AllBonds, HAngles] = None,
+        rigidWater: bool = False,
+        removeCMMotion: bool = True,
+        hydrogenMass: Union[None, Quantity] = None,
+        *args,
+        **kwargs,
+    ) -> openmm.System:
+        """
+        Create an OpenMM System from the parsed Tinker files.
+
+        Parameters
+        ----------
+        nonbondedMethod : ff.NonbondedMethod, optional, default=ff.NoCutoff
+            The method to use for nonbonded interactions.
+            Allowed values are NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
+        nonbondedCutoff : Quantity, optional, default=1.0*nanometers
+            The cutoff distance to use for nonbonded interactions.
+        constraints : Union[None, ff.Constraints], optional, default=None
+            Specifies which bonds and angles should be implemented with constraints.
+            Allowed values are None, HBonds, AllBonds, or HAngles.
+        rigidWater : bool, optional, default=True
+            If true, water molecules will be fully rigid regardless of the value passed for the constraints argument.
+            Note that AMOEBA waters are flexible.
+        removeCMMotion : bool, optional, default=True
+            If True, center of mass motion will be removed.
+        hydrogenMass : Union[None, Quantity], optional, default=None
+            The mass to use for hydrogen atoms bound to heavy atoms.
+            Any mass added to a hydrogen is subtracted from the heavy atom to keep their total mass the same.
+
+        Returns
+        -------
+        openmm.System
+            The created OpenMM System.
+        """
+        # Reset the file pointers
+        for f in self._XmlFilesList:
+            f.seek(0)
+
+        forcefield = ff.ForceField(*self._XmlFilesList)
 
         system = forcefield.createSystem(
             self.topology,
@@ -184,6 +392,8 @@ class TinkerFiles:
             rigidWater=rigidWater,
             removeCMMotion=removeCMMotion,
             hydrogenMass=hydrogenMass,
+            *args,
+            **kwargs,
         )
 
         return system
@@ -258,14 +468,17 @@ class TinkerFiles:
     # ------------------------------------------------------------------------------------------ #
     #                                   XYZ FILE PARSING                                         #
     # ------------------------------------------------------------------------------------------ #
-    def _parseXyzLine(self, line: str) -> None:
+    @staticmethod
+    def _parseAndStoreXyzLine(line: str, xyzDict: dict) -> None:
         """
-        Parse a line from a TINKER .xyz file.
+        Parse a line of an .xyz file and store the data in a dictionary.
 
         Parameters
         ----------
         line : str
-            The line to parse
+            The line containing atom data.
+        xyzDict : dict
+            The dictionary to store parsed atom data.
         """
         fields = line.split()
         if len(fields) < 6:
@@ -273,19 +486,23 @@ class TinkerFiles:
                 "Each line in the TINKER .xyz file must have at least 6 fields"
             )
 
-        # Extract info
-        index = int(fields[0])
+        index = int(fields[0]) - 1
         symbol = str(fields[1])
         x = float(fields[2]) * 0.1
         y = float(fields[3]) * 0.1
         z = float(fields[4]) * 0.1
+        position = Vec3(x, y, z)
+        atomType = str(fields[5])
+        bonds = [int(bond) - 1 for bond in fields[6:]]
 
-        self.positions.append(Vec3(x, y, z))
-        self._symbols.append(symbol)
-        self._atomTypes.append(fields[5])
-        self._bonds.append([int(i) - 1 for i in fields[6:]])
+        xyzDict[index] = {
+            "symbol": symbol,
+            "positions": position,
+            "atomType": atomType,
+            "bonds": bonds,
+        }
 
-    def _loadXyzFile(self, file: str) -> None:
+    def _loadXyzFile(self, file: str) -> Tuple[Dict, List[Vec3], List[Vec3]]:
         """
         Load a TINKER .xyz file.
 
@@ -293,14 +510,24 @@ class TinkerFiles:
         ----------
         file : str
             The name of the .xyz file to load.
+
+        Returns
+        -------
+        self._xyzDict, self.boxVectors, self.positions : dict, list of Vec3, list of Vec3
+            The dictionary with the atom data, the box vectors, and the atomic positions.
         """
         try:
+            self._xyzDict = {}
+
             with open(file, "r") as f:
-                self.positions = []
+                # Read number of atoms
                 nAtoms = int(f.readline())
+
+                # Read the second line
                 secondLine = f.readline().strip()
                 secondLineSplit = secondLine.split()
 
+                # Check for box information
                 if len(secondLineSplit) == 6 and secondLineSplit[0] != "1":
                     # Read box unit vectors and angles from the second line
                     box = [
@@ -310,57 +537,53 @@ class TinkerFiles:
                     self.boxVectors = computePeriodicBoxVectors(*box)
                 else:
                     # No box information, so treat the second line as atom positions
-                    self._parseXyzLine(secondLine)
+                    TinkerFiles._parseAndStoreXyzLine(secondLine, self._xyzDict)
                     nAtoms -= 1
 
-                # Read the remaining atom positions
+                # Process the remaining atom lines
                 for _ in range(nAtoms):
-                    self._parseXyzLine(f.readline().strip())
+                    atomLine = f.readline().strip()
+                    TinkerFiles._parseAndStoreXyzLine(atomLine, self._xyzDict)
+
+            # Store the positions
+            self.positions = [self._xyzDict[i]["positions"] for i in range(nAtoms)]
+
         except FileNotFoundError:
             raise IOError(f"Could not find file {file}")
         except Exception as e:
             raise ValueError(f"Error parsing {file}: {e}")
 
+        return self._xyzDict, self.boxVectors, self.positions
+
     # ------------------------------------------------------------------------------------------ #
     #                                   KEY FILE PARSING                                         #
     # ------------------------------------------------------------------------------------------ #
-    def _parseAtomLine(self, fields: List[str]) -> None:
-        """
-        Parse an atom type line from a TINKER .key file.
-
-        Parameters
-        ----------
-        fields : list of str
-            The fields of the line to parse. Must contain at least 8 fields in the following order:
-            [atomIndex, atomType, atomClass, nameShort, nameLong, atomicNumber, mass, valence].
-
-        Raises
-        ------
-        ValueError
-            If the line has fewer than 8 fields or if the atom information is inconsistent.
-        """
-        if len(fields) < 8:
-            raise ValueError(
-                f"Invalid atom line: Expected at least 8 fields, got {len(fields)}. Fields: {fields}"
-            )
-
-        # Extract atom information
-        _, atomType, atomClass, nameShort, nameLong, atomicNumber, mass, valence = (
-            fields
-        )
-
-        nameLong = nameLong.replace('"', "")
-
-        if atomType in self._atomTypesDict:
+    @staticmethod
+    def _addAtomType(
+        atomTypeDict: Dict,
+        atomType: str,
+        atomClass: str,
+        nameShort: str,
+        nameLong: str,
+        atomicNumber: int,
+        mass: float,
+        valence: int,
+        element: str,
+        residue: str,
+    ) -> None:
+        """Helper function to validate atom type information."""
+        if atomType in atomTypeDict:
             # Validate against existing atom type data
-            stored = self._atomTypesDict[atomType]
+            stored = atomTypeDict[atomType]
             mismatches = {
                 "atomClass": atomClass,
                 "nameShort": nameShort,
                 "nameLong": nameLong,
+                "element": element,
                 "atomicNumber": atomicNumber,
                 "mass": mass,
                 "valence": valence,
+                "residue": residue,
             }
 
             for key, new_value in mismatches.items():
@@ -369,263 +592,225 @@ class TinkerFiles:
                         f"Inconsistent {key} for atom type '{atomType}': "
                         f"expected '{stored[key]}', got '{new_value}'."
                     )
-        else:
-            # Add new atom type to the dictionary
-            self._atomTypesDict[atomType] = {
-                "atomClass": str(atomClass),
-                "nameShort": str(nameShort),
-                "nameLong": str(nameLong),
-                "atomicNumber": int(atomicNumber),
-                "mass": float(mass),
-                "valence": int(valence),
+
+        # Add new atom type to the dictionary
+        atomTypeDict[atomType] = {
+            "atomClass": atomClass,
+            "nameShort": nameShort,
+            "nameLong": nameLong,
+            "element": element,
+            "atomicNumber": atomicNumber,
+            "mass": mass,
+            "valence": valence,
+            "residue": residue,
+        }
+
+    @staticmethod
+    def _addBioType(
+        bioTypeDict: Dict,
+        bioType: str,
+        nameShort: str,
+        nameLong: str,
+        atomType: str,
+        element: str,
+        residue: str,
+    ) -> None:
+        """Helper function to validate biotype information."""
+        if bioType in bioTypeDict:
+            # Validate against existing atom type data
+            stored = bioTypeDict[bioType]
+            mismatches = {
+                "nameShort": nameShort,
+                "nameLong": nameLong,
+                "atomType": atomType,
+                "element": element,
+                "residue": residue,
             }
 
-    def _loadKeyFile(self, file: str):
+            for key, new_value in mismatches.items():
+                if stored[key] != new_value:
+                    raise ValueError(
+                        f"Inconsistent {key} for biotype '{bioType}': "
+                        f"expected '{stored[key]}', got '{new_value}'."
+                    )
+
+        # Add new biotype to the dictionary
+        bioTypeDict[bioType] = {
+            "nameShort": nameShort,
+            "nameLong": nameLong,
+            "atomType": atomType,
+            "element": element,
+            "residue": residue,
+        }
+
+    @staticmethod
+    def getResidueAbbreviation(residueName: str) -> str:
         """
-        Load a TINKER .key or .prm file to extract atom type information.
+        Get the residue abbreviation for a given residue name.
 
         Parameters
         ----------
-        file : str
-            The name of the .key or .prm file to load.
+        residueName : str
+            The name of the residue.
+
+        Returns
+        -------
+        str
+            The residue abbreviation.
         """
+        for abbr, data in TinkerFiles.RESIDUE_MAPPING.items():
+            if data["tinkerLookupName"] in residueName:
+                return abbr
+        return "_" + residueName[:3].upper()
+
+    def _loadKeyFile(self, keyFile: str) -> Tuple[Dict, Dict, Dict, Dict]:
+        """
+        Load a TINKER .key or .prm file.
+
+        Parameters
+        ----------
+        keyFile : str
+            The name of the file.
+
+        Returns
+        -------
+        atomTypes, bioTypes, forces, scalars : dict, dict, dict, dict
+            The atom types, bio types, forces, and scalars.
+        """
+        # Get all interesting lines from the file
         try:
-            with open(file, "r") as f:
-                for line in f:
-                    fields = re.findall(r"\"[^\"]*\"|\S+", line)
-                    if len(fields) < 2:
-                        continue
-                    if fields[0] == "atom":
-                        self._parseAtomLine(fields)
+            allLines = []
+            with open(keyFile) as file:
+                for line in file:
+                    try:
+                        if line.count('"') % 2 != 0:
+                            # Skip lines with an odd number of quotes to avoid parsing errors
+                            # with citations or other non-essential information
+                            continue
+
+                        fields = shlex.split(line)
+
+                        if not fields or fields[0].startswith("#"):
+                            # Skip empty lines and comments
+                            continue
+                        allLines.append(fields)
+                    except Exception as e:
+                        print(line)
+                        raise ValueError(f"Error parsing line in {keyFile}: {e}")
         except FileNotFoundError:
-            raise IOError(f"Could not find file {file}")
+            raise IOError(f"Could not find file {keyFile}")
         except Exception as e:
-            raise ValueError(f"Error parsing {file}: {e}")
+            raise ValueError(f"Error reading {keyFile}: {e}")
 
-    # ------------------------------------------------------------------------------------------ #
-    #                                        XML FILES                                           #
-    # ------------------------------------------------------------------------------------------ #
-    def _createResidueXmlFiles(self):
-        """Create the residue XML files."""
-        root = etree.Element("Residues")
-        seenResidues = set()
-        self._residueAtomTypes = dict()
-        for residue in self.topology.residues():
-            if residue.name in seenResidues:
-                continue
+        atomTypesDict = dict()
+        bioTypesDict = dict()
+        forcesDict = dict()
+        # We use the default values for the scalars as a starting point
+        # and update them with the values from the key file
+        scalarsDict = self.RECOGNIZED_SCALARS.copy()
 
-            if "water" in residue.name.lower():
-                resType = "water"
-            elif "ion" in residue.name.lower():
-                resType = "ion"
+        lineIndex = 0
+        while lineIndex < len(allLines):
+            fields = allLines[lineIndex]
+            if fields[0] == "atom":
+                if len(fields) != 8:
+                    raise ValueError(
+                        f"Invalid atom line: Expected 8 fields, got {len(fields)}. Fields: {fields}"
+                    )
+                # Atom type information
+                # atom atomType atomClass nameShort nameLong atomicNumber mass valence
+                (
+                    atomType,
+                    atomClass,
+                    nameShort,
+                    nameLong,
+                    atomicNumber,
+                    mass,
+                    valence,
+                ) = fields[1:]
+                element = elem.Element.getByAtomicNumber(int(atomicNumber)).symbol
+                nameLong = re.sub(r"\s+", " ", nameLong.strip())
+                resAbbr = TinkerFiles.getResidueAbbreviation(nameLong)
+                TinkerFiles._addAtomType(
+                    atomTypesDict,
+                    atomType,
+                    atomClass,
+                    nameShort,
+                    nameLong,
+                    atomicNumber,
+                    mass,
+                    valence,
+                    element,
+                    resAbbr,
+                )
+                lineIndex += 1
+            elif fields[0] == "biotype":
+                # Biotype information
+                if len(fields) != 5:
+                    raise ValueError(
+                        f"Invalid biotype line: Expected 5 fields, got {len(fields)}. Fields: {fields}"
+                    )
+                bioType, nameShort, nameLong, atomType = fields[1:]
+                element = elem.Element.getByAtomicNumber(int(atomicNumber)).symbol
+                nameLong = nameLong.replace('"', "")
+                lookUp = f"{nameShort}_{nameLong}"
+                if lookUp in bioTypesDict:
+                    # Workaround for Tinker using the same name but different types for H2', H2'', and for H5', H5''
+                    lookUp = f"{nameShort}*_{nameLong}"
+                resAbbr = TinkerFiles.getResidueAbbreviation(nameLong)
+                TinkerFiles._addBioType(
+                    bioTypesDict,
+                    bioType,
+                    nameShort,
+                    nameLong,
+                    atomType,
+                    element,
+                    resAbbr,
+                )
+                lineIndex += 1
+            elif fields[0] in self.RECOGNIZED_FORCES:
+                if self.RECOGNIZED_FORCES[fields[0]] == 1:
+                    if fields[0] not in forcesDict:
+                        forcesDict[fields[0]] = []
+                    forcesDict[fields[0]].append(fields[1:])
+                    lineIndex += 1
+                else:
+                    # Call the function to parse the specific force
+                    lineIndex = self.RECOGNIZED_FORCES[fields[0]](
+                        lineIndex, allLines, forcesDict
+                    )
+            elif fields[0] in self.RECOGNIZED_SCALARS:
+                scalar, value = fields
+                scalarsDict[scalar] = value
+                lineIndex += 1
             else:
-                resType = "smallMolecule"
+                # Skip unrecognized fields
+                # print(f"Field {fields[0]} not recognized: line=<{fields}>")
+                lineIndex += 1
 
-            # Create a new residue template
-            res = etree.SubElement(root, "Residue")
-            res.attrib["abbreviation"] = residue.name[:5].upper()
-            res.attrib["loc"] = "free"
-            res.attrib["type"] = resType
-            res.attrib["tinkerLookupName"] = residue.name
-            res.attrib["fullName"] = residue.name
-
-            # Add this residue to the residue dictionary
-            self._residueAtomTypes[residue.name] = dict()
-
-            # Add atoms to the residue
-            for atomId, atom in enumerate(residue.atoms()):
-                atom.name = f"{atom.name}{atomId}"
-                at = etree.SubElement(res, "Atom")
-                at.attrib["name"] = atom.name
-                at.attrib["tinkerLookupName"] = atom.name
-                at.attrib["bonds"] = str(len(self._bonds[atom.index]))
-
-                # Add the atom type to the residue dictionary
-                self._residueAtomTypes[residue.name][atom.name] = self._atomTypes[
-                    atom.index
-                ]
-
-            # Add bonds to the residue
-            for bond in residue.bonds():
-                bo = etree.SubElement(res, "Bond")
-                bo.attrib["from"] = bond.atom1.name
-                bo.attrib["to"] = bond.atom2.name
-
-            seenResidues.add(residue.name)
-
-        tree = etree.ElementTree(root)
-        etree.indent(root, "  ")
-        filename = "residues_trial.xml"
-        tree.write(filename, xml_declaration=True, encoding="utf-8", method="xml")
-
-        return filename
-
-    # ------------------------------------------------------------------------------------------ #
-    #                                        TOPOLOGY                                            #
-    # ------------------------------------------------------------------------------------------ #
-    def _createTopology(self) -> top.Topology:
-        """
-        Build the topology from the data parsed from the .xyz and .key files.
-
-        Returns
-        -------
-        openmm.app.topology.Topology
-            The topology object.
-        """
-        # Infer the residues from the bonds
-        self._getResiduesFromBonds()
-
-        # Add chain to the topology
-        for residueName, residueAtoms in zip(self._residueNames, self._residues):
-            # Add chain to the topology
-            chain = self.topology.addChain()
-            # Add residues to the topology
-            residue = self.topology.addResidue(residueName, chain)
-            for atomIndex in residueAtoms:
-                # Add atoms to the topology
-                atomType = self._atomTypes[atomIndex]
-                atomTypeData = self._atomTypesDict[atomType]
-                element = elem.Element.getByAtomicNumber(atomTypeData["atomicNumber"])
-                self.topology.addAtom(self._symbols[atomIndex], element, residue)
-
-        # Add bonds to the topology
-        atoms = list(self.topology.atoms())
-        seenBonds = set()
-        for atomIndex, bondedAtoms in enumerate(self._bonds):
-            for bondedAtomIndex in bondedAtoms:
-                if (bondedAtomIndex, atomIndex) not in seenBonds:
-                    self.topology.addBond(atoms[atomIndex], atoms[bondedAtomIndex])
-                    seenBonds.add((bondedAtomIndex, atomIndex))
-
-        return self.topology
-
-    def _getResiduesFromBonds(self):
-        """
-        Form residues by recursively traversing bonded atoms.
-
-        Notes
-        -----
-        Residues are defined as connected atoms in the graph formed by the bonds between atoms.
-        For example, connected amino acids in a protein are considered to be part of the same residue.
-
-        Returns
-        -------
-        list of list of int
-            A list of residues, where each residue is a list of atom indices.
-        """
-
-        def _getResidueName(atomIndex):
-            atomType = self._atomTypes[atomIndex]
-            residueName = self._atomTypesDict[atomType]["nameLong"].replace('"', "")
-            nameParts = residueName.split()
-            if len(nameParts) == 2:
-                residueName = nameParts[0]
-            else:
-                residueName = " ".join(nameParts[:2])
-            return residueName
-
-        self._residues = []
-        self._residueNames = []
-        seen = set()
-
-        lastResidue = None
-        for atom1 in range(len(self._bonds)):
-            if atom1 not in seen:
-                # Start a new residue
-                residue = []
-
-                # Get the residue name
-                residueName = _getResidueName(atom1)
-
-                # Iterative way of traversing a graph-like structure
-                # Recursive approach led to stack overflow
-                stack = [atom1]
-                while stack:
-                    atom = stack.pop()
-                    if atom not in seen:
-                        seen.add(atom)
-                        residue.append(atom)
-                        stack.extend(self._bonds[atom])
-
-                self._residues.append(sorted(residue))
-                self._residueNames.append(residueName)
-
-        return self._residues, self._residueNames
-
-
-class TinkerXmlFileWriter:
-    """
-    TinkerXmlFileWriter is a class that provides methods for parsing Tinker .key and .prm files
-    and converting them into XML files that are compatible with OpenMM.
-
-    Notes
-    -----
-    The methods in this class are largely inspired by the functions in `devtools/forcefield-scripts/processTinkerForceField.py`.
-    """
-
-    RECOGNIZED_FORCES = {
-        "bond": 1,
-        "angle": 1,
-        "anglep": 1,
-        "strbnd": 1,
-        "ureybrad": 1,
-        "opbend": 1,
-        "torsion": 1,
-        "pitors": 1,
-        "strtors": 1,
-        "angtors": 1,
-        "vdw": 1,
-        "vdwpr": 1,
-        "polarize": 1,
-        "tortors": None,
-        "multipole": None,
-    }
-
-    RECOGNIZED_SCALARS = {
-        "forcefield": "-2.55",
-        "bond-cubic": "-2.55",
-        "bond-quartic": "3.793125",
-        "angle-cubic": "-0.014",
-        "angle-quartic": "0.000056",
-        "angle-pentic": "-0.0000007",
-        "angle-sextic": "0.000000022",
-        "opbendtype": "ALLINGER",
-        "opbend-cubic": "-0.014",
-        "opbend-quartic": "0.000056",
-        "opbend-pentic": "-0.0000007",
-        "opbend-sextic": "0.000000022",
-        "torsionunit": "0.5",
-        "vdwtype": "BUFFERED-14-7",
-        "radiusrule": "CUBIC-MEAN",
-        "radiustype": "R-MIN",
-        "radiussize": "DIAMETER",
-        "epsilonrule": "HHG",
-        "dielectric": "1.0",
-        "polarization": "MUTUAL",
-        "vdw-13-scale": "0.0",
-        "vdw-14-scale": "1.0",
-        "vdw-15-scale": "1.0",
-        "mpole-12-scale": "0.0",
-        "mpole-13-scale": "0.0",
-        "mpole-14-scale": "0.4",
-        "mpole-15-scale": "0.8",
-        "polar-12-scale": "0.0",
-        "polar-13-scale": "0.0",
-        "polar-14-scale": "1.0",
-        "polar-15-scale": "1.0",
-        "polar-14-intra": "0.5",
-        "direct-11-scale": "0.0",
-        "direct-12-scale": "1.0",
-        "direct-13-scale": "1.0",
-        "direct-14-scale": "1.0",
-        "mutual-11-scale": "1.0",
-        "mutual-12-scale": "1.0",
-        "mutual-13-scale": "1.0",
-        "mutual-14-scale": "1.0",
-    }
+        return atomTypesDict, bioTypesDict, forcesDict, scalarsDict
 
     @staticmethod
-    def __addMultipole(lineIndex, allLines, forces):
+    def __addMultipole(
+        lineIndex: int, allLines: List[List[str]], forces: Dict[str, Any]
+    ) -> int:
+        """
+        Parse and store multipole force data from the key file.
+
+        Parameters
+        ----------
+        lineIndex : int
+            The current line index in the key file.
+        allLines : list of list of str
+            All lines from the key file, split into fields.
+        forces : dict
+            The forces dictionary to store the parsed data.
+
+        Returns
+        -------
+        int
+            The updated line index after parsing the multipole force data.
+        """
         if "multipole" not in forces:
             forces["multipole"] = []
         fields = allLines[lineIndex]
@@ -654,7 +839,26 @@ class TinkerXmlFileWriter:
         return lineIndex
 
     @staticmethod
-    def __addTorTor(lineIndex, allLines, forces):
+    def __addTorTor(
+        lineIndex: int, allLines: List[List[str]], forces: Dict[str, Any]
+    ) -> int:
+        """
+        Parse and store torsion-torsion force data from the key file.
+
+        Parameters
+        ----------
+        lineIndex : int
+            The current line index in the key file.
+        allLines : list of list of str
+            All lines from the key file, split into fields.
+        forces : dict
+            The forces dictionary to store the parsed data.
+
+        Returns
+        -------
+        int
+            The updated line index after parsing the torsion-torsion force data.
+        """
         if "tortors" not in forces:
             forces["tortors"] = []
         fields = allLines[lineIndex]
@@ -667,623 +871,345 @@ class TinkerXmlFileWriter:
         forces["tortors"].append([tortorInfo, grid])
         return lineIndex
 
-    RECOGNIZED_FORCES["tortors"] = __addTorTor
-    RECOGNIZED_FORCES["multipole"] = __addMultipole
-
-    # ------------------------------------------------------------------------------------------ #
-    #                                  PRIVATE STATIC METHODS                                    #
-    # ------------------------------------------------------------------------------------------ #
     @staticmethod
-    def _getDefaultAtom():
+    def _combineXyzAndKeyData(xyzDict: Dict, atomTypes: List, bioTypes: List) -> Dict:
         """
-        Get the default atom dictionary.
-
-        Returns
-        -------
-        dict
-            The default atom dictionary.
-        """
-        atom = dict()
-        atom["tinkerLookupName"] = "XXX"
-        atom["type"] = -1
-        atom["bonds"] = dict()
-        return atom
-
-    @staticmethod
-    def _addBond(atomDict, atom1, atom2):
-        """
-        Add a bond between two atoms to the atom dictionary.
+        Combine the data from the .xyz and .key files into one dictionary.
 
         Parameters
         ----------
-        atomDict : dict
-            The atom dictionary.
-        atom1 : str
-            The name of the first atom.
-        atom2 : str
-            The name of the second atom.
-        """
-        if atom1 not in atomDict:
-            atomDict[atom1] = TinkerXmlFileWriter._getDefaultAtom()
-        if atom2 not in atomDict:
-            atomDict[atom2] = TinkerXmlFileWriter._getDefaultAtom()
-        atomDict[atom2]["bonds"][atom1] = 1
-        atomDict[atom1]["bonds"][atom2] = 1
-
-    @staticmethod
-    def _getXmlAtoms(atoms):
-        """
-        Get the atom information from the XML file.
-
-        Parameters
-        ----------
-        atoms : list
-            The list of atoms.
-
-        Returns
-        -------
-        dict
-            The atom information.
-        """
-        atomInfo = dict()
-        for atom in atoms:
-            name = atom.attrib["name"]
-            atomInfo[name] = TinkerXmlFileWriter._getDefaultAtom()
-            atomInfo[name]["tinkerLookupName"] = atom.attrib["tinkerLookupName"]
-        return atomInfo
-
-    @staticmethod
-    def _getXmlBonds(bonds):
-        """
-        Get the bond information from the XML file.
-
-        Parameters
-        ----------
-        bonds : list
-            The list of bonds.
-
-        Returns
-        -------
-        dict
-            The bond information.
-        """
-        bondInfo = dict()
-        for bond in bonds:
-            atom1 = bond.attrib["from"]
-            atom2 = bond.attrib["to"]
-            if atom1 not in bondInfo:
-                bondInfo[atom1] = dict()
-            if atom2 not in bondInfo:
-                bondInfo[atom2] = dict()
-            bondInfo[atom1][atom2] = 1
-            bondInfo[atom2][atom1] = 1
-        return bondInfo
-
-    @staticmethod
-    def _copyBonds(bonds):
-        """
-        Copy the bond information to a new dictionary.
-
-        Parameters
-        ----------
-        bonds : dict
-            The bond information.
-
-        Returns
-        -------
-        dict
-            The new dictionary with the bond information.
-        """
-        bondCopy = dict()
-        for key in bonds.keys():
-            bondCopy[key] = bonds[key]
-        return bondCopy
-
-    @staticmethod
-    def _copyAtom(atom):
-        """
-        Copy the atom information to a new dictionary.
-
-        Parameters
-        ----------
-        atom : dict
-            The atom information.
-
-        Returns
-        -------
-        dict
-            The new dictionary with the atom information.
-        """
-        atomCopy = dict()
-        for key in atom.keys():
-            if key != "bonds":
-                atomCopy[key] = atom[key]
-            else:
-                atomCopy["bonds"] = TinkerXmlFileWriter._copyBonds(atom[key])
-        return atomCopy
-
-    @staticmethod
-    def _copyProteinResidue(residue):
-        """
-        Copy the protein residue information to a new dictionary.
-
-        Parameters
-        ----------
-        residue : dict
-            The protein residue information.
-
-        Returns
-        -------
-        dict
-            The new dictionary with the protein residue information.
-        """
-        residueCopy = dict()
-        residueCopy["atoms"] = dict()
-        residueCopy["type"] = residue["type"]
-        residueCopy["loc"] = residue["loc"]
-        residueCopy["tinkerLookupName"] = residue["tinkerLookupName"]
-        residueCopy["residueName"] = residue["residueName"]
-        residueCopy["include"] = residue["include"]
-        for atom in residue["atoms"]:
-            residueCopy["atoms"][atom] = TinkerXmlFileWriter._copyAtom(
-                residue["atoms"][atom]
-            )
-        return residueCopy
-
-    @staticmethod
-    def _buildProteinResidue(
-        residueDict,
-        atoms,
-        bondInfo,
-        abbr,
-        loc,
-        tinkerLookupName,
-        include,
-        residueName,
-        resType,
-    ):
-        """
-        Build a protein residue.
-
-        Parameters
-        ----------
-        residueDict : dict
-            The residue dictionary.
-        atoms : dict
-            The atom information.
-        bondInfo : dict
-            The bond information.
-        abbr : str
-            The abbreviation of the residue.
-        loc : str
-            The location of the residue.
-        tinkerLookupName : str
-            The Tinker lookup name of the residue.
-        include : int
-            The include flag.
-        residueName : str
-            The name of the residue.
-        resType : str
-            The type of the residue.
-        """
-        residueDict[abbr] = dict()
-        residueDict[abbr]["atoms"] = atoms
-        residueDict[abbr]["type"] = resType
-        residueDict[abbr]["loc"] = loc
-        residueDict[abbr]["tinkerLookupName"] = tinkerLookupName
-        residueDict[abbr]["residueName"] = residueName
-        residueDict[abbr]["include"] = include
-
-        for atom in bondInfo:
-            if atom in residueDict[abbr]["atoms"]:
-                if "bonds" not in residueDict[abbr]["atoms"][atom]:
-                    residueDict[abbr]["atoms"][atom]["bonds"] = dict()
-                for bondedAtom in bondInfo[atom]:
-                    if bondedAtom in residueDict[abbr]["atoms"]:
-                        if "bonds" not in residueDict[abbr]["atoms"][bondedAtom]:
-                            residueDict[abbr]["atoms"][bondedAtom]["bonds"] = dict()
-                        residueDict[abbr]["atoms"][bondedAtom]["bonds"][atom] = 1
-                        residueDict[abbr]["atoms"][atom]["bonds"][bondedAtom] = 1
-                    else:
-                        print(f"Error: bonded atom={atom} not in residue={abbr}")
-            else:
-                print(f"Error: bonded atom={atom} not in residue={abbr}")
-
-        return residueDict
-
-    @classmethod
-    def createResidueDict(cls, residueXmlFileName, residueAtomTypes):
-        """
-        Create the residue dictionary from defined residues in the XML file.
-
-        Parameters
-        ----------
-        residueXmlFileName : str
-            The name of the XML file containing the residue information.
-        residueAtomTypes : dict
-            Dictionary containing the atom types for each residue.
-
-        Returns
-        -------
-        dict
-            The residue dictionary.
-        """
-        residueTree = etree.parse(residueXmlFileName)
-        print(f"Read {residueXmlFileName}")
-        root = residueTree.getroot()
-        residueDict = dict()
-        for residue in root.findall("Residue"):
-            abbr = residue.attrib["abbreviation"]
-            loc = residue.attrib["loc"]
-            resType = residue.attrib["type"]
-            tinkerName = residue.attrib["tinkerLookupName"]
-            residueName = residue.attrib["fullName"]
-
-            if resType not in (
-                "smallMolecule",
-                "protein",
-                "water",
-                "dna",
-                "rna",
-                "ion",
-            ):
-                raise ValueError(f"Unknown residue type: {resType}")
-
-            atoms = TinkerXmlFileWriter._getXmlAtoms(residue.findall("Atom"))
-
-            # Add atom types to the atoms
-            for atom in atoms:
-                try:
-                    atoms[atom]["type"] = residueAtomTypes[residueName][atom]
-                except KeyError:
-                    raise ValueError(
-                        f"Error: atom={atom} not in residueAtomTypes for residue={residueName}"
-                    )
-
-            bondInfo = TinkerXmlFileWriter._getXmlBonds(residue.findall("Bond"))
-            if resType == "water":
-                TinkerXmlFileWriter._buildProteinResidue(
-                    residueDict,
-                    atoms,
-                    bondInfo,
-                    abbr,
-                    "x",
-                    tinkerName,
-                    1,
-                    "HOH",
-                    "water",
-                )
-            elif resType == "protein":
-                TinkerXmlFileWriter._buildProteinResidue(
-                    residueDict,
-                    atoms,
-                    bondInfo,
-                    abbr,
-                    "m",
-                    tinkerName,
-                    1,
-                    residueName,
-                    "protein",
-                )
-                cResidueName = "C" + abbr
-                residueDict[cResidueName] = TinkerXmlFileWriter._copyProteinResidue(
-                    residueDict[abbr]
-                )
-                residueDict[cResidueName]["loc"] = "c"
-                if residueDict[abbr]["tinkerLookupName"].find("(") > -1:
-                    begin = residueDict[abbr]["tinkerLookupName"].find("(")
-                    end = residueDict[abbr]["tinkerLookupName"].find(")") + 1
-                    sub = residueDict[abbr]["tinkerLookupName"][begin:end]
-                    if sub == "(HD)" or sub == "(HE)":
-                        residueDict[cResidueName]["tinkerLookupName"] = (
-                            "C-Terminal " + "HIS " + sub
-                        )
-                    else:
-                        residueDict[cResidueName]["tinkerLookupName"] = (
-                            "C-Terminal " + abbr + " " + sub
-                        )
-                    print(
-                        f"tinkerLookupName {abbr} {residueDict[cResidueName]['tinkerLookupName']}"
-                    )
-                else:
-                    residueDict[cResidueName]["tinkerLookupName"] = "C-Terminal " + abbr
-                residueDict[cResidueName]["atoms"]["OXT"] = (
-                    TinkerXmlFileWriter._copyAtom(residueDict[abbr]["atoms"]["O"])
-                )
-                residueDict[cResidueName]["atoms"]["OXT"]["tinkerLookupName"] = "OXT"
-                residueDict[cResidueName]["atoms"]["O"]["tinkerLookupName"] = "OXT"
-                residueDict[cResidueName]["parent"] = residueDict[abbr]
-                nResidueName = "N" + abbr
-                residueDict[nResidueName] = TinkerXmlFileWriter._copyProteinResidue(
-                    residueDict[abbr]
-                )
-                residueDict[nResidueName]["loc"] = "n"
-                residueDict[nResidueName]["tinkerLookupName"] = "N-Terminal " + abbr
-                residueDict[nResidueName]["parent"] = residueDict[abbr]
-                if abbr == "PRO":
-                    residueDict[nResidueName]["atoms"][
-                        "H2"
-                    ] = TinkerXmlFileWriter._getDefaultAtom()
-                    residueDict[nResidueName]["atoms"][
-                        "H3"
-                    ] = TinkerXmlFileWriter._getDefaultAtom()
-                    residueDict[nResidueName]["atoms"]["H2"]["tinkerLookupName"] = "HN"
-                    residueDict[nResidueName]["atoms"]["H3"]["tinkerLookupName"] = "HN"
-                    TinkerXmlFileWriter._addBond(
-                        residueDict[nResidueName]["atoms"], "H2", "N"
-                    )
-                    TinkerXmlFileWriter._addBond(
-                        residueDict[nResidueName]["atoms"], "H3", "N"
-                    )
-                else:
-                    residueDict[nResidueName]["atoms"]["H2"] = (
-                        TinkerXmlFileWriter._copyAtom(residueDict[abbr]["atoms"]["H"])
-                    )
-                    residueDict[nResidueName]["atoms"]["H3"] = (
-                        TinkerXmlFileWriter._copyAtom(residueDict[abbr]["atoms"]["H"])
-                    )
-            elif resType == "dna" or resType == "rna":
-                TinkerXmlFileWriter._buildProteinResidue(
-                    residueDict,
-                    atoms,
-                    bondInfo,
-                    abbr,
-                    loc,
-                    tinkerName,
-                    1,
-                    residueName,
-                    resType,
-                )
-            else:
-                TinkerXmlFileWriter._buildProteinResidue(
-                    residueDict,
-                    atoms,
-                    bondInfo,
-                    abbr,
-                    loc,
-                    tinkerName,
-                    1,
-                    residueName,
-                    resType,
-                )
-
-        print(residueDict)
-        return residueDict
-
-    @staticmethod
-    def _setBioTypes(bioTypes, residueDict):
-        """
-        Set the biotypes for all atoms.
-
-        Parameters
-        ----------
+        xyzDict : dict
+            The data from the .xyz file.
+        atomTypes : dict
+            The atom types from the .key file.
         bioTypes : dict
-            The biotype information.
-        residueDict : dict
-            The residue dictionary.
+            The bio types from the .key file.
 
         Returns
         -------
-        int
-            The return code.
-        """
-        for resname, res in residueDict.items():
-            for atom in res["atoms"]:
-                atomLookup = res["atoms"][atom]["tinkerLookupName"]
-                resLookup = []
-                if res["type"] == "dna":
-                    if res["loc"] in ("5", "N"):
-                        resLookup.append("5'-Hydroxyl DNA")
-                    if res["loc"] in ("3", "N"):
-                        resLookup.append("3'-Hydroxyl DNA")
-                    resLookup.append("Phosphodiester DNA")
-                if res["type"] == "rna":
-                    if res["loc"] in ("5", "N"):
-                        resLookup.append("5'-Hydroxyl RNA")
-                    if res["loc"] in ("3", "N"):
-                        resLookup.append("3'-Hydroxyl RNA")
-                    resLookup.append("Phosphodiester RNA")
-                resLookup.append(res["tinkerLookupName"])
-                for suffix in resLookup:
-                    lookupName = atomLookup + "_" + suffix
-                    if lookupName in bioTypes:
-                        break
-                if lookupName in bioTypes:
-                    res["atoms"][atom]["type"] = bioTypes[lookupName][3]
-                else:
-                    print(f"For {atom} lookupName={lookupName} not in biotype")
-                    if "parent" in res:
-                        lookupName = f"{res['atoms'][atom]['tinkerLookupName']}_{res['parent']['tinkerLookupName']}"
-                        if lookupName in bioTypes:
-                            res["atoms"][atom]["type"] = bioTypes[lookupName][3]
-                        else:
-                            print(f"Missing lookupName={lookupName} from biotype")
-        return 0
+        dict
+            The combined data.
 
-    @classmethod
-    def processKeyFile(cls, keyFile, residueDict):
+        Notes
+        -----
+        atomData[index]                          index = 0, 1, 2, ...
+        atomData[index]['symbol']                atom symbol
+        atomData[index]['positions']             atom position
+        atomData[index]['bonds']                 list of bonded atom indices
+
+        # if atomType is present in the .key file
+        atomData[index]['atomType']              atom type
+        atomData[index]['atomClass']             atom class
+        atomData[index]['nameShort']             short name
+        atomData[index]['nameLong']              long name
+        atomData[index]['element']               element
+        atomData[index]['atomicNumber']          atomic number
+        atomData[index]['mass']                  mass
+        atomData[index]['valence']               valence
+
+        # if bioType is present in the .key file
+        atomData[index]['bioType']               bio type
+        atomData[index]['nameShort']             short name
+        atomData[index]['nameLong']              long name
+        atomData[index]['atomType']              atom type
+        atomData[index]['element']               element
         """
-        Process the .key or .prm file.
+        atomData = dict()
+        for atomIndex in xyzDict:
+            atomData[atomIndex] = xyzDict[atomIndex]
+
+            if "atomType" in atomData[atomIndex]:
+                # Add all the atom type data to the atom data
+                for atomTypeDict in atomTypes:
+                    if atomData[atomIndex]["atomType"] in atomTypeDict:
+                        atomData[atomIndex].update(
+                            atomTypeDict[atomData[atomIndex]["atomType"]]
+                        )
+                        break
+            elif "bioType" in atomData[atomIndex]:
+                # Add all the biotype data to the atom data
+                for bioTypeDict in bioTypes:
+                    if atomData[atomIndex]["bioType"] in bioTypeDict:
+                        atomData[atomIndex].update(
+                            bioTypeDict[atomData[atomIndex]["bioType"]]
+                        )
+                        break
+
+        return atomData
+
+    # ------------------------------------------------------------------------------------------ #
+    #                                        TOPOLOGY                                            #
+    # ------------------------------------------------------------------------------------------ #
+    @staticmethod
+    def _getResiduesFromBonds(atomData: Dict) -> Tuple[List[List[int]], List[str]]:
+        """
+        Form whole residues by recursively traversing bonded atoms.
+
+        Notes
+        -----
+        Residues are defined as connected atoms in the graph formed by the bonds between atoms.
+        For example, connected amino acids in a protein are considered to be part of the same residue.
+
+        Returns
+        -------
+        list of list of int
+            A list of residues, where each residue is a list of atom indices.
+        """
+
+        def _getResidueName(atomIndex):
+            # Find atom type in atomTypesDict
+            atomType = atomData[atomIndex]["atomType"]
+            residueName = atomData[atomIndex]["residue"]
+
+            nameParts = residueName.split()
+            if len(nameParts) == 2:
+                residueName = nameParts[0]
+            else:
+                residueName = " ".join(nameParts[:2])
+            return residueName
+
+        residues = []
+        residueNames = []
+        seen = set()
+
+        lastResidue = None
+        for atom1 in range(len(atomData)):
+            if atom1 not in seen:
+                # Start a new residue
+                residue = []
+
+                # Get the residue name
+                residueName = _getResidueName(atom1)
+
+                # Iterative way of traversing a graph-like structure
+                # Recursive approach led to stack overflow
+                stack = [atom1]
+                while stack:
+                    atom = stack.pop()
+                    if atom not in seen:
+                        seen.add(atom)
+                        residue.append(atom)
+                        stack.extend(atomData[atom]["bonds"])
+
+                residues.append(sorted(residue))
+                residueNames.append(residueName)
+
+        return residues, residueNames
+
+    def _createTopology(self, atomData: Dict) -> top.Topology:
+        """
+        Build the topology from the data parsed from the .xyz file and the .key file.
 
         Parameters
         ----------
-        keyFile : str
-            The name of the file.
+        atomData : dict
+            The atom data parsed from the .xyz and .key files.
+
+        Returns
+        -------
+        openmm.app.topology.Topology
+            The topology object.
         """
-        # Get all interesting lines from the file
-        allLines = []
-        for line in open(keyFile):
-            try:
-                fields = shlex.split(line)
-            except:
-                continue
-            if len(fields) == 0:
-                continue
-            if fields[0][0] == "#":
-                continue
-            allLines.append(fields)
+        self.topology = top.Topology()
 
-        # Load lines in lists/scalar values
-        atomTypes = dict()
-        bioTypes = dict()
-        forces = dict()
-        scalars = cls.RECOGNIZED_SCALARS.copy()
+        # Infer the residues from the bonds
+        residues, residueNames = self._getResiduesFromBonds(atomData)
 
-        lineIndex = 0
-        while lineIndex < len(allLines):
-            fields = allLines[lineIndex]
-            if fields[0] == "atom":
-                element = elem.Element.getByAtomicNumber(int(fields[5])).symbol
-                print("Element", element)
-                atomTypes[int(fields[1])] = (fields[2], element, fields[6])
-                lineIndex += 1
+        # Add chain to the topology
+        for residueName, residueAtoms in zip(residueNames, residues):
+            # Add chain to the topology
+            chain = self.topology.addChain()
+            # Add residues to the topology
+            residue = self.topology.addResidue(residueName, chain)
+            for atomIndex in residueAtoms:
+                symbol = atomData[atomIndex]["symbol"]
+                element = elem.Element.getBySymbol(symbol)
 
-            elif fields[0] == "biotype":
-                lookUp = f"{fields[2]}_{fields[3]}"
-                if lookUp in bioTypes:
-                    # Workaround for Tinker using the same name but different types for H2', H2'', and for H5', H5''
-                    lookUp = f"{fields[2]}*_{fields[3]}"
-                bioTypes[lookUp] = fields[1:]
-                lineIndex += 1
+                # Add atoms to the topology
+                self.topology.addAtom(symbol, element, residue)
 
-            elif fields[0] in cls.RECOGNIZED_FORCES:
-                if cls.RECOGNIZED_FORCES[fields[0]] == 1:
-                    if fields[0] not in forces:
-                        forces[fields[0]] = []
-                    forces[fields[0]].append(fields[1:])
-                    lineIndex += 1
-                else:
-                    lineIndex = cls.RECOGNIZED_FORCES[fields[0]](
-                        lineIndex, allLines, forces
-                    )
-            elif fields[0] in cls.RECOGNIZED_SCALARS:
-                scalars[fields[0]] = fields[1]
-                lineIndex += 1
-            else:
-                print(f"Field {fields[0]} not recognized: line=<{allLines[lineIndex]}>")
-                lineIndex += 1
+        # Add bonds to the topology
+        atoms = list(self.topology.atoms())
+        seenBonds = set()
+        for atomIndex in range(len(atomData)):
+            for bondedAtomIndex in atomData[atomIndex]["bonds"]:
+                if (bondedAtomIndex, atomIndex) not in seenBonds:
+                    self.topology.addBond(atoms[atomIndex], atoms[bondedAtomIndex])
+                    seenBonds.add((atomIndex, bondedAtomIndex))
 
-        # Set biotypes for all atoms
-        cls._setBioTypes(bioTypes, residueDict)
-
-        return atomTypes, bioTypes, forces, scalars
+        return self.topology
 
     # ---------------------------------------------------------------------------------------- #
     #                                      WRITE XML FILE                                      #
     # ---------------------------------------------------------------------------------------- #
     @staticmethod
-    def _writeAtomTypes(tinkerXmlFile, atomTypes):
+    def _writeAtomTypes(
+        root: etree.Element, atomTypes: Dict[str, Dict[str, Any]]
+    ) -> None:
         """
         Write the atom types to the XML file.
 
         Parameters
         ----------
-        tinkerXmlFile : file
-            The file to write to.
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
         atomTypes : dict
             The atom types dictionary.
         """
-        tinkerXmlFile.write(" <AtomTypes>\n")
+        atomTypesElement = etree.SubElement(root, "AtomTypes")
         for atomType in sorted(atomTypes):
-            outputString = f'  <Type name="{atomType}" class="{atomTypes[atomType][0]}" element="{atomTypes[atomType][1]}" mass="{atomTypes[atomType][2]}" />'
-            tinkerXmlFile.write(f"{outputString}\n")
-        tinkerXmlFile.write(" </AtomTypes>\n")
+            atomTypeElement = etree.SubElement(atomTypesElement, "Type")
+            atomTypeElement.attrib["name"] = atomType
+            atomTypeElement.attrib["class"] = atomTypes[atomType]["atomClass"]
+            atomTypeElement.attrib["element"] = atomTypes[atomType]["element"]
+            atomTypeElement.attrib["mass"] = atomTypes[atomType]["mass"]
 
     @staticmethod
-    def _writeResidues(tinkerXmlFile, residueDict):
-        tinkerXmlFile.write(" <Residues>\n")
-        for resname, res in sorted(residueDict.items()):
-            if res["include"]:
-                if resname == "HOH":
-                    # AMBER water is flexible
-                    tinkerXmlFile.write(
-                        f'  <Residue name="{resname}" rigidWater="false">\n'
-                    )
-                else:
-                    tinkerXmlFile.write(f'  <Residue name="{resname}">\n')
+    def _writeResidues(
+        root: etree.Element,
+        atomData: Dict[int, Dict[str, Any]],
+        topology: top.Topology,
+        residuesSet: Set[str],
+    ) -> None:
+        """
+        Write the residues to the XML file.
 
-                # Write atom fields
-                atomIndex = dict()
-                for atomCount, atom in enumerate(res["atoms"].keys()):
-                    atomType = res["atoms"][atom]["type"]
-                    if int(atomType) < 0:
-                        print(
-                            f"Error: type={atomType} for atom={atom} of residue={resname}"
-                        )
-                    tag = f'   <Atom name="{atom}" type="{atomType}" />'
-                    atomIndex[atom] = atomCount
-                    tinkerXmlFile.write(f"{tag}\n")
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        atomData : dict
+            The atom data dictionary.
+        topology : openmm.app.topology.Topology
+            The topology object.
+        """
+        residuesElement = etree.SubElement(root, "Residues")
+        residuesSeen = set()
+        for residue in topology.residues():
+            if residue.name in residuesSet and residue.name not in residuesSeen:
+                residueElement = etree.SubElement(residuesElement, "Residue")
+                residueElement.attrib["name"] = residue.name
 
-                # Write bond fields
-                includedBonds = dict()
-                for atomName in res["atoms"].keys():
-                    bondsInfo = res["atoms"][atomName]["bonds"]
-                    for bondedAtom in bondsInfo:
-                        if (
-                            bondedAtom not in includedBonds
-                            or atomName not in includedBonds[bondedAtom]
-                        ):
-                            outputString = f'   <Bond from="{atomIndex[atomName]}" to="{atomIndex[bondedAtom]}" />'
-                            if atomName not in includedBonds:
-                                includedBonds[atomName] = dict()
-                            if bondedAtom not in includedBonds:
-                                includedBonds[bondedAtom] = dict()
-                            includedBonds[atomName][bondedAtom] = 1
-                            includedBonds[bondedAtom][atomName] = 1
-                            tinkerXmlFile.write(f"{outputString}\n")
+                if residue.name == "HOH":
+                    # AMOEBA water is flexible
+                    residueElement.attrib["rigidWater"] = "false"
 
-                tinkerXmlFile.write("  </Residue>\n")
-        tinkerXmlFile.write(" </Residues>\n")
+                for i, atom in enumerate(residue.atoms()):
+                    atomElement = etree.SubElement(residueElement, "Atom")
+                    atomElement.attrib["name"] = atomData[atom.index][
+                        "nameShort"
+                    ] + str(i)
+                    atomElement.attrib["type"] = atomData[atom.index]["atomType"]
+
+                baseIndex = next(atom.index for atom in residue.atoms())
+                for bond in residue.bonds():
+                    bondElement = etree.SubElement(residueElement, "Bond")
+                    bondElement.attrib["from"] = str(bond[0].index - baseIndex)
+                    bondElement.attrib["to"] = str(bond[1].index - baseIndex)
+
+                residuesSeen.add(residue.name)
 
     @staticmethod
-    def _writeAmoebaBondForce(tinkerXmlFile, forces, scalars):
+    def _writeAmoebaBondForce(
+        root: etree.Element, forces: Dict[str, Any], scalars: Dict[str, str]
+    ) -> None:
+        """
+        Write the AmoebaBondForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        scalars : dict
+            The scalars dictionary.
+        """
         if "bond" not in forces:
             return
 
         cubic = 10.0 * float(scalars["bond-cubic"])
         quartic = 100.0 * float(scalars["bond-quartic"])
-        outputString = (
-            f""" <AmoebaBondForce bond-cubic="{cubic}" bond-quartic="{quartic}">"""
-        )
-        tinkerXmlFile.write(f"{outputString}\n")
-        bonds = forces["bond"]
-        for bond in bonds:
+        bondForceElement = etree.SubElement(root, "AmoebaBondForce")
+        bondForceElement.attrib["bond-cubic"] = str(cubic)
+        bondForceElement.attrib["bond-quartic"] = str(quartic)
+
+        for bond in forces["bond"]:
             length = float(bond[3]) * 0.1
             k = float(bond[2]) * 100.0 * 4.184
-            outputString = f"""  <Bond class1="{bond[0]}" class2="{bond[1]}" length="{length}" k="{k}"/>"""
-            tinkerXmlFile.write(f"{outputString}\n")
-        tinkerXmlFile.write(" </AmoebaBondForce>\n")
+            bondElement = etree.SubElement(bondForceElement, "Bond")
+            bondElement.attrib["class1"] = bond[0]
+            bondElement.attrib["class2"] = bond[1]
+            bondElement.attrib["length"] = str(length)
+            bondElement.attrib["k"] = str(k)
 
     @staticmethod
-    def _writeAmoebaAngleForce(tinkerXmlFile, forces, scalars):
-        angleForces = [
-            angleSet for angleSet in ["angle", "anglep"] if angleSet in forces
-        ]
-        if len(angleForces) == 0:
+    def _writeAmoebaAngleForce(
+        root: etree.Element, forces: Dict[str, Any], scalars: Dict[str, str]
+    ) -> None:
+        """
+        Write the AmoebaAngleForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        scalars : dict
+            The scalars dictionary.
+        """
+        if "angle" not in forces and "anglep" not in forces:
             return
 
         cubic = float(scalars["angle-cubic"])
         quartic = float(scalars["angle-quartic"])
         pentic = float(scalars["angle-pentic"])
         sextic = float(scalars["angle-sextic"])
-        outputString = f""" <AmoebaAngleForce angle-cubic="{cubic}" angle-quartic="{quartic}" angle-pentic="{pentic}" angle-sextic="{sextic}">"""
-        tinkerXmlFile.write(f"{outputString}\n")
+        angleForceElement = etree.SubElement(root, "AmoebaAngleForce")
+        angleForceElement.attrib["angle-cubic"] = str(cubic)
+        angleForceElement.attrib["angle-quartic"] = str(quartic)
+        angleForceElement.attrib["angle-pentic"] = str(pentic)
+        angleForceElement.attrib["angle-sextic"] = str(sextic)
+
         radian = 57.2957795130
         radian2 = 4.184 / (radian * radian)
-        for angleSet in angleForces:
+
+        for angleSet in ["angle", "anglep"]:
+            if angleSet not in forces:
+                continue
             for angle in forces[angleSet]:
                 k = float(angle[3]) * radian2
-                outputString = f'  <Angle class1="{angle[0]}" class2="{angle[1]}" class3="{angle[2]}" k="{k}" angle1="{angle[4]}"'
+                angleElement = etree.SubElement(angleForceElement, "Angle")
+                angleElement.attrib["class1"] = angle[0]
+                angleElement.attrib["class2"] = angle[1]
+                angleElement.attrib["class3"] = angle[2]
+                angleElement.attrib["k"] = str(k)
+                angleElement.attrib["angle1"] = angle[4]
                 if len(angle) > 5:
-                    outputString += f' angle2="{angle[5]}"'
+                    angleElement.attrib["angle2"] = angle[5]
                 if len(angle) > 6:
-                    outputString += f' angle3="{angle[6]}"'
-                outputString += f' inPlane="{angleSet == "anglep"}"/>'
-                tinkerXmlFile.write(f"{outputString}\n")
-        tinkerXmlFile.write(" </AmoebaAngleForce>\n")
+                    angleElement.attrib["angle3"] = angle[6]
+                angleElement.attrib["inPlane"] = (
+                    "true" if angleSet == "anglep" else "false"
+                )
 
     @staticmethod
-    def _writeAmoebaOutOfPlaneBendForce(tinkerXmlFile, forces, scalars, radian):
+    def _writeAmoebaOutOfPlaneBendForce(
+        root: etree.Element, forces: Dict[str, Any], scalars: Dict[str, str]
+    ) -> None:
+        """
+        Write the AmoebaOutOfPlaneBendForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        scalars : dict
+            The scalars dictionary.
+        """
         if "opbend" not in forces:
             return
 
@@ -1291,32 +1217,57 @@ class TinkerXmlFileWriter:
         quartic = float(scalars["opbend-quartic"])
         pentic = float(scalars["opbend-pentic"])
         sextic = float(scalars["opbend-sextic"])
-        type = scalars["opbendtype"]
-        outputString = f""" <AmoebaOutOfPlaneBendForce type="{type}" opbend-cubic="{cubic}" opbend-quartic="{quartic}" opbend-pentic="{pentic}" opbend-sextic="{sextic}">"""
-        tinkerXmlFile.write(f"{outputString}\n")
-        opbends = forces["opbend"]
+        opbendType = scalars["opbendtype"]
+
+        opbendForceElement = etree.SubElement(root, "AmoebaOutOfPlaneBendForce")
+        opbendForceElement.attrib["type"] = opbendType
+        opbendForceElement.attrib["opbend-cubic"] = str(cubic)
+        opbendForceElement.attrib["opbend-quartic"] = str(quartic)
+        opbendForceElement.attrib["opbend-pentic"] = str(pentic)
+        opbendForceElement.attrib["opbend-sextic"] = str(sextic)
+
+        radian = 57.2957795130
         radian2 = 4.184 / (radian * radian)
-        for opbend in opbends:
+
+        for opbend in forces["opbend"]:
             k = float(opbend[4]) * radian2
-            for i in range(4):
-                if opbend[i] == "0":
-                    opbend[i] = ""
-            outputString = f"""  <Angle class1="{opbend[0]}" class2="{opbend[1]}" class3="{opbend[2]}" class4="{opbend[3]}" k="{k}"/>"""
-            tinkerXmlFile.write(f"{outputString}\n")
-        tinkerXmlFile.write(" </AmoebaOutOfPlaneBendForce>\n")
+            angleElement = etree.SubElement(opbendForceElement, "Angle")
+            angleElement.attrib["class1"] = opbend[0]
+            angleElement.attrib["class2"] = opbend[1]
+            angleElement.attrib["class3"] = opbend[2]
+            angleElement.attrib["class4"] = opbend[3]
+            angleElement.attrib["k"] = str(k)
 
     @staticmethod
-    def _writeAmoebaTorsionForce(tinkerXmlFile, forces, scalars, radian):
+    def _writeAmoebaTorsionForce(
+        root: etree.Element, forces: Dict[str, Any], scalars: Dict[str, str]
+    ) -> None:
+        """
+        Write the AmoebaTorsionForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        scalars : dict
+            The scalars dictionary.
+        """
         if "torsion" not in forces:
             return
 
         torsionUnit = float(scalars["torsionunit"])
-        outputString = """ <PeriodicTorsionForce>"""
-        tinkerXmlFile.write(f"{outputString}\n")
-        torsions = forces["torsion"]
         conversion = 4.184 * torsionUnit
-        for torsion in torsions:
-            outputString = f"""  <Proper class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" """
+        radian = 57.2957795130
+
+        torsionForceElement = etree.SubElement(root, "PeriodicTorsionForce")
+        for torsion in forces["torsion"]:
+            torsionElement = etree.SubElement(torsionForceElement, "Proper")
+            torsionElement.attrib["class1"] = torsion[0]
+            torsionElement.attrib["class2"] = torsion[1]
+            torsionElement.attrib["class3"] = torsion[2]
+            torsionElement.attrib["class4"] = torsion[3]
             startIndex = 4
             for ii in range(0, 3):
                 torsionSuffix = str(ii + 1)
@@ -1326,228 +1277,372 @@ class TinkerXmlFileWriter:
                 amplitude = float(torsion[startIndex]) * conversion
                 angle = float(torsion[startIndex + 1]) / radian
                 periodicity = int(torsion[startIndex + 2])
-                outputString += f"""  {amplitudeAttributeName}="{amplitude}" {angleAttributeName}="{angle}" {periodicityAttributeName}="{periodicity}" """
+                torsionElement.attrib[amplitudeAttributeName] = str(amplitude)
+                torsionElement.attrib[angleAttributeName] = str(angle)
+                torsionElement.attrib[periodicityAttributeName] = str(periodicity)
                 startIndex += 3
-            outputString += "/>"
-            tinkerXmlFile.write(f"{outputString}\n")
-        tinkerXmlFile.write(" </PeriodicTorsionForce>\n")
 
     @staticmethod
-    def _writeAmoebaPiTorsionForce(tinkerXmlFile, forces):
+    def _writeAmoebaPiTorsionForce(root: etree.Element, forces: Dict[str, Any]) -> None:
+        """
+        Write the AmoebaPiTorsionForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        """
         if "pitors" not in forces:
             return
 
         piTorsionUnit = 1.0
-        outputString = f""" <AmoebaPiTorsionForce piTorsionUnit="{piTorsionUnit}">"""
-        tinkerXmlFile.write(f"{outputString}\n")
-        piTorsions = forces["pitors"]
         conversion = 4.184 * piTorsionUnit
-        for piTorsion in piTorsions:
+        piTorsionForceElement = etree.SubElement(root, "AmoebaPiTorsionForce")
+        piTorsionForceElement.attrib["piTorsionUnit"] = str(piTorsionUnit)
+        for piTorsion in forces["pitors"]:
             k = float(piTorsion[2]) * conversion
-            outputString = f"""  <PiTorsion class1="{piTorsion[0]}" class2="{piTorsion[1]}" k="{k}" />"""
-            tinkerXmlFile.write(f"{outputString}\n")
-        tinkerXmlFile.write(" </AmoebaPiTorsionForce>\n")
+            piTorsionElement = etree.SubElement(piTorsionForceElement, "PiTorsion")
+            piTorsionElement.attrib["class1"] = piTorsion[0]
+            piTorsionElement.attrib["class2"] = piTorsion[1]
+            piTorsionElement.attrib["k"] = str(k)
 
     @staticmethod
-    def _writeAmoebaStretchTorsionForce(tinkerXmlFile, forces):
+    def _writeAmoebaStretchTorsionForce(
+        root: etree.Element, forces: Dict[str, Any]
+    ) -> None:
+        """
+        Write the AmoebaStretchTorsionForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        """
         if "strtors" not in forces:
             return
 
-        tinkerXmlFile.write(" <AmoebaStretchTorsionForce>\n")
+        stretchTorsionForceElement = etree.SubElement(root, "AmoebaStretchTorsionForce")
         for torsion in forces["strtors"]:
             v = [float(x) * 10 * 4.184 for x in torsion[4:]]
-            tinkerXmlFile.write(
-                f'  <Torsion class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" v11="{v[0]}" v12="{v[1]}" v13="{v[2]}" v21="{v[3]}" v22="{v[4]}" v23="{v[5]}" v31="{v[6]}" v32="{v[7]}" v33="{v[8]}"/>\n'
-            )
-        tinkerXmlFile.write(" </AmoebaStretchTorsionForce>\n")
+            torsionElement = etree.SubElement(stretchTorsionForceElement, "Torsion")
+            torsionElement.attrib["class1"] = torsion[0]
+            torsionElement.attrib["class2"] = torsion[1]
+            torsionElement.attrib["class3"] = torsion[2]
+            torsionElement.attrib["class4"] = torsion[3]
+            torsionElement.attrib["v11"] = str(v[0])
+            torsionElement.attrib["v12"] = str(v[1])
+            torsionElement.attrib["v13"] = str(v[2])
+            torsionElement.attrib["v21"] = str(v[3])
+            torsionElement.attrib["v22"] = str(v[4])
+            torsionElement.attrib["v23"] = str(v[5])
+            torsionElement.attrib["v31"] = str(v[6])
+            torsionElement.attrib["v32"] = str(v[7])
+            torsionElement.attrib["v33"] = str(v[8])
 
     @staticmethod
-    def _writeAmoebaAngleTorsionForce(tinkerXmlFile, forces):
+    def _writeAmoebaAngleTorsionForce(
+        root: etree.Element, forces: Dict[str, Any]
+    ) -> None:
+        """
+        Write the AmoebaAngleTorsionForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        """
         if "angtors" not in forces:
             return
 
-        tinkerXmlFile.write(" <AmoebaAngleTorsionForce>\n")
+        angleTorsionForceElement = etree.SubElement(root, "AmoebaAngleTorsionForce")
         for torsion in forces["angtors"]:
             v = [float(x) * 4.184 for x in torsion[4:]]
-            tinkerXmlFile.write(
-                f'  <Torsion class1="{torsion[0]}" class2="{torsion[1]}" class3="{torsion[2]}" class4="{torsion[3]}" v11="{v[0]}" v12="{v[1]}" v13="{v[2]}" v21="{v[3]}" v22="{v[4]}" v23="{v[5]}"/>\n'
-            )
-        tinkerXmlFile.write(" </AmoebaAngleTorsionForce>\n")
+            torsionElement = etree.SubElement(angleTorsionForceElement, "Torsion")
+            torsionElement.attrib["class1"] = torsion[0]
+            torsionElement.attrib["class2"] = torsion[1]
+            torsionElement.attrib["class3"] = torsion[2]
+            torsionElement.attrib["class4"] = torsion[3]
+            torsionElement.attrib["v11"] = str(v[0])
+            torsionElement.attrib["v12"] = str(v[1])
+            torsionElement.attrib["v13"] = str(v[2])
+            torsionElement.attrib["v21"] = str(v[3])
+            torsionElement.attrib["v22"] = str(v[4])
+            torsionElement.attrib["v23"] = str(v[5])
 
     @staticmethod
-    def _writeAmoebaStretchBendForce(tinkerXmlFile, forces, radian):
+    def _writeAmoebaStretchBendForce(
+        root: etree.Element, forces: Dict[str, Any]
+    ) -> None:
+        """
+        Write the AmoebaStretchBendForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        """
         if "strbnd" not in forces:
             return
 
         stretchBendUnit = 1.0
-        outputString = (
-            f""" <AmoebaStretchBendForce stretchBendUnit="{stretchBendUnit}">"""
-        )
-        tinkerXmlFile.write(f"{outputString}\n")
+        radian = 57.2957795130
         conversion = 41.84 / radian
-        stretchBends = forces["strbnd"]
-        for stretchBend in stretchBends:
+        stretchBendForceElement = etree.SubElement(root, "AmoebaStretchBendForce")
+        stretchBendForceElement.attrib["stretchBendUnit"] = str(stretchBendUnit)
+
+        for stretchBend in forces["strbnd"]:
             k1 = float(stretchBend[3]) * conversion
             k2 = float(stretchBend[4]) * conversion
-            outputString = f"""  <StretchBend class1="{stretchBend[0]}" class2="{stretchBend[1]}" class3="{stretchBend[2]}" k1="{k1}" k2="{k2}" />"""
-            tinkerXmlFile.write(f"{outputString}\n")
-        tinkerXmlFile.write("</AmoebaStretchBendForce>\n")
+            stretchBendElement = etree.SubElement(
+                stretchBendForceElement, "StretchBend"
+            )
+            stretchBendElement.attrib["class1"] = stretchBend[0]
+            stretchBendElement.attrib["class2"] = stretchBend[1]
+            stretchBendElement.attrib["class3"] = stretchBend[2]
+            stretchBendElement.attrib["k1"] = str(k1)
+            stretchBendElement.attrib["k2"] = str(k2)
 
     @staticmethod
-    def _writeAmoebaTorsionTorsionForce(tinkerXmlFile, forces):
+    def _writeAmoebaTorsionTorsionForce(
+        root: etree.Element, forces: Dict[str, Any]
+    ) -> None:
+        """
+        Write the AmoebaTorsionTorsionForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        """
         if "tortors" not in forces:
             return
 
         torsionTorsionUnit = 1.0
-        tinkerXmlFile.write(""" <AmoebaTorsionTorsionForce >\n""")
-        torsionTorsions = forces["tortors"]
-        for index, torsionTorsion in enumerate(torsionTorsions):
-            torInfo = torsionTorsion[0]
-            grid = torsionTorsion[1]
-            outputString = f"""  <TorsionTorsion class1="{torInfo[0]}" class2="{torInfo[1]}" class3="{torInfo[2]}" class4="{torInfo[3]}" class5="{torInfo[4]}" grid="{index}" nx="{torInfo[5]}" ny="{torInfo[6]}" />"""
-            tinkerXmlFile.write(f"{outputString}\n")
 
-        for index, torsionTorsion in enumerate(torsionTorsions):
-            torInfo = torsionTorsion[0]
-            grid = torsionTorsion[1]
-            outputString = f"""  <TorsionTorsionGrid grid="{index}" nx="{torInfo[5]}" ny="{torInfo[6]}" >"""
-            tinkerXmlFile.write(f"{outputString}\n")
-            for gridIndex, gridEntry in enumerate(grid):
-                print(f"Gxx {gridIndex}  {gridEntry}")
+        torsionTorsionForceElement = etree.SubElement(root, "AmoebaTorsionTorsionForce")
+        for index, torsionTorsion in enumerate(forces["tortors"]):
+            torsionTorsionElement = etree.SubElement(
+                torsionTorsionForceElement, "TorsionTorsion"
+            )
+            torsionTorsionElement.attrib["class1"] = torsionTorsion[0][0]
+            torsionTorsionElement.attrib["class2"] = torsionTorsion[0][1]
+            torsionTorsionElement.attrib["class3"] = torsionTorsion[0][2]
+            torsionTorsionElement.attrib["class4"] = torsionTorsion[0][3]
+            torsionTorsionElement.attrib["class5"] = torsionTorsion[0][4]
+            torsionTorsionElement.attrib["grid"] = str(index)
+            torsionTorsionElement.attrib["nx"] = str(torsionTorsion[0][5])
+            torsionTorsionElement.attrib["ny"] = str(torsionTorsion[0][6])
+
+        for index, torsionTorsion in enumerate(forces["tortors"]):
+            gridElement = etree.SubElement(
+                torsionTorsionForceElement, "TorsionTorsionGrid"
+            )
+            gridElement.attrib["grid"] = str(index)
+            gridElement.attrib["nx"] = str(torsionTorsion[0][5])
+            gridElement.attrib["ny"] = str(torsionTorsion[0][6])
+            for gridIndex, gridEntry in enumerate(torsionTorsion[1]):
                 if len(gridEntry) > 5:
                     f = float(gridEntry[2]) * 4.184
                     fx = float(gridEntry[3]) * 4.184
                     fy = float(gridEntry[4]) * 4.184
                     fxy = float(gridEntry[5]) * 4.184
-                    outputString = f"""  <Grid angle1="{gridEntry[0]}" angle2="{gridEntry[1]}" f="{f}" fx="{fx}" fy="{fy}" fxy="{fxy}" />"""
-                    tinkerXmlFile.write(f"  {outputString}\n")
+                    gridEntryElement = etree.SubElement(gridElement, "Grid")
+                    gridEntryElement.attrib["angle1"] = gridEntry[0]
+                    gridEntryElement.attrib["angle2"] = gridEntry[1]
+                    gridEntryElement.attrib["f"] = str(f)
+                    gridEntryElement.attrib["fx"] = str(fx)
+                    gridEntryElement.attrib["fy"] = str(fy)
+                    gridEntryElement.attrib["fxy"] = str(fxy)
                 elif len(gridEntry) > 2:
                     f = float(gridEntry[2]) * 4.184
-                    outputString = f"""  <Grid angle1="{gridEntry[0]}" angle2="{gridEntry[1]}" f="{f}" />"""
-                    tinkerXmlFile.write(f"  {outputString}\n")
-            tinkerXmlFile.write("</TorsionTorsionGrid >\n")
-
-        tinkerXmlFile.write("</AmoebaTorsionTorsionForce>\n")
+                    gridEntryElement = etree.SubElement(gridElement, "Grid")
+                    gridEntryElement.attrib["angle1"] = gridEntry[0]
+                    gridEntryElement.attrib["angle2"] = gridEntry[1]
+                    gridEntryElement.attrib["f"] = str(f)
 
     @staticmethod
-    def _writeAmoebaVdwForce(tinkerXmlFile, forces, scalars):
+    def _writeAmoebaVdwForce(
+        root: etree.Element, forces: Dict[str, Any], scalars: Dict[str, str]
+    ) -> None:
+        """
+        Write the AmoebaVdwForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        scalars : dict
+            The scalars dictionary.
+        """
         if "vdw" not in forces and "vdwpr" not in forces:
             return
 
-        outputString = f""" <AmoebaVdwForce type="{scalars['vdwtype']}" radiusrule="{scalars['radiusrule']}" radiustype="{scalars['radiustype']}" radiussize="{scalars['radiussize']}" epsilonrule="{scalars['epsilonrule']}" vdw-13-scale="{scalars['vdw-13-scale']}" vdw-14-scale="{scalars['vdw-14-scale']}" vdw-15-scale="{scalars['vdw-15-scale']}" >"""
-        tinkerXmlFile.write(f"{outputString}\n")
+        vdwForceElement = etree.SubElement(root, "AmoebaVdwForce")
+        vdwForceElement.attrib["type"] = scalars["vdwtype"]
+        vdwForceElement.attrib["radiusrule"] = scalars["radiusrule"]
+        vdwForceElement.attrib["radiustype"] = scalars["radiustype"]
+        vdwForceElement.attrib["radiussize"] = scalars["radiussize"]
+        vdwForceElement.attrib["epsilonrule"] = scalars["epsilonrule"]
+        vdwForceElement.attrib["vdw-13-scale"] = scalars["vdw-13-scale"]
+        vdwForceElement.attrib["vdw-14-scale"] = scalars["vdw-14-scale"]
+        vdwForceElement.attrib["vdw-15-scale"] = scalars["vdw-15-scale"]
+
         if "vdw" in forces:
             for vdw in forces["vdw"]:
                 sigma = float(vdw[1]) * 0.1
                 epsilon = float(vdw[2]) * 4.184
                 reduction = vdw[3] if len(vdw) > 3 else 1.0
-                outputString = f"""  <Vdw class="{vdw[0]}" sigma="{sigma}" epsilon="{epsilon}" reduction="{reduction}"/>"""
-                tinkerXmlFile.write(f"{outputString}\n")
+                vdwElement = etree.SubElement(vdwForceElement, "Vdw")
+                vdwElement.attrib["class"] = vdw[0]
+                vdwElement.attrib["sigma"] = str(sigma)
+                vdwElement.attrib["epsilon"] = str(epsilon)
+                vdwElement.attrib["reduction"] = str(reduction)
 
         if "vdwpr" in forces:
             for pair in forces["vdwpr"]:
                 sigma = float(pair[2]) * 0.1
                 epsilon = float(pair[3]) * 4.184
-                outputString = f"""  <Pair class1="{pair[0]}" class2="{pair[1]}" sigma="{sigma}" epsilon="{epsilon}"/>"""
-                tinkerXmlFile.write(f"{outputString}\n")
-        tinkerXmlFile.write(" </AmoebaVdwForce>\n")
+                pairElement = etree.SubElement(vdwForceElement, "Pair")
+                pairElement.attrib["class1"] = pair[0]
+                pairElement.attrib["class2"] = pair[1]
+                pairElement.attrib["sigma"] = str(sigma)
+                pairElement.attrib["epsilon"] = str(epsilon)
 
     @staticmethod
-    def _writeAmoebaMultipoleForce(tinkerXmlFile, forces, recognizedScalars):
-        scalarList = {
-            "mpole12Scale": recognizedScalars["mpole-12-scale"],
-            "mpole13Scale": recognizedScalars["mpole-13-scale"],
-            "mpole14Scale": recognizedScalars["mpole-14-scale"],
-            "mpole15Scale": recognizedScalars["mpole-15-scale"],
-            "polar12Scale": recognizedScalars["polar-12-scale"],
-            "polar13Scale": recognizedScalars["polar-13-scale"],
-            "polar14Scale": recognizedScalars["polar-14-scale"],
-            "polar15Scale": recognizedScalars["polar-15-scale"],
-            "polar14Intra": recognizedScalars["polar-14-intra"],
-            "direct11Scale": recognizedScalars["direct-11-scale"],
-            "direct12Scale": recognizedScalars["direct-12-scale"],
-            "direct13Scale": recognizedScalars["direct-13-scale"],
-            "direct14Scale": recognizedScalars["direct-14-scale"],
-            "mutual11Scale": recognizedScalars["mutual-11-scale"],
-            "mutual12Scale": recognizedScalars["mutual-12-scale"],
-            "mutual13Scale": recognizedScalars["mutual-13-scale"],
-            "mutual14Scale": recognizedScalars["mutual-14-scale"],
-        }
+    def _writeAmoebaMultipoleForce(
+        root: etree.Element, forces: Dict[str, Any], scalars: Dict[str, str]
+    ) -> None:
+        """
+        Write the AmoebaMultipoleForce to the XML file.
 
-        outputString = " <AmoebaMultipoleForce "
-        for key in sorted(scalarList.keys()):
-            outputString += f' {key}="{scalarList[key]}" '
-        outputString += " > "
-        tinkerXmlFile.write(f"{outputString}\n")
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        scalars : dict
+            The scalars dictionary.
+        """
+        if "multipole" not in forces and "polarize" not in forces:
+            return
 
-        multipoleArray = forces["multipole"]
+        amoebaMultipoleForceElement = etree.SubElement(root, "AmoebaMultipoleForce")
+        for key in sorted(scalars):
+            amoebaMultipoleForceElement.attrib[key] = scalars[key]
+
         bohr = 0.52917720859
         dipoleConversion = 0.1 * bohr
         quadrupoleConversion = 0.01 * bohr * bohr / 3.0
-        for multipoleInfo in multipoleArray:
+        for multipoleInfo in forces["multipole"]:
             axisInfo = multipoleInfo[0]
             multipoles = multipoleInfo[1]
-            outputString = f'  <Multipole type="{axisInfo[0]}" '
+            multipoleElement = etree.SubElement(
+                amoebaMultipoleForceElement, "Multipole"
+            )
+            multipoleElement.attrib["type"] = axisInfo[0]
             axisInfoLen = len(axisInfo)
 
             if axisInfoLen > 1:
-                outputString += f'kz="{axisInfo[1]}" '
-
+                multipoleElement.attrib["kz"] = axisInfo[1]
             if axisInfoLen > 2:
-                outputString += f'kx="{axisInfo[2]}" '
-
+                multipoleElement.attrib["kx"] = axisInfo[2]
             if axisInfoLen > 3:
-                outputString += f'ky="{axisInfo[3]}" '
+                multipoleElement.attrib["ky"] = axisInfo[3]
 
-            outputString += f'c0="{multipoles[0]}" d1="{str(dipoleConversion * float(multipoles[1]))}" d2="{str(dipoleConversion * float(multipoles[2]))}" d3="{str(dipoleConversion * float(multipoles[3]))}" q11="{str(quadrupoleConversion * float(multipoles[4]))}" q21="{str(quadrupoleConversion * float(multipoles[5]))}" q22="{str(quadrupoleConversion * float(multipoles[6]))}" q31="{str(quadrupoleConversion * float(multipoles[7]))}" q32="{str(quadrupoleConversion * float(multipoles[8]))}" q33="{str(quadrupoleConversion * float(multipoles[9]))}"  />'
-            tinkerXmlFile.write(f"{outputString}\n")
+            multipoleElement.attrib["c0"] = multipoles[0]
+            multipoleElement.attrib["d1"] = str(dipoleConversion * float(multipoles[1]))
+            multipoleElement.attrib["d2"] = str(dipoleConversion * float(multipoles[2]))
+            multipoleElement.attrib["d3"] = str(dipoleConversion * float(multipoles[3]))
+            multipoleElement.attrib["q11"] = str(
+                quadrupoleConversion * float(multipoles[4])
+            )
+            multipoleElement.attrib["q21"] = str(
+                quadrupoleConversion * float(multipoles[5])
+            )
+            multipoleElement.attrib["q22"] = str(
+                quadrupoleConversion * float(multipoles[6])
+            )
+            multipoleElement.attrib["q31"] = str(
+                quadrupoleConversion * float(multipoles[7])
+            )
+            multipoleElement.attrib["q32"] = str(
+                quadrupoleConversion * float(multipoles[8])
+            )
+            multipoleElement.attrib["q33"] = str(
+                quadrupoleConversion * float(multipoles[9])
+            )
 
-        polarizeArray = forces["polarize"]
         polarityConversion = 0.001
-        m = {}
-        for polarize in polarizeArray:
-            m[polarize[0]] = []
-            outputString = f'  <Polarize type="{polarize[0]}" polarizability="{str(polarityConversion * float(polarize[1]))}" thole="{polarize[2]}" '
+        for polarize in forces["polarize"]:
+            polarizeElement = etree.SubElement(amoebaMultipoleForceElement, "Polarize")
+            polarizeElement.attrib["type"] = polarize[0]
+            polarizeElement.attrib["polarizability"] = str(
+                polarityConversion * float(polarize[1])
+            )
+            polarizeElement.attrib["thole"] = polarize[2]
             for ii in range(3, len(polarize)):
-                outputString += f'pgrp{ii - 2}="{polarize[ii]}" '
-                m[polarize[0]].append(polarize[ii])
-
-            outputString += "/>"
-            tinkerXmlFile.write(f"{outputString}\n")
-            print(m[polarize[0]])
-        for t in sorted(m):
-            for k in m[t]:
-                if t not in m[k]:
-                    print(t, k)
-
-        tinkerXmlFile.write(" </AmoebaMultipoleForce>\n")
+                polarizeElement.attrib[f"pgrp{ii - 2}"] = polarize[ii]
 
     @staticmethod
     def _writeAmoebaGeneralizedKirkwoodForce(
-        gkXmlFile, forces, atomTypes, bioTypes, recognizedScalars
-    ):
+        root: etree.Element,
+        forces: Dict[str, Any],
+        atomTypes: Dict[str, Dict[str, Any]],
+        bioTypes: Dict[str, Dict[str, Any]],
+        scalars: Dict[str, str],
+    ) -> None:
+        """
+        Write the AmoebaGeneralizedKirkwoodForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        atomTypes : dict
+            The atom types dictionary.
+        bioTypes : dict
+            The bio types dictionary.
+        scalars : dict
+            The scalars dictionary.
+        """
+        if "multipole" not in forces:
+            return
+
         solventDielectric = 78.3
         soluteDielectric = 1.0
         includeCavityTerm = 1
         probeRadius = 0.14
         surfaceAreaFactor = -6.0 * 3.1415926535 * 0.0216 * 1000.0 * 0.4184
-        outputString = f' <AmoebaGeneralizedKirkwoodForce solventDielectric="{solventDielectric}" soluteDielectric="{soluteDielectric}" includeCavityTerm="{includeCavityTerm}" probeRadius="{probeRadius}" surfaceAreaFactor="{surfaceAreaFactor}">'
-        gkXmlFile.write(f"{outputString}\n")
 
-        for type in sorted(atomTypes):
-            print(f"atom type={type}  {atomTypes[type]}")
+        gkForceElement = etree.SubElement(root, "AmoebaGeneralizedKirkwoodForce")
+        gkForceElement.attrib["solventDielectric"] = str(solventDielectric)
+        gkForceElement.attrib["soluteDielectric"] = str(soluteDielectric)
+        gkForceElement.attrib["includeCavityTerm"] = str(includeCavityTerm)
+        gkForceElement.attrib["probeRadius"] = str(probeRadius)
+        gkForceElement.attrib["surfaceAreaFactor"] = str(surfaceAreaFactor)
 
-        for type in sorted(bioTypes):
-            print(f"bio type={type}  {bioTypes[type]}")
-
-        multipoleArray = forces["multipole"]
-        for multipoleInfo in multipoleArray:
+        for multipoleInfo in forces["multipole"]:
             axisInfo = multipoleInfo[0]
             multipoles = multipoleInfo[1]
-            type = int(axisInfo[0])
+            atomType = int(axisInfo[0])
             shct = 0.8
-            if type in atomTypes:
-                element = atomTypes[type][1]
+            if atomType in atomTypes:
+                element = atomTypes[atomType]["element"]
                 if element == "H":
                     shct = 0.85
                 elif element == "C":
@@ -1571,12 +1666,27 @@ class TinkerXmlFileWriter:
             else:
                 print(f"Warning no overlap scale factor for type={type} ")
 
-            outputString = f'  <GeneralizedKirkwood type="{axisInfo[0]}" charge="{multipoles[0]}" shct="{shct}"  /> '
-            gkXmlFile.write(f"{outputString}\n")
-        gkXmlFile.write(" </AmoebaGeneralizedKirkwoodForce>\n")
+            gkElement = etree.SubElement(gkForceElement, "GeneralizedKirkwood")
+            gkElement.attrib["type"] = axisInfo[0]
+            gkElement.attrib["charge"] = multipoles[0]
+            gkElement.attrib["shct"] = str(shct)
 
     @staticmethod
-    def _writeAmoebaWcaDispersionForce(gkXmlFile, forces, scalars):
+    def _writeAmoebaWcaDispersionForce(
+        root: etree.Element, forces: Dict[str, Any], scalars: Dict[str, str]
+    ) -> None:
+        """
+        Write the AmoebaWcaDispersionForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        scalars : dict
+            The scalars dictionary.
+        """
         if "vdw" not in forces:
             return
 
@@ -1589,118 +1699,143 @@ class TinkerXmlFileWriter:
         dispoff = 0.26
         shctd = 0.81
 
-        outputString = f' <AmoebaWcaDispersionForce epso="{epso * 4.184}" epsh="{epsh * 4.184}" rmino="{rmino * 0.1}" rminh="{rminh * 0.1}" awater="{1000.0 * awater}" slevy="{slevy}"  dispoff="{0.1 * dispoff}" shctd="{shctd}" >'
-        gkXmlFile.write(f"{outputString}\n")
-        vdws = forces["vdw"]
+        root = etree.SubElement(root, "AmoebaWcaDispersionForce")
+        root.attrib["epso"] = str(epso * 4.184)
+        root.attrib["epsh"] = str(epsh * 4.184)
+        root.attrib["rmino"] = str(rmino * 0.1)
+        root.attrib["rminh"] = str(rminh * 0.1)
+        root.attrib["awater"] = str(1000.0 * awater)
+        root.attrib["slevy"] = str(slevy)
+        root.attrib["dispoff"] = str(0.1 * dispoff)
+        root.attrib["shctd"] = str(shctd)
         convert = 0.1
+
         if scalars["radiustype"] == "SIGMA":
             convert *= 1.122462048309372
 
         if scalars["radiussize"] == "DIAMETER":
             convert *= 0.5
 
-        for vdw in vdws:
+        for vdw in forces["vdw"]:
             sigma = float(vdw[1])
             sigma *= convert
             epsilon = float(vdw[2]) * 4.184
-            outputString = f'  <WcaDispersion class="{vdw[0]}" radius="{sigma}" epsilon="{epsilon}" /> '
-            gkXmlFile.write(f"{outputString}\n")
-        gkXmlFile.write(" </AmoebaWcaDispersionForce>\n")
+            vdwElement = etree.SubElement(root, "WcaDispersion")
+            vdwElement.attrib["class"] = vdw[0]
+            vdwElement.attrib["radius"] = str(sigma)
+            vdwElement.attrib["epsilon"] = str(epsilon)
 
     @staticmethod
-    def _writeAmoebaUreyBradleyForce(tinkerXmlFile, forces):
+    def _writeAmoebaUreyBradleyForce(
+        root: etree.Element, forces: Dict[str, Any]
+    ) -> None:
+        """
+        Write the AmoebaUreyBradleyForce to the XML file.
+
+        Parameters
+        ----------
+        root : xml.etree.ElementTree.Element
+            The root element of the XML tree.
+        forces : dict
+            The forces dictionary.
+        """
         if "ureybrad" not in forces:
             return
 
         cubic = 0.0
         quartic = 0.0
+        ureyBradleyForceElement = etree.SubElement(root, "AmoebaUreyBradleyForce")
+        ureyBradleyForceElement.attrib["cubic"] = str(cubic)
+        ureyBradleyForceElement.attrib["quartic"] = str(quartic)
 
-        outputString = (
-            f' <AmoebaUreyBradleyForce cubic="{cubic}" quartic="{quartic}"  >'
-        )
-        tinkerXmlFile.write(f"{outputString}\n")
-        ubs = forces["ureybrad"]
-        for ub in ubs:
+        for ub in forces["ureybrad"]:
             k = float(ub[3]) * 4.184 * 100.0
             d = float(ub[4]) * 0.1
-            outputString = f'  <UreyBradley class1="{ub[0]}" class2="{ub[1]}" class3="{ub[2]}" k="{k}" d="{d}" /> '
-            tinkerXmlFile.write(f"{outputString}\n")
-        tinkerXmlFile.write(" </AmoebaUreyBradleyForce>\n")
+            ureyBradleyElement = etree.SubElement(
+                ureyBradleyForceElement, "UreyBradley"
+            )
+            ureyBradleyElement.attrib["class1"] = ub[0]
+            ureyBradleyElement.attrib["class2"] = ub[1]
+            ureyBradleyElement.attrib["class3"] = ub[2]
+            ureyBradleyElement.attrib["k"] = str(k)
+            ureyBradleyElement.attrib["d"] = str(d)
 
-    @staticmethod
-    def _writeForceFieldEnd(tinkerXmlFile, gkXmlFile):
-        tinkerXmlFile.write("</ForceField>\n")
-        gkXmlFile.write("</ForceField>\n")
-        tinkerXmlFile.close()
-        gkXmlFile.close()
-
-    @classmethod
-    def createXmlFiles(
-        cls, filename, atomTypes, bioTypes, forces, residueDict, scalars
-    ):
+    def _createXmlFile(self, filename, atomTypes, bioTypes, forces, scalars, atomData):
         """
         Create the XML file.
 
         Parameters
         ----------
-
+        filename : str
+            The name of .key file.
+        atomTypes : dict
+            The atom types dictionary.
+        bioTypes : dict
+            The bio types dictionary.
+        forces : dict
+            The forces dictionary.
+        scalars : dict
+            The scalars dictionary.
+        atomData : dict
+            The atom data dictionary.
 
         Returns
         -------
         tinkXmlFile, gkXmlFile : tuple(file, file)
             The XML files.
         """
-        if "forcefield" not in scalars:
-            scalars["forcefield"] = filename.rsplit(".", 1)[0]
-
-        tinkerXmlFileName = scalars["forcefield"]
-        tinkerXmlFileName += ".xml"
-        tinkerXmlFile = open(tinkerXmlFileName, "w")
-        print(f"Opened {tinkerXmlFileName}.")
-
-        gkXmlFileName = scalars["forcefield"]
-        gkXmlFileName += "_gk.xml"
-        gkXmlFile = open(gkXmlFileName, "w")
-        print(f"Opened {gkXmlFileName}.")
+        root = etree.Element("ForceField")
 
         # Write the header
-        today = datetime.date.today().isoformat()
-        sourceFile = os.path.basename(filename)
-        header = f""" <Info>
-        <Source>{sourceFile}</Source>
-        <DateGenerated>{today}</DateGenerated>
-        <Reference></Reference>
-        </Info>
-    """
+        info = etree.SubElement(root, "Info")
+        etree.SubElement(info, "Source").text = os.path.basename(filename)
+        etree.SubElement(info, "DateGenerated").text = datetime.date.today().isoformat()
+        etree.SubElement(info, "Reference")
 
-        gkXmlFile.write("<ForceField>\n")
-        gkXmlFile.write(header)
-        tinkerXmlFile.write("<ForceField>\n")
-        tinkerXmlFile.write(header)
+        # Write the AtomTypes
+        TinkerFiles._writeAtomTypes(root, atomTypes)
 
-        cls._writeAtomTypes(tinkerXmlFile, atomTypes)
-        cls._writeResidues(tinkerXmlFile, residueDict)
-        # if bioTypes:
-        #    cls._writeEndCaps(tinkerXmlFile, bioTypes)
-        # cls._writeIons(tinkerXmlFile, ions)
-
-        radian = 57.2957795130
-        cls._writeAmoebaBondForce(tinkerXmlFile, forces, scalars)
-        cls._writeAmoebaAngleForce(tinkerXmlFile, forces, scalars)
-        cls._writeAmoebaOutOfPlaneBendForce(tinkerXmlFile, forces, scalars, radian)
-        cls._writeAmoebaTorsionForce(tinkerXmlFile, forces, scalars, radian)
-        cls._writeAmoebaPiTorsionForce(tinkerXmlFile, forces)
-        cls._writeAmoebaStretchTorsionForce(tinkerXmlFile, forces)
-        cls._writeAmoebaAngleTorsionForce(tinkerXmlFile, forces)
-        cls._writeAmoebaStretchBendForce(tinkerXmlFile, forces, radian)
-        cls._writeAmoebaTorsionTorsionForce(tinkerXmlFile, forces)
-        cls._writeAmoebaVdwForce(tinkerXmlFile, forces, scalars)
-        cls._writeAmoebaMultipoleForce(tinkerXmlFile, forces, scalars)
-        cls._writeAmoebaGeneralizedKirkwoodForce(
-            gkXmlFile, forces, atomTypes, bioTypes, scalars
+        # Check residues present in this file
+        residuesSet = set(atomTypes[atomIndex]["residue"] for atomIndex in atomTypes)
+        residuesSet = residuesSet.union(
+            set(bioTypes[atomIndex]["residue"] for atomIndex in bioTypes)
         )
-        cls._writeAmoebaWcaDispersionForce(gkXmlFile, forces, scalars)
-        cls._writeAmoebaUreyBradleyForce(tinkerXmlFile, forces)
-        cls._writeForceFieldEnd(tinkerXmlFile, gkXmlFile)
 
-        return tinkerXmlFile, gkXmlFile
+        # Write the Residues
+        TinkerFiles._writeResidues(root, atomData, self.topology, residuesSet)
+
+        # Write the Forces
+        TinkerFiles._writeAmoebaBondForce(root, forces, scalars)
+        TinkerFiles._writeAmoebaAngleForce(root, forces, scalars)
+        TinkerFiles._writeAmoebaOutOfPlaneBendForce(root, forces, scalars)
+        TinkerFiles._writeAmoebaTorsionForce(root, forces, scalars)
+        TinkerFiles._writeAmoebaPiTorsionForce(root, forces)
+        TinkerFiles._writeAmoebaStretchTorsionForce(root, forces)
+        TinkerFiles._writeAmoebaAngleTorsionForce(root, forces)
+        TinkerFiles._writeAmoebaStretchBendForce(root, forces)
+        TinkerFiles._writeAmoebaTorsionTorsionForce(root, forces)
+        TinkerFiles._writeAmoebaVdwForce(root, forces, scalars)
+        TinkerFiles._writeAmoebaMultipoleForce(root, forces, scalars)
+        # TinkerFiles._writeAmoebaGeneralizedKirkwoodForce(root, forces, atomTypes, bioTypes, scalars)
+        # TinkerFiles._writeAmoebaWcaDispersionForce(root, forces, scalars)
+        TinkerFiles._writeAmoebaUreyBradleyForce(root, forces)
+
+        # Write footer
+        tree = etree.ElementTree(root)
+        etree.indent(root, "  ")
+
+        # Store the XML file in memory
+        tinkerXmlFile = io.StringIO()
+        tree.write(
+            tinkerXmlFile, xml_declaration=True, encoding="unicode", method="xml"
+        )
+
+        if self._writeXmlFiles:
+            if scalars["forcefield"] == "-2.55":
+                scalars["forcefield"] = filename.rsplit(".", 1)[0]
+            tinkerXmlFileName = scalars["forcefield"] + ".xml"
+
+            with open(tinkerXmlFileName, "w") as f:
+                f.write(tinkerXmlFile.getvalue())
+
+        return tinkerXmlFile, None
