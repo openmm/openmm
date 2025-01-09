@@ -694,8 +694,18 @@ class TinkerFiles:
         """
         for abbr, data in TinkerFiles.RESIDUE_MAPPING.items():
             if data["tinkerLookupName"] in residueName:
-                return abbr
-        return "_" + residueName[:3].upper()
+                if data["type"] == "protein":
+                    return "PRT"
+                elif data["type"] == "dna":
+                    return "DNA"
+                elif data["type"] == "rna":
+                    return "RNA"
+                elif data["type"] == "ion":
+                    return abbr
+                elif data["type"] == "AmoebaWater":
+                    return "HOH"
+
+        return residueName[:3].upper()
 
     def _loadKeyFile(self, keyFile: str) -> Tuple[Dict, Dict, Dict, Dict]:
         """
@@ -729,7 +739,6 @@ class TinkerFiles:
                             continue
                         allLines.append(fields)
                     except Exception as e:
-                        print(line)
                         raise ValueError(f"Error parsing line in {keyFile}: {e}")
         except FileNotFoundError:
             raise IOError(f"Could not find file {keyFile}")
@@ -819,7 +828,6 @@ class TinkerFiles:
                 lineIndex += 1
             else:
                 # Skip unrecognized fields
-                # print(f"Field {fields[0]} not recognized: line=<{fields}>")
                 lineIndex += 1
 
         return atomTypesDict, bioTypesDict, forcesDict, scalarsDict
@@ -1007,7 +1015,6 @@ class TinkerFiles:
         residueNames = []
         seen = set()
 
-        lastResidue = None
         for atom1 in range(len(atomData)):
             if atom1 not in seen:
                 # Start a new residue
@@ -1051,19 +1058,18 @@ class TinkerFiles:
         residues, residueNames = self._getResiduesFromBonds(atomData)
 
         # Add chain to the topology
+        chain = self.topology.addChain()
         for residueName, residueAtoms in zip(residueNames, residues):
-            # Add chain to the topology
-            chain = self.topology.addChain()
             # Add residues to the topology
             residue = self.topology.addResidue(residueName, chain)
             for atomIndex in residueAtoms:
-                symbol = atomData[atomIndex]["symbol"]
+                name = atomData[atomIndex]["nameShort"]
                 element = elem.Element.getByAtomicNumber(
                     int(atomData[atomIndex]["atomicNumber"])
                 )
 
                 # Add atoms to the topology
-                self.topology.addAtom(symbol, element, residue)
+                self.topology.addAtom(name, element, residue)
 
         # Add bonds to the topology
         atoms = list(self.topology.atoms())
