@@ -43,25 +43,10 @@ import xml.etree.ElementTree as etree
 from functools import wraps
 from typing import Any, Dict, List, Set, Tuple, Union
 
-HBonds = forcefield.HBonds
-AllBonds = forcefield.AllBonds
-HAngles = forcefield.HAngles
-
 from openmm.app.internal.unitcell import computePeriodicBoxVectors
 from openmm.unit import Quantity, nanometers
 from openmm.vec3 import Vec3
 
-from . import (
-    LJPME,
-    PME,
-    AllBonds,
-    CutoffNonPeriodic,
-    CutoffPeriodic,
-    Ewald,
-    HAngles,
-    HBonds,
-    NoCutoff,
-)
 from . import element as elem
 from . import forcefield as ff
 from . import topology as top
@@ -235,8 +220,8 @@ class TinkerFiles:
         self,
         xyz: str,
         key: str,
-        periodicBoxVectors=None,
-        unitCellDimensions=None,
+        periodicBoxVectors: Tuple[Vec3, Vec3, Vec3] = None,
+        unitCellDimensions: Vec3 = None,
         writeXmlFiles: bool = False,
         filePrefix: str = "tinkerFiles",
     ):
@@ -319,13 +304,13 @@ class TinkerFiles:
 
         # If provided, set the periodic box vectors or unit cell dimensions in the topology
         # This overwrites the box information from the xyz file
+        if periodicBoxVectors is not None and unitCellDimensions is not None:
+            raise ValueError(
+                "Specify either periodicBoxVectors or unitCellDimensions, but not both"
+            )
         if periodicBoxVectors is not None:
-            if unitCellDimensions is not None:
-                raise ValueError(
-                    "Specify either periodicBoxVectors or unitCellDimensions, but not both"
-                )
             self.topology.setPeriodicBoxVectors(periodicBoxVectors)
-        else:
+        elif unitCellDimensions is not None:
             self.topology.setUnitCellDimensions(unitCellDimensions)
 
         # ----------------------- CREATE XML FILES -----------------------
@@ -341,16 +326,21 @@ class TinkerFiles:
     def createSystem(
         self,
         nonbondedMethod: Union[
-            NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, PME, LJPME
-        ] = PME,
+            ff.NoCutoff,
+            ff.CutoffNonPeriodic,
+            ff.CutoffPeriodic,
+            ff.Ewald,
+            ff.PME,
+            ff.LJPME,
+        ] = ff.PME,
         nonbondedCutoff: Quantity = 1.0 * nanometers,
-        constraints: Union[None, HBonds, AllBonds, HAngles] = None,
+        constraints: Union[None, ff.HBonds, ff.AllBonds, ff.HAngles] = None,
         rigidWater: bool = False,
         removeCMMotion: bool = True,
         hydrogenMass: Union[None, Quantity] = None,
         *args,
         **kwargs,
-    ) -> openmm.System:
+    ) -> Any:
         """
         Create an OpenMM System from the parsed Tinker files.
 
@@ -571,7 +561,32 @@ class TinkerFiles:
         element: str,
         residue: str,
     ) -> None:
-        """Helper function to validate atom type information."""
+        """
+        Helper function to validate atom type information.
+
+        Parameters
+        ----------
+        atomTypeDict : dict
+            The dictionary of atom type data.
+        atomType : str
+            The atom type.
+        atomClass : str
+            The atom class.
+        nameShort : str
+            The short name of the atom type.
+        nameLong : str
+            The long name of the atom type.
+        atomicNumber : int
+            The atomic number of the atom type.
+        mass : float
+            The mass of the atom type.
+        valence : int
+            The valence of the atom type.
+        element : str
+            The element of the atom type.
+        residue : str
+            The residue of the atom type.
+        """
         if atomType in atomTypeDict:
             # Validate against existing atom type data
             stored = atomTypeDict[atomType]
@@ -615,7 +630,26 @@ class TinkerFiles:
         element: str,
         residue: str,
     ) -> None:
-        """Helper function to validate biotype information."""
+        """
+        Helper function to validate biotype information.
+
+        Parameters
+        ----------
+        bioTypeDict : dict
+            The dictionary of biotype data.
+        bioType : str
+            The bio type.
+        nameShort : str
+            The short name of the biotype.
+        nameLong : str
+            The long name of the biotype.
+        atomType : str
+            The atom type counterpart of the biotype.
+        element : str
+            The element of the biotype.
+        residue : str
+            The residue of the biotype
+        """
         if bioType in bioTypeDict:
             # Validate against existing atom type data
             stored = bioTypeDict[bioType]
@@ -896,6 +930,7 @@ class TinkerFiles:
         atomData[index]['symbol']                atom symbol
         atomData[index]['positions']             atom position
         atomData[index]['bonds']                 list of bonded atom indices
+        atomData[index]['residue']               residue name
 
         # if atomType is present in the .key file
         atomData[index]['atomType']              atom type
@@ -1023,7 +1058,9 @@ class TinkerFiles:
             residue = self.topology.addResidue(residueName, chain)
             for atomIndex in residueAtoms:
                 symbol = atomData[atomIndex]["symbol"]
-                element = elem.Element.getBySymbol(symbol)
+                element = elem.Element.getByAtomicNumber(
+                    int(atomData[atomIndex]["atomicNumber"])
+                )
 
                 # Add atoms to the topology
                 self.topology.addAtom(symbol, element, residue)
@@ -1815,7 +1852,7 @@ class TinkerFiles:
         TinkerFiles._writeAmoebaStretchBendForce(root, forces)
         TinkerFiles._writeAmoebaTorsionTorsionForce(root, forces)
         TinkerFiles._writeAmoebaVdwForce(root, forces, scalars)
-        TinkerFiles._writeAmoebaMultipoleForce(root, forces, scalars)
+        # TinkerFiles._writeAmoebaMultipoleForce(root, forces, scalars)
         # TinkerFiles._writeAmoebaGeneralizedKirkwoodForce(root, forces, atomTypes, bioTypes, scalars)
         # TinkerFiles._writeAmoebaWcaDispersionForce(root, forces, scalars)
         TinkerFiles._writeAmoebaUreyBradleyForce(root, forces)
