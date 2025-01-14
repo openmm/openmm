@@ -91,13 +91,12 @@ private:
     double _dispoff;
     double _slevy;
 
-    enum { EMIXO, RMIXO, RMIXO7, AO, EMIXH, RMIXH, RMIXH7, AH, LastIntermediateValueIndex }; 
+    enum { EMIXO, RMIXO, EMIXH, RMIXH, LastIntermediateValueIndex };
 
     /**---------------------------------------------------------------------------------------
     
        Calculate pair ixn
-    
-       @param  radiusI              radius of particle I
+
        @param  radiusJ              radius of particle J
        @param  particleIPosition    particle I position 
        @param  particleJPosition    particle J position 
@@ -108,7 +107,7 @@ private:
 
        --------------------------------------------------------------------------------------- */
     
-    double calculatePairIxn(double radiusI, double radiusJ,
+    double calculatePairIxn(double radiusJ,
                             const OpenMM::Vec3& particleIPosition, const OpenMM::Vec3& particleJPosition,
                             const double* const intermediateValues,
                             Vec3& force) const;

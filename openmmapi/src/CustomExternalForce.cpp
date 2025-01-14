@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2012 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,11 +40,9 @@
 #include <utility>
 
 using namespace OpenMM;
-using std::string;
-using std::stringstream;
-using std::vector;
+using namespace std;
 
-CustomExternalForce::CustomExternalForce(const string& energy) : energyExpression(energy) {
+CustomExternalForce::CustomExternalForce(const string& energy) : energyExpression(energy), numContexts(0) {
 }
 
 const string& CustomExternalForce::getEnergyFunction() const {
@@ -110,14 +108,29 @@ void CustomExternalForce::setParticleParameters(int index, int particle, const v
     ASSERT_VALID_INDEX(index, particles);
     particles[index].parameters = parameters;
     particles[index].particle = particle;
+    if (numContexts > 0) {
+        firstChangedParticle = min(index, firstChangedParticle);
+        lastChangedParticle = max(index, lastChangedParticle);
+    }
 }
 
 ForceImpl* CustomExternalForce::createImpl() const {
-    return new CustomExternalForceImpl(*this);
+    if (numContexts == 0) {
+        // Begin tracking changes to particles.
+        firstChangedParticle = particles.size();
+        lastChangedParticle = -1;
+    }
+    numContexts++;    return new CustomExternalForceImpl(*this);
 }
 
 void CustomExternalForce::updateParametersInContext(Context& context) {
-    dynamic_cast<CustomExternalForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context));
+    dynamic_cast<CustomExternalForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context), firstChangedParticle, lastChangedParticle);
+    if (numContexts == 1) {
+        // We just updated the only existing context for this force, so we can reset
+        // the tracking of changed particles.
+        firstChangedParticle = particles.size();
+        lastChangedParticle = -1;
+    }
 }
 
 bool CustomExternalForce::usesPeriodicBoundaryConditions() const {

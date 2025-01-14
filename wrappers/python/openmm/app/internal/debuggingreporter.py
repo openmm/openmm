@@ -67,14 +67,10 @@ class DebuggingReporter(object):
 
         Returns
         -------
-        tuple
-            A six element tuple. The first element is the number of steps
-            until the next report. The next four elements specify whether
-            that report will require positions, velocities, forces, and
-            energies respectively.  The final element specifies whether
-            positions should be wrapped to lie in a single periodic box.
+        dict
+            A dictionary describing the required information for the next report
         """
-        return (1, True, True, True, False, False)
+        return {'steps':1, 'periodic':False, 'include':['positions', 'velocities', 'forces']}
 
     def report(self, simulation, state):
         """Generate a report.

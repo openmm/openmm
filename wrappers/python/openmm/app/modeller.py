@@ -113,7 +113,7 @@ class Modeller(object):
             for residue in chain.residues():
                 newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                 for atom in residue.atoms():
-                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -127,7 +127,7 @@ class Modeller(object):
             for residue in chain.residues():
                 newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                 for atom in residue.atoms():
-                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(addPositions[atom.index]))
         for bond in addTopology.bonds():
@@ -172,7 +172,7 @@ class Modeller(object):
                                 if needNewResidue:
                                     newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                                     needNewResidue = False;
-                                newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                                newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                                 newAtoms[atom] = newAtom
                                 newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -248,7 +248,7 @@ class Modeller(object):
                 else:
                     # Just copy the residue over.
                     for atom in residue.atoms():
-                        newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                        newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                         newAtoms[atom] = newAtom
                         newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -548,7 +548,7 @@ class Modeller(object):
                 if residue in residueTemplates:
                     newResidueTemplates[newResidue] = residueTemplates[residue]
                 for atom in residue.atoms():
-                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -1479,7 +1479,7 @@ class Modeller(object):
                 lipidResNum += 1
 
                 for atom in residue.atoms():
-                    newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                    newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                     newAtoms[atom] = newAtom
                 membranePos += pos
                 for bond in resBonds[residue]:
@@ -1494,7 +1494,7 @@ class Modeller(object):
         for (residue, pos) in addedWater:
             newResidue = membraneTopology.addResidue(residue.name, solventChain, residue.id, residue.insertionCode)
             for atom in residue.atoms():
-                newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                 newAtoms[atom] = newAtom
             membranePos += pos
             for bond in resBonds[residue]:
@@ -1575,7 +1575,11 @@ class Modeller(object):
 
         needExtraWater = (boxSizeZ > patchSize[2])
         if needExtraWater:
-            modeller.addSolvent(forcefield, neutralize=False, residueTemplates=residueTemplates)
+            newResidueTemplates = {}
+            for r1, r2 in zip(self.topology.residues(), modeller.topology.residues()):
+                if r1 in residueTemplates:
+                    newResidueTemplates[r2] = residueTemplates[r1]
+            modeller.addSolvent(forcefield, neutralize=False, residueTemplates=newResidueTemplates)
 
         # Record the positions of all waters that have been added.
 

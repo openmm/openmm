@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013 Stanford University and the Authors.           *
+ * Portions copyright (c) 2013-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 
 #include "sfmt/SFMT.h"
 #include "windowsExportCpu.h"
+#include <iosfwd>
 #include <vector>
 
 namespace OpenMM {
@@ -48,6 +49,8 @@ public:
     void initialize(int seed, int numThreads);
     float getGaussianRandom(int threadIndex);
     float getUniformRandom(int threadIndex);
+    void createCheckpoint(std::ostream& stream);
+    void loadCheckpoint(std::istream& stream);
 private:
     bool hasInitialized;
     int randomSeed;

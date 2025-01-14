@@ -66,6 +66,44 @@ class TestDCDFile(unittest.TestCase):
         del dcd
         os.remove(fname)
 
+    def testAtomSubset(self):
+        """Test writing a DCD file containing a subset of atoms"""
+        fname = tempfile.mktemp(suffix='.dcd')
+        pdb = app.PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        ff = app.ForceField('amber99sb.xml', 'tip3p.xml')
+        system = ff.createSystem(pdb.topology)
+
+        # Create a simulation and write some frames to a DCD file.
+
+        integrator = mm.VerletIntegrator(0.001*unit.picoseconds)
+        simulation = app.Simulation(pdb.topology, system, integrator, mm.Platform.getPlatform('Reference'))
+        atomSubset = [atom.index for atom in next(pdb.topology.chains()).atoms()]
+        dcd = app.DCDReporter(fname, 2, atomSubset=atomSubset)
+        simulation.reporters.append(dcd)
+        simulation.context.setPositions(pdb.positions)
+        simulation.context.setVelocitiesToTemperature(300*unit.kelvin)
+        simulation.step(10)
+        self.assertEqual(5, dcd._dcd._modelCount)
+        del simulation
+        del dcd
+        len1 = os.stat(fname).st_size
+
+        # Create a new simulation and have it append some more frames.
+
+        integrator = mm.VerletIntegrator(0.001*unit.picoseconds)
+        simulation = app.Simulation(pdb.topology, system, integrator, mm.Platform.getPlatform('Reference'))
+        dcd = app.DCDReporter(fname, 2, append=True, atomSubset=atomSubset)
+        simulation.reporters.append(dcd)
+        simulation.context.setPositions(pdb.positions)
+        simulation.context.setVelocitiesToTemperature(300*unit.kelvin)
+        simulation.step(10)
+        self.assertEqual(10, dcd._dcd._modelCount)
+        len2 = os.stat(fname).st_size
+        self.assertTrue(len2-len1 > 3*4*5*len(atomSubset))
+        del simulation
+        del dcd
+        os.remove(fname)
+
 
 if __name__ == '__main__':
     unittest.main()

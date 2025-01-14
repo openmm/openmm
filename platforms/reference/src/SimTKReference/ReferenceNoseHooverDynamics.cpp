@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-2020 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2024 Stanford University and Simbios.
  * Contributors: Andy Simmonett, Peter Eastman, Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -51,13 +51,11 @@ ReferenceNoseHooverDynamics::~ReferenceNoseHooverDynamics() {
 
 void ReferenceNoseHooverDynamics::step1(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
                                           vector<Vec3>& velocities,
-                                          vector<Vec3>& forces, vector<double>& masses, double tolerance, bool &forcesAreValid,
+                                          vector<Vec3>& forces, vector<double>& masses, double tolerance,
                                           const std::vector<int> & atomList, const std::vector<std::tuple<int, int, double>> &pairList,
                                           double maxPairDistance) {
 
     // first-time-through initialization
-    if (!forcesAreValid) context.calcForcesAndEnergy(true, false, context.getIntegrator().getIntegrationForceGroups());
-
     if (getTimeStep() == 0) {
        // invert masses
        for (int ii = 0; ii < numberOfAtoms; ii++) {
@@ -115,7 +113,7 @@ void ReferenceNoseHooverDynamics::step1(OpenMM::ContextImpl &context, const Open
 
 void ReferenceNoseHooverDynamics::step2(OpenMM::ContextImpl &context, const OpenMM::System& system, vector<Vec3>& atomCoordinates,
                                           vector<Vec3>& velocities,
-                                          vector<Vec3>& forces, vector<double>& masses, double tolerance, bool &forcesAreValid,
+                                          vector<Vec3>& forces, vector<double>& masses, double tolerance,
                                           const std::vector<int> & atomList, const std::vector<std::tuple<int, int, double>> &pairList,
                                           double maxPairDistance) {
     const double halfdt = 0.5*getDeltaT();

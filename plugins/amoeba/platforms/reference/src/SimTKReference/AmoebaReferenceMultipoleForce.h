@@ -1239,9 +1239,15 @@ public:
      * Get dielectric offset.
      *
      * @return dielectric offset
-     *
      */
     double getDielectricOffset() const;
+
+    /**
+     * Get the descreen offset.
+     *
+     * @return descreen offset.
+     */
+    double getDescreenOffset() const;
 
 private:
 
@@ -1252,10 +1258,17 @@ private:
     double _fd;
     double _fq;
 
+    double _beta0;
+    double _beta1;
+    double _beta2;
+
     std::vector<double> _atomicRadii;
-    std::vector<double> _scaledRadii;
+    std::vector<double> _scaleFactors;
+    std::vector<double> _descreenRadii;
+    std::vector<double> _neckFactors;
+
     std::vector<double> _bornRadii;
-    std::vector<double> _bornForce;
+    std::vector<double> _soluteIntegral;
 
     std::vector<Vec3> _gkField;
     std::vector<Vec3> _inducedDipoleS;
@@ -1269,6 +1282,8 @@ private:
     double _probeRadius;
     double _surfaceAreaFactor;
     double _dielectricOffset;
+    double _tanhRescaling;
+    double _descreenOffset;
 
     /**
      * Zero fixed multipole fields.
