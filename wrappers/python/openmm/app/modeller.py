@@ -319,7 +319,7 @@ class Modeller(object):
         totalCharge = 0.0
         if isinstance(nonbonded, AmoebaMultipoleForce):
             for i in range(nonbonded.getNumMultipoles()):
-                totalCharge += nonbonded.getMultipoleParameters(i)[1].value_in_unit(elementary_charge)
+                totalCharge += nonbonded.getMultipoleParameters(i)[0].value_in_unit(elementary_charge)
         else:
             for i in range(nonbonded.getNumParticles()):
                 totalCharge += nonbonded.getParticleParameters(i)[0].value_in_unit(elementary_charge)
@@ -530,13 +530,10 @@ class Modeller(object):
             raise ValueError('The ForceField does not specify a NonbondedForce')
         cutoff = [waterRadius]*system.getNumParticles()
 
-        isAmoeba = isinstance(nonbonded, AmoebaVdwForce)
-        epsilonIndex = 3 if isAmoeba else 2
-        sigmaIndex = 2 if isAmoeba else 1
         for i in range(system.getNumParticles()):
             params = nonbonded.getParticleParameters(i)
-            if params[epsilonIndex] != 0*kilojoules_per_mole:
-                cutoff[i] += params[sigmaIndex].value_in_unit(nanometer)*vdwRadiusPerSigma
+            if params[2] != 0*kilojoules_per_mole:
+                cutoff[i] += params[1].value_in_unit(nanometer)*vdwRadiusPerSigma
 
         waterCutoff = waterRadius
         if len(cutoff) == 0:
