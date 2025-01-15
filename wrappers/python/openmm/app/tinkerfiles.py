@@ -268,12 +268,9 @@ class TinkerFiles:
 
     def createSystem(
         self,
-        nonbondedMethod: Union[
-            ff.NoCutoff,
-            ff.PME,
-        ] = ff.PME,
+        nonbondedMethod = ff.PME,
         nonbondedCutoff: Quantity = 1.0 * nanometers,
-        constraints: Union[None, ff.HBonds, ff.AllBonds, ff.HAngles] = None,
+        constraints = None,
         rigidWater: bool = False,
         removeCMMotion: bool = True,
         hydrogenMass: Union[None, Quantity] = None,
