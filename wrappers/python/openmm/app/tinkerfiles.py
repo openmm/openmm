@@ -78,67 +78,7 @@ class TinkerFiles:
 
     # fmt: off
     RESIDUE_MAPPING = {
-        "ALA": {"loc": "middle", "type": "protein", "tinkerLookupName": "Alanine", "fullName": "Alanine"},
-        "ARG": {"loc": "middle", "type": "protein", "tinkerLookupName": "Arginine", "fullName": "Arginine"},
-        "ASN": {"loc": "middle", "type": "protein", "tinkerLookupName": "Asparagine", "fullName": "Asparagine"},
-        "ASP": {"loc": "middle", "type": "protein", "tinkerLookupName": "Aspartic Acid", "fullName": "Aspartic Acid"},
-        "ASH": {"loc": "middle", "type": "protein", "tinkerLookupName": "Aspartic Acid (COOH)", "fullName": "Aspartic Acid"},
-        "CYS": {"loc": "middle", "type": "protein", "tinkerLookupName": "Cysteine (SH)", "fullName": "Cysteine"},
-        "CYD": {"loc": "middle", "type": "protein", "tinkerLookupName": "Cysteine (S-)", "fullName": "Cysteine"},
-        "CYX": {"loc": "middle", "type": "protein", "tinkerLookupName": "Cystine (SS)", "fullName": "Cystine"},
-        "GLN": {"loc": "middle", "type": "protein", "tinkerLookupName": "Glutamine", "fullName": "Glutamine"},
-        "GLU": {"loc": "middle", "type": "protein", "tinkerLookupName": "Glutamic Acid", "fullName": "Glutamic Acid"},
-        "GLH": {"loc": "middle", "type": "protein", "tinkerLookupName": "Glutamic Acid (COOH)", "fullName": "Glutamic Acid"},
-        "GLY": {"loc": "middle", "type": "protein", "tinkerLookupName": "Glycine", "fullName": "Glycine"},
-        "HIS": {"loc": "middle", "type": "protein", "tinkerLookupName": "Histidine (+)", "fullName": "Histidine"},
-        "HID": {"loc": "middle", "type": "protein", "tinkerLookupName": "Histidine (HD)", "fullName": "Histidine"},
-        "HIE": {"loc": "middle", "type": "protein", "tinkerLookupName": "Histidine (HE)", "fullName": "Histidine"},
         "HOH": {"loc": "middle", "type": "AmoebaWater", "tinkerLookupName": "Water", "fullName": "Water"},
-        "ILE": {"loc": "middle", "type": "protein", "tinkerLookupName": "Isoleucine", "fullName": "Isoleucine"},
-        "LEU": {"loc": "middle", "type": "protein", "tinkerLookupName": "Leucine", "fullName": "Leucine"},
-        "LYS": {"loc": "middle", "type": "protein", "tinkerLookupName": "Lysine", "fullName": "Lysine"},
-        "LYD": {"loc": "middle", "type": "protein", "tinkerLookupName": "Lysine (NH2)", "fullName": "Lysine"},
-        "MET": {"loc": "middle", "type": "protein", "tinkerLookupName": "Methionine", "fullName": "Methionine"},
-        "PHE": {"loc": "middle", "type": "protein", "tinkerLookupName": "Phenylalanine", "fullName": "Phenylalanine"},
-        "PRO": {"loc": "middle", "type": "protein", "tinkerLookupName": "Proline", "fullName": "Proline"},
-        "SER": {"loc": "middle", "type": "protein", "tinkerLookupName": "Serine", "fullName": "Serine"},
-        "THR": {"loc": "middle", "type": "protein", "tinkerLookupName": "Threonine", "fullName": "Threonine"},
-        "TRP": {"loc": "middle", "type": "protein", "tinkerLookupName": "Tryptophan", "fullName": "Tryptophan"},
-        "TYR": {"loc": "middle", "type": "protein", "tinkerLookupName": "Tyrosine", "fullName": "Tyrosine"},
-        "TYD": {"loc": "middle", "type": "protein", "tinkerLookupName": "Tyrosine (O-)", "fullName": "Tyrosine"},
-        "VAL": {"loc": "middle", "type": "protein", "tinkerLookupName": "Valine", "fullName": "Valine"},
-        "DA": {"loc": "middle", "type": "dna", "tinkerLookupName": "Deoxyadenosine", "fullName": "Deoxyadenosine"},
-        "DA3": {"loc": "3", "type": "dna", "tinkerLookupName": "Deoxyadenosine", "fullName": "Deoxyadenosine"},
-        "DA5": {"loc": "5", "type": "dna", "tinkerLookupName": "Deoxyadenosine", "fullName": "Deoxyadenosine"},
-        "DAN": {"loc": "N", "type": "dna", "tinkerLookupName": "Deoxyadenosine", "fullName": "Deoxyadenosine"},
-        "DC": {"loc": "middle", "type": "dna", "tinkerLookupName": "Deoxycytidine", "fullName": "Deoxycytidine"},
-        "DC3": {"loc": "3", "type": "dna", "tinkerLookupName": "Deoxycytidine", "fullName": "Deoxycytidine"},
-        "DC5": {"loc": "5", "type": "dna", "tinkerLookupName": "Deoxycytidine", "fullName": "Deoxycytidine"},
-        "DCN": {"loc": "N", "type": "dna", "tinkerLookupName": "Deoxycytidine", "fullName": "Deoxycytidine"},
-        "DG": {"loc": "middle", "type": "dna", "tinkerLookupName": "Deoxyguanosine", "fullName": "Deoxyguanosine"},
-        "DG3": {"loc": "3", "type": "dna", "tinkerLookupName": "Deoxyguanosine", "fullName": "Deoxyguanosine"},
-        "DG5": {"loc": "5", "type": "dna", "tinkerLookupName": "Deoxyguanosine", "fullName": "Deoxyguanosine"},
-        "DGN": {"loc": "N", "type": "dna", "tinkerLookupName": "Deoxyguanosine", "fullName": "Deoxyguanosine"},
-        "DT": {"loc": "middle", "type": "dna", "tinkerLookupName": "Deoxythymidine", "fullName": "Deoxythymidine"},
-        "DT3": {"loc": "3", "type": "dna", "tinkerLookupName": "Deoxythymidine", "fullName": "Deoxythymidine"},
-        "DT5": {"loc": "5", "type": "dna", "tinkerLookupName": "Deoxythymidine", "fullName": "Deoxythymidine"},
-        "DTN": {"loc": "N", "type": "dna", "tinkerLookupName": "Deoxythymidine", "fullName": "Deoxythymidine"},
-        "RA": {"loc": "middle", "type": "rna", "tinkerLookupName": "Adenosine", "fullName": "Adenosine"},
-        "RA3": {"loc": "3", "type": "rna", "tinkerLookupName": "Adenosine", "fullName": "Adenosine"},
-        "RA5": {"loc": "5", "type": "rna", "tinkerLookupName": "Adenosine", "fullName": "Adenosine"},
-        "RAN": {"loc": "N", "type": "rna", "tinkerLookupName": "Adenosine", "fullName": "Adenosine"},
-        "RC": {"loc": "middle", "type": "rna", "tinkerLookupName": "Cytidine", "fullName": "Cytidine"},
-        "RC3": {"loc": "3", "type": "rna", "tinkerLookupName": "Cytidine", "fullName": "Cytidine"},
-        "RC5": {"loc": "5", "type": "rna", "tinkerLookupName": "Cytidine", "fullName": "Cytidine"},
-        "RCN": {"loc": "N", "type": "rna", "tinkerLookupName": "Cytidine", "fullName": "Cytidine"},
-        "RG": {"loc": "middle", "type": "rna", "tinkerLookupName": "Guanosine", "fullName": "Guanosine"},
-        "RG3": {"loc": "3", "type": "rna", "tinkerLookupName": "Guanosine", "fullName": "Guanosine"},
-        "RG5": {"loc": "5", "type": "rna", "tinkerLookupName": "Guanosine", "fullName": "Guanosine"},
-        "RGN": {"loc": "N", "type": "rna", "tinkerLookupName": "Guanosine", "fullName": "Guanosine"},
-        "RU": {"loc": "middle", "type": "rna", "tinkerLookupName": "Uridine", "fullName": "Uridine"},
-        "RU3": {"loc": "3", "type": "rna", "tinkerLookupName": "Uridine", "fullName": "Uridine"},
-        "RU5": {"loc": "5", "type": "rna", "tinkerLookupName": "Uridine", "fullName": "Uridine"},
-        "RUN": {"loc": "N", "type": "rna", "tinkerLookupName": "Uridine", "fullName": "Uridine"},
         "LI": {"loc": None, "type": "ion", "tinkerLookupName": "Lithium Ion", "fullName": "Lithium Ion"},
         "NA": {"loc": None, "type": "ion", "tinkerLookupName": "Sodium Ion", "fullName": "Sodium Ion"},
         "K": {"loc": None, "type": "ion", "tinkerLookupName": "Potassium Ion", "fullName": "Potassium Ion"},
@@ -315,29 +255,30 @@ class TinkerFiles:
 
         # ----------------------- CREATE XML FILES -----------------------
         self._XmlFilesList = []
+        self._ImplicitXmlFilesList = []
         for keyFile, atomTypes, bioTypes, forces, scalars in zip(
             key, self._atomTypes, self._bioTypes, self._forces, self._scalars
         ):
-            xmlFile = self._createXmlFile(
+            xmlFile, implicitXmlFile = self._createXmlFile(
                 keyFile, atomTypes, bioTypes, forces, scalars, self._atomData
             )
-            self._XmlFilesList.extend(f for f in xmlFile if f is not None)
+            self._XmlFilesList.append(xmlFile)
+            self._ImplicitXmlFilesList.append(implicitXmlFile)
 
     def createSystem(
         self,
         nonbondedMethod: Union[
             ff.NoCutoff,
-            ff.CutoffNonPeriodic,
-            ff.CutoffPeriodic,
-            ff.Ewald,
             ff.PME,
-            ff.LJPME,
         ] = ff.PME,
         nonbondedCutoff: Quantity = 1.0 * nanometers,
         constraints: Union[None, ff.HBonds, ff.AllBonds, ff.HAngles] = None,
         rigidWater: bool = False,
         removeCMMotion: bool = True,
         hydrogenMass: Union[None, Quantity] = None,
+        polarization: str = "mutual",
+        mutualInducedTargetEpsilon: float = 0.00001,
+        implicitSolvent: bool = False,
         *args,
         **kwargs,
     ) -> Any:
@@ -346,9 +287,9 @@ class TinkerFiles:
 
         Parameters
         ----------
-        nonbondedMethod : ff.NonbondedMethod, optional, default=ff.NoCutoff
+        nonbondedMethod : ff.NonbondedMethod, optional, default=ff.PME
             The method to use for nonbonded interactions.
-            Allowed values are NoCutoff, CutoffNonPeriodic, CutoffPeriodic, Ewald, or PME.
+            Allowed values are NoCutoff, and PME.
         nonbondedCutoff : Quantity, optional, default=1.0*nanometers
             The cutoff distance to use for nonbonded interactions.
         constraints : Union[None, ff.Constraints], optional, default=None
@@ -362,17 +303,30 @@ class TinkerFiles:
         hydrogenMass : Union[None, Quantity], optional, default=None
             The mass to use for hydrogen atoms bound to heavy atoms.
             Any mass added to a hydrogen is subtracted from the heavy atom to keep their total mass the same.
+        polarization : str, optional, default="mutual"
+            The method to use for calculating induced dipoles.
+            Allowed values are "mutual", "direct", or "extrapolated".
+        mutualInducedTargetEpsilon : float, optional, default=0.00001
+            The target epsilon for mutual induced dipoles.
+            Only used if polarization="mutual".
+        implicitSolvent : bool, optional, default=False
+            If True, solvent will be modeled implicitly.
 
         Returns
         -------
         openmm.System
             The created OpenMM System.
         """
+        xmlFilesList = self._XmlFilesList
+        if implicitSolvent:
+            xmlFilesList += self._ImplicitXmlFilesList
+            nonbondedMethod = ff.NoCutoff
+
         # Reset the file pointers
-        for f in self._XmlFilesList:
+        for f in xmlFilesList:
             f.seek(0)
 
-        forcefield = ff.ForceField(*self._XmlFilesList)
+        forcefield = ff.ForceField(*xmlFilesList)
 
         system = forcefield.createSystem(
             self.topology,
@@ -382,6 +336,8 @@ class TinkerFiles:
             rigidWater=rigidWater,
             removeCMMotion=removeCMMotion,
             hydrogenMass=hydrogenMass,
+            polarization=polarization,
+            mutualInducedTargetEpsilon=mutualInducedTargetEpsilon,
             *args,
             **kwargs,
         )
@@ -512,6 +468,7 @@ class TinkerFiles:
             with open(file, "r") as f:
                 # Read number of atoms
                 nAtoms = int(f.readline())
+                linesLeft = nAtoms
 
                 # Read the second line
                 secondLine = f.readline().strip()
@@ -528,10 +485,10 @@ class TinkerFiles:
                 else:
                     # No box information, so treat the second line as atom positions
                     TinkerFiles._parseAndStoreXyzLine(secondLine, self._xyzDict)
-                    nAtoms -= 1
+                    linesLeft -= 1
 
                 # Process the remaining atom lines
-                for _ in range(nAtoms):
+                for _ in range(linesLeft):
                     atomLine = f.readline().strip()
                     TinkerFiles._parseAndStoreXyzLine(atomLine, self._xyzDict)
 
@@ -694,13 +651,7 @@ class TinkerFiles:
         """
         for abbr, data in TinkerFiles.RESIDUE_MAPPING.items():
             if data["tinkerLookupName"] in residueName:
-                if data["type"] == "protein":
-                    return "PRT"
-                elif data["type"] == "dna":
-                    return "DNA"
-                elif data["type"] == "rna":
-                    return "RNA"
-                elif data["type"] == "ion":
+                if data["type"] == "ion":
                     return abbr
                 elif data["type"] == "AmoebaWater":
                     return "HOH"
@@ -1100,7 +1051,7 @@ class TinkerFiles:
             The atom types dictionary.
         """
         atomTypesElement = etree.SubElement(root, "AtomTypes")
-        for atomType in sorted(atomTypes):
+        for atomType in sorted(atomTypes, key=int):
             atomTypeElement = etree.SubElement(atomTypesElement, "Type")
             atomTypeElement.attrib["name"] = atomType
             atomTypeElement.attrib["class"] = atomTypes[atomType]["atomClass"]
@@ -1583,19 +1534,42 @@ class TinkerFiles:
             return
 
         amoebaMultipoleForceElement = etree.SubElement(root, "AmoebaMultipoleForce")
-        for key in sorted(scalars):
-            amoebaMultipoleForceElement.attrib[key] = scalars[key]
+        amoebaMultipoleForceElement.attrib["mpole12Scale"] = scalars["mpole-12-scale"]
+        amoebaMultipoleForceElement.attrib["mpole13Scale"] = scalars["mpole-13-scale"]
+        amoebaMultipoleForceElement.attrib["mpole14Scale"] = scalars["mpole-14-scale"]
+        amoebaMultipoleForceElement.attrib["mpole15Scale"] = scalars["mpole-15-scale"]
+        amoebaMultipoleForceElement.attrib["polar12Scale"] = scalars["polar-12-scale"]
+        amoebaMultipoleForceElement.attrib["polar13Scale"] = scalars["polar-13-scale"]
+        amoebaMultipoleForceElement.attrib["polar14Scale"] = scalars["polar-14-scale"]
+        amoebaMultipoleForceElement.attrib["polar15Scale"] = scalars["polar-15-scale"]
+        amoebaMultipoleForceElement.attrib["polar14Intra"] = scalars["polar-14-intra"]
+        amoebaMultipoleForceElement.attrib["direct11Scale"] = scalars["direct-11-scale"]
+        amoebaMultipoleForceElement.attrib["direct12Scale"] = scalars["direct-12-scale"]
+        amoebaMultipoleForceElement.attrib["direct13Scale"] = scalars["direct-13-scale"]
+        amoebaMultipoleForceElement.attrib["direct14Scale"] = scalars["direct-14-scale"]
+        amoebaMultipoleForceElement.attrib["mutual11Scale"] = scalars["mutual-11-scale"]
+        amoebaMultipoleForceElement.attrib["mutual12Scale"] = scalars["mutual-12-scale"]
+        amoebaMultipoleForceElement.attrib["mutual13Scale"] = scalars["mutual-13-scale"]
+        amoebaMultipoleForceElement.attrib["mutual14Scale"] = scalars["mutual-14-scale"]
 
         bohr = 0.52917720859
         dipoleConversion = 0.1 * bohr
         quadrupoleConversion = 0.01 * bohr * bohr / 3.0
         for multipoleInfo in forces["multipole"]:
             axisInfo = multipoleInfo[0]
+
+            if int(axisInfo[0]) < 0:
+                # Some Tinker files include a multipole parameter definition
+                # for atom types with negative indices with no multipole parameters (all zeros).
+                # We skip these entries as they cause an error in OpenMM.
+                continue
+
             multipoles = multipoleInfo[1]
             multipoleElement = etree.SubElement(
                 amoebaMultipoleForceElement, "Multipole"
             )
             multipoleElement.attrib["type"] = axisInfo[0]
+
             axisInfoLen = len(axisInfo)
 
             if axisInfoLen > 1:
@@ -1644,8 +1618,6 @@ class TinkerFiles:
         root: etree.Element,
         forces: Dict[str, Any],
         atomTypes: Dict[str, Dict[str, Any]],
-        bioTypes: Dict[str, Dict[str, Any]],
-        scalars: Dict[str, str],
     ) -> None:
         """
         Write the AmoebaGeneralizedKirkwoodForce to the XML file.
@@ -1682,8 +1654,9 @@ class TinkerFiles:
         for multipoleInfo in forces["multipole"]:
             axisInfo = multipoleInfo[0]
             multipoles = multipoleInfo[1]
-            atomType = int(axisInfo[0])
-            shct = 0.8
+            atomType = axisInfo[0]
+
+            shct = 0.8  # Default value for overlap scale factor
             if atomType in atomTypes:
                 element = atomTypes[atomType]["element"]
                 if element == "H":
@@ -1704,10 +1677,10 @@ class TinkerFiles:
                     shct = 0.88
                 else:
                     print(
-                        f"Warning no overlap scale factor for type={type} element={element}"
+                        f"Warning no overlap scale factor for type={atomType} element={element}"
                     )
             else:
-                print(f"Warning no overlap scale factor for type={type} ")
+                print(f"Warning no overlap scale factor for type={atomType} ")
 
             gkElement = etree.SubElement(gkForceElement, "GeneralizedKirkwood")
             gkElement.attrib["type"] = axisInfo[0]
@@ -1835,19 +1808,24 @@ class TinkerFiles:
         etree.SubElement(info, "DateGenerated").text = datetime.date.today().isoformat()
         etree.SubElement(info, "Reference")
 
+        # Copy the root element for the Generalized Kirkwood force
+        gkRoot = root.__copy__()
+
         # Write the AtomTypes
         TinkerFiles._writeAtomTypes(root, atomTypes)
 
-        # Check residues present in this file
-        residuesSet = set(atomTypes[atomIndex]["residue"] for atomIndex in atomTypes)
-        residuesSet = residuesSet.union(
-            set(bioTypes[atomIndex]["residue"] for atomIndex in bioTypes)
-        )
+        # Extract residues present in this file
+        residuesSet = {
+            atomInfo["residue"]
+            for atomInfo in atomData.values()
+            if atomInfo["atomType"] in atomTypes
+        }
 
         # Write the Residues
         TinkerFiles._writeResidues(root, atomData, self.topology, residuesSet)
 
         # Write the Forces
+        # Bonded forces
         TinkerFiles._writeAmoebaBondForce(root, forces, scalars)
         TinkerFiles._writeAmoebaAngleForce(root, forces, scalars)
         TinkerFiles._writeAmoebaOutOfPlaneBendForce(root, forces, scalars)
@@ -1857,15 +1835,21 @@ class TinkerFiles:
         TinkerFiles._writeAmoebaAngleTorsionForce(root, forces)
         TinkerFiles._writeAmoebaStretchBendForce(root, forces)
         TinkerFiles._writeAmoebaTorsionTorsionForce(root, forces)
+
+        # Non-bonded forces
         TinkerFiles._writeAmoebaVdwForce(root, forces, scalars)
-        # TinkerFiles._writeAmoebaMultipoleForce(root, forces, scalars)
-        # TinkerFiles._writeAmoebaGeneralizedKirkwoodForce(root, forces, atomTypes, bioTypes, scalars)
-        # TinkerFiles._writeAmoebaWcaDispersionForce(root, forces, scalars)
+        TinkerFiles._writeAmoebaMultipoleForce(root, forces, scalars)
         TinkerFiles._writeAmoebaUreyBradleyForce(root, forces)
+
+        # Write the Generalized Kirkwood Force
+        TinkerFiles._writeAmoebaGeneralizedKirkwoodForce(gkRoot, forces, atomTypes)
+        TinkerFiles._writeAmoebaWcaDispersionForce(gkRoot, forces, scalars)
 
         # Write footer
         tree = etree.ElementTree(root)
         etree.indent(root, "  ")
+        gkTree = etree.ElementTree(gkRoot)
+        etree.indent(gkRoot, "  ")
 
         # Store the XML file in memory
         tinkerXmlFile = io.StringIO()
@@ -1873,12 +1857,21 @@ class TinkerFiles:
             tinkerXmlFile, xml_declaration=True, encoding="unicode", method="xml"
         )
 
+        gkTinkerXmlFile = io.StringIO()
+        gkTree.write(
+            gkTinkerXmlFile, xml_declaration=True, encoding="unicode", method="xml"
+        )
+
         if self._writeXmlFiles:
             if scalars["forcefield"] == "-2.55":
                 scalars["forcefield"] = filename.rsplit(".", 1)[0]
-            tinkerXmlFileName = scalars["forcefield"] + ".xml"
 
+            tinkerXmlFileName = scalars["forcefield"] + ".xml"
             with open(tinkerXmlFileName, "w") as f:
                 f.write(tinkerXmlFile.getvalue())
 
-        return tinkerXmlFile, None
+            gkTinkerXmlFileName = scalars["forcefield"] + "_gk.xml"
+            with open(gkTinkerXmlFileName, "w") as f:
+                f.write(gkTinkerXmlFile.getvalue())
+
+        return tinkerXmlFile, gkTinkerXmlFile
