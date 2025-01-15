@@ -6,9 +6,9 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2024 Stanford University and the Authors.
+Portions copyright (c) 2012-2025 Stanford University and the Authors.
 Authors: Peter Eastman, Mark Friedrichs
-Contributors:
+Contributors: Evan Pretti
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -2553,20 +2553,38 @@ class LennardJonesGenerator(object):
 
     def __init__(self, forcefield, lj14scale, useDispersionCorrection):
         self.ff = forcefield
-        self.nbfixTypes = {}
+        self.nbfixParameters = []
+        self.nbfixTypes1 = defaultdict(set)
+        self.nbfixTypes2 = defaultdict(set)
         self.lj14scale = lj14scale
         self.useDispersionCorrection = useDispersionCorrection
         self.ljTypes = ForceField._AtomTypeParameters(forcefield, 'LennardJonesForce', 'Atom', ('sigma', 'epsilon'))
 
     def registerNBFIX(self, parameters):
         types = self.ff._findAtomTypes(parameters, 2)
+
         if None not in types:
+            sigma = _convertParameterToNumber(parameters['sigma'])
+            epsilon = _convertParameterToNumber(parameters['epsilon'])
+
+            # Retrieve the index of nbfixParameters into which this sigma and
+            # epsilon will be stored, then register this index with the atom
+            # types that should have this sigma and epsilon applied.
+            nbfixIndex = len(self.nbfixParameters)
+            self.nbfixParameters.append([sigma, epsilon])
             for type1 in types[0]:
-                for type2 in types[1]:
-                    epsilon = _convertParameterToNumber(parameters['epsilon'])
-                    sigma = _convertParameterToNumber(parameters['sigma'])
-                    self.nbfixTypes[(type1, type2)] = [sigma, epsilon]
-                    self.nbfixTypes[(type2, type1)] = [sigma, epsilon]
+                self.nbfixTypes1[type1].add(nbfixIndex)
+            for type2 in types[1]:
+                self.nbfixTypes2[type2].add(nbfixIndex)
+
+    def getNBFIX(self, type1, type2):
+        nbfixIndices = (self.nbfixTypes1[type1] & self.nbfixTypes2[type2]) | (self.nbfixTypes2[type1] & self.nbfixTypes1[type2])
+        if nbfixIndices:
+            if len(nbfixIndices) > 1:
+                raise ValueError('Multiple NBFixPair entries match atom types %s-%s.' % (type1, type2))
+            return self.nbfixParameters[nbfixIndices.pop()]
+        else:
+            return None
 
     def registerLennardJones(self, parameters):
         self.ljTypes.registerAtom(parameters)
@@ -2605,7 +2623,7 @@ class LennardJonesGenerator(object):
         # First derive the lookup tables.  We need to include entries for every type
         # that a) appears in the system and b) has unique parameters.
 
-        nbfixTypeSet = set().union(*self.nbfixTypes)
+        nbfixTypeSet = {t for nbfixTypes in (self.nbfixTypes1, self.nbfixTypes2) for t in nbfixTypes if nbfixTypes[t]}
         allTypes = set(data.atomType[atom] for atom in data.atoms)
         mergedTypes = []
         mergedTypeParams = []
@@ -2636,10 +2654,9 @@ class LennardJonesGenerator(object):
         bcoef = acoef[:]
         for m in range(numLjTypes):
             for n in range(numLjTypes):
-                pair = (mergedTypes[m], mergedTypes[n])
-                if pair in self.nbfixTypes:
-                    epsilon = self.nbfixTypes[pair][1]
-                    sigma = self.nbfixTypes[pair][0]
+                nbfix = self.getNBFIX(mergedTypes[m], mergedTypes[n])
+                if nbfix is not None:
+                    sigma, epsilon = nbfix
                     sigma6 = sigma**6
                     acoef[m+numLjTypes*n] = 4*epsilon*sigma6*sigma6
                     bcoef[m+numLjTypes*n] = 4*epsilon*sigma6
@@ -2709,10 +2726,9 @@ class LennardJonesGenerator(object):
                 a1 = data.atoms[p1]
                 a2 = data.atoms[p2]
                 if (p1,p2) not in skip and (p2,p1) not in skip:
-                    type1 = data.atomType[a1]
-                    type2 = data.atomType[a2]
-                    if (type1, type2) in self.nbfixTypes:
-                        sigma, epsilon = self.nbfixTypes[(type1, type2)]
+                    nbfix = self.getNBFIX(data.atomType[a1], data.atomType[a2])
+                    if nbfix is not None:
+                        sigma, epsilon = nbfix
                     else:
                         values1 = self.ljTypes.getAtomParameters(a1, data)
                         values2 = self.ljTypes.getAtomParameters(a2, data)
