@@ -163,7 +163,6 @@ class TinkerFiles:
         periodicBoxVectors: Tuple[Vec3, Vec3, Vec3] = None,
         unitCellDimensions: Vec3 = None,
         writeXmlFiles: bool = False,
-        filePrefix: str = "tinkerFiles",
     ):
         """
         Load exactly one .xyz file and one or more .key or .prm files.
@@ -183,9 +182,6 @@ class TinkerFiles:
             If provided, this overwrites the box information from the xyz file.
         writeXmlFiles : bool, optional, default=False
             If True, the residue and force field XML files are written to disk.
-        filePrefix : str, optional, default="tinkerFiles"
-            The prefix to use for the XML files written to
-            disk if writeXmlFiles is True.
         """
         # ----------------------- INTERNAL VARIABLES -----------------------
         # Populate parser functions for the recognized forces
@@ -194,7 +190,6 @@ class TinkerFiles:
 
         # Store the input parameters
         self._writeXmlFiles = writeXmlFiles
-        self._filePrefix = filePrefix
         self._XmlFilesList = None
 
         # Topology
@@ -254,16 +249,22 @@ class TinkerFiles:
             self.topology.setUnitCellDimensions(unitCellDimensions)
 
         # ----------------------- CREATE XML FILES -----------------------
-        self._XmlFilesList = []
-        self._ImplicitXmlFilesList = []
+        self.forceFields = []
+        self.implictForceFields = []
         for keyFile, atomTypes, bioTypes, forces, scalars in zip(
             key, self._atomTypes, self._bioTypes, self._forces, self._scalars
         ):
             xmlFile, implicitXmlFile = self._createXmlFile(
                 keyFile, atomTypes, bioTypes, forces, scalars, self._atomData
             )
-            self._XmlFilesList.append(xmlFile)
-            self._ImplicitXmlFilesList.append(implicitXmlFile)
+
+            # Reset the file pointers
+            xmlFile.seek(0)
+            implicitXmlFile.seek(0)
+
+            # Store the XML files
+            self.forceFields.append(xmlFile)
+            self.implictForceFields.append(implicitXmlFile)
 
     def createSystem(
         self,
@@ -317,10 +318,9 @@ class TinkerFiles:
         openmm.System
             The created OpenMM System.
         """
-        xmlFilesList = self._XmlFilesList
+        xmlFilesList = self.forceFields
         if implicitSolvent:
-            xmlFilesList += self._ImplicitXmlFilesList
-            nonbondedMethod = ff.NoCutoff
+            xmlFilesList += self.implictForceFields
 
         # Reset the file pointers
         for f in xmlFilesList:
@@ -937,7 +937,7 @@ class TinkerFiles:
     @staticmethod
     def _getResiduesFromBonds(atomData: Dict) -> Tuple[List[List[int]], List[str]]:
         """
-        Form whole residues by recursively traversing bonded atoms.
+        Form whole residues by traversing bonded atoms.
 
         Notes
         -----
