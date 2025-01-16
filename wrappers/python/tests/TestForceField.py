@@ -920,12 +920,12 @@ class TestForceField(unittest.TestCase):
         chain = top.addChain()
         res = top.addResidue('RES', chain)
         top.addAtom('A', elem.carbon, res)
-        top.addAtom('B', elem.carbon, res)
-        top.addAtom('C', elem.carbon, res)
-        top.addAtom('D', elem.carbon, res)
+        top.addAtom('B', elem.nitrogen, res)
+        top.addAtom('C', elem.nitrogen, res)
+        top.addAtom('D', elem.oxygen, res)
         top.addAtom('E', elem.carbon, res)
-        top.addAtom('F', elem.carbon, res)
-        top.addAtom('G', elem.carbon, res)
+        top.addAtom('F', elem.nitrogen, res)
+        top.addAtom('G', elem.oxygen, res)
         atoms = list(top.atoms())
         top.addBond(atoms[0], atoms[1])
         top.addBond(atoms[1], atoms[2])
@@ -940,8 +940,8 @@ class TestForceField(unittest.TestCase):
 <ForceField>
  <AtomTypes>
   <Type name="A" class="A" element="C" mass="1"/>
-  <Type name="B" class="B" element="C" mass="1"/>
-  <Type name="C" class="C" element="C" mass="1"/>
+  <Type name="B" class="B" element="N" mass="1"/>
+  <Type name="C" class="C" element="O" mass="1"/>
  </AtomTypes>
  <Residues>
   <Residue name="RES">
