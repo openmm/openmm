@@ -1639,8 +1639,11 @@ public:
     void copyState(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1);
 private:
     int numParticles;
-    std::vector<Vec3> displ1;
-    std::vector<Vec3> displ0;
+    std::vector<Vec3> displ1, displ0;
+    std::vector<Vec3> displacement1, displacement0;
+    std::vector<int> pj1, pi1, pj0, pi0;
+    void setDisplacements(std::vector<Vec3>& pos);
+    void displForces(std::vector<Vec3>& force0, std::vector<Vec3>& force1);
 };
 
 /**

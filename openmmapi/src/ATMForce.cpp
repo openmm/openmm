@@ -92,20 +92,30 @@ void ATMForce::setEnergyFunction(const std::string& energy) {
 }
 
 int ATMForce::addParticle(const Vec3& displacement1, const Vec3& displacement0) {
-    particles.push_back(ParticleInfo(particles.size(), displacement1, displacement0));
+  particles.push_back(ParticleInfo(particles.size(), displacement1, displacement0, -1, -1, -1, -1));
     return particles.size()-1;
 }
 
-void ATMForce::getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0) const {
+void ATMForce::getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0,
+				     int& pDestination1, int& pOrigin1, int& pDestination0, int& pOrigin0 ) const {
     ASSERT_VALID_INDEX(index, particles);
     displacement1 = particles[index].displacement1;
     displacement0 = particles[index].displacement0;
+    pDestination1 = particles[index].pDestination1;
+    pOrigin1      = particles[index].pOrigin1;
+    pDestination0 = particles[index].pDestination0;
+    pOrigin0      = particles[index].pOrigin0;
 }
 
-void ATMForce::setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0) {
+void ATMForce::setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0,
+				     int pDestination1, int pOrigin1, int pDestination0, int pOrigin0 ) {
     ASSERT_VALID_INDEX(index, particles);
     particles[index].displacement1 = displacement1;
     particles[index].displacement0 = displacement0;
+    particles[index].pDestination1 = pDestination1;
+    particles[index].pOrigin1      = pOrigin1;
+    particles[index].pDestination0 = pDestination0;
+    particles[index].pOrigin0      = pOrigin0;
 }
 
 int ATMForce::addForce(Force* force) {

@@ -522,5 +522,5 @@ UNITS = {
 ("ATMForce", "getDefaultUmax") :  ('unit.kilojoule_per_mole', ()),
 ("ATMForce", "getDefaultUbcore") :  ('unit.kilojoule_per_mole', ()),
 ("ATMForce", "getDefaultAcore") :  (None, ()),
-("ATMForce", "getParticleParameters") : (None, ("unit.nanometer", "unit.nanometer")),
+("ATMForce", "getParticleParameters") : (None, ("unit.nanometer", "unit.nanometer", None, None, None, None )),
 }

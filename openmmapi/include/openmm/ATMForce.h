@@ -221,7 +221,7 @@ public:
      */
     Force& getForce(int index) const;
     /**
-     * Add a particle to the force.
+     * Add a particle to the force
      *
      * All of the particles in the System must be added to the ATMForce in the same order
      * as they appear in the System.
@@ -235,18 +235,30 @@ public:
      * Get the parameters for a particle
      * 
      * @param index           the index in the force for the particle for which to get parameters
-     * @param displacement1   the displacement of the particle for the target state in nm
-     * @param displacement0   the displacement of the particle for the initial state in nm
+     * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
+     * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
+     * @param pDestination1   the index of the destination particle for variable displacement for the target state
+     * @param pOrigin1        the index of the origin particle for variable displacement for the target state
+     * @param pDestination0   the index of the destination particle for variable displacement for the initial state
+     * @param pOrigin0        the index of the origin particle for variable displacement for the initial state
      */
-    void getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0) const;
+    void getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0,
+			       int& pDestination1, int& pOrigin1, int& pDestination0, int& pOrigin0 ) const;
+
     /**
-     * Set the parameters for a particle
+     * Set the displacements for a particle
      * 
      * @param index           the index in the force of the particle for which to set parameters
-     * @param displacement1   the displacement of the particle for the target state in nm
-     * @param displacement0   the displacement of the particle for the initial state in nm
+     * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
+     * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
+     * @param pDestination1   the index of the destination particle for variable displacement for the target state or -1 if using fixed displacement
+     * @param pOrigin1        the index of the origin particle for variable displacement for the target state or -1 if using fixed displacement
+     * @param pDestination0   the index of the destination particle for variable displacement for the initial state or -1 if using fixed displacement
+     * @param pOrigin0        the index of the origin particle for variable displacement for the initial state or -1 if using fixed displacement
      */
-    void setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0=Vec3());
+    void setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0,
+			       int pDestination1, int pOrigin1, int pDestination0, int pOrigin0 );
+
     /**
      * Add a new global parameter that the interaction may depend on.  The default value provided to
      * this method is the initial value of the parameter in newly created Contexts.  You can change
@@ -420,12 +432,15 @@ class ATMForce::ParticleInfo {
 public:
     int index;
     Vec3 displacement1, displacement0;
+    //variable displacements = pos[pDestination] - pos[pOrigin]
+    int pDestination1, pOrigin1, pDestination0, pOrigin0;
     ParticleInfo() : index(-1) {
     }
     ParticleInfo(int index) : index(index) {
     }
-    ParticleInfo(int index, Vec3 displacement1, Vec3 displacement0) :
-        index(index), displacement1(displacement1), displacement0(displacement0) {
+    ParticleInfo(int index, Vec3 displacement1, Vec3 displacement0, int pj1, int pi1, int pj0, int pi0 ) :
+        index(index), displacement1(displacement1), displacement0(displacement0),
+                      pDestination1(pj1), pOrigin1(pi1), pDestination0(pj0), pOrigin0(pi0) {
     }
 };
 

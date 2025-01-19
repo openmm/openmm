@@ -63,9 +63,11 @@ void ATMForceProxy::serialize(const void* object, SerializationNode& node) const
     SerializationNode& particles = node.createChildNode("Particles");
     for (int i = 0; i < force.getNumParticles(); i++) {
         Vec3 d1, d0;
-        force.getParticleParameters(i, d1, d0);
+	int j1, i1, j0, i0;
+        force.getParticleParameters(i, d1, d0, j1, i1, j0, i0 );
         particles.createChildNode("Particle").setDoubleProperty("d1x", d1[0]).setDoubleProperty("d1y", d1[1]).setDoubleProperty("d1z", d1[2])
-                .setDoubleProperty("d0x", d0[0]).setDoubleProperty("d0y", d0[1]).setDoubleProperty("d0z", d0[2]);
+	  .setDoubleProperty("d0x", d0[0]).setDoubleProperty("d0y", d0[1]).setDoubleProperty("d0z", d0[2])
+	  .setIntProperty("pj1", j1).setIntProperty("pi1", i1).setIntProperty("pj0", j0).setIntProperty("pi0", i0);
     }
 }
 
@@ -88,9 +90,17 @@ void* ATMForceProxy::deserialize(const SerializationNode& node) const {
         for (auto& f : forces.getChildren())
             force->addForce(f.getChildren()[0].decodeObject<Force>());
         const SerializationNode& particles = node.getChildNode("Particles");
-        for (auto& p : particles.getChildren())
-            force->addParticle(Vec3(p.getDoubleProperty("d1x"), p.getDoubleProperty("d1y"), p.getDoubleProperty("d1z")),
-                               Vec3(p.getDoubleProperty("d0x"), p.getDoubleProperty("d0y"), p.getDoubleProperty("d0z")));
+        for (auto& p : particles.getChildren()){
+	  force->addParticle(Vec3(p.getDoubleProperty("d1x"), p.getDoubleProperty("d1y"), p.getDoubleProperty("d1z")),
+			     Vec3(p.getDoubleProperty("d0x"), p.getDoubleProperty("d0y"), p.getDoubleProperty("d0z")));
+	  if ( p.getIntProperty("pj1") > 0 and p.getIntProperty("pi1") > 0 ){
+	    int i = force->addParticle(Vec3(p.getDoubleProperty("d1x"), p.getDoubleProperty("d1y"), p.getDoubleProperty("d1z")),
+				       Vec3(p.getDoubleProperty("d0x"), p.getDoubleProperty("d0y"), p.getDoubleProperty("d0z")));
+	    force->setParticleParameters(i, Vec3(p.getDoubleProperty("d1x"), p.getDoubleProperty("d1y"), p.getDoubleProperty("d1z")),
+					 Vec3(p.getDoubleProperty("d0x"), p.getDoubleProperty("d0y"), p.getDoubleProperty("d0z")),
+					 p.getIntProperty("pj1"), p.getIntProperty("pi1"), p.getIntProperty("pj0"), p.getIntProperty("pi0"));
+	  }
+	}
         return force;
     }
     catch (...) {

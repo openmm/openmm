@@ -2932,12 +2932,67 @@ void ReferenceCalcATMForceKernel::initialize(const System& system, const ATMForc
     //displacement map
     displ1.resize(numParticles);
     displ0.resize(numParticles);
+    displacement1.resize(numParticles);
+    displacement0.resize(numParticles);
+    pj1.resize(numParticles);
+    pi1.resize(numParticles);
+    pj0.resize(numParticles);
+    pi0.resize(numParticles);
     for (int i = 0; i < numParticles; i++) {
-        Vec3 displacement1, displacement0;
-        force.getParticleParameters(i, displacement1, displacement0 );
-        displ1[i] = displacement1;
-        displ0[i] = displacement0;
+        Vec3 d1, d0;
+	int j1, i1, j0, i0;
+        force.getParticleParameters(i, d1, d0, j1, i1, j0, i0 );
+	displacement1[i] = d1;
+	displacement0[i] = d0;
+	pj1[i] = j1;
+	pi1[i] = i1;
+	pj0[i] = j0;
+	pi0[i] = i0;
     }
+}
+
+void ReferenceCalcATMForceKernel::setDisplacements(vector<Vec3>& pos){
+  numParticles = pos.size();
+
+  for (int i = 0; i < numParticles; i++) {
+    if (pj1[i] >= 0 && pi1[i] >= 0){
+      displ1[i] = pos[pj1[i]] - pos[pi1[i]];
+      if (pi0[i] >= 0 && pj0[i] >= 0){
+	displ0[i] = pos[pj0[i]] - pos[pi0[i]];
+      }else{
+	displ0[i] = Vec3();
+      }
+    }else{
+      displ1[i] = displacement1[i];
+      displ0[i] = displacement0[i];
+    }
+  }
+}
+
+
+//Add forces from variable displacements
+void ReferenceCalcATMForceKernel::displForces(vector<Vec3>& force0, vector<Vec3>& force1){
+  vector<Vec3> dforce1(numParticles), dforce0(numParticles);
+
+  for (int i = 0; i < numParticles; i++){
+      if (pj1[i] >= 0 && pi1[i] >= 0){
+	dforce1[pj1[i]] += force1[i];
+	dforce1[pi1[i]] -= force1[i];
+      }
+  }
+  for (int i = 0; i < numParticles; i++){
+    force1[i] += dforce1[i];
+  }
+
+  for (int i = 0; i < numParticles; i++){
+      if (pj0[i] >= 0 && pi0[i] >= 0){
+	dforce0[pj0[i]] += force0[i];
+	dforce0[pi0[i]] -= force0[i];
+      }
+  }
+  for (int i = 0; i < numParticles; i++){
+    force0[i] += dforce0[i];
+  }
 }
 
 void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1,
@@ -2945,6 +3000,7 @@ void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl&
     vector<Vec3>& force = extractForces(context);
     vector<Vec3>& force0 = extractForces(innerContext0);
     vector<Vec3>& force1 = extractForces(innerContext1);
+    displForces(force0, force1);
     for (int i = 0; i < force.size(); i++)
         force[i] += dEdu0*force0[i] + dEdu1*force1[i];
     map<string, double>& derivs = extractEnergyParameterDerivatives(context);
@@ -2954,6 +3010,9 @@ void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl&
 
 void ReferenceCalcATMForceKernel::copyState(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1) {
     vector<Vec3>& pos = extractPositions(context);
+
+    //calculate displacement vectors
+    setDisplacements(pos);
 
     //in the initial state, particles are displaced by displ0
     vector<Vec3> pos0(pos);
@@ -2992,11 +3051,22 @@ void ReferenceCalcATMForceKernel::copyParametersToContext(ContextImpl& context, 
           throw OpenMMException("copyParametersToContext: The number of ATMForce particles has changed");
     displ1.resize(numParticles);
     displ0.resize(numParticles);
+    displacement1.resize(numParticles);
+    displacement0.resize(numParticles);
+    pj1.resize(numParticles);
+    pi1.resize(numParticles);
+    pj0.resize(numParticles);
+    pi0.resize(numParticles);
     for (int i = 0; i < numParticles; i++) {
-        Vec3 displacement1, displacement0;
-        force.getParticleParameters(i, displacement1, displacement0 );
-        displ1[i] = displacement1;
-        displ0[i] = displacement0;
+        Vec3 d1, d0;
+	int j1, i1, j0, i0;
+        force.getParticleParameters(i, d1, d0, j1, i1, j0, i0 );
+	displacement1[i] = d1;
+	displacement0[i] = d0;
+	pj1[i] = j1;
+	pi1[i] = i1;
+	pj0[i] = j0;
+	pi0[i] = i0;
     }
 }
 
