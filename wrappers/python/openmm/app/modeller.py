@@ -113,7 +113,7 @@ class Modeller(object):
             for residue in chain.residues():
                 newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                 for atom in residue.atoms():
-                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -127,7 +127,7 @@ class Modeller(object):
             for residue in chain.residues():
                 newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                 for atom in residue.atoms():
-                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(addPositions[atom.index]))
         for bond in addTopology.bonds():
@@ -172,7 +172,7 @@ class Modeller(object):
                                 if needNewResidue:
                                     newResidue = newTopology.addResidue(residue.name, newChain, residue.id, residue.insertionCode)
                                     needNewResidue = False;
-                                newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                                newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                                 newAtoms[atom] = newAtom
                                 newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -248,7 +248,7 @@ class Modeller(object):
                 else:
                     # Just copy the residue over.
                     for atom in residue.atoms():
-                        newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                        newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                         newAtoms[atom] = newAtom
                         newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -548,7 +548,7 @@ class Modeller(object):
                 if residue in residueTemplates:
                     newResidueTemplates[newResidue] = residueTemplates[residue]
                 for atom in residue.atoms():
-                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                    newAtom = newTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                     newAtoms[atom] = newAtom
                     newPositions.append(deepcopy(self.positions[atom.index]))
         for bond in self.topology.bonds():
@@ -736,6 +736,15 @@ class Modeller(object):
                     terminal = hydrogen.attrib['terminal']
                 data.hydrogens.append(Modeller._Hydrogen(hydrogen.attrib['name'], hydrogen.attrib['parent'], maxph, atomVariants, terminal))
 
+    @staticmethod
+    def _loadStandardHydrogenDefinitions():
+        """Load the definitions of hydrogens for standard residues.  Normally there is no need to call this directly.
+        It is automatically called by addHydrogens().  If the definitions have already been loaded, this returns without
+        doing anything."""
+        if not Modeller._hasLoadedStandardHydrogens:
+            Modeller.loadHydrogenDefinitions(os.path.join(os.path.dirname(__file__), 'data', 'hydrogens.xml'))
+            Modeller._hasLoadedStandardHydrogens = True
+
     def addHydrogens(self, forcefield=None, pH=7.0, variants=None, platform=None, residueTemplates=dict()):
         """Add missing hydrogens to the model.
 
@@ -798,7 +807,11 @@ class Modeller(object):
             length must equal the number of residues in the model.  variants[i]
             is the name of the variant to use for residue i (indexed starting at
             0). If an element is None, the standard rules will be followed to
-            select a variant for that residue.
+            select a variant for that residue.  Alternatively, an element may specify
+            exactly which hydrogens to add.  In that case, variants[i] should be
+            a list of tuples [(name1, parent1), (name2, parent2), ...].  Each
+            tuple specifies the name of a hydrogen and the name of the parent atom
+            it should be bonded to.
         platform : Platform=None
             the Platform to use when computing the hydrogen atom positions.  If
             this is None, the default Platform will be used.
@@ -827,8 +840,7 @@ class Modeller(object):
 
         # Load the residue specifications.
 
-        if not Modeller._hasLoadedStandardHydrogens:
-            Modeller.loadHydrogenDefinitions(os.path.join(os.path.dirname(__file__), 'data', 'hydrogens.xml'))
+        Modeller._loadStandardHydrogenDefinitions()
 
         # Make a list of atoms bonded to each atom.
 
@@ -867,10 +879,9 @@ class Modeller(object):
                     newResidueTemplates[newResidue] = residueTemplates[residue]
                 isNTerminal = (residue == chain._residues[0])
                 isCTerminal = (residue == chain._residues[-1])
-                if residue.name in Modeller._residueHydrogens:
+                if residue.name in Modeller._residueHydrogens or isinstance(variants[residue.index], list):
                     # Add hydrogens.  First select which variant to use.
 
-                    spec = Modeller._residueHydrogens[residue.name]
                     variant = variants[residue.index]
                     if variant is None:
                         if residue.name == 'CYS':
@@ -930,8 +941,14 @@ class Modeller(object):
                                     variant = 'HID'
                         elif residue.name == 'HIS':
                             variant = 'HIP'
-                    if variant is not None and variant not in spec.variants:
-                        raise ValueError('Illegal variant for %s residue: %s' % (residue.name, variant))
+                    if isinstance(variant, list):
+                        spec = Modeller._ResidueData(residue.name)
+                        infinity = float('Inf')
+                        spec.hydrogens = [Modeller._Hydrogen(name, parent, infinity, None, None) for name, parent in variant]
+                    else:
+                        spec = Modeller._residueHydrogens[residue.name]
+                        if variant is not None and variant not in spec.variants:
+                            raise ValueError('Illegal variant for %s residue: %s' % (residue.name, variant))
                     actualVariants[residue.index] = variant
                     removeExtraHydrogens = (variants[residue.index] is not None)
 
@@ -1462,7 +1479,7 @@ class Modeller(object):
                 lipidResNum += 1
 
                 for atom in residue.atoms():
-                    newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                    newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                     newAtoms[atom] = newAtom
                 membranePos += pos
                 for bond in resBonds[residue]:
@@ -1477,7 +1494,7 @@ class Modeller(object):
         for (residue, pos) in addedWater:
             newResidue = membraneTopology.addResidue(residue.name, solventChain, residue.id, residue.insertionCode)
             for atom in residue.atoms():
-                newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id)
+                newAtom = membraneTopology.addAtom(atom.name, atom.element, newResidue, atom.id, atom.formalCharge)
                 newAtoms[atom] = newAtom
             membranePos += pos
             for bond in resBonds[residue]:
@@ -1558,7 +1575,11 @@ class Modeller(object):
 
         needExtraWater = (boxSizeZ > patchSize[2])
         if needExtraWater:
-            modeller.addSolvent(forcefield, neutralize=False, residueTemplates=residueTemplates)
+            newResidueTemplates = {}
+            for r1, r2 in zip(self.topology.residues(), modeller.topology.residues()):
+                if r1 in residueTemplates:
+                    newResidueTemplates[r2] = residueTemplates[r1]
+            modeller.addSolvent(forcefield, neutralize=False, residueTemplates=newResidueTemplates)
 
         # Record the positions of all waters that have been added.
 

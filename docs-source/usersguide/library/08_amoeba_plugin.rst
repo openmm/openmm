@@ -11,9 +11,6 @@ accelerate AMOEBA simulations. TINKER-OpenMM can be created from a TINKER
 package using three files made available through the OpenMM home page. OpenMM
 AMOEBA Force and System objects containing AMOEBA forces can be serialized.
 
-At present, AMOEBA is only supported on the CUDA and Reference platforms, not on
-the OpenCL platform.
-
 In the following sections, the individual forces and options available in the
 plugin are listed, and the steps required to build and use the plugin and
 TINKER-OpenMM are outlined. Validation results are also reported.  Benchmarks

@@ -215,8 +215,7 @@ class Quantity(object):
     def __repr__(self):
         """
         """
-        return (Quantity.__name__ + '(value=' + repr(self._value) + ', unit=' +
-                str(self.unit) + ')')
+        return str(self)
 
     def format(self, format_spec):
         return format_spec % self._value + ' ' + str(self.unit.get_symbol())

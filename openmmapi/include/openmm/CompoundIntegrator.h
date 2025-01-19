@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015-2020 Stanford University and the Authors.      *
+ * Portions copyright (c) 2015-2024 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -158,6 +158,23 @@ public:
      * @param steps   the number of time steps to take
      */
     void step(int steps);
+    /**
+     * Get which force groups to use for integration.  By default, all force groups
+     * are included.  This is interpreted as a set of bit flags: the forces from group i
+     * will be included if (groups&(1<<i)) != 0.
+     * 
+     * This method returns the integration force groups for the current Integator.
+     */
+    int getIntegrationForceGroups() const;
+    /**
+     * Set which force groups to use for integration.  By default, all force groups
+     * are included.  This is interpreted as a set of bit flags: the forces from group i
+     * will be included if (groups&(1<<i)) != 0.
+     * 
+     * Calling this method sets the integration force groups for all Integrators
+     * containined in this CompoundIntegrator.
+     */
+    void setIntegrationForceGroups(int groups);
 protected:
     /**
      * This will be called by the Context when it is created.  It informs the Integrator

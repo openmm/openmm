@@ -1,5 +1,6 @@
 from collections import defaultdict
 import unittest
+import random
 
 from validateModeller import *
 from openmm.app import *
@@ -975,6 +976,33 @@ class TestModeller(unittest.TestCase):
         modeller.delete(hydrogens)
         self.assertTrue(modeller.topology.getNumAtoms() < pdb.topology.getNumAtoms())
         modeller.addHydrogens()
+        self.assertEqual(modeller.topology.getNumAtoms(), pdb.topology.getNumAtoms())
+        for res1, res2 in zip(pdb.topology.residues(), modeller.topology.residues()):
+            names1 = sorted([a.name for a in res1.atoms()])
+            names2 = sorted([a.name for a in res2.atoms()])
+            self.assertEqual(names1, names2)
+        # Reset the loaded definitions so we don't affect other tests.
+        Modeller._residueHydrogens = {}
+        Modeller._hasLoadedStandardHydrogens = False
+
+    def test_addSpecificHydrogens(self):
+        """Test specifying exactly which hydrogens to add."""
+        pdb = PDBFile('systems/glycopeptide.pdb')
+        variants = [None]*pdb.topology.getNumResidues()
+        for residue in pdb.topology.residues():
+            if residue.name != 'ALA':
+                var = []
+                for atom1, atom2 in residue.bonds():
+                    if atom1.element == element.hydrogen:
+                        var.append((atom1.name, atom2.name))
+                    elif atom2.element == element.hydrogen:
+                        var.append((atom2.name, atom1.name))
+                variants[residue.index] = var
+        modeller = Modeller(pdb.topology, pdb.positions)
+        hydrogens = [a for a in modeller.topology.atoms() if a.element == element.hydrogen and random.random() < 0.7]
+        modeller.delete(hydrogens)
+        self.assertTrue(modeller.topology.getNumAtoms() < pdb.topology.getNumAtoms())
+        modeller.addHydrogens(variants=variants)
         self.assertEqual(modeller.topology.getNumAtoms(), pdb.topology.getNumAtoms())
         for res1, res2 in zip(pdb.topology.residues(), modeller.topology.residues()):
             names1 = sorted([a.name for a in res1.atoms()])

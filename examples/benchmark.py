@@ -2,7 +2,7 @@ from __future__ import print_function
 import openmm.app as app
 import openmm as mm
 import openmm.unit as unit
-from datetime import datetime
+from datetime import datetime, timezone
 import argparse
 import os
 
@@ -352,6 +352,8 @@ def runOneTest(testName, options):
         properties['DeviceIndex'] = options.device
         if ',' in options.device or ' ' in options.device:
             initialSteps = 250
+    if options.disable_pme_stream:
+        properties['DisablePmeStream'] = 'true'
     if options.opencl_platform is not None and 'OpenCLPlatformIndex' in platform.getPropertyNames():
         properties['OpenCLPlatformIndex'] = options.opencl_platform
     if (options.precision is not None) and ('Precision' in platform.getPropertyNames()):
@@ -478,9 +480,10 @@ parser.add_argument('--seconds', default=60, dest='seconds', type=float, help='t
 parser.add_argument('--polarization', default='mutual', dest='polarization', choices=POLARIZATION_MODES, help=f'the polarization method for AMOEBA: {POLARIZATION_MODES} [default: mutual]')
 parser.add_argument('--mutual-epsilon', default=1e-5, dest='epsilon', type=float, help='mutual induced epsilon for AMOEBA [default: 1e-5]')
 parser.add_argument('--bond-constraints', default='hbonds', dest='bond_constraints', help=f'hbonds: constrain bonds to hydrogen, use 1.5*amu H mass; allbonds: constrain all bonds, use 4*amu H mass, and use larger timestep. This option is ignored for AMOEBA: {BOND_CONSTRAINTS} [default: hbonds]')
-parser.add_argument('--device', default=None, dest='device', help='device index for CUDA or OpenCL')
+parser.add_argument('--disable-pme-stream', default=False, action='store_true', dest='disable_pme_stream', help='disable use of a separate GPU stream for PME')
+parser.add_argument('--device', default=None, dest='device', help='device index for CUDA, HIP, or OpenCL')
 parser.add_argument('--opencl-platform', default=None, dest='opencl_platform', help='platform index for OpenCL')
-parser.add_argument('--precision', default='single', dest='precision', help=f'precision modes for CUDA or OpenCL: {PRECISIONS} [default: single]')
+parser.add_argument('--precision', default='single', dest='precision', help=f'precision modes for CUDA, HIP, or OpenCL: {PRECISIONS} [default: single]')
 parser.add_argument('--style', default='simple', dest='style', choices=STYLES, help=f'output style: {STYLES} [default: simple]')
 parser.add_argument('--outfile', default=None, dest='outfile', help='output filename for benchmark logging (must end with .yaml or .json)')
 parser.add_argument('--serialize', default=None, dest='serialize', help='if specified, output serialized test systems for Folding@home or other uses')
@@ -493,7 +496,7 @@ if args.platform is None:
 system_info = dict()
 import socket, platform
 system_info['hostname'] = socket.gethostname()
-system_info['timestamp'] = datetime.utcnow().isoformat()
+system_info['timestamp'] = datetime.now(timezone.utc).isoformat()
 system_info['openmm_version'] = mm.version.version
 system_info['cpuinfo'] = cpuinfo()
 system_info['cpuarch'] = platform.processor()
@@ -502,10 +505,12 @@ system_info['system'] = platform.system()
 
 # Attempt to get GPU info
 try:
+    import shutil
     import subprocess
-    cmd = 'nvidia-smi --query-gpu=driver_version,gpu_name --format=csv,noheader'
-    output = subprocess.check_output(cmd, shell=True, text=True)
-    system_info['nvidia_driver'], system_info['gpu'] = output.strip().split(', ')
+    if shutil.which('nvidia-smi') is not None:
+        cmd = 'nvidia-smi --query-gpu=driver_version,gpu_name --format=csv,noheader'
+        output = subprocess.check_output(cmd, shell=True, text=True)
+        system_info['nvidia_driver'], system_info['gpu'] = output.strip().split(', ')
 except Exception as e:
     pass
 

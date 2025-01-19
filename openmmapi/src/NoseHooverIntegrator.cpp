@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2024 Stanford University and the Authors.      *
  * Authors: Andreas Krämer and Andrew C. Simmonett                            *
  * Contributors: Peter Eastman                                                *
  *                                                                            *
@@ -47,19 +47,13 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-NoseHooverIntegrator::NoseHooverIntegrator(double stepSize):
-    forcesAreValid(false),
-    hasSubsystemThermostats_(true)
-{
+NoseHooverIntegrator::NoseHooverIntegrator(double stepSize) : hasSubsystemThermostats_(true) {
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
     setMaximumPairDistance(0.0);
 }
 NoseHooverIntegrator::NoseHooverIntegrator(double temperature, double collisionFrequency, double stepSize,
-                                           int chainLength, int numMTS, int numYoshidaSuzuki) : 
-    forcesAreValid(false),
-    hasSubsystemThermostats_(false) {
-
+                                           int chainLength, int numMTS, int numYoshidaSuzuki) : hasSubsystemThermostats_(false) {
     setStepSize(stepSize);
     setConstraintTolerance(1e-5);
     setMaximumPairDistance(0.0);
@@ -294,7 +288,6 @@ void NoseHooverIntegrator::setRelativeCollisionFrequency(double frequency, int c
 }
 
 double NoseHooverIntegrator::computeKineticEnergy() {
-    forcesAreValid = false;
     double kE = 0.0;
     if(noseHooverChains.size() > 0) {
         for (const auto &nhc: noseHooverChains){
@@ -329,7 +322,6 @@ void NoseHooverIntegrator::initialize(ContextImpl& contextRef) {
     owner = &contextRef.getOwner();
     kernel = context->getPlatform().createKernel(IntegrateNoseHooverStepKernel::Name(), contextRef);
     kernel.getAs<IntegrateNoseHooverStepKernel>().initialize(contextRef.getSystem(), *this);
-    forcesAreValid = false;
 
     // check for drude particles and build the Nose-Hoover Chains
     for (auto& thermostat: noseHooverChains){
@@ -367,10 +359,9 @@ void NoseHooverIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");
     for (int i = 0; i < steps; ++i) {
-        if(context->updateContextState())
-            forcesAreValid = false;
+        context->updateContextState();
         context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
-        kernel.getAs<IntegrateNoseHooverStepKernel>().execute(*context, *this, forcesAreValid);
+        kernel.getAs<IntegrateNoseHooverStepKernel>().execute(*context, *this);
     }
 }
 

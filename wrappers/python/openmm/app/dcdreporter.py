@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2024 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -32,8 +32,7 @@ from __future__ import absolute_import
 __author__ = "Peter Eastman"
 __version__ = "1.0"
 
-from openmm.app import DCDFile
-from openmm.unit import nanometer
+from openmm.app import DCDFile, Topology
 
 class DCDReporter(object):
     """DCDReporter outputs a series of frames from a Simulation to a DCD file.
@@ -41,7 +40,7 @@ class DCDReporter(object):
     To use it, create a DCDReporter, then add it to the Simulation's list of reporters.
     """
 
-    def __init__(self, file, reportInterval, append=False, enforcePeriodicBox=None):
+    def __init__(self, file, reportInterval, append=False, enforcePeriodicBox=None, atomSubset=None):
         """Create a DCDReporter.
 
         Parameters
@@ -57,10 +56,13 @@ class DCDReporter(object):
             lies in the same periodic box.  If None (the default), it will automatically decide whether
             to translate molecules based on whether the system being simulated uses periodic boundary
             conditions.
+        atomSubset: list
+            Atom indices (zero indexed) of the particles to output.  If None (the default), all particles will be output.
         """
         self._reportInterval = reportInterval
         self._append = append
         self._enforcePeriodicBox = enforcePeriodicBox
+        self._atomSubset = atomSubset
         if append:
             mode = 'r+b'
         else:
@@ -78,15 +80,11 @@ class DCDReporter(object):
 
         Returns
         -------
-        tuple
-            A six element tuple. The first element is the number of steps
-            until the next report. The next four elements specify whether
-            that report will require positions, velocities, forces, and
-            energies respectively.  The final element specifies whether
-            positions should be wrapped to lie in a single periodic box.
+        dict
+            A dictionary describing the required information for the next report
         """
         steps = self._reportInterval - simulation.currentStep%self._reportInterval
-        return (steps, True, False, False, False, self._enforcePeriodicBox)
+        return {'steps':steps, 'periodic':self._enforcePeriodicBox, 'include':['positions']}
 
     def report(self, simulation, state):
         """Generate a report.
@@ -100,11 +98,24 @@ class DCDReporter(object):
         """
 
         if self._dcd is None:
+            if self._atomSubset is None:
+                topology = simulation.topology
+            else:
+                topology = Topology()
+                topology.setPeriodicBoxVectors(simulation.topology.getPeriodicBoxVectors())
+                atoms = list(simulation.topology.atoms())
+                chain = topology.addChain()
+                residue = topology.addResidue('', chain)
+                for i in self._atomSubset:
+                    topology.addAtom(atoms[i].name, atoms[i].element, residue)
             self._dcd = DCDFile(
-                self._out, simulation.topology, simulation.integrator.getStepSize(),
+                self._out, topology, simulation.integrator.getStepSize(),
                 simulation.currentStep, self._reportInterval, self._append
             )
-        self._dcd.writeModel(state.getPositions(asNumpy=True), periodicBoxVectors=state.getPeriodicBoxVectors())
+        positions = state.getPositions(asNumpy=True)
+        if self._atomSubset is not None:
+            positions = [positions[i] for i in self._atomSubset]
+        self._dcd.writeModel(positions, periodicBoxVectors=state.getPeriodicBoxVectors())
 
     def __del__(self):
         self._out.close()

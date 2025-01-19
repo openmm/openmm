@@ -90,69 +90,69 @@ static void setupMultipoleAmmonia(System& system, AmoebaGeneralizedKirkwoodForce
 
     amoebaMultipoleForce->setNonbondedMethod(AmoebaMultipoleForce::NoCutoff);
     amoebaMultipoleForce->setPolarizationType(polarizationType);
-    amoebaMultipoleForce->setMutualInducedTargetEpsilon(1.0e-06);
+    amoebaMultipoleForce->setMutualInducedTargetEpsilon(1.0e-6);
     amoebaMultipoleForce->setMutualInducedMaxIterations(500);
 
     std::vector<double> nitrogenMolecularDipole(3);
     std::vector<double> nitrogenMolecularQuadrupole(9);
 
-    nitrogenMolecularDipole[0]     =   8.3832254e-03;
-    nitrogenMolecularDipole[1]     =   0.0000000e+00;
-    nitrogenMolecularDipole[2]     =   3.4232474e-03;
+    nitrogenMolecularDipole[0]     =   8.3832254e-3;
+    nitrogenMolecularDipole[1]     =   0.0;
+    nitrogenMolecularDipole[2]     =   3.4232474e-3;
 
-    nitrogenMolecularQuadrupole[0] =  -4.0406249e-04;
-    nitrogenMolecularQuadrupole[1] =   0.0000000e+00;
-    nitrogenMolecularQuadrupole[2] =  -2.6883671e-04;
-    nitrogenMolecularQuadrupole[3] =   0.0000000e+00;
-    nitrogenMolecularQuadrupole[4] =   2.5463927e-04;
-    nitrogenMolecularQuadrupole[5] =   0.0000000e+00;
-    nitrogenMolecularQuadrupole[6] =  -2.6883671e-04;
-    nitrogenMolecularQuadrupole[7] =   0.0000000e+00;
-    nitrogenMolecularQuadrupole[8] =   1.4942322e-04;
+    nitrogenMolecularQuadrupole[0] =  -4.0406249e-4;
+    nitrogenMolecularQuadrupole[1] =   0.0;
+    nitrogenMolecularQuadrupole[2] =  -2.6883671e-4;
+    nitrogenMolecularQuadrupole[3] =   0.0;
+    nitrogenMolecularQuadrupole[4] =   2.5463927e-4;
+    nitrogenMolecularQuadrupole[5] =   0.0;
+    nitrogenMolecularQuadrupole[6] =  -2.6883671e-4;
+    nitrogenMolecularQuadrupole[7] =   0.0;
+    nitrogenMolecularQuadrupole[8] =   1.4942322e-4;
 
     // first N
 
     system.addParticle(1.4007000e+01);
-    amoebaMultipoleForce->addMultipole(-5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 1, 2, 3,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03);
+    amoebaMultipoleForce->addMultipole(-5.796e-1, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 1, 2, 3,  3.9e-1, 3.1996314e-1, 1.073e-3);
 
     // 3 H attached to first N
 
     std::vector<double> hydrogenMolecularDipole(3);
     std::vector<double> hydrogenMolecularQuadrupole(9);
-    hydrogenMolecularDipole[0]     =  -1.7388763e-03;
-    hydrogenMolecularDipole[1]     =   0.0000000e+00;
-    hydrogenMolecularDipole[2]     =  -4.6837475e-03;
+    hydrogenMolecularDipole[0]     =  -1.7388763e-3;
+    hydrogenMolecularDipole[1]     =   0.0;
+    hydrogenMolecularDipole[2]     =  -4.6837475e-3;
 
-    hydrogenMolecularQuadrupole[0] =  -4.4253841e-05;
-    hydrogenMolecularQuadrupole[1] =   0.0000000e+00;
-    hydrogenMolecularQuadrupole[2] =   1.5429571e-05;
-    hydrogenMolecularQuadrupole[3] =   0.0000000e+00;
-    hydrogenMolecularQuadrupole[4] =   4.1798924e-05;
-    hydrogenMolecularQuadrupole[5] =   0.0000000e+00;
-    hydrogenMolecularQuadrupole[6] =   1.5429571e-05;
-    hydrogenMolecularQuadrupole[7] =   0.0000000e+00;
-    hydrogenMolecularQuadrupole[8] =   2.4549167e-06;
+    hydrogenMolecularQuadrupole[0] =  -4.4253841e-5;
+    hydrogenMolecularQuadrupole[1] =   0.0;
+    hydrogenMolecularQuadrupole[2] =   1.5429571e-5;
+    hydrogenMolecularQuadrupole[3] =   0.0;
+    hydrogenMolecularQuadrupole[4] =   4.1798924e-5;
+    hydrogenMolecularQuadrupole[5] =   0.0;
+    hydrogenMolecularQuadrupole[6] =   1.5429571e-5;
+    hydrogenMolecularQuadrupole[7] =   0.0;
+    hydrogenMolecularQuadrupole[8] =   2.4549167e-6;
 
-    system.addParticle(1.0080000e+00);
-    system.addParticle(1.0080000e+00);
-    system.addParticle(1.0080000e+00);
-    amoebaMultipoleForce->addMultipole(1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 2, 3, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04);
-    amoebaMultipoleForce->addMultipole(1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 3, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04);
-    amoebaMultipoleForce->addMultipole(1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 2, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04);
+    system.addParticle(1.008);
+    system.addParticle(1.008);
+    system.addParticle(1.008);
+    amoebaMultipoleForce->addMultipole(1.932e-1, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 2, 3, 3.9e-1, 2.8135002e-1, 4.96e-4);
+    amoebaMultipoleForce->addMultipole(1.932e-1, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 3, 3.9e-1, 2.8135002e-1, 4.96e-4);
+    amoebaMultipoleForce->addMultipole(1.932e-1, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 0, 1, 2, 3.9e-1, 2.8135002e-1, 4.96e-4);
 
     // second N
 
-    system.addParticle(  1.4007000e+01);
-    amoebaMultipoleForce->addMultipole( -5.7960000e-01, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 5, 6, 7,  3.9000000e-01,  3.1996314e-01,  1.0730000e-03);
+    system.addParticle(1.4007000e+01);
+    amoebaMultipoleForce->addMultipole(-5.796e-1, nitrogenMolecularDipole, nitrogenMolecularQuadrupole, 2, 5, 6, 7, 3.9e-1, 3.1996314e-1, 1.073e-3);
 
     // 3 H attached to second N
 
-    system.addParticle(  1.0080000e+00);
-    system.addParticle(  1.0080000e+00);
-    system.addParticle(  1.0080000e+00);
-    amoebaMultipoleForce->addMultipole(  1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 6, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04);
-    amoebaMultipoleForce->addMultipole(  1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 7, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04);
-    amoebaMultipoleForce->addMultipole(  1.9320000e-01, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 6, 3.9000000e-01,  2.8135002e-01,  4.9600000e-04);
+    system.addParticle(1.008);
+    system.addParticle(1.008);
+    system.addParticle(1.008);
+    amoebaMultipoleForce->addMultipole(1.932e-1, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 6, 7, 3.9e-1, 2.8135002e-1, 4.96e-4);
+    amoebaMultipoleForce->addMultipole(1.932e-1, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 7, 3.9e-1, 2.8135002e-1, 4.96e-4);
+    amoebaMultipoleForce->addMultipole(1.932e-1, hydrogenMolecularDipole, hydrogenMolecularQuadrupole, 2, 4, 5, 6, 3.9e-1, 2.8135002e-1, 4.96e-4);
 
     // covalent maps
 
@@ -282,17 +282,17 @@ static void setupMultipoleAmmonia(System& system, AmoebaGeneralizedKirkwoodForce
 
     // GK force
 
-    amoebaGeneralizedKirkwoodForce->setSolventDielectric(  7.8300000e+01);
-    amoebaGeneralizedKirkwoodForce->setSoluteDielectric(   1.0000000e+00);
+    amoebaGeneralizedKirkwoodForce->setSolventDielectric(7.83e+01);
+    amoebaGeneralizedKirkwoodForce->setSoluteDielectric(1.0);
     amoebaGeneralizedKirkwoodForce->setIncludeCavityTerm(includeCavityTerm);
 
     // addParticle: charge, radius, scalingFactor
 
     for (unsigned int ii = 0; ii < 2; ii++) {
-        amoebaGeneralizedKirkwoodForce->addParticle( -5.7960000e-01,   1.5965000e-01,   6.9000000e-01);
-        amoebaGeneralizedKirkwoodForce->addParticle(  1.9320000e-01,   1.2360000e-01,   6.9000000e-01);
-        amoebaGeneralizedKirkwoodForce->addParticle(  1.9320000e-01,   1.2360000e-01,   6.9000000e-01);
-        amoebaGeneralizedKirkwoodForce->addParticle(  1.9320000e-01,   1.2360000e-01,   6.9000000e-01);
+        amoebaGeneralizedKirkwoodForce->addParticle(-5.7960e-1, 1.5965e-1, 6.9e-1, 1.5965e-1, 0.0f);
+        amoebaGeneralizedKirkwoodForce->addParticle( 1.9320e-1, 1.2360e-1, 6.9e-1, 1.2360e-1, 0.0f);
+        amoebaGeneralizedKirkwoodForce->addParticle( 1.9320e-1, 1.2360e-1, 6.9e-1, 1.2360e-1, 0.0f);
+        amoebaGeneralizedKirkwoodForce->addParticle( 1.9320e-1, 1.2360e-1, 6.9e-1, 1.2360e-1, 0.0f);
     }
     system.addForce(amoebaGeneralizedKirkwoodForce);
 }
@@ -5770,8 +5770,8 @@ static void setupAndGetForcesEnergyMultipoleVillin(AmoebaMultipoleForce::Polariz
     // GK force
 
     AmoebaGeneralizedKirkwoodForce* amoebaGeneralizedKirkwoodForce  = new AmoebaGeneralizedKirkwoodForce();
-    amoebaGeneralizedKirkwoodForce->setSolventDielectric(  7.8300000e+01);
-    amoebaGeneralizedKirkwoodForce->setSoluteDielectric(   1.0000000e+00);
+    amoebaGeneralizedKirkwoodForce->setSolventDielectric(7.83e+01);
+    amoebaGeneralizedKirkwoodForce->setSoluteDielectric(1.0);
     amoebaGeneralizedKirkwoodForce->setIncludeCavityTerm(includeCavityTerm);
 
     // addParticle: charge, radius, scalingFactor
@@ -7167,9 +7167,9 @@ static void testGeneralizedKirkwoodAmmoniaMutualPolarizationWithCavityTerm() {
     // Try changing the particle parameters and make sure it's still correct.
     
     for (int i = 0; i < numberOfParticles; i++) {
-        double charge, radius, scale;
-        amoebaGeneralizedKirkwoodForce->getParticleParameters(i, charge, radius, scale);
-        amoebaGeneralizedKirkwoodForce->setParticleParameters(i, charge, 0.9*radius, 1.1*scale);
+        double charge, radius, scale, descreenRadius, neckscale;
+        amoebaGeneralizedKirkwoodForce->getParticleParameters(i, charge, radius, scale, descreenRadius, neckscale);
+        amoebaGeneralizedKirkwoodForce->setParticleParameters(i, charge, 0.9*radius, 1.1*scale, 1.2*descreenRadius, 1.3*neckscale);
     }
     LangevinIntegrator integrator2(0.0, 0.1, 0.01);
     Context context2(system, integrator2, context.getPlatform());
