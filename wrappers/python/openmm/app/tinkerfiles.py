@@ -40,6 +40,7 @@ import os
 import re
 import shlex
 import xml.etree.ElementTree as etree
+import numpy as np
 from functools import wraps
 from typing import Any, Dict, List, Set, Tuple, Union
 
@@ -51,26 +52,6 @@ from . import element as elem
 from . import forcefield as ff
 from . import topology as top
 
-try:
-    import numpy as np
-except ImportError:
-    np = None
-
-
-def numpy_protector(func):
-    """
-    Decorator to emit useful error messages if users try to request numpy
-    processing if numpy is not available. Raises ImportError if numpy could not
-    be found
-    """
-
-    @wraps(func)
-    def wrapper(self, asNumpy=False):
-        if asNumpy and np is None:
-            raise ImportError("Could not import numpy. Cannot set asNumpy=True")
-        return func(self, asNumpy=asNumpy)
-
-    return wrapper
 
 
 class TinkerFiles:
@@ -342,7 +323,6 @@ class TinkerFiles:
     # ------------------------------------------------------------------------------------------ #
     #                                     POSITIONS AND BOX                                      #
     # ------------------------------------------------------------------------------------------ #
-    @numpy_protector
     def getPositions(self, asNumpy: bool = False) -> Union[List[Vec3], np.ndarray]:
         """
         Get the atomic positions.
@@ -363,7 +343,6 @@ class TinkerFiles:
             return self._numpyPositions
         return self.positions
 
-    @numpy_protector
     def getBoxVectors(self, asNumpy: bool = False) -> Union[List[Vec3], np.ndarray]:
         """
         Get the periodic box vectors.
