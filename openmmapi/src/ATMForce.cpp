@@ -38,6 +38,7 @@
 #include "openmm/internal/ATMForceImpl.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/AssertionUtilities.h"
+#include <openmm/Vec3.h>
 #include <iostream>
 #include <cmath>
 #include <string>
@@ -93,8 +94,13 @@ void ATMForce::setEnergyFunction(const std::string& energy) {
 
 int ATMForce::addParticle(const Vec3& displacement1, const Vec3& displacement0) {
   particles.push_back(ParticleInfo(particles.size(), displacement1, displacement0, -1, -1, -1, -1));
-    return particles.size()-1;
+  return particles.size()-1;
 }
+int ATMForce::addParticle(const int pDestination1, const int pOrigin1, const int pDestination0, const int pOrigin0) {
+  particles.push_back(ParticleInfo(particles.size(), Vec3(0., 0., 0.), Vec3(0., 0., 0.), pDestination1, pOrigin1, pDestination0, pOrigin0));
+  return particles.size()-1;
+}
+
 
 void ATMForce::getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0,
 				     int& pDestination1, int& pOrigin1, int& pDestination0, int& pOrigin0 ) const {
@@ -107,11 +113,19 @@ void ATMForce::getParticleParameters(int index, Vec3& displacement1, Vec3& displ
     pOrigin0      = particles[index].pOrigin0;
 }
 
-void ATMForce::setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0,
-				     int pDestination1, int pOrigin1, int pDestination0, int pOrigin0 ) {
+void ATMForce::setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0) {
     ASSERT_VALID_INDEX(index, particles);
     particles[index].displacement1 = displacement1;
     particles[index].displacement0 = displacement0;
+    particles[index].pDestination1 = -1;
+    particles[index].pOrigin1      = -1;
+    particles[index].pDestination0 = -1;
+    particles[index].pOrigin0      = -1;
+}
+void ATMForce::setParticleParameters(int index, const int pDestination1, const int pOrigin1, const int pDestination0, const int pOrigin0 ) {
+    ASSERT_VALID_INDEX(index, particles);
+    particles[index].displacement1 = Vec3(0., 0., 0.);
+    particles[index].displacement0 = Vec3(0., 0., 0.);
     particles[index].pDestination1 = pDestination1;
     particles[index].pOrigin1      = pOrigin1;
     particles[index].pDestination0 = pDestination0;

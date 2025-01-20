@@ -28,16 +28,16 @@ KERNEL void hybridForce(int numParticles,
 
 KERNEL void setDisplacements(int numParticles,
 			     GLOBAL real4* RESTRICT posq,
-			     GLOBAL float4* RESTRICT displacement0,
-			     GLOBAL float4* RESTRICT displacement1,
+			     GLOBAL real4* RESTRICT displacement0,
+			     GLOBAL real4* RESTRICT displacement1,
 			     GLOBAL int* RESTRICT pj1,
 			     GLOBAL int* RESTRICT pi1,
 			     GLOBAL int* RESTRICT pj0,
 			     GLOBAL int* RESTRICT pi0,
 			     GLOBAL int* RESTRICT atomOrder,
 			     GLOBAL int* RESTRICT invAtomOrder,
-			     GLOBAL float4* RESTRICT displ0,
-			     GLOBAL float4* RESTRICT displ1){
+			     GLOBAL real4* RESTRICT displ0,
+			     GLOBAL real4* RESTRICT displ1){
     for (int index = GLOBAL_ID; index < numParticles; index += GLOBAL_SIZE) {
         int atom = atomOrder[index];
 	int j1 = pj1[atom];
@@ -136,8 +136,8 @@ KERNEL void copyState(int numParticles,
                       GLOBAL real4* RESTRICT posq,
                       GLOBAL real4* RESTRICT posq0,
                       GLOBAL real4* RESTRICT posq1,
-                      GLOBAL float4* RESTRICT displ0,
-		      GLOBAL float4* RESTRICT displ1,
+                      GLOBAL real4* RESTRICT displ0,
+		      GLOBAL real4* RESTRICT displ1,
                       GLOBAL int* RESTRICT atomOrder,
                       GLOBAL int* RESTRICT inner0InvAtomOrder,
                       GLOBAL int* RESTRICT inner1InvAtomOrder

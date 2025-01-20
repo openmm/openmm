@@ -221,7 +221,7 @@ public:
      */
     Force& getForce(int index) const;
     /**
-     * Add a particle to the force
+     * Add a particle to the force (fixed lab frame displacement)
      *
      * All of the particles in the System must be added to the ATMForce in the same order
      * as they appear in the System.
@@ -232,32 +232,51 @@ public:
      */
     int addParticle(const Vec3& displacement1, const Vec3& displacement0=Vec3());
     /**
+     * Add a particle to the force (variable position-based displacement)
+     *
+     * All of the particles in the System must be added to the ATMForce in the same order
+     * as they appear in the System.
+     *
+     * @param pDestination1   the index of the destination particle for variable displacement for the target state or -1 for no displacement
+     * @param pOrigin1        the index of the origin particle for variable displacement for the target stateor -1 for no displacement
+     * @param pDestination0   the index of the destination particle for variable displacement for the initial state or -1 for no displacement
+     * @param pOrigin0        the index of the origin particle for variable displacement for the initial state or -1 for no displacement
+     * @return                 the index of the particle that was added
+     */
+    int addParticle(const int pDestination1, const int pOrigin1, const int pDestination0 = -1, const int pOrigin0 = -1);
+
+    /**
      * Get the parameters for a particle
      * 
      * @param index           the index in the force for the particle for which to get parameters
      * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
      * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
-     * @param pDestination1   the index of the destination particle for variable displacement for the target state
-     * @param pOrigin1        the index of the origin particle for variable displacement for the target state
-     * @param pDestination0   the index of the destination particle for variable displacement for the initial state
-     * @param pOrigin0        the index of the origin particle for variable displacement for the initial state
+     * @param pDestination1   the index of the destination particle for variable displacement for the target state or -1 for no displacement 
+     * @param pOrigin1        the index of the origin particle for variable displacement for the target state or -1 for no displacement 
+     * @param pDestination0   the index of the destination particle for variable displacement for the initial state or -1 for no displacement 
+     * @param pOrigin0        the index of the origin particle for variable displacement for the initial state or -1 for no displacement 
      */
     void getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0,
 			       int& pDestination1, int& pOrigin1, int& pDestination0, int& pOrigin0 ) const;
 
     /**
-     * Set the displacements for a particle
+     * Set the displacements for a particle (fixed lab frame displacement)
      * 
      * @param index           the index in the force of the particle for which to set parameters
      * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
      * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
-     * @param pDestination1   the index of the destination particle for variable displacement for the target state or -1 if using fixed displacement
-     * @param pOrigin1        the index of the origin particle for variable displacement for the target state or -1 if using fixed displacement
-     * @param pDestination0   the index of the destination particle for variable displacement for the initial state or -1 if using fixed displacement
-     * @param pOrigin0        the index of the origin particle for variable displacement for the initial state or -1 if using fixed displacement
      */
-    void setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0,
-			       int pDestination1, int pOrigin1, int pDestination0, int pOrigin0 );
+    void setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0);
+    /**
+     * Set the displacements for a particle (variable position-based displacement)
+     * 
+     * @param index           the index in the force of the particle for which to set parameters
+     * @param pDestination1   the index of the destination particle for variable displacement for the target state or -1 for no displacement
+     * @param pOrigin1        the index of the origin particle for variable displacement for the target state or -1 for no displacement
+     * @param pDestination0   the index of the destination particle for variable displacement for the initial state or -1 for no displacement
+     * @param pOrigin0        the index of the origin particle for variable displacement for the initial state or -1 for no  displacement
+     */
+    void setParticleParameters(int index, const int pDestination1, const int pOrigin1, const int pDestination0, const int pOrigin0 );
 
     /**
      * Add a new global parameter that the interaction may depend on.  The default value provided to

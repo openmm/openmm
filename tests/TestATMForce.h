@@ -148,14 +148,11 @@ void test3ParticlesSwap() {
 
     ATMForce* atm = new ATMForce(lmbd, lmbd, 0., 0, 0, umax, ubcore, acore, direction);
     Vec3 nodispl = Vec3(0., 0., 0.);
-    atm->addParticle( nodispl, nodispl );
-    atm->addParticle( nodispl, nodispl );
-    atm->addParticle( nodispl, nodispl );
-    //swap 1 and 2
-    atm->setParticleParameters( 0, nodispl, nodispl, -1, -1, -1, -1);
-    atm->setParticleParameters( 1, nodispl, nodispl,  2,  1, -1, -1);
-    atm->setParticleParameters( 2, nodispl, nodispl,  1,  2, -1, -1);
-    
+    //swap particles 1 and 2
+    atm->addParticle( nodispl );
+    atm->addParticle( 2,  1 );
+    atm->addParticle( 1,  2 );
+
     atm->addForce(bond);
     system.addForce(atm);
 
@@ -239,7 +236,7 @@ void test2Particles2Displacement0() {
 
     //Displace the second particle further in the target state
     Vec3 displ1 = Vec3(2., 0., 0.);
-    atm->setParticleParameters(1, displ1, displ0, -1, -1, -1, -1 );
+    atm->setParticleParameters(1, displ1, displ0 );
     atm->updateParametersInContext(context);
     state = context.getState(State::Energy | State::Forces);
     epot = state.getPotentialEnergy();
@@ -336,7 +333,7 @@ void testNonbonded() {
             }
     auto rng = std::default_random_engine {};
     std::shuffle(std::begin(positions), std::end(positions), rng);
-    atm->setParticleParameters(0, Vec3(0.5, 0, 0), Vec3(0.0, 0, 0), -1, -1, -1, -1);
+    atm->setParticleParameters(0, Vec3(0.5, 0, 0), Vec3(0.0, 0, 0));
 
     //in this scenario the non-bonded force is added to the System, a copy is added to ATMForce and
     //the System's copy is disabled by giving it a force group that is not evaluated.
@@ -564,8 +561,7 @@ void testLargeSystemSwap() {
         system.addParticle(1.0);
         positions.push_back(3*Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt)));
         external->addParticle(i, {qf[i]});
-        atm->addParticle(nodispl,nodispl);
-	atm->setParticleParameters( i, nodispl, nodispl, target_particle[i], i, -1, -1);
+        atm->addParticle(target_particle[i], i);
     }
 
     double energy0 = 0.;
@@ -678,7 +674,7 @@ void testSimulation() {
                 nb->addParticle(0, 0.3, 1.0);
                 atm->addParticle(Vec3());
             }
-    atm->setParticleParameters(0, Vec3(0.3, 0, 0), Vec3(-0.3, 0, 0), -1, -1, -1, -1);
+    atm->setParticleParameters(0, Vec3(0.3, 0, 0), Vec3(-0.3, 0, 0));
 
     // Simulate it and make sure that the other particles avoid the displaced positions.
 
