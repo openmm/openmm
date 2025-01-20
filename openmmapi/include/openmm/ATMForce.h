@@ -259,7 +259,7 @@ public:
      * @param pOrigin0        the index of the origin particle for the displacement for the initial state or -1 for no displacement
      * @return                the index of the particle that was added
      */
-    int addParticle(const int pDestination1, const int pOrigin1, const int pDestination0 = -1, const int pOrigin0 = -1);
+    int addParticle(int pDestination1, int pOrigin1, int pDestination0 = -1, int pOrigin0 = -1);
 
     /**
      * Get the parameters for a particle
@@ -292,7 +292,7 @@ public:
      * @param pDestination0   the index of the destination particle for the displacement for the initial state or -1 for no displacement
      * @param pOrigin0        the index of the origin particle for the displacement for the initial state or -1 for no  displacement
      */
-    void setParticleParameters(int index, const int pDestination1, const int pOrigin1, const int pDestination0, const int pOrigin0 );
+    void setParticleParameters(int index, int pDestination1, int pOrigin1, int pDestination0, int pOrigin0 );
 
     /**
      * Add a new global parameter that the interaction may depend on.  The default value provided to

@@ -96,7 +96,7 @@ int ATMForce::addParticle(const Vec3& displacement1, const Vec3& displacement0) 
   particles.push_back(ParticleInfo(particles.size(), displacement1, displacement0, -1, -1, -1, -1));
   return particles.size()-1;
 }
-int ATMForce::addParticle(const int pDestination1, const int pOrigin1, const int pDestination0, const int pOrigin0) {
+int ATMForce::addParticle(int pDestination1, int pOrigin1, int pDestination0, int pOrigin0) {
   particles.push_back(ParticleInfo(particles.size(), Vec3(0., 0., 0.), Vec3(0., 0., 0.), pDestination1, pOrigin1, pDestination0, pOrigin0));
   return particles.size()-1;
 }
@@ -122,7 +122,7 @@ void ATMForce::setParticleParameters(int index, const Vec3& displacement1, const
     particles[index].pDestination0 = -1;
     particles[index].pOrigin0      = -1;
 }
-void ATMForce::setParticleParameters(int index, const int pDestination1, const int pOrigin1, const int pDestination0, const int pOrigin0 ) {
+void ATMForce::setParticleParameters(int index, int pDestination1, int pOrigin1, int pDestination0, int pOrigin0 ) {
     ASSERT_VALID_INDEX(index, particles);
     particles[index].displacement1 = Vec3(0., 0., 0.);
     particles[index].displacement0 = Vec3(0., 0., 0.);
