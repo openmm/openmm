@@ -44,7 +44,7 @@ from functools import wraps
 from typing import Any, Dict, List, Set, Tuple, Union
 
 from openmm.app.internal.unitcell import computePeriodicBoxVectors
-from openmm.unit import Quantity, nanometers
+from openmm.unit import nanometers
 from openmm.vec3 import Vec3
 
 from . import element as elem
@@ -76,7 +76,6 @@ def numpy_protector(func):
 class TinkerFiles:
     """TinkerFiles parses Tinker files (.xyz, .prm, .key), constructs a Topology, and (optionally) an OpenMM System from it."""
 
-    # fmt: off
     RESIDUE_MAPPING = {
         "HOH": {"loc": "middle", "type": "AmoebaWater", "tinkerLookupName": "Water", "fullName": "Water"},
         "LI": {"loc": None, "type": "ion", "tinkerLookupName": "Lithium Ion", "fullName": "Lithium Ion"},
@@ -93,7 +92,6 @@ class TinkerFiles:
         "BR": {"loc": None, "type": "ion", "tinkerLookupName": "Bromide Ion", "fullName": "Bromide Ion"},
         "I": {"loc": None, "type": "ion", "tinkerLookupName": "Iodide Ion", "fullName": "Iodide Ion"},
     } 
-    # fmt: on
 
     RECOGNIZED_FORCES: Dict[str, Any] = {
         "bond": 1,
@@ -222,8 +220,8 @@ class TinkerFiles:
 
         # Load the .xyz file
         self._xyzDict, self.boxVectors, self.positions = self._loadXyzFile(xyz)
-        self.positions = Quantity(self.positions, nanometers)
-
+        self.positions = positions * nanometers
+        
         # Combine the data from the .xyz and .key files
         self._atomData = TinkerFiles._combineXyzAndKeyData(
             self._xyzDict, self._atomTypes, self._bioTypes
@@ -269,11 +267,11 @@ class TinkerFiles:
     def createSystem(
         self,
         nonbondedMethod = ff.PME,
-        nonbondedCutoff: Quantity = 1.0 * nanometers,
+        nonbondedCutoff = 1.0 * nanometers,
         constraints = None,
         rigidWater: bool = False,
         removeCMMotion: bool = True,
-        hydrogenMass: Union[None, Quantity] = None,
+        hydrogenMass = None,
         polarization: str = "mutual",
         mutualInducedTargetEpsilon: float = 0.00001,
         implicitSolvent: bool = False,
@@ -285,12 +283,12 @@ class TinkerFiles:
 
         Parameters
         ----------
-        nonbondedMethod : ff.NonbondedMethod, optional, default=ff.PME
+        nonbondedMethod : object=PME
             The method to use for nonbonded interactions.
             Allowed values are NoCutoff, and PME.
-        nonbondedCutoff : Quantity, optional, default=1.0*nanometers
+        nonbondedCutoff : distance=1.0*nanometers
             The cutoff distance to use for nonbonded interactions.
-        constraints : Union[None, ff.Constraints], optional, default=None
+        constraints : object=None
             Specifies which bonds and angles should be implemented with constraints.
             Allowed values are None, HBonds, AllBonds, or HAngles.
         rigidWater : bool, optional, default=True
@@ -298,7 +296,7 @@ class TinkerFiles:
             Note that AMOEBA waters are flexible.
         removeCMMotion : bool, optional, default=True
             If True, center of mass motion will be removed.
-        hydrogenMass : Union[None, Quantity], optional, default=None
+        hydrogenMass : mass=None
             The mass to use for hydrogen atoms bound to heavy atoms.
             Any mass added to a hydrogen is subtracted from the heavy atom to keep their total mass the same.
         polarization : str, optional, default="mutual"
@@ -361,9 +359,7 @@ class TinkerFiles:
         """
         if asNumpy:
             if self._numpyPositions is None:
-                self._numpyPositions = Quantity(
-                    np.array(self.positions.value_in_unit(nanometers)), nanometers
-                )
+                self._numpyPositions = np.array(self.positions.value_in_unit(nanometers)) * nanometers
             return self._numpyPositions
         return self.positions
 
@@ -388,23 +384,13 @@ class TinkerFiles:
             if self._numpyBoxVectors is None:
                 self._numpyBoxVectors = []
                 self._numpyBoxVectors.append(
-                    Quantity(
-                        np.array(self.boxVectors[0].value_in_unit(nanometers)),
-                        nanometers,
+                    np.array(self.boxVectors[0].value_in_unit(nanometers)) * nanometers
                     )
-                )
                 self._numpyBoxVectors.append(
-                    Quantity(
-                        np.array(self.boxVectors[1].value_in_unit(nanometers)),
-                        nanometers,
+                    np.array(self.boxVectors[1].value_in_unit(nanometers)) * nanometers
                     )
-                )
                 self._numpyBoxVectors.append(
-                    Quantity(
-                        np.array(self.boxVectors[2].value_in_unit(nanometers)),
-                        nanometers,
-                    )
-                )
+                    np.array(self.boxVectors[2].value_in_unit(nanometers)) * nanometers
             return self._numpyBoxVectors
         return self.boxVectors
 
