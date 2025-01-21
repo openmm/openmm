@@ -249,7 +249,7 @@ class AmberPrmtopFile(object):
                      ff.LJPME:'LJPME'}
         if nonbondedMethod not in methodMap:
             raise ValueError('Illegal value for nonbonded method')
-        if not self._prmtop.getIfBox() and nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME, ff.LJPME):
+        if self.topology.getPeriodicBoxVectors() is None and nonbondedMethod in (ff.CutoffPeriodic, ff.Ewald, ff.PME, ff.LJPME):
             raise ValueError('Illegal nonbonded method for a non-periodic system')
         constraintMap = {None:None,
                          ff.HBonds:'h-bonds',
