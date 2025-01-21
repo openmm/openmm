@@ -148,16 +148,6 @@ jobs:
               -DOPENMM_BUILD_OPENCL_LIB=OFF \
               -DOPENMM_BUILD_OPENCL_TESTS=OFF \
 
-          - name: Linux CPU Pypy
-            python-version: "pypy"
-            os: ubuntu-latest
-            env: ubuntu-pypy
-            OPENCL: false
-            cuda-version: ""
-            CMAKE_FLAGS: |
-              -DOPENMM_BUILD_OPENCL_LIB=OFF \
-              -DOPENMM_BUILD_OPENCL_TESTS=OFF \
-
           - name: MacOS Intel Python 3.13
             python-version: "3.13"
             os: macos-13
@@ -184,17 +174,6 @@ jobs:
 
       - uses: conda-incubator/setup-miniconda@v3
         name: "Prepare base dependencies"
-        if: matrix.python-version == 'pypy'
-        with:
-          activate-environment: build
-          environment-file: devtools/ci/gh-actions/conda-envs/build-${{ matrix.env }}.yml
-          auto-activate-base: false
-          miniforge-variant: Miniforge-pypy3
-          use-mamba: true
-
-      - uses: conda-incubator/setup-miniconda@v3
-        name: "Prepare base dependencies"
-        if: matrix.python-version != 'pypy'
         with:
           python-version: ${{ matrix.python-version }}
           activate-environment: build
@@ -655,7 +634,7 @@ jobs:
         shell: bash -l {0}
         env:
           # Pipe-seperated list of domains to skip
-          SKIP_DOMAIN: support.amd.com|www.pnas.org|doi.org
+          SKIP_DOMAIN: support.amd.com|www.pnas.org|doi.org|commonfund.nih.gov
         run: |
           set +e
           # Linkinator accepts regex for its --skip argument, so we
