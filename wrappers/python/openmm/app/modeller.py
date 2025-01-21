@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2024 Stanford University and the Authors.
+Portions copyright (c) 2012-2025 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: 
 
@@ -1283,7 +1283,8 @@ class Modeller(object):
         self.positions = newPositions
 
 
-    def addMembrane(self, forcefield, lipidType='POPC', membraneCenterZ=0*nanometer, minimumPadding=1*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True, residueTemplates=dict()):
+    def addMembrane(self, forcefield, lipidType='POPC', membraneCenterZ=0*nanometer, minimumPadding=1*nanometer, positiveIon='Na+', negativeIon='Cl-',
+                    ionicStrength=0*molar, neutralize=True, residueTemplates=dict(), platform=None):
         """Add a lipid membrane to the model.
 
         This method actually adds both a membrane and a water box.  It is best to build them together,
@@ -1341,6 +1342,9 @@ class Modeller(object):
             templates to use for them.  This is useful when a ForceField contains multiple templates
             that can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
             monoatomic iron ion in the Topology).
+        platform : Platform=None
+            the Platform to use when computing the hydrogen atom positions.  If
+            this is None, the default Platform will be used.
         """
         if 'topology' in dir(lipidType) and 'positions' in dir(lipidType):
             patch = lipidType
@@ -1540,7 +1544,10 @@ class Modeller(object):
 
         steps = int(max(proteinSize.x, proteinSize.y)*10) + 1
         integrator = LangevinIntegrator(10.0, 50.0, 0.001)
-        context = Context(system, integrator)
+        if platform is None:
+            context = Context(system, integrator)
+        else:
+            context = Context(system, integrator, platform)
         context.setPositions(mergedPositions)
         LocalEnergyMinimizer.minimize(context, 10.0, 30)
         try:
