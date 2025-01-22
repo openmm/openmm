@@ -91,12 +91,13 @@ void* ATMForceProxy::deserialize(const SerializationNode& node) const {
             force->addForce(f.getChildren()[0].decodeObject<Force>());
         const SerializationNode& particles = node.getChildNode("Particles");
         for (auto& p : particles.getChildren()){
-	  if ( p.getIntProperty("pj1") > 0 && p.getIntProperty("pi1") > 0 ){
-	    force->addParticle(p.getIntProperty("pj1"), p.getIntProperty("pi1"), p.getIntProperty("pj0"), p.getIntProperty("pi0"));
-	  }else{
-	    force->addParticle(Vec3(p.getDoubleProperty("d1x"), p.getDoubleProperty("d1y"), p.getDoubleProperty("d1z")),
-			       Vec3(p.getDoubleProperty("d0x"), p.getDoubleProperty("d0y"), p.getDoubleProperty("d0z")));
-	  }
+	    if ( p.getIntProperty("pj1") > 0 && p.getIntProperty("pi1") > 0 ){
+		force->addParticle(p.getIntProperty("pj1"), p.getIntProperty("pi1"), p.getIntProperty("pj0"), p.getIntProperty("pi0"));
+	    }
+	    else {
+		force->addParticle(Vec3(p.getDoubleProperty("d1x"), p.getDoubleProperty("d1y"), p.getDoubleProperty("d1z")),
+				   Vec3(p.getDoubleProperty("d0x"), p.getDoubleProperty("d0y"), p.getDoubleProperty("d0z")));
+	    }
 	}
         return force;
     }

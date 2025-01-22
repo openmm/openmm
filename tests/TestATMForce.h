@@ -149,8 +149,8 @@ void test3ParticlesSwap() {
     ATMForce* atm = new ATMForce(lmbd, lmbd, 0., 0, 0, umax, ubcore, acore, direction);
     //swap particles 1 and 2
     atm->addParticle( ); //particle 0 is not displaced
-    atm->addParticle( 2,  1 );
-    atm->addParticle( 1,  2 );
+    atm->addParticle(2,  1 );
+    atm->addParticle(1,  2 );
 
     atm->addForce(bond);
     system.addForce(atm);
@@ -207,7 +207,7 @@ void test2Particles2Displacement0() {
     atm->addParticle( nodispl );
     //second particle is displaced at both states but by the same amount (1,0,0)
     Vec3 displ0 = Vec3(1., 0., 0.);
-    atm->addParticle( displ0, displ0 );
+    atm->addParticle(displ0, displ0);
     atm->addForce(bond);
     system.addForce(atm);
 

@@ -8079,68 +8079,54 @@ void CommonCalcATMForceKernel::initialize(const System& system, const ATMForce& 
     numParticles = force.getNumParticles();
     if (numParticles == 0)
         return;
-    vector<int>  pj1Vector(cc.getPaddedNumAtoms());
-    vector<int>  pi1Vector(cc.getPaddedNumAtoms());
-    vector<int>  pj0Vector(cc.getPaddedNumAtoms());
-    vector<int>  pi0Vector(cc.getPaddedNumAtoms());
+    vector<mm_int4> displParticlesVector(cc.getPaddedNumAtoms());
     if  (cc.getUseDoublePrecision()) {
-      vector<mm_double4> displVector1(cc.getPaddedNumAtoms(), mm_double4(0, 0, 0, 0));
-      vector<mm_double4> displVector0(cc.getPaddedNumAtoms(), mm_double4(0, 0, 0, 0));
-      for (int i = 0; i < numParticles; i++) {
-	Vec3 d1, d0;
-	int j1, i1, j0, i0; 
-        force.getParticleParameters(i, d1, d0, j1, i1, j0, i0);
-        displVector1[i] = mm_double4(d1[0], d1[1], d1[2], 0);
-        displVector0[i] = mm_double4(d0[0], d0[1], d0[2], 0);
-	pj1Vector[i] = j1;
-	pi1Vector[i] = i1;
-	pj0Vector[i] = j0;
-	pi0Vector[i] = i0;
-      }
-      displ1.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "displ1");
-      displacement1.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "displacement1");
-      displacement1.upload(displVector1);
-      displ0.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "displ0");
-      displacement0.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "displacement0");
-      displacement0.upload(displVector0);
-    } else {
-      vector<mm_float4> displVector1(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-      vector<mm_float4> displVector0(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-      for (int i = 0; i < numParticles; i++) {
-	Vec3 d1, d0;
-	int j1, i1, j0, i0; 
-        force.getParticleParameters(i, d1, d0, j1, i1, j0, i0);
-        displVector1[i] = mm_float4(d1[0], d1[1], d1[2], 0);
-        displVector0[i] = mm_float4(d0[0], d0[1], d0[2], 0);
-	pj1Vector[i] = j1;
-	pi1Vector[i] = i1;
-	pj0Vector[i] = j0;
-	pi0Vector[i] = i0;
-      }
-      displ1.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ1");
-      displacement1.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displacement1");
-      displacement1.upload(displVector1);
-      displ0.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ0");
-      displacement0.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displacement0");
-      displacement0.upload(displVector0);
+	vector<mm_double4> displVector1(cc.getPaddedNumAtoms(), mm_double4(0, 0, 0, 0));
+	vector<mm_double4> displVector0(cc.getPaddedNumAtoms(), mm_double4(0, 0, 0, 0));
+	for (int i = 0; i < numParticles; i++) {
+	    Vec3 d1, d0;
+	    int j1, i1, j0, i0;
+	    force.getParticleParameters(i, d1, d0, j1, i1, j0, i0);
+	    displVector1[i] = mm_double4(d1[0], d1[1], d1[2], 0);
+	    displVector0[i] = mm_double4(d0[0], d0[1], d0[2], 0);
+	    displParticlesVector[i] = mm_int4(j1, i1, j0, i0);
+	}
+	displ1.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "displ1");
+	displacement1.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "displacement1");
+	displacement1.upload(displVector1);
+	displ0.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "displ0");
+	displacement0.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "displacement0");
+	displacement0.upload(displVector0);
     }
-    pj1.initialize<int>(cc, cc.getPaddedNumAtoms(), "pj1");
-    pi1.initialize<int>(cc, cc.getPaddedNumAtoms(), "pi1");
-    pj0.initialize<int>(cc, cc.getPaddedNumAtoms(), "pj0");
-    pi0.initialize<int>(cc, cc.getPaddedNumAtoms(), "pi0");
-    pj1.upload(pj1Vector);
-    pi1.upload(pi1Vector);
-    pj0.upload(pj0Vector);
-    pi0.upload(pi0Vector);
+    else {
+	vector<mm_float4> displVector1(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+	vector<mm_float4> displVector0(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+	for (int i = 0; i < numParticles; i++) {
+	    Vec3 d1, d0;
+	    int j1, i1, j0, i0; 
+	    force.getParticleParameters(i, d1, d0, j1, i1, j0, i0);
+	    displVector1[i] = mm_float4(d1[0], d1[1], d1[2], 0);
+	    displVector0[i] = mm_float4(d0[0], d0[1], d0[2], 0);
+	    displParticlesVector[i] = mm_int4(j1, i1, j0, i0);
+	}
+	displ1.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ1");
+	displacement1.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displacement1");
+	displacement1.upload(displVector1);
+	displ0.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displ0");
+	displacement0.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "displacement0");
+	displacement0.upload(displVector0);
+    }
+    displParticles.initialize<mm_int4>(cc, cc.getPaddedNumAtoms(), "displParticles");
+    displParticles.upload(displParticlesVector);
 
     dforce0.initialize(cc, cc.getLongForceBuffer().getSize(), cc.getLongForceBuffer().getElementSize(), "dforce0");
     dforce1.initialize(cc, cc.getLongForceBuffer().getSize(), cc.getLongForceBuffer().getElementSize(), "dforce1");
-
+    
     invAtomOrder.initialize<int>(cc, cc.getPaddedNumAtoms(), "invAtomOrder");
     inner0InvAtomOrder.initialize<int>(cc, cc.getPaddedNumAtoms(), "inner0InvAtomOrder");
     inner1InvAtomOrder.initialize<int>(cc, cc.getPaddedNumAtoms(), "inner1InvAtomOrder");
     for (int i = 0; i < force.getNumEnergyParameterDerivatives(); i++)
-        cc.addEnergyParameterDerivative(force.getEnergyParameterDerivativeName(i));
+	cc.addEnergyParameterDerivative(force.getEnergyParameterDerivativeName(i));
 }
 
 void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& innerContext0, ContextImpl& innerContext1) {
@@ -8176,10 +8162,7 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
 	setDisplacementsKernel->addArg(cc.getPosq());
 	setDisplacementsKernel->addArg(displacement0);
 	setDisplacementsKernel->addArg(displacement1);
-	setDisplacementsKernel->addArg(pj1);
-	setDisplacementsKernel->addArg(pi1);
-	setDisplacementsKernel->addArg(pj0);
-	setDisplacementsKernel->addArg(pi0);
+	setDisplacementsKernel->addArg(displParticles);
 	setDisplacementsKernel->addArg(cc.getAtomIndexArray());
 	setDisplacementsKernel->addArg(invAtomOrder);
 	setDisplacementsKernel->addArg(displ0);
@@ -8217,10 +8200,7 @@ void CommonCalcATMForceKernel::initKernels(ContextImpl& context, ContextImpl& in
         displForceKernel->addArg(cc1.getLongForceBuffer());
 	displForceKernel->addArg(dforce0);
 	displForceKernel->addArg(dforce1);
-	displForceKernel->addArg(pj1);
-	displForceKernel->addArg(pi1);
-	displForceKernel->addArg(pj0);
-	displForceKernel->addArg(pi0);
+	displForceKernel->addArg(displParticles);
         displForceKernel->addArg(cc.getAtomIndexArray());
 	displForceKernel->addArg(invAtomOrder);
         displForceKernel->addArg(inner0InvAtomOrder);
@@ -8299,47 +8279,36 @@ void CommonCalcATMForceKernel::copyParametersToContext(ContextImpl& context, con
     ContextSelector selector(cc);
     if (force.getNumParticles() != numParticles)
         throw OpenMMException("copyParametersToContext: The number of ATMMetaForce particles has changed");
-    vector<int>  pj1Vector(cc.getPaddedNumAtoms());
-    vector<int>  pi1Vector(cc.getPaddedNumAtoms());
-    vector<int>  pj0Vector(cc.getPaddedNumAtoms());
-    vector<int>  pi0Vector(cc.getPaddedNumAtoms());
+    vector<mm_int4> displParticlesVector(cc.getPaddedNumAtoms());
     if  (cc.getUseDoublePrecision()) {
-      vector<mm_double4> displVector1(cc.getPaddedNumAtoms(), mm_double4(0, 0, 0, 0));
-      vector<mm_double4> displVector0(cc.getPaddedNumAtoms(), mm_double4(0, 0, 0, 0));
-      for (int i = 0; i < numParticles; i++) {
-	Vec3 d1, d0;
-	int j1, i1, j0, i0;
-        force.getParticleParameters(i, d1, d0, j1, i1, j0, i0);
-        displVector1[i] = mm_double4(d1[0], d1[1], d1[2], 0);
-        displVector0[i] = mm_double4(d0[0], d0[1], d0[2], 0);
-	pj1Vector[i] = j1;
-	pi1Vector[i] = i1;
-	pj0Vector[i] = j0;
-	pi0Vector[i] = i0;
-      }
-      displacement1.upload(displVector1);
-      displacement0.upload(displVector0);
-    }else{
-      vector<mm_float4> displVector1(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-      vector<mm_float4> displVector0(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
-      for (int i = 0; i < numParticles; i++) {
-	Vec3 d1, d0;
-	int j1, i1, j0, i0;
-        force.getParticleParameters(i, d1, d0, j1, i1, j0, i0);
-        displVector1[i] = mm_float4(d1[0], d1[1], d1[2], 0);
-        displVector0[i] = mm_float4(d0[0], d0[1], d0[2], 0);
-	pj1Vector[i] = j1;
-	pi1Vector[i] = i1;
-	pj0Vector[i] = j0;
-	pi0Vector[i] = i0;
-      }
-      displacement1.upload(displVector1);
-      displacement0.upload(displVector0);
+	vector<mm_double4> displVector1(cc.getPaddedNumAtoms(), mm_double4(0, 0, 0, 0));
+	vector<mm_double4> displVector0(cc.getPaddedNumAtoms(), mm_double4(0, 0, 0, 0));
+	for (int i = 0; i < numParticles; i++) {
+	    Vec3 d1, d0;
+	    int j1, i1, j0, i0;
+	    force.getParticleParameters(i, d1, d0, j1, i1, j0, i0);
+	    displVector1[i] = mm_double4(d1[0], d1[1], d1[2], 0);
+	    displVector0[i] = mm_double4(d0[0], d0[1], d0[2], 0);
+	    displParticlesVector[i] = mm_int4(j1, i1, j0, i0);
+	}
+	displacement1.upload(displVector1);
+	displacement0.upload(displVector0);
     }
-    pj1.upload(pj1Vector);
-    pi1.upload(pi1Vector);
-    pj0.upload(pj0Vector);
-    pi0.upload(pi0Vector);
+    else {
+	vector<mm_float4> displVector1(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+	vector<mm_float4> displVector0(cc.getPaddedNumAtoms(), mm_float4(0, 0, 0, 0));
+	for (int i = 0; i < numParticles; i++) {
+	    Vec3 d1, d0;
+	    int j1, i1, j0, i0;
+	    force.getParticleParameters(i, d1, d0, j1, i1, j0, i0);
+	    displVector1[i] = mm_float4(d1[0], d1[1], d1[2], 0);
+	    displVector0[i] = mm_float4(d0[0], d0[1], d0[2], 0);
+	    displParticlesVector[i] = mm_int4(j1, i1, j0, i0);
+	}
+	displacement1.upload(displVector1);
+	displacement0.upload(displVector0);
+    }
+    displParticles.upload(displParticlesVector);
 }
 
 class CommonCalcCustomCPPForceKernel::StartCalculationPreComputation : public ComputeContext::ForcePreComputation {

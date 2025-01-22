@@ -239,15 +239,6 @@ public:
      */
     Force& getForce(int index) const;
     /**
-     * Add a particle to the force with zero displacement
-     *
-     * All of the particles in the System must be added to the ATMForce in the same order
-     * as they appear in the System.
-     *
-     * @return                 the index of the particle that was added
-     */
-    int addParticle();
-    /**
      * Add a particle to the force with fixed lab frame displacements
      *
      * All of the particles in the System must be added to the ATMForce in the same order
@@ -257,7 +248,7 @@ public:
      * @param displacement0    the displacement of the particle for the initial state in nm
      * @return                 the index of the particle that was added
      */
-    int addParticle(const Vec3& displacement1, const Vec3& displacement0=Vec3());
+    int addParticle(const Vec3& displacement1=Vec3(), const Vec3& displacement0=Vec3());
     /**
      * Add a particle to the force with displacements as the vector distances between specified particles
      *

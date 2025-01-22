@@ -531,6 +531,7 @@ class TestAPIUnits(unittest.TestCase):
         force = ATMForce(0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.6, 0.8, -1.0);
         force.addParticle(Vec3(1, 2, 3), Vec3(4, 5, 6))
         force.addParticle(1, 0)
+        force.addParticle()
         self.assertEqual(0.1, force.getGlobalParameterDefaultValue(0))
         self.assertEqual(0.2, force.getGlobalParameterDefaultValue(1))
         self.assertEqual(0.3, force.getGlobalParameterDefaultValue(2))
@@ -548,6 +549,13 @@ class TestAPIUnits(unittest.TestCase):
         self.assertEqual(Vec3(0, 0, 0)*nanometers, d0)
         self.assertEqual(1, pDestination1)
         self.assertEqual(0, pOrigin1)
+        d1, d0, pDestination1, pOrigin1, pDestination0, pOrigin0  = force.getParticleParameters(2)
+        self.assertEqual(Vec3(0, 0, 0)*nanometers, d1)
+        self.assertEqual(Vec3(0, 0, 0)*nanometers, d0)
+        self.assertEqual(-1, pDestination1)
+        self.assertEqual(-1, pOrigin1)
+        self.assertEqual(-1, pDestination0)
+        self.assertEqual(-1, pOrigin0)
 
     def testDrudeForce(self):
         """ Tests the DrudeForce API features """
