@@ -147,9 +147,8 @@ void test3ParticlesSwap() {
     bond->addBond(0, 2, kf2v);
 
     ATMForce* atm = new ATMForce(lmbd, lmbd, 0., 0, 0, umax, ubcore, acore, direction);
-    Vec3 nodispl = Vec3(0., 0., 0.);
     //swap particles 1 and 2
-    atm->addParticle( nodispl );
+    atm->addParticle( ); //particle 0 is not displaced
     atm->addParticle( 2,  1 );
     atm->addParticle( 1,  2 );
 

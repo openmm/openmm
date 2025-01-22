@@ -92,13 +92,17 @@ void ATMForce::setEnergyFunction(const std::string& energy) {
     energyExpression = energy;
 }
 
+int ATMForce::addParticle() {
+    particles.push_back(ParticleInfo(particles.size(), Vec3(0., 0., 0.), Vec3(0., 0., 0.), -1, -1, -1, -1));
+    return particles.size()-1;
+}
 int ATMForce::addParticle(const Vec3& displacement1, const Vec3& displacement0) {
-  particles.push_back(ParticleInfo(particles.size(), displacement1, displacement0, -1, -1, -1, -1));
-  return particles.size()-1;
+    particles.push_back(ParticleInfo(particles.size(), displacement1, displacement0, -1, -1, -1, -1));
+    return particles.size()-1;
 }
 int ATMForce::addParticle(int pDestination1, int pOrigin1, int pDestination0, int pOrigin0) {
-  particles.push_back(ParticleInfo(particles.size(), Vec3(0., 0., 0.), Vec3(0., 0., 0.), pDestination1, pOrigin1, pDestination0, pOrigin0));
-  return particles.size()-1;
+    particles.push_back(ParticleInfo(particles.size(), Vec3(0., 0., 0.), Vec3(0., 0., 0.), pDestination1, pOrigin1, pDestination0, pOrigin0));
+    return particles.size()-1;
 }
 
 

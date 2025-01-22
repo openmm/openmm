@@ -98,12 +98,14 @@ namespace OpenMM {
  *    ATMForce *atmforce = new ATMForce("u0 + Lambda*(u1 - u0)");
  *    atm->addGlobalParameter("Lambda", 0.5);
  *    atm->addParticle(2, 1);
- *    atm->addParticle(Vec3(0, 0, 0));
- *    atm->addParticle(Vec3(0, 0, 0));
+ *    atm->addParticle();
+ *    atm->addParticle();
  *    CustomBondForce* force = new CustomBondForce("0.5*r^2");
  *    atm->addForce(force);
  * \endverbatim
  *
+ * where addParticle() without arguments adds a particle with zero displacement. 
+ * 
  * Energy expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta,
  * select.  All trigonometric functions
@@ -236,6 +238,15 @@ public:
      * return the force from index
      */
     Force& getForce(int index) const;
+    /**
+     * Add a particle to the force with zero displacement
+     *
+     * All of the particles in the System must be added to the ATMForce in the same order
+     * as they appear in the System.
+     *
+     * @return                 the index of the particle that was added
+     */
+    int addParticle();
     /**
      * Add a particle to the force with fixed lab frame displacements
      *
