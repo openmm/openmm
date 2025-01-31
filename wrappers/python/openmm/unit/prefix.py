@@ -64,7 +64,6 @@ class SiPrefix(object):
             symbol = self.symbol + unit.symbol
             name = self.prefix + unit.name
             factor = self.factor
-            # TODO - check for existing BaseUnit with same name, symbol, and factor
             new_base_unit = BaseUnit(unit.dimension, name, symbol)
             new_base_unit.define_conversion_factor_to(unit, factor)
             return new_base_unit
@@ -73,7 +72,6 @@ class SiPrefix(object):
             symbol = self.symbol + unit.symbol
             name = self.prefix + unit.name
             factor = self.factor * unit.factor
-            # TODO - check for existing BaseUnit with same name, symbol, and factor
             return ScaledUnit(factor, unit.master, name, symbol)
         elif isinstance(unit, Unit):
             base_units = list(unit.iter_base_or_scaled_units())
