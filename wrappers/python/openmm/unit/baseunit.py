@@ -68,7 +68,7 @@ class BaseUnit(object):
         self.dimension = base_dim
         self.name = name
         self.symbol = symbol
-        self._conversion_factors[self.dimension][self.name][self.name] = 1.0
+        BaseUnit._conversion_factors[self.dimension][self.name][self.name] = 1.0
 
     def __lt__(self, other):
         """
@@ -137,7 +137,7 @@ class BaseUnit(object):
             raise TypeError('Cannot define conversion for BaseUnits with different dimensions.')
         assert(factor != 0)
         assert(self != other)
-        conversion_factors = self._conversion_factors[self.dimension]
+        conversion_factors = BaseUnit._conversion_factors[self.dimension]
         conversion_factors_self = conversion_factors[self.name]
         conversion_factors_other = conversion_factors[other.name]
         # import all transitive conversions
@@ -170,7 +170,7 @@ class BaseUnit(object):
         if self.dimension != other.dimension:
             raise TypeError('Cannot get conversion for BaseUnits with different dimensions.')
         if self.name == other.name: return 1.0
-        conversion_factors_self = self._conversion_factors[self.dimension][self.name]
+        conversion_factors_self = BaseUnit._conversion_factors[self.dimension][self.name]
         if not other.name in conversion_factors_self:
             raise LookupError('No conversion defined from BaseUnit "%s" to "%s".' % (self, other))
         return conversion_factors_self[other.name]
