@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -49,6 +49,7 @@
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/CustomManyParticleForce.h"
 #include "openmm/CustomTorsionForce.h"
+#include "openmm/DPDIntegrator.h"
 #include "openmm/GayBerneForce.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/HarmonicAngleForce.h"
@@ -1399,6 +1400,39 @@ public:
      * @param values    a vector containing the values
      */
     virtual void setPerDofVariable(ContextImpl& context, int variable, const std::vector<Vec3>& values) = 0;
+};
+
+/**
+ * This kernel is invoked by DPDIntegrator to take one time step.
+ */
+class IntegrateDPDStepKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "IntegrateDPDStep";
+    }
+    IntegrateDPDStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the DPDIntegrator this kernel will be used for
+     */
+    virtual void initialize(const System& system, const DPDIntegrator& integrator) = 0;
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the DPDIntegrator this kernel is being used for
+     */
+    virtual void execute(ContextImpl& context, const DPDIntegrator& integrator) = 0;
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the DPDIntegrator this kernel is being used for
+     */
+    virtual double computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator) = 0;
 };
 
 /**
