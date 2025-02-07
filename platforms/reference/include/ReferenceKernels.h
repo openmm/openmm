@@ -68,6 +68,7 @@ class ReferenceVariableStochasticDynamics;
 class ReferenceVariableVerletDynamics;
 class ReferenceVerletDynamics;
 class ReferenceCustomDynamics;
+class ReferenceDPDDynamics;
 
 /**
  * This kernel is invoked at the beginning and end of force and energy computations.  It gives the
@@ -1507,6 +1508,42 @@ private:
     ReferenceCustomDynamics* dynamics;
     std::vector<double> masses, globalValues;
     std::vector<std::vector<OpenMM::Vec3> > perDofValues; 
+};
+
+/**
+ * This kernel is invoked by DPDIntegrator to take one time step.
+ */
+class ReferenceIntegrateDPDStepKernel : public IntegrateDPDStepKernel {
+public:
+    ReferenceIntegrateDPDStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateDPDStepKernel(name, platform),
+        data(data), dynamics(0) {
+    }
+    ~ReferenceIntegrateDPDStepKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the DPDIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const DPDIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the DPDIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const DPDIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the DPDIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator);
+private:
+    ReferencePlatform::PlatformData& data;
+    ReferenceDPDDynamics* dynamics;
+    std::vector<double> masses;
 };
 
 /**

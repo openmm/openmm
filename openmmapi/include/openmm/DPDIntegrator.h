@@ -52,6 +52,15 @@ namespace OpenMM {
  * different types of particles.  In that case you can call setParticleType() to set
  * the types of particles and addTypePair() to set the parameters to use for their
  * interactions.
+ * 
+ * Particle types, type pairs, and default parameters must be set before you create
+ * a Context.  Changing them will have no effect on an existing Context unless you
+ * reinitialize it.
+ * 
+ * This integrator can be applied either to periodic or non-periodic systems.  It
+ * applies periodic boundary conditions if system.usesPeriodicBoundaryConditions()
+ * returns true, which happens if any force in the system uses periodic boundary
+ * conditions.
  */
 
 class OPENMM_EXPORT DPDIntegrator : public Integrator {

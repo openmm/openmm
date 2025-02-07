@@ -133,6 +133,16 @@ double ReferenceDynamics::getTemperature() const {
 
 /**---------------------------------------------------------------------------------------
 
+   Set the temperature
+
+   --------------------------------------------------------------------------------------- */
+
+void ReferenceDynamics::setTemperature(double temperature) {
+    _temperature = temperature;
+}
+
+/**---------------------------------------------------------------------------------------
+
    Get ReferenceConstraint
 
    @return ReferenceConstraint  object

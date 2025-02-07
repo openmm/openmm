@@ -311,6 +311,7 @@ void SimTKOpenMMUtilities::setRandomNumberSeed(uint32_t seed) {
     else
         _randomNumberSeed = seed;
    _randomInitialized = false;
+   nextGaussianIsValid = false;
 }
 
 void SimTKOpenMMUtilities::createCheckpoint(std::ostream& stream) {
