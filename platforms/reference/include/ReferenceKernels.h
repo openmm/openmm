@@ -1516,7 +1516,7 @@ private:
 class ReferenceIntegrateDPDStepKernel : public IntegrateDPDStepKernel {
 public:
     ReferenceIntegrateDPDStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateDPDStepKernel(name, platform),
-        data(data), dynamics(0) {
+        data(data), dynamics(NULL) {
     }
     ~ReferenceIntegrateDPDStepKernel();
     /**

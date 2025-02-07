@@ -26,6 +26,7 @@
 #define __ReferenceDPDDynamics_H__
 
 #include "ReferenceDynamics.h"
+#include "ReferenceNeighborList.h"
 #include "openmm/DPDIntegrator.h"
 #include "openmm/Vec3.h"
 #include "openmm/internal/ContextImpl.h"
@@ -36,12 +37,14 @@ namespace OpenMM {
 
 class OPENMM_EXPORT ReferenceDPDDynamics : public ReferenceDynamics {
 protected:
-      std::vector<OpenMM::Vec3> xPrime, oldx;
+      std::vector<Vec3> xPrime, oldx;
       std::vector<double> masses, inverseMasses;
       bool periodic;
-      OpenMM::Vec3 periodicBoxVectors[3];
+      Vec3 periodicBoxVectors[3];
+      NeighborList neighborList;
       std::vector<int> particleType;
       std::vector<std::vector<double> > frictionTable, cutoffTable;
+      double maxCutoff;
 public:
     /**
      * Constructor
@@ -76,18 +79,18 @@ public:
     /**
      * The first stage of the update algorithm.
      */
-    virtual void updatePart1(int numberOfAtoms, std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces);
+    virtual void updatePart1(int numParticles, std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& forces);
 
     /**
      * The second stage of the update algorithm.
      */
-    virtual void updatePart2(int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
+    virtual void updatePart2(int numParticles, std::vector<OpenMM::Vec3>& atomCoordinates, std::vector<OpenMM::Vec3>& velocities,
                              std::vector<OpenMM::Vec3>& xPrime);
 
     /**
      * The third stage of the update algorithm.
      */
-    virtual void updatePart3(OpenMM::ContextImpl& context, int numberOfAtoms, std::vector<OpenMM::Vec3>& atomCoordinates,
+    virtual void updatePart3(OpenMM::ContextImpl& context, int numParticles, std::vector<OpenMM::Vec3>& atomCoordinates,
                              std::vector<OpenMM::Vec3>& velocities, std::vector<OpenMM::Vec3>& xPrime);
 };
 

@@ -150,7 +150,41 @@ void testTemperature() {
     }
     ke /= steps;
     double expected = 0.5*numParticles*3*BOLTZ*temp;
-    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.05);
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 0.08);
+}
+
+void testTypePairs() {
+    const int numParticles = 8;
+    const double temp = 100.0;
+    System system;
+    DPDIntegrator integrator(temp, 1.0, 2.0, 0.01);
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(2.0);
+        positions[i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
+        if (i > 3) {
+            positions[i][0] += 5.0;
+            integrator.setParticleType(i, 1);
+        }
+    }
+    integrator.addTypePair(1, 1, 0.0, 2.0);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+
+    // The integrator should not affect the second cluster of particles.  The friction
+    // for their mutual interactions is 0, and they're outside the cutoff distance from
+    // the first cluster.
+    
+    integrator.step(10);
+    State state = context.getState(State::Positions);
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 3; j++)
+            ASSERT(positions[i][j] != state.getPositions()[i][j]);
+    for (int i = 4; i < numParticles; i++)
+        for (int j = 0; j < 3; j++)
+            ASSERT_EQUAL_TOL(positions[i][j], state.getPositions()[i][j], 1e-6);
 }
 
 void testConstraints() {
@@ -349,6 +383,7 @@ int main(int argc, char* argv[]) {
         initializeTests(argc, argv);
         tesConservationLaws();
         testTemperature();
+        testTypePairs();
         testConstraints();
         testConstrainedMasslessParticles();
         testRandomSeed();

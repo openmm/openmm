@@ -2860,7 +2860,7 @@ void ReferenceIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context,
 }
 
 ReferenceIntegrateDPDStepKernel::~ReferenceIntegrateDPDStepKernel() {
-    if (dynamics)
+    if (dynamics != NULL)
         delete dynamics;
 }
 

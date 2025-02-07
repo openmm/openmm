@@ -22,9 +22,6 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <cstring>
-#include <sstream>
-
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceDPDDynamics.h"
 #include "ReferencePlatform.h"
@@ -35,8 +32,9 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/DPDIntegratorUtilities.h"
 #include "ReferenceForce.h"
+#include <set>
 
-using std::vector;
+using namespace std;
 using namespace OpenMM;
 
 ReferenceDPDDynamics::ReferenceDPDDynamics(const System& system, const DPDIntegrator& integrator) :
@@ -46,7 +44,6 @@ ReferenceDPDDynamics::ReferenceDPDDynamics(const System& system, const DPDIntegr
     oldx.resize(numParticles);
     periodic = system.usesPeriodicBoundaryConditions();
     int numTypes;
-    double maxCutoff;
     DPDIntegratorUtilities::createTypeTables(integrator, numParticles, numTypes, particleType, frictionTable, cutoffTable, maxCutoff);
 }
 
@@ -59,67 +56,69 @@ void ReferenceDPDDynamics::setPeriodicBoxVectors(OpenMM::Vec3* vectors) {
     periodicBoxVectors[2] = vectors[2];
 }
 
-void ReferenceDPDDynamics::updatePart1(int numberOfAtoms, vector<Vec3>& velocities, vector<Vec3>& forces) {
-    for (int i = 0; i < numberOfAtoms; i++)
+void ReferenceDPDDynamics::updatePart1(int numParticles, vector<Vec3>& velocities, vector<Vec3>& forces) {
+    for (int i = 0; i < numParticles; i++)
         if (inverseMasses[i] != 0.0)
             velocities[i] += (getDeltaT()*inverseMasses[i])*forces[i];
 }
 
-void ReferenceDPDDynamics::updatePart2(int numberOfAtoms, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
+void ReferenceDPDDynamics::updatePart2(int numParticles, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
                                        vector<Vec3>& xPrime) {
     const double halfdt = 0.5*getDeltaT();
     const double kT = BOLTZ*getTemperature();
 
     // First position update.
 
-    for (int i = 0; i < numberOfAtoms; i++)
+    for (int i = 0; i < numParticles; i++)
         if (inverseMasses[i] != 0.0)
             xPrime[i] = atomCoordinates[i] + velocities[i]*halfdt;
 
     // Apply friction and noise to velocities.
 
-    for (int i = 1; i < numberOfAtoms; i++) {
+    vector<set<int> > exclusions(numParticles);
+    computeNeighborListVoxelHash(neighborList, numParticles, atomCoordinates, exclusions, periodicBoxVectors, periodic, maxCutoff, 0.0);
+    for (auto& pair : neighborList) {
+        int i = pair.first;
+        int j = pair.second;
+        if (masses[i] == 0.0 && masses[j] == 0.0)
+            continue;
         int type1 = particleType[i];
-        for (int j = 0; j < i; j++) {
-            if (masses[i] == 0.0 && masses[j] == 0.0)
-                continue;
-            int type2 = particleType[i];
-            double friction = frictionTable[type1][type2];
-            double cutoff = cutoffTable[type1][type2];
-            double deltaR[ReferenceForce::LastDeltaRIndex];
-            if (periodic)
-                ReferenceForce::getDeltaRPeriodic(atomCoordinates[i], atomCoordinates[j], periodicBoxVectors, deltaR);
-            else
-                ReferenceForce::getDeltaR(atomCoordinates[i], atomCoordinates[j], deltaR);
-            double r = deltaR[ReferenceForce::RIndex];
-            if (r >= cutoff)
-                continue;
-            double m = masses[i]*masses[j]/(masses[i]+masses[j]);
-            double omega = 1.0-(r/cutoff);
-            double vscale = exp(-getDeltaT()*friction*omega*omega);
-            double noisescale = sqrt(1-vscale*vscale);
-            Vec3 dir = Vec3(deltaR[ReferenceForce::XIndex], deltaR[ReferenceForce::YIndex], deltaR[ReferenceForce::ZIndex])/r;
-            Vec3 v = velocities[j]-velocities[i];
-            double dv = (1.0-vscale)*v.dot(dir) + noisescale*sqrt(kT/m)*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-            if (masses[i] != 0.0)
-                velocities[i] += (m/masses[i])*dv*dir;
-            if (masses[j] != 0.0)
-                velocities[j] -= (m/masses[j])*dv*dir;
-        }
+        int type2 = particleType[j];
+        double friction = frictionTable[type1][type2];
+        double cutoff = cutoffTable[type1][type2];
+        double deltaR[ReferenceForce::LastDeltaRIndex];
+        if (periodic)
+            ReferenceForce::getDeltaRPeriodic(atomCoordinates[i], atomCoordinates[j], periodicBoxVectors, deltaR);
+        else
+            ReferenceForce::getDeltaR(atomCoordinates[i], atomCoordinates[j], deltaR);
+        double r = deltaR[ReferenceForce::RIndex];
+        if (r >= cutoff)
+            continue;
+        double m = masses[i]*masses[j]/(masses[i]+masses[j]);
+        double omega = 1.0-(r/cutoff);
+        double vscale = exp(-getDeltaT()*friction*omega*omega);
+        double noisescale = sqrt(1-vscale*vscale);
+        Vec3 dir = Vec3(deltaR[ReferenceForce::XIndex], deltaR[ReferenceForce::YIndex], deltaR[ReferenceForce::ZIndex])/r;
+        Vec3 v = velocities[j]-velocities[i];
+        double dv = (1.0-vscale)*v.dot(dir) + noisescale*sqrt(kT/m)*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+        if (masses[i] != 0.0)
+            velocities[i] += (m/masses[i])*dv*dir;
+        if (masses[j] != 0.0)
+            velocities[j] -= (m/masses[j])*dv*dir;
     }
 
     // Second position update.
 
-    for (int i = 0; i < numberOfAtoms; i++)
+    for (int i = 0; i < numParticles; i++)
         if (inverseMasses[i] != 0.0) {
             xPrime[i] = xPrime[i] + velocities[i]*halfdt;
             oldx[i] = xPrime[i];
         }
 }
 
-void ReferenceDPDDynamics::updatePart3(OpenMM::ContextImpl& context, int numberOfAtoms, vector<Vec3>& atomCoordinates,
+void ReferenceDPDDynamics::updatePart3(OpenMM::ContextImpl& context, int numParticles, vector<Vec3>& atomCoordinates,
                                          vector<Vec3>& velocities, vector<Vec3>& xPrime) {
-    for (int i = 0; i < numberOfAtoms; i++) {
+    for (int i = 0; i < numParticles; i++) {
         if (inverseMasses[i] != 0.0) {
             velocities[i] += (xPrime[i]-oldx[i])/getDeltaT();
             atomCoordinates[i] = xPrime[i];
@@ -129,7 +128,7 @@ void ReferenceDPDDynamics::updatePart3(OpenMM::ContextImpl& context, int numberO
 
 void ReferenceDPDDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordinates,
                                     vector<Vec3>& velocities, vector<double>& masses, double tolerance) {
-    int numberOfAtoms = context.getSystem().getNumParticles();
+    int numParticles = context.getSystem().getNumParticles();
     ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
     if (this->masses.size() == 0) {
         this->masses = masses;
@@ -145,19 +144,19 @@ void ReferenceDPDDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordi
     // 1st update
 
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    updatePart1(numberOfAtoms, velocities, *data->forces);
+    updatePart1(numParticles, velocities, *data->forces);
     if (referenceConstraintAlgorithm)
         referenceConstraintAlgorithm->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
 
     // 2nd update
 
-    updatePart2(numberOfAtoms, atomCoordinates, velocities, xPrime);
+    updatePart2(numParticles, atomCoordinates, velocities, xPrime);
     if (referenceConstraintAlgorithm)
         referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses, tolerance);
 
     // 3rd update
 
-    updatePart3(context, numberOfAtoms, atomCoordinates, velocities, xPrime);
+    updatePart3(context, numParticles, atomCoordinates, velocities, xPrime);
     getVirtualSites().computePositions(context.getSystem(), atomCoordinates);
     incrementTimeStep();
 }
