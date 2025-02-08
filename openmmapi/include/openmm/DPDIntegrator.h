@@ -42,7 +42,7 @@
 namespace OpenMM {
 
 /**
- * This integrator implements diffusive particle dynamics (DPD).  It is similar to a
+ * This integrator implements dissipative particle dynamics (DPD).  It is similar to a
  * LangevinIntegrator, but instead off applying the friction and noise forces to the
  * Cartesian coordinates of particles, they are applied to inter-particle distances.
  * 
