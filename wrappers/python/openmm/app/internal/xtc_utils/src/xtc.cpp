@@ -81,7 +81,9 @@ struct XTCFrame {
 
     // Read the next frame from the XTC file and store it in this object
     int readNextFrame(XDRFILE* xd) {
-        float in_prec;
+        // Preinitialize in_prec for the precision check below since it may not
+        // be modified by read_xtc if the coordinates to read are not compressed
+        float in_prec = prec;
         auto* p_ptr = reinterpret_cast<rvec*>(positions.data());
         int status = read_xtc(xd, natoms, &step, &time, box, p_ptr, &in_prec);
         if (status == exdrOK && prec != in_prec) {
