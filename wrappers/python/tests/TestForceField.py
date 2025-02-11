@@ -469,8 +469,28 @@ class TestForceField(unittest.TestCase):
         with self.assertRaises(ValueError):
             ff = ForceField(StringIO(xml1), StringIO(xml2))
 
-    def test_duplicateAtomTypeForbiddenElementMissing(self):
-        """Test that multiple registrations of the same atom type, one with and one without an element, are forbidden."""
+    def test_duplicateAtomTypeForbiddenElementAdded(self):
+        """Test that multiple registrations of the same atom type, the first without and the second with an element, are forbidden."""
+
+        xml1 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test" mass="1.007947"/>
+ </AtomTypes>
+</ForceField>"""
+
+        xml2 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test" element="H" mass="1.007947"/>
+ </AtomTypes>
+</ForceField>"""
+
+        with self.assertRaises(ValueError):
+            ff = ForceField(StringIO(xml1), StringIO(xml2))
+
+    def test_duplicateAtomTypeForbiddenElementRemoved(self):
+        """Test that multiple registrations of the same atom type, the first with and the second without an element, are forbidden."""
 
         xml1 = """
 <ForceField>
