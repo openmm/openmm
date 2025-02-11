@@ -379,6 +379,136 @@ class TestForceField(unittest.TestCase):
             self.assertEqual(vectors[i], self.pdb1.topology.getPeriodicBoxVectors()[i])
             self.assertEqual(vectors[i], system.getDefaultPeriodicBoxVectors()[i])
 
+    def test_duplicateAtomTypeAllowed(self):
+        """Test that multiple registrations of the same atom type with identical definitions are allowed."""
+
+        xml1 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test" element="H" mass="1.007947"/>
+ </AtomTypes>
+</ForceField>"""
+
+        xml2 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test" element="H" mass="1.007947"/>
+ </AtomTypes>
+</ForceField>"""
+
+        ff = ForceField(StringIO(xml1), StringIO(xml2))
+
+        self.assertTrue("test-name" in ff._atomTypes)
+        at = ff._atomTypes["test-name"]
+        self.assertEqual(at.atomClass, "test")
+        self.assertEqual(at.element, elem.hydrogen)
+        self.assertEqual(at.mass, 1.007947)
+
+    def test_duplicateAtomTypeAllowedNoElement(self):
+        """Test that multiple registrations of the same atom type with identical definitions and without elements are allowed."""
+
+        xml1 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test" mass="0.0"/>
+ </AtomTypes>
+</ForceField>"""
+
+        xml2 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test" mass="0.0"/>
+ </AtomTypes>
+</ForceField>"""
+
+        ff = ForceField(StringIO(xml1), StringIO(xml2))
+        
+        self.assertTrue("test-name" in ff._atomTypes)
+        at = ff._atomTypes["test-name"]
+        self.assertEqual(at.atomClass, "test")
+        self.assertEqual(at.element, None)
+        self.assertEqual(at.mass, 0.0)
+
+    def test_duplicateAtomTypeForbiddenClass(self):
+        """Test that multiple registrations of the same atom type with different classes are forbidden."""
+
+        xml1 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test-1" element="H" mass="1.007947"/>
+ </AtomTypes>
+</ForceField>"""
+
+        xml2 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test-2" element="H" mass="1.007947"/>
+ </AtomTypes>
+</ForceField>"""
+
+        with self.assertRaises(ValueError):
+            ff = ForceField(StringIO(xml1), StringIO(xml2))
+
+    def test_duplicateAtomTypeForbiddenElement(self):
+        """Test that multiple registrations of the same atom type with different elements are forbidden."""
+
+        xml1 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test" element="H" mass="1.007947"/>
+ </AtomTypes>
+</ForceField>"""
+
+        xml2 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test" element="C" mass="1.007947"/>
+ </AtomTypes>
+</ForceField>"""
+
+        with self.assertRaises(ValueError):
+            ff = ForceField(StringIO(xml1), StringIO(xml2))
+
+    def test_duplicateAtomTypeForbiddenElementMissing(self):
+        """Test that multiple registrations of the same atom type, one with and one without an element, are forbidden."""
+
+        xml1 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test" element="H" mass="1.007947"/>
+ </AtomTypes>
+</ForceField>"""
+
+        xml2 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test" mass="1.007947"/>
+ </AtomTypes>
+</ForceField>"""
+
+        with self.assertRaises(ValueError):
+            ff = ForceField(StringIO(xml1), StringIO(xml2))
+
+    def test_duplicateAtomTypeForbiddenMass(self):
+        """Test that multiple registrations of the same atom type with different elements are forbidden."""
+
+        xml1 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test" element="H" mass="1.007947"/>
+ </AtomTypes>
+</ForceField>"""
+
+        xml2 = """
+<ForceField>
+ <AtomTypes>
+  <Type name="test-name" class="test" element="H" mass="12.01078"/>
+ </AtomTypes>
+</ForceField>"""
+
+        with self.assertRaises(ValueError):
+            ff = ForceField(StringIO(xml1), StringIO(xml2))
+
     def test_ResidueAttributes(self):
         """Test a ForceField that gets per-particle parameters from residue attributes."""
 

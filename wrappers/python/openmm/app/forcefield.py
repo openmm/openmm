@@ -444,7 +444,8 @@ class ForceField(object):
         if name in self._atomTypes:
             #  allow multiple registrations of the same atom type provided the definitions are identical
             existing = self._atomTypes[name]
-            if existing.atomClass == parameters['class'] and existing.mass == float(parameters['mass']) and existing.element.symbol == parameters['element']:
+            elementsMatch = ((existing.element is None and 'element' not in parameters) or ('element' in parameters and existing.element.symbol == parameters['element']))
+            if existing.atomClass == parameters['class'] and existing.mass == float(parameters['mass']) and elementsMatch:
                 return
             raise ValueError('Found multiple definitions for atom type: '+name)
         atomClass = parameters['class']
@@ -1045,6 +1046,7 @@ class ForceField(object):
                         raise Exception('Multiple non-identical matching templates found for residue %d (%s): %s.' % (res.index+1, res.name, ', '.join(match[0].name for match in allMatches)))
                 template = allMatches[0][0]
                 matches = allMatches[0][1]
+
         return [template, matches]
 
     def _buildBondedToAtomList(self, topology):
