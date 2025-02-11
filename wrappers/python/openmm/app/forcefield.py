@@ -1046,7 +1046,6 @@ class ForceField(object):
                         raise Exception('Multiple non-identical matching templates found for residue %d (%s): %s.' % (res.index+1, res.name, ', '.join(match[0].name for match in allMatches)))
                 template = allMatches[0][0]
                 matches = allMatches[0][1]
-
         return [template, matches]
 
     def _buildBondedToAtomList(self, topology):

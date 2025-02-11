@@ -422,7 +422,7 @@ class TestForceField(unittest.TestCase):
 </ForceField>"""
 
         ff = ForceField(StringIO(xml1), StringIO(xml2))
-        
+
         self.assertTrue("test-name" in ff._atomTypes)
         at = ff._atomTypes["test-name"]
         self.assertEqual(at.atomClass, "test")
@@ -490,7 +490,7 @@ class TestForceField(unittest.TestCase):
             ff = ForceField(StringIO(xml1), StringIO(xml2))
 
     def test_duplicateAtomTypeForbiddenMass(self):
-        """Test that multiple registrations of the same atom type with different elements are forbidden."""
+        """Test that multiple registrations of the same atom type with different masses are forbidden."""
 
         xml1 = """
 <ForceField>
