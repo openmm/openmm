@@ -7711,6 +7711,8 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
     DPDIntegratorUtilities::createTypeTables(integrator, system.getNumParticles(), numTypes, particleTypeVec, frictionTable, cutoffTable, maxCutoff);
     map<string, string> defines;
     defines["M_PI"] = cc.doubleToString(M_PI);
+    if (system.usesPeriodicBoundaryConditions())
+        defines["USE_PERIODIC"] = "1";
     ComputeProgram program = cc.compileProgram(CommonKernelSources::dpd, defines);
     kernel1 = program->createKernel("integrateDPDPart1");
     kernel2 = program->createKernel("integrateDPDPart2");
