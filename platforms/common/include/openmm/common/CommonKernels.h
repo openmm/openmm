@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1518,6 +1518,43 @@ public:
     }
     GlobalTarget(CommonIntegrateCustomStepKernel::GlobalTargetType type, int variableIndex) : type(type), variableIndex(variableIndex) {
     }
+};
+
+/**
+ * This kernel is invoked by DPDIntegrator to take one time step.
+ */
+class CommonIntegrateDPDStepKernel : public IntegrateDPDStepKernel {
+public:
+    CommonIntegrateDPDStepKernel(std::string name, const Platform& platform, ComputeContext& cc) : IntegrateDPDStepKernel(name, platform), cc(cc),
+            hasInitializedKernels(false) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the DPDIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const DPDIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the DPDIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const DPDIntegrator& integrator);
+    /**
+     * Compute the kinetic energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the DPDIntegrator this kernel is being used for
+     */
+    double computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator);
+private:
+    ComputeContext& cc;
+    bool hasInitializedKernels;
+    int numTypes, randomSeed;
+    ComputeArray particleType, pairParams, oldDelta, velDelta;
+    ComputeKernel kernel1, kernel2, kernel3, kernel4;
 };
 
 /**

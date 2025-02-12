@@ -35,6 +35,8 @@
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
+#include "openmm/internal/DPDIntegratorUtilities.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "openmm/internal/timer.h"
 #include "CommonKernelSources.h"
 #include "lepton/CustomFunction.h"
@@ -7698,6 +7700,112 @@ void CommonIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context, in
         for (int i = 0; i < (int) values.size(); i++)
             localPerDofValuesFloat[variable][i] = mm_float4(values[order[i]][0], values[order[i]][1], values[order[i]][2], 0);
     }
+}
+
+void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDIntegrator& integrator) {
+    cc.initializeContexts();
+    ContextSelector selector(cc);
+    vector<int> particleTypeVec;
+    vector<vector<double> > frictionTable, cutoffTable;
+    double maxCutoff;
+    DPDIntegratorUtilities::createTypeTables(integrator, system.getNumParticles(), numTypes, particleTypeVec, frictionTable, cutoffTable, maxCutoff);
+    map<string, string> defines;
+    defines["M_PI"] = cc.doubleToString(M_PI);
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::dpd, defines);
+    kernel1 = program->createKernel("integrateDPDPart1");
+    kernel2 = program->createKernel("integrateDPDPart2");
+    kernel3 = program->createKernel("integrateDPDPart3");
+    kernel4 = program->createKernel("integrateDPDPart4");
+    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
+        oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+    else
+        oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+    particleType.initialize<int>(cc, cc.getNumAtoms(), "dpdParticleType");
+    pairParams.initialize<mm_float2>(cc, numTypes*numTypes, "dpdPairParams");
+    velDelta.initialize<long long>(cc, 3*cc.getPaddedNumAtoms(), "velDelta");
+    particleType.upload(particleTypeVec);
+    vector<mm_float2> pairParamsVec(numTypes*numTypes);
+    for (int i = 0; i < numTypes; i++)
+        for (int j = 0; j < numTypes; j++)
+            pairParamsVec[i+j*numTypes] = mm_float2(frictionTable[i][j], cutoffTable[i][j]);
+    pairParams.upload(pairParamsVec);
+    cc.addAutoclearBuffer(velDelta);
+    randomSeed = integrator.getRandomNumberSeed();
+    if (randomSeed == 0)
+        randomSeed = osrngseed(); // A seed of 0 means use a unique one
+
+}
+
+void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegrator& integrator) {
+    ContextSelector selector(cc);
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    int numAtoms = cc.getNumAtoms();
+    int paddedNumAtoms = cc.getPaddedNumAtoms();
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        kernel1->addArg(numAtoms);
+        kernel1->addArg(paddedNumAtoms);
+        kernel1->addArg(cc.getVelm());
+        kernel1->addArg(cc.getLongForceBuffer());
+        kernel1->addArg(integration.getStepSize());
+        kernel2->addArg(numAtoms);
+        kernel2->addArg(paddedNumAtoms);
+        kernel2->addArg(cc.getPosq());
+        kernel2->addArg(cc.getVelm());
+        kernel2->addArg(velDelta);
+        kernel2->addArg(integration.getStepSize());
+        kernel2->addArg(particleType);
+        kernel2->addArg(numTypes);
+        kernel2->addArg(pairParams);
+        for (int i = 0; i < 7; i++)
+            kernel2->addArg(); // Random seed, kT, and box vectors will be set just before it is executed.
+        if (cc.getUseMixedPrecision())
+            kernel2->addArg(cc.getPosqCorrection());
+        kernel3->addArg(numAtoms);
+        kernel3->addArg(paddedNumAtoms);
+        kernel3->addArg(cc.getVelm());
+        kernel3->addArg(velDelta);
+        kernel3->addArg(integration.getPosDelta());
+        kernel3->addArg(oldDelta);
+        kernel3->addArg(integration.getStepSize());
+        kernel4->addArg(numAtoms);
+        kernel4->addArg(cc.getPosq());
+        kernel4->addArg(cc.getVelm());
+        kernel4->addArg(integration.getPosDelta());
+        kernel4->addArg(oldDelta);
+        kernel4->addArg(integration.getStepSize());
+        if (cc.getUseMixedPrecision())
+            kernel4->addArg(cc.getPosqCorrection());
+    }
+
+    // Perform the integration.
+
+    double stepSize = integrator.getStepSize();
+    cc.getIntegrationUtilities().setNextStepSize(stepSize);
+    kernel1->execute(numAtoms);
+    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+    kernel2->setArg(9, randomSeed+cc.getStepCount());
+    kernel2->setArg(10, (float) (BOLTZ*integrator.getTemperature()));
+    setPeriodicBoxArgs(cc, kernel2, 11);
+    kernel2->execute(numAtoms*(numAtoms+1)/2);
+    kernel3->execute(numAtoms);
+    integration.applyConstraints(integrator.getConstraintTolerance());
+    kernel4->execute(numAtoms);
+    integration.computeVirtualSites();
+
+    // Update the time and step count.
+
+    cc.setTime(cc.getTime()+stepSize);
+    cc.setStepCount(cc.getStepCount()+1);
+    cc.reorderAtoms();
+
+    // Reduce UI lag.
+
+    flushPeriodically(cc);
+}
+
+double CommonIntegrateDPDStepKernel::computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator) {
+    return cc.getIntegrationUtilities().computeKineticEnergy(0.0);
 }
 
 void CommonRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
