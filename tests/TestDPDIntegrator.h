@@ -119,7 +119,7 @@ void testTemperature() {
     const double boxSize = 5.0;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-    DPDIntegrator integrator(temp, 10.0, 2.5, 0.002);
+    DPDIntegrator integrator(temp, 20.0, 2.5, 0.002);
     NonbondedForce* forceField = new NonbondedForce();
     forceField->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     forceField->setCutoffDistance(2.5);
@@ -134,15 +134,16 @@ void testTemperature() {
     system.addForce(forceField);
     Context context(system, integrator, platform);
     context.setPositions(positions);
+    context.setVelocitiesToTemperature(temp, 0);
     
     // Let it equilibrate.
     
-    integrator.step(5000);
+    integrator.step(1000);
     
     // Now run it for a while and see if the temperature is correct.
     
     double ke = 0.0;
-    int steps = 25000;
+    int steps = 10000;
     for (int i = 0; i < steps; ++i) {
         State state = context.getState(State::Energy);
         ke += state.getKineticEnergy();

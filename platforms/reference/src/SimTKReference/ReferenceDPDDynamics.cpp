@@ -56,6 +56,10 @@ void ReferenceDPDDynamics::setPeriodicBoxVectors(OpenMM::Vec3* vectors) {
     periodicBoxVectors[2] = vectors[2];
 }
 
+double ReferenceDPDDynamics::getMaxCutoff() const {
+    return maxCutoff;
+}
+
 void ReferenceDPDDynamics::updatePart1(int numParticles, vector<Vec3>& velocities, vector<Vec3>& forces) {
     for (int i = 0; i < numParticles; i++)
         if (inverseMasses[i] != 0.0)
@@ -69,9 +73,11 @@ void ReferenceDPDDynamics::updatePart2(int numParticles, vector<Vec3>& atomCoord
 
     // First position update.
 
-    for (int i = 0; i < numParticles; i++)
+    for (int i = 0; i < numParticles; i++) {
+        xPrime[i] = atomCoordinates[i];
         if (inverseMasses[i] != 0.0)
-            xPrime[i] = atomCoordinates[i] + velocities[i]*halfdt;
+            xPrime[i] += velocities[i]*halfdt;
+    }
 
     // Apply friction and noise to velocities.
 
@@ -88,9 +94,9 @@ void ReferenceDPDDynamics::updatePart2(int numParticles, vector<Vec3>& atomCoord
         double cutoff = cutoffTable[type1][type2];
         double deltaR[ReferenceForce::LastDeltaRIndex];
         if (periodic)
-            ReferenceForce::getDeltaRPeriodic(atomCoordinates[i], atomCoordinates[j], periodicBoxVectors, deltaR);
+            ReferenceForce::getDeltaRPeriodic(xPrime[i], xPrime[j], periodicBoxVectors, deltaR);
         else
-            ReferenceForce::getDeltaR(atomCoordinates[i], atomCoordinates[j], deltaR);
+            ReferenceForce::getDeltaR(xPrime[i], xPrime[j], deltaR);
         double r = deltaR[ReferenceForce::RIndex];
         if (r >= cutoff)
             continue;

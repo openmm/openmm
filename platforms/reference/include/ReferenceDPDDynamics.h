@@ -64,6 +64,10 @@ public:
      */
     void setPeriodicBoxVectors(OpenMM::Vec3* vectors);
     /**
+     * Get the maximum cutoff distance for any pair of types.
+     */
+    double getMaxCutoff() const;
+    /**
      * Perform a time step, updating the positions and velocities.
      * 
      * @param context             the context this integrator is updating

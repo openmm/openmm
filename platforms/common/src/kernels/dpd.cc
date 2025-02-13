@@ -35,7 +35,6 @@ float getRandomNormal(RandomState* random) {
 /**
  * Perform the first part of integration: velocity step.
  */
-
 KERNEL void integrateDPDPart1(int numAtoms, int paddedNumAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force,
         GLOBAL const mixed2* RESTRICT dt) {
     mixed fscale = dt[0].y/(mixed) 0x100000000;
@@ -53,23 +52,21 @@ KERNEL void integrateDPDPart1(int numAtoms, int paddedNumAtoms, GLOBAL mixed4* R
 /**
  * Load the position of a particle.
  */
-inline DEVICE mixed4 loadPos(GLOBAL const real4* RESTRICT posq, GLOBAL const real4* RESTRICT posqCorrection, int index) {
+inline DEVICE mixed3 loadPos(GLOBAL const real4* RESTRICT posq, GLOBAL const real4* RESTRICT posqCorrection, int index) {
 #ifdef USE_MIXED_PRECISION
     real4 pos1 = posq[index];
     real4 pos2 = posqCorrection[index];
-    return make_mixed4(pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z, pos1.w);
+    return make_mixed3(pos1.x+(mixed)pos2.x, pos1.y+(mixed)pos2.y, pos1.z+(mixed)pos2.z);
 #else
-    return posq[index];
+    return trimTo3(posq[index]);
 #endif
 }
 /**
  * Compute the friction and noise for a pair of particles.
  */
-DEVICE void processPair(int i, int j, int paddedNumAtoms, GLOBAL real4* RESTRICT posq, GLOBAL mixed4* RESTRICT velm, GLOBAL mm_ulong* RESTRICT velDelta, mixed dt, float kT,
-        GLOBAL const int* particleType, int numTypes, GLOBAL const float2* RESTRICT params, GLOBAL real4* RESTRICT posqCorrection, RandomState* random,
+DEVICE void processPair(int i, int j, mixed3 pos1, mixed3 pos2, mixed4 vel1, mixed4 vel2, int paddedNumAtoms, GLOBAL mm_ulong* RESTRICT velDelta, mixed dt, float kT,
+        GLOBAL const int* particleType, int numTypes, GLOBAL const float2* RESTRICT params, RandomState* random,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
-    mixed4 vel1 = velm[i];
-    mixed4 vel2 = velm[j];
     if (vel1.w == 0 && vel2.w == 0)
         return;
     int type1 = particleType[i];
@@ -77,8 +74,6 @@ DEVICE void processPair(int i, int j, int paddedNumAtoms, GLOBAL real4* RESTRICT
     float2 pairParams = params[type1+type2*numTypes];
     float friction = pairParams.x;
     float cutoff = pairParams.y;
-    mixed4 pos1 = loadPos(posq, posqCorrection, i);
-    mixed4 pos2 = loadPos(posq, posqCorrection, j);
     mixed3 delta = make_mixed3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
 #ifdef USE_PERIODIC
     APPLY_PERIODIC_TO_DELTA(delta)
@@ -133,6 +128,7 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
     // Loop over atom pairs to compute the changes in velocity.
 
     int numPairs = numAtoms*(numAtoms+1)/2;
+    mixed halfdt = 0.5f*dt[0].y;
     for (int index = GLOBAL_ID; index < numPairs; index += GLOBAL_SIZE) {
         int j = (int) floor(numAtoms+0.5f-SQRT((numAtoms+0.5f)*(numAtoms+0.5f)-2*index));
         int i = (index-j*numAtoms+j*(j+1)/2);
@@ -140,9 +136,18 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
             j += (i < j ? -1 : 1);
             i = (index-j*numAtoms+j*(j+1)/2);
         }
-        if (i != j)
-            processPair(i, j, paddedNumAtoms, posq, velm, (GLOBAL mm_ulong*) velDelta, dt[0].y, kT, particleType, numTypes, params, posqCorrection, &random,
+        if (i != j) {
+            mixed4 vel1 = velm[i];
+            mixed4 vel2 = velm[j];
+            mixed3 pos1 = loadPos(posq, posqCorrection, i);
+            mixed3 pos2 = loadPos(posq, posqCorrection, j);
+            if (vel1.w != 0)
+                pos1 += halfdt*trimTo3(vel1);
+            if (vel2.w != 0)
+                pos2 += halfdt*trimTo3(vel2);
+            processPair(i, j, pos1, pos2, vel1, vel2, paddedNumAtoms, (GLOBAL mm_ulong*) velDelta, dt[0].y, kT, particleType, numTypes, params, &random,
                         periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+        }
     }
 }
 
@@ -169,7 +174,7 @@ KERNEL void integrateDPDPart3(int numAtoms, int paddedNumAtoms, GLOBAL mixed4* R
 }
 
 /**
- * Perform the third part of integration: apply constraint forces to velocities, then record
+ * Perform the fourth part of integration: apply constraint forces to velocities, then record
  * the constrained positions.
  */
 KERNEL void integrateDPDPart4(int numAtoms, GLOBAL real4* RESTRICT posq, GLOBAL mixed4* RESTRICT velm,
