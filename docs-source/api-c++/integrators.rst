@@ -57,8 +57,19 @@ The RPMD integrator implements Ring Polymer MD.
     generated/RPMDIntegrator
 
 
-Customizing ``Integrator``
-==========================
+Dissipative Particle Dynamics integrators
+=========================================
+
+The DPD integrator implements Dissipative Particle Dynamics.
+
+.. toctree::
+    :maxdepth: 2
+
+    generated/DPDIntegrator
+
+
+Custom integrators
+==================
 
 These classes facilitate customisation of the integrator. ``CustomIntegrator``
 allows a wide variety of integration algorithms to be implemented efficiently
