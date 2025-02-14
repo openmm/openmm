@@ -114,24 +114,34 @@ void tesConservationLaws() {
 }
 
 void testTemperature() {
-    const int numParticles = 30;
+    const int numParticles = 100;
     const double temp = 100.0;
-    const double boxSize = 5.0;
+    const double boxSize = 8.0;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     DPDIntegrator integrator(temp, 20.0, 2.5, 0.002);
-    NonbondedForce* forceField = new NonbondedForce();
-    forceField->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
-    forceField->setCutoffDistance(2.5);
+    NonbondedForce* force = new NonbondedForce();
+    force->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    force->setCutoffDistance(2.5);
     vector<Vec3> positions(numParticles);
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     for (int i = 0; i < numParticles; ++i) {
         system.addParticle(2.0);
-        forceField->addParticle((i%2 == 0 ? 0.1 : -0.1), 0.2, 1.0);
-        positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        force->addParticle((i%2 == 0 ? 0.1 : -0.1), 0.2, 1.0);
+        bool close = true;
+        while (close) {
+            positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+            close = false;
+            for (int j = 0; j < i; ++j) {
+                Vec3 delta = positions[i]-positions[j];
+                if (delta.dot(delta) < 0.1)
+                    close = true;
+            }
+        }
     }
-    system.addForce(forceField);
+    force->addException(0, numParticles-1, 0.0, 0.0, 0.0); // So there will be an off-diagonal tile with exclusions
+    system.addForce(force);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocitiesToTemperature(temp, 0);
@@ -143,7 +153,7 @@ void testTemperature() {
     // Now run it for a while and see if the temperature is correct.
     
     double ke = 0.0;
-    int steps = 10000;
+    int steps = 5000;
     for (int i = 0; i < steps; ++i) {
         State state = context.getState(State::Energy);
         ke += state.getKineticEnergy();
@@ -196,6 +206,8 @@ void testConstraints() {
     DPDIntegrator integrator(temp, 2.0, 1.5, 0.01);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
+    forceField->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    forceField->setCutoffDistance(10.0);
     for (int i = 0; i < numParticles; ++i) {
         system.addParticle(10.0);
         forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
@@ -273,6 +285,8 @@ void testRandomSeed() {
     System system;
     DPDIntegrator integrator(temp, 2.0, 5.0, 0.01);
     NonbondedForce* forceField = new NonbondedForce();
+    forceField->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    forceField->setCutoffDistance(10.0);
     for (int i = 0; i < numParticles; ++i) {
         system.addParticle(2.0);
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);

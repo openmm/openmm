@@ -64,13 +64,11 @@ inline DEVICE mixed3 loadPos(GLOBAL const real4* RESTRICT posq, GLOBAL const rea
 /**
  * Compute the friction and noise for a pair of particles.
  */
-DEVICE void processPair(int i, int j, mixed3 pos1, mixed3 pos2, mixed4 vel1, mixed4 vel2, int paddedNumAtoms, GLOBAL mm_ulong* RESTRICT velDelta, mixed dt, float kT,
-        GLOBAL const int* particleType, int numTypes, GLOBAL const float2* RESTRICT params, RandomState* random,
+DEVICE void processPair(int i, int j, mixed3 pos1, mixed3 pos2, mixed4 vel1, mixed4 vel2, int type1, int type2, int paddedNumAtoms,
+        GLOBAL mm_ulong* RESTRICT velDelta, mixed dt, float kT, int numTypes, GLOBAL const float2* RESTRICT params, RandomState* random,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     if (vel1.w == 0 && vel2.w == 0)
         return;
-    int type1 = particleType[i];
-    int type2 = particleType[j];
     float2 pairParams = params[type1+type2*numTypes];
     float friction = pairParams.x;
     float cutoff = pairParams.y;
@@ -105,17 +103,28 @@ DEVICE void processPair(int i, int j, mixed3 pos1, mixed3 pos2, mixed4 vel1, mix
  */
 KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const real4* RESTRICT posq, GLOBAL const mixed4* RESTRICT velm, GLOBAL mm_long* RESTRICT velDelta,
         GLOBAL const mixed2* RESTRICT dt, GLOBAL const int* particleType, int numTypes, GLOBAL const float2* RESTRICT params, mm_long seed,
-        float kT, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ
+        float kT, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
+        GLOBAL const int2* restrict exclusionTiles, int numExclusionTiles, GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount,
+        GLOBAL const int* RESTRICT interactingAtoms
 #ifdef USE_MIXED_PRECISION
         , GLOBAL const real4* RESTRICT posqCorrection
 #endif
         ) {
+    const int totalWarps = GLOBAL_SIZE/TILE_SIZE;
+    const int warp = GLOBAL_ID/TILE_SIZE;
+    const int tgx = LOCAL_ID & (TILE_SIZE-1);
+    const int tbx = LOCAL_ID - tgx;
+    mixed halfdt = 0.5f*dt[0].y;
+    LOCAL mixed3 localPos[WORK_GROUP_SIZE];
+    LOCAL mixed4 localVel[WORK_GROUP_SIZE];
+    LOCAL int localType[WORK_GROUP_SIZE];
 #ifndef USE_MIXED_PRECISION
     GLOBAL real4* posqCorrection = 0;
 #endif
 
     // Initialize the random generator for this thread.  The seed is incremented each step,
-    // and the sequence ID is the global thread index.
+    // and the stream ID is the global thread index.  Skipping a variable number of values
+    // also seems to be necessary to decorrelate the streams.
 
     RandomState random;
     random.state = 0;
@@ -124,30 +133,81 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
     getRandomInt(&random);
     random.state += seed;
     getRandomInt(&random);
+    for (int i = 0; i < LOCAL_ID%16; i++)
+        getRandomInt(&random);
 
-    // Loop over atom pairs to compute the changes in velocity.
+    // First loop: process fixed tiles (ones that contain exclusions).
 
-    int numPairs = numAtoms*(numAtoms+1)/2;
-    mixed halfdt = 0.5f*dt[0].y;
-    for (int index = GLOBAL_ID; index < numPairs; index += GLOBAL_SIZE) {
-        int j = (int) floor(numAtoms+0.5f-SQRT((numAtoms+0.5f)*(numAtoms+0.5f)-2*index));
-        int i = (index-j*numAtoms+j*(j+1)/2);
-        if (i < j || i >= numAtoms) { // Occasionally happens due to roundoff error.
-            j += (i < j ? -1 : 1);
-            i = (index-j*numAtoms+j*(j+1)/2);
+    for (int tile = warp; tile < numExclusionTiles; tile += totalWarps) {
+        const int2 tileIndices = exclusionTiles[tile];
+        const unsigned int x = tileIndices.x;
+        const unsigned int y = tileIndices.y;
+        int atom1 = x*TILE_SIZE + tgx;
+        mixed4 vel1 = velm[atom1];
+        mixed3 pos1 = loadPos(posq, posqCorrection, atom1);
+        if (vel1.w != 0)
+            pos1 += halfdt*trimTo3(vel1);
+        int type1 = particleType[atom1];
+        if (x == y) {
+            localVel[LOCAL_ID] = vel1;
+            localPos[LOCAL_ID] = pos1;
+            localType[LOCAL_ID] = type1;
         }
-        if (i != j) {
-            mixed4 vel1 = velm[i];
-            mixed4 vel2 = velm[j];
-            mixed3 pos1 = loadPos(posq, posqCorrection, i);
-            mixed3 pos2 = loadPos(posq, posqCorrection, j);
-            if (vel1.w != 0)
-                pos1 += halfdt*trimTo3(vel1);
+        else {
+            int atom2 = y*TILE_SIZE + tgx;
+            mixed4 vel2 = velm[atom2];
+            mixed3 pos2 = loadPos(posq, posqCorrection, atom2);
             if (vel2.w != 0)
                 pos2 += halfdt*trimTo3(vel2);
-            processPair(i, j, pos1, pos2, vel1, vel2, paddedNumAtoms, (GLOBAL mm_ulong*) velDelta, dt[0].y, kT, particleType, numTypes, params, &random,
-                        periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+            localVel[LOCAL_ID] = vel2;
+            localPos[LOCAL_ID] = pos2;
+            localType[LOCAL_ID] = particleType[atom2];
         }
+        SYNC_WARPS;
+        for (int i = 0; i < TILE_SIZE; i++) {
+            int atom2 = y*TILE_SIZE+i;
+            if (x != y || atom1 < atom2) {
+                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                    processPair(atom1, atom2, pos1, localPos[tbx+i], vel1, localVel[tbx+i], type1, localType[tbx+i],
+                                paddedNumAtoms, (GLOBAL mm_ulong*) velDelta, dt[0].y, kT, numTypes, params, &random,
+                                periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+                }
+            }
+        }
+        SYNC_WARPS;
+    }
+
+    // Second loop: process tiles from the neighbor list.
+
+    unsigned int numTiles = interactionCount[0];
+    LOCAL int atomIndices[WORK_GROUP_SIZE];
+    for (int tile = warp; tile < numTiles; tile += totalWarps) {
+        int x = tiles[tile];
+        int atom1 = x*TILE_SIZE + tgx;
+        mixed4 vel1 = velm[atom1];
+        mixed3 pos1 = loadPos(posq, posqCorrection, atom1);
+        if (vel1.w != 0)
+            pos1 += halfdt*trimTo3(vel1);
+        int type1 = particleType[atom1];
+        int atom2 = interactingAtoms[tile*TILE_SIZE+tgx];
+        atomIndices[LOCAL_ID] = atom2;
+        mixed4 vel2 = velm[atom2];
+        mixed3 pos2 = loadPos(posq, posqCorrection, atom2);
+        if (vel2.w != 0)
+            pos2 += halfdt*trimTo3(vel2);
+        localVel[LOCAL_ID] = vel2;
+        localPos[LOCAL_ID] = pos2;
+        localType[LOCAL_ID] = particleType[atom2];
+        SYNC_WARPS;
+        for (int i = 0; i < TILE_SIZE; i++) {
+            int atom2 = atomIndices[tbx+i];
+            if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                processPair(atom1, atom2, pos1, localPos[tbx+i], vel1, localVel[tbx+i], type1, localType[tbx+i],
+                            paddedNumAtoms, (GLOBAL mm_ulong*) velDelta, dt[0].y, kT, numTypes, params, &random,
+                            periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+            }
+        }
+        SYNC_WARPS;
     }
 }
 

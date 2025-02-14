@@ -7703,14 +7703,27 @@ void CommonIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context, in
 }
 
 void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDIntegrator& integrator) {
-    cc.initializeContexts();
-    ContextSelector selector(cc);
+    // Record information about the integrator.
+
     vector<int> particleTypeVec;
     vector<vector<double> > frictionTable, cutoffTable;
     double maxCutoff;
     DPDIntegratorUtilities::createTypeTables(integrator, system.getNumParticles(), numTypes, particleTypeVec, frictionTable, cutoffTable, maxCutoff);
+
+    // We want the NonbondedUtilities to build a neighbor list.  Add an empty interaction
+    // with a nonexistant force group to it.
+
+    cc.getNonbondedUtilities().addInteraction(true, system.usesPeriodicBoundaryConditions(), false, maxCutoff, vector<vector<int> >(), "", 32);
+
+    // Create the kernels and arrays.
+
+    cc.initializeContexts();
+    ContextSelector selector(cc);
     map<string, string> defines;
     defines["M_PI"] = cc.doubleToString(M_PI);
+    defines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
+    defines["TILE_SIZE"] = cc.intToString(ComputeContext::TileSize);
+    defines["WORK_GROUP_SIZE"] = cc.intToString(cc.getNonbondedUtilities().getForceThreadBlockSize());
     if (system.usesPeriodicBoundaryConditions())
         defines["USE_PERIODIC"] = "1";
     ComputeProgram program = cc.compileProgram(CommonKernelSources::dpd, defines);
@@ -7735,12 +7748,12 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
     randomSeed = integrator.getRandomNumberSeed();
     if (randomSeed == 0)
         randomSeed = osrngseed(); // A seed of 0 means use a unique one
-
 }
 
 void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegrator& integrator) {
     ContextSelector selector(cc);
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    NonbondedUtilities& nb = cc.getNonbondedUtilities();
     int numAtoms = cc.getNumAtoms();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     if (!hasInitializedKernels) {
@@ -7761,6 +7774,11 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
         kernel2->addArg(pairParams);
         for (int i = 0; i < 7; i++)
             kernel2->addArg(); // Random seed, kT, and box vectors will be set just before it is executed.
+        kernel2->addArg(nb.getExclusionTiles());
+        kernel2->addArg(nb.getExclusionTiles().getSize());
+        kernel2->addArg(nb.getInteractingTiles());
+        kernel2->addArg(nb.getInteractionCount());
+        kernel2->addArg(nb.getInteractingAtoms());
         if (cc.getUseMixedPrecision())
             kernel2->addArg(cc.getPosqCorrection());
         kernel3->addArg(numAtoms);
@@ -7789,7 +7807,7 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
     kernel2->setArg(9, randomSeed+cc.getStepCount());
     kernel2->setArg(10, (float) (BOLTZ*integrator.getTemperature()));
     setPeriodicBoxArgs(cc, kernel2, 11);
-    kernel2->execute(numAtoms*(numAtoms+1)/2);
+    kernel2->execute(nb.getNumForceThreadBlocks(), nb.getForceThreadBlockSize());
     kernel3->execute(numAtoms);
     integration.applyConstraints(integrator.getConstraintTolerance());
     kernel4->execute(numAtoms);
