@@ -7,7 +7,7 @@ typedef struct {
 /**
  * Generate a random number with PCH-XSH-RR.
  */
-unsigned int getRandomInt(RandomState* random) {
+DEVICE unsigned int getRandomInt(RandomState* random) {
     unsigned int xs = ((random->state>>18)^random->state)>>27;
     unsigned int rot = random->state>>59;
     random->state = random->state*6364136223846793005ULL + random->increment;
@@ -17,7 +17,7 @@ unsigned int getRandomInt(RandomState* random) {
 /**
  * Generate a normally distributed random number with Box-Muller.
  */
-float getRandomNormal(RandomState* random) {
+DEVICE float getRandomNormal(RandomState* random) {
     if (random->nextIsValid) {
         random->nextIsValid = false;
         return random->next;
@@ -104,7 +104,7 @@ DEVICE void processPair(int i, int j, mixed3 pos1, mixed3 pos2, mixed4 vel1, mix
 KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const real4* RESTRICT posq, GLOBAL const mixed4* RESTRICT velm, GLOBAL mm_long* RESTRICT velDelta,
         GLOBAL const mixed2* RESTRICT dt, GLOBAL const int* particleType, int numTypes, GLOBAL const float2* RESTRICT params, mm_long seed,
         float kT, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
-        GLOBAL const int2* restrict exclusionTiles, int numExclusionTiles, GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount,
+        GLOBAL const int2* RESTRICT exclusionTiles, int numExclusionTiles, GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount,
         GLOBAL const int* RESTRICT interactingAtoms
 #ifdef USE_MIXED_PRECISION
         , GLOBAL const real4* RESTRICT posqCorrection

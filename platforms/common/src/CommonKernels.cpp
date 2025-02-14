@@ -7796,7 +7796,7 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
         for (int i = 0; i < 7; i++)
             kernel2->addArg(); // Random seed, kT, and box vectors will be set just before it is executed.
         kernel2->addArg(nb.getExclusionTiles());
-        kernel2->addArg(nb.getExclusionTiles().getSize());
+        kernel2->addArg((int) nb.getExclusionTiles().getSize());
         kernel2->addArg(nb.getInteractingTiles());
         kernel2->addArg(nb.getInteractionCount());
         kernel2->addArg(nb.getInteractingAtoms());
