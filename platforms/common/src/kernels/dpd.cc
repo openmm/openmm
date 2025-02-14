@@ -72,7 +72,7 @@ DEVICE void processPair(int i, int j, mixed3 pos1, mixed3 pos2, mixed4 vel1, mix
     float2 pairParams = params[type1+type2*numTypes];
     float friction = pairParams.x;
     float cutoff = pairParams.y;
-    mixed3 delta = make_mixed3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
+    real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
 #ifdef USE_PERIODIC
     APPLY_PERIODIC_TO_DELTA(delta)
 #endif
@@ -81,15 +81,15 @@ DEVICE void processPair(int i, int j, mixed3 pos1, mixed3 pos2, mixed4 vel1, mix
     real r = r2*invR;
     if (r >= cutoff)
         return;
-    mixed mass1 = (vel1.w == 0 ? 0 : 1/vel1.w);
-    mixed mass2 = (vel2.w == 0 ? 0 : 1/vel2.w);
-    mixed m = mass1*mass2/(mass1+mass2);
-    mixed omega = 1-(r/cutoff);
-    mixed vscale = EXP(-dt*friction*omega*omega);
-    mixed noisescale = SQRT(1-vscale*vscale);
-    mixed3 dir = delta*invR;
-    mixed3 v = trimTo3(vel2)-trimTo3(vel1);
-    mixed dv = (1-vscale)*dot(v, dir) + noisescale*SQRT(kT/m)*getRandomNormal(random);
+    real mass1 = (vel1.w == 0 ? 0 : 1/vel1.w);
+    real mass2 = (vel2.w == 0 ? 0 : 1/vel2.w);
+    real m = mass1*mass2/(mass1+mass2);
+    real omega = 1-(r/cutoff);
+    real vscale = EXP(-dt*friction*omega*omega);
+    real noisescale = SQRT(1-vscale*vscale);
+    real3 dir = delta*invR;
+    real3 v = make_real3(vel2.x-vel1.x, vel2.y-vel1.y, vel2.z-vel1.z);
+    real dv = (1-vscale)*dot(v, dir) + noisescale*SQRT(kT/m)*getRandomNormal(random);
     ATOMIC_ADD(&velDelta[i], (mm_ulong) realToFixedPoint(m*vel1.w*dv*dir.x));
     ATOMIC_ADD(&velDelta[i+paddedNumAtoms], (mm_ulong) realToFixedPoint(m*vel1.w*dv*dir.y));
     ATOMIC_ADD(&velDelta[i+2*paddedNumAtoms], (mm_ulong) realToFixedPoint(m*vel1.w*dv*dir.z));
