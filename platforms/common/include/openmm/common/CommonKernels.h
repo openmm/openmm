@@ -1550,6 +1550,7 @@ public:
      */
     double computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator);
 private:
+    class ReorderListener;
     ComputeContext& cc;
     bool hasInitializedKernels;
     int numTypes, randomSeed;

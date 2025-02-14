@@ -7702,6 +7702,26 @@ void CommonIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context, in
     }
 }
 
+class CommonIntegrateDPDStepKernel::ReorderListener : public ComputeContext::ReorderListener {
+public:
+    ReorderListener(ComputeContext& cc, vector<int>& particleTypes, ComputeArray& particleTypeArray) :
+            cc(cc), particleTypes(particleTypes), particleTypeArray(particleTypeArray) {
+    }
+    void execute() {
+        // Reorder particleTypes to reflect the new atom order.
+
+        vector<int> sortedTypes(particleTypes.size());
+        const vector<int>& order = cc.getAtomIndex();
+        for (int i = 0; i < particleTypes.size(); i++)
+            sortedTypes[i] = particleTypes[order[i]];
+        particleTypeArray.upload(sortedTypes);
+    }
+private:
+    ComputeContext& cc;
+    ComputeArray& particleTypeArray;
+    vector<int> particleTypes;
+};
+
 void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDIntegrator& integrator) {
     // Record information about the integrator.
 
@@ -7745,6 +7765,7 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
             pairParamsVec[i+j*numTypes] = mm_float2(frictionTable[i][j], cutoffTable[i][j]);
     pairParams.upload(pairParamsVec);
     cc.addAutoclearBuffer(velDelta);
+    cc.addReorderListener(new ReorderListener(cc, particleTypeVec, particleType));
     randomSeed = integrator.getRandomNumberSeed();
     if (randomSeed == 0)
         randomSeed = osrngseed(); // A seed of 0 means use a unique one
