@@ -513,6 +513,7 @@ UNITS = {
 ("DPDIntegrator", "setDefaultFriction") : (None, ("unit.picosecond**-1",)),
 ("DPDIntegrator", "getDefaultCutoff") : ("unit.nanometer", ()),
 ("DPDIntegrator", "setDefaultCutoff") : (None, ("unit.nanometer",)),
+("DPDIntegrator", "getParticleTypes") : (None, ()),
 ("LocalEnergyMinimizer", "minimize") : (None, (None, "unit.kilojoules_per_mole/unit.nanometer", None)),
 ("ATMForce", "getForce") : (None, ()),
 ("ATMForce", "getPerturbationEnergy") :  ('unit.kilojoule_per_mole', ()),
