@@ -125,6 +125,12 @@ public:
      */
     void setParticleType(int index, int type);
     /**
+     * Get a map whose keys are particle indices and whose values are particle types.  This
+     * contains only the particles that have been specifically set with setParticleType().
+     * All others have a default type of 0.
+     */
+    const std::map<int, int>& getParticleTypes() const;
+    /**
      * Get the number of type pairs that have been added to the integrator.
      */
     int getNumTypePairs() const {

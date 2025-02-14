@@ -37,8 +37,7 @@
 #include <string>
 
 using namespace OpenMM;
-using std::string;
-using std::vector;
+using namespace std;
 
 DPDIntegrator::DPDIntegrator(double temperature, double defaultFriction, double defaultCutoff, double stepSize) {
     setTemperature(temperature);
@@ -85,6 +84,10 @@ int DPDIntegrator::getParticleType(int index) const {
 
 void DPDIntegrator::setParticleType(int index, int type) {
     particleType[index] = type;
+}
+
+const map<int, int>& DPDIntegrator::getParticleTypes() const {
+    return particleType;
 }
 
 int DPDIntegrator::addTypePair(int type1, int type2, double friction, double cutoff) {
