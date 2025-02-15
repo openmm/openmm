@@ -7828,7 +7828,7 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
     kernel2->setArg(9, randomSeed+cc.getStepCount());
     kernel2->setArg(10, (float) (BOLTZ*integrator.getTemperature()));
     setPeriodicBoxArgs(cc, kernel2, 11);
-    kernel2->execute(nb.getNumForceThreadBlocks(), nb.getForceThreadBlockSize());
+    kernel2->execute(nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
     kernel3->execute(numAtoms);
     integration.applyConstraints(integrator.getConstraintTolerance());
     kernel4->execute(numAtoms);
