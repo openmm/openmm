@@ -1,4 +1,4 @@
-/* Portions copyright (c) 2013-2024 Stanford University and Simbios.
+/* Portions copyright (c) 2013-2025 Stanford University and Simbios.
  * Authors: Peter Eastman
  * Contributors: 
  *
@@ -49,7 +49,7 @@ void CpuRandom::initialize(int seed, int numThreads) {
     hasInitialized = true;
     threadRandom.resize(numThreads);
     nextGaussian.resize(numThreads);
-    nextGaussianIsValid.resize(numThreads, false);
+    nextGaussianIsValid.resize(numThreads);
 
     /* Use a quick and dirty RNG to pick seeds for the real random number generator.
      * A random seed of 0 means pick a unique seed
@@ -62,6 +62,7 @@ void CpuRandom::initialize(int seed, int numThreads) {
         r = (1664525*r + 1013904223) & 0xFFFFFFFF;
         threadRandom[i] = new OpenMM_SFMT::SFMT();
         init_gen_rand(r, *threadRandom[i]);
+        nextGaussianIsValid[i] = false;
     }
 }
 
