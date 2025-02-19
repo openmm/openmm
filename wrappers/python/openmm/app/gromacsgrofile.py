@@ -59,7 +59,7 @@ def _isfloat(word):
     @return answer Boolean which specifies whether the string is any number
 
     """
-    return match('^[-+]?[0-9]*\.?[0-9]*([eEdD][-+]?[0-9]+)?$',word)
+    return match(r'^[-+]?[0-9]*\.?[0-9]*([eEdD][-+]?[0-9]+)?$',word)
 
 def _is_gro_coord(line):
     """ Determines whether a line contains GROMACS data or not
