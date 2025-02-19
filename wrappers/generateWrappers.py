@@ -92,7 +92,8 @@ class WrapperGenerator:
                             'bool OpenMM::Continuous3DFunction::operator!=',
                             'bool OpenMM::Discrete1DFunction::operator!=',
                             'bool OpenMM::Discrete2DFunction::operator!=',
-                            'bool OpenMM::Discrete3DFunction::operator!='
+                            'bool OpenMM::Discrete3DFunction::operator!=',
+                            'const std::map<int, int>& OpenMM::DPDIntegrator::getParticleTypes'
                            ]
         self.skipMethods = [s.replace(' ', '') for s in self.skipMethods]
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']
