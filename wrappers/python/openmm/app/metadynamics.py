@@ -244,7 +244,7 @@ class Metadynamics(object):
         # Check for any files updated by other processes.
 
         fileLoaded = False
-        pattern = re.compile('bias_(.*)_(.*)\.npy')
+        pattern = re.compile(r'bias_(.*)_(.*)\.npy')
         for filename in os.listdir(self.biasDir):
             match = pattern.match(filename)
             if match is not None:
