@@ -69,11 +69,41 @@ private:
 };
 
 /**
+ * This implements the pointvectorangle() function used in custom forces.
+ */
+class OPENMM_EXPORT ReferencePointVectorAngleFunction : public Lepton::CustomFunction {
+public:
+    ReferencePointVectorAngleFunction(bool periodic, Vec3** boxVectorHandle);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    Lepton::CustomFunction* clone() const;
+private:
+    bool periodic;
+    Vec3** boxVectorHandle;
+};
+
+/**
  * This implements the pointdihedral() function used in custom forces.
  */
 class OPENMM_EXPORT ReferencePointDihedralFunction : public Lepton::CustomFunction {
 public:
     ReferencePointDihedralFunction(bool periodic, Vec3** boxVectorHandle);
+    int getNumArguments() const;
+    double evaluate(const double* arguments) const;
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const;
+    Lepton::CustomFunction* clone() const;
+private:
+    bool periodic;
+    Vec3** boxVectorHandle;
+};
+
+/**
+ * This implements the arrayvectorangle() function used in custom forces.
+ */
+class OPENMM_EXPORT ReferenceArrayVectorAngleFunction : public Lepton::CustomFunction {
+public:
+    ReferenceArrayVectorAngleFunction(bool periodic, Vec3** boxVectorHandle);
     int getNumArguments() const;
     double evaluate(const double* arguments) const;
     double evaluateDerivative(const double* arguments, const int* derivOrder) const;
