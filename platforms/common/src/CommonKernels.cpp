@@ -7742,6 +7742,7 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
     map<string, string> defines;
     defines["M_PI"] = cc.doubleToString(M_PI);
     defines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
+    defines["MAX_CUTOFF"] = cc.doubleToString(maxCutoff);
     defines["TILE_SIZE"] = cc.intToString(ComputeContext::TileSize);
     defines["WORK_GROUP_SIZE"] = cc.intToString(cc.getNonbondedUtilities().getForceThreadBlockSize());
     if (system.usesPeriodicBoundaryConditions())
@@ -7799,6 +7800,8 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
         kernel2->addArg((int) nb.getExclusionTiles().getSize());
         kernel2->addArg(nb.getInteractingTiles());
         kernel2->addArg(nb.getInteractionCount());
+        kernel2->addArg(nb.getBlockCenters());
+        kernel2->addArg(nb.getBlockBoundingBoxes());
         kernel2->addArg(nb.getInteractingAtoms());
         if (cc.getUseMixedPrecision())
             kernel2->addArg(cc.getPosqCorrection());

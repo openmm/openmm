@@ -23,7 +23,7 @@ DEVICE float getRandomNormal(RandomState* random) {
         return random->next;
     }
     float scale = 1/(float) 0x100000000;
-    float x = scale*max(getRandomInt(random), 1);
+    float x = scale*max(getRandomInt(random), 1u);
     float y = scale*getRandomInt(random);
     float multiplier = SQRT(-2*LOG(x));
     float angle = 2*M_PI*y;
@@ -64,7 +64,7 @@ inline DEVICE mixed3 loadPos(GLOBAL const real4* RESTRICT posq, GLOBAL const rea
 /**
  * Compute the friction and noise for a pair of particles.
  */
-DEVICE void processPair(int i, int j, mixed3 pos1, mixed3 pos2, mixed4 vel1, mixed4 vel2, int type1, int type2, int paddedNumAtoms,
+DEVICE void processPair(int i, int j, real3 delta, mixed4 vel1, mixed4 vel2, int type1, int type2, int paddedNumAtoms,
         GLOBAL mm_ulong* RESTRICT velDelta, mixed dt, float kT, int numTypes, GLOBAL const float2* RESTRICT params, RandomState* random,
         real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ) {
     if (vel1.w == 0 && vel2.w == 0)
@@ -72,10 +72,6 @@ DEVICE void processPair(int i, int j, mixed3 pos1, mixed3 pos2, mixed4 vel1, mix
     float2 pairParams = params[type1+type2*numTypes];
     float friction = pairParams.x;
     float cutoff = pairParams.y;
-    real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
-#ifdef USE_PERIODIC
-    APPLY_PERIODIC_TO_DELTA(delta)
-#endif
     real r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
     real invR = RSQRT(r2);
     real r = r2*invR;
@@ -105,7 +101,7 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
         GLOBAL const mixed2* RESTRICT dt, GLOBAL const int* particleType, int numTypes, GLOBAL const float2* RESTRICT params, mm_long seed,
         float kT, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         GLOBAL const int2* RESTRICT exclusionTiles, int numExclusionTiles, GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount,
-        GLOBAL const int* RESTRICT interactingAtoms
+        GLOBAL const real4* RESTRICT blockCenter, GLOBAL const real4* RESTRICT blockSize, GLOBAL const int* RESTRICT interactingAtoms
 #ifdef USE_MIXED_PRECISION
         , GLOBAL const real4* RESTRICT posqCorrection
 #endif
@@ -164,11 +160,16 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
             localType[LOCAL_ID] = particleType[atom2];
         }
         SYNC_WARPS;
-        for (int i = 0; i < TILE_SIZE; i++) {
-            int atom2 = y*TILE_SIZE+i;
-            if (x != y || atom1 < atom2) {
-                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                    processPair(atom1, atom2, pos1, localPos[tbx+i], vel1, localVel[tbx+i], type1, localType[tbx+i],
+        if (atom1 < NUM_ATOMS) {
+            for (int i = 0; i < TILE_SIZE; i++) {
+                int atom2 = y*TILE_SIZE+i;
+                if ((x != y || atom1 < atom2) && atom2 < NUM_ATOMS) {
+                    mixed3 pos2 = localPos[tbx+i];
+                    real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
+#ifdef USE_PERIODIC
+                    APPLY_PERIODIC_TO_DELTA(delta)
+#endif
+                    processPair(atom1, atom2, delta, vel1, localVel[tbx+i], type1, localType[tbx+i],
                                 paddedNumAtoms, (GLOBAL mm_ulong*) velDelta, dt[0].y, kT, numTypes, params, &random,
                                 periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
                 }
@@ -183,6 +184,10 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
     LOCAL int atomIndices[WORK_GROUP_SIZE];
     for (int tile = warp; tile < numTiles; tile += totalWarps) {
         int x = tiles[tile];
+        real4 blockSizeX = blockSize[x];
+        bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
+                                   0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF &&
+                                   0.5f*periodicBoxSize.z-blockSizeX.z >= MAX_CUTOFF);
         int atom1 = x*TILE_SIZE + tgx;
         mixed4 vel1 = velm[atom1];
         mixed3 pos1 = loadPos(posq, posqCorrection, atom1);
@@ -198,13 +203,48 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
         localVel[LOCAL_ID] = vel2;
         localPos[LOCAL_ID] = pos2;
         localType[LOCAL_ID] = particleType[atom2];
-        SYNC_WARPS;
-        for (int i = 0; i < TILE_SIZE; i++) {
-            int atom2 = atomIndices[tbx+i];
-            if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                processPair(atom1, atom2, pos1, localPos[tbx+i], vel1, localVel[tbx+i], type1, localType[tbx+i],
-                            paddedNumAtoms, (GLOBAL mm_ulong*) velDelta, dt[0].y, kT, numTypes, params, &random,
-                            periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+#ifdef USE_PERIODIC
+        if (singlePeriodicCopy) {
+            // The box is small enough that we can just translate all the atoms into a single periodic
+            // box, then skip having to apply periodic boundary conditions later.
+
+            real4 blockCenterX = blockCenter[x];
+            APPLY_PERIODIC_TO_POS_WITH_CENTER(pos1, blockCenterX)
+            APPLY_PERIODIC_TO_POS_WITH_CENTER(localPos[LOCAL_ID], blockCenterX)
+            SYNC_WARPS;
+            if (atom1 < NUM_ATOMS) {
+                for (int i = 0; i < TILE_SIZE; i++) {
+                    int atom2 = atomIndices[tbx+i];
+                    if (atom2 < NUM_ATOMS) {
+                        pos2 = localPos[tbx+i];
+                        real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
+                        processPair(atom1, atom2, delta, vel1, localVel[tbx+i], type1, localType[tbx+i],
+                                    paddedNumAtoms, (GLOBAL mm_ulong*) velDelta, dt[0].y, kT, numTypes, params, &random,
+                                    periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+                    }
+                }
+            }
+        }
+        else
+#endif
+        {
+            // We need to apply periodic boundary conditions separately for each interaction.
+
+            SYNC_WARPS;
+            if (atom1 < NUM_ATOMS) {
+                for (int i = 0; i < TILE_SIZE; i++) {
+                    int atom2 = atomIndices[tbx+i];
+                    if (atom2 < NUM_ATOMS) {
+                        pos2 = localPos[tbx+i];
+                        real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
+#ifdef USE_PERIODIC
+                        APPLY_PERIODIC_TO_DELTA(delta)
+#endif
+                        processPair(atom1, atom2, delta, vel1, localVel[tbx+i], type1, localType[tbx+i],
+                                    paddedNumAtoms, (GLOBAL mm_ulong*) velDelta, dt[0].y, kT, numTypes, params, &random,
+                                    periodicBoxSize, invPeriodicBoxSize, periodicBoxVecX, periodicBoxVecY, periodicBoxVecZ);
+                    }
+                }
             }
         }
         SYNC_WARPS;
