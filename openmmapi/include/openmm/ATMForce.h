@@ -284,7 +284,7 @@ public:
      * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
      * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
      */
-    void setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0);
+    void setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0=Vec3());
     /**
      * Set the displacements for a particle as the vector distances between specified particles
      * 
