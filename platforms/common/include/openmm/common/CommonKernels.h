@@ -1554,7 +1554,7 @@ private:
     ComputeContext& cc;
     bool hasInitializedKernels;
     int numTypes, randomSeed;
-    ComputeArray particleType, pairParams, oldDelta, velDelta;
+    ComputeArray particleType, pairParams, oldDelta, velDelta, tileCounter;
     ComputeKernel kernel1, kernel2, kernel3, kernel4;
 };
 

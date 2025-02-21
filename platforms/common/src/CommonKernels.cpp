@@ -7759,6 +7759,7 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
     particleType.initialize<int>(cc, cc.getNumAtoms(), "dpdParticleType");
     pairParams.initialize<mm_float2>(cc, numTypes*numTypes, "dpdPairParams");
     velDelta.initialize<long long>(cc, 3*cc.getPaddedNumAtoms(), "velDelta");
+    tileCounter.initialize<int>(cc, 1, "tileCounter");
     particleType.upload(particleTypeVec);
     vector<mm_float2> pairParamsVec(numTypes*numTypes);
     for (int i = 0; i < numTypes; i++)
@@ -7785,6 +7786,7 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
         kernel1->addArg(cc.getVelm());
         kernel1->addArg(cc.getLongForceBuffer());
         kernel1->addArg(integration.getStepSize());
+        kernel1->addArg(tileCounter);
         kernel2->addArg(numAtoms);
         kernel2->addArg(paddedNumAtoms);
         kernel2->addArg(cc.getPosq());
@@ -7803,6 +7805,7 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
         kernel2->addArg(nb.getBlockCenters());
         kernel2->addArg(nb.getBlockBoundingBoxes());
         kernel2->addArg(nb.getInteractingAtoms());
+        kernel2->addArg(tileCounter);
         if (cc.getUseMixedPrecision())
             kernel2->addArg(cc.getPosqCorrection());
         kernel3->addArg(numAtoms);
@@ -7831,7 +7834,7 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
     kernel2->setArg(9, randomSeed+cc.getStepCount());
     kernel2->setArg(10, (float) (BOLTZ*integrator.getTemperature()));
     setPeriodicBoxArgs(cc, kernel2, 11);
-    kernel2->execute(nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
+    kernel2->execute(2*nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
     kernel3->execute(numAtoms);
     integration.applyConstraints(integrator.getConstraintTolerance());
     kernel4->execute(numAtoms);

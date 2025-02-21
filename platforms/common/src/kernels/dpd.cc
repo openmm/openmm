@@ -36,7 +36,7 @@ DEVICE float getRandomNormal(RandomState* random) {
  * Perform the first part of integration: velocity step.
  */
 KERNEL void integrateDPDPart1(int numAtoms, int paddedNumAtoms, GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_long* RESTRICT force,
-        GLOBAL const mixed2* RESTRICT dt) {
+        GLOBAL const mixed2* RESTRICT dt, GLOBAL int* RESTRICT tileCounter) {
     mixed fscale = dt[0].y/(mixed) 0x100000000;
     for (int index = GLOBAL_ID; index < numAtoms; index += GLOBAL_SIZE) {
         mixed4 velocity = velm[index];
@@ -47,6 +47,8 @@ KERNEL void integrateDPDPart1(int numAtoms, int paddedNumAtoms, GLOBAL mixed4* R
             velm[index] = velocity;
         }
     }
+    if (GLOBAL_ID == 0)
+        tileCounter[0] = 0;
 }
 
 /**
@@ -101,7 +103,7 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
         GLOBAL const mixed2* RESTRICT dt, GLOBAL const int* particleType, int numTypes, GLOBAL const float2* RESTRICT params, mm_long seed,
         float kT, real4 periodicBoxSize, real4 invPeriodicBoxSize, real4 periodicBoxVecX, real4 periodicBoxVecY, real4 periodicBoxVecZ,
         GLOBAL const int2* RESTRICT exclusionTiles, int numExclusionTiles, GLOBAL const int* RESTRICT tiles, GLOBAL const unsigned int* RESTRICT interactionCount,
-        GLOBAL const real4* RESTRICT blockCenter, GLOBAL const real4* RESTRICT blockSize, GLOBAL const int* RESTRICT interactingAtoms
+        GLOBAL const real4* RESTRICT blockCenter, GLOBAL const real4* RESTRICT blockSize, GLOBAL const int* RESTRICT interactingAtoms, GLOBAL int* RESTRICT tileCounter
 #ifdef USE_MIXED_PRECISION
         , GLOBAL const real4* RESTRICT posqCorrection
 #endif
@@ -182,8 +184,12 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
 
     unsigned int numTiles = interactionCount[0];
     LOCAL int atomIndices[WORK_GROUP_SIZE];
+    LOCAL int nextTile[WORK_GROUP_SIZE/TILE_SIZE];
     for (int tile = warp; tile < numTiles; tile += totalWarps) {
-        int x = tiles[tile];
+        if (tgx == 0)
+            nextTile[tbx/TILE_SIZE] = ATOMIC_ADD(tileCounter, 1);
+        SYNC_WARPS;
+        int x = tiles[nextTile[tbx/TILE_SIZE]];
         real4 blockSizeX = blockSize[x];
         bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
                                    0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF &&
