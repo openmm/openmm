@@ -23,7 +23,7 @@ DEVICE float getRandomNormal(RandomState* random) {
         return random->next;
     }
     float scale = 1/(float) 0x100000000;
-    float x = scale*getRandomInt(random);
+    float x = scale*max(getRandomInt(random), 1);
     float y = scale*getRandomInt(random);
     float multiplier = SQRT(-2*LOG(x));
     float angle = 2*M_PI*y;
