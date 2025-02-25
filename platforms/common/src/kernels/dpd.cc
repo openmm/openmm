@@ -48,7 +48,7 @@ KERNEL void integrateDPDPart1(int numAtoms, int paddedNumAtoms, GLOBAL mixed4* R
         }
     }
     if (GLOBAL_ID == 0)
-        tileCounter[0] = 0;
+        *tileCounter = 0;
 }
 
 /**
@@ -189,7 +189,8 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
         if (tgx == 0)
             nextTile[tbx/TILE_SIZE] = ATOMIC_ADD(tileCounter, 1);
         SYNC_WARPS;
-        int x = tiles[nextTile[tbx/TILE_SIZE]];
+        int tileIndex = nextTile[tbx/TILE_SIZE];
+        int x = tiles[tileIndex];
         real4 blockSizeX = blockSize[x];
         bool singlePeriodicCopy = (0.5f*periodicBoxSize.x-blockSizeX.x >= MAX_CUTOFF &&
                                    0.5f*periodicBoxSize.y-blockSizeX.y >= MAX_CUTOFF &&
@@ -200,7 +201,7 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
         if (vel1.w != 0)
             pos1 += halfdt*trimTo3(vel1);
         int type1 = particleType[atom1];
-        int atom2 = interactingAtoms[tile*TILE_SIZE+tgx];
+        int atom2 = interactingAtoms[tileIndex*TILE_SIZE+tgx];
         atomIndices[LOCAL_ID] = atom2;
         mixed4 vel2 = velm[atom2];
         mixed3 pos2 = loadPos(posq, posqCorrection, atom2);
