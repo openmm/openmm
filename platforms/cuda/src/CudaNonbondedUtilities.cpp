@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -61,7 +61,7 @@ public:
 };
 
 CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
-        blockSorter(NULL), pinnedCountBuffer(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0), canUsePairList(true), tilesAfterReorder(0) {
+        blockSorter(NULL), pinnedCountBuffer(NULL), forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), tilesAfterReorder(0) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -262,6 +262,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
 
     // Create data structures for the neighbor list.
 
+    maxCutoff = getMaxCutoffDistance();
     if (useCutoff) {
         // Select a size for the arrays that hold the neighbor list.  We have to make a fairly
         // arbitrary guess, but if this turns out to be too small we'll increase it later.
@@ -407,7 +408,7 @@ void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
     KernelSet& kernels = groupKernels[forceGroups];
     if (useCutoff && usePeriodic) {
         double4 box = context.getPeriodicBoxSize();
-        double minAllowedSize = 1.999999*kernels.cutoffDistance;
+        double minAllowedSize = 1.999999*maxCutoff;
         if (box.x < minAllowedSize || box.y < minAllowedSize || box.z < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
     }
@@ -418,15 +419,12 @@ void CudaNonbondedUtilities::prepareInteractions(int forceGroups) {
 
     // Compute the neighbor list.
 
-    if (lastCutoff != kernels.cutoffDistance)
-        forceRebuildNeighborList = true;
     context.executeKernel(kernels.findBlockBoundsKernel, &findBlockBoundsArgs[0], context.getNumAtomBlocks());
     context.executeKernel(kernels.computeSortKeysKernel, &computeSortKeysArgs[0], context.getNumAtomBlocks());
     blockSorter->sort(sortedBlocks);
     context.executeKernel(kernels.sortBoxDataKernel, &sortBoxDataArgs[0], context.getNumAtoms());
     context.executeKernel(kernels.findInteractingBlocksKernel, &findInteractingBlocksArgs[0], context.getNumAtoms(), 256);
     forceRebuildNeighborList = false;
-    lastCutoff = kernels.cutoffDistance;
     interactionCount.download(pinnedCountBuffer, false);
     cuEventRecord(downloadCountEvent, context.getCurrentStream());
 }
@@ -503,25 +501,22 @@ void CudaNonbondedUtilities::setAtomBlockRange(double startFraction, double endF
 
 void CudaNonbondedUtilities::createKernelsForGroups(int groups) {
     KernelSet kernels;
-    double cutoff = 0.0;
     string source;
     for (int i = 0; i < 32; i++) {
         if ((groups&(1<<i)) != 0) {
-            cutoff = max(cutoff, groupCutoff[i]);
             source += groupKernelSource[i];
         }
     }
     kernels.hasForces = (source.size() > 0);
-    kernels.cutoffDistance = cutoff;
     kernels.source = source;
     kernels.forceKernel = kernels.energyKernel = kernels.forceEnergyKernel = NULL;
     if (useCutoff) {
-        double paddedCutoff = padCutoff(cutoff);
+        double paddedCutoff = padCutoff(maxCutoff);
         map<string, string> defines;
         defines["TILE_SIZE"] = context.intToString(CudaContext::TileSize);
         defines["NUM_BLOCKS"] = context.intToString(context.getNumAtomBlocks());
         defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
-        defines["PADDING"] = context.doubleToString(paddedCutoff-cutoff);
+        defines["PADDING"] = context.doubleToString(paddedCutoff-maxCutoff);
         defines["PADDED_CUTOFF"] = context.doubleToString(paddedCutoff);
         defines["PADDED_CUTOFF_SQUARED"] = context.doubleToString(paddedCutoff*paddedCutoff);
         defines["NUM_TILES_WITH_EXCLUSIONS"] = context.intToString(exclusionTiles.getSize());
