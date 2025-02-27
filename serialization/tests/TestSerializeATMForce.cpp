@@ -88,10 +88,17 @@ void testSerialization() {
     ASSERT_EQUAL(force.getNumParticles(), force2.getNumParticles());
     for (int i = 0; i < force.getNumParticles(); i++) {
         Vec3 d1a, d1b, d0a, d0b;
-        force.getParticleParameters(i, d1a, d0a);
-        force2.getParticleParameters(i, d1b, d0b);
+	int j1a, i1a, j0a, i0a;
+	int j1b, i1b, j0b, i0b;
+
+        force.getParticleParameters(i,  d1a, d0a, j1a, i1a, j0a, i0a);
+        force2.getParticleParameters(i, d1b, d0b, j1b, i1b, j0b, i0b);
         ASSERT_EQUAL_VEC(d1a, d1b, 0.0);
         ASSERT_EQUAL_VEC(d0a, d0b, 0.0);
+	ASSERT_EQUAL( j1a, j1b);
+	ASSERT_EQUAL( i1a, i1b);
+	ASSERT_EQUAL( j0a, j0b);
+	ASSERT_EQUAL( i0a, i0b);
     }
 }
 
