@@ -1410,12 +1410,12 @@ class CharmmPsfFile(object):
                 idxa = pair[1]
                 parent_exclude_list[idx].append(idxa)
                 force.addException(idx, idxa, 0.0, 0.1, 0.0)
-            # If lonepairs and Drude particles are bonded to the same parent atom, add exception
-            for excludeterm in parent_exclude_list:
-                if(len(excludeterm) >= 2):
-                    for i in range(len(excludeterm)):
-                        for j in range(i):
-                            force.addException(excludeterm[j], excludeterm[i], 0.0, 0.1, 0.0)
+        # If lonepairs and Drude particles are bonded to the same parent atom, add exception
+        for excludeterm in parent_exclude_list:
+            if(len(excludeterm) >= 2):
+                for i in range(len(excludeterm)):
+                    for j in range(i):
+                        force.addException(excludeterm[j], excludeterm[i], 0.0, 0.1, 0.0)
         # Exclude 1-2 and 1-3 pairs as well as the lonepair/Drude attached onto them
         if nbxmod > 1:
             for ia1, ia2 in self.pair_12_list:
