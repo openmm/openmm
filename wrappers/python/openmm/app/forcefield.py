@@ -871,6 +871,7 @@ class ForceField(object):
                         newSite = deepcopy(site)
                         newSite.index = indexMap[site.index]
                         newSite.atoms = [indexMap[i] for i in site.atoms]
+                        newSite.excludeWith = indexMap[site.excludeWith]
                         newTemplate.virtualSites.append(newSite)
 
                 # Build the lists of bonds and external bonds.
