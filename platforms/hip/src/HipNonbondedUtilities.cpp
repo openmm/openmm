@@ -430,7 +430,7 @@ void HipNonbondedUtilities::prepareInteractions(int forceGroups) {
     KernelSet& kernels = groupKernels[forceGroups];
     if (useCutoff && usePeriodic) {
         double4 box = context.getPeriodicBoxSize();
-        double minAllowedSize = 1.999999*kernels.cutoffDistance;
+        double minAllowedSize = 1.999999*maxCutoff;
         if (box.x < minAllowedSize || box.y < minAllowedSize || box.z < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
     }
