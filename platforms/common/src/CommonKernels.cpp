@@ -7729,6 +7729,8 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
     vector<vector<double> > frictionTable, cutoffTable;
     double maxCutoff;
     DPDIntegratorUtilities::createTypeTables(integrator, system.getNumParticles(), numTypes, particleTypeVec, frictionTable, cutoffTable, maxCutoff);
+    while (particleTypeVec.size() < cc.getPaddedNumAtoms())
+        particleTypeVec.push_back(0);
 
     // We want the NonbondedUtilities to build a neighbor list.  Add an empty interaction
     // with a nonexistant force group to it.
@@ -7756,7 +7758,7 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
         oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
     else
         oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
-    particleType.initialize<int>(cc, cc.getNumAtoms(), "dpdParticleType");
+    particleType.initialize<int>(cc, cc.getPaddedNumAtoms(), "dpdParticleType");
     pairParams.initialize<mm_float2>(cc, numTypes*numTypes, "dpdPairParams");
     velDelta.initialize<long long>(cc, 3*cc.getPaddedNumAtoms(), "velDelta");
     tileCounter.initialize<int>(cc, 1, "tileCounter");
