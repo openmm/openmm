@@ -296,9 +296,51 @@ void testNonbonded() {
     double epot2 = state2.getPotentialEnergy();
     atm->getPerturbationEnergy(context2, u1, u0, energy);
     double epert2 = u1 - u0;
-
     ASSERT_EQUAL_TOL(epert1, epert2,  1e-3);
 }
+
+void testNonbondedwithEndpointClash() {
+    System system;
+    double u0, u1, energy;
+    double lambda = 0.0; //U(lambda) = u0; it does not depend on u1
+    double width = 4.0;
+
+    system.setDefaultPeriodicBoxVectors(Vec3(width, 0, 0), Vec3(0, width, 0), Vec3(0, 0, width));
+    NonbondedForce* nbforce = new NonbondedForce();
+    nbforce->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nbforce->setCutoffDistance(0.7);
+    ATMForce* atm = new ATMForce(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+    double spacing = width/6.0;
+    double offset = spacing/5.0;
+    vector<Vec3> positions;
+    for (int i = 0; i < 6; i++)
+        for (int j = 0; j < 6; j++)
+            for (int k = 0; k < 6; k++) {
+	        positions.push_back(Vec3(spacing*i+offset, spacing*j+offset, spacing*k+offset));
+		system.addParticle(10.0);
+		nbforce->addParticle(0, 0.3, 1.0);
+		atm->addParticle(Vec3(0,0,0));
+            }
+    //places first particle almost on top of another particle in displaced system
+    atm->setParticleParameters(0, Vec3(spacing+1.e-4, 0, 0), Vec3(0.0, 0, 0));
+    system.addForce(nbforce);
+    atm->addForce(XmlSerializer::clone<Force>(*nbforce));
+    system.removeForce(0);
+    system.addForce(atm);
+    LangevinMiddleIntegrator integrator(300, 1.0, 0.004);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setParameter(ATMForce::Lambda1(), lambda);
+    context.setParameter(ATMForce::Lambda2(), lambda);
+    integrator.step(10);
+    State state = context.getState( State::Energy | State::Forces | State::Positions | State::ParameterDerivatives, false );
+    double epot = state.getPotentialEnergy();
+    atm->getPerturbationEnergy(context, u1, u0, energy);
+    double epert = u1 - u0;
+    vector<Vec3> positions2 = state.getPositions();
+    ASSERT( fabs( positions[0][0]   - positions2[0][0]) < width )  ;
+}
+
 
 
 void testParticlesCustomExpressionLinear() {
@@ -546,6 +588,7 @@ int main(int argc, char* argv[]) {
         test2Particles2Displacement0();
         test2ParticlesSoftCore();
         testNonbonded();
+	testNonbondedwithEndpointClash();
         testParticlesCustomExpressionLinear();
         testParticlesCustomExpressionSoftplus();
         testLargeSystem();
