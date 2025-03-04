@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2012-2017 Stanford University and the Authors.      *
+ * Portions copyright (c) 2012-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,6 +47,7 @@ ReferenceVirtualSites::ReferenceVirtualSites(const System& system) {
     while (sites.size() > 0) {
         if (sites.size() == remainingSites)
             throw OpenMMException("Virtual site definitions are circular");
+        remainingSites = sites.size();
         for (auto index = sites.begin(); index != sites.end();) {
             const VirtualSite& site = system.getVirtualSite(*index);
             bool canCompute = true;
