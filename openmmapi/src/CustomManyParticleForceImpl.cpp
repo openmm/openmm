@@ -158,20 +158,28 @@ map<string, double> CustomManyParticleForceImpl::getDefaultParameters() {
 ParsedExpression CustomManyParticleForceImpl::prepareExpression(const CustomManyParticleForce& force, const map<string, CustomFunction*>& customFunctions) {
     CustomManyParticleForceImpl::FunctionPlaceholder distance(2);
     CustomManyParticleForceImpl::FunctionPlaceholder angle(3);
+    CustomManyParticleForceImpl::FunctionPlaceholder vectorangle(4);
     CustomManyParticleForceImpl::FunctionPlaceholder dihedral(4);
     CustomManyParticleForceImpl::FunctionPlaceholder pointdistance(6);
     CustomManyParticleForceImpl::FunctionPlaceholder pointangle(9);
+    CustomManyParticleForceImpl::FunctionPlaceholder pointvectorangle(12);
     CustomManyParticleForceImpl::FunctionPlaceholder pointdihedral(12);
+    CustomManyParticleForceImpl::FunctionPlaceholder arrayvectorangle(6);
     map<string, CustomFunction*> functions = customFunctions;
     functions["distance"] = &distance;
     functions["angle"] = &angle;
+    functions["angle4"] = &vectorangle;
     functions["dihedral"] = &dihedral;
     if (functions.find("pointdistance") == functions.end())
         functions["pointdistance"] = &pointdistance;
     if (functions.find("pointangle") == functions.end())
         functions["pointangle"] = &pointangle;
+    if (functions.find("pointvectorangle") == functions.end())
+        functions["pointvectorangle"] = &pointvectorangle;
     if (functions.find("pointdihedral") == functions.end())
         functions["pointdihedral"] = &pointdihedral;
+    if (functions.find("vectorangle") == functions.end())
+        functions["vectorangle"] = &arrayvectorangle;
     ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions);
     map<string, int> atoms;
     set<string> variables;
@@ -202,7 +210,7 @@ ExpressionTreeNode CustomManyParticleForceImpl::replaceFunctions(const Expressio
     if (op.getId() == Operation::VARIABLE && variables.find(op.getName()) == variables.end())
         throw OpenMMException("CustomManyParticleForce: Unknown variable '"+op.getName()+"'");
     vector<ExpressionTreeNode> children;
-    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "dihedral")) {
+    if (op.getId() != Operation::CUSTOM || (op.getName() != "distance" && op.getName() != "angle" && op.getName() != "angle4" && op.getName() != "dihedral")) {
         // The arguments are not particle identifiers, so process its children.
 
         for (auto& child : node.getChildren())
@@ -237,6 +245,8 @@ ExpressionTreeNode CustomManyParticleForceImpl::replaceFunctions(const Expressio
         return ExpressionTreeNode(new Operation::Custom("pointdistance", functions.at("pointdistance")->clone()), children);
     if (op.getName() == "angle")
         return ExpressionTreeNode(new Operation::Custom("pointangle", functions.at("pointangle")->clone()), children);
+    if (op.getName() == "angle4")
+        return ExpressionTreeNode(new Operation::Custom("pointvectorangle", functions.at("pointvectorangle")->clone()), children);
     if (op.getName() == "dihedral")
         return ExpressionTreeNode(new Operation::Custom("pointdihedral", functions.at("pointdihedral")->clone()), children);
     throw OpenMMException("Internal error.  Unexpected function '"+op.getName()+"'");

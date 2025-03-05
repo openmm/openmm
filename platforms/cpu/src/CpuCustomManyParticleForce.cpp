@@ -53,6 +53,7 @@ CpuCustomManyParticleForce::CpuCustomManyParticleForce(const CustomManyParticleF
 
     functions["pointdistance"] = new ReferencePointDistanceFunction(force.usesPeriodicBoundaryConditions(), &boxVectorsRef);
     functions["pointangle"] = new ReferencePointAngleFunction(force.usesPeriodicBoundaryConditions(), &boxVectorsRef);
+    functions["pointvectorangle"] = new ReferencePointVectorAngleFunction(force.usesPeriodicBoundaryConditions(), &boxVectorsRef);
     functions["pointdihedral"] = new ReferencePointDihedralFunction(force.usesPeriodicBoundaryConditions(), &boxVectorsRef);
 
     // Parse the expression and create the objects used to calculate the interaction.

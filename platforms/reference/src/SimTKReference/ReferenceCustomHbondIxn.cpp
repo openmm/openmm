@@ -25,6 +25,7 @@
 #include <string.h>
 #include <sstream>
 #include <utility>
+#include <iostream>
 
 #include "SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
@@ -35,6 +36,7 @@ using std::pair;
 using std::set;
 using std::string;
 using std::stringstream;
+using std::iostream;
 using std::vector;
 using namespace OpenMM;
 
@@ -46,13 +48,15 @@ using namespace OpenMM;
 
 ReferenceCustomHbondIxn::ReferenceCustomHbondIxn(const vector<vector<int> >& donorAtoms, const vector<vector<int> >& acceptorAtoms,
             const Lepton::ParsedExpression& energyExpression, const vector<string>& donorParameterNames, const vector<string>& acceptorParameterNames,
-            const map<string, vector<int> >& distances, const map<string, vector<int> >& angles, const map<string, vector<int> >& dihedrals) :
+            const map<string, vector<int> >& distances, const map<string, vector<int> >& angles, const map<string, vector<int> >& vectorangles, const map<string, vector<int> >& dihedrals) :
             cutoff(false), periodic(false), donorAtoms(donorAtoms), acceptorAtoms(acceptorAtoms), energyExpression(energyExpression.createProgram()),
             donorParamNames(donorParameterNames), acceptorParamNames(acceptorParameterNames) {
     for (auto& term : distances)
         distanceTerms.push_back(ReferenceCustomHbondIxn::DistanceTermInfo(term.first, term.second, energyExpression.differentiate(term.first).optimize().createProgram()));
     for (auto& term : angles)
         angleTerms.push_back(ReferenceCustomHbondIxn::AngleTermInfo(term.first, term.second, energyExpression.differentiate(term.first).optimize().createProgram()));
+    for (auto& term : vectorangles)
+        vectorangleTerms.push_back(ReferenceCustomHbondIxn::VectorAngleTermInfo(term.first, term.second, energyExpression.differentiate(term.first).optimize().createProgram()));
     for (auto& term : dihedrals)
         dihedralTerms.push_back(ReferenceCustomHbondIxn::DihedralTermInfo(term.first, term.second, energyExpression.differentiate(term.first).optimize().createProgram()));
 }
@@ -192,6 +196,12 @@ void ReferenceCustomHbondIxn::calculateOneIxn(int donor, int acceptor, vector<Ve
         computeDelta(atoms[term.p3], atoms[term.p2], term.delta2, atomCoordinates);
         variables[term.name] = computeAngle(term.delta1, term.delta2);
     }
+    for (int i = 0; i < (int) vectorangleTerms.size(); i++) {
+        const VectorAngleTermInfo& term = vectorangleTerms[i];
+        computeDelta(atoms[term.p1], atoms[term.p2], term.delta1, atomCoordinates);
+        computeDelta(atoms[term.p3], atoms[term.p4], term.delta2, atomCoordinates);
+        variables[term.name] = computeAngle(term.delta1, term.delta2);
+    }
     for (int i = 0; i < (int) dihedralTerms.size(); i++) {
         const DihedralTermInfo& term = dihedralTerms[i];
         computeDelta(atoms[term.p2], atoms[term.p1], term.delta1, atomCoordinates);
@@ -238,6 +248,35 @@ void ReferenceCustomHbondIxn::calculateOneIxn(int donor, int acceptor, vector<Ve
             forces[atoms[term.p1]][i] += deltaCrossP[0][i];
             forces[atoms[term.p2]][i] += deltaCrossP[1][i];
             forces[atoms[term.p3]][i] += deltaCrossP[2][i];
+        }
+    }
+
+    // Apply forces based on vectorangles.
+    
+    for (int i = 0; i < (int) vectorangleTerms.size(); i++) {
+        const VectorAngleTermInfo& term = vectorangleTerms[i];
+        double dEdTheta = term.forceExpression.evaluate(variables);
+        double thetaCross[ReferenceForce::LastDeltaRIndex];
+        SimTKOpenMMUtilities::crossProductVector3(term.delta1, term.delta2, thetaCross);
+        double lengthThetaCross = sqrt(DOT3(thetaCross, thetaCross));
+        if (lengthThetaCross < 1.0e-06)
+            lengthThetaCross = 1.0e-06;
+        double term0 = dEdTheta/(term.delta1[ReferenceForce::R2Index]*lengthThetaCross);
+        double term3 = dEdTheta/(term.delta2[ReferenceForce::R2Index]*lengthThetaCross);
+        double deltaCrossP[4][3];
+        SimTKOpenMMUtilities::crossProductVector3(term.delta1, thetaCross, deltaCrossP[0]);
+        SimTKOpenMMUtilities::crossProductVector3(term.delta2, thetaCross, deltaCrossP[3]);
+        for (int i = 0; i < 3; i++) {
+            deltaCrossP[0][i] *= term0;
+            deltaCrossP[3][i] *= term3;
+            deltaCrossP[1][i] = -deltaCrossP[0][i];
+            deltaCrossP[2][i] = -deltaCrossP[3][i];
+        }
+        for (int i = 0; i < 3; i++) {
+            forces[atoms[term.p1]][i] += deltaCrossP[0][i];
+            forces[atoms[term.p2]][i] += deltaCrossP[1][i];
+            forces[atoms[term.p3]][i] += deltaCrossP[2][i];
+            forces[atoms[term.p4]][i] += deltaCrossP[3][i];
         }
     }
 

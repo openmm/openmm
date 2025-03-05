@@ -38,26 +38,38 @@ using namespace Lepton;
 using namespace std;
 
 ExpressionTreeNode::ExpressionTreeNode(Operation* operation, const vector<ExpressionTreeNode>& children) : operation(operation), children(children) {
-    if (operation->getNumArguments() != children.size())
-        throw Exception("wrong number of arguments to function: "+operation->getName());
+    if (operation->getNumArguments() != children.size()) {
+        throw Exception("Wrong number of arguments to function '" + operation->getName() +
+                        "'. Expected: " + std::to_string(operation->getNumArguments()) +
+                        ", Provided: " + std::to_string(children.size()));
+    }
 }
 
 ExpressionTreeNode::ExpressionTreeNode(Operation* operation, const ExpressionTreeNode& child1, const ExpressionTreeNode& child2) : operation(operation) {
     children.push_back(child1);
     children.push_back(child2);
-    if (operation->getNumArguments() != children.size())
-        throw Exception("wrong number of arguments to function: "+operation->getName());
+    if (operation->getNumArguments() != children.size()) {
+        throw Exception("Wrong number of arguments to function '" + operation->getName() +
+                        "'. Expected: " + std::to_string(operation->getNumArguments()) +
+                        ", Provided: " + std::to_string(children.size()));
+    }
 }
 
 ExpressionTreeNode::ExpressionTreeNode(Operation* operation, const ExpressionTreeNode& child) : operation(operation) {
     children.push_back(child);
-    if (operation->getNumArguments() != children.size())
-        throw Exception("wrong number of arguments to function: "+operation->getName());
+    if (operation->getNumArguments() != children.size()) {
+        throw Exception("Wrong number of arguments to function '" + operation->getName() +
+                        "'. Expected: " + std::to_string(operation->getNumArguments()) +
+                        ", Provided: " + std::to_string(children.size()));
+    }
 }
 
 ExpressionTreeNode::ExpressionTreeNode(Operation* operation) : operation(operation) {
-    if (operation->getNumArguments() != children.size())
-        throw Exception("wrong number of arguments to function: "+operation->getName());
+    if (operation->getNumArguments() != children.size()) {
+        throw Exception("Wrong number of arguments to function '" + operation->getName() +
+                        "'. Expected: " + std::to_string(operation->getNumArguments()) +
+                        ", Provided: " + std::to_string(children.size()));
+    }
 }
 
 ExpressionTreeNode::ExpressionTreeNode(const ExpressionTreeNode& node) : operation(node.operation == NULL ? NULL : node.operation->clone()), children(node.getChildren()) {
