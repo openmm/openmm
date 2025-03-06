@@ -496,8 +496,8 @@ END""", file=prm_file)
                     system = psf.createSystem(prm)
                     force_type = CustomTorsionForce if test_improper else PeriodicTorsionForce
                     force, = (force for force in system.getForces() if isinstance(force, force_type))
-                    assert force.getNumTorsions() == 1
-                    assert force.getTorsionParameters(0)[:4] == [0, 1, 2, 3]
+                    self.assertEqual(force.getNumTorsions(), 1)
+                    self.assertEqual(force.getTorsionParameters(0)[:4], [0, 1, 2, 3])
 
     def test_Residues(self):
         """Test that residues are read correctly, even if they have the same RESID while being in separate segments."""
