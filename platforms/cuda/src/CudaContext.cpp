@@ -189,7 +189,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     contextIsValid = true;
     ContextSelector selector(*this);
     CHECK_RESULT(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED));
-    if (contextIndex > 0) {
+    if (contextIndex > 0 && originalContext == NULL) {
         int canAccess;
         cuDeviceCanAccessPeer(&canAccess, getDevice(), platformData.contexts[0]->getDevice());
         if (canAccess) {
