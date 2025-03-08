@@ -81,8 +81,18 @@ void CustomCVForceImpl::initialize(ContextImpl& context) {
 }
 
 double CustomCVForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups) {
-    if ((groups&(1<<forceGroup)) != 0)
-        return kernel.getAs<CalcCustomCVForceKernel>().execute(context, getContextImpl(*innerContext), includeForces, includeEnergy);
+    if (!includeForces && !includeEnergy) return 0.0;
+
+    if ((groups&(1<<forceGroup)) != 0) {
+        double energy = kernel.getAs<CalcCustomCVForceKernel>().execute(context, getContextImpl(*innerContext), includeForces, includeEnergy);
+
+        context.collectiveVariableValues.resize(innerSystem.getNumForces());
+        for (int i = 0; i < innerSystem.getNumForces(); i++)
+          context.collectiveVariableValues[i] = innerContext->getState(State::Energy, false, 1 << i).getPotentialEnergy();
+        
+        return energy;
+        
+    }
     return 0.0;
 }
 
