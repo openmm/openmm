@@ -324,6 +324,8 @@ UNITS = {
 ("HippoNonbondedForce",                 "getInducedDipoles")                             :  ( None, ()),
 ("HippoNonbondedForce",                 "getLabFramePermanentDipoles")                   :  ( None, ()),
     
+("Context", "getCVTimeSeries") : (None, ()),
+("Context", "getGlobalVariableTimeSeries") : (None, ()),
 ("Context", "getParameter") : (None, ()),
 ("Context", "getParameters") : (None, ()),
 ("Context", "getMolecules") : (None, ()),

@@ -284,6 +284,14 @@ public:
      * belong to exactly one molecule.
      */
     const std::vector<std::vector<int> >& getMolecules() const;
+    /**
+     * If CustomCVForce is defined, it will return the time series of CollectiveVariables of size equal to the length of the last step (or size 0)
+     */
+    std::vector<std::vector<double>> getCVTimeSeries();
+    /**
+     * If CustomIntegrator is defined, it will return the time series of GlobalVariables of size equal to the length of the last step (or size 0)
+     */
+    std::vector<std::vector<double>> getGlobalVariableTimeSeries();
 private:
     friend class ContextImpl;
     friend class Force;

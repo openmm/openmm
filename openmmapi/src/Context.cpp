@@ -245,6 +245,14 @@ void Context::computeVirtualSites() {
     impl->computeVirtualSites();
 }
 
+std::vector<std::vector<double>> Context::getCVTimeSeries() {
+    return impl->getCVTimeSeries();
+}
+
+std::vector<std::vector<double>> Context::getGlobalVariableTimeSeries() {
+    return impl->getGlobalVariableTimeSeries();
+}
+
 void Context::reinitialize(bool preserveState) {
     const System& system = impl->getSystem();
     Integrator& integrator = impl->getIntegrator();

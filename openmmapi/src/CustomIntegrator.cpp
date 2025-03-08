@@ -143,8 +143,14 @@ void CustomIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");  
     globalsAreCurrent = false;
+    context->CVTimeSeriesBuffer.clear();
+    context->collectiveVariableValues.clear();
+    context->globalVariableTimeSeriesBuffer.clear();
     for (int i = 0; i < steps; ++i) {
+        context->updateGlobalVariablesCache();
         kernel.getAs<IntegrateCustomStepKernel>().execute(*context, *this, forcesAreValid);
+        if (context->collectiveVariableValues.size() > 0) 
+          context->CVTimeSeriesBuffer.push_back(context->collectiveVariableValues);
     }
 }
 

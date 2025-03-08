@@ -358,10 +358,14 @@ vector<string> NoseHooverIntegrator::getKernelNames() {
 void NoseHooverIntegrator::step(int steps) {
     if (context == NULL)
         throw OpenMMException("This Integrator is not bound to a context!");
+    context->CVTimeSeriesBuffer.clear();
+    context->collectiveVariableValues.clear();
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForcesAndEnergy(true, false, getIntegrationForceGroups());
         kernel.getAs<IntegrateNoseHooverStepKernel>().execute(*context, *this);
+        if (context->collectiveVariableValues.size() > 0) 
+          context->CVTimeSeriesBuffer.push_back(context->collectiveVariableValues);
     }
 }
 

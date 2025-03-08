@@ -11,6 +11,7 @@
 namespace std {
   %template(pairii) pair<int,int>;
   %template(vectord) vector<double>;
+  %template(vectordd) vector< vector<double> >;
   %template(vectorddd) vector< vector< vector<double> > >;
   %template(vectori) vector<int>;
   %template(vectorii) vector < vector<int> >;
