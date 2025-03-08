@@ -94,6 +94,13 @@ SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern librar
 IF(X86 OR ARM)
     SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} libraries/vecmath)
 ENDIF()
+IF(NOT WIN32)
+    IF (NOT ANDROID)
+        SET(PTHREADS_LIB pthread)
+        # in linux, even in static builds we link against the dynamic object (since its tied to libc versions)
+        SET(PTHREADS_LIB_STATIC pthread)
+    ENDIF (NOT ANDROID)
+ENDIF()
 
 SET (CMAKE_CXX_STANDARD 11)
 

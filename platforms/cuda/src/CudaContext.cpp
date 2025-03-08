@@ -547,11 +547,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
 
     stringstream tempFileName;
     tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
-#ifdef WIN32
-    tempFileName << "_" << GetCurrentProcessId();
-#else
-    tempFileName << "_" << getpid();
-#endif
+    tempFileName << "_" << this_thread::get_id();
     string outputFile = (tempDir+tempFileName.str()+".ptx");
 
     // Split the command line flags into an array of options.
