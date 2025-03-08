@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,10 +40,12 @@
 #include "openmm/common/IntegrationUtilities.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include "openmm/Vec3.h"
-#include <pthread.h>
+#include <condition_variable>
 #include <map>
+#include <mutex>
 #include <queue>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace OpenMM {
@@ -485,7 +487,7 @@ public:
      * Get the thread used by this context for executing parallel computations.
      */
     WorkThread& getWorkThread() {
-        return *thread;
+        return *workThread;
     }
     /**
      * Get the names of all parameters with respect to which energy derivatives are computed.
@@ -555,7 +557,7 @@ protected:
     std::vector<ReorderListener*> reorderListeners;
     std::vector<ForcePreComputation*> preComputations;
     std::vector<ForcePostComputation*> postComputations;
-    WorkThread* thread;
+    WorkThread* workThread;
 };
 
 struct ComputeContext::Molecule {
@@ -610,9 +612,9 @@ private:
     std::queue<ComputeContext::WorkTask*> tasks;
     bool waiting, finished, threwException;
     OpenMMException stashedException;
-    pthread_mutex_t queueLock;
-    pthread_cond_t waitForTaskCondition, queueEmptyCondition;
-    pthread_t thread;
+    std::mutex queueLock;
+    std::condition_variable waitForTaskCondition, queueEmptyCondition;
+    std::thread workThread;
 };
 
 /**

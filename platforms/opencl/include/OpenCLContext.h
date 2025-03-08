@@ -48,7 +48,6 @@
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
 #endif
-#include <pthread.h>
 #include "opencl.hpp"
 #include "openmm/common/windowsExportCommon.h"
 #include "OpenCLArray.h"
