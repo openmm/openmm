@@ -240,6 +240,15 @@ public:
      * to change, false otherwise
      */
     bool updateContextState();
+
+    vector<vector<double>> getCVTimeSeries() {
+        return CVTimeSeriesBuffer;
+    }
+
+    vector<vector<double>> getGlobalVariableTimeSeries() {
+        return globalVariableTimeSeriesBuffer;
+    }
+    
     /**
      * Get the list of ForceImpls belonging to this ContextImpl.
      */
