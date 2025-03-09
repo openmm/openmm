@@ -89,7 +89,7 @@ double CustomCVForceImpl::calcForcesAndEnergy(ContextImpl& context, bool include
         context.collectiveVariableValues.resize(innerSystem.getNumForces());
         for (int i = 0; i < innerSystem.getNumForces(); i++)
           context.collectiveVariableValues[i] = innerContext->getState(State::Energy, false, 1 << i).getPotentialEnergy();
-        
+
         return energy;
         
     }
@@ -121,12 +121,7 @@ map<string, double> CustomCVForceImpl::getDefaultParameters() {
 }
 
 void CustomCVForceImpl::getCollectiveVariableValues(ContextImpl& context, vector<double>& values) {
-    kernel.getAs<CalcCustomCVForceKernel>().copyState(context, getContextImpl(*innerContext));
-    values.clear();
-    for (int i = 0; i < innerSystem.getNumForces(); i++) {
-        double value = innerContext->getState(State::Energy, false, 1<<i).getPotentialEnergy();
-        values.push_back(value);
-    }
+    values = context.collectiveVariableValues;
 }
 
 Context& CustomCVForceImpl::getInnerContext() {

@@ -49,6 +49,8 @@ namespace OpenMM {
  */
 
 class OPENMM_EXPORT CustomCVForceImpl : public ForceImpl {
+private:
+    vector<double> cacheValues;
 public:
     CustomCVForceImpl(const CustomCVForce& owner);
     ~CustomCVForceImpl();
