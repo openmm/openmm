@@ -146,8 +146,10 @@ void CustomIntegrator::step(int steps) {
     context->CVTimeSeriesBuffer.clear();
     context->globalVariableTimeSeriesBuffer.clear();
     for (int i = 0; i < steps; ++i) {
-        kernel.getAs<IntegrateCustomStepKernel>().execute(*context, *this, forcesAreValid);
         context->updateGlobalVariablesCache();
+        kernel.getAs<IntegrateCustomStepKernel>().execute(*context, *this, forcesAreValid);
+        if (context->collectiveVariableValues.size() > 0) 
+          context->CVTimeSeriesBuffer.push_back(context->collectiveVariableValues);
     }
 }
 

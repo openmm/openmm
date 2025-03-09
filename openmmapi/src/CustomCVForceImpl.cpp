@@ -89,8 +89,6 @@ double CustomCVForceImpl::calcForcesAndEnergy(ContextImpl& context, bool include
         context.collectiveVariableValues.resize(innerSystem.getNumForces());
         for (int i = 0; i < innerSystem.getNumForces(); i++)
           context.collectiveVariableValues[i] = innerContext->getState(State::Energy, false, 1 << i).getPotentialEnergy();
-        
-        context.CVTimeSeriesBuffer.push_back(context.collectiveVariableValues);
 
         return energy;
         
