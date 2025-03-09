@@ -209,6 +209,28 @@ ContextImpl::~ContextImpl() {
     platform->contextDestroyed(*this);
 }
 
+void ContextImpl::updateGlobalVariablesCache() {
+
+    if (CustomIntegrator* customIntegrator = dynamic_cast<CustomIntegrator*>(&getIntegrator())) {
+
+        int currentStep = getTime();
+
+        if (currentStep == lastUpdatedStep)
+            return;
+
+        lastUpdatedStep = currentStep;
+
+        globalVariableValues.resize(customIntegrator->getNumGlobalVariables());
+
+        for (int i = 0; i < customIntegrator->getNumGlobalVariables(); i++) {
+            globalVariableValues[i] = customIntegrator->getGlobalVariable(i);
+        }
+        globalVariableTimeSeriesBuffer.push_back(globalVariableValues);
+
+    }
+
+}
+
 double ContextImpl::getTime() const {
     return updateStateDataKernel.getAs<const UpdateStateDataKernel>().getTime(*this);
 }

@@ -52,6 +52,13 @@ class System;
 
 class OPENMM_EXPORT ContextImpl {
 public:
+    State state;
+    vector<double> collectiveVariableValues;
+    vector<double> globalVariableValues;
+    vector<vector<double>> CVTimeSeriesBuffer;
+    vector<vector<double>> globalVariableTimeSeriesBuffer;
+    int lastUpdatedStep = -1;
+    void updateGlobalVariablesCache();
     /**
      * Create an ContextImpl for a Context;
      */
