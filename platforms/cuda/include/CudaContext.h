@@ -35,7 +35,6 @@
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
 #endif
-#include <pthread.h>
 #include <cuda.h>
 #include <builtin_types.h>
 #include <vector_functions.h>

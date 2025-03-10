@@ -46,7 +46,6 @@
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
 #endif
-#include <pthread.h>
 #include <hip/hip_runtime.h>
 #include "openmm/common/windowsExportCommon.h"
 #include "HipArray.h"
