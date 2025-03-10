@@ -94,13 +94,6 @@ SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern librar
 IF(X86 OR ARM)
     SET(OPENMM_SOURCE_SUBDIRS ${OPENMM_SOURCE_SUBDIRS} libraries/vecmath)
 ENDIF()
-IF(NOT WIN32)
-    IF (NOT ANDROID)
-        SET(PTHREADS_LIB pthread)
-        # in linux, even in static builds we link against the dynamic object (since its tied to libc versions)
-        SET(PTHREADS_LIB_STATIC pthread)
-    ENDIF (NOT ANDROID)
-ENDIF()
 
 SET (CMAKE_CXX_STANDARD 11)
 
@@ -134,9 +127,9 @@ ELSEIF(MSVC)
     # Explicitly suppress warnings 4305 and 4244.
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4305 /wd4244")
 ELSEIF(X86)
-    SET(EXTRA_COMPILE_FLAGS "-msse2")
+    SET(EXTRA_COMPILE_FLAGS "-msse2 -pthread")
 ELSE()
-    SET(EXTRA_COMPILE_FLAGS)
+    SET(EXTRA_COMPILE_FLAGS "-pthread")
 ENDIF()
 
 IF(UNIX AND NOT CMAKE_BUILD_TYPE)
