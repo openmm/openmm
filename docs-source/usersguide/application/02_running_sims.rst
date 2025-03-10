@@ -13,7 +13,7 @@ A First Example
 Let’s begin with our first example of an OpenMM script. It loads a PDB file
 called :file:`input.pdb` that defines a biomolecular system, parameterizes it using the Amber14 force field and TIP3P-FB water
 model, energy minimizes it, simulates it for 10,000 steps with a Langevin
-integrator, and saves a snapshot frame to a PDB file called :file:`output.pdb` every 1000 time
+integrator, and saves a snapshot frame to a DCD file called :file:`output.dcd` every 1000 time
 steps.
 
 .. samepage::
@@ -32,7 +32,7 @@ steps.
         simulation = Simulation(pdb.topology, system, integrator)
         simulation.context.setPositions(pdb.positions)
         simulation.minimizeEnergy()
-        simulation.reporters.append(PDBReporter('output.pdb', 1000))
+        simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
                 potentialEnergy=True, temperature=True))
         simulation.step(10000)
@@ -152,12 +152,12 @@ good idea to do this at the start of a simulation, since the coordinates in the
 PDB file might produce very large forces.
 ::
 
-    simulation.reporters.append(PDBReporter('output.pdb', 1000))
+    simulation.reporters.append(DCDReporter('output.dcd', 1000))
 
 This line creates a “reporter” to generate output during the simulation, and
-adds it to the :class:`Simulation` object’s list of reporters.  A :class:`PDBReporter` writes
-structures to a PDB file.  We specify that the output file should be called
-:file:`output.pdb`, and that a structure should be written every 1000 time steps.
+adds it to the :class:`Simulation` object’s list of reporters.  A :class:`DCDReporter` writes
+structures to a DCD file.  We specify that the output file should be called
+:file:`output.dcd`, and that a structure should be written every 1000 time steps.
 ::
 
     simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
@@ -169,13 +169,13 @@ information every 1000 time steps: the current step index, the potential energy
 of the system, and the temperature.  We specify :code:`stdout` (not in
 quotes) as the output file, which means to write the results to the console.  We
 also could have given a file name (in quotes), just as we did for the
-:class:`PDBReporter`, to write the information to a file.
+:class:`DCDReporter`, to write the information to a file.
 ::
 
     simulation.step(10000)
 
 Finally, we run the simulation, integrating the equations of motion for 10,000
-time steps.  Once it is finished, you can load the PDB file into any program you
+time steps.  Once it is finished, you can load the DCD file into any program you
 want for analysis and visualization (VMD_, PyMol_, AmberTools_, etc.).
 
 .. _VMD: http://www.ks.uiuc.edu/Research/vmd/
@@ -210,7 +210,7 @@ found in OpenMM’s :file:`examples` folder with the name :file:`simulateAmber.p
         simulation = Simulation(prmtop.topology, system, integrator)
         simulation.context.setPositions(inpcrd.positions)
         simulation.minimizeEnergy()
-        simulation.reporters.append(PDBReporter('output.pdb', 1000))
+        simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
                 potentialEnergy=True, temperature=True))
         simulation.step(10000)
@@ -300,7 +300,7 @@ with the name :file:`simulateGromacs.py`.
         simulation = Simulation(top.topology, system, integrator)
         simulation.context.setPositions(gro.positions)
         simulation.minimizeEnergy()
-        simulation.reporters.append(PDBReporter('output.pdb', 1000))
+        simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
                 potentialEnergy=True, temperature=True))
         simulation.step(10000)
@@ -358,7 +358,7 @@ on the :class:`CharmmPsfFile`.
         simulation = Simulation(psf.topology, system, integrator)
         simulation.context.setPositions(pdb.positions)
         simulation.minimizeEnergy()
-        simulation.reporters.append(PDBReporter('output.pdb', 1000))
+        simulation.reporters.append(DCDReporter('output.dcd', 1000))
         simulation.reporters.append(StateDataReporter(stdout, 1000, step=True,
                 potentialEnergy=True, temperature=True))
         simulation.step(10000)
@@ -1384,15 +1384,15 @@ To save a trajectory, just add a “reporter” to the simulation, as shown in t
 example scripts above:
 ::
 
-    simulation.reporters.append(PDBReporter('output.pdb', 1000))
+    simulation.reporters.append(DCDReporter('output.dcd', 1000))
 
-The two parameters of the :class:`PDBReporter` are the output filename and how often (in
-number of time steps) output structures should be written.  To use PDBx/mmCIF,
-DCD or XTC format, just replace :class:`PDBReporter` with :class:`PDBxReporter`, 
-:class:`DCDReporter` or :class:`XTCReporter`.  The parameters represent the same values:
+The two parameters of the :class:`DCDReporter` are the output filename and how often (in
+number of time steps) output structures should be written.  To use PDB, PDBx/mmCIF,
+or XTC format, just replace :class:`DCDReporter` with :class:`PDBReporter`, :class:`PDBxReporter`, 
+or :class:`XTCReporter`.  The parameters represent the same values:
 ::
 
-    simulation.reporters.append(DCDReporter('output.dcd', 1000))
+    simulation.reporters.append(XTCReporter('output.xtc', 1000))
 
 Recording Other Data
 ====================
