@@ -59,7 +59,7 @@ namespace OpenMM {
  * and please cite it to support our work if you use this software in your research.
  *
  * The ATMForce implements an arbitrary potential energy function that depends on the potential
- * energies (u0 and u1) of the system before and after a set of atoms are displaced by a specified amount.
+ * energies (u0 and u1) of the system before and after a set of atoms are displaced by some amount.
  * For example, you might displace a molecule from the solvent bulk to a receptor binding site to simulate 
  * a binding process.  The potential energy function typically also depends on one or more parameters that
  * are dialed to implement alchemical transformations.
@@ -88,7 +88,25 @@ namespace OpenMM {
  *    atm->addForce(force);
  * \endverbatim
  *
- * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
+ * In the example above, displacements are specified by fixed lab-frame vectors. ATMForce also supports variable displacements in internal
+ * system coordinates in terms of vector distances between specified particles. For example, the following code creates an ATMForce based on 
+ * the change in energy when the first particle is displaced by the vector distance from particle 1 to particle 2:
+ *
+ * \verbatim embed:rst:leading-asterisk
+ * .. code-block:: cpp
+ *
+ *    ATMForce *atmforce = new ATMForce("u0 + Lambda*(u1 - u0)");
+ *    atm->addGlobalParameter("Lambda", 0.5);
+ *    atm->addParticle(2, 1);
+ *    atm->addParticle();
+ *    atm->addParticle();
+ *    CustomBondForce* force = new CustomBondForce("0.5*r^2");
+ *    atm->addForce(force);
+ * \endverbatim
+ *
+ * where addParticle() without arguments adds a particle with zero displacement. 
+ * 
+ * Energy expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, atan2, sinh, cosh, tanh, erf, erfc, min, max, abs, floor, ceil, step, delta,
  * select.  All trigonometric functions
  * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  delta(x) = 1 if x is 0, 0 otherwise.
@@ -221,7 +239,7 @@ public:
      */
     Force& getForce(int index) const;
     /**
-     * Add a particle to the force.
+     * Add a particle to the force with fixed lab frame displacements
      *
      * All of the particles in the System must be added to the ATMForce in the same order
      * as they appear in the System.
@@ -230,23 +248,54 @@ public:
      * @param displacement0    the displacement of the particle for the initial state in nm
      * @return                 the index of the particle that was added
      */
-    int addParticle(const Vec3& displacement1, const Vec3& displacement0=Vec3());
+    int addParticle(const Vec3& displacement1=Vec3(), const Vec3& displacement0=Vec3());
+    /**
+     * Add a particle to the force with displacements as the vector distances between specified particles
+     *
+     * All of the particles in the System must be added to the ATMForce in the same order
+     * as they appear in the System.
+     *
+     * @param pDestination1   the index of the destination particle for the displacement for the target state or -1 for no displacement
+     * @param pOrigin1        the index of the origin particle for the displacement for the target stateor -1 for no displacement
+     * @param pDestination0   the index of the destination particle for the displacement for the initial state or -1 for no displacement
+     * @param pOrigin0        the index of the origin particle for the displacement for the initial state or -1 for no displacement
+     * @return                the index of the particle that was added
+     */
+    int addParticle(int pDestination1, int pOrigin1, int pDestination0 = -1, int pOrigin0 = -1);
+
     /**
      * Get the parameters for a particle
      * 
      * @param index           the index in the force for the particle for which to get parameters
-     * @param displacement1   the displacement of the particle for the target state in nm
-     * @param displacement0   the displacement of the particle for the initial state in nm
+     * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
+     * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
+     * @param pDestination1   the index of the destination particle for the displacement for the target state or -1 for no displacement 
+     * @param pOrigin1        the index of the origin particle for the displacement for the target state or -1 for no displacement 
+     * @param pDestination0   the index of the destination particle for the displacement for the initial state or -1 for no displacement 
+     * @param pOrigin0        the index of the origin particle for the displacement for the initial state or -1 for no displacement 
      */
-    void getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0) const;
+    void getParticleParameters(int index, Vec3& displacement1, Vec3& displacement0,
+			       int& pDestination1, int& pOrigin1, int& pDestination0, int& pOrigin0 ) const;
+
     /**
-     * Set the parameters for a particle
+     * Set the displacements for a particle as fixed lab frame vectors
      * 
      * @param index           the index in the force of the particle for which to set parameters
-     * @param displacement1   the displacement of the particle for the target state in nm
-     * @param displacement0   the displacement of the particle for the initial state in nm
+     * @param displacement1   the fixed lab-frame displacement of the particle for the target state in nm
+     * @param displacement0   the fixed lab-frame displacement of the particle for the initial state in nm
      */
     void setParticleParameters(int index, const Vec3& displacement1, const Vec3& displacement0=Vec3());
+    /**
+     * Set the displacements for a particle as the vector distances between specified particles
+     * 
+     * @param index           the index in the force of the particle for which to set parameters
+     * @param pDestination1   the index of the destination particle for the displacement for the target state or -1 for no displacement
+     * @param pOrigin1        the index of the origin particle for the displacement for the target state or -1 for no displacement
+     * @param pDestination0   the index of the destination particle for the displacement for the initial state or -1 for no displacement
+     * @param pOrigin0        the index of the origin particle for the displacement for the initial state or -1 for no  displacement
+     */
+    void setParticleParameters(int index, int pDestination1, int pOrigin1, int pDestination0, int pOrigin0 );
+
     /**
      * Add a new global parameter that the interaction may depend on.  The default value provided to
      * this method is the initial value of the parameter in newly created Contexts.  You can change
@@ -420,12 +469,15 @@ class ATMForce::ParticleInfo {
 public:
     int index;
     Vec3 displacement1, displacement0;
+    //variable displacements = pos[pDestination] - pos[pOrigin]
+    int pDestination1, pOrigin1, pDestination0, pOrigin0;
     ParticleInfo() : index(-1) {
     }
     ParticleInfo(int index) : index(index) {
     }
-    ParticleInfo(int index, Vec3 displacement1, Vec3 displacement0) :
-        index(index), displacement1(displacement1), displacement0(displacement0) {
+    ParticleInfo(int index, Vec3 displacement1, Vec3 displacement0, int pj1, int pi1, int pj0, int pi0 ) :
+        index(index), displacement1(displacement1), displacement0(displacement0),
+                      pDestination1(pj1), pOrigin1(pi1), pDestination0(pj0), pOrigin0(pi0) {
     }
 };
 
