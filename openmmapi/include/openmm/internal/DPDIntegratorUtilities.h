@@ -1,5 +1,5 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
+#ifndef OPENMM_DPDINTEGRATORUTILITIES_H_
+#define OPENMM_DPDINTEGRATORUTILITIES_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,56 +32,32 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CompoundIntegrator.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomCentroidBondForce.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomCVForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomManyParticleForce.h"
-#include "openmm/CustomNonbondedForce.h"
 #include "openmm/DPDIntegrator.h"
-#include "openmm/Force.h"
-#include "openmm/GayBerneForce.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LangevinMiddleIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/MonteCarloFlexibleBarostat.h"
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Context.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/RMSDForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/TabulatedFunction.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/NoseHooverIntegrator.h"
-#include "openmm/NoseHooverChain.h"
-#include "openmm/VirtualSite.h"
-#include "openmm/Platform.h"
-#include "openmm/serialization/XmlSerializer.h"
-#include "openmm/ATMForce.h"
+#include <vector>
 
-#endif /*OPENMM_H_*/
+namespace OpenMM {
+
+/**
+ * This class defines a set of utility functions that are useful in implementing DPDIntegrator.
+ */
+
+class OPENMM_EXPORT DPDIntegratorUtilities {
+public:
+    /**
+     * Create tables of the parameters to use for each pair of types.
+     * 
+     * @param integrator         the integrator to analyze
+     * @param numParticles       the number of particles in the System
+     * @param[out] numTypes      the number of unique particle types
+     * @param[out] particleType  the type of each particle, represented as an index between 0 and numTypes
+     * @param[out] friction      element [i][j] is the friction to use between particles of type i and j
+     * @param[out] cutoff        element [i][j] is the cutoff to use between particles of type i and j
+     * @param[out] maxCutoff     the maximum cutoff distance between any pair of particles
+     */
+    static void createTypeTables(const DPDIntegrator& integrator, int numParticles, int& numTypes, std::vector<int>& particleType,
+            std::vector<std::vector<double> >& friction, std::vector<std::vector<double> >& cutoff, double& maxCutoff);
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_DPDINTEGRATORUTILITIES_H_*/
