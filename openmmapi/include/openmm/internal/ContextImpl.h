@@ -259,6 +259,11 @@ public:
      */
     const std::vector<std::vector<int> >& getMolecules() const;
     /**
+     * Get a list of the particles in each constained group in the system.  Two particles are in the
+     * same group if they are connected by constraints or virtual sites.
+     */
+    const std::vector<std::vector<int> >& getConstrainedGroups() const;
+    /**
      * Create a checkpoint recording the current state of the Context.
      * 
      * @param stream    an output stream the checkpoint data should be written to
@@ -303,7 +308,7 @@ private:
     Integrator& integrator;
     std::vector<ForceImpl*> forceImpls;
     std::map<std::string, double> parameters;
-    mutable std::vector<std::vector<int> > molecules;
+    mutable std::vector<std::vector<int> > molecules, constrainedGroups;
     bool hasInitializedForces, hasSetPositions, integratorIsDeleted;
     int lastForceGroups;
     Platform* platform;

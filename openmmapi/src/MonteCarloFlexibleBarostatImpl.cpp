@@ -105,7 +105,7 @@ void MonteCarloFlexibleBarostatImpl::updateContextState(ContextImpl& context, bo
     if (owner.getScaleMoleculesAsRigid())
         numberOfScaledParticles = context.getMolecules().size();
     else
-        numberOfScaledParticles = context.getSystem().getNumParticles();
+        numberOfScaledParticles = context.getConstrainedGroups().size();
     double finalEnergy = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
     double kT = BOLTZ*context.getParameter(MonteCarloFlexibleBarostat::Temperature());
     double w0 = finalEnergy-initialEnergy;
