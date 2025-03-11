@@ -102,7 +102,7 @@ void ReferenceDPDDynamics::updatePart2(int numParticles, vector<Vec3>& atomCoord
             continue;
         double m = masses[i]*masses[j]/(masses[i]+masses[j]);
         double omega = 1.0-(r/cutoff);
-        double vscale = exp(-getDeltaT()*friction*omega*omega);
+        double vscale = exp(-getDeltaT()*2*friction*omega*omega);
         double noisescale = sqrt(1-vscale*vscale);
         Vec3 dir = Vec3(deltaR[ReferenceForce::XIndex], deltaR[ReferenceForce::YIndex], deltaR[ReferenceForce::ZIndex])/r;
         Vec3 v = velocities[j]-velocities[i];

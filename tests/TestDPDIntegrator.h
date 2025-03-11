@@ -32,6 +32,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "openmm/CustomExternalForce.h"
+#include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/DPDIntegrator.h"
@@ -111,6 +112,57 @@ void tesConservationLaws() {
         ASSERT_EQUAL_VEC(initialMomentum, momentum, 1e-5);
         ASSERT_EQUAL_TOL(energy, computeEnergy(context), 0.02);
     }
+}
+
+void testDiffusion() {
+    const int gridWidth = 10;
+    const int numParticles = gridWidth*gridWidth*gridWidth;
+    const double density = 3.0;
+    const double boxSize = pow(numParticles/density, 1.0/3.0);
+    const double cutoff = 1.0;
+    const double friction = 6.75;
+    const double dt = 0.04;
+    const double temp = 1.0/BOLTZ; // So kT = 1.0 kJ/mol
+    
+    // Create a periodic box of particles.
+    
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    HarmonicBondForce* force = new HarmonicBondForce();
+    force->setUsesPeriodicBoundaryConditions(true);
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    double scale = boxSize/gridWidth;
+    for (int i = 0; i < gridWidth; i++)
+        for (int j = 0; j < gridWidth; j++)
+            for (int k = 0; k < gridWidth; k++)
+                positions[i*gridWidth*gridWidth + j*gridWidth + k] = scale*Vec3(i+0.1*genrand_real2(sfmt), j+0.1*genrand_real2(sfmt), k+0.1*genrand_real2(sfmt));
+    DPDIntegrator integrator(temp, friction, cutoff, dt);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(temp, 0);
+    
+    // Simulate it and compute the diffusion coefficient.
+    
+    integrator.step(100);
+    State state1 = context.getState(State::Positions);
+    integrator.step(1000);
+    State state2 = context.getState(State::Positions);
+    double r2 = 0.0;
+    for (int i = 0; i < numParticles; i++) {
+        Vec3 delta = state1.getPositions()[i]-state2.getPositions()[i];
+        r2 += delta.dot(delta);
+    }
+    r2 /= numParticles;
+    double diffusion = r2/6.0/(state2.getTime()-state1.getTime());
+
+    // Compare to a value computed with LAMMPS.
+
+    ASSERT_USUALLY_EQUAL_TOL(0.5203, diffusion, 0.05);
 }
 
 void testTemperature() {
@@ -397,6 +449,7 @@ int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         tesConservationLaws();
+        testDiffusion();
         testTemperature();
         testTypePairs();
         testConstraints();

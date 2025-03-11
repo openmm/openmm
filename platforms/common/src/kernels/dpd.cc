@@ -83,7 +83,7 @@ DEVICE void processPair(int i, int j, real3 delta, mixed4 vel1, mixed4 vel2, int
     real mass2 = (vel2.w == 0 ? 0 : 1/vel2.w);
     real m = mass1*mass2/(mass1+mass2);
     real omega = 1-(r/cutoff);
-    real vscale = EXP(-dt*friction*omega*omega);
+    real vscale = EXP(-dt*2*friction*omega*omega);
     real noisescale = SQRT(1-vscale*vscale);
     real3 dir = delta*invR;
     real3 v = make_real3(vel2.x-vel1.x, vel2.y-vel1.y, vel2.z-vel1.z);
