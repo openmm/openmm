@@ -2973,12 +2973,15 @@ void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl&
     vector<Vec3>& force0 = extractForces(innerContext0);
     vector<Vec3>& force1 = extractForces(innerContext1);
 
+    //update forces and
     //protects from infinite forces when the hybrid potential does
     //not depend on u1 or u0, typically at the endpoints
     double epsi = std::numeric_limits<float>::min();
     for (int i = 0; i < force.size(); i++) {
-	if ( fabs(dEdu0) > epsi ) force[i] += dEdu0*force0[i];
-	if ( fabs(dEdu1) > epsi ) force[i] += dEdu1*force1[i];
+      if (fabs(dEdu0) > epsi)
+	    force[i] += dEdu0*force0[i];
+	if (fabs(dEdu1) > epsi)
+	    force[i] += dEdu1*force1[i];
     }
 
     map<string, double>& derivs = extractEnergyParameterDerivatives(context);

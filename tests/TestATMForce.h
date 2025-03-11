@@ -110,7 +110,6 @@ void test2Particles() {
     }
 }
 
-
 void test2Particles2Displacement0() {
     // A pair of particles tethered by an harmonic bond. 
     // Displace the second one to test energy and forces at different lambda values
@@ -194,6 +193,7 @@ double softCoreFunc(double u, double umax, double ub, double a, double& df) {
     return usc;
 }
 
+
 void test2ParticlesSoftCore() {
     // Similar to test2Particles() but employing a soft-core function
 
@@ -241,7 +241,10 @@ void test2ParticlesSoftCore() {
     ASSERT_EQUAL_VEC(Vec3(-lmbd*df*displ[0], 0.0, 0.0), state.getForces()[1], 1e-6);
 }
 
+
 void testNonbonded() {
+    // Tests a system with a nonbonded Force
+
     System system;
     double u0, u1, energy;
     double lambda = 0.5;
@@ -299,7 +302,12 @@ void testNonbonded() {
     ASSERT_EQUAL_TOL(epert1, epert2,  1e-3);
 }
 
+
 void testNonbondedwithEndpointClash() {
+    // Similar to testNonbonded() but at the initial alchemical state
+    // and with an invalid potential at the final state due to a clash
+    // between two particles.
+
     System system;
     double u0, u1, energy;
     double lambda = 0.0; //U(lambda) = u0; it does not depend on u1
@@ -323,25 +331,28 @@ void testNonbondedwithEndpointClash() {
             }
     //places first particle almost on top of another particle in displaced system
     atm->setParticleParameters(0, Vec3(spacing+1.e-4, 0, 0), Vec3(0.0, 0, 0));
-    system.addForce(nbforce);
-    atm->addForce(XmlSerializer::clone<Force>(*nbforce));
-    system.removeForce(0);
+    atm->addForce(nbforce);
     system.addForce(atm);
     LangevinMiddleIntegrator integrator(300, 1.0, 0.004);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setParameter(ATMForce::Lambda1(), lambda);
     context.setParameter(ATMForce::Lambda2(), lambda);
-    integrator.step(10);
-    State state = context.getState( State::Energy | State::Forces | State::Positions | State::ParameterDerivatives, false );
+
+    State state = context.getState(State::Energy, false);
     double epot = state.getPotentialEnergy();
+    ASSERT(!isnan(epot) && !isinf(epot));
+
     atm->getPerturbationEnergy(context, u1, u0, energy);
     double epert = u1 - u0;
+    ASSERT(!isnan(energy) && !isinf(energy));
+    ASSERT(!isnan(epert) && !isinf(epert));
+
+    integrator.step(10);
+    state = context.getState(State::Energy | State::Positions, false);
     vector<Vec3> positions2 = state.getPositions();
-    ASSERT( fabs( positions[0][0]   - positions2[0][0]) < width )  ;
+    ASSERT(fabs(positions[0][0] - positions2[0][0]) < width);
 }
-
-
 
 void testParticlesCustomExpressionLinear() {
     // Similar to test2Particles() but employing a custom alchemical energy expression

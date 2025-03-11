@@ -151,8 +151,10 @@ double ATMForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForce
     double dEdu1 = u1DerivExpression.evaluate();
     double epsi = std::numeric_limits<float>::min();
     double maxEnergy = std::numeric_limits<float>::max();
-    if(fabs(dEdu0) < epsi && ( isnan(state0Energy) || isinf(state0Energy)) ) state0Energy = maxEnergy;
-    if(fabs(dEdu1) < epsi && ( isnan(state1Energy) || isinf(state1Energy)) ) state1Energy = maxEnergy;
+    if(fabs(dEdu0) < epsi && (isnan(state0Energy) || isinf(state0Energy)))
+	state0Energy = maxEnergy;
+    if(fabs(dEdu1) < epsi && (isnan(state1Energy) || isinf(state1Energy)))
+	state1Energy = maxEnergy;
 
     // Compute the alchemical energy and forces.
 
