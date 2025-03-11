@@ -2978,7 +2978,7 @@ void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl&
     //not depend on u1 or u0, typically at the endpoints
     double epsi = std::numeric_limits<float>::min();
     for (int i = 0; i < force.size(); i++) {
-      if (fabs(dEdu0) > epsi)
+        if (fabs(dEdu0) > epsi)
 	    force[i] += dEdu0*force0[i];
 	if (fabs(dEdu1) > epsi)
 	    force[i] += dEdu1*force1[i];
