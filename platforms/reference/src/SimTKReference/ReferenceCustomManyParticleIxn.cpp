@@ -51,6 +51,7 @@ ReferenceCustomManyParticleIxn::ReferenceCustomManyParticleIxn(const CustomManyP
 
     functions["pointdistance"] = new ReferencePointDistanceFunction(force.usesPeriodicBoundaryConditions(), &periodicBoxVectors);
     functions["pointangle"] = new ReferencePointAngleFunction(force.usesPeriodicBoundaryConditions(), &periodicBoxVectors);
+    functions["pointvectorangle"] = new ReferencePointVectorAngleFunction(force.usesPeriodicBoundaryConditions(), &periodicBoxVectors);
     functions["pointdihedral"] = new ReferencePointDihedralFunction(force.usesPeriodicBoundaryConditions(), &periodicBoxVectors);
 
     // Parse the expression and create the object used to calculate the interaction.

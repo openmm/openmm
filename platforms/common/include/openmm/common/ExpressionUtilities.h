@@ -57,7 +57,7 @@ public:
      * @param functionNames  defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
      * @param tempType       the type of value to use for temporary variables (defaults to "real")
-     * @param distancesArePeriodic   whether the distances in pointdistance(), pointangle(), and pointdihedral() functions
+     * @param distancesArePeriodic   whether the distances in pointdistance(), pointangle(), pointvectorangle(), and pointdihedral() functions
      *                               should have periodic boundary conditions applied
      */
     std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::map<std::string, std::string>& variables,
@@ -73,7 +73,7 @@ public:
      * @param functionNames  defines the variable name for each tabulated function that may appear in the expressions
      * @param prefix         a prefix to put in front of temporary variables
      * @param tempType       the type of value to use for temporary variables (defaults to "real")
-     * @param distancesArePeriodic   whether the distances in pointdistance(), pointangle(), and pointdihedral() functions
+     * @param distancesArePeriodic   whether the distances in pointdistance(), pointangle(), pointvectorangle(), and pointdihedral() functions
      *                               should have periodic boundary conditions applied
      */
     std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& variables,
@@ -130,6 +130,8 @@ private:
     void callFunction(std::stringstream& out, std::string singleFn, std::string doubleFn, const std::string& arg, const std::string& tempType);
     void callFunction2(std::stringstream& out, std::string singleFn, std::string doubleFn, const std::string& arg1, const std::string& arg2, const std::string& tempType);
     void computeDelta(std::stringstream& out, const std::string& varName, const Lepton::ExpressionTreeNode& node, int index1, int index2, const std::string& tempType,
+            bool periodic, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
+    void initializeDelta(std::stringstream& out, const std::string& varName, const Lepton::ExpressionTreeNode& node, int startIndex, const std::string& tempType,
             bool periodic, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
     std::vector<std::vector<double> > computeFunctionParameters(const std::vector<const TabulatedFunction*>& functions);
     ComputeContext& context;

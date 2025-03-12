@@ -116,8 +116,8 @@ void testHbond() {
         c2.setPositions(positions);
         State s1 = c1.getState(State::Forces | State::Energy);
         State s2 = c2.getState(State::Forces | State::Energy);
-        for (int i = 0; i < customSystem.getNumParticles(); i++)
-            ASSERT_EQUAL_VEC(s2.getForces()[i], s1.getForces()[i], TOL);
+        for (int j = 0; j < customSystem.getNumParticles(); j++)
+            ASSERT_EQUAL_VEC(s2.getForces()[j], s1.getForces()[j], TOL);
         ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
     }
     
@@ -143,6 +143,214 @@ void testHbond() {
         ASSERT_EQUAL_VEC(s2.getForces()[i], s1.getForces()[i], TOL);
     ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
 }
+
+void testVectorAngle2() {
+    /* Compares VectorAngle with an approximation of vector angle*/
+
+    const int numParticles = 4;
+    const int numTestIterations = 10;
+    const double TOL = 1e-5;
+    
+    // Initialize systems
+    System customSystem, standardSystem;
+    for (int i = 0; i < numParticles; i++) {
+        customSystem.addParticle(1.0);
+        standardSystem.addParticle(1.0);
+    }
+
+    CustomHbondForce* custom = new CustomHbondForce("k*(angle4(d2,d1,a2,a1)-psi0)");
+    custom->addGlobalParameter("k", 1);
+    custom->addGlobalParameter("psi0", M_PI_2);
+    vector<double> parameters(0);
+    custom->addDonor(0, 1, -1, parameters);
+    custom->addAcceptor(2, 3, -1, parameters);
+    custom->setCutoffDistance(10.0);
+    customSystem.addForce(custom);
+    ASSERT(!custom->usesPeriodicBoundaryConditions());
+    ASSERT(!customSystem.usesPeriodicBoundaryConditions());
+
+    // Create an identical system without using vectorangle
+
+    CustomHbondForce* ref = new CustomHbondForce("k*(vangle - psi0);"
+                                                 "vangle   = acos(cost3lim);"
+                                                 "cost3lim = min(max(cost3,-0.9999),0.9999);"
+                                                 "cost3    = sin(t1)*sin(t2)*cos(phi)-cos(t1)*cos(t2);"
+                                                 "t1       = angle(d2,d1,a1);"
+                                                 "t2       = angle(d1,a1,a2);"
+                                                 "phi      = dihedral(d2,d1,a1,a2);");
+    ref->addGlobalParameter("k", 1);
+    ref->addGlobalParameter("psi0", M_PI_2);
+    ref->addDonor(0, 1, -1, parameters);
+    ref->addAcceptor(2, 3, -1, parameters);
+    ref->setCutoffDistance(10.0);
+
+    standardSystem.addForce(ref);
+    ASSERT(!ref->usesPeriodicBoundaryConditions());
+    ASSERT(!standardSystem.usesPeriodicBoundaryConditions());
+
+    // Set the atoms in various positions, and verify that both systems give identical forces and energy.
+
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    vector<Vec3> positions(numParticles);
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context c1(customSystem, integrator1, platform);
+    Context c2(standardSystem, integrator2, platform);
+    for (int i = 0; i < 10; i++) {
+        for (int j = 0; j < (int) positions.size(); j++)
+            positions[j] = Vec3(2.0*genrand_real2(sfmt), 2.0*genrand_real2(sfmt), 2.0*genrand_real2(sfmt));
+        c1.setPositions(positions);
+        c2.setPositions(positions);
+        State s1 = c1.getState(State::Forces | State::Energy);
+        State s2 = c2.getState(State::Forces | State::Energy);
+        ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
+        for (int j = 0; j < customSystem.getNumParticles(); j++) {
+            ASSERT_EQUAL_VEC(s2.getForces()[j], s1.getForces()[j], TOL);
+        }
+        
+    }
+
+    //Special cases where reference fails
+    vector<Vec3> expected(4);
+    expected[0] = Vec3(0.0,0.0,0.0);
+    expected[1] = Vec3(0.0,0.0,0.0);
+    expected[2] = Vec3(0.0,0.0,0.0);
+    expected[3] = Vec3(0.0,0.0,0.0);
+
+    // Anti-Parallel
+    positions[0] = Vec3(0.0,0.0,0.0);
+    positions[1] = Vec3(0.0,0.0,1.0);
+    positions[2] = Vec3(0.0,0.0,0.0);
+    positions[3] = Vec3(0.0,0.0,-1.0);
+    c1.setPositions(positions);
+    State s1 = c1.getState(State::Forces | State::Energy);
+    for (int j = 0; j < customSystem.getNumParticles(); j++) {
+        ASSERT_EQUAL_VEC(expected[j], s1.getForces()[j], TOL);
+    }
+    ASSERT_EQUAL_TOL(M_PI_2, s1.getPotentialEnergy(), TOL);
+
+    // Parallel
+    positions[3] = Vec3(0.0,0.0,1.0);
+    c1.setPositions(positions);
+    s1 = c1.getState(State::Forces | State::Energy);
+    for (int j = 0; j < customSystem.getNumParticles(); j++) {
+        ASSERT_EQUAL_VEC(expected[j], s1.getForces()[j], TOL);
+    }
+    ASSERT_EQUAL_TOL(-M_PI_2, s1.getPotentialEnergy(), TOL);
+
+    // 90 degrees
+    positions[3] = Vec3(0.0,1.0,0.0);
+    expected[0] = Vec3(0.0,-1.0,0.0);
+    expected[1] = Vec3(0.0,1.0,0.0);
+    expected[2] = Vec3(0.0,0.0,-1.0);
+    expected[3] = Vec3(0.0,0.0,1.0);
+    
+    c1.setPositions(positions);
+    s1 = c1.getState(State::Forces | State::Energy);
+    for (int j = 0; j < customSystem.getNumParticles(); j++) {
+        ASSERT_EQUAL_VEC(expected[j], s1.getForces()[j], TOL);
+    }
+    ASSERT_EQUAL_TOL(0, s1.getPotentialEnergy(), TOL);
+
+    // -90 degrees
+    positions[3] = Vec3(0.0,-1.0,0.0);
+    expected[0] = Vec3(0.0,1.0,0.0);
+    expected[1] = Vec3(0.0,-1.0,0.0);
+    expected[2] = Vec3(0.0,0.0,-1.0);
+    expected[3] = Vec3(0.0,0.0,1.0);
+    c1.setPositions(positions);
+    s1 = c1.getState(State::Forces | State::Energy);
+    for (int j = 0; j < customSystem.getNumParticles(); j++) {
+        ASSERT_EQUAL_VEC(expected[j], s1.getForces()[j], TOL);
+    }
+    ASSERT_EQUAL_TOL(0, s1.getPotentialEnergy(), TOL);
+
+}
+
+void testVectorAngle() {
+    /* Compares VectorAngle with angle*/
+    
+    // Initialize the system
+    int numParticles = 5;
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
+
+    // Create CustomHbondForce using angle
+    CustomHbondForce* angleForce = new CustomHbondForce("angle(d1,d2,a1)");
+    angleForce->addDonor(0, 2, -1, {});
+    angleForce->addAcceptor(4, -1, -1, {});
+    angleForce->setCutoffDistance(10.0);
+    angleForce->setForceGroup(0);
+    system.addForce(angleForce);
+
+    // Create CustomHbondForce using vectorangle
+    CustomHbondForce* vectorAngleForce = new CustomHbondForce("angle4(d1,d2,a1,a2)");
+    vectorAngleForce->addDonor(0, 1, -1, {});
+    vectorAngleForce->addAcceptor(4, 3, -1, {});
+    vectorAngleForce->setCutoffDistance(10.0);
+    vectorAngleForce->setForceGroup(1);
+    system.addForce(vectorAngleForce);
+
+    // Set up the contexts for each force
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
+    // Edge case test vectors
+    vector<vector<Vec3>> testPositions = {
+        // Parallel vectors
+        {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(1, 0, 0)},
+        // Antiparallel vectors
+        {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(-1, 0, 0)},
+        // 45 degree angle
+        {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0.7, 0.7, 0)},
+        // Orthogonal vectors (90 degrees)
+        {Vec3(1, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 1, 0)},
+        // One zero vector
+        {Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 1, 0)},
+        // Both vectors zero
+        {Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0), Vec3(0, 0, 0)}
+    };
+
+    // Generate random positions
+    for (int i = 0; i < 10; i++) {
+        vector<Vec3> randomPositions;
+        for (int j = 0; j < numParticles; j++) {
+            randomPositions.push_back(Vec3(5.0 * genrand_real2(sfmt), 5.0 * genrand_real2(sfmt), 5.0 * genrand_real2(sfmt)));
+        }
+        testPositions.push_back(randomPositions);
+    }
+    
+    for (auto& positions : testPositions) {
+            positions[1] = positions[2];
+            positions[3] = positions[2];
+    }
+
+    for (const auto& positions : testPositions) {
+        context.setPositions(positions);
+        State state0 = context.getState(State::Forces | State::Energy, false, 1<<0);
+        State state1 = context.getState(State::Forces | State::Energy, false, 1<<1);
+        
+        if (state0.getPotentialEnergy()!=state0.getPotentialEnergy()){
+            // Energy in NaN
+            ASSERT(state1.getPotentialEnergy()!=state1.getPotentialEnergy())
+            continue;
+        }
+        
+        ASSERT_EQUAL_TOL(state0.getPotentialEnergy(), state1.getPotentialEnergy(), TOL);
+        ASSERT_EQUAL_VEC(state0.getForces()[0], state1.getForces()[0], TOL);
+        ASSERT_EQUAL_VEC(state0.getForces()[4], state1.getForces()[4], TOL);
+        ASSERT_EQUAL_VEC(state0.getForces()[2], state1.getForces()[1]+state1.getForces()[3], TOL);
+
+    }
+
+}
+
 
 void testExclusions() {
     System system;
@@ -366,6 +574,8 @@ int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
         testHbond();
+        testVectorAngle();
+        testVectorAngle2();
         testExclusions();
         testCutoff();
         testCustomFunctions();
