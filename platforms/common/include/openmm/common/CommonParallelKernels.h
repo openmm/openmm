@@ -29,6 +29,8 @@
 
 #include "openmm/common/ComputeContext.h"
 #include "openmm/common/CommonKernels.h"
+#include "openmm/common/CommonCalcCustomHbondForceKernel.h"
+#include "openmm/common/CommonCalcCustomManyParticleForceKernel.h"
 #include "openmm/common/CommonCalcCustomNonbondedForceKernel.h"
 
 namespace OpenMM {

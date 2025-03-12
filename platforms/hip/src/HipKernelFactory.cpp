@@ -32,6 +32,8 @@
 #include "openmm/common/CommonKernels.h"
 #include "openmm/common/CommonParallelKernels.h"
 #include "openmm/common/CommonCalcCustomGBForceKernel.h"
+#include "openmm/common/CommonCalcCustomHbondForceKernel.h"
+#include "openmm/common/CommonCalcCustomManyParticleForceKernel.h"
 #include "openmm/common/CommonCalcCustomNonbondedForceKernel.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
