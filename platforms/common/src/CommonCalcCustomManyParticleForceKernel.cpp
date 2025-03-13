@@ -32,6 +32,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomManyParticleForceImpl.h"
 #include "CommonKernelSources.h"
+#include "SimTKOpenMMRealType.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
 #include "lepton/Operation.h"
