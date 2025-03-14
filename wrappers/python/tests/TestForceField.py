@@ -1006,6 +1006,100 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(ff._templates['FE2'].atoms[0].type, 'Fe2+_tip3p_standard')
         ff.createSystem(pdb.topology)
 
+    def test_CMAPTorsionGeneratorMapAssignment(self):
+        """Tests assignment of the correct maps when multiple CMAPTorsionGenerators are present"""
+
+        ffxml_1 = """
+<ForceField>
+    <AtomTypes>
+        <Type name="A" class="A" element="C" mass="12" />
+        <Type name="B" class="B" element="N" mass="14" />
+    </AtomTypes>
+    <Residues>
+        <Residue name="X">
+            <Atom name="X1" type="A" />
+            <Atom name="X2" type="A" />
+            <Atom name="X3" type="A" />
+            <Atom name="X4" type="A" />
+            <Atom name="X5" type="B" />
+            <Bond atomName1="X1" atomName2="X2" />
+            <Bond atomName1="X2" atomName2="X3" />
+            <Bond atomName1="X3" atomName2="X4" />
+            <Bond atomName1="X4" atomName2="X5" />
+        </Residue>
+        <Residue name="Y">
+            <Atom name="Y1" type="A" />
+            <Atom name="Y2" type="A" />
+            <Atom name="Y3" type="A" />
+            <Atom name="Y4" type="B" />
+            <Atom name="Y5" type="B" />
+            <Bond atomName1="Y1" atomName2="Y2" />
+            <Bond atomName1="Y2" atomName2="Y3" />
+            <Bond atomName1="Y3" atomName2="Y4" />
+            <Bond atomName1="Y4" atomName2="Y5" />
+        </Residue>
+    </Residues>
+    <CMAPTorsionForce>
+        <Map>10 11 12 13</Map>
+        <Torsion map="0" class1="A" class2="A" class3="A" class4="A" class5="B" />
+    </CMAPTorsionForce>
+</ForceField>
+"""
+
+        ffxml_2 = """
+<ForceField>
+    <CMAPTorsionForce>
+        <Map>14 15 16 17</Map>
+        <Torsion map="0" class1="A" class2="A" class3="A" class4="B" class5="B" />
+    </CMAPTorsionForce>
+</ForceField>
+"""
+
+        ff = ForceField(StringIO(ffxml_1), StringIO(ffxml_2))
+
+        topology = Topology()
+
+        x = topology.addResidue("X", topology.addChain())
+        x1 = topology.addAtom("X1", elem.carbon, x)
+        x2 = topology.addAtom("X2", elem.carbon, x)
+        x3 = topology.addAtom("X3", elem.carbon, x)
+        x4 = topology.addAtom("X4", elem.carbon, x)
+        x5 = topology.addAtom("X5", elem.nitrogen, x)
+        topology.addBond(x1, x2)
+        topology.addBond(x2, x3)
+        topology.addBond(x3, x4)
+        topology.addBond(x4, x5)
+
+        y = topology.addResidue("Y", topology.addChain())
+        y1 = topology.addAtom("Y1", elem.carbon, y)
+        y2 = topology.addAtom("Y2", elem.carbon, y)
+        y3 = topology.addAtom("Y3", elem.carbon, y)
+        y4 = topology.addAtom("Y4", elem.nitrogen, y)
+        y5 = topology.addAtom("Y5", elem.nitrogen, y)
+        topology.addBond(y1, y2)
+        topology.addBond(y2, y3)
+        topology.addBond(y3, y4)
+        topology.addBond(y4, y5)
+
+        system = ff.createSystem(topology)
+        cmap, = (force for force in system.getForces() if isinstance(force, openmm.CMAPTorsionForce))
+
+        torsionCount = cmap.getNumTorsions()
+        assert torsionCount == 2
+
+        for torsionIndex in range(torsionCount):
+            mapIndex, *atomIndices = cmap.getTorsionParameters(torsionIndex)
+            mapSize, energy = cmap.getMapParameters(mapIndex)
+
+            if atomIndices == [0, 1, 2, 3, 1, 2, 3, 4]:
+                expectedEnergy = (10.0, 11.0, 12.0, 13.0) * kilojoule_per_mole
+            elif atomIndices == [5, 6, 7, 8, 6, 7, 8, 9]:
+                expectedEnergy = (14.0, 15.0, 16.0, 17.0) * kilojoule_per_mole
+            else:
+                raise ValueError("unexpected torsion")
+
+            assert energy == expectedEnergy
+
     def test_LennardJonesGenerator(self):
         """ Test the LennardJones generator"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
