@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,7 +39,9 @@
 #include "openmm/internal/ThreadPool.h"
 #include <atomic>
 #include <complex>
-#include <pthread.h>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 #include <vector>
 
 namespace OpenMM {
@@ -123,9 +125,9 @@ private:
     std::vector<std::size_t> gridShape, fftAxes;
     std::vector<std::ptrdiff_t> realGridStride, complexGridStride;
     int waitCount;
-    pthread_cond_t startCondition, endCondition;
-    pthread_mutex_t lock;
-    pthread_t mainThread;
+    std::condition_variable startCondition, endCondition;
+    std::mutex lock;
+    std::thread mainThread;
     // The following variables are used to store information about the calculation currently being performed.
     IO* io;
     float energy;
@@ -217,9 +219,9 @@ private:
     std::vector<std::size_t> gridShape, fftAxes;
     std::vector<std::ptrdiff_t> realGridStride, complexGridStride;
     int waitCount;
-    pthread_cond_t startCondition, endCondition;
-    pthread_mutex_t lock;
-    pthread_t mainThread;
+    std::condition_variable startCondition, endCondition;
+    std::mutex lock;
+    std::thread mainThread;
     // The following variables are used to store information about the calculation currently being performed.
     CalcPmeReciprocalForceKernel::IO* io;
     float energy;

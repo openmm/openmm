@@ -189,7 +189,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     contextIsValid = true;
     ContextSelector selector(*this);
     CHECK_RESULT(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED));
-    if (contextIndex > 0) {
+    if (contextIndex > 0 && originalContext == NULL) {
         int canAccess;
         cuDeviceCanAccessPeer(&canAccess, getDevice(), platformData.contexts[0]->getDevice());
         if (canAccess) {
@@ -547,11 +547,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
 
     stringstream tempFileName;
     tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
-#ifdef WIN32
-    tempFileName << "_" << GetCurrentProcessId();
-#else
-    tempFileName << "_" << getpid();
-#endif
+    tempFileName << "_" << this_thread::get_id();
     string outputFile = (tempDir+tempFileName.str()+".ptx");
 
     // Split the command line flags into an array of options.

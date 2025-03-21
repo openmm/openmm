@@ -181,7 +181,7 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
 
     contextIsValid = true;
     ContextSelector selector(*this);
-    if (contextIndex > 0) {
+    if (contextIndex > 0 && originalContext == NULL) {
         int canAccess;
         CHECK_RESULT(hipDeviceCanAccessPeer(&canAccess, getDevice(), platformData.contexts[0]->getDevice()));
         if (canAccess) {

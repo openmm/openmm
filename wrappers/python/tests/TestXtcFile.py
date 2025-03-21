@@ -135,6 +135,48 @@ class TestXtcFile(unittest.TestCase):
             )
             self.assertTrue(np.allclose(step, np.arange(0, nframes), atol=1e-5))
 
+    def test_xtc_small(self):
+        """Test the XTC file by writing a trajectory and reading it back. Using a system size below the compression threshold"""
+        with tempfile.TemporaryDirectory() as temp:
+            fname = os.path.join(temp, 'traj.xtc')
+            pdbfile = app.PDBFile("systems/ions.pdb")
+            # Set some arbitrary size for the unit cell so that a box is included in the trajectory
+            pdbfile.topology.setUnitCellDimensions([10, 10, 10])
+            natom = len(list(pdbfile.topology.atoms()))
+            nframes = 20
+            xtc = app.XTCFile(fname, pdbfile.topology, 0.001)
+            coords = []
+            box = []
+            for i in range(nframes):
+                coords.append(
+                    [mm.Vec3(random(), random(), random()) for j in range(natom)]
+                    * unit.nanometers
+                )
+                box_i = (
+                    mm.Vec3(random(), random(), random()) * unit.nanometers,
+                    mm.Vec3(random(), random(), random()) * unit.nanometers,
+                    mm.Vec3(random(), random(), random()) * unit.nanometers,
+                )
+                box.append(np.array([[vec.x, vec.y, vec.z] for vec in box_i]))
+                xtc.writeModel(coords[i], periodicBoxVectors=box_i)
+            # The  XTCFile class  does not  provide a  way to  read the
+            # trajectory back, but the underlying XTC library does
+            coords_read, box_read, time, step = read_xtc(fname.encode("utf-8"))
+            self.assertEqual(coords_read.shape, (natom, 3, nframes))
+            self.assertEqual(box_read.shape, (3, 3, nframes))
+            self.assertEqual(len(time), nframes)
+            self.assertEqual(len(step), nframes)
+            coords = np.array(
+                [c.value_in_unit(unit.nanometers) for c in coords]
+            ).transpose(1, 2, 0)
+            self.assertTrue(np.allclose(coords_read, coords, atol=1e-3))
+            box = np.array(box).transpose(1, 2, 0)
+            self.assertTrue(np.allclose(box_read, box, atol=1e-3))
+            self.assertTrue(
+                np.allclose(time, np.arange(0, nframes) * 0.001, atol=1e-5)
+            )
+            self.assertTrue(np.allclose(step, np.arange(0, nframes), atol=1e-5))
+
     def testLongTrajectory(self):
         """Test writing a trajectory that has more than 2^31 steps."""
         with tempfile.TemporaryDirectory() as temp:

@@ -444,7 +444,8 @@ class ForceField(object):
         if name in self._atomTypes:
             #  allow multiple registrations of the same atom type provided the definitions are identical
             existing = self._atomTypes[name]
-            if existing.atomClass == parameters['class'] and existing.mass == float(parameters['mass']) and existing.element.symbol == parameters['element']:
+            elementsMatch = ((existing.element is None and 'element' not in parameters) or (existing.element is not None and 'element' in parameters and existing.element.symbol == parameters['element']))
+            if existing.atomClass == parameters['class'] and existing.mass == float(parameters['mass']) and elementsMatch:
                 return
             raise ValueError('Found multiple definitions for atom type: '+name)
         atomClass = parameters['class']
@@ -870,6 +871,7 @@ class ForceField(object):
                         newSite = deepcopy(site)
                         newSite.index = indexMap[site.index]
                         newSite.atoms = [indexMap[i] for i in site.atoms]
+                        newSite.excludeWith = indexMap[site.excludeWith]
                         newTemplate.virtualSites.append(newSite)
 
                 # Build the lists of bonds and external bonds.
@@ -2390,6 +2392,7 @@ class CMAPTorsionGenerator(object):
             ff.registerGenerator(generator)
         else:
             generator = existing[0]
+        mapOffset = len(generator.maps)
         for map in element.findall('Map'):
             values = [float(x) for x in map.text.split()]
             size = sqrt(len(values))
@@ -2399,7 +2402,7 @@ class CMAPTorsionGenerator(object):
         for torsion in element.findall('Torsion'):
             types = ff._findAtomTypes(torsion.attrib, 5)
             if None not in types:
-                generator.torsions.append(CMAPTorsion(types, int(torsion.attrib['map'])))
+                generator.torsions.append(CMAPTorsion(types, int(torsion.attrib['map']) + mapOffset))
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
         existing = [f for f in sys.getForces() if type(f) == mm.CMAPTorsionForce]

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1068,7 +1068,11 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
+        if (nb14Index.find(i) == nb14Index.end()) {
+            if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
+                throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+        }
+        else
             nb14s.push_back(i);
     }
     if (nb14s.size() != num14)
@@ -3003,8 +3007,18 @@ void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl&
     vector<Vec3>& force = extractForces(context);
     vector<Vec3>& force0 = extractForces(innerContext0);
     vector<Vec3>& force1 = extractForces(innerContext1);
-    for (int i = 0; i < force.size(); i++)
-        force[i] += dEdu0*force0[i] + dEdu1*force1[i];
+
+    //update forces and
+    //protects from infinite forces when the hybrid potential does
+    //not depend on u1 or u0, typically at the endpoints
+    double epsi = std::numeric_limits<float>::min();
+    for (int i = 0; i < force.size(); i++) {
+        if (fabs(dEdu0) > epsi)
+	    force[i] += dEdu0*force0[i];
+	if (fabs(dEdu1) > epsi)
+	    force[i] += dEdu1*force1[i];
+    }
+
     map<string, double>& derivs = extractEnergyParameterDerivatives(context);
     for (auto deriv : energyParamDerivs)
         derivs[deriv.first] += deriv.second;

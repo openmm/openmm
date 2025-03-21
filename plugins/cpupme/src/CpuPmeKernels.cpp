@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2013-2022 Stanford University and the Authors.      *
+ * Portions copyright (c) 2013-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -460,17 +460,15 @@ void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize
     // Initialize threads.
     
     isFinished = false;
-    pthread_cond_init(&startCondition, NULL);
-    pthread_cond_init(&endCondition, NULL);
-    pthread_mutex_init(&lock, NULL);
-    pthread_create(&mainThread, NULL, threadBody, this);
+    mainThread = thread(threadBody, this);
     
     // Wait until the main thread is up and running.
     
-    pthread_mutex_lock(&lock);
-    while (!isFinished)
-        pthread_cond_wait(&endCondition, &lock);
-    pthread_mutex_unlock(&lock);
+    {
+        unique_lock<mutex> ul(lock);
+        while (!isFinished)
+            endCondition.wait(ul);
+    }
     
     // Initialize the FFT grids.
 
@@ -535,26 +533,23 @@ void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize
 
 CpuCalcPmeReciprocalForceKernel::~CpuCalcPmeReciprocalForceKernel() {
     isDeleted = true;
-    pthread_mutex_lock(&lock);
-    pthread_cond_broadcast(&startCondition);
-    pthread_mutex_unlock(&lock);
-    pthread_join(mainThread, NULL);
-    pthread_mutex_destroy(&lock);
-    pthread_cond_destroy(&startCondition);
-    pthread_cond_destroy(&endCondition);
+    lock.lock();
+    startCondition.notify_all();
+    lock.unlock();
+    mainThread.join();
 }
 
 void CpuCalcPmeReciprocalForceKernel::runMainThread() {
     // This is the main thread that coordinates all the other ones.
 
-    pthread_mutex_lock(&lock);
+    unique_lock<mutex> ul(lock);
     isFinished = true;
-    pthread_cond_signal(&endCondition);
+    endCondition.notify_one();
     ThreadPool threads(numThreads);
     while (true) {
         // Wait for the signal to start.
 
-        pthread_cond_wait(&startCondition, &lock);
+        startCondition.wait(ul);
         if (isDeleted)
             break;
         posq = io->getPosq();
@@ -584,9 +579,8 @@ void CpuCalcPmeReciprocalForceKernel::runMainThread() {
         lastBoxVectors[0] = periodicBoxVectors[0];
         lastBoxVectors[1] = periodicBoxVectors[1];
         lastBoxVectors[2] = periodicBoxVectors[2];
-        pthread_cond_signal(&endCondition);
+        endCondition.notify_one();
     }
-    pthread_mutex_unlock(&lock);
 }
 
 void CpuCalcPmeReciprocalForceKernel::runWorkerThread(ThreadPool& threads, int index) {
@@ -640,18 +634,18 @@ void CpuCalcPmeReciprocalForceKernel::beginComputation(IO& io, const Vec3* perio
 
     // Do the calculation.
 
-    pthread_mutex_lock(&lock);
+    unique_lock<mutex> ul(lock);
     isFinished = false;
-    pthread_cond_signal(&startCondition);
-    pthread_mutex_unlock(&lock);
+    startCondition.notify_one();
 }
 
 double CpuCalcPmeReciprocalForceKernel::finishComputation(IO& io) {
-    pthread_mutex_lock(&lock);
-    while (!isFinished) {
-        pthread_cond_wait(&endCondition, &lock);
+    {
+        unique_lock<mutex> ul(lock);
+        while (!isFinished) {
+            endCondition.wait(ul);
+        }
     }
-    pthread_mutex_unlock(&lock);
     io.setForce(&force[0]);
     return energy;
 }
@@ -742,18 +736,15 @@ void CpuCalcDispersionPmeReciprocalForceKernel::initialize(int xsize, int ysize,
     // Initialize threads.
     
     isFinished = false;
-    pthread_cond_init(&startCondition, NULL);
-    pthread_cond_init(&endCondition, NULL);
-    pthread_mutex_init(&lock, NULL);
-    pthread_create(&mainThread, NULL, dispersionThreadBody, this);
+    mainThread = thread(dispersionThreadBody, this);
     
     // Wait until the main thread is up and running.
     
-    pthread_mutex_lock(&lock);
-    while (!isFinished)
-        pthread_cond_wait(&endCondition, &lock);
-    pthread_mutex_unlock(&lock);
-    
+    {
+        unique_lock<mutex> ul(lock);
+        while (!isFinished)
+            endCondition.wait(ul);
+    }
 
     // Initialize the FFT grids.
 
@@ -818,26 +809,23 @@ void CpuCalcDispersionPmeReciprocalForceKernel::initialize(int xsize, int ysize,
 
 CpuCalcDispersionPmeReciprocalForceKernel::~CpuCalcDispersionPmeReciprocalForceKernel() {
     isDeleted = true;
-    pthread_mutex_lock(&lock);
-    pthread_cond_broadcast(&startCondition);
-    pthread_mutex_unlock(&lock);
-    pthread_join(mainThread, NULL);
-    pthread_mutex_destroy(&lock);
-    pthread_cond_destroy(&startCondition);
-    pthread_cond_destroy(&endCondition);
+    lock.lock();
+    startCondition.notify_all();
+    lock.unlock();
+    mainThread.join();
 }
 
 void CpuCalcDispersionPmeReciprocalForceKernel::runMainThread() {
     // This is the main thread that coordinates all the other ones.
 
-    pthread_mutex_lock(&lock);
+    unique_lock<mutex> ul(lock);
     isFinished = true;
-    pthread_cond_signal(&endCondition);
+    endCondition.notify_one();
     ThreadPool threads(numThreads);
     while (true) {
         // Wait for the signal to start.
 
-        pthread_cond_wait(&startCondition, &lock);
+        startCondition.wait(ul);
         if (isDeleted)
             break;
         posq = io->getPosq();
@@ -868,9 +856,8 @@ void CpuCalcDispersionPmeReciprocalForceKernel::runMainThread() {
         lastBoxVectors[0] = periodicBoxVectors[0];
         lastBoxVectors[1] = periodicBoxVectors[1];
         lastBoxVectors[2] = periodicBoxVectors[2];
-        pthread_cond_signal(&endCondition);
+        endCondition.notify_one();
     }
-    pthread_mutex_unlock(&lock);
 }
 
 void CpuCalcDispersionPmeReciprocalForceKernel::runWorkerThread(ThreadPool& threads, int index) {
@@ -926,18 +913,18 @@ void CpuCalcDispersionPmeReciprocalForceKernel::beginComputation(CalcPmeReciproc
 
     // Do the calculation.
 
-    pthread_mutex_lock(&lock);
+    unique_lock<mutex> ul(lock);
     isFinished = false;
-    pthread_cond_signal(&startCondition);
-    pthread_mutex_unlock(&lock);
+    startCondition.notify_one();
 }
 
 double CpuCalcDispersionPmeReciprocalForceKernel::finishComputation(CalcPmeReciprocalForceKernel::IO& io) {
-    pthread_mutex_lock(&lock);
-    while (!isFinished) {
-        pthread_cond_wait(&endCondition, &lock);
+    {
+        unique_lock<mutex> ul(lock);
+        while (!isFinished) {
+            endCondition.wait(ul);
+        }
     }
-    pthread_mutex_unlock(&lock);
     io.setForce(&force[0]);
     return energy;
 }
