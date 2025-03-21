@@ -107,6 +107,11 @@ public:
      */
     virtual int getNumForceThreadBlocks() = 0;
     /**
+     * Get the reduced number of thread blocks used for computing nonbonded forces in register heavy kernels.
+     * This value may be the same as getNumForceThreadBlocks.
+     */
+    virtual int getNumReducedForceThreadBlocks() = 0;
+    /**
      * Get the size of each thread block used for computing nonbonded forces.
      */
     virtual int getForceThreadBlockSize() = 0;
