@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1067,7 +1067,11 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
+        if (nb14Index.find(i) == nb14Index.end()) {
+            if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
+                throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+        }
+        else
             nb14s.push_back(i);
     }
     if (nb14s.size() != num14)
