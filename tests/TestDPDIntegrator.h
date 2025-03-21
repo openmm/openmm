@@ -58,7 +58,7 @@ double computeEnergy(Context& context) {
     return energy;
 }
 
-void tesConservationLaws() {
+void testConservationLaws() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double boxSize = 5.0;
@@ -448,15 +448,25 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
-        tesConservationLaws();
+        cout << "a" << endl;
+        testConservationLaws();
+        cout << "b" << endl;
         testDiffusion();
+        cout << "c" << endl;
         testTemperature();
+        cout << "d" << endl;
         testTypePairs();
+        cout << "e" << endl;
         testConstraints();
+        cout << "f" << endl;
         testConstrainedMasslessParticles();
+        cout << "g" << endl;
         testRandomSeed();
+        cout << "h" << endl;
         testInitialTemperature();
+        cout << "i" << endl;
         testForceGroups();
+        cout << "j" << endl;
         runPlatformTests();
     }
     catch(const exception& e) {
