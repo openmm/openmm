@@ -64,7 +64,9 @@ void testConservationLaws() {
     const double boxSize = 5.0;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    cout << "a"<< endl;
     DPDIntegrator integrator(temp, 3.0, 2.5, 0.002);
+    cout << "b"<< endl;
     NonbondedForce* forceField = new NonbondedForce();
     forceField->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     forceField->setCutoffDistance(2.5);
@@ -73,7 +75,9 @@ void testConservationLaws() {
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
+    cout << "c"<< endl;
     Context context(system, integrator, platform);
+    cout << "d"<< endl;
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
     OpenMM_SFMT::SFMT sfmt;
@@ -88,8 +92,11 @@ void testConservationLaws() {
     context.setPositions(positions);
     context.setVelocities(velocities);
     for (int i = 0; i < 100; i++) {
+        cout << "e"<< endl;
         integrator.step(1);
+        cout << "f"<< endl;
         State state = context.getState(State::Velocities);
+        cout << "g"<< endl;
         Vec3 momentum;
         for (int j = 0; j < numParticles; j++)
             momentum += system.getParticleMass(j)*state.getVelocities()[j];
@@ -99,13 +106,18 @@ void testConservationLaws() {
     // If we set the friction to 0, it should also conserve energy.
 
     integrator.setDefaultFriction(0.0);
+    cout << "h"<< endl;
     context.reinitialize();
+    cout << "i"<< endl;
     context.setPositions(positions);
     context.setVelocities(velocities);
     double energy = computeEnergy(context);
     for (int i = 0; i < 100; i++) {
+        cout << "j"<< endl;
         integrator.step(1);
+        cout << "k"<< endl;
         State state = context.getState(State::Velocities | State::Energy);
+        cout << "l"<< endl;
         Vec3 momentum;
         for (int j = 0; j < numParticles; j++)
             momentum += system.getParticleMass(j)*state.getVelocities()[j];
@@ -448,25 +460,15 @@ void runPlatformTests();
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
-        cout << "a" << endl;
         testConservationLaws();
-        cout << "b" << endl;
         testDiffusion();
-        cout << "c" << endl;
         testTemperature();
-        cout << "d" << endl;
         testTypePairs();
-        cout << "e" << endl;
         testConstraints();
-        cout << "f" << endl;
         testConstrainedMasslessParticles();
-        cout << "g" << endl;
         testRandomSeed();
-        cout << "h" << endl;
         testInitialTemperature();
-        cout << "i" << endl;
         testForceGroups();
-        cout << "j" << endl;
         runPlatformTests();
     }
     catch(const exception& e) {
