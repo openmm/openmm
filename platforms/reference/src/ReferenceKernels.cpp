@@ -2877,16 +2877,21 @@ void ReferenceIntegrateDPDStepKernel::initialize(const System& system, const DPD
 }
 
 void ReferenceIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegrator& integrator) {
+    std::cout << "a"<< std::endl;
     dynamics->setTemperature(integrator.getTemperature());
     dynamics->setDeltaT(integrator.getStepSize());
     dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
     dynamics->setVirtualSites(extractVirtualSites(context));
     dynamics->setPeriodicBoxVectors(extractBoxVectors(context));
+    std::cout << "b"<< std::endl;
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& velData = extractVelocities(context);
+    std::cout << "c"<< std::endl;
     dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance());
+    std::cout << "d"<< std::endl;
     data.time += integrator.getStepSize();
     data.stepCount++;
+    std::cout << "e"<< std::endl;
 }
 
 double ReferenceIntegrateDPDStepKernel::computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator) {
