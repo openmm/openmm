@@ -66,7 +66,6 @@ void ReferenceDPDDynamics::updatePart1(int numParticles, vector<Vec3>& velocitie
             velocities[i] += (getDeltaT()*inverseMasses[i])*forces[i];
 }
 
-#include <iostream>
 void ReferenceDPDDynamics::updatePart2(int numParticles, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
                                        vector<Vec3>& xPrime) {
     const double halfdt = 0.5*getDeltaT();
@@ -85,47 +84,26 @@ void ReferenceDPDDynamics::updatePart2(int numParticles, vector<Vec3>& atomCoord
     vector<set<int> > exclusions(numParticles);
     computeNeighborListVoxelHash(neighborList, numParticles, atomCoordinates, exclusions, periodicBoxVectors, periodic, maxCutoff, 0.0);
     for (auto& pair : neighborList) {
-#ifdef _MSC_VER
-        cout << "a"<< endl;
-#endif
         int i = pair.first;
         int j = pair.second;
         if (masses[i] == 0.0 && masses[j] == 0.0)
             continue;
-#ifdef _MSC_VER
-        cout << "b"<< endl;
-#endif
         int type1 = particleType[i];
         int type2 = particleType[j];
-#ifdef _MSC_VER
-        cout << "c"<< endl;
-        cout<<type1<<" "<<type2<<" "<<frictionTable.size()<<" "<<cutoffTable.size()<<endl;
-        cout<<frictionTable[type1].size()<<endl;
-        cout<<cutoffTable[type1].size()<<endl;
-#endif
         double friction = frictionTable[type1][type2];
         double cutoff = cutoffTable[type1][type2];
-#ifdef _MSC_VER
-        cout << "d"<< endl;
-#endif
         double deltaR[ReferenceForce::LastDeltaRIndex];
         if (periodic)
             ReferenceForce::getDeltaRPeriodic(xPrime[i], xPrime[j], periodicBoxVectors, deltaR);
         else
             ReferenceForce::getDeltaR(xPrime[i], xPrime[j], deltaR);
         double r = deltaR[ReferenceForce::RIndex];
-#ifdef _MSC_VER
-        cout << "e"<< endl;
-#endif
         if (r >= cutoff)
             continue;
         double m = masses[i]*masses[j]/(masses[i]+masses[j]);
         double omega = 1.0-(r/cutoff);
         double vscale = exp(-getDeltaT()*2*friction*omega*omega);
         double noisescale = sqrt(1-vscale*vscale);
-#ifdef _MSC_VER
-        cout << "f"<< endl;
-#endif
         Vec3 dir = Vec3(deltaR[ReferenceForce::XIndex], deltaR[ReferenceForce::YIndex], deltaR[ReferenceForce::ZIndex])/r;
         Vec3 v = velocities[j]-velocities[i];
         double dv = (1.0-vscale)*v.dot(dir) + noisescale*sqrt(kT/m)*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
@@ -133,9 +111,6 @@ void ReferenceDPDDynamics::updatePart2(int numParticles, vector<Vec3>& atomCoord
             velocities[i] += (m/masses[i])*dv*dir;
         if (masses[j] != 0.0)
             velocities[j] -= (m/masses[j])*dv*dir;
-#ifdef _MSC_VER
-        cout << "g"<< endl;
-#endif
     }
 
     // Second position update.
