@@ -99,6 +99,9 @@ void ReferenceDPDDynamics::updatePart2(int numParticles, vector<Vec3>& atomCoord
         int type2 = particleType[j];
 #ifdef _MSC_VER
         cout << "c"<< endl;
+        cout<<type1<<" "<<type2<<" "<<frictionTable.size()<<" "<<cutoffTable.size()<<endl;
+        cout<<frictionTable[type1].size()<<endl;
+        cout<<cutoffTable[type1].size()<<endl;
 #endif
         double friction = frictionTable[type1][type2];
         double cutoff = cutoffTable[type1][type2];
