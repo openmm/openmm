@@ -3426,24 +3426,33 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
 
     // Perform the integration.
 
+    vector<int> p;
+    particleType.download(p);
     cout<<"e"<<endl;
     double stepSize = integrator.getStepSize();
     cc.getIntegrationUtilities().setNextStepSize(stepSize);
     kernel1->execute(numAtoms);
+    particleType.download(p);
     cout<<"f"<<endl;
     integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+    particleType.download(p);
     cout<<"g"<<endl;
     kernel2->setArg(9, randomSeed+cc.getStepCount());
     kernel2->setArg(10, (float) (BOLTZ*integrator.getTemperature()));
     setPeriodicBoxArgs(cc, kernel2, 11);
+    particleType.download(p);
     cout<<"h"<<endl;
     kernel2->execute(2*nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
+    particleType.download(p);
     cout<<"i"<<endl;
     kernel3->execute(numAtoms);
+    particleType.download(p);
     cout<<"j"<<endl;
     integration.applyConstraints(integrator.getConstraintTolerance());
+    particleType.download(p);
     cout<<"k"<<endl;
     kernel4->execute(numAtoms);
+    particleType.download(p);
     cout<<"l"<<endl;
     integration.computeVirtualSites();
 
@@ -3456,6 +3465,7 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
     // Reduce UI lag.
 
     flushPeriodically(cc);
+    particleType.download(p);
     cout<<"m"<<endl;
 }
 
