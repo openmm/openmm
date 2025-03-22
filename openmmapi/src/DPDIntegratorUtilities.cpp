@@ -48,7 +48,7 @@ void DPDIntegratorUtilities::createTypeTables(const DPDIntegrator& integrator, i
         auto mapping = typeMap.find(type);
         if (mapping == typeMap.end()) {
             particleType[i] = typeMap.size();
-            typeMap[type] = typeMap.size();
+            typeMap[type] = particleType[i];
         }
         else
             particleType[i] = mapping->second;
