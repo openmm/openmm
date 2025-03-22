@@ -66,8 +66,10 @@ void ReferenceDPDDynamics::updatePart1(int numParticles, vector<Vec3>& velocitie
             velocities[i] += (getDeltaT()*inverseMasses[i])*forces[i];
 }
 
+#include <iostream>
 void ReferenceDPDDynamics::updatePart2(int numParticles, vector<Vec3>& atomCoordinates, vector<Vec3>& velocities,
                                        vector<Vec3>& xPrime) {
+    std::cout << "a"<< std::endl;
     const double halfdt = 0.5*getDeltaT();
     const double kT = BOLTZ*getTemperature();
 
@@ -81,8 +83,10 @@ void ReferenceDPDDynamics::updatePart2(int numParticles, vector<Vec3>& atomCoord
 
     // Apply friction and noise to velocities.
 
+    std::cout << "b"<< std::endl;
     vector<set<int> > exclusions(numParticles);
     computeNeighborListVoxelHash(neighborList, numParticles, atomCoordinates, exclusions, periodicBoxVectors, periodic, maxCutoff, 0.0);
+    std::cout << "c"<< std::endl;
     for (auto& pair : neighborList) {
         int i = pair.first;
         int j = pair.second;
@@ -115,11 +119,13 @@ void ReferenceDPDDynamics::updatePart2(int numParticles, vector<Vec3>& atomCoord
 
     // Second position update.
 
+    std::cout << "d"<< std::endl;
     for (int i = 0; i < numParticles; i++)
         if (inverseMasses[i] != 0.0) {
             xPrime[i] = xPrime[i] + velocities[i]*halfdt;
             oldx[i] = xPrime[i];
         }
+    std::cout << "e"<< std::endl;
 }
 
 void ReferenceDPDDynamics::updatePart3(OpenMM::ContextImpl& context, int numParticles, vector<Vec3>& atomCoordinates,
@@ -131,10 +137,9 @@ void ReferenceDPDDynamics::updatePart3(OpenMM::ContextImpl& context, int numPart
         }
     }
 }
-#include <iostream>
+
 void ReferenceDPDDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordinates,
                                     vector<Vec3>& velocities, vector<double>& masses, double tolerance) {
-    std::cout << "1"<< std::endl;
     int numParticles = context.getSystem().getNumParticles();
     ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
     if (this->masses.size() == 0) {
@@ -151,25 +156,19 @@ void ReferenceDPDDynamics::update(ContextImpl& context, vector<Vec3>& atomCoordi
     // 1st update
 
     ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
-    std::cout << "2"<< std::endl;
     updatePart1(numParticles, velocities, *data->forces);
-    std::cout << "3"<< std::endl;
     if (referenceConstraintAlgorithm)
         referenceConstraintAlgorithm->applyToVelocities(atomCoordinates, velocities, inverseMasses, tolerance);
 
     // 2nd update
 
-    std::cout << "4"<< std::endl;
     updatePart2(numParticles, atomCoordinates, velocities, xPrime);
-    std::cout << "5"<< std::endl;
     if (referenceConstraintAlgorithm)
         referenceConstraintAlgorithm->apply(atomCoordinates, xPrime, inverseMasses, tolerance);
 
     // 3rd update
 
-    std::cout << "6"<< std::endl;
     updatePart3(context, numParticles, atomCoordinates, velocities, xPrime);
-    std::cout << "7"<< std::endl;
     getVirtualSites().computePositions(context.getSystem(), atomCoordinates);
     incrementTimeStep();
 }
