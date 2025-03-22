@@ -2877,7 +2877,6 @@ void ReferenceIntegrateDPDStepKernel::initialize(const System& system, const DPD
 }
 
 void ReferenceIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegrator& integrator) {
-    std::cout << "a"<< std::endl;
     dynamics->setTemperature(integrator.getTemperature());
     dynamics->setDeltaT(integrator.getStepSize());
     dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
