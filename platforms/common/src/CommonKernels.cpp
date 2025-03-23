@@ -3318,7 +3318,6 @@ private:
 void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDIntegrator& integrator) {
     // Record information about the integrator.
 
-    cout<<"a"<<endl;
     vector<int> particleTypeVec;
     vector<vector<double> > frictionTable, cutoffTable;
     double maxCutoff;
@@ -3340,7 +3339,8 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
     defines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
     defines["MAX_CUTOFF"] = cc.doubleToString(maxCutoff);
     defines["TILE_SIZE"] = cc.intToString(ComputeContext::TileSize);
-    defines["WORK_GROUP_SIZE"] = cc.intToString(cc.getNonbondedUtilities().getForceThreadBlockSize());
+    blockSize = max(32, cc.getNonbondedUtilities().getForceThreadBlockSize());
+    defines["WORK_GROUP_SIZE"] = cc.intToString(blockSize);
     if (system.usesPeriodicBoundaryConditions())
         defines["USE_PERIODIC"] = "1";
     ComputeProgram program = cc.compileProgram(CommonKernelSources::dpd, defines);
@@ -3367,18 +3367,15 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
     randomSeed = integrator.getRandomNumberSeed();
     if (randomSeed == 0)
         randomSeed = osrngseed(); // A seed of 0 means use a unique one
-    cout<<"b"<<endl;
 }
 
 void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegrator& integrator) {
-    cout<<"c"<<endl;
     ContextSelector selector(cc);
     IntegrationUtilities& integration = cc.getIntegrationUtilities();
     NonbondedUtilities& nb = cc.getNonbondedUtilities();
     int numAtoms = cc.getNumAtoms();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     if (!hasInitializedKernels) {
-        cout<<"d"<<endl;
         hasInitializedKernels = true;
         kernel1->addArg(numAtoms);
         kernel1->addArg(paddedNumAtoms);
@@ -3428,32 +3425,24 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
 
     vector<int> p;
     particleType.download(p);
-    cout<<"e"<<endl;
     double stepSize = integrator.getStepSize();
     cc.getIntegrationUtilities().setNextStepSize(stepSize);
     kernel1->execute(numAtoms);
     particleType.download(p);
-    cout<<"f"<<endl;
     integration.applyVelocityConstraints(integrator.getConstraintTolerance());
     particleType.download(p);
-    cout<<"g"<<endl;
     kernel2->setArg(9, randomSeed+cc.getStepCount());
     kernel2->setArg(10, (float) (BOLTZ*integrator.getTemperature()));
     setPeriodicBoxArgs(cc, kernel2, 11);
     particleType.download(p);
-    cout<<"h"<<endl;
-    kernel2->execute(2*nb.getNumForceThreadBlocks()*nb.getForceThreadBlockSize(), nb.getForceThreadBlockSize());
+    kernel2->execute(2*nb.getNumForceThreadBlocks()*blockSize, blockSize);
     particleType.download(p);
-    cout<<"i"<<endl;
     kernel3->execute(numAtoms);
     particleType.download(p);
-    cout<<"j"<<endl;
     integration.applyConstraints(integrator.getConstraintTolerance());
     particleType.download(p);
-    cout<<"k"<<endl;
     kernel4->execute(numAtoms);
     particleType.download(p);
-    cout<<"l"<<endl;
     integration.computeVirtualSites();
 
     // Update the time and step count.
@@ -3466,7 +3455,6 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
 
     flushPeriodically(cc);
     particleType.download(p);
-    cout<<"m"<<endl;
 }
 
 double CommonIntegrateDPDStepKernel::computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator) {

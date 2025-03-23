@@ -52,7 +52,6 @@ void DPDIntegratorUtilities::createTypeTables(const DPDIntegrator& integrator, i
         }
         else
             particleType[i] = mapping->second;
-        printf("%d %d %d\n", i, type, particleType[i]);
     }
     numTypes = typeMap.size();
 

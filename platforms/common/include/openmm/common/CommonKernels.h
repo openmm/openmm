@@ -1090,7 +1090,7 @@ private:
     class ReorderListener;
     ComputeContext& cc;
     bool hasInitializedKernels;
-    int numTypes, randomSeed;
+    int numTypes, randomSeed, blockSize;
     ComputeArray particleType, pairParams, oldDelta, velDelta, tileCounter;
     ComputeKernel kernel1, kernel2, kernel3, kernel4;
 };
