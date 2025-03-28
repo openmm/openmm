@@ -12,8 +12,6 @@
 #   libOpenMMDrude_static.a
 #----------------------------------------------------
 
-#INCLUDE(Dart)
-
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
 SET(OPENMM_DRUDE_PLUGIN_SOURCE_SUBDIRS . openmmapi serialization)

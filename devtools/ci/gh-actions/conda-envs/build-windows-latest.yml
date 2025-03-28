@@ -5,7 +5,7 @@ channels:
 dependencies:
 # build
 - jom
-- cmake
+- cmake<4.0
 - ccache
 - m2-coreutils
 # host
