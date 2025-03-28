@@ -3343,6 +3343,8 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
     defines["WORK_GROUP_SIZE"] = cc.intToString(blockSize);
     if (system.usesPeriodicBoundaryConditions())
         defines["USE_PERIODIC"] = "1";
+    if (cc.getIsCPU())
+        defines["INTEL_WORKAROUND"] = "1";
     ComputeProgram program = cc.compileProgram(CommonKernelSources::dpd, defines);
     kernel1 = program->createKernel("integrateDPDPart1");
     kernel2 = program->createKernel("integrateDPDPart2");
