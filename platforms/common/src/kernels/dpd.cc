@@ -162,14 +162,14 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
             localType[LOCAL_ID] = particleType[atom2];
         }
         SYNC_WARPS;
-        if (atom1 < NUM_ATOMS) {
+        if (atom1 < numAtoms) {
             for (int i = 0; i < TILE_SIZE; i++) {
 #ifdef INTEL_WORKAROUND
                 // Workaround for bug in Intel's OpenCL for CPUs.
                 mem_fence(CLK_LOCAL_MEM_FENCE);
 #endif
                 int atom2 = y*TILE_SIZE+i;
-                if ((x != y || atom1 < atom2) && atom2 < NUM_ATOMS) {
+                if ((x != y || atom1 < atom2) && atom2 < numAtoms) {
                     mixed3 pos2 = localPos[tbx+i];
                     real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
 #ifdef USE_PERIODIC
@@ -223,14 +223,14 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
             APPLY_PERIODIC_TO_POS_WITH_CENTER(pos1, blockCenterX)
             APPLY_PERIODIC_TO_POS_WITH_CENTER(localPos[LOCAL_ID], blockCenterX)
             SYNC_WARPS;
-            if (atom1 < NUM_ATOMS) {
+            if (atom1 < numAtoms) {
                 for (int i = 0; i < TILE_SIZE; i++) {
 #ifdef INTEL_WORKAROUND
                     // Workaround for bug in Intel's OpenCL for CPUs.
                     mem_fence(CLK_LOCAL_MEM_FENCE);
 #endif
                     int atom2 = atomIndices[tbx+i];
-                    if (atom2 < NUM_ATOMS) {
+                    if (atom2 < numAtoms) {
                         pos2 = localPos[tbx+i];
                         real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
                         processPair(atom1, atom2, delta, vel1, localVel[tbx+i], type1, localType[tbx+i],
@@ -246,10 +246,10 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
             // We need to apply periodic boundary conditions separately for each interaction.
 
             SYNC_WARPS;
-            if (atom1 < NUM_ATOMS) {
+            if (atom1 < numAtoms) {
                 for (int i = 0; i < TILE_SIZE; i++) {
                     int atom2 = atomIndices[tbx+i];
-                    if (atom2 < NUM_ATOMS) {
+                    if (atom2 < numAtoms) {
                         pos2 = localPos[tbx+i];
                         real3 delta = make_real3(pos2.x-pos1.x, pos2.y-pos1.y, pos2.z-pos1.z);
 #ifdef USE_PERIODIC

@@ -3336,7 +3336,6 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
     ContextSelector selector(cc);
     map<string, string> defines;
     defines["M_PI"] = cc.doubleToString(M_PI);
-    defines["NUM_ATOMS"] = cc.intToString(cc.getNumAtoms());
     defines["MAX_CUTOFF"] = cc.doubleToString(maxCutoff);
     defines["TILE_SIZE"] = cc.intToString(ComputeContext::TileSize);
     blockSize = max(32, cc.getNonbondedUtilities().getForceThreadBlockSize());
