@@ -115,7 +115,7 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
     mixed halfdt = 0.5f*dt[0].y;
     LOCAL mixed3 localPos[WORK_GROUP_SIZE];
     LOCAL mixed4 localVel[WORK_GROUP_SIZE];
-    LOCAL int localType[WORK_GROUP_SIZE];
+    LOCAL volatile int localType[WORK_GROUP_SIZE];
 #ifndef USE_MIXED_PRECISION
     GLOBAL real4* posqCorrection = 0;
 #endif
@@ -248,6 +248,10 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
             SYNC_WARPS;
             if (atom1 < numAtoms) {
                 for (int i = 0; i < TILE_SIZE; i++) {
+#ifdef INTEL_WORKAROUND
+                    // Workaround for bug in Intel's OpenCL for CPUs.
+                    mem_fence(CLK_LOCAL_MEM_FENCE);
+#endif
                     int atom2 = atomIndices[tbx+i];
                     if (atom2 < numAtoms) {
                         pos2 = localPos[tbx+i];
