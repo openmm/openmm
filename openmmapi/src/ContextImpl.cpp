@@ -397,6 +397,44 @@ const vector<vector<int> >& ContextImpl::getMolecules() const {
     return molecules;
 }
 
+const vector<vector<int> >& ContextImpl::getConstrainedGroups() const {
+    if (!hasInitializedForces)
+        throw OpenMMException("ContextImpl: getConstrainedGroups() cannot be called until all ForceImpls have been initialized");
+    if (constrainedGroups.size() > 0 || system.getNumParticles() == 0)
+        return constrainedGroups;
+
+    // First make a list of constraints.
+
+    vector<pair<int, int> > links;
+    for (int i = 0; i < system.getNumConstraints(); i++) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        links.push_back(std::make_pair(particle1, particle2));
+    }
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        if (system.isVirtualSite(i)) {
+            const VirtualSite& site = system.getVirtualSite(i);
+            for (int j = 0; j < site.getNumParticles(); j++)
+                links.push_back(std::make_pair(i, site.getParticle(j)));
+        }
+    }
+
+    // Make a list of every other particle to which each particle is connected
+
+    int numParticles = system.getNumParticles();
+    vector<vector<int> > particleBonds(numParticles);
+    for (auto& link : links) {
+        particleBonds[link.first].push_back(link.second);
+        particleBonds[link.second].push_back(link.first);
+    }
+
+    // Now identify particles by which molecule they belong to.
+
+    constrainedGroups = findMolecules(numParticles, particleBonds);
+    return constrainedGroups;
+}
+
 vector<vector<int> > ContextImpl::findMolecules(int numParticles, vector<vector<int> >& particleBonds) {
     // This is essentially a recursive algorithm, but it is reformulated as a loop to avoid
     // stack overflows.  It selects a particle, marks it as a new molecule, then recursively
