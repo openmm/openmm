@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,56 +29,57 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CompoundIntegrator.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomCentroidBondForce.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomCVForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomManyParticleForce.h"
-#include "openmm/CustomNonbondedForce.h"
-#include "openmm/DPDIntegrator.h"
-#include "openmm/Force.h"
-#include "openmm/GayBerneForce.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LangevinMiddleIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/MonteCarloFlexibleBarostat.h"
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Context.h"
+#include "openmm/internal/DPDIntegratorUtilities.h"
 #include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/RMSDForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/TabulatedFunction.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/NoseHooverIntegrator.h"
-#include "openmm/NoseHooverChain.h"
-#include "openmm/VirtualSite.h"
-#include "openmm/Platform.h"
-#include "openmm/serialization/XmlSerializer.h"
-#include "openmm/ATMForce.h"
+#include <map>
+#include <cstdio>
 
-#endif /*OPENMM_H_*/
+using namespace OpenMM;
+using namespace std;
+
+void DPDIntegratorUtilities::createTypeTables(const DPDIntegrator& integrator, int numParticles, int& numTypes, vector<int>& particleType,
+        vector<vector<double> >& friction, vector<vector<double> >& cutoff, double& maxCutoff) {
+    // Identify all unique types and record the types of particles.
+
+    map<int, int> typeMap;
+    particleType.resize(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        int type = integrator.getParticleType(i);
+        auto mapping = typeMap.find(type);
+        if (mapping == typeMap.end()) {
+            particleType[i] = typeMap.size();
+            typeMap[type] = particleType[i];
+        }
+        else
+            particleType[i] = mapping->second;
+    }
+    numTypes = typeMap.size();
+
+    // Build tables of friction and cutoff.
+
+    friction.clear();
+    cutoff.clear();
+    friction.resize(numTypes, vector<double>(numTypes, integrator.getDefaultFriction()));
+    cutoff.resize(numTypes, vector<double>(numTypes, integrator.getDefaultCutoff()));
+    map<int, int> inverseMap;
+    for (auto mapping : typeMap)
+        inverseMap[mapping.second] = mapping.first;
+    maxCutoff = integrator.getDefaultCutoff();
+    for (int i = 0; i < integrator.getNumTypePairs(); i++) {
+        int t1, t2;
+        double f, c;
+        integrator.getTypePairParameters(i, t1, t2, f, c);
+        if (f < 0.0)
+            throw OpenMMException("DPDIntegrator: friction cannot be negative");
+        if (c <= 0.0)
+            throw OpenMMException("DPDIntegrator: cutoff must be positive");
+        int type1 = inverseMap[t1];
+        int type2 = inverseMap[t2];
+        friction[type1][type2] = f;
+        friction[type2][type1] = f;
+        cutoff[type1][type2] = c;
+        cutoff[type2][type1] = c;
+        if (c > maxCutoff)
+            maxCutoff = c;
+    }
+}
