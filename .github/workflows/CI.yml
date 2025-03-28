@@ -257,7 +257,6 @@ jobs:
           cd build
           if [[ ${{ matrix.OPENCL }} == true ]]; then
             source /opt/intel/oneapi/setvars.sh
-            ./TestOpenCLDPDIntegrator
           fi
           python ../devtools/run-ctest.py --parallel 2 --timeout 600 --job-duration 900 --attempts 3
 
