@@ -269,12 +269,12 @@ double ConstantPotentialForce::getChargeConstraintTarget() const {
     return chargeTarget;
 }
 
-void ConstantPotentialForce::setChargeConstraintTarget(double target) {
-    chargeTarget = target;
+void ConstantPotentialForce::setChargeConstraintTarget(double charge) {
+    chargeTarget = charge;
 }
 
-Vec3 ConstantPotentialForce::getExternalField() const {
-    return externalField;
+void ConstantPotentialForce::getExternalField(Vec3& field) const {
+    field = externalField;
 }
 
 void ConstantPotentialForce::setExternalField(const Vec3& field) {

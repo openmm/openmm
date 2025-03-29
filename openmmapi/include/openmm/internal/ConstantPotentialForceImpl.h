@@ -59,11 +59,14 @@ public:
         // This force field doesn't update the state directly.
     }
     double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy, int groups);
-    std::map<std::string, double> getDefaultParameters();
+    std::map<std::string, double> getDefaultParameters() {
+        return std::map<std::string, double>(); // This force field doesn't define any parameters.
+    }
     std::vector<std::string> getKernelNames();
     void updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle, int firstException, int lastException);
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     void getCharges(ContextImpl& context, std::vector<double>& charges);
+    // TODO: see if we can reuse the static methods from NonbondedForce.
 private:
     const ConstantPotentialForce& owner;
     Kernel kernel;

@@ -43,15 +43,15 @@
 namespace OpenMM {
 
 /**
- * This class implements the periodic finite field constant potential method
- * described in Dufils et al., Phys. Rev. Lett. 123, 195501 (2019).  This class
- * implements a standard Coulomb force using the particle mesh Ewald method, but
- * it can also solve for the magnitudes of Gaussian charge distributions on
- * conducting electrodes held at fixed potentials and apply external electric
- * fields.  An implementation of a semiclassical Thomas-Fermi model described in
- * Scalfi et al., J. Chem. Phys. 153, 174704 (2020) is also included.  Unlike
- * NonbondedForce, Lennard-Jones interactions are not computed by this force,
- * and should be specified in another force if they are desired.
+ * This class implements the periodic finite field constant potential method.
+ * This is described in Dufils et al., Phys. Rev. Lett. 123, 195501 (2019).
+ * This class implements a standard Coulomb force using the particle mesh Ewald
+ * method, but it can also solve for the magnitudes of Gaussian charge
+ * distributions on conducting electrodes held at fixed potentials and apply
+ * external electric fields.  An implementation of a semiclassical Thomas-Fermi
+ * model described in Scalfi et al., J. Chem. Phys. 153, 174704 (2020) is also
+ * included.  Unlike NonbondedForce, Lennard-Jones interactions are not computed
+ * by this force, and should be specified in another force if they are desired.
  *
  * To use this class, create a ConstantPotentialForce object, then call
  * addParticle() once for each particle in the System to define its parameters.
@@ -275,18 +275,21 @@ public:
      */
     void createExceptionsFromBonds(const std::vector<std::pair<int, int> >& bonds, double coulomb14Scale);
     /**
-     * Update the particle and exception parameters in a Context to match those stored in this Force object.  This method
-     * provides an efficient method to update certain parameters in an existing Context without needing to reinitialize it.
-     * Simply call setParticleParameters() and setExceptionParameters() to modify this object's parameters, then call
+     * Update the particle and exception parameters in a Context to match those
+     * stored in this Force object.  This method provides an efficient method to
+     * update certain parameters in an existing Context without needing to
+     * reinitialize it.  Simply call setParticleParameters() and
+     * setExceptionParameters() to modify this object's parameters, then call
      * updateParametersInContext() to copy them over to the Context.
      *
-     * This method has several limitations.  The only information it updates is the parameters of particles and exceptions,
-     * as well as parameter offsets for particles and exceptions.  All other aspects of the Force (the nonbonded method,
-     * the cutoff distance, etc.) are unaffected and can only be changed by reinitializing the Context.  Furthermore,
-     * only the chargeProd, sigma, and epsilon values of an exception can be changed; the pair of particles involved in the
-     * exception cannot change.  Likewise, it can update charge, sigma and epsilon for a parameter offset, but not the
-     * identify of the particle or exception the offset is applied to, or which global parameter it is based on.  Finally,
-     * this method cannot be used to add new particles or exceptions, only to change the parameters of existing ones.
+     * This method has several limitations.  The only information it updates is
+     * the parameters of particles and exceptions.  All other aspects of the
+     * Force (the constant potential method, the cutoff distance, etc.) are
+     * unaffected and can only be changed by reinitializing the Context.
+     * Furthermore, only the chargeProd value of an exception can be changed;
+     * the pair of particles involved in the exception cannot change.  Finally,
+     * this method cannot be used to add new particles or exceptions, only to
+     * change the parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
     /**
@@ -390,12 +393,12 @@ public:
      * (fluctuating) charges on all electrode particles as well as the (fixed)
      * charges on all non-electrode particles.
      */
-    void setChargeConstraintTarget(double target);
+    void setChargeConstraintTarget(double charge);
     /**
      * Get the external electric field strength, measured in kJ/mol/nm per
      * proton charge.
      */
-    Vec3 getExternalField() const;
+    void getExternalField(Vec3& field) const;
     /**
      * Set the external electric field strength, measured in kJ/mol/nm per
      * proton charge.

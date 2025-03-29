@@ -55,7 +55,6 @@ ConstantPotentialForceImpl::~ConstantPotentialForceImpl() {
 void ConstantPotentialForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcConstantPotentialForceKernel::Name(), context);
 
-
     const System& system = context.getSystem();
     if (owner.getNumParticles() != system.getNumParticles())
         throw OpenMMException("ConstantPotentialForce must have exactly as many particles as the System it belongs to.");
@@ -147,4 +146,8 @@ void ConstantPotentialForceImpl::updateParametersInContext(ContextImpl& context,
 
 void ConstantPotentialForceImpl::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
     kernel.getAs<CalcConstantPotentialForceKernel>().getPMEParameters(alpha, nx, ny, nz);
+}
+
+void ConstantPotentialForceImpl::getCharges(ContextImpl& context, std::vector<double>& charges) {
+    kernel.getAs<CalcConstantPotentialForceKernel>().getCharges(context, charges);
 }
