@@ -115,7 +115,7 @@ class DCDReporter(object):
         positions = state.getPositions(asNumpy=True)
         if self._atomSubset is not None:
             positions = [positions[i] for i in self._atomSubset]
-        self._dcd.writeModel(positions, periodicBoxVectors=state.getPeriodicBoxVectors())
+        self._dcd.writeModel(positions, periodicBoxVectors=state.getPeriodicBoxVectors(), currentStep=simulation.currentStep)
 
     def __del__(self):
         self._out.close()

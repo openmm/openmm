@@ -107,11 +107,10 @@ class XTCReporter(object):
                 self._fileName,
                 topology,
                 simulation.integrator.getStepSize(),
-                simulation.currentStep,
                 self._reportInterval,
                 self._append,
             )
         positions = state.getPositions(asNumpy=True)
         if self._atomSubset is not None:
             positions = [positions[i] for i in self._atomSubset]
-        self._xtc.writeModel(positions, periodicBoxVectors=state.getPeriodicBoxVectors())
+        self._xtc.writeModel(positions, periodicBoxVectors=state.getPeriodicBoxVectors(), currentStep=simulation.currentStep)

@@ -75,7 +75,6 @@ class DCDFile(object):
         self._topology = topology
         self._firstStep = firstStep
         self._interval = interval
-        self._modelCount = 0
         if is_quantity(dt):
             dt = dt.value_in_unit(picoseconds)
         dt /= 0.04888821
@@ -84,8 +83,6 @@ class DCDFile(object):
         if topology.getUnitCellDimensions() is not None:
             boxFlag = 1
         if append:
-            file.seek(8, os.SEEK_SET)
-            self._modelCount = struct.unpack('<i', file.read(4))[0]
             file.seek(268, os.SEEK_SET)
             numAtoms = struct.unpack('<i', file.read(4))[0]
             if numAtoms != topology.getNumAtoms():
@@ -98,7 +95,7 @@ class DCDFile(object):
             header += struct.pack('<4i', 164, 4, topology.getNumAtoms(), 4)
             file.write(header)
 
-    def writeModel(self, positions, unitCellDimensions=None, periodicBoxVectors=None):
+    def writeModel(self, positions, unitCellDimensions=None, periodicBoxVectors=None, currentStep=0):
         """Write out a model to the DCD file.
 
         The periodic box can be specified either by the unit cell dimensions
@@ -116,6 +113,8 @@ class DCDFile(object):
             The dimensions of the crystallographic unit cell.
         periodicBoxVectors : tuple of Vec3=None
             The vectors defining the periodic box.
+        currentStep : int=0
+            The current step of the simulation.
         """
         if self._topology.getNumAtoms() != len(positions):
             raise ValueError('The number of positions must match the number of atoms')
@@ -129,23 +128,21 @@ class DCDFile(object):
             raise ValueError('Particle position is infinite.  For more information, see https://github.com/openmm/openmm/wiki/Frequently-Asked-Questions#nan')
         file = self._file
 
-        self._modelCount += 1
-        if self._interval > 1 and self._firstStep+self._modelCount*self._interval > 1<<31:
+        if self._interval > 1 and currentStep + self._interval > 1<<31:
             # This will exceed the range of a 32 bit integer.  To avoid crashing or producing a corrupt file,
             # update the header to say the trajectory consisted of a smaller number of larger steps (so the
             # total trajectory length remains correct).
-            self._firstStep //= self._interval
             self._dt *= self._interval
             self._interval = 1
             file.seek(0, os.SEEK_SET)
-            file.write(struct.pack('<i4c9if', 84, b'C', b'O', b'R', b'D', 0, self._firstStep, self._interval, 0, 0, 0, 0, 0, 0, self._dt))
+            file.write(struct.pack('<i4c9if', 84, b'C', b'O', b'R', b'D', 0, 1, self._interval, 0, 0, 0, 0, 0, 0, self._dt))
 
         # Update the header.
 
         file.seek(8, os.SEEK_SET)
-        file.write(struct.pack('<i', self._modelCount))
+        file.write(struct.pack('<i', currentStep // self._interval))
         file.seek(20, os.SEEK_SET)
-        file.write(struct.pack('<i', self._firstStep+self._modelCount*self._interval))
+        file.write(struct.pack('<i', currentStep))
 
         # Write the data.
 
