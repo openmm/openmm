@@ -63,10 +63,14 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
-    void updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle, int firstException, int lastException);
+    void updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle, int firstException, int lastException, int firstElectrode, int lastElectrode);
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     void getCharges(ContextImpl& context, std::vector<double>& charges);
-    // TODO: see if we can reuse the static methods from NonbondedForce.
+    /**
+     * This is a utility routine that calculates the values to use for alpha and
+     * grid size when using Particle Mesh Ewald.
+     */
+    static void calcPMEParameters(const System& system, const ConstantPotentialForce& force, double& alpha, int& xsize, int& ysize, int& zsize);
 private:
     const ConstantPotentialForce& owner;
     Kernel kernel;

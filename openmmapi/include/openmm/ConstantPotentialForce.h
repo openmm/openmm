@@ -275,21 +275,23 @@ public:
      */
     void createExceptionsFromBonds(const std::vector<std::pair<int, int> >& bonds, double coulomb14Scale);
     /**
-     * Update the particle and exception parameters in a Context to match those
-     * stored in this Force object.  This method provides an efficient method to
-     * update certain parameters in an existing Context without needing to
-     * reinitialize it.  Simply call setParticleParameters() and
-     * setExceptionParameters() to modify this object's parameters, then call
-     * updateParametersInContext() to copy them over to the Context.
+     * Update particle, exception, and electrode parameters in a Context to
+     * match those stored in this Force object.  This method provides an
+     * efficient method to update certain parameters in an existing Context
+     * without needing to reinitialize it.  Simply call setParticleParameters()
+     * and setExceptionParameters() to modify this object's parameters, then
+     * call updateParametersInContext() to copy them over to the Context.
      *
      * This method has several limitations.  The only information it updates is
-     * the parameters of particles and exceptions.  All other aspects of the
-     * Force (the constant potential method, the cutoff distance, etc.) are
-     * unaffected and can only be changed by reinitializing the Context.
-     * Furthermore, only the chargeProd value of an exception can be changed;
-     * the pair of particles involved in the exception cannot change.  Finally,
-     * this method cannot be used to add new particles or exceptions, only to
-     * change the parameters of existing ones.
+     * the parameters of particles, exceptions, and electrodes.  All other
+     * aspects of the Force (the constant potential method, the cutoff distance,
+     * etc.) are unaffected and can only be changed by reinitializing the
+     * Context.  Furthermore, only the chargeProd value of an exception can be
+     * changed; the pair of particles involved in the exception cannot change.
+     * Similarly, for electrodes, the set of particles involved in the electrode
+     * cannot be updated with this method.  Finally, this method cannot be used
+     * to add new particles, exceptions, or electrodes, only to change the
+     * parameters of existing ones.
      */
     void updateParametersInContext(Context& context);
     /**
@@ -426,7 +428,7 @@ private:
     std::vector<ExceptionInfo> exceptions;
     std::vector<ElectrodeInfo> electrodes;
     std::map<std::pair<int, int>, int> exceptionMap;
-    mutable int numContexts, firstChangedParticle, lastChangedParticle, firstChangedException, lastChangedException;
+    mutable int numContexts, firstChangedParticle, lastChangedParticle, firstChangedException, lastChangedException, firstChangedElectrode, lastChangedElectrode;
 };
 
 /**

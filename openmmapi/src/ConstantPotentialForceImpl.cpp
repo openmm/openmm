@@ -139,8 +139,8 @@ std::vector<std::string> ConstantPotentialForceImpl::getKernelNames() {
     return names;
 }
 
-void ConstantPotentialForceImpl::updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle, int firstException, int lastException) {
-    kernel.getAs<CalcConstantPotentialForceKernel>().copyParametersToContext(context, owner, firstParticle, lastParticle, firstException, lastException);
+void ConstantPotentialForceImpl::updateParametersInContext(ContextImpl& context, int firstParticle, int lastParticle, int firstException, int lastException, int firstElectrode, int lastElectrode) {
+    kernel.getAs<CalcConstantPotentialForceKernel>().copyParametersToContext(context, owner, firstParticle, lastParticle, firstException, lastException, firstElectrode, lastElectrode);
     context.systemChanged();
 }
 
@@ -150,4 +150,17 @@ void ConstantPotentialForceImpl::getPMEParameters(double& alpha, int& nx, int& n
 
 void ConstantPotentialForceImpl::getCharges(ContextImpl& context, std::vector<double>& charges) {
     kernel.getAs<CalcConstantPotentialForceKernel>().getCharges(context, charges);
+}
+
+void ConstantPotentialForceImpl::calcPMEParameters(const System& system, const ConstantPotentialForce& force, double& alpha, int& xsize, int& ysize, int& zsize) {
+    force.getPMEParameters(alpha, xsize, ysize, zsize);
+    if (alpha == 0.0) {
+        Vec3 boxVectors[3];
+        system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        double tol = force.getEwaldErrorTolerance();
+        alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(2.0*tol));
+        xsize = max((int) ceil(2*alpha*boxVectors[0][0]/(3*pow(tol, 0.2))), 6);
+        ysize = max((int) ceil(2*alpha*boxVectors[1][1]/(3*pow(tol, 0.2))), 6);
+        zsize = max((int) ceil(2*alpha*boxVectors[2][2]/(3*pow(tol, 0.2))), 6);
+    }
 }

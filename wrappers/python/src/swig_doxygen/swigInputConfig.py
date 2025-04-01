@@ -347,7 +347,7 @@ UNITS = {
 ("ConstantPotentialForce", "getExceptionParameters") : (None, (None, None, "unit.elementary_charge*unit.elementary_charge")),
 ("ConstantPotentialForce", "setExceptionParameters") : (None, (None, None, None, "unit.elementary_charge*unit.elementary_charge")),
 ("ConstantPotentialForce", "addParticle") : (None, ("unit.elementary_charge",)),
-("ConstantPotentialForce", "getParticleParameters") : (None, ("unit.elementary_charge",)),
+("ConstantPotentialForce", "getParticleParameters") : ("unit.elementary_charge", ()),
 ("ConstantPotentialForce", "setParticleParameters") : (None, (None, "unit.elementary_charge",)),
 ("ConstantPotentialForce", "getConstantPotentialMethod") : (None, ()),
 ("ConstantPotentialForce", "setConstantPotentialMethod") : (None, (None,)),

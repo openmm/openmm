@@ -149,6 +149,8 @@ ForceImpl* ConstantPotentialForce::createImpl() const {
         lastChangedParticle = -1;
         firstChangedException = exceptions.size();
         lastChangedException = -1;
+        firstChangedElectrode = electrodes.size();
+        lastChangedElectrode = -1;
     }
     numContexts++;
     return new ConstantPotentialForceImpl(*this);
@@ -206,14 +208,16 @@ void ConstantPotentialForce::addExclusionsToSet(const vector<set<int> >& bonded1
 
 void ConstantPotentialForce::updateParametersInContext(Context& context) {
     dynamic_cast<ConstantPotentialForceImpl&>(getImplInContext(context)).updateParametersInContext(getContextImpl(context),
-            firstChangedParticle, lastChangedParticle, firstChangedException, lastChangedException);
+            firstChangedParticle, lastChangedParticle, firstChangedException, lastChangedException, firstChangedElectrode, lastChangedElectrode);
     if (numContexts == 1) {
-        // We just updated the only existing context for this force, so we can reset
-        // the tracking of changed particles and exceptions.
+        // We just updated the only existing context for this force, so we can
+        // reset the tracking of changed particles, exceptions, and electrodes.
         firstChangedParticle = particles.size();
         lastChangedParticle = -1;
         firstChangedException = exceptions.size();
         lastChangedException = -1;
+        firstChangedElectrode = electrodes.size();
+        lastChangedElectrode = -1;
     }
 }
 
@@ -255,6 +259,10 @@ void ConstantPotentialForce::setElectrodeParameters(int index, const std::set<in
     electrodes[index].potential = potential;
     electrodes[index].gaussianWidth = gaussianWidth;
     electrodes[index].thomasFermiScale = thomasFermiScale;
+    if (numContexts > 0) {
+        firstChangedElectrode = min(index, firstChangedElectrode);
+        lastChangedElectrode = max(index, lastChangedElectrode);
+    }
 }
 
 bool ConstantPotentialForce::getUseChargeConstraint() const {
