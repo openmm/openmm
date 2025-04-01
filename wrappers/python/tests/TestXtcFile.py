@@ -212,7 +212,6 @@ class TestXtcFile(unittest.TestCase):
             simulation.context.setPositions(pdb.positions)
             simulation.context.setVelocitiesToTemperature(300 * unit.kelvin)
             simulation.step(10)
-            self.assertEqual(5, xtc._xtc._modelCount)
             self.assertEqual(5, xtc._xtc._getNumFrames())
             del simulation
             del xtc
@@ -231,7 +230,6 @@ class TestXtcFile(unittest.TestCase):
             simulation.context.setPositions(pdb.positions)
             simulation.context.setVelocitiesToTemperature(300 * unit.kelvin)
             simulation.step(10)
-            self.assertEqual(10, xtc._xtc._modelCount)
             self.assertEqual(10, xtc._xtc._getNumFrames())
             del simulation
             del xtc
@@ -259,7 +257,6 @@ class TestXtcFile(unittest.TestCase):
             simulation.context.setPositions(pdb.positions)
             simulation.context.setVelocitiesToTemperature(300 * unit.kelvin)
             simulation.step(10)
-            self.assertEqual(5, xtc._xtc._modelCount)
             self.assertEqual(5, xtc._xtc._getNumFrames())
 
             # The  XTCFile class  does not  provide a  way to  read the

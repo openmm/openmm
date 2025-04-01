@@ -6,6 +6,13 @@ from openmm import unit
 from random import random
 import os
 
+def _readModelCount(file):
+    import struct
+
+    with open(file, "r+b") as f:
+        f.seek(8, os.SEEK_SET)
+        return struct.unpack('<i', f.read(4))[0]
+
 class TestDCDFile(unittest.TestCase):
     def test_dcd(self):
         """ Test the DCD file """
@@ -45,7 +52,7 @@ class TestDCDFile(unittest.TestCase):
         simulation.context.setPositions(pdb.positions)
         simulation.context.setVelocitiesToTemperature(300*unit.kelvin)
         simulation.step(10)
-        self.assertEqual(5, dcd._dcd._modelCount)
+        self.assertEqual(5, _readModelCount(fname))
         del simulation
         del dcd
         len1 = os.stat(fname).st_size
@@ -59,7 +66,7 @@ class TestDCDFile(unittest.TestCase):
         simulation.context.setPositions(pdb.positions)
         simulation.context.setVelocitiesToTemperature(300*unit.kelvin)
         simulation.step(10)
-        self.assertEqual(10, dcd._dcd._modelCount)
+        self.assertEqual(10, _readModelCount(fname))
         len2 = os.stat(fname).st_size
         self.assertTrue(len2-len1 > 3*4*5*system.getNumParticles())
         del simulation
@@ -83,7 +90,7 @@ class TestDCDFile(unittest.TestCase):
         simulation.context.setPositions(pdb.positions)
         simulation.context.setVelocitiesToTemperature(300*unit.kelvin)
         simulation.step(10)
-        self.assertEqual(5, dcd._dcd._modelCount)
+        self.assertEqual(5, _readModelCount(fname))
         del simulation
         del dcd
         len1 = os.stat(fname).st_size
@@ -97,7 +104,7 @@ class TestDCDFile(unittest.TestCase):
         simulation.context.setPositions(pdb.positions)
         simulation.context.setVelocitiesToTemperature(300*unit.kelvin)
         simulation.step(10)
-        self.assertEqual(10, dcd._dcd._modelCount)
+        self.assertEqual(10, _readModelCount(fname))
         len2 = os.stat(fname).st_size
         self.assertTrue(len2-len1 > 3*4*5*len(atomSubset))
         del simulation
