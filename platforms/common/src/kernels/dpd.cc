@@ -166,7 +166,7 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
             for (int i = 0; i < TILE_SIZE; i++) {
 #ifdef INTEL_WORKAROUND
                 // Workaround for bug in Intel's OpenCL for CPUs.
-                mem_fence(CLK_LOCAL_MEM_FENCE);
+                MEM_FENCE;
 #endif
                 int atom2 = y*TILE_SIZE+i;
                 if ((x != y || atom1 < atom2) && atom2 < numAtoms) {
@@ -181,7 +181,11 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
                 }
             }
         }
+#ifdef NVIDIA_WORKAROUND
+        SYNC_THREADS;
+#else
         SYNC_WARPS;
+#endif
     }
 
     // Second loop: process tiles from the neighbor list.
@@ -227,7 +231,7 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
                 for (int i = 0; i < TILE_SIZE; i++) {
 #ifdef INTEL_WORKAROUND
                     // Workaround for bug in Intel's OpenCL for CPUs.
-                    mem_fence(CLK_LOCAL_MEM_FENCE);
+                    MEM_FENCE;
 #endif
                     int atom2 = atomIndices[tbx+i];
                     if (atom2 < numAtoms) {
@@ -250,7 +254,7 @@ KERNEL void integrateDPDPart2(int numAtoms, int paddedNumAtoms, GLOBAL const rea
                 for (int i = 0; i < TILE_SIZE; i++) {
 #ifdef INTEL_WORKAROUND
                     // Workaround for bug in Intel's OpenCL for CPUs.
-                    mem_fence(CLK_LOCAL_MEM_FENCE);
+                    MEM_FENCE;
 #endif
                     int atom2 = atomIndices[tbx+i];
                     if (atom2 < numAtoms) {

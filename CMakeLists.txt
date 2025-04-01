@@ -27,8 +27,7 @@ CMAKE_POLICY(SET CMP0003 NEW)
 CMAKE_POLICY(SET CMP0005 NEW)
 CMAKE_POLICY(SET CMP0011 NEW)
 
-INCLUDE(Dart)
-MARK_AS_ADVANCED(DART_ROOT)
+include(CTest)
 
 # We have custom cmake modules for FindOpenMM and running python tests
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")

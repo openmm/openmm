@@ -3320,7 +3320,6 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
 
     vector<int> particleTypeVec;
     vector<vector<double> > frictionTable, cutoffTable;
-    double maxCutoff;
     DPDIntegratorUtilities::createTypeTables(integrator, system.getNumParticles(), numTypes, particleTypeVec, frictionTable, cutoffTable, maxCutoff);
     while (particleTypeVec.size() < cc.getPaddedNumAtoms())
         particleTypeVec.push_back(0);
@@ -3330,25 +3329,10 @@ void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDInt
 
     cc.getNonbondedUtilities().addInteraction(true, system.usesPeriodicBoundaryConditions(), false, maxCutoff, vector<vector<int> >(), "", 32);
 
-    // Create the kernels and arrays.
+    // Create the arrays.
 
     cc.initializeContexts();
     ContextSelector selector(cc);
-    map<string, string> defines;
-    defines["M_PI"] = cc.doubleToString(M_PI);
-    defines["MAX_CUTOFF"] = cc.doubleToString(maxCutoff);
-    defines["TILE_SIZE"] = cc.intToString(ComputeContext::TileSize);
-    blockSize = max(32, cc.getNonbondedUtilities().getForceThreadBlockSize());
-    defines["WORK_GROUP_SIZE"] = cc.intToString(blockSize);
-    if (system.usesPeriodicBoundaryConditions())
-        defines["USE_PERIODIC"] = "1";
-    if (cc.getIsCPU())
-        defines["INTEL_WORKAROUND"] = "1";
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::dpd, defines);
-    kernel1 = program->createKernel("integrateDPDPart1");
-    kernel2 = program->createKernel("integrateDPDPart2");
-    kernel3 = program->createKernel("integrateDPDPart3");
-    kernel4 = program->createKernel("integrateDPDPart4");
     if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
         oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
     else
@@ -3377,6 +3361,31 @@ void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegr
     int numAtoms = cc.getNumAtoms();
     int paddedNumAtoms = cc.getPaddedNumAtoms();
     if (!hasInitializedKernels) {
+        map<string, string> defines;
+        defines["M_PI"] = cc.doubleToString(M_PI);
+        defines["MAX_CUTOFF"] = cc.doubleToString(maxCutoff);
+        defines["TILE_SIZE"] = cc.intToString(ComputeContext::TileSize);
+        blockSize = max(32, cc.getNonbondedUtilities().getForceThreadBlockSize());
+        defines["WORK_GROUP_SIZE"] = cc.intToString(blockSize);
+        if (context.getSystem().usesPeriodicBoundaryConditions())
+            defines["USE_PERIODIC"] = "1";
+        if (cc.getIsCPU())
+            defines["INTEL_WORKAROUND"] = "1";
+        try {
+            // Workaround for errors in NVIDIA OpenCL.
+
+            string platformName = context.getPlatform().getPropertyValue(context.getOwner(), "OpenCLPlatformName");
+            if (platformName.rfind("NVIDIA", 0) == 0)
+                defines["NVIDIA_WORKAROUND"] = "1";
+        }
+        catch (...) {
+            // This isn't the OpenCL platform.
+        }
+        ComputeProgram program = cc.compileProgram(CommonKernelSources::dpd, defines);
+        kernel1 = program->createKernel("integrateDPDPart1");
+        kernel2 = program->createKernel("integrateDPDPart2");
+        kernel3 = program->createKernel("integrateDPDPart3");
+        kernel4 = program->createKernel("integrateDPDPart4");
         hasInitializedKernels = true;
         kernel1->addArg(numAtoms);
         kernel1->addArg(paddedNumAtoms);
