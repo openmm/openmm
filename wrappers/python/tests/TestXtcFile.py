@@ -34,7 +34,7 @@ class TestXtcFile(unittest.TestCase):
                     mm.Vec3(random(), random(), random()) * unit.nanometers,
                 )
                 box.append(np.array([[vec.x, vec.y, vec.z] for vec in box_i]))
-                xtc.writeModel(coords[i], periodicBoxVectors=box_i)
+                xtc.writeModel(coords[i], periodicBoxVectors=box_i, currentStep=i)
             # The  XTCFile class  does not  provide a  way to  read the
             # trajectory back, but the underlying XTC library does
             coords_read, box_read, time, step = read_xtc(fname.encode("utf-8"))
@@ -72,7 +72,7 @@ class TestXtcFile(unittest.TestCase):
                 )
                 box_i = mm.Vec3(random(), random(), random()) * unit.nanometers
                 box.append(np.diag(box_i[:3].value_in_unit(unit.nanometers)))
-                xtc.writeModel(coords[i], unitCellDimensions=box_i)
+                xtc.writeModel(coords[i], unitCellDimensions=box_i, currentStep=i)
             #The  XTCFile class  does not  provide a  way to  read the
             #trajectory back, but the underlying XTC library does
             coords_read, box_read, time, step = read_xtc(fname.encode("utf-8"))
@@ -108,7 +108,7 @@ class TestXtcFile(unittest.TestCase):
                     [mm.Vec3(random(), random(), random()) for j in range(natom)]
                     * unit.nanometers
                 )
-                xtc.writeModel(coords[i])
+                xtc.writeModel(coords[i], currentStep=i)
             # The  XTCFile class  does not  provide a  way to  read the
             # trajectory back, but the underlying XTC library does
             coords_read, box_read, time, step = read_xtc(fname.encode("utf-8"))
@@ -158,7 +158,7 @@ class TestXtcFile(unittest.TestCase):
                     mm.Vec3(random(), random(), random()) * unit.nanometers,
                 )
                 box.append(np.array([[vec.x, vec.y, vec.z] for vec in box_i]))
-                xtc.writeModel(coords[i], periodicBoxVectors=box_i)
+                xtc.writeModel(coords[i], periodicBoxVectors=box_i, currentStep=i)
             # The  XTCFile class  does not  provide a  way to  read the
             # trajectory back, but the underlying XTC library does
             coords_read, box_read, time, step = read_xtc(fname.encode("utf-8"))
@@ -187,7 +187,8 @@ class TestXtcFile(unittest.TestCase):
             for i in range(5):
                 xtc.writeModel(
                     [mm.Vec3(random(), random(), random()) for j in range(natom)]
-                    * unit.angstroms
+                    * unit.angstroms,
+                    currentStep=i
                 )
 
     def testAppend(self):

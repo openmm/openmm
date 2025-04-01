@@ -22,7 +22,7 @@ class TestDCDFile(unittest.TestCase):
         with open(fname, 'wb') as f:
             dcd = app.DCDFile(f, pdbfile.topology, 0.001)
             for i in range(5):
-                dcd.writeModel([mm.Vec3(random(), random(), random()) for j in range(natom)]*unit.angstroms)
+                dcd.writeModel([mm.Vec3(random(), random(), random()) for j in range(natom)]*unit.angstroms, currentStep=i)
         os.remove(fname)
     
     def testLongTrajectory(self):
@@ -33,7 +33,7 @@ class TestDCDFile(unittest.TestCase):
         with open(fname, 'wb') as f:
             dcd = app.DCDFile(f, pdbfile.topology, 0.001, interval=1000000000)
             for i in range(5):
-                dcd.writeModel([mm.Vec3(random(), random(), random()) for j in range(natom)]*unit.angstroms)
+                dcd.writeModel([mm.Vec3(random(), random(), random()) for j in range(natom)]*unit.angstroms, currentStep=i)
         os.remove(fname)
     
     def testAppend(self):
