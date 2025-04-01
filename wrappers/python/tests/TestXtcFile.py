@@ -226,6 +226,7 @@ class TestXtcFile(unittest.TestCase):
                 integrator,
                 mm.Platform.getPlatform("Reference"),
             )
+            simulation.currentStep = 10
             xtc = app.XTCReporter(fname, 2, append=True)
             simulation.reporters.append(xtc)
             simulation.context.setPositions(pdb.positions)
