@@ -50,7 +50,7 @@ void MonteCarloAnisotropicBarostatImpl::initialize(ContextImpl& context) {
     if (!context.getSystem().usesPeriodicBoundaryConditions())
         throw OpenMMException("A barostat cannot be used with a non-periodic system");
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner, owner.getScaleMoleculesAsRigid());
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
@@ -114,10 +114,15 @@ void MonteCarloAnisotropicBarostatImpl::updateContextState(ContextImpl& context,
     kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, lengthScale[0], lengthScale[1], lengthScale[2]);
 
     // Compute the energy of the modified system.
-    
+
+    double numberOfScaledParticles;
+    if (owner.getScaleMoleculesAsRigid())
+        numberOfScaledParticles = context.getMolecules().size();
+    else
+        numberOfScaledParticles = context.getConstrainedGroups().size();
     double finalEnergy = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
     double kT = BOLTZ*context.getParameter(MonteCarloAnisotropicBarostat::Temperature());
-    double w = finalEnergy-initialEnergy + pressure*deltaVolume - context.getMolecules().size()*kT*log(newVolume/volume);
+    double w = finalEnergy-initialEnergy + pressure*deltaVolume - numberOfScaledParticles*kT*log(newVolume/volume);
     if (w > 0 && SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() > exp(-w/kT)) {
         // Reject the step.
         
