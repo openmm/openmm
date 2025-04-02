@@ -64,7 +64,7 @@ class DCDFile(object):
         dt : time
             The time step used in the trajectory
         firstStep : int=0
-            DEPRECATED: The index of the first step in the trajectory
+            The index of the first step in the trajectory
         interval : int=1
             The frequency (measured in time steps) at which states are written
             to the trajectory
@@ -73,6 +73,7 @@ class DCDFile(object):
         """
         self._file = file
         self._topology = topology
+        self._firstStep = firstStep
         self._interval = interval
         self._modelCount = 0
         if is_quantity(dt):
@@ -90,7 +91,7 @@ class DCDFile(object):
             if numAtoms != topology.getNumAtoms():
                 raise ValueError('Cannot append to a DCD file that contains a different number of atoms')
         else:
-            header = struct.pack('<i4c9if', 84, b'C', b'O', b'R', b'D', 0, interval, interval, 0, 0, 0, 0, 0, 0, dt)
+            header = struct.pack('<i4c9if', 84, b'C', b'O', b'R', b'D', 0, firstStep, interval, 0, 0, 0, 0, 0, 0, dt)
             header += struct.pack('<13i', boxFlag, 0, 0, 0, 0, 0, 0, 0, 0, 24, 84, 164, 2)
             header += struct.pack('<80s', b'Created by OpenMM')
             header += struct.pack('<80s', b'Created '+time.asctime(time.localtime(time.time())).encode('ascii'))
@@ -133,17 +134,18 @@ class DCDFile(object):
             # This will exceed the range of a 32 bit integer.  To avoid crashing or producing a corrupt file,
             # update the header to say the trajectory consisted of a smaller number of larger steps (so the
             # total trajectory length remains correct).
+            self._firstStep //= self._interval
             self._dt *= self._interval
             self._interval = 1
             file.seek(0, os.SEEK_SET)
-            file.write(struct.pack('<i4c9if', 84, b'C', b'O', b'R', b'D', 0, 1, self._interval, 0, 0, 0, 0, 0, 0, self._dt))
+            file.write(struct.pack('<i4c9if', 84, b'C', b'O', b'R', b'D', 0, self._firstStep, self._interval, 0, 0, 0, 0, 0, 0, self._dt))
 
         # Update the header.
 
         file.seek(8, os.SEEK_SET)
         file.write(struct.pack('<i', self._modelCount))
         file.seek(20, os.SEEK_SET)
-        file.write(struct.pack('<i', self._modelCount*self._interval))
+        file.write(struct.pack('<i', self._firstStep+(self._modelCount-1)*self._interval))
         # Write the data.
 
         file.seek(0, os.SEEK_END)

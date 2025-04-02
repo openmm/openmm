@@ -110,7 +110,7 @@ class DCDReporter(object):
                     topology.addAtom(atoms[i].name, atoms[i].element, residue)
             self._dcd = DCDFile(
                 self._out, topology, simulation.integrator.getStepSize(),
-                simulation.currentStep, self._reportInterval, self._append
+                self._reportInterval, self._reportInterval, self._append
             )
         positions = state.getPositions(asNumpy=True)
         if self._atomSubset is not None:
