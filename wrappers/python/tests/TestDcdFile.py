@@ -68,6 +68,7 @@ class TestDCDFile(unittest.TestCase):
 
         integrator = mm.VerletIntegrator(0.001*unit.picoseconds)
         simulation = app.Simulation(pdb.topology, system, integrator, mm.Platform.getPlatform('Reference'))
+        simulation.currentStep = 10
         dcd = app.DCDReporter(fname, 2, append=True)
         simulation.reporters.append(dcd)
         simulation.context.setPositions(pdb.positions)
@@ -112,6 +113,7 @@ class TestDCDFile(unittest.TestCase):
 
         integrator = mm.VerletIntegrator(0.001*unit.picoseconds)
         simulation = app.Simulation(pdb.topology, system, integrator, mm.Platform.getPlatform('Reference'))
+        simulation.currentStep = 10
         dcd = app.DCDReporter(fname, 2, append=True, atomSubset=atomSubset)
         simulation.reporters.append(dcd)
         simulation.context.setPositions(pdb.positions)

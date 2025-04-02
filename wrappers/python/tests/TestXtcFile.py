@@ -217,7 +217,7 @@ class TestXtcFile(unittest.TestCase):
             self.assertEqual(5, xtc._xtc._modelCount)
             self.assertEqual(5, xtc._xtc._getNumFrames())
             _, _, time, step = read_xtc(fname.encode("utf-8"))
-            self.assertEqual(np.arange(2, 11, 2) * xtc._dt, time)
+            self.assertEqual(np.arange(2, 11, 2) * 0.001, time)
             self.assertEqual(np.arange(2, 11, 2), step)
             del simulation
             del xtc
@@ -231,6 +231,7 @@ class TestXtcFile(unittest.TestCase):
                 integrator,
                 mm.Platform.getPlatform("Reference"),
             )
+            simulation.currentStep = 10
             xtc = app.XTCReporter(fname, 2, append=True)
             simulation.reporters.append(xtc)
             simulation.context.setPositions(pdb.positions)
@@ -239,7 +240,7 @@ class TestXtcFile(unittest.TestCase):
             self.assertEqual(10, xtc._xtc._modelCount)
             self.assertEqual(10, xtc._xtc._getNumFrames())
             _, _, time, step = read_xtc(fname.encode("utf-8"))
-            self.assertEqual(np.arange(2, 21, 2) * xtc._dt, time)
+            self.assertAlmostEqual(np.arange(2, 21, 2) * 0.001, time)
             self.assertEqual(np.arange(2, 21, 2), step)
             del simulation
             del xtc
@@ -277,7 +278,7 @@ class TestXtcFile(unittest.TestCase):
             self.assertEqual(box_read.shape, (3, 3, 5))
             self.assertEqual(len(time), 5)
             self.assertEqual(len(step), 5)
-            self.assertEqual(np.arange(2, 11, 2) * xtc._dt, time)
+            self.assertAlmostEqual(np.arange(2, 11, 2) * 1e-10, time)
             self.assertEqual(np.arange(2, 11, 2), step)
             coords = [pdb.positions[i].value_in_unit(unit.nanometers) for i in atomSubset]
             self.assertTrue(np.allclose(coords_read[:,:,0], coords, atol=1e-3))
