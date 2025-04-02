@@ -217,8 +217,8 @@ class TestXtcFile(unittest.TestCase):
             self.assertEqual(5, xtc._xtc._modelCount)
             self.assertEqual(5, xtc._xtc._getNumFrames())
             _, _, time, step = read_xtc(fname.encode("utf-8"))
-            self.assertEqual(np.arange(2, 11, 2) * 0.001, time)
-            self.assertEqual(np.arange(2, 11, 2), step)
+            self.assertTrue(np.allclose(np.arange(2, 11, 2) * 0.001, time))
+            self.assertTrue(np.array_equal(np.arange(2, 11, 2), step))
             del simulation
             del xtc
 
@@ -240,8 +240,8 @@ class TestXtcFile(unittest.TestCase):
             self.assertEqual(10, xtc._xtc._modelCount)
             self.assertEqual(10, xtc._xtc._getNumFrames())
             _, _, time, step = read_xtc(fname.encode("utf-8"))
-            self.assertAlmostEqual(np.arange(2, 21, 2) * 0.001, time)
-            self.assertEqual(np.arange(2, 21, 2), step)
+            self.assertTrue(np.allclose(np.arange(2, 21, 2) * 0.001, time))
+            self.assertTrue(np.array_equal(np.arange(2, 21, 2), step))
             del simulation
             del xtc
 
@@ -278,8 +278,8 @@ class TestXtcFile(unittest.TestCase):
             self.assertEqual(box_read.shape, (3, 3, 5))
             self.assertEqual(len(time), 5)
             self.assertEqual(len(step), 5)
-            self.assertAlmostEqual(np.arange(2, 11, 2) * 1e-10, time)
-            self.assertEqual(np.arange(2, 11, 2), step)
+            self.assertTrue(np.allclose(np.arange(2, 11, 2) * 1e-10, time))
+            self.assertTrue(np.array_equal(np.arange(2, 11, 2), step))
             coords = [pdb.positions[i].value_in_unit(unit.nanometers) for i in atomSubset]
             self.assertTrue(np.allclose(coords_read[:,:,0], coords, atol=1e-3))
             self.assertTrue(np.allclose(box_read[:,:,0], pdb.topology.getPeriodicBoxVectors().value_in_unit(unit.nanometers), atol=1e-3))
