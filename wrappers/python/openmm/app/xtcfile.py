@@ -34,7 +34,7 @@ class XTCFile(object):
         dt : time
             The time step used in the trajectory
         firstStep : int=0
-            The index of the first step in the trajectory
+            DEPRECATED: The index of the first step in the trajectory
         interval : int=1
             The frequency (measured in time steps) at which states are written
             to the trajectory
@@ -45,7 +45,6 @@ class XTCFile(object):
             raise TypeError("fileName must be a string")
         self._filename = fileName
         self._topology = topology
-        self._firstStep = firstStep
         self._interval = interval
         self._modelCount = 0
         if is_quantity(dt):
@@ -106,12 +105,11 @@ class XTCFile(object):
         self._modelCount += 1
         if (
             self._interval > 1
-            and self._firstStep + self._modelCount * self._interval > 1 << 31
+            and self._modelCount * self._interval > 1 << 31
         ):
             # This will exceed the range of a 32 bit integer.  To avoid crashing or producing a corrupt file,
             # update the file to say the trajectory consisted of a smaller number of larger steps (so the
             # total trajectory length remains correct).
-            self._firstStep //= self._interval
             self._dt *= self._interval
             self._interval = 1
             with tempfile.TemporaryDirectory() as temp:
@@ -119,7 +117,7 @@ class XTCFile(object):
                 xtc_rewrite_with_new_timestep(
                     self._filename.encode("utf-8"),
                     fname.encode("utf-8"),
-                    self._firstStep,
+                    1,
                     self._interval,
                     self._dt,
                 )
@@ -143,7 +141,7 @@ class XTCFile(object):
             )
         else:
             boxVectors = np.zeros((3, 3)).astype(np.float32)
-        step = (self._modelCount - 1) * self._interval + self._firstStep
+        step = self._modelCount * self._interval
         time = step * self._dt
         xtc_write_frame(
             self._filename.encode("utf-8"),
