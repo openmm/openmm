@@ -6,6 +6,17 @@ from openmm import unit
 from random import random
 import os
 
+
+def _read_dcd_header(file):
+    import struct
+    
+    with open(file, "r+b") as f:
+        f.seek(8, os.SEEK_SET)
+        modelCount = struct.unpack("<i", f.read(4))[0]
+        f.seek(20, os.SEEK_SET)
+        currStep = struct.unpack("<i", f.read(4))[0]
+        return modelCount, currStep
+
 class TestDCDFile(unittest.TestCase):
     def test_dcd(self):
         """ Test the DCD file """
@@ -49,11 +60,15 @@ class TestDCDFile(unittest.TestCase):
         del simulation
         del dcd
         len1 = os.stat(fname).st_size
+        modelCount, currStep = _read_dcd_header(fname)
+        self.assertEqual(5, modelCount)
+        self.assertEqual(10, currStep)
 
         # Create a new simulation and have it append some more frames.
 
         integrator = mm.VerletIntegrator(0.001*unit.picoseconds)
         simulation = app.Simulation(pdb.topology, system, integrator, mm.Platform.getPlatform('Reference'))
+        simulation.currentStep = 10
         dcd = app.DCDReporter(fname, 2, append=True)
         simulation.reporters.append(dcd)
         simulation.context.setPositions(pdb.positions)
@@ -64,6 +79,9 @@ class TestDCDFile(unittest.TestCase):
         self.assertTrue(len2-len1 > 3*4*5*system.getNumParticles())
         del simulation
         del dcd
+        modelCount, currStep = _read_dcd_header(fname)
+        self.assertEqual(10, modelCount)
+        self.assertEqual(20, currStep)
         os.remove(fname)
 
     def testAtomSubset(self):
@@ -87,11 +105,15 @@ class TestDCDFile(unittest.TestCase):
         del simulation
         del dcd
         len1 = os.stat(fname).st_size
+        modelCount, currStep = _read_dcd_header(fname)
+        self.assertEqual(5, modelCount)
+        self.assertEqual(10, currStep)
 
         # Create a new simulation and have it append some more frames.
 
         integrator = mm.VerletIntegrator(0.001*unit.picoseconds)
         simulation = app.Simulation(pdb.topology, system, integrator, mm.Platform.getPlatform('Reference'))
+        simulation.currentStep = 10
         dcd = app.DCDReporter(fname, 2, append=True, atomSubset=atomSubset)
         simulation.reporters.append(dcd)
         simulation.context.setPositions(pdb.positions)
@@ -102,6 +124,9 @@ class TestDCDFile(unittest.TestCase):
         self.assertTrue(len2-len1 > 3*4*5*len(atomSubset))
         del simulation
         del dcd
+        modelCount, currStep = _read_dcd_header(fname)
+        self.assertEqual(10, modelCount)
+        self.assertEqual(20, currStep)
         os.remove(fname)
 
 
