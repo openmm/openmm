@@ -106,7 +106,7 @@ class XTCFile(object):
         self._modelCount += 1
         if (
             self._interval > 1
-            and self._modelCount * self._interval > 1 << 31
+            and self._firstStep + self._modelCount * self._interval > 1 << 31
         ):
             # This will exceed the range of a 32 bit integer.  To avoid crashing or producing a corrupt file,
             # update the file to say the trajectory consisted of a smaller number of larger steps (so the

@@ -130,7 +130,7 @@ class DCDFile(object):
         file = self._file
 
         self._modelCount += 1
-        if self._interval > 1 and self._modelCount*self._interval > 1<<31:
+        if self._interval > 1 and self._firstStep+self._modelCount*self._interval > 1<<31:
             # This will exceed the range of a 32 bit integer.  To avoid crashing or producing a corrupt file,
             # update the header to say the trajectory consisted of a smaller number of larger steps (so the
             # total trajectory length remains correct).
