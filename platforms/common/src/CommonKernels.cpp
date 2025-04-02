@@ -34,6 +34,8 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomCentroidBondForceImpl.h"
 #include "openmm/internal/CustomCompoundBondForceImpl.h"
+#include "openmm/internal/DPDIntegratorUtilities.h"
+#include "openmm/internal/OSRngSeed.h"
 #include "openmm/internal/ThreadPool.h"
 #include "openmm/internal/timer.h"
 #include "CommonKernelSources.h"
@@ -3291,6 +3293,182 @@ double CommonIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, 
 
 double CommonIntegrateVariableLangevinStepKernel::computeKineticEnergy(ContextImpl& context, const VariableLangevinIntegrator& integrator) {
     return cc.getIntegrationUtilities().computeKineticEnergy(0.5*integrator.getStepSize());
+}
+
+class CommonIntegrateDPDStepKernel::ReorderListener : public ComputeContext::ReorderListener {
+public:
+    ReorderListener(ComputeContext& cc, vector<int>& particleTypes, ComputeArray& particleTypeArray) :
+            cc(cc), particleTypes(particleTypes), particleTypeArray(particleTypeArray) {
+    }
+    void execute() {
+        // Reorder particleTypes to reflect the new atom order.
+
+        vector<int> sortedTypes(particleTypes.size());
+        const vector<int>& order = cc.getAtomIndex();
+        for (int i = 0; i < particleTypes.size(); i++)
+            sortedTypes[i] = particleTypes[order[i]];
+        particleTypeArray.upload(sortedTypes);
+    }
+private:
+    ComputeContext& cc;
+    ComputeArray& particleTypeArray;
+    vector<int> particleTypes;
+};
+
+void CommonIntegrateDPDStepKernel::initialize(const System& system, const DPDIntegrator& integrator) {
+    // Record information about the integrator.
+
+    vector<int> particleTypeVec;
+    vector<vector<double> > frictionTable, cutoffTable;
+    DPDIntegratorUtilities::createTypeTables(integrator, system.getNumParticles(), numTypes, particleTypeVec, frictionTable, cutoffTable, maxCutoff);
+    while (particleTypeVec.size() < cc.getPaddedNumAtoms())
+        particleTypeVec.push_back(0);
+
+    // We want the NonbondedUtilities to build a neighbor list.  Add an empty interaction
+    // with a nonexistant force group to it.
+
+    cc.getNonbondedUtilities().addInteraction(true, system.usesPeriodicBoundaryConditions(), false, maxCutoff, vector<vector<int> >(), "", 32);
+
+    // Create the arrays.
+
+    cc.initializeContexts();
+    ContextSelector selector(cc);
+    if (cc.getUseDoublePrecision() || cc.getUseMixedPrecision())
+        oldDelta.initialize<mm_double4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+    else
+        oldDelta.initialize<mm_float4>(cc, cc.getPaddedNumAtoms(), "oldDelta");
+    particleType.initialize<int>(cc, cc.getPaddedNumAtoms(), "dpdParticleType");
+    pairParams.initialize<mm_float2>(cc, numTypes*numTypes, "dpdPairParams");
+    velDelta.initialize<long long>(cc, 3*cc.getPaddedNumAtoms(), "velDelta");
+    tileCounter.initialize<int>(cc, 1, "tileCounter");
+    particleType.upload(particleTypeVec);
+    vector<mm_float2> pairParamsVec(numTypes*numTypes);
+    for (int i = 0; i < numTypes; i++)
+        for (int j = 0; j < numTypes; j++)
+            pairParamsVec[i+j*numTypes] = mm_float2(frictionTable[i][j], cutoffTable[i][j]);
+    pairParams.upload(pairParamsVec);
+    cc.addAutoclearBuffer(velDelta);
+    cc.addReorderListener(new ReorderListener(cc, particleTypeVec, particleType));
+    randomSeed = integrator.getRandomNumberSeed();
+    if (randomSeed == 0)
+        randomSeed = osrngseed(); // A seed of 0 means use a unique one
+}
+
+void CommonIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegrator& integrator) {
+    ContextSelector selector(cc);
+    IntegrationUtilities& integration = cc.getIntegrationUtilities();
+    NonbondedUtilities& nb = cc.getNonbondedUtilities();
+    int numAtoms = cc.getNumAtoms();
+    int paddedNumAtoms = cc.getPaddedNumAtoms();
+    if (!hasInitializedKernels) {
+        map<string, string> defines;
+        defines["M_PI"] = cc.doubleToString(M_PI);
+        defines["MAX_CUTOFF"] = cc.doubleToString(maxCutoff);
+        defines["TILE_SIZE"] = cc.intToString(ComputeContext::TileSize);
+        blockSize = max(32, cc.getNonbondedUtilities().getForceThreadBlockSize());
+        defines["WORK_GROUP_SIZE"] = cc.intToString(blockSize);
+        if (context.getSystem().usesPeriodicBoundaryConditions())
+            defines["USE_PERIODIC"] = "1";
+        if (cc.getIsCPU())
+            defines["INTEL_WORKAROUND"] = "1";
+        try {
+            // Workaround for errors in NVIDIA OpenCL.
+
+            string platformName = context.getPlatform().getPropertyValue(context.getOwner(), "OpenCLPlatformName");
+            if (platformName.rfind("NVIDIA", 0) == 0)
+                defines["NVIDIA_WORKAROUND"] = "1";
+        }
+        catch (...) {
+            // This isn't the OpenCL platform.
+        }
+        ComputeProgram program = cc.compileProgram(CommonKernelSources::dpd, defines);
+        kernel1 = program->createKernel("integrateDPDPart1");
+        kernel2 = program->createKernel("integrateDPDPart2");
+        kernel3 = program->createKernel("integrateDPDPart3");
+        kernel4 = program->createKernel("integrateDPDPart4");
+        hasInitializedKernels = true;
+        kernel1->addArg(numAtoms);
+        kernel1->addArg(paddedNumAtoms);
+        kernel1->addArg(cc.getVelm());
+        kernel1->addArg(cc.getLongForceBuffer());
+        kernel1->addArg(integration.getStepSize());
+        kernel1->addArg(tileCounter);
+        kernel2->addArg(numAtoms);
+        kernel2->addArg(paddedNumAtoms);
+        kernel2->addArg(cc.getPosq());
+        kernel2->addArg(cc.getVelm());
+        kernel2->addArg(velDelta);
+        kernel2->addArg(integration.getStepSize());
+        kernel2->addArg(particleType);
+        kernel2->addArg(numTypes);
+        kernel2->addArg(pairParams);
+        for (int i = 0; i < 7; i++)
+            kernel2->addArg(); // Random seed, kT, and box vectors will be set just before it is executed.
+        kernel2->addArg(nb.getExclusionTiles());
+        kernel2->addArg((int) nb.getExclusionTiles().getSize());
+        kernel2->addArg(nb.getInteractingTiles());
+        kernel2->addArg(nb.getInteractionCount());
+        kernel2->addArg(nb.getBlockCenters());
+        kernel2->addArg(nb.getBlockBoundingBoxes());
+        kernel2->addArg(nb.getInteractingAtoms());
+        kernel2->addArg(tileCounter);
+        if (cc.getUseMixedPrecision())
+            kernel2->addArg(cc.getPosqCorrection());
+        kernel3->addArg(numAtoms);
+        kernel3->addArg(paddedNumAtoms);
+        kernel3->addArg(cc.getVelm());
+        kernel3->addArg(velDelta);
+        kernel3->addArg(integration.getPosDelta());
+        kernel3->addArg(oldDelta);
+        kernel3->addArg(integration.getStepSize());
+        kernel4->addArg(numAtoms);
+        kernel4->addArg(cc.getPosq());
+        kernel4->addArg(cc.getVelm());
+        kernel4->addArg(integration.getPosDelta());
+        kernel4->addArg(oldDelta);
+        kernel4->addArg(integration.getStepSize());
+        if (cc.getUseMixedPrecision())
+            kernel4->addArg(cc.getPosqCorrection());
+    }
+
+    // Perform the integration.
+
+    vector<int> p;
+    particleType.download(p);
+    double stepSize = integrator.getStepSize();
+    cc.getIntegrationUtilities().setNextStepSize(stepSize);
+    kernel1->execute(numAtoms);
+    particleType.download(p);
+    integration.applyVelocityConstraints(integrator.getConstraintTolerance());
+    particleType.download(p);
+    kernel2->setArg(9, randomSeed+cc.getStepCount());
+    kernel2->setArg(10, (float) (BOLTZ*integrator.getTemperature()));
+    setPeriodicBoxArgs(cc, kernel2, 11);
+    particleType.download(p);
+    kernel2->execute(2*nb.getNumForceThreadBlocks()*blockSize, blockSize);
+    particleType.download(p);
+    kernel3->execute(numAtoms);
+    particleType.download(p);
+    integration.applyConstraints(integrator.getConstraintTolerance());
+    particleType.download(p);
+    kernel4->execute(numAtoms);
+    particleType.download(p);
+    integration.computeVirtualSites();
+
+    // Update the time and step count.
+
+    cc.setTime(cc.getTime()+stepSize);
+    cc.setStepCount(cc.getStepCount()+1);
+    cc.reorderAtoms();
+
+    // Reduce UI lag.
+
+    flushPeriodically(cc);
+    particleType.download(p);
+}
+
+double CommonIntegrateDPDStepKernel::computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator) {
+    return cc.getIntegrationUtilities().computeKineticEnergy(0.0);
 }
 
 void CommonRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
