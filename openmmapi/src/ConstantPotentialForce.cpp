@@ -43,7 +43,7 @@ using namespace OpenMM;
 using namespace std;
 
 ConstantPotentialForce::ConstantPotentialForce() : cutoffDistance(1.0),
-        ewaldErrorTol(5e-4), alpha(0.0), chargeTarget(0.0), exceptionsUsePeriodic(false),
+        ewaldErrorTol(5e-4), alpha(0.0), cgErrorTol(1e-8), chargeTarget(0.0), exceptionsUsePeriodic(false),
         useChargeConstraint(false), nx(0), ny(0), nz(0), numContexts(0) {
 }
 
@@ -240,6 +240,14 @@ void ConstantPotentialForce::setConstantPotentialMethod(ConstantPotentialMethod 
     constantPotentialMethod = method;
 }
 
+double ConstantPotentialForce::getCGErrorTolerance() const {
+    return cgErrorTol;
+}
+
+void ConstantPotentialForce::setCGErrorTolerance(double tol) {
+    cgErrorTol = tol;
+}
+
 int ConstantPotentialForce::addElectrode(const std::set<int>& electrodeParticles, double potential, double gaussianWidth, double thomasFermiScale) {
     electrodes.push_back(ElectrodeInfo(electrodeParticles, potential, gaussianWidth, thomasFermiScale));
     return electrodes.size() - 1;
@@ -289,6 +297,6 @@ void ConstantPotentialForce::setExternalField(const Vec3& field) {
     externalField = field;
 }
 
-void ConstantPotentialForce::getCharges(Context& context, std::vector<double>& charges) {
+void ConstantPotentialForce::getCharges(Context& context, std::vector<double>& charges) const {
     dynamic_cast<ConstantPotentialForceImpl&>(getImplInContext(context)).getCharges(getContextImpl(context), charges);
 }

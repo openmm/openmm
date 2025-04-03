@@ -57,6 +57,7 @@ void ConstantPotentialForceProxy::serialize(const void* object, SerializationNod
     node.setIntProperty("nz", nz);
     node.setIntProperty("exceptionsUsePeriodic", force.getExceptionsUsePeriodicBoundaryConditions());
     node.setIntProperty("constantPotentialMethod", (int) force.getConstantPotentialMethod());
+    node.setDoubleProperty("cgTolerance", force.getCGErrorTolerance());
     node.setBoolProperty("useChargeConstraint", force.getUseChargeConstraint());
     node.setDoubleProperty("chargeConstraintTarget", force.getChargeConstraintTarget());
     Vec3 externalField;
@@ -102,7 +103,7 @@ void* ConstantPotentialForceProxy::deserialize(const SerializationNode& node) co
         force->setForceGroup(node.getIntProperty("forceGroup", 0));
         force->setName(node.getStringProperty("name", force->getName()));
         force->setCutoffDistance(node.getDoubleProperty("cutoff"));
-        force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
+        force->setCGErrorTolerance(node.getDoubleProperty("cgTolerance"));
         double alpha = node.getDoubleProperty("alpha", 0.0);
         int nx = node.getIntProperty("nx", 0);
         int ny = node.getIntProperty("ny", 0);
@@ -110,6 +111,7 @@ void* ConstantPotentialForceProxy::deserialize(const SerializationNode& node) co
         force->setPMEParameters(alpha, nx, ny, nz);
         force->setExceptionsUsePeriodicBoundaryConditions(node.getIntProperty("exceptionsUsePeriodic"));
         force->setConstantPotentialMethod((ConstantPotentialForce::ConstantPotentialMethod) node.getIntProperty("constantPotentialMethod"));
+        force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
         force->setUseChargeConstraint(node.getBoolProperty("useChargeConstraint"));
         force->setChargeConstraintTarget(node.getDoubleProperty("chargeConstraintTarget"));
         const SerializationNode& externalFieldNode = node.getChildNode("ExternalField");

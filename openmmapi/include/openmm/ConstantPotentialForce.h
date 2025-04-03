@@ -334,6 +334,16 @@ public:
      */
     void setConstantPotentialMethod(ConstantPotentialMethod method);
     /**
+     * Get the tolerance used for the conjugate gradient method of calculating
+     * electrode charges.
+     */
+    double getCGErrorTolerance() const;
+    /**
+     * Set the tolerance used for the conjugate gradient method of calculating
+     * electrode charges.
+     */
+    void setCGErrorTolerance(double tol);
+    /**
      * Get the number of electrodes that have been added.
      */
     int getNumElectrodes() const {
@@ -411,7 +421,7 @@ public:
      * simply be the fixed charges set, while for electrode particles, they will
      * be the current charges solved for by the constant potential method.
      */
-    void getCharges(Context& context, std::vector<double>& charges);
+    void getCharges(Context& context, std::vector<double>& charges) const;
 protected:
     ForceImpl* createImpl() const;
 private:
@@ -419,7 +429,7 @@ private:
     class ExceptionInfo;
     class ElectrodeInfo;
     ConstantPotentialMethod constantPotentialMethod;
-    double cutoffDistance, ewaldErrorTol, alpha, chargeTarget;
+    double cutoffDistance, ewaldErrorTol, alpha, cgErrorTol, chargeTarget;
     Vec3 externalField;
     bool exceptionsUsePeriodic, useChargeConstraint;
     int nx, ny, nz;
