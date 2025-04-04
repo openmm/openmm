@@ -125,6 +125,7 @@ void testIdealGas() {
         // Now run it for a while and see if the volume is correct.
 
         double volume = 0.0;
+        double avgPressure = 0.0;
         for (int j = 0; j < steps; ++j) {
             Vec3 box[3];
             context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
@@ -132,10 +133,13 @@ void testIdealGas() {
             ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
             ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
             integrator.step(frequency);
+            avgPressure += barostat->computeCurrentPressure(context);
         }
         volume /= steps;
+        avgPressure /= steps;
         double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
         ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure, 0.1);
     }
 }
 
@@ -268,6 +272,52 @@ void testWater() {
     ASSERT_USUALLY_EQUAL_TOL(1.0, density, 0.02);
 }
 
+void testLJPressure() {
+    const int gridSize = 8;
+    const int frequency = 10;
+    const int steps = 1000;
+    const double spacing = 1.0;
+    const double temp = 50.0;
+    const double pressure = 10.0;
+
+    // Create a gas of LJ particles.  This is much more compressible than water, which means
+    // the fluctuations in pressure are much smaller and it's easier to compute the average.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(gridSize*spacing, 0, 0), Vec3(0, gridSize*spacing, 0), Vec3(0, 0, gridSize*spacing));
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    vector<Vec3> positions;
+    for (int i = 0; i < gridSize; ++i) {
+        for (int j = 0; j < gridSize; ++j) {
+            for (int k = 0; k < gridSize; ++k) {
+                system.addParticle(1.0);
+                nonbonded->addParticle(0.0, 1.0, 1.0);
+                positions.push_back(Vec3(spacing*i, spacing*j, spacing*k));
+            }
+        }
+    }
+    system.addForce(nonbonded);
+    MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp, frequency);
+    system.addForce(barostat);
+
+    // Simulate it and see if the average instantaneous pressure matches the heat bath pressure.
+
+    LangevinIntegrator integrator(temp, 1.0, 0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    integrator.step(1000);
+    double avgPressure = 0.0;
+    for (int j = 0; j < steps; ++j) {
+        Vec3 box[3];
+        context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
+        avgPressure += barostat->computeCurrentPressure(context);
+        integrator.step(frequency);
+    }
+    avgPressure /= steps;
+    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure, 0.1);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -276,8 +326,8 @@ int main(int argc, char* argv[]) {
         testChangingBoxSize();
         testIdealGas();
         testRandomSeed();
-        // Don't run testWater() here, because it's very slow on Reference platform.
-        // Individual platforms can run it from runPlatformTests().
+        // Don't run testWater() or testLJPressure() here, because they're very slow on
+        // Reference platform.  Individual platforms can run them from runPlatformTests().
         runPlatformTests();
     }
     catch(const exception& e) {
