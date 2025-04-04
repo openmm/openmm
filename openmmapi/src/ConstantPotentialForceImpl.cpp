@@ -123,6 +123,25 @@ void ConstantPotentialForceImpl::initialize(ContextImpl& context) {
         }
     }
 
+    // Make sure no exceptions involve electrode particles.
+    for (int i = 0; i < owner.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd;
+        owner.getExceptionParameters(i, particle1, particle2, chargeProd);
+        int electrode1 = electrodes[particle1];
+        int electrode2 = electrodes[particle2];
+        if(electrode1 != -1) {
+            stringstream msg;
+            msg << "ConstantPotentialForce: Particle " << particle1 << " belongs to exception " << i << " and electrode " << electrode1;
+            throw OpenMMException(msg.str());
+        }
+        if(electrode2 != -1) {
+            stringstream msg;
+            msg << "ConstantPotentialForce: Particle " << particle2 << " belongs to exception " << i << " and electrode " << electrode2;
+            throw OpenMMException(msg.str());
+        }
+    }
+
     kernel.getAs<CalcConstantPotentialForceKernel>().initialize(context.getSystem(), owner);
 }
 
