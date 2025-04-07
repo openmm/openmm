@@ -1204,14 +1204,21 @@ public:
      * @param context    the context in which to execute this kernel
      */
     void restoreCoordinates(ContextImpl& context);
+    /**
+     * Compute the kinetic energy of the system.  If initialize() was called with rigidMolecules=true, this
+     * should include only the translational center of mass motion of molecules.  Otherwise it should include
+     * the total kinetic energy of all particles.  This is used when computing instantaneous pressure.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    double computeKineticEnergy(ContextImpl& context);
 private:
     ComputeContext& cc;
     bool hasInitializedKernels, rigidMolecules, atomsWereReordered;
     int numMolecules;
     ComputeArray savedPositions, savedFloatForces, savedLongForces, savedVelocities;
-    ComputeArray moleculeAtoms;
-    ComputeArray moleculeStartIndex;
-    ComputeKernel kernel;
+    ComputeArray moleculeAtoms, moleculeStartIndex, energyBuffer;
+    ComputeKernel kernel, kineticEnergyKernel;
     std::vector<int> lastAtomOrder;
     std::vector<mm_int4> lastPosCellOffsets;
 };

@@ -37,7 +37,8 @@ using namespace OpenMM;
 
   --------------------------------------------------------------------------------------- */
 
-ReferenceMonteCarloBarostat::ReferenceMonteCarloBarostat(int numAtoms, const vector<vector<int> >& molecules) : molecules(molecules) {
+ReferenceMonteCarloBarostat::ReferenceMonteCarloBarostat(int numAtoms, const vector<vector<int> >& molecules, const std::vector<double>& masses) :
+            molecules(molecules), masses(masses) {
     savedAtomPositions[0].resize(numAtoms);
     savedAtomPositions[1].resize(numAtoms);
     savedAtomPositions[2].resize(numAtoms);
@@ -119,4 +120,19 @@ void ReferenceMonteCarloBarostat::restorePositions(vector<Vec3>& atomPositions) 
     for (int i = 0; i < numAtoms; i++)
         for (int j = 0; j < 3; j++)
             atomPositions[i][j] = savedAtomPositions[j][i];
+}
+
+double ReferenceMonteCarloBarostat::computeMolecularKineticEnergy(const vector<Vec3>& velocities) {
+    double ke = 0.0;
+    for (auto& molecule : molecules) {
+        Vec3 molVel;
+        double molMass = 0.0;
+        for (int atom : molecule) {
+            molVel += masses[atom]*velocities[atom];
+            molMass += masses[atom];
+        }
+        molVel /= molecule.size();
+        ke += 0.5*molMass*molVel.dot(molVel);
+    }
+    return ke;
 }

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1471,6 +1471,14 @@ public:
      * @param context    the context in which to execute this kernel
      */
     virtual void restoreCoordinates(ContextImpl& context) = 0;
+    /**
+     * Compute the kinetic energy of the system.  If initialize() was called with rigidMolecules=true, this
+     * should include only the translational center of mass motion of molecules.  Otherwise it should include
+     * the total kinetic energy of all particles.  This is used when computing instantaneous pressure.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    virtual double computeKineticEnergy(ContextImpl& context) = 0;
 };
 
 /**

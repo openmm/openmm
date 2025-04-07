@@ -155,8 +155,8 @@ double MonteCarloBarostatImpl::computeCurrentPressure(ContextImpl& context) {
 
     // Compute the pressure.
 
-    double kT = BOLTZ*context.getParameter(MonteCarloBarostat::Temperature());
+    double ke = kernel.getAs<ApplyMonteCarloBarostatKernel>().computeKineticEnergy(context);
     double deltaVolume = volume*(scale1*scale1*scale1 - scale2*scale2*scale2);
-    double pressure = context.getMolecules().size()*kT/volume - (energy1-energy2)/deltaVolume;
+    double pressure = (2.0/3.0)*ke/volume - (energy1-energy2)/deltaVolume;
     return pressure/(AVOGADRO*1e-25);
 }

@@ -3566,8 +3566,12 @@ void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const
     catch (...) {
         // The CUDA platform doesn't have a floating point force buffer, so we don't need to copy it.
     }
+    energyBuffer.initialize(cc, cc.getNumThreadBlocks(), cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "energyBuffer");
+    vector<float> zeros(energyBuffer.getSize(), 0.0f);
+    energyBuffer.upload(zeros, true);
     ComputeProgram program = cc.compileProgram(CommonKernelSources::monteCarloBarostat);
     kernel = program->createKernel("scalePositions");
+    kineticEnergyKernel = program->createKernel("computeMolecularKineticEnergy");
 }
 
 void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) {
@@ -3626,12 +3630,17 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
         kernel->addArg(cc.getPosq());
         kernel->addArg(moleculeAtoms);
         kernel->addArg(moleculeStartIndex);
+        kineticEnergyKernel->addArg(numMolecules);
+        kineticEnergyKernel->addArg(cc.getVelm());
+        kineticEnergyKernel->addArg(moleculeAtoms);
+        kineticEnergyKernel->addArg(moleculeStartIndex);
+        kineticEnergyKernel->addArg(energyBuffer);
     }
     kernel->setArg(0, (float) scaleX);
     kernel->setArg(1, (float) scaleY);
     kernel->setArg(2, (float) scaleZ);
     setPeriodicBoxArgs(cc, kernel, 4);
-    kernel->execute(cc.getNumAtoms());
+    kernel->execute(numMolecules);
 }
 
 void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
@@ -3646,6 +3655,27 @@ void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& contex
     // check if atoms were reordered from energy evaluation before or after scaling
     if (atomsWereReordered || cc.getAtomsWereReordered())
         cc.setAtomIndex(lastAtomOrder);
+}
+
+double CommonApplyMonteCarloBarostatKernel::computeKineticEnergy(ContextImpl& context) {
+    if (rigidMolecules) {
+        kineticEnergyKernel->execute(numMolecules);
+        double ke = 0.0;
+        if (energyBuffer.getElementSize() == sizeof(float)) {
+            vector<float> buffer;
+            energyBuffer.download(buffer);
+            for (int i = 0; i < buffer.size(); i++)
+                ke += buffer[i];
+        }
+        else {
+            vector<double> buffer;
+            energyBuffer.download(buffer);
+            for (int i = 0; i < buffer.size(); i++)
+                ke += buffer[i];
+        }
+        return ke;
+    }
+    return context.calcKineticEnergy();
 }
 
 class CommonCalcATMForceKernel::ReorderListener : public ComputeContext::ReorderListener {

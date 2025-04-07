@@ -2896,13 +2896,17 @@ void ReferenceApplyMonteCarloBarostatKernel::initialize(const System& system, co
 
 void ReferenceApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) {
     if (barostat == NULL) {
+        const System& system = context.getSystem();
+        vector<double> masses;
+        for (int i = 0; i < system.getNumParticles(); i++)
+            masses.push_back(system.getParticleMass(i));
         if (rigidMolecules)
-            barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), context.getMolecules());
+            barostat = new ReferenceMonteCarloBarostat(system.getNumParticles(), context.getMolecules(), masses);
         else {
-            vector<vector<int> > molecules(context.getSystem().getNumParticles());
+            vector<vector<int> > molecules(system.getNumParticles());
             for (int i = 0; i < molecules.size(); i++)
                 molecules[i].push_back(i);
-            barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), molecules);
+            barostat = new ReferenceMonteCarloBarostat(system.getNumParticles(), molecules, masses);
         }
     }
     vector<Vec3>& posData = extractPositions(context);
@@ -2918,6 +2922,12 @@ void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& conte
 void ReferenceApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
     vector<Vec3>& posData = extractPositions(context);
     barostat->restorePositions(posData);
+}
+
+double ReferenceApplyMonteCarloBarostatKernel::computeKineticEnergy(ContextImpl& context) {
+    if (rigidMolecules)
+        return barostat->computeMolecularKineticEnergy(extractVelocities(context));
+    return context.calcKineticEnergy();
 }
 
 void ReferenceRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {

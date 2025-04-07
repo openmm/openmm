@@ -39,3 +39,38 @@ KERNEL void scalePositions(float scaleX, float scaleY, float scaleZ, int numMole
         }
     }
 }
+
+/**
+ * Compute the kinetic energy of molecular centers of mass.
+ */
+KERNEL void computeMolecularKineticEnergy(int numMolecules, GLOBAL mixed4* RESTRICT velm, GLOBAL const int* RESTRICT moleculeAtoms,
+        GLOBAL const int* RESTRICT moleculeStartIndex, GLOBAL mixed* RESTRICT energyBuffer) {
+    mixed ke = 0;
+    for (int index = GLOBAL_ID; index < numMolecules; index += GLOBAL_SIZE) {
+        int first = moleculeStartIndex[index];
+        int last = moleculeStartIndex[index+1];
+        int numAtoms = last-first;
+        mixed3 molVel = make_mixed3(0);
+        float molMass = 0;
+        for (int atom = first; atom < last; atom++) {
+            mixed4 v = velm[moleculeAtoms[atom]];
+            float mass = (v.w == 0 ? 0 : 1/v.w);
+            molVel += mass*trimTo3(v);
+            molMass += mass;
+        }
+        molVel /= numAtoms;
+        ke += 0.5f*molMass*dot(molVel, molVel);
+    }
+
+    // Sum the contributions from all the threads in this block and write the result.
+
+    LOCAL mixed tempBuffer[WORK_GROUP_SIZE];
+    tempBuffer[LOCAL_ID] = ke;
+    for (int i = 1; i < WORK_GROUP_SIZE; i *= 2) {
+        SYNC_THREADS;
+        if (LOCAL_ID%(i*2) == 0 && LOCAL_ID+i < WORK_GROUP_SIZE)
+            tempBuffer[LOCAL_ID] += tempBuffer[LOCAL_ID+i];
+    }
+    if (LOCAL_ID == 0)
+        energyBuffer[GROUP_ID] = tempBuffer[0];
+}
