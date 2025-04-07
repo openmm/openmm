@@ -12,7 +12,7 @@ class TestCheckpointReporter(unittest.TestCase):
     def setUp(self):
         with open(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb')) as f:
             pdb = app.PDBFile(f)
-        forcefield = app.ForceField(os.path.join(curr_dir, 'systems', 'amber99sbildn.xml'))
+        forcefield = app.ForceField('amber99sbildn.xml')
         system = forcefield.createSystem(pdb.topology,
             nonbondedMethod=app.CutoffNonPeriodic, nonbondedCutoff=1.0*unit.nanometers,
             constraints=app.HBonds)
