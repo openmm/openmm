@@ -5,21 +5,23 @@ from openmm import *
 from openmm.unit import *
 import openmm.app.element as elem
 
+curr_dir = os.path.dirname(os.path.abspath(__file__))
+
 class TestDesmondDMSFile(unittest.TestCase):
     def setUp(self):
         """Set up the tests by loading the input files."""
 
         # alanine dipeptide with explicit water
-        path = os.path.join(os.path.dirname(__file__), 'systems/alanine-dipeptide-explicit-amber99SBILDN-tip3p.dms')
+        path = os.path.join(curr_dir, 'systems', 'alanine-dipeptide-explicit-amber99SBILDN-tip3p.dms')
         self.dms = DesmondDMSFile(path)
 
         #nabumetone OPLS force field
-        path = os.path.join(os.path.dirname(__file__), 'systems/bcd-nabumetone_lig.dms')
+        path = os.path.join(curr_dir, 'systems', 'bcd-nabumetone_lig.dms')
         self.dms_opls1 = DesmondDMSFile(path)
         
         #beta-cyclodextrin/nabumetone complex OPLS force field
-        path1 = os.path.join(os.path.dirname(__file__), 'systems/bcd-nabumetone_lig.dms')
-        path2 = os.path.join(os.path.dirname(__file__), 'systems/bcd-nabumetone_rcpt.dms')
+        path1 = os.path.join(curr_dir, 'systems', 'bcd-nabumetone_lig.dms')
+        path2 = os.path.join(curr_dir, 'systems', 'bcd-nabumetone_rcpt.dms')
         self.dms_opls2 = DesmondDMSFile([path1,path2])
     
     def test_NonbondedMethod(self):

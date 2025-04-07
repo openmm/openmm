@@ -10,12 +10,15 @@ import openmm as mm
 import numpy as np
 from openmm.app.internal.xtc_utils import read_xtc
 
+
+curr_dir = os.path.dirname(os.path.abspath(__file__))
+
 class TestXtcFile(unittest.TestCase):
     def test_xtc_triclinic(self):
         """Test the XTC file by writing a trajectory and reading it back. Using a triclinic box"""
         with tempfile.TemporaryDirectory() as temp:
             fname = os.path.join(temp, 'traj.xtc')
-            pdbfile = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
+            pdbfile = app.PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb'))
             # Set some arbitrary size for the unit cell so that a box is included in the trajectory
             pdbfile.topology.setUnitCellDimensions([10, 10, 10])
             natom = len(list(pdbfile.topology.atoms()))
@@ -57,7 +60,7 @@ class TestXtcFile(unittest.TestCase):
         """Test the XTC file by writing a trajectory and reading it back. Using a cubic box"""
         with tempfile.TemporaryDirectory() as temp:
             fname = os.path.join(temp, 'traj.xtc')
-            pdbfile = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
+            pdbfile = app.PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb'))
             # Set some arbitrary size for the unit cell so that a box is included in the trajectory
             pdbfile.topology.setUnitCellDimensions([10, 10, 10])
             natom = len(list(pdbfile.topology.atoms()))
@@ -95,7 +98,7 @@ class TestXtcFile(unittest.TestCase):
         """Test the XTC file by writing a trajectory and reading it back. Letting the box be set from the topology"""
         with tempfile.TemporaryDirectory() as temp:
             fname = os.path.join(temp, 'traj.xtc')
-            pdbfile = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
+            pdbfile = app.PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb'))
             # Set some arbitrary size for the unit cell so that a box is included in the trajectory
             unitCell = mm.Vec3(random(), random(), random()) * unit.nanometers
             pdbfile.topology.setUnitCellDimensions(unitCell)
@@ -139,7 +142,7 @@ class TestXtcFile(unittest.TestCase):
         """Test the XTC file by writing a trajectory and reading it back. Using a system size below the compression threshold"""
         with tempfile.TemporaryDirectory() as temp:
             fname = os.path.join(temp, 'traj.xtc')
-            pdbfile = app.PDBFile("systems/ions.pdb")
+            pdbfile = app.PDBFile(os.path.join(curr_dir, 'systems', 'ions.pdb'))
             # Set some arbitrary size for the unit cell so that a box is included in the trajectory
             pdbfile.topology.setUnitCellDimensions([10, 10, 10])
             natom = len(list(pdbfile.topology.atoms()))
@@ -181,7 +184,7 @@ class TestXtcFile(unittest.TestCase):
         """Test writing a trajectory that has more than 2^31 steps."""
         with tempfile.TemporaryDirectory() as temp:
             fname = os.path.join(temp, 'traj.xtc')
-            pdbfile = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
+            pdbfile = app.PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb'))
             natom = len(list(pdbfile.topology.atoms()))
             xtc = app.XTCFile(fname, pdbfile.topology, 0.001, interval=1000000000)
             for i in range(5):
@@ -196,7 +199,7 @@ class TestXtcFile(unittest.TestCase):
         """Test appending to an existing trajectory."""
         with tempfile.TemporaryDirectory() as temp:
             fname = os.path.join(temp, 'traj.xtc')
-            pdb = app.PDBFile("systems/alanine-dipeptide-implicit.pdb")
+            pdb = app.PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb'))
             ff = app.ForceField("amber99sb.xml", "tip3p.xml")
             system = ff.createSystem(pdb.topology)
 
@@ -249,7 +252,7 @@ class TestXtcFile(unittest.TestCase):
         """Test writing an XTC file containing a subset of atoms"""
         with tempfile.TemporaryDirectory() as temp:
             fname = os.path.join(temp, 'traj.xtc')
-            pdb = app.PDBFile("systems/alanine-dipeptide-explicit.pdb")
+            pdb = app.PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-explicit.pdb'))
             ff = app.ForceField("amber99sb.xml", "tip3p.xml")
             system = ff.createSystem(pdb.topology)
 

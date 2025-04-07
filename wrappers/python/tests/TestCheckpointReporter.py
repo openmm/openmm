@@ -5,10 +5,12 @@ from openmm import app
 import openmm as mm
 from openmm import unit
 
+curr_dir = os.path.dirname(os.path.abspath(__file__))
+
 
 class TestCheckpointReporter(unittest.TestCase):
     def setUp(self):
-        with open('systems/alanine-dipeptide-implicit.pdb') as f:
+        with open(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb')) as f:
             pdb = app.PDBFile(f)
         forcefield = app.ForceField('amber99sbildn.xml')
         system = forcefield.createSystem(pdb.topology,

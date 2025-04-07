@@ -6,6 +6,10 @@ from openmm import *
 from openmm.app import *
 from openmm.unit import *
 import math, random
+import os
+
+
+curr_dir = os.path.dirname(os.path.abspath(__file__))
 
 class TestIntegrators(unittest.TestCase):
     """Test Python Integrator classes"""
@@ -13,7 +17,7 @@ class TestIntegrators(unittest.TestCase):
     def testMTSIntegratorExplicit(self):
         """Test the MTS integrator on an explicit solvent system"""
         # Create a periodic solvated system with PME
-        pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-explicit.pdb'))
         ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
         system = ff.createSystem(pdb.topology, nonbondedMethod=PME)
 
@@ -100,7 +104,7 @@ class TestIntegrators(unittest.TestCase):
     def testBadGroups(self):
         """Test the MTS integrator with bad force group substeps."""
         # Create a periodic solvated system with PME
-        pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-explicit.pdb'))
         ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
         system = ff.createSystem(pdb.topology, nonbondedMethod=PME)
 
@@ -124,7 +128,7 @@ class TestIntegrators(unittest.TestCase):
     def testMTSLangevinIntegrator(self):
         """Test the MTSLangevinIntegrator on an explicit solvent system"""
         # Create a periodic solvated system with PME
-        pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-explicit.pdb'))
         ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
         system = ff.createSystem(pdb.topology, nonbondedMethod=PME)
 
@@ -188,7 +192,7 @@ class TestIntegrators(unittest.TestCase):
 
     def testNoseHooverIntegrator(self):
         """Test partial thermostating in the NoseHooverIntegrator (only API)"""
-        pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-explicit.pdb'))
         ff = ForceField('amber99sbildn.xml', 'tip3p.xml')
         system = ff.createSystem(pdb.topology, nonbondedMethod=PME)
 
@@ -203,9 +207,9 @@ class TestIntegrators(unittest.TestCase):
     def testDrudeNoseHooverIntegrator(self):
         """Test the DrudeNoseHooverIntegrator"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
-        psf = CharmmPsfFile('systems/ala3_solv_drude.psf')
-        crd = CharmmCrdFile('systems/ala3_solv_drude.crd')
-        params = CharmmParameterSet('systems/toppar_drude_master_protein_2013e.str')
+        psf = CharmmPsfFile(os.path.join(curr_dir, 'systems', 'ala3_solv_drude.psf'))
+        crd = CharmmCrdFile(os.path.join(curr_dir, 'systems', 'ala3_solv_drude.crd'))
+        params = CharmmParameterSet(os.path.join(curr_dir, 'systems', 'toppar_drude_master_protein_2013e.str'))
         # Box dimensions (cubic box)
         psf.setBox(33.2*angstroms, 33.2*angstroms, 33.2*angstroms)
 

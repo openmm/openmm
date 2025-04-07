@@ -10,6 +10,9 @@ except ImportError:
     from io import StringIO
 import os
 
+
+curr_dir = os.path.dirname(os.path.abspath(__file__))
+
 class TestPatches(unittest.TestCase):
     """Test ForceFields that use patches."""
 
@@ -260,7 +263,7 @@ class TestPatches(unittest.TestCase):
  </NonbondedForce>
 </ForceField>"""
         ff = ForceField(StringIO(xml))
-        pdb = PDBFile(os.path.join('systems', 'ala_ala_ala.pdb'))
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'ala_ala_ala.pdb'))
         system = ff.createSystem(pdb.topology)
         nb = system.getForce(0)
         expectedCharges = [0.1414, 0.2719, 0.2719, 0.2719, 0.0337, 0.0823, 0.0337, 0.0603, 0.0603, 0.0603, 0.5973, -0.5679,
@@ -270,7 +273,7 @@ class TestPatches(unittest.TestCase):
             self.assertEqual(expectedCharges[i], nb.getParticleParameters(i)[0].value_in_unit(elementary_charge))
 
     def testDisulfidePatch(self):
-        pdb = PDBFile(os.path.join('systems', 'bpti.pdb'))
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'bpti.pdb'))
         ff = ForceField('amber99sb.xml')
         system1 = ff.createSystem(pdb.topology)
         

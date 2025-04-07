@@ -13,12 +13,14 @@ except ImportError:
 import os
 import warnings
 
+curr_dir = os.path.dirname(os.path.abspath(__file__))
+
 class TestGenerators(unittest.TestCase):
     """Test the various generators found in forcefield.py."""
 
     def setUp(self):
         # alanine dipeptide with implicit water
-        self.pdb1 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        self.pdb1 = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb'))
 
 
     def test_CustomHbondGenerator(self):

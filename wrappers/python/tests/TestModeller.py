@@ -6,29 +6,33 @@ from validateModeller import *
 from openmm.app import *
 from openmm import *
 from openmm.unit import *
+import os
 
 if sys.version_info >= (3, 0):
     from io import StringIO
 else:
     from cStringIO import StringIO
 
+
+curr_dir = os.path.dirname(os.path.abspath(__file__))
+
 class TestModeller(unittest.TestCase):
     """ Test the Modeller class. """
 
     def setUp(self):
         # load the alanine dipeptide pdb file
-        self.pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        self.pdb = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-explicit.pdb'))
         self.topology_start = self.pdb.topology
         self.positions = self.pdb.positions
         self.forcefield = ForceField('amber10.xml', 'tip3p.xml')
 
         # load the T4-lysozyme-L99A receptor pdb file
-        self.pdb2 = PDBFile('systems/lysozyme-implicit.pdb')
+        self.pdb2 = PDBFile(os.path.join(curr_dir, 'systems', 'lysozyme-implicit.pdb'))
         self.topology_start2 = self.pdb2.topology
         self.positions2 = self.pdb2.positions
 
         # load the metallothionein pdb file
-        self.pdb3 =  PDBFile('systems/1T2Y.pdb')
+        self.pdb3 =  PDBFile(os.path.join(curr_dir, 'systems', '1T2Y.pdb'))
         self.topology_start3 = self.pdb3.topology
         self.positions3 = self.pdb3.positions
 
@@ -134,7 +138,7 @@ class TestModeller(unittest.TestCase):
         """ Test the add() method. """
 
         # load the methanol-box pdb file
-        pdb2 = PDBFile('systems/methanol-box.pdb')
+        pdb2 = PDBFile(os.path.join(curr_dir, 'systems', 'methanol-box.pdb'))
         topology_toAdd = pdb2.topology
         positions_toAdd = pdb2.positions
 
@@ -969,7 +973,7 @@ class TestModeller(unittest.TestCase):
 
     def test_addHydrogensGlycam(self):
         """Test adding hydrogens for GLYCAM."""
-        pdb = PDBFile('systems/glycopeptide.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'glycopeptide.pdb'))
         Modeller.loadHydrogenDefinitions('glycam-hydrogens.xml')
         modeller = Modeller(pdb.topology, pdb.positions)
         hydrogens = [a for a in modeller.topology.atoms() if a.element == element.hydrogen]
@@ -987,7 +991,7 @@ class TestModeller(unittest.TestCase):
 
     def test_addSpecificHydrogens(self):
         """Test specifying exactly which hydrogens to add."""
-        pdb = PDBFile('systems/glycopeptide.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'glycopeptide.pdb'))
         variants = [None]*pdb.topology.getNumResidues()
         for residue in pdb.topology.residues():
             if residue.name != 'ALA':
@@ -1185,7 +1189,7 @@ class TestModeller(unittest.TestCase):
     def test_addMembrane(self):
         """Test adding a membrane to a realistic system."""
 
-        mol = PDBxFile('systems/gpcr.cif')
+        mol = PDBxFile(os.path.join(curr_dir, 'systems', 'gpcr.cif'))
         modeller = Modeller(mol.topology, mol.positions)
         ff = ForceField('amber14-all.xml', 'amber14/tip3p.xml')
 
@@ -1235,7 +1239,7 @@ class TestModeller(unittest.TestCase):
         """
 
         # Given: an isolated molecule
-        pdb = PDBFile("systems/alanine-dipeptide-implicit.pdb")
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb'))
         topology, positions = pdb.topology, pdb.positions
         topology.setUnitCellDimensions(Vec3(3.5, 3.5, 3.5) * nanometers)
         # with some bonds carrying type and order information
@@ -1282,7 +1286,7 @@ class TestModeller(unittest.TestCase):
         self.assertIn((Double, 2.0), [(b.type, b.order) for b in modeller.topology.bonds()])
 
         # When (6): add a modeller (which also bears some bond info)
-        to_add = PDBFile('systems/methanol-box.pdb')
+        to_add = PDBFile(os.path.join(curr_dir, 'systems', 'methanol-box.pdb'))
         topology_to_add = to_add.topology
         positions_to_add = to_add.positions
         # add a dummy bond to the "to_add" system to check that it also is preserved

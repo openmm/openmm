@@ -5,10 +5,11 @@ import openmm as mm
 from openmm import unit
 import os
 
+curr_dir = os.path.dirname(os.path.abspath(__file__))
 
 class TestStateDataReporter(unittest.TestCase):
     def setUp(self):
-        self.pdb = app.PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        self.pdb = app.PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb'))
         self.forcefield = app.ForceField('amber99sbildn.xml')
         self.system = self.forcefield.createSystem(self.pdb.topology, nonbondedMethod=app.CutoffNonPeriodic, constraints=app.HBonds)
 

@@ -7,13 +7,16 @@ import openmm.app.element as elem
 import os
 from io import StringIO
 
+
+curr_dir = os.path.dirname(os.path.abspath(__file__))
+
 class TestPdbxFile(unittest.TestCase):
     """Test the PDBx/mmCIF file parser"""
 
     def test_FormatConversion(self):
         """Test conversion from PDB to PDBx"""
 
-        mol = PDBFile('systems/ala_ala_ala.pdb')
+        mol = PDBFile(os.path.join(curr_dir, 'systems', 'ala_ala_ala.pdb'))
         with tempfile.TemporaryDirectory() as tempdir:
             filename = os.path.join(tempdir, 'temp.pdbx')
             PDBxFile.writeFile(mol.topology, mol.positions, filename, keepIds=True)
@@ -25,7 +28,7 @@ class TestPdbxFile(unittest.TestCase):
 
     def test_Triclinic(self):
         """Test parsing a file that describes a triclinic box."""
-        pdb = PDBxFile('systems/triclinic.pdbx')
+        pdb = PDBxFile(os.path.join(curr_dir, 'systems', 'triclinic.pdbx'))
         self.assertEqual(len(pdb.positions), 8)
         expectedPositions = [
             Vec3(1.744, 2.788, 3.162),
@@ -66,11 +69,11 @@ class TestPdbxFile(unittest.TestCase):
 
     def testReporterImplicit(self):
         """ Tests the PDBxReporter without PBC """
-        parm = AmberPrmtopFile('systems/alanine-dipeptide-implicit.prmtop')
+        parm = AmberPrmtopFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.prmtop'))
         system = parm.createSystem()
         sim = Simulation(parm.topology, system, VerletIntegrator(1*femtoseconds),
                          Platform.getPlatform('Reference'))
-        sim.context.setPositions(PDBFile('systems/alanine-dipeptide-implicit.pdb').getPositions())
+        sim.context.setPositions(PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb')).getPositions())
         sim.reporters.append(PDBxReporter('test.cif', 1))
         sim.step(10)
         pdb = PDBxFile('test.cif')
@@ -98,11 +101,11 @@ class TestPdbxFile(unittest.TestCase):
 
     def testReporterExplicit(self):
         """ Tests the PDBxReporter with PBC """
-        parm = AmberPrmtopFile('systems/alanine-dipeptide-explicit.prmtop')
+        parm = AmberPrmtopFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-explicit.prmtop'))
         system = parm.createSystem(nonbondedCutoff=1.0, nonbondedMethod=PME)
         sim = Simulation(parm.topology, system, VerletIntegrator(1*femtoseconds),
                          Platform.getPlatform('Reference'))
-        orig_pdb = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        orig_pdb = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-explicit.pdb'))
         sim.context.setPositions(orig_pdb.getPositions())
         sim.context.setPeriodicBoxVectors(*parm.topology.getPeriodicBoxVectors())
         sim.reporters.append(PDBxReporter('test.cif', 1))
@@ -132,7 +135,7 @@ class TestPdbxFile(unittest.TestCase):
 
     def testBonds(self):
         """Test reading and writing a file that includes bonds."""
-        pdb = PDBFile('systems/methanol_ions.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'methanol_ions.pdb'))
         output = StringIO()
         PDBxFile.writeFile(pdb.topology, pdb.positions, output)
         input = StringIO(output.getvalue())
@@ -146,7 +149,7 @@ class TestPdbxFile(unittest.TestCase):
 
     def testMultiChain(self):
         """Test reading and writing a file that includes multiple chains"""
-        cif_ori = PDBxFile('systems/multichain.pdbx')
+        cif_ori = PDBxFile(os.path.join(curr_dir, 'systems', 'multichain.pdbx'))
 
         output = StringIO()
         PDBxFile.writeFile(cif_ori.topology, cif_ori.positions, output, keepIds=True)
@@ -162,7 +165,7 @@ class TestPdbxFile(unittest.TestCase):
 
     def testInsertionCodes(self):
         """Test reading a file that uses insertion codes."""
-        pdbx = PDBxFile('systems/insertions.pdbx')
+        pdbx = PDBxFile(os.path.join(curr_dir, 'systems', 'insertions.pdbx'))
         residues = list(pdbx.topology.residues())
         self.assertEqual(7, len(residues))
         names = ['PHE', 'ASP', 'LYS', 'ILE', 'LYS', 'ASN', 'TRP']
