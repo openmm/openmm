@@ -5,10 +5,14 @@ from openmm.app import *
 from openmm import *
 from openmm.unit import *
 import openmm.app.element as elem
+import os
 if sys.version_info >= (3, 0):
     from io import StringIO
 else:
     from cStringIO import StringIO
+
+
+curr_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 class TestTopology(unittest.TestCase):
@@ -25,7 +29,7 @@ class TestTopology(unittest.TestCase):
 
     def test_getters(self):
         """Test getters for number of atoms, residues, chains."""
-        self.check_pdbfile('systems/1T2Y.pdb', 271, 25, 1)
+        self.check_pdbfile(os.path.join(curr_dir, 'systems', '1T2Y.pdb'), 271, 25, 1)
 
     def test_bondtype_singleton(self):
         """ Tests that the bond types are really singletons """

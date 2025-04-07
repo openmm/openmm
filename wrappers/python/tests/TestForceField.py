@@ -14,6 +14,9 @@ except ImportError:
 import os
 import warnings
 
+
+curr_dir = os.path.dirname(os.path.abspath(__file__))
+
 class TestForceField(unittest.TestCase):
     """Test the ForceField.createSystem() method."""
 
@@ -23,13 +26,13 @@ class TestForceField(unittest.TestCase):
 
         """
         # alanine dipeptide with explicit water
-        self.pdb1 = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        self.pdb1 = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-explicit.pdb'))
         self.forcefield1 = ForceField('amber99sb.xml', 'tip3p.xml')
         self.topology1 = self.pdb1.topology
         self.topology1.setUnitCellDimensions(Vec3(2, 2, 2))
 
         # alanine dipeptide with implicit water
-        self.pdb2 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        self.pdb2 = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb'))
         self.forcefield2 = ForceField('amber99sb.xml', 'amber99_obc.xml')
 
 
@@ -258,7 +261,7 @@ class TestForceField(unittest.TestCase):
         """Test that setting the mass of Drude particles works correctly."""
 
         forcefield = ForceField('charmm_polar_2013.xml')
-        pdb = PDBFile('systems/ala_ala_ala.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'ala_ala_ala.pdb'))
         modeller = Modeller(pdb.topology, pdb.positions)
         modeller.addExtraParticles(forcefield)
         system = forcefield.createSystem(modeller.topology, drudeMass=0)
@@ -297,13 +300,13 @@ class TestForceField(unittest.TestCase):
     def test_Forces(self):
         """Compute forces and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
 
-        pdb = PDBFile('systems/lysozyme-implicit.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'lysozyme-implicit.pdb'))
         system = self.forcefield2.createSystem(pdb.topology)
         integrator = VerletIntegrator(0.001)
         context = Context(system, integrator)
         context.setPositions(pdb.positions)
         state1 = context.getState(getForces=True)
-        with open('systems/lysozyme-implicit-forces.xml') as input:
+        with open(os.path.join(curr_dir, 'systems', 'lysozyme-implicit-forces.xml')) as input:
             state2 = XmlSerializer.deserialize(input.read())
         numDifferences = 0
         for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
@@ -327,7 +330,7 @@ class TestForceField(unittest.TestCase):
             context.setPositions(self.pdb2.positions)
             state1 = context.getState(getForces=True)
             if file[i] is not None:
-                with open('systems/alanine-dipeptide-implicit-forces/'+file[i]+'.xml') as infile:
+                with open(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit-forces', file[i]+'.xml')) as infile:
                     state2 = XmlSerializer.deserialize(infile.read())
                 for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
                     diff = norm(f1-f2)
@@ -607,7 +610,7 @@ class TestForceField(unittest.TestCase):
         ff = ForceField(StringIO(xml))
 
         # Load a water box.
-        prmtop = AmberPrmtopFile('systems/water-box-216.prmtop')
+        prmtop = AmberPrmtopFile(os.path.join(curr_dir, 'systems', 'water-box-216.prmtop'))
         top = prmtop.topology
         
         # Building a System should fail, because two templates match each residue.
@@ -1103,10 +1106,9 @@ class TestForceField(unittest.TestCase):
     def test_LennardJonesGenerator(self):
         """ Test the LennardJones generator"""
         warnings.filterwarnings('ignore', category=CharmmPSFWarning)
-        psf = CharmmPsfFile('systems/ions.psf')
-        pdb = PDBFile('systems/ions.pdb')
-        params = CharmmParameterSet('systems/toppar_water_ions.str'
-                                    )
+        psf = CharmmPsfFile(os.path.join(curr_dir, 'systems', 'ions.psf'))
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'ions.pdb'))
+        params = CharmmParameterSet(os.path.join(curr_dir, 'systems', 'toppar_water_ions.str'))
 
         # Box dimensions (found from bounding box)
         psf.setBox(12.009*angstroms,   12.338*angstroms,   11.510*angstroms)
@@ -1266,7 +1268,7 @@ class TestForceField(unittest.TestCase):
  </PeriodicTorsionForce>
 </ForceField>
 """
-        pdb = PDBFile('systems/impropers_ordering_tetrapeptide.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'impropers_ordering_tetrapeptide.pdb'))
         # ff1 uses default ordering of impropers, ff2 uses "amber" for the one
         # problematic improper
         ff1 = ForceField('amber99sbildn.xml')
@@ -1316,7 +1318,7 @@ class TestForceField(unittest.TestCase):
   </Residues>
 </ForceField>
 """
-        pdb = PDBFile('systems/formaldehyde.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'formaldehyde.pdb'))
         # ff1 uses default ordering of impropers, ff2 uses "amber" for the one
         # problematic improper
         ff = ForceField(StringIO(xml))
@@ -1335,7 +1337,7 @@ class TestForceField(unittest.TestCase):
 
     def test_Disulfides(self):
         """Test that various force fields handle disulfides correctly."""
-        pdb = PDBFile('systems/bpti.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'bpti.pdb'))
         for ff in ['amber99sb.xml', 'amber14-all.xml', 'charmm36.xml', 'amberfb15.xml', 'amoeba2013.xml']:
             forcefield = ForceField(ff)
             system = forcefield.createSystem(pdb.topology)
@@ -1370,7 +1372,7 @@ END"""))
 
     def test_CharmmPolar(self):
         """Test the CHARMM polarizable force field."""
-        pdb = PDBFile('systems/ala_ala_ala_drude.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'ala_ala_ala_drude.pdb'))
         pdb.topology.setUnitCellDimensions(Vec3(3, 3, 3))
         ff = ForceField('charmm_polar_2019.xml')
         system = ff.createSystem(pdb.topology, nonbondedMethod=PME, nonbondedCutoff=1.2*nanometers)
@@ -1452,7 +1454,7 @@ self.scriptExecuted = True
     def test_Glycam(self):
         """Test computing energy with GLYCAM."""
         ff = ForceField('amber14/protein.ff14SB.xml', 'amber14/GLYCAM_06j-1.xml')
-        pdb = PDBFile('systems/glycopeptide.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'glycopeptide.pdb'))
         system = ff.createSystem(pdb.topology)
         for i, f in enumerate(system.getForces()):
             f.setForceGroup(i)
@@ -1474,7 +1476,7 @@ self.scriptExecuted = True
 
     def test_CustomNonbondedGenerator(self):
         """ Test the CustomNonbondedForce generator"""
-        pdb = PDBFile('systems/ions.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'ions.pdb'))
         xml = """
 <ForceField>
  <AtomTypes>
@@ -1520,7 +1522,7 @@ self.scriptExecuted = True
         self.assertAlmostEqual(energy1, energy2)
 
     def test_OpcEnergy(self):
-        pdb = PDBFile('systems/opcbox.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'opcbox.pdb'))
         topology, positions = pdb.topology, pdb.positions
         self.assertEqual(len(positions), 864)
         forcefield = ForceField('opc.xml')
@@ -1554,7 +1556,7 @@ self.scriptExecuted = True
         self.assertTrue(abs(energy1 - energy2) < energy_tolerance)
 
     def test_Opc3Energy(self):
-        pdb = PDBFile('systems/opc3box.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'opc3box.pdb'))
         topology, positions = pdb.topology, pdb.positions
         self.assertEqual(len(positions), 648)
         forcefield = ForceField('opc3.xml')
@@ -1596,7 +1598,7 @@ class AmoebaTestForceField(unittest.TestCase):
 
         """
 
-        self.pdb1 = PDBFile('systems/amoeba-ion-in-water.pdb')
+        self.pdb1 = PDBFile(os.path.join(curr_dir, 'systems', 'amoeba-ion-in-water.pdb'))
         self.forcefield1 = ForceField('amoeba2013.xml')
         self.topology1 = self.pdb1.topology
 
@@ -1670,14 +1672,14 @@ class AmoebaTestForceField(unittest.TestCase):
     def test_Forces(self):
         """Compute forces and compare them to ones generated with a previous version of OpenMM to ensure they haven't changed."""
 
-        pdb = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb'))
         forcefield = ForceField('amoeba2013.xml', 'amoeba2013_gk.xml')
         system = forcefield.createSystem(pdb.topology, polarization='direct')
         integrator = VerletIntegrator(0.001)
         context = Context(system, integrator, Platform.getPlatform('Reference'))
         context.setPositions(pdb.positions)
         state1 = context.getState(getForces=True)
-        with open('systems/alanine-dipeptide-amoeba-forces.xml') as input:
+        with open(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-amoeba-forces.xml')) as input:
             state2 = XmlSerializer.deserialize(input.read())
         for f1, f2, in zip(state1.getForces().value_in_unit(kilojoules_per_mole/nanometer), state2.getForces().value_in_unit(kilojoules_per_mole/nanometer)):
             diff = norm(f1-f2)
@@ -1700,7 +1702,7 @@ class AmoebaTestForceField(unittest.TestCase):
 
     def test_Amoeba18BPTI(self):
         """Test that AMOEBA18 computes energies correctly for BPTI."""
-        energies = self.computeAmoeba18Energies('systems/bpti.pdb')
+        energies = self.computeAmoeba18Energies(os.path.join(curr_dir, 'systems', 'bpti.pdb'))
 
         # Compare to values computed with Tinker.
 
@@ -1717,7 +1719,7 @@ class AmoebaTestForceField(unittest.TestCase):
 
     def test_Amoeba18Nucleic(self):
         """Test that AMOEBA18 computes energies correctly for DNA and RNA."""
-        energies = self.computeAmoeba18Energies('systems/nucleic.pdb')
+        energies = self.computeAmoeba18Energies(os.path.join(curr_dir, 'systems', 'nucleic.pdb'))
 
         # Compare to values computed with Tinker.
 

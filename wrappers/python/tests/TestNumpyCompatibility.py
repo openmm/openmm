@@ -2,6 +2,7 @@ import unittest
 from openmm import app
 import openmm as mm
 from openmm import unit
+import os
 try:
     import numpy as np
     NUMPY_IMPORT_FAILED = False
@@ -9,11 +10,13 @@ except ImportError:
     NUMPY_IMPORT_FAILED = True
 
 
+curr_dir = os.path.dirname(os.path.abspath(__file__))
+
 @unittest.skipIf(NUMPY_IMPORT_FAILED, 'Numpy is not installed')
 class TestNumpyCompatibility(unittest.TestCase):
 
     def setUp(self):
-        prmtop = app.AmberPrmtopFile('systems/water-box-216.prmtop')
+        prmtop = app.AmberPrmtopFile(os.path.join(curr_dir, 'systems', 'water-box-216.prmtop'))
 
         system = prmtop.createSystem(nonbondedMethod=app.PME,
                                      nonbondedCutoff=0.9*unit.nanometers,

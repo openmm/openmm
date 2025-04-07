@@ -1,3 +1,4 @@
+import os
 import unittest
 from validateConstraints import *
 from openmm.app import *
@@ -15,13 +16,15 @@ def compareByElement(array1, array2, cmp):
         cmp(x, y)
 
 
+curr_dir = os.path.dirname(os.path.abspath(__file__))
+
 class TestAmberInpcrdFile(unittest.TestCase):
     """Test the Amber inpcrd file parser"""
 
     def test_CrdVelBox(self):
         """ Test parsing ASCII restarts with crds, vels, and box """
         cmp = self.assertAlmostEqual
-        inpcrd = AmberInpcrdFile('systems/crds_vels_box.rst7')
+        inpcrd = AmberInpcrdFile(os.path.join(curr_dir, 'systems', 'crds_vels_box.rst7'))
         self.assertEqual(len(inpcrd.positions), 2101)
         compareByElement(inpcrd.positions[-1].value_in_unit(angstroms),
                          [3.5958082, 8.4176792, -8.2954064], cmp)
@@ -35,7 +38,7 @@ class TestAmberInpcrdFile(unittest.TestCase):
         """ Test NetCDF restart file parsing """
         cmp = self.assertAlmostEqual
 
-        inpcrd = AmberInpcrdFile('systems/amber.ncrst')
+        inpcrd = AmberInpcrdFile(os.path.join(curr_dir, 'systems', 'amber.ncrst'))
         self.assertEqual(len(inpcrd.positions), 2101)
         compareByElement(inpcrd.positions[0].value_in_unit(angstroms),
                          [6.82122492718229, 6.6276250662042, -8.51668999892245],
@@ -48,24 +51,24 @@ class TestAmberInpcrdFile(unittest.TestCase):
 
     def test_CrdBox(self):
         """ Test parsing ASCII restarts with only crds and box """
-        inpcrd = AmberInpcrdFile('systems/crds_box.rst7')
+        inpcrd = AmberInpcrdFile(os.path.join(curr_dir, 'systems', 'crds_box.rst7'))
         self.assertEqual(len(inpcrd.positions), 18660)
         self.assertTrue(inpcrd.velocities is None)
         self.assertTrue(inpcrd.boxVectors is not None)
 
     def test_CrdVel(self):
-        inpcrd = AmberInpcrdFile('systems/crds_vels.rst7')
+        inpcrd = AmberInpcrdFile(os.path.join(curr_dir, 'systems', 'crds_vels.rst7'))
         self.assertTrue(inpcrd.boxVectors is None)
         self.assertTrue(inpcrd.velocities is not None)
 
     def test_CrdOnly(self):
-        inpcrd = AmberInpcrdFile('systems/crdsonly.rst7')
+        inpcrd = AmberInpcrdFile(os.path.join(curr_dir, 'systems', 'crdsonly.rst7'))
         self.assertTrue(inpcrd.boxVectors is None)
         self.assertTrue(inpcrd.velocities is None)
 
     def test_CrdBoxTruncoct(self):
         # Check that the box vectors come out correct.
-        inpcrd = AmberInpcrdFile('systems/tz2.truncoct.rst7')
+        inpcrd = AmberInpcrdFile(os.path.join(curr_dir, 'systems', 'tz2.truncoct.rst7'))
         ac = Vec3(42.4388485, 0.0, 0.0) * angstroms
         bc = Vec3(-14.146281691908937, 40.011730483685835, 0.0) * angstroms
         cc = Vec3(-14.146281691908937, -20.0058628205162, 34.651176446201672) * angstroms

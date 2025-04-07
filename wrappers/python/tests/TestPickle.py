@@ -8,6 +8,10 @@ import openmm.app.element as elem
 import openmm.app.forcefield as forcefield
 import copy
 import pickle
+import os
+
+
+curr_dir = os.path.dirname(os.path.abspath(__file__))
 
 class TestPickle(unittest.TestCase):
     """Pickling / deepcopy of OpenMM objects."""
@@ -18,13 +22,13 @@ class TestPickle(unittest.TestCase):
 
         """
         # alanine dipeptide with explicit water
-        self.pdb1 = PDBFile('systems/alanine-dipeptide-explicit.pdb')
+        self.pdb1 = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-explicit.pdb'))
         self.forcefield1 = ForceField('amber99sb.xml', 'tip3p.xml')
         self.topology1 = self.pdb1.topology
         self.topology1.setUnitCellDimensions(Vec3(2, 2, 2))
 
         # alalnine dipeptide with implicit water
-        self.pdb2 = PDBFile('systems/alanine-dipeptide-implicit.pdb')
+        self.pdb2 = PDBFile(os.path.join(curr_dir, 'systems', 'alanine-dipeptide-implicit.pdb'))
         self.forcefield2 = ForceField('amber99sb.xml', 'amber99_obc.xml')
 
     def check_copy(self, object, object_copy):
