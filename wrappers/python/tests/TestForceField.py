@@ -681,7 +681,7 @@ class TestForceField(unittest.TestCase):
         #
 
         # Load the PDB file.
-        pdb = PDBFile(os.path.join('systems', 'T4-lysozyme-L99A-p-xylene-implicit.pdb'))
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'T4-lysozyme-L99A-p-xylene-implicit.pdb'))
         # Create a ForceField object.
         forcefield = ForceField('amber99sb.xml', 'tip3p.xml', StringIO(simple_ffxml_contents))
         # Add the residue template generator.
@@ -703,7 +703,7 @@ class TestForceField(unittest.TestCase):
         # Test all systems with separate ForceField objects.
         for test in tests:
             # Load the PDB file.
-            pdb = PDBFile(os.path.join('systems', test['pdb_filename']))
+            pdb = PDBFile(os.path.join(curr_dir, 'systems', test['pdb_filename']))
             # Create a ForceField object.
             forcefield = ForceField(StringIO(simple_ffxml_contents))
             # Add the residue template generator.
@@ -719,7 +719,7 @@ class TestForceField(unittest.TestCase):
         forcefield.registerTemplateGenerator(simpleTemplateGenerator)
         for test in tests:
             # Load the PDB file.
-            pdb = PDBFile(os.path.join('systems', test['pdb_filename']))
+            pdb = PDBFile(os.path.join(curr_dir, 'systems', test['pdb_filename']))
             # Parameterize system.
             system = forcefield.createSystem(pdb.topology, nonbondedMethod=test['nonbondedMethod'])
             # TODO: Test energies are finite?
@@ -728,7 +728,7 @@ class TestForceField(unittest.TestCase):
         """Test retrieval of list of residues for which no templates are available."""
 
         # Load the PDB file.
-        pdb = PDBFile(os.path.join('systems', 'T4-lysozyme-L99A-p-xylene-implicit.pdb'))
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'T4-lysozyme-L99A-p-xylene-implicit.pdb'))
         # Create a ForceField object.
         forcefield = ForceField('amber99sb.xml', 'tip3p.xml')
         # Get list of unmatched residues.
@@ -739,7 +739,7 @@ class TestForceField(unittest.TestCase):
         self.assertEqual(unmatched_residues[0].id, '163')
 
         # Load the PDB file.
-        pdb = PDBFile(os.path.join('systems', 'ala_ala_ala.pdb'))
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'ala_ala_ala.pdb'))
         # Create a ForceField object.
         forcefield = ForceField('tip3p.xml')
         # Get list of unmatched residues.
@@ -757,7 +757,7 @@ class TestForceField(unittest.TestCase):
         #
 
         # Load the PDB file.
-        pdb = PDBFile(os.path.join('systems', 'nacl-water.pdb'))
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'nacl-water.pdb'))
         # Create a ForceField object.
         forcefield = ForceField('tip3p.xml')
         # Get list of unmatched residues.
@@ -800,7 +800,7 @@ class TestForceField(unittest.TestCase):
         #
 
         # Load the PDB file.
-        pdb = PDBFile(os.path.join('systems', 'T4-lysozyme-L99A-p-xylene-implicit.pdb'))
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'T4-lysozyme-L99A-p-xylene-implicit.pdb'))
         # Create a ForceField object.
         forcefield = ForceField('amber99sb.xml', 'tip3p.xml', StringIO(simple_ffxml_contents))
         # Get list of unique unmatched residues.
@@ -820,7 +820,7 @@ class TestForceField(unittest.TestCase):
         """Test retrieval of list of templates that match residues in a topology."""
 
         # Load the PDB file.
-        pdb = PDBFile(os.path.join('systems', 'ala_ala_ala.pdb'))
+        pdb = PDBFile(os.path.join(curr_dir, 'systems', 'ala_ala_ala.pdb'))
         # Create a ForceField object.
         forcefield = ForceField('amber99sb.xml')
         # Get list of matching residue templates.
@@ -873,7 +873,7 @@ class TestForceField(unittest.TestCase):
 
     def test_ScalingFactorCombining(self):
         """ Tests that FFs can be combined if their scaling factors are very close """
-        forcefield = ForceField('amber99sb.xml', os.path.join('systems', 'test_amber_ff.xml'))
+        forcefield = ForceField('amber99sb.xml', os.path.join(curr_dir, 'systems', 'test_amber_ff.xml'))
         # This would raise an exception if it didn't work
 
     def test_MultipleFilesandForceTags(self):
@@ -1251,7 +1251,7 @@ class TestForceField(unittest.TestCase):
 
     def test_Includes(self):
         """Test using a ForceField that includes other files."""
-        forcefield = ForceField(os.path.join('systems', 'ff_with_includes.xml'))
+        forcefield = ForceField(os.path.join(curr_dir, 'systems', 'ff_with_includes.xml'))
         self.assertTrue(len(forcefield._atomTypes) > 10)
         self.assertTrue('spce-O' in forcefield._atomTypes)
         self.assertTrue('HOH' in forcefield._templates)
