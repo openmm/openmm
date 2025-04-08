@@ -148,13 +148,14 @@ public:
      * Compute the instantaneous pressure of a system to which this barostat is applied.
      * 
      * The pressure is computed from the molecular virial, using a finite difference to
-     * calculate the derivative of potential energy with respect to volume.  For a system
+     * calculate the derivative of potential energy with respect to volume.  For most systems
      * in equilibrium, the time average of the instantaneous pressure should equal the
      * pressure applied by the barostat.  Fluctuations around the average value can be
-     * extremely large, however, and it make take a very long simulation to accurately
+     * extremely large, however, and it may take a very long simulation to accurately
      * compute the average.
      * 
      * @param context    the Context for which to compute the current pressure
+     * @returns the instantaneous pressure
      */
     double computeCurrentPressure(Context& context) const;
 protected:
