@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "Force.h"
+#include "Vec3.h"
 #include <string>
 #include "internal/windowsExport.h"
 
@@ -238,6 +239,21 @@ public:
     bool usesPeriodicBoundaryConditions() const {
         return false;
     }
+    /**
+     * Compute the instantaneous pressure along each axis of a system to which this barostat
+     * is applied.
+     * 
+     * The pressure is computed from the molecular virial, using a finite difference to
+     * calculate the derivative of potential energy with respect to volume.  For most systems
+     * in equilibrium, the time average of the instantaneous pressure should equal the
+     * pressure applied by the barostat.  Fluctuations around the average value can be
+     * extremely large, however, and it may take a very long simulation to accurately
+     * compute the average.
+     * 
+     * @param context    the Context for which to compute the current pressure
+     * @returns a vector containing the pressure along each axis
+     */
+    Vec3 computeCurrentPressure(Context& context) const;
 protected:
     ForceImpl* createImpl() const;
 private:
