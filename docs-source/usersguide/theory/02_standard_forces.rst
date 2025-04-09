@@ -630,6 +630,25 @@ probability.  It does not itself perform temperature regulation, however.  You
 must use another mechanism along with it to maintain the temperature, such as
 LangevinIntegrator or AndersenThermostat.
 
+Another feature of MonteCarloBarostat is that it can compute the "instantaneous
+pressure", which is defined based on the molecular virial:
+
+.. math::
+   P_{inst} = \frac{1}{3V} (\sum_i m_i |\mathbf{v}_i|^2 ) - \frac{dE}{dV}
+
+where the sum is taken over molecules, :math:`m_i` is the mass of the i'th molecule,
+and :math:`\mathbf{v}_i` is the velocity of its center of mass.  The derivative
+of potential energy with respect to volume is approximated with a finite difference.
+
+In most cases, the time average of the instantaneous pressure should equal the
+pressure applied by the barostat.  Fluctuations around the average can be extremely
+large, however, especially when simulating incompressible materials like water.
+A very long simulation may be required to accurately compute the average.  There
+also are situations where the average instantaneous pressure differs from the
+applied pressure.  For example, if the system contains immobile massless particles,
+they will reduce the kinetic energy below what would be expected based on the
+temperature, and hence reduce the calculated pressure.
+
 MonteCarloAnisotropicBarostat
 *****************************
 
