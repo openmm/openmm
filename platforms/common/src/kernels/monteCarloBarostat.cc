@@ -58,7 +58,7 @@ KERNEL void computeMolecularKineticEnergy(int numMolecules, GLOBAL mixed4* RESTR
             molVel += mass*trimTo3(v);
             molMass += mass;
         }
-        molVel /= numAtoms;
+        molVel *= RECIP((mixed) numAtoms);
         ke += 0.5f*molMass*dot(molVel, molVel);
     }
 

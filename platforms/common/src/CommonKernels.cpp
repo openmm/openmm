@@ -3569,7 +3569,9 @@ void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const
     energyBuffer.initialize(cc, cc.getNumThreadBlocks(), cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "energyBuffer");
     vector<float> zeros(energyBuffer.getSize(), 0.0f);
     energyBuffer.upload(zeros, true);
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::monteCarloBarostat);
+    map<string, string> defines;
+    defines["WORK_GROUP_SIZE"] = cc.intToString(cc.ThreadBlockSize);
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::monteCarloBarostat, defines);
     kernel = program->createKernel("scalePositions");
     kineticEnergyKernel = program->createKernel("computeMolecularKineticEnergy");
 }
@@ -3658,6 +3660,7 @@ void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& contex
 }
 
 double CommonApplyMonteCarloBarostatKernel::computeKineticEnergy(ContextImpl& context) {
+    ContextSelector selector(cc);
     if (rigidMolecules) {
         kineticEnergyKernel->execute(numMolecules);
         double ke = 0.0;
