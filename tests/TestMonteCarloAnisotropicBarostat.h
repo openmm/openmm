@@ -188,8 +188,8 @@ void testIdealGasAxis(int axis) {
 
 void testMolecularGas() {
     const int numMolecules = 64;
-    const int frequency = 10;
-    const int steps = 1000;
+    const int frequency = 5;
+    const int steps = 5000;
     const double pressure = 3.0;
     const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
     const double temp = 300.0;
@@ -222,7 +222,7 @@ void testMolecularGas() {
 
     // Simulate it and see if the pressure is correct..
 
-    LangevinIntegrator integrator(temp, 0.1, 0.01);
+    LangevinIntegrator integrator(temp, 0.1, 0.005);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     integrator.step(10000);
