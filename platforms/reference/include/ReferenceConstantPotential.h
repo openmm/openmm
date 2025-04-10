@@ -32,6 +32,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include <array>
+
 #include "ReferenceNeighborList.h"
 #include "ReferencePME.h"
 #include "tnt_array2d.h"
