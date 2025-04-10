@@ -1244,8 +1244,8 @@ void ReferenceCalcConstantPotentialForceKernel::initialize(const System& system,
 
     // Clear (initial guess) charges on electrode particles.
     numElectrodeParticles = electrodeIndices.size();
-    for (int i = 0; i < numElectrodeParticles; i++) {
-        charges[electrodeIndices[i]] = 0.0;
+    for (int ii = 0; ii < numElectrodeParticles; ii++) {
+        charges[electrodeIndices[ii]] = 0.0;
     }
 
     // Set options from force.
@@ -1258,6 +1258,15 @@ void ReferenceCalcConstantPotentialForceKernel::initialize(const System& system,
     useChargeConstraint = force.getUseChargeConstraint();
     chargeTarget = force.getChargeConstraintTarget();
     force.getExternalField(externalField);
+
+    // Set the charge target to be that on the electrode particles (so that the
+    // overall charge is constrained correctly if the non-electrolyte particles
+    // are non-neutral).
+    for (int i = 0; i < numParticles; i++) {
+        if (electrodeIndexMap[i] == -1) {
+            chargeTarget -= charges[i];
+        }
+    }
 
     matrix = NULL;
     cg = NULL;
@@ -1367,16 +1376,16 @@ void ReferenceCalcConstantPotentialForceKernel::copyParametersToContext(ContextI
     // Update external field.
     force.getExternalField(externalField);
 
-    // Invalidate matrix or CG data if electrode parameters changed.
-    bool chargeTargetChanged = false;
-    if (useChargeConstraint) {
-        double newChargeTarget = force.getChargeConstraintTarget();
-        if (newChargeTarget != chargeTarget) {
-            chargeTarget = newChargeTarget;
-            chargeTargetChanged = true;
+    // Update charge target.
+    chargeTarget = force.getChargeConstraintTarget();
+    for (int i = 0; i < numParticles; i++) {
+        if (electrodeIndexMap[i] == -1) {
+            chargeTarget -= charges[i];
         }
     }
-    if (firstElectrode <= lastElectrode || chargeTargetChanged) {
+
+    // Invalidate matrix or CG data if electrode parameters changed.
+    if (firstElectrode <= lastElectrode) {
         if (matrix != NULL) {
             matrix->invalidate();
         }
