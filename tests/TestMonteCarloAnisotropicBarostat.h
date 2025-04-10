@@ -213,14 +213,14 @@ void testMolecularGas() {
         system.addParticle(1.0);
         system.addParticle(1.0);
         Vec3 pos(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
-        bonds->addBond(positions.size(), positions.size()+1, 0.1, 10.0);
+        system.addConstraint(positions.size(), positions.size()+1, 0.1);
         system.addConstraint(positions.size(), positions.size()+2, 0.1);
         positions.push_back(pos);
         positions.push_back(pos+Vec3(0.1, 0.0, 0.0));
         positions.push_back(pos+Vec3(0.0, 0.1, 0.0));
     }
 
-    // Simulate it and see if the pressure is correct..
+    // Simulate it and see if the pressure is correct.
 
     LangevinIntegrator integrator(temp, 0.1, 0.005);
     Context context(system, integrator, platform);
