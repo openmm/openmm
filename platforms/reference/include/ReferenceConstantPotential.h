@@ -45,10 +45,25 @@ class ReferenceConstantPotentialMatrix {
 private:
     bool valid;
     Vec3 boxVectors[3];
-    JAMA::Cholesky<double> Ainv;
+    JAMA::Cholesky<double> capacitance;
+    std::vector<double> constraintVector;
 
 public:
-    ReferenceConstantPotentialMatrix();
+    ReferenceConstantPotentialMatrix(int numElectrodeParticles);
+    void invalidate();
+};
+
+class ReferenceConstantPotentialCG {
+    friend class ReferenceConstantPotential;
+
+private:
+    bool valid;
+    Vec3 boxVectors[3];
+    std::vector<double> precondVector;
+    double precondScale;
+
+public:
+    ReferenceConstantPotentialCG(int numElectrodeParticles);
     void invalidate();
 };
 
@@ -77,6 +92,11 @@ public:
         const std::vector<int>& electrodeIndices,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
         ReferenceConstantPotentialMatrix* matrix);
+    void updateCG(int numParticles, int numElectrodeParticles,
+        const std::vector<int>& electrodeIndexMap,
+        const std::vector<int>& electrodeIndices,
+        const std::vector<std::array<double, 3> >& electrodeParamArray,
+        ReferenceConstantPotentialCG* cg);
     void execute(int numParticles, int numElectrodeParticles,
         const std::vector<Vec3>& posData, std::vector<Vec3>& forceData,
         std::vector<double>& charges,
@@ -84,14 +104,16 @@ public:
         const std::vector<int>& electrodeIndexMap,
         const std::vector<int>& electrodeIndices,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
-        double* energy, ReferenceConstantPotentialMatrix* matrix);
-    void solve(int numParticles, int numElectrodeParticles,
+        double* energy, ReferenceConstantPotentialMatrix* matrix,
+        ReferenceConstantPotentialCG* cg);
+    void getCharges(int numParticles, int numElectrodeParticles,
         const std::vector<Vec3>& posData, std::vector<double>& charges,
         const std::vector<std::set<int>>& exclusions,
         const std::vector<int>& electrodeIndexMap,
         const std::vector<int>& electrodeIndices,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
-        ReferenceConstantPotentialMatrix* matrix);
+        ReferenceConstantPotentialMatrix* matrix,
+        ReferenceConstantPotentialCG* cg);
 
 private:
     void solve(int numParticles, int numElectrodeParticles,
@@ -100,8 +122,9 @@ private:
         const std::vector<int>& electrodeIndexMap,
         const std::vector<int>& electrodeIndices,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
-        ReferenceConstantPotentialMatrix* matrix, pme_t pmeData);
-    void getEnergiesForces(int numParticles, int numElectrodeParticles,
+        ReferenceConstantPotentialMatrix* matrix,
+        ReferenceConstantPotentialCG* cg, pme_t pmeData);
+    void getEnergyForces(int numParticles, int numElectrodeParticles,
         const std::vector<Vec3>& posData, std::vector<Vec3>& forceData,
         std::vector<double>& charges,
         const std::vector<std::set<int>>& exclusions,

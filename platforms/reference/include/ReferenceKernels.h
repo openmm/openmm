@@ -727,6 +727,9 @@ public:
      */
     void getCharges(ContextImpl& context, std::vector<double>& charges);
 private:
+    void updateNeighborList(const Vec3* boxVectors, const std::vector<Vec3>& posData);
+    void updateConstantPotentialData(ReferenceConstantPotential& conp, const std::vector<Vec3>& posData);
+private:
     int numParticles, num14, numElectrodeParticles;
     std::vector<double> charges;
     std::vector<std::vector<double> > bonded14ParamArray;
@@ -743,6 +746,7 @@ private:
     Vec3 externalField;
     NeighborList* neighborList;
     ReferenceConstantPotentialMatrix* matrix;
+    ReferenceConstantPotentialCG* cg;
 };
 
 /**

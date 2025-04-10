@@ -1185,6 +1185,9 @@ ReferenceCalcConstantPotentialForceKernel::~ReferenceCalcConstantPotentialForceK
     if (matrix != NULL) {
         delete matrix;
     }
+    if (cg != NULL) {
+        delete cg;
+    }
 }
 
 void ReferenceCalcConstantPotentialForceKernel::initialize(const System& system, const ConstantPotentialForce& force) {
@@ -1195,7 +1198,7 @@ void ReferenceCalcConstantPotentialForceKernel::initialize(const System& system,
        force.getParticleParameters(i, charges[i]);
     }
 
-    // Get non-zeroing exceptions.
+    // Get "1-4" exceptions (those that don't zero the charge product).
     exclusions.resize(numParticles);
     vector<int> nb14s;
     for (int i = 0; i < force.getNumExceptions(); i++) {
@@ -1256,6 +1259,8 @@ void ReferenceCalcConstantPotentialForceKernel::initialize(const System& system,
     chargeTarget = force.getChargeConstraintTarget();
     force.getExternalField(externalField);
 
+    matrix = NULL;
+    cg = NULL;
     if (method == ConstantPotentialForce::ConstantPotentialMethod::Matrix) {
         // If we are precomputing a matrix, electrode particles must be frozen.
         for (int i = 0; i < numElectrodeParticles; i++) {
@@ -1264,9 +1269,9 @@ void ReferenceCalcConstantPotentialForceKernel::initialize(const System& system,
             }
         }
 
-        matrix = new ReferenceConstantPotentialMatrix();
-    } else {
-        matrix = NULL;
+        matrix = new ReferenceConstantPotentialMatrix(numElectrodeParticles);
+    } else { // ConstantPotentialMethod::CG
+        cg = new ReferenceConstantPotentialCG(numElectrodeParticles);
     }
 }
 
@@ -1276,24 +1281,15 @@ double ReferenceCalcConstantPotentialForceKernel::execute(ContextImpl& context, 
     vector<Vec3>& forceData = extractForces(context);
     double energy = 0;
 
-    // Check box vectors and compute neighbor list.
-    double minAllowedSize = 1.999999*nonbondedCutoff;
-    if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
-        throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
-    }
-    computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, boxVectors, true, nonbondedCutoff, 0.0);
-
     // Solve for charges, then calculate forces and energy.
+    updateNeighborList(boxVectors, posData);
     ReferenceConstantPotential conp(nonbondedCutoff, neighborList, boxVectors, exceptionsArePeriodic, ewaldAlpha, gridSize, cgErrorTol, useChargeConstraint, chargeTarget, externalField);
-    if (method == ConstantPotentialForce::ConstantPotentialMethod::Matrix) {
-        // This will update the matrix only if it was cleared.
-        conp.updateMatrix(numParticles, numElectrodeParticles, posData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, matrix);
-    }
-    conp.execute(numParticles, numElectrodeParticles, posData, forceData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, includeEnergy ? &energy : NULL, matrix);
+    updateConstantPotentialData(conp, posData);
+    conp.execute(numParticles, numElectrodeParticles, posData, forceData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, includeEnergy ? &energy : NULL, matrix, cg);
 
     // Process non-zeroing exceptions.  Since exceptions and electrodes should
     // involve disjoint sets of atoms, this isn't required for the energy
-    // minimization with respect to the electrode atoms.
+    // minimization with respect to the electrode atom charges.
     ReferenceBondForce refBondForce;
     ReferenceConstantPotential14 conp14;
     if (exceptionsArePeriodic) {
@@ -1317,7 +1313,7 @@ void ReferenceCalcConstantPotentialForceKernel::copyParametersToContext(ContextI
         }
     }
 
-    // Get non-zeroing exceptions.
+    // Get "1-4" (non-zeroing) exceptions.
     vector<int> nb14s;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
@@ -1371,9 +1367,22 @@ void ReferenceCalcConstantPotentialForceKernel::copyParametersToContext(ContextI
     // Update external field.
     force.getExternalField(externalField);
 
-    // Invalidate matrix if it is in use and electrode parameters changed.
-    if (matrix != NULL && firstElectrode <= lastElectrode) {
-        matrix->invalidate();
+    // Invalidate matrix or CG data if electrode parameters changed.
+    bool chargeTargetChanged = false;
+    if (useChargeConstraint) {
+        double newChargeTarget = force.getChargeConstraintTarget();
+        if (newChargeTarget != chargeTarget) {
+            chargeTarget = newChargeTarget;
+            chargeTargetChanged = true;
+        }
+    }
+    if (firstElectrode <= lastElectrode || chargeTargetChanged) {
+        if (matrix != NULL) {
+            matrix->invalidate();
+        }
+        if (cg != NULL) {
+            cg->invalidate();
+        }
     }
 }
 
@@ -1388,13 +1397,30 @@ void ReferenceCalcConstantPotentialForceKernel::getCharges(ContextImpl& context,
     Vec3* boxVectors = extractBoxVectors(context);
     vector<Vec3>& posData = extractPositions(context);
     
-    chargesOut = charges;
-
+    // Solve for charges only.
+    updateNeighborList(boxVectors, posData);
     ReferenceConstantPotential conp(nonbondedCutoff, neighborList, boxVectors, exceptionsArePeriodic, ewaldAlpha, gridSize, cgErrorTol, useChargeConstraint, chargeTarget, externalField);
-    if (method == ConstantPotentialForce::ConstantPotentialMethod::Matrix) {
-        conp.updateMatrix(numParticles, numElectrodeParticles, posData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, matrix);
+    updateConstantPotentialData(conp, posData);
+    conp.getCharges(numParticles, numElectrodeParticles, posData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, matrix, cg);
+
+    chargesOut = charges;
+}
+
+void ReferenceCalcConstantPotentialForceKernel::updateNeighborList(const Vec3* boxVectors, const std::vector<Vec3>& posData) {
+    double minAllowedSize = 1.999999*nonbondedCutoff;
+    if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
+        throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
     }
-    conp.solve(numParticles, numElectrodeParticles, posData, chargesOut, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, matrix);
+    computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, boxVectors, true, nonbondedCutoff, 0.0);
+}
+
+void ReferenceCalcConstantPotentialForceKernel::updateConstantPotentialData(ReferenceConstantPotential& conp, const std::vector<Vec3>& posData) {
+    if (method == ConstantPotentialForce::ConstantPotentialMethod::Matrix) {
+        // This will update the matrix only if it was cleared.
+        conp.updateMatrix(numParticles, numElectrodeParticles, posData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, matrix);
+    } else { // ConstantPotentialMethod::CG
+        conp.updateCG(numParticles, numElectrodeParticles, electrodeIndexMap, electrodeIndices, electrodeParamArray, cg);
+    }
 }
 
 ReferenceCalcCustomNonbondedForceKernel::~ReferenceCalcCustomNonbondedForceKernel() {

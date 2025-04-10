@@ -107,8 +107,7 @@ public:
          * A capacitance matrix is precomputed at the start of the simulation
          * and is used to directly calculate the electrode charges at each
          * simulation step.  This method can only be used if all electrode
-         * particles have fixed positions, and due to memory requirements, is
-         * only recommended when the number of electrode particles is small.
+         * particles have fixed positions and the periodic box does not change.
          */
         Matrix = 1,
     };
@@ -283,11 +282,12 @@ public:
      * call updateParametersInContext() to copy them over to the Context.
      *
      * This method has several limitations.  The only information it updates is
-     * the parameters of particles, exceptions, and electrodes.  All other
-     * aspects of the Force (the constant potential method, the cutoff distance,
-     * etc.) are unaffected and can only be changed by reinitializing the
-     * Context.  Furthermore, only the chargeProd value of an exception can be
-     * changed; the pair of particles involved in the exception cannot change.
+     * the parameters of particles, exceptions, and electrodes, as well as the
+     * target total charge for the charge constraint.  All other aspects of the
+     * Force (the constant potential method, the cutoff distance, etc.) are
+     * unaffected and can only be changed by reinitializing the Context.
+     * Furthermore, only the chargeProd value of an exception can be changed;
+     * the pair of particles involved in the exception cannot change.
      * Similarly, for electrodes, the set of particles involved in the electrode
      * cannot be updated with this method.  Finally, this method cannot be used
      * to add new particles, exceptions, or electrodes, only to change the

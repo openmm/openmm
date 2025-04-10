@@ -130,12 +130,12 @@ void ConstantPotentialForceImpl::initialize(ContextImpl& context) {
         owner.getExceptionParameters(i, particle1, particle2, chargeProd);
         int electrode1 = electrodes[particle1];
         int electrode2 = electrodes[particle2];
-        if(electrode1 != -1) {
+        if (electrode1 != -1) {
             stringstream msg;
             msg << "ConstantPotentialForce: Particle " << particle1 << " belongs to exception " << i << " and electrode " << electrode1;
             throw OpenMMException(msg.str());
         }
-        if(electrode2 != -1) {
+        if (electrode2 != -1) {
             stringstream msg;
             msg << "ConstantPotentialForce: Particle " << particle2 << " belongs to exception " << i << " and electrode " << electrode2;
             throw OpenMMException(msg.str());
