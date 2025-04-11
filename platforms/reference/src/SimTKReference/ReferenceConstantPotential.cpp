@@ -341,7 +341,7 @@ void ReferenceConstantPotential::solve(
         // Evaluate the initial gradient Aq - b.
         getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, grad, pmeData);
 
-        // Project the current gradient and apply preconditioning.
+        // Project the initial gradient with preconditioning.
         offset = 0.0;
         if (useChargeConstraint) {
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
@@ -351,17 +351,6 @@ void ReferenceConstantPotential::solve(
         }
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
             projGrad[ii] = cg->precondVector[ii] * (grad[ii] - offset);
-        }
-
-        // Check for convergence.
-        error = 0.0;
-        for (int ii = 0; ii < numElectrodeParticles; ii++) {
-            error += projGrad[ii] * projGrad[ii];
-        }
-        if (error <= cgErrorTol * cgErrorTol * numElectrodeParticles) {
-            // The charges already satisfy the constant potential equations to
-            // within the requested tolerance and no iterations are required.
-            return;
         }
 
         // Save the current charges, then evaluate the gradient with zero
@@ -410,7 +399,21 @@ void ReferenceConstantPotential::solve(
                 grad[ii] += alpha * gradStep[ii];
             }
 
-            // Project the current gradient and apply preconditioning.
+            // Check for convergence.  We have to check the step size (see
+            // Shariff, Computers Math. Applic. 30, 11, 25-37, 1995); the
+            // projected gradient with preconditioning may not give meaningful
+            // convergence information.
+            error = 0.0;
+            for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                error += qStep[ii] * qStep[ii];
+            }
+            error *= alpha * alpha;
+            if (error <= cgErrorTol * cgErrorTol * numElectrodeParticles) {
+                converged = true;
+                break;
+            }
+
+            // Project the current gradient with preconditioning.
             offset = 0.0;
             if (useChargeConstraint) {
                 for (int ii = 0; ii < numElectrodeParticles; ii++) {
@@ -420,16 +423,6 @@ void ReferenceConstantPotential::solve(
             }
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
                 projGrad[ii] = cg->precondVector[ii] * (grad[ii] - offset);
-            }
-
-            // Check for convergence.
-            error = 0.0;
-            for (int ii = 0; ii < numElectrodeParticles; ii++) {
-                error += projGrad[ii] * projGrad[ii];
-            }
-            if (error <= cgErrorTol * cgErrorTol * numElectrodeParticles) {
-                converged = true;
-                break;
             }
 
             // Evaluate the conjugate gradient parameter beta and update
@@ -443,6 +436,23 @@ void ReferenceConstantPotential::solve(
 
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
                 qStep[ii] = beta * qStep[ii] - projGrad[ii];
+            }
+
+            if (useChargeConstraint) {
+                // Analytically, when using the total charge constraint, qStep
+                // should always sum to 0 so that the constraint will never be
+                // violated as long as it is initially satisfied.  However,
+                // numerically, the algorithm is unstable with respect to a
+                // catastrophic buildup of constraint error!  We thus explicitly
+                // subtract off any accumulated drift after each iteration.
+                offset = 0.0;
+                for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                    offset += qStep[ii];
+                }
+                offset /= numElectrodeParticles;
+                for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                    qStep[ii] -= offset;
+                }
             }
         }
 
