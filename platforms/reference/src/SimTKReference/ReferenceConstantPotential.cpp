@@ -473,7 +473,7 @@ void ReferenceConstantPotential::getEnergyForces(
     // Computes energies and forces given optimized charges.
 
     const double SQRT_PI = sqrt(PI_M);
-    const double TWO_BY_SQRT_PI = 2.0 / SQRT_PI;
+    const double TWO_OVER_SQRT_PI = 2.0 / SQRT_PI;
     const double SELF_ALPHA_SCALE = ONE_4PI_EPS0 / SQRT_PI;
     const double SELF_ETA_SCALE = SELF_ALPHA_SCALE / sqrt(2.0);
     const double TF_SCALE = 1.0 / (2.0 * EPSILON0);
@@ -509,7 +509,7 @@ void ReferenceConstantPotential::getEnergyForces(
         }
 
         double qqFactor = ONE_4PI_EPS0 * charges[i] * charges[j];
-        double forceFactor = qqFactor * inverseR * inverseR * inverseR * (erfcAlphaR - erfcEtaR + TWO_BY_SQRT_PI * (alphaR * exp(-alphaR * alphaR) - expEtaRTerm));
+        double forceFactor = qqFactor * inverseR * inverseR * inverseR * (erfcAlphaR - erfcEtaR + TWO_OVER_SQRT_PI * (alphaR * exp(-alphaR * alphaR) - expEtaRTerm));
         for (int k = 0; k < 3; k++) {
             double force = forceFactor * deltaR[k];
             forceData[i][k] -= force;
@@ -526,39 +526,28 @@ void ReferenceConstantPotential::getEnergyForces(
                 continue;
             }
 
-            int ii = electrodeIndexMap[i];
-            int jj = electrodeIndexMap[j];
-
-            double iWidth = ii == -1 ? 0.0 : electrodeParamArray[ii][GaussianWidthIndex];
-            double jWidth = jj == -1 ? 0.0 : electrodeParamArray[jj][GaussianWidthIndex];
-            double width = sqrt(iWidth * iWidth + jWidth * jWidth);
-
             double deltaR[ReferenceForce::LastDeltaRIndex];
             ReferenceForce::getDeltaRPeriodic(posData[i], posData[j], boxVectors, deltaR);
             double r = deltaR[ReferenceForce::RIndex];
             double inverseR = 1.0 / r;
 
-            double alphaR = ewaldAlpha * r;
-            double erfAlphaR = erf(alphaR);
-
-            double etaR = 0.0;
-            double erfcEtaR = 0.0;
-            double expEtaRTerm = 0.0;
-            if (width != 0.0) {
-                etaR = r / width;
-                erfcEtaR = erfc(etaR);
-                expEtaRTerm = etaR * exp(-etaR * etaR);
-            }
-
             double qqFactor = ONE_4PI_EPS0 * charges[i] * charges[j];
-            double forceFactor = qqFactor * inverseR * inverseR * inverseR * (erfAlphaR + erfcEtaR + TWO_BY_SQRT_PI * (alphaR * exp(-alphaR * alphaR) + expEtaRTerm));
-            for (int k = 0; k < 3; k++) {
-                double force = forceFactor * deltaR[k];
-                forceData[i][k] += force;
-                forceData[j][k] -= force;
-            }
+            double alphaR = ewaldAlpha * r;
 
-            energyAccum -= qqFactor * inverseR * (erfAlphaR + erfcEtaR);
+            if (alphaR > 1e-6) {
+                double erfAlphaR = erf(alphaR);
+
+                double forceFactor = qqFactor * inverseR * inverseR * inverseR * (erfAlphaR + TWO_OVER_SQRT_PI * alphaR * exp(-alphaR * alphaR));
+                for (int k = 0; k < 3; k++) {
+                    double force = forceFactor * deltaR[k];
+                    forceData[i][k] += force;
+                    forceData[j][k] -= force;
+                }
+
+                energyAccum -= qqFactor * inverseR * erfAlphaR;
+            } else {
+                energyAccum -= qqFactor * TWO_OVER_SQRT_PI * ewaldAlpha;
+            }
         }
     }
     
