@@ -678,7 +678,7 @@ private:
  */
 class ReferenceCalcConstantPotentialForceKernel : public CalcConstantPotentialForceKernel {
 public:
-    ReferenceCalcConstantPotentialForceKernel(std::string name, const Platform& platform) : CalcConstantPotentialForceKernel(name, platform) {
+    ReferenceCalcConstantPotentialForceKernel(std::string name, const Platform& platform) : CalcConstantPotentialForceKernel(name, platform), neighborList(NULL), matrix(NULL), cg(NULL) {
     }
     ~ReferenceCalcConstantPotentialForceKernel();
     /**

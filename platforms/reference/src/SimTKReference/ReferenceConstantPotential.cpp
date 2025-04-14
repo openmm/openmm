@@ -138,6 +138,8 @@ void ReferenceConstantPotential::updateMatrix(
         A[ii][ii] = dUdQ[ii] - dUdQ0[ii];
     }
 
+    pme_destroy(pmeData);
+
     // Compute Cholesky decomposition representation of the inverse.
     matrix->capacitance = JAMA::Cholesky<double>(A);
     if (!matrix->capacitance.is_spd()) {
@@ -163,8 +165,6 @@ void ReferenceConstantPotential::updateMatrix(
             matrix->constraintVector[ii] *= constraintScale;
         }
     }
-
-    pme_destroy(pmeData);
 }
 
 void ReferenceConstantPotential::updateCG(
@@ -315,7 +315,8 @@ void ReferenceConstantPotential::solve(
             }
         }
 
-    } else {
+    }
+    else {
         // Conjugate gradient solver.
 
         std::vector<double> q(numElectrodeParticles);
@@ -555,7 +556,8 @@ void ReferenceConstantPotential::getEnergyForces(
                 }
 
                 energyAccum -= qqFactor * inverseR * erfAlphaR;
-            } else {
+            }
+            else {
                 energyAccum -= qqFactor * TWO_OVER_SQRT_PI * ewaldAlpha;
             }
         }

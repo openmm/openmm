@@ -60,7 +60,8 @@ void ReferenceConstantPotential14::calculateBondIxn(
     int atomBIndex = atomIndices[1];
     if (periodic) {
         ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], periodicBoxVectors, deltaR);
-    } else {
+    }
+    else {
         ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR);  
     }
 

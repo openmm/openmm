@@ -1279,7 +1279,8 @@ void ReferenceCalcConstantPotentialForceKernel::initialize(const System& system,
         }
 
         matrix = new ReferenceConstantPotentialMatrix(numElectrodeParticles);
-    } else { // ConstantPotentialMethod::CG
+    }
+    else { // ConstantPotentialMethod::CG
         cg = new ReferenceConstantPotentialCG(numElectrodeParticles);
     }
 }
@@ -1332,7 +1333,8 @@ void ReferenceCalcConstantPotentialForceKernel::copyParametersToContext(ContextI
             if (chargeProd != 0.0) {
                 throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
             }
-        } else {
+        }
+        else {
             nb14s.push_back(i);
         }
     }
@@ -1427,7 +1429,8 @@ void ReferenceCalcConstantPotentialForceKernel::updateConstantPotentialData(Refe
     if (method == ConstantPotentialForce::ConstantPotentialMethod::Matrix) {
         // This will update the matrix only if it was cleared.
         conp.updateMatrix(numParticles, numElectrodeParticles, posData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, matrix);
-    } else { // ConstantPotentialMethod::CG
+    }
+    else { // ConstantPotentialMethod::CG
         conp.updateCG(numParticles, numElectrodeParticles, electrodeIndexMap, electrodeIndices, electrodeParamArray, cg);
     }
 }
