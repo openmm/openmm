@@ -334,13 +334,17 @@ public:
      */
     void setConstantPotentialMethod(ConstantPotentialMethod method);
     /**
-     * Get the tolerance used for the conjugate gradient method of calculating
-     * electrode charges.
+     * Get the tolerance, in units of the proton charge, used for the conjugate
+     * gradient method of calculating electrode charges.  The conjugate gradient
+     * method will stop if the RMS difference between the vector of electrode
+     * charges changes by no more than this value between successive iterations.
      */
     double getCGErrorTolerance() const;
     /**
-     * Set the tolerance used for the conjugate gradient method of calculating
-     * electrode charges.
+     * Set the tolerance, in units of the proton charge, used for the conjugate
+     * gradient method of calculating electrode charges.  The conjugate gradient
+     * method will stop if the RMS difference between the vector of electrode
+     * charges changes by no more than this value between successive iterations.
      */
     void setCGErrorTolerance(double tol);
     /**
