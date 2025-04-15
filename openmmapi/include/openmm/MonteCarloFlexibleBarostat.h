@@ -34,6 +34,7 @@
 
 #include "Force.h"
 #include <string>
+#include <vector>
 #include "internal/windowsExport.h"
 
 namespace OpenMM {
