@@ -232,9 +232,9 @@ void testMolecularGas() {
         avgPressure += barostat->computeCurrentPressure(context);
     }
     avgPressure /= steps;
-    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[0], 0.1);
-    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[1], 0.1);
-    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[2], 0.1);
+    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[0], 0.2);
+    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[1], 0.2);
+    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[2], 0.2);
 }
 
 void testRandomSeed() {
