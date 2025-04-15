@@ -122,8 +122,10 @@ void ReferenceMonteCarloBarostat::restorePositions(vector<Vec3>& atomPositions) 
             atomPositions[i][j] = savedAtomPositions[j][i];
 }
 
-double ReferenceMonteCarloBarostat::computeMolecularKineticEnergy(const vector<Vec3>& velocities) {
-    double ke = 0.0;
+void ReferenceMonteCarloBarostat::computeMolecularKineticEnergy(const vector<Vec3>& velocities, vector<double>& ke, int components) {
+    ke.resize(components);
+    for (int i = 0; i < components; i++)
+        ke[i] = 0.0;
     for (auto& molecule : molecules) {
         Vec3 molVel;
         double molMass = 0.0;
@@ -132,7 +134,17 @@ double ReferenceMonteCarloBarostat::computeMolecularKineticEnergy(const vector<V
             molMass += masses[atom];
         }
         molVel /= molecule.size();
-        ke += 0.5*molMass*molVel.dot(molVel);
+        if (components == 1)
+            ke[0] += 0.5*molMass*molVel.dot(molVel);
+        else {
+            ke[0] += 0.5*molMass*molVel[0]*molVel[0];
+            ke[1] += 0.5*molMass*molVel[1]*molVel[1];
+            ke[2] += 0.5*molMass*molVel[2]*molVel[2];
+            if (components == 6) {
+                ke[3] += 0.5*molMass*molVel[1]*molVel[0];
+                ke[4] += 0.5*molMass*molVel[2]*molVel[0];
+                ke[5] += 0.5*molMass*molVel[2]*molVel[1];
+            }
+        }
     }
-    return ke;
 }

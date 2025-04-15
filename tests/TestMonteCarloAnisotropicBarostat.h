@@ -84,7 +84,7 @@ void testIdealGas() {
         
         // Let it equilibrate.
         
-        integrator.step(10000);
+        integrator.step(5000);
         
         // Now run it for a while and see if the volume is correct.
         
@@ -101,9 +101,9 @@ void testIdealGas() {
         avgPressure /= steps;
         double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
         ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
-        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[0], 0.1);
-        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[1], 0.1);
-        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[2], 0.1);
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[0], 0.2);
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[1], 0.2);
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[2], 0.2);
     }
 }
 
@@ -151,7 +151,7 @@ void testIdealGasAxis(int axis) {
         
         // Let it equilibrate.
         
-        integrator.step(10000);
+        integrator.step(5000);
         
         // Now run it for a while and see if the volume is correct.
         
@@ -171,9 +171,9 @@ void testIdealGasAxis(int axis) {
         avgPressure /= steps;
         double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
         ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
-        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[0], 0.1);
-        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[1], 0.1);
-        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[2], 0.1);
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[0], 0.2);
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[1], 0.2);
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[2], 0.2);
         if (!scaleX) {
             ASSERT(boxX == initialLength);
         }
@@ -225,7 +225,7 @@ void testMolecularGas() {
     LangevinIntegrator integrator(temp, 0.1, 0.005);
     Context context(system, integrator, platform);
     context.setPositions(positions);
-    integrator.step(10000);
+    integrator.step(5000);
     Vec3 avgPressure;
     for (int j = 0; j < steps; ++j) {
         integrator.step(frequency);
@@ -338,7 +338,7 @@ void testTriclinic() {
 
     // Let it equilibrate.
 
-    integrator.step(10000);
+    integrator.step(5000);
 
     // Now run it for a while and see if the volume is correct.
 

@@ -96,10 +96,12 @@ class ReferenceMonteCarloBarostat {
          Compute the kinetic energy of molecular center of mass translations.
 
          @param velocities      atom velocities
+         @param ke              a vector to store the kinetic energy components into
+         @param components      the number of components to calculate
 
          --------------------------------------------------------------------------------------- */
 
-      double computeMolecularKineticEnergy(const std::vector<OpenMM::Vec3>& velocities);
+      void computeMolecularKineticEnergy(const std::vector<OpenMM::Vec3>& velocities, std::vector<double>& ke, int components);
 };
 
 } // namespace OpenMM

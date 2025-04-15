@@ -50,7 +50,7 @@ void MonteCarloAnisotropicBarostatImpl::initialize(ContextImpl& context) {
     if (!context.getSystem().usesPeriodicBoundaryConditions())
         throw OpenMMException("A barostat cannot be used with a non-periodic system");
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner, 3);
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
@@ -165,7 +165,8 @@ Vec3 MonteCarloAnisotropicBarostatImpl::computeCurrentPressure(ContextImpl& cont
     double delta = 1e-3;
     int groups = context.getIntegrator().getIntegrationForceGroups();
     kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
-    double ke = kernel.getAs<ApplyMonteCarloBarostatKernel>().computeKineticEnergy(context);
+    vector<double> ke;
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().computeKineticEnergy(context, ke);
     double deltaVolume = volume*2*delta;
     Vec3 pressure;
 
@@ -195,7 +196,7 @@ Vec3 MonteCarloAnisotropicBarostatImpl::computeCurrentPressure(ContextImpl& cont
 
         // Compute the pressure.
 
-        pressure[axis] = ((2.0/3.0)*ke/volume - (energy1-energy2)/deltaVolume)/(AVOGADRO*1e-25);
+        pressure[axis] = (2.0*ke[axis]/volume - (energy1-energy2)/deltaVolume)/(AVOGADRO*1e-25);
     }
 
     // Restore the context to its original state.

@@ -2890,7 +2890,8 @@ ReferenceApplyMonteCarloBarostatKernel::~ReferenceApplyMonteCarloBarostatKernel(
         delete barostat;
 }
 
-void ReferenceApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& barostat, bool rigidMolecules) {
+void ReferenceApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& barostat, int components, bool rigidMolecules) {
+    this->components = components;
     this->rigidMolecules = rigidMolecules;
 }
 
@@ -2924,10 +2925,8 @@ void ReferenceApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& con
     barostat->restorePositions(posData);
 }
 
-double ReferenceApplyMonteCarloBarostatKernel::computeKineticEnergy(ContextImpl& context) {
-    if (rigidMolecules)
-        return barostat->computeMolecularKineticEnergy(extractVelocities(context));
-    return context.calcKineticEnergy();
+void ReferenceApplyMonteCarloBarostatKernel::computeKineticEnergy(ContextImpl& context, vector<double>& ke) {
+    barostat->computeMolecularKineticEnergy(extractVelocities(context), ke, components);
 }
 
 void ReferenceRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
