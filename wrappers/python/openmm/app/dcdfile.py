@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012 Stanford University and the Authors.
+Portions copyright (c) 2012-2025 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -84,12 +84,18 @@ class DCDFile(object):
         if topology.getUnitCellDimensions() is not None:
             boxFlag = 1
         if append:
-            file.seek(8, os.SEEK_SET)
+            file.seek(0, os.SEEK_SET)
+            headerBytes = struct.unpack('<i', file.read(4))[0]
+            headerMagic = file.read(4)
+            if headerBytes != 84 or headerMagic != b'CORD':
+                raise ValueError('Cannot append to DCD file with invalid header')
             self._modelCount = struct.unpack('<i', file.read(4))[0]
-            file.seek(268, os.SEEK_SET)
+            file.seek(92, os.SEEK_SET)
+            commentsBytes = struct.unpack('<i', file.read(4))[0]
+            file.seek(104 + commentsBytes, os.SEEK_SET)
             numAtoms = struct.unpack('<i', file.read(4))[0]
             if numAtoms != topology.getNumAtoms():
-                raise ValueError('Cannot append to a DCD file that contains a different number of atoms')
+                raise ValueError(f'Cannot append from system with {topology.getNumAtoms()} atoms to DCD file with {numAtoms} atoms')
         else:
             header = struct.pack('<i4c9if', 84, b'C', b'O', b'R', b'D', 0, firstStep, interval, 0, 0, 0, 0, 0, 0, dt)
             header += struct.pack('<13i', boxFlag, 0, 0, 0, 0, 0, 0, 0, 0, 24, 84, 164, 2)
