@@ -85,10 +85,9 @@ class DCDFile(object):
             boxFlag = 1
         if append:
             file.seek(0, os.SEEK_SET)
-            headerBytes = struct.unpack('<i', file.read(4))[0]
-            headerMagic = file.read(4)
-            if headerBytes != 84 or headerMagic != b'CORD':
-                raise ValueError('Cannot append to DCD file with invalid header')
+            headerMagic = file.read(8)
+            if headerMagic[4:8] != b'CORD' or struct.unpack('<i', headerMagic[:4])[0] != 84:
+                raise ValueError('Cannot append to file with invalid DCD header')
             self._modelCount = struct.unpack('<i', file.read(4))[0]
             file.seek(92, os.SEEK_SET)
             commentsBytes = struct.unpack('<i', file.read(4))[0]
