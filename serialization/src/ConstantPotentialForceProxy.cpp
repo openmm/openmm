@@ -55,7 +55,7 @@ void ConstantPotentialForceProxy::serialize(const void* object, SerializationNod
     node.setIntProperty("nx", nx);
     node.setIntProperty("ny", ny);
     node.setIntProperty("nz", nz);
-    node.setIntProperty("exceptionsUsePeriodic", force.getExceptionsUsePeriodicBoundaryConditions());
+    node.setBoolProperty("exceptionsUsePeriodic", force.getExceptionsUsePeriodicBoundaryConditions());
     node.setIntProperty("constantPotentialMethod", (int) force.getConstantPotentialMethod());
     node.setDoubleProperty("cgTolerance", force.getCGErrorTolerance());
     node.setBoolProperty("useChargeConstraint", force.getUseChargeConstraint());
@@ -109,7 +109,7 @@ void* ConstantPotentialForceProxy::deserialize(const SerializationNode& node) co
         int ny = node.getIntProperty("ny", 0);
         int nz = node.getIntProperty("nz", 0);
         force->setPMEParameters(alpha, nx, ny, nz);
-        force->setExceptionsUsePeriodicBoundaryConditions(node.getIntProperty("exceptionsUsePeriodic"));
+        force->setExceptionsUsePeriodicBoundaryConditions(node.getBoolProperty("exceptionsUsePeriodic"));
         force->setConstantPotentialMethod((ConstantPotentialForce::ConstantPotentialMethod) node.getIntProperty("constantPotentialMethod"));
         force->setEwaldErrorTolerance(node.getDoubleProperty("ewaldTolerance"));
         force->setUseChargeConstraint(node.getBoolProperty("useChargeConstraint"));
