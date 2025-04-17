@@ -34,4 +34,5 @@
 
 void runPlatformTests() {
     testWater();
+    testLJPressure();
 }

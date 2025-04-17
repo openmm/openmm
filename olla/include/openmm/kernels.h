@@ -1476,8 +1476,10 @@ public:
      * @param system          the System this kernel will be applied to
      * @param barostat        the MonteCarloBarostat this kernel will be used for
      * @param rigidMolecules  whether molecules should be kept rigid while scaling coordinates
+     * @param components      the number of box components the barostat operates one (1 for isotropic scaling,
+     *                        3 for anisotropic, 6 for both lengths and angles)
      */
-    virtual void initialize(const System& system, const Force& barostat, bool rigidMolecules=true) = 0;
+    virtual void initialize(const System& system, const Force& barostat, int components, bool rigidMolecules=true) = 0;
     /**
      * Save the coordinates before attempting a Monte Carlo step.  This allows us to restore them
      * if the step is rejected.
@@ -1505,6 +1507,16 @@ public:
      * @param context    the context in which to execute this kernel
      */
     virtual void restoreCoordinates(ContextImpl& context) = 0;
+    /**
+     * Compute the kinetic energy of the system.  If initialize() was called with rigidMolecules=true, this
+     * should include only the translational center of mass motion of molecules.  Otherwise it should include
+     * the total kinetic energy of all particles.  This is used when computing instantaneous pressure.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param ke         a vector to store the kinetic energy components into.  On output, its length will
+     *                   equal the number of components passed to initialize().
+     */
+    virtual void computeKineticEnergy(ContextImpl& context, std::vector<double>& ke) = 0;
 };
 
 /**

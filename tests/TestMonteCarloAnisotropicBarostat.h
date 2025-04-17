@@ -51,7 +51,7 @@ void testIdealGas() {
     const int numParticles = 64;
     const int frequency = 10;
     const int steps = 1000;
-    const double pressure = 1.5;
+    const double pressure = 3.0;
     const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
     const double temp[] = {300.0, 600.0, 1000.0};
     const double initialVolume = numParticles*BOLTZ*temp[1]/pressureInMD;
@@ -84,20 +84,26 @@ void testIdealGas() {
         
         // Let it equilibrate.
         
-        integrator.step(10000);
+        integrator.step(5000);
         
         // Now run it for a while and see if the volume is correct.
         
         double volume = 0.0;
+        Vec3 avgPressure;
         for (int j = 0; j < steps; ++j) {
             Vec3 box[3];
             context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
             volume += box[0][0]*box[1][1]*box[2][2];
             integrator.step(frequency);
+            avgPressure += barostat->computeCurrentPressure(context);
         }
         volume /= steps;
+        avgPressure /= steps;
         double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
         ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[0], 0.2);
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[1], 0.2);
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[2], 0.2);
     }
 }
 
@@ -106,7 +112,7 @@ void testIdealGasAxis(int axis) {
     const int numParticles = 64;
     const int frequency = 10;
     const int steps = 1000;
-    const double pressure = 1.5;
+    const double pressure = 3.0;
     const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
     const double temp[] = {300.0, 600.0, 1000.0};
     const double initialVolume = numParticles*BOLTZ*temp[1]/pressureInMD;
@@ -145,11 +151,12 @@ void testIdealGasAxis(int axis) {
         
         // Let it equilibrate.
         
-        integrator.step(10000);
+        integrator.step(5000);
         
         // Now run it for a while and see if the volume is correct.
         
         double volume = 0.0;
+        Vec3 avgPressure;
         for (int j = 0; j < steps; ++j) {
             Vec3 box[3];
             context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
@@ -158,10 +165,15 @@ void testIdealGasAxis(int axis) {
             boxZ = box[2][2];
             volume += box[0][0]*box[1][1]*box[2][2];
             integrator.step(frequency);
+            avgPressure += barostat->computeCurrentPressure(context);
         }
         volume /= steps;
+        avgPressure /= steps;
         double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
         ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[0], 0.2);
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[1], 0.2);
+        ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[2], 0.2);
         if (!scaleX) {
             ASSERT(boxX == initialLength);
         }
@@ -172,6 +184,57 @@ void testIdealGasAxis(int axis) {
             ASSERT(boxZ == 2*initialLength);
         }
     }
+}
+
+void testMolecularGas() {
+    const int numMolecules = 64;
+    const int frequency = 5;
+    const int steps = 5000;
+    const double pressure = 3.0;
+    const double pressureInMD = pressure*(AVOGADRO*1e-25); // pressure in kJ/mol/nm^3
+    const double temp = 300.0;
+    const double initialVolume = numMolecules*BOLTZ*temp/pressureInMD;
+    const double initialLength = std::pow(initialVolume, 1.0/3.0);
+
+    // Create a gas of noninteracting molecules.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, true, true, true, frequency);
+    system.addForce(barostat);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(bonds);
+    vector<Vec3> positions;
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    for (int i = 0; i < numMolecules; ++i) {
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        Vec3 pos(initialLength*genrand_real2(sfmt), 0.5*initialLength*genrand_real2(sfmt), 2*initialLength*genrand_real2(sfmt));
+        system.addConstraint(positions.size(), positions.size()+1, 0.1);
+        system.addConstraint(positions.size(), positions.size()+2, 0.1);
+        positions.push_back(pos);
+        positions.push_back(pos+Vec3(0.1, 0.0, 0.0));
+        positions.push_back(pos+Vec3(0.0, 0.1, 0.0));
+    }
+
+    // Simulate it and see if the pressure is correct.
+
+    LangevinIntegrator integrator(temp, 0.1, 0.005);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    integrator.step(5000);
+    Vec3 avgPressure;
+    for (int j = 0; j < steps; ++j) {
+        integrator.step(frequency);
+        avgPressure += barostat->computeCurrentPressure(context);
+    }
+    avgPressure /= steps;
+    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[0], 0.2);
+    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[1], 0.2);
+    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[2], 0.2);
 }
 
 void testRandomSeed() {
@@ -275,7 +338,7 @@ void testTriclinic() {
 
     // Let it equilibrate.
 
-    integrator.step(10000);
+    integrator.step(5000);
 
     // Now run it for a while and see if the volume is correct.
 
@@ -447,6 +510,54 @@ void testEinsteinCrystal() {
     ASSERT_USUALLY_EQUAL_TOL(results[11], results[14], 3/std::sqrt((double) steps));
 }
 
+void testLJPressure() {
+    const int gridSize = 8;
+    const int frequency = 10;
+    const int steps = 1000;
+    const double spacing = 1.2;
+    const double temp = 150.0;
+    const double pressure = 10.0;
+
+    // Create a gas of LJ particles.  This is much more compressible than water, which means
+    // the fluctuations in pressure are much smaller and it's easier to compute the average.
+
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(gridSize*spacing, 0, 0), Vec3(0, gridSize*spacing, 0), Vec3(0, 0, gridSize*spacing));
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    vector<Vec3> positions;
+    for (int i = 0; i < gridSize; ++i) {
+        for (int j = 0; j < gridSize; ++j) {
+            for (int k = 0; k < gridSize; ++k) {
+                system.addParticle(1.0);
+                nonbonded->addParticle(0.0, 1.0, 1.0);
+                positions.push_back(Vec3(spacing*i, spacing*j, spacing*k));
+            }
+        }
+    }
+    system.addForce(nonbonded);
+    MonteCarloAnisotropicBarostat* barostat = new MonteCarloAnisotropicBarostat(Vec3(pressure, pressure, pressure), temp, true, true, true, frequency);
+    system.addForce(barostat);
+
+    // Simulate it and see if the average instantaneous pressure matches the heat bath pressure.
+
+    LangevinIntegrator integrator(temp, 1.0, 0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    integrator.step(1000);
+    Vec3 avgPressure;
+    for (int j = 0; j < steps; ++j) {
+        Vec3 box[3];
+        context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
+        avgPressure += barostat->computeCurrentPressure(context);
+        integrator.step(frequency);
+    }
+    avgPressure /= steps;
+    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[0], 0.1);
+    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[1], 0.1);
+    ASSERT_USUALLY_EQUAL_TOL(pressure, avgPressure[2], 0.1);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -456,6 +567,7 @@ int main(int argc, char* argv[]) {
         testIdealGasAxis(0);
         testIdealGasAxis(1);
         testIdealGasAxis(2);
+        testMolecularGas();
         testRandomSeed();
         testTriclinic();
         //testEinsteinCrystal();

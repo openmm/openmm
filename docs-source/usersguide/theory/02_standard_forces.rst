@@ -630,6 +630,25 @@ probability.  It does not itself perform temperature regulation, however.  You
 must use another mechanism along with it to maintain the temperature, such as
 LangevinIntegrator or AndersenThermostat.
 
+Another feature of MonteCarloBarostat is that it can compute the "instantaneous
+pressure", which is defined based on the molecular virial:
+
+.. math::
+   P_{inst} = \frac{1}{3V} (\sum_i m_i |\mathbf{v}_i|^2 ) - \frac{dE}{dV}
+
+where the sum is taken over molecules, :math:`m_i` is the mass of the i'th molecule,
+and :math:`\mathbf{v}_i` is the velocity of its center of mass.  The derivative
+of potential energy with respect to volume is approximated with a finite difference.
+
+In most cases, the time average of the instantaneous pressure should equal the
+pressure applied by the barostat.  Fluctuations around the average can be extremely
+large, however, especially when simulating incompressible materials like water.
+A very long simulation may be required to accurately compute the average.  There
+also are situations where the average instantaneous pressure differs from the
+applied pressure.  For example, if the system contains immobile massless particles,
+they will reduce the kinetic energy below what would be expected based on the
+temperature, and hence reduce the calculated pressure.
+
 MonteCarloAnisotropicBarostat
 *****************************
 
@@ -643,6 +662,18 @@ each axis.
 You can specify that the barostat should only be applied to certain axes of the
 box, keeping the other axes fixed.  This is useful, for example, when doing
 constant surface area simulations of membranes.
+
+Like MonteCarloBarostat, the anisotropic barostat can compute an instantaneous
+pressure, but in this case the pressure is computed separately along each axis
+according to the formula
+
+.. math::
+   P_{inst} = \frac{1}{V} \sum_i m_i v_i^2 - \frac{dE}{dV}
+
+where :math:`v_i` is the component of the i'th molecule's velocity along the
+specified axis.  The derivative :math:`dE/dV` is again computed with a finite
+difference, but in this case :math:`dE` refers to the change in potential energy
+when scaling the box size along only a single axis.
 
 MonteCarloMembraneBarostat
 **************************
@@ -677,6 +708,10 @@ behavior of the periodic box:
   * inversely varying with the X and Y axes (so the total box volume does not
     change)
 
+Like other barostats, MonteCarloMembraneBarostat can compute the instantaneous
+pressure.  It is computed separately for each axis using the same formula as
+MonteCarloAnisotropicBarostat.
+
 MonteCarloFlexibleBarostat
 **************************
 
@@ -686,6 +721,39 @@ steps can change not just the lengths of the box sides, but also the angles.  It
 is especially useful for simulations of bulk materials where the shape of a
 crystal's unit cell may not be known in advance, or could even change with time
 as it transitions between phases.
+
+Computing the instantaneous pressure with MonteCarloFlexibleBarostat is more
+complicated than other barostats.  Because the box angles can change, it needs
+to compute the full pressure tensor.  Let :math:`\mathbf{a}`, :math:`\mathbf{b}`,
+and :math:`\mathbf{c}` be the vectors defining the periodic box.  They can be
+assembled into a 3 by 3 box matrix
+
+.. math::
+
+    h = \left[ {\begin{array}{ccc}
+        a_x & a_y & a_z \\
+        b_x & b_y & b_z \\
+        c_x & c_y & c_z \\
+      \end{array} } \right]
+
+The pressure tensor is similarly represented by a 3 by 3 matrix.  Its elements
+are given by
+
+.. math::
+
+   P_{jk} = \frac{1}{V} \left( \sum_i m_i v_{ij} v_{ik} - \frac{\partial E}{\partial h_{jk}} h_{jk} \right)
+
+Because of the particular reduced form OpenMM uses for the box vectors (see Section
+:numref:`periodic-boundary-conditions`), the elements above the diagonal are
+always zero.  In addition, the elements below the diagonal do not involve any
+change to the box volume, and therefore are not affected by the applied pressure.
+The six non-zero elements are as follows.
+
+* The diagonal elements reflect the pressure acting to change the box size along
+  each axis.  In equilibrium they should average to the applied pressure, although
+  fluctuations around the average can be very large.
+* The elements below the diagonal reflect the pressure acting to change the box
+  angles.  In equilibrium they should average to zero.
 
 CMMotionRemover
 ***************
