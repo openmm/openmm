@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,57 +29,56 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CompoundIntegrator.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomCentroidBondForce.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomCVForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomManyParticleForce.h"
-#include "openmm/CustomNonbondedForce.h"
-#include "openmm/CustomVolumeForce.h"
-#include "openmm/DPDIntegrator.h"
-#include "openmm/Force.h"
-#include "openmm/GayBerneForce.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LangevinMiddleIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/MonteCarloFlexibleBarostat.h"
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Context.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/RMSDForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/TabulatedFunction.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/NoseHooverIntegrator.h"
-#include "openmm/NoseHooverChain.h"
-#include "openmm/VirtualSite.h"
-#include "openmm/Platform.h"
-#include "openmm/serialization/XmlSerializer.h"
-#include "openmm/ATMForce.h"
+#include "openmm/internal/CustomVolumeForceImpl.h"
+#include "openmm/internal/ContextImpl.h"
+#include "lepton/ParsedExpression.h"
+#include "lepton/Parser.h"
 
-#endif /*OPENMM_H_*/
+using namespace OpenMM;
+using namespace std;
+
+CustomVolumeForceImpl::CustomVolumeForceImpl(const CustomVolumeForce& owner) : CustomCPPForceImpl(owner), owner(owner) {
+    Lepton::ParsedExpression expression = Lepton::Parser::parse(owner.getEnergyFunction());
+    energyExpression = expression.createCompiledExpression();
+    map<string, double*> variableLocations;
+    globalParameterNames.resize(owner.getNumGlobalParameters());
+    globalValues.resize(owner.getNumGlobalParameters());
+    for (int i = 0; i < owner.getNumGlobalParameters(); i++) {
+        string name = owner.getGlobalParameterName(i);
+        defaultParameters[name] = owner.getGlobalParameterDefaultValue(i);
+        globalParameterNames[i] = name;
+        variableLocations[name] = &globalValues[i];
+    }
+    boxVariables.resize(7);
+    variableLocations["v"] = &boxVariables[0];
+    variableLocations["ax"] = &boxVariables[1];
+    variableLocations["bx"] = &boxVariables[2];
+    variableLocations["by"] = &boxVariables[3];
+    variableLocations["cx"] = &boxVariables[4];
+    variableLocations["cy"] = &boxVariables[5];
+    variableLocations["cz"] = &boxVariables[6];
+    energyExpression.setVariableLocations(variableLocations);
+}
+
+void CustomVolumeForceImpl::initialize(ContextImpl& context) {
+    CustomCPPForceImpl::initialize(context);
+}
+
+double CustomVolumeForceImpl::computeForce(ContextImpl& context, const vector<Vec3>& positions, vector<Vec3>& forces) {
+    for (int i = 0; i < globalParameterNames.size(); i++)
+        globalValues[i] = context.getParameter(globalParameterNames[i]);
+    Vec3 a, b, c;
+    context.getPeriodicBoxVectors(a, b, c);
+    boxVariables[0] = a[0]*b[1]*c[2];
+    boxVariables[1] = a[0];
+    boxVariables[2] = b[0];
+    boxVariables[3] = b[1];
+    boxVariables[4] = c[0];
+    boxVariables[5] = c[1];
+    boxVariables[6] = c[2];
+    return energyExpression.evaluate();
+}
+
+map<string, double> CustomVolumeForceImpl::getDefaultParameters() {
+    return defaultParameters;
+}
