@@ -139,6 +139,8 @@ KernelImpl* HipKernelFactory::createKernelImpl(std::string name, const Platform&
         return new CommonIntegrateVariableLangevinStepKernel(name, platform, cu);
     if (name == IntegrateCustomStepKernel::Name())
         return new CommonIntegrateCustomStepKernel(name, platform, cu);
+    if (name == IntegrateDPDStepKernel::Name())
+        return new CommonIntegrateDPDStepKernel(name, platform, cu);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new CommonApplyAndersenThermostatKernel(name, platform, cu);
     if (name == IntegrateNoseHooverStepKernel::Name())

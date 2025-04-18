@@ -107,7 +107,7 @@ class XTCReporter(object):
                 self._fileName,
                 topology,
                 simulation.integrator.getStepSize(),
-                simulation.currentStep,
+                self._reportInterval,
                 self._reportInterval,
                 self._append,
             )

@@ -14,7 +14,7 @@ AMOEBA Force and System objects containing AMOEBA forces can be serialized.
 In the following sections, the individual forces and options available in the
 plugin are listed, and the steps required to build and use the plugin and
 TINKER-OpenMM are outlined. Validation results are also reported.  Benchmarks
-can be found on the OpenMM wiki at http://wiki.simtk.org/openmm/Benchmarks.
+can be found on the OpenMM website at https://openmm.org.
 
 OpenMM AMOEBA Supported Forces and Options
 *******************************************

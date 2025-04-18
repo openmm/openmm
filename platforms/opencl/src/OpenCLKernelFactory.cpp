@@ -138,6 +138,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new CommonIntegrateVariableLangevinStepKernel(name, platform, cl);
     if (name == IntegrateCustomStepKernel::Name())
         return new CommonIntegrateCustomStepKernel(name, platform, cl);
+    if (name == IntegrateDPDStepKernel::Name())
+        return new CommonIntegrateDPDStepKernel(name, platform, cl);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new CommonApplyAndersenThermostatKernel(name, platform, cl);
     if (name == IntegrateNoseHooverStepKernel::Name())
