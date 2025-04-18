@@ -57,7 +57,9 @@ private:
     std::map<std::string, double> defaultParameters;
     Lepton::CompiledExpression energyExpression;
     std::vector<std::string> globalParameterNames;
-    std::vector<double> globalValues, boxVariables;
+    std::vector<double> globalValues;
+    Vec3 a, b, c;
+    double volume;
 };
 
 } // namespace OpenMM

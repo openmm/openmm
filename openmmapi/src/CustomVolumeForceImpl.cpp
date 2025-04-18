@@ -49,14 +49,13 @@ CustomVolumeForceImpl::CustomVolumeForceImpl(const CustomVolumeForce& owner) : C
         globalParameterNames[i] = name;
         variableLocations[name] = &globalValues[i];
     }
-    boxVariables.resize(7);
-    variableLocations["v"] = &boxVariables[0];
-    variableLocations["ax"] = &boxVariables[1];
-    variableLocations["bx"] = &boxVariables[2];
-    variableLocations["by"] = &boxVariables[3];
-    variableLocations["cx"] = &boxVariables[4];
-    variableLocations["cy"] = &boxVariables[5];
-    variableLocations["cz"] = &boxVariables[6];
+    variableLocations["v"] = &volume;
+    variableLocations["ax"] = &a[0];
+    variableLocations["bx"] = &b[0];
+    variableLocations["by"] = &b[1];
+    variableLocations["cx"] = &c[0];
+    variableLocations["cy"] = &c[1];
+    variableLocations["cz"] = &c[2];
     energyExpression.setVariableLocations(variableLocations);
 }
 
@@ -67,15 +66,8 @@ void CustomVolumeForceImpl::initialize(ContextImpl& context) {
 double CustomVolumeForceImpl::computeForce(ContextImpl& context, const vector<Vec3>& positions, vector<Vec3>& forces) {
     for (int i = 0; i < globalParameterNames.size(); i++)
         globalValues[i] = context.getParameter(globalParameterNames[i]);
-    Vec3 a, b, c;
     context.getPeriodicBoxVectors(a, b, c);
-    boxVariables[0] = a[0]*b[1]*c[2];
-    boxVariables[1] = a[0];
-    boxVariables[2] = b[0];
-    boxVariables[3] = b[1];
-    boxVariables[4] = c[0];
-    boxVariables[5] = c[1];
-    boxVariables[6] = c[2];
+    volume = a[0]*b[1]*c[2];
     return energyExpression.evaluate();
 }
 
