@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,8 +6,8 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
- * Authors: Peter Eastman                                                     *
+ * Portions copyright (c) 2006-2025 Stanford University and the Authors.      *
+ * Authors: Pande Group, Evan Pretti                                          *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -32,57 +29,53 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CompoundIntegrator.h"
-#include "openmm/ConstantPotentialForce.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomCentroidBondForce.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomCVForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomManyParticleForce.h"
-#include "openmm/CustomNonbondedForce.h"
-#include "openmm/DPDIntegrator.h"
-#include "openmm/Force.h"
-#include "openmm/GayBerneForce.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LangevinMiddleIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/MonteCarloFlexibleBarostat.h"
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Context.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/RMSDForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/TabulatedFunction.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/NoseHooverIntegrator.h"
-#include "openmm/NoseHooverChain.h"
-#include "openmm/VirtualSite.h"
-#include "openmm/Platform.h"
-#include "openmm/serialization/XmlSerializer.h"
-#include "openmm/ATMForce.h"
+#include "SimTKOpenMMUtilities.h"
+#include "ReferenceConstantPotential14.h"
+#include "ReferenceForce.h"
 
-#endif /*OPENMM_H_*/
+using std::vector;
+using namespace OpenMM;
+
+ReferenceConstantPotential14::ReferenceConstantPotential14() : periodic(false) {
+}
+
+ReferenceConstantPotential14::~ReferenceConstantPotential14() {
+}
+
+void ReferenceConstantPotential14::setPeriodic(OpenMM::Vec3* vectors) {
+    periodic = true;
+    periodicBoxVectors[0] = vectors[0];
+    periodicBoxVectors[1] = vectors[1];
+    periodicBoxVectors[2] = vectors[2];
+}
+
+void ReferenceConstantPotential14::calculateBondIxn(
+    vector<int>& atomIndices, vector<Vec3>& atomCoordinates,
+    vector<double>& parameters, vector<Vec3>& forces,
+    double* totalEnergy, double* energyParamDerivs
+) {
+    double deltaR[ReferenceForce::LastDeltaRIndex];
+
+    int atomAIndex = atomIndices[0];
+    int atomBIndex = atomIndices[1];
+    if (periodic) {
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], periodicBoxVectors, deltaR);
+    }
+    else {
+        ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR);  
+    }
+
+    double inverseR = 1.0 / deltaR[ReferenceForce::RIndex];
+    double energy = ONE_4PI_EPS0 * parameters[0] * inverseR;
+    double dEdR = energy * inverseR * inverseR;
+
+    for (int ii = 0; ii < 3; ii++) {
+        double force = dEdR * deltaR[ii];
+        forces[atomAIndex][ii] += force;
+        forces[atomBIndex][ii] -= force;
+    }
+
+    if (totalEnergy != NULL) {
+        *totalEnergy += energy;
+    }
+}
