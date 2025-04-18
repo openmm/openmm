@@ -139,7 +139,6 @@ private:
     class GlobalParameterInfo;
     std::string energyExpression;
     std::vector<GlobalParameterInfo> globalParameters;
-    std::vector<int> energyParameterDerivatives;
 };
 
 /**
