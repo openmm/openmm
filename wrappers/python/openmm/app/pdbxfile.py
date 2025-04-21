@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2015-2023 Stanford University and the Authors.
+Portions copyright (c) 2015-2025 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: Jason Swails
 
@@ -33,15 +33,16 @@ from __future__ import division, absolute_import, print_function
 __author__ = "Peter Eastman"
 __version__ = "2.0"
 
-import sys
-import math
 from openmm import Vec3, Platform
-from datetime import date
 from openmm.app.internal.pdbx.reader.PdbxReader import PdbxReader
 from openmm.app.internal.unitcell import computePeriodicBoxVectors, computeLengthsAndAngles
-from openmm.app import Topology, PDBFile
-from openmm.unit import nanometers, angstroms, is_quantity, norm, Quantity
+from openmm.app import topology, Topology, PDBFile
+from openmm.unit import nanometers, angstroms, is_quantity, Quantity
 from . import element as elem
+import sys
+import math
+from datetime import date
+from collections import defaultdict
 try:
     import numpy
 except:
@@ -92,9 +93,10 @@ class PDBxFile(object):
         resNameCol = atomData.getAttributeIndex('auth_comp_id')
         if resNameCol == -1:
             resNameCol = atomData.getAttributeIndex('label_comp_id')
+        resIdCol = atomData.getAttributeIndex('label_seq_id')
         resNumCol = atomData.getAttributeIndex('auth_seq_id')
         if resNumCol == -1:
-            resNumCol = atomData.getAttributeIndex('label_seq_id')
+            resNumCol = resIdCol
         resInsertionCol = atomData.getAttributeIndex('pdbx_PDB_ins_code')
         chainIdCol = atomData.getAttributeIndex('auth_asym_id')
         if chainIdCol == -1:
@@ -123,7 +125,7 @@ class PDBxFile(object):
         atomsInResidue = set()
         models = []
         for row in atomData.getRowList():
-            atomKey = ((row[resNumCol], row[chainIdCol], row[atomNameCol]))
+            atomKey = ((row[resIdCol], row[chainIdCol], row[atomNameCol]))
             model = ('1' if modelCol == -1 else row[modelCol])
             if model not in models:
                 models.append(model)
@@ -189,7 +191,6 @@ class PDBxFile(object):
             self._positions[i] = self._positions[i]*nanometers
         ## The atom positions read from the PDBx/mmCIF file.  If the file contains multiple frames, these are the positions in the first frame.
         self.positions = self._positions[0]
-        self.topology.createStandardBonds()
         self._numpyPositions = None
 
         # Record unit cell information, if present.
@@ -227,6 +228,45 @@ class PDBxFile(object):
                     if bond not in existingBonds and (bond[1], bond[0]) not in existingBonds:
                         top.addBond(bond[0], bond[1])
                         existingBonds.add(bond)
+
+        # Add bonds based on chem_comp_bond records.
+
+        bondData = block.getObj('chem_comp_bond')
+        if bondData is not None:
+            # Load the bond definitions for residues.
+
+            resNameCol = bondData.getAttributeIndex('comp_id')
+            atom1Col = bondData.getAttributeIndex('atom_id_1')
+            atom2Col = bondData.getAttributeIndex('atom_id_2')
+            bondOrderCol = bondData.getAttributeIndex('value_order')
+            resBonds = defaultdict(list)
+            for row in bondData.getRowList():
+                bondOrder = None if bondOrderCol == -1 else row[bondOrderCol]
+                resBonds[row[resNameCol]].append((row[atom1Col], row[atom2Col], bondOrder))
+
+            # Create the bonds.
+
+            bondTypes = defaultdict(lambda: None, {
+                'sing': topology.Single,
+                'doub': topology.Double,
+                'trip': topology.Triple,
+                'arom': topology.Aromatic
+            })
+            bondOrders = defaultdict(lambda: None, {
+                'sing': 1,
+                'doub': 2,
+                'trip': 3
+            })
+            for res in self.topology.residues():
+                if res.name in resBonds:
+                    atoms = {atom.name: atom for atom in res.atoms()}
+                    for atom1, atom2, bondOrder in resBonds[res.name]:
+                        if atom1 in atoms and atom2 in atoms:
+                            self.topology.addBond(atoms[atom1], atoms[atom2], bondTypes[bondOrder], bondOrders[bondOrder])
+
+        # Add bonds for standard residues.
+
+        self.topology.createStandardBonds()
 
     def getTopology(self):
         """Get the Topology of the model."""

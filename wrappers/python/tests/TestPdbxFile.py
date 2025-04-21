@@ -144,6 +144,43 @@ class TestPdbxFile(unittest.TestCase):
             self.assertEqual(bond1[0].name, bond2[0].name)
             self.assertEqual(bond1[1].name, bond2[1].name)
 
+    def testChemCompBonds(self):
+        """Test creating bonds based on chem_comp_bond records."""
+        pdb = PDBxFile('systems/6mvz.cif')
+
+        def bondCount(res1, atom1, res2, atom2):
+            count = 0
+            for bond in pdb.topology.bonds():
+                if (res1 == bond[0].residue.index and atom1 == bond[0].name) or (res2 == bond[0].residue.index and atom2 == bond[0].name):
+                    if (res1 == bond[1].residue.index and atom1 == bond[1].name) or (res2 == bond[1].residue.index and atom2 == bond[1].name):
+                        count += 1
+            return count
+
+        # Check some bonds that ought to be present.
+
+        self.assertEqual(1, bondCount(0, 'N', 0, 'CA'))
+        self.assertEqual(1, bondCount(0, 'C', 1, 'N'))
+        self.assertEqual(1, bondCount(1, 'CA', 1, 'CB'))
+        self.assertEqual(1, bondCount(1, 'C', 2, 'N'))
+        self.assertEqual(1, bondCount(2, 'CB', 2, 'CG'))
+        self.assertEqual(1, bondCount(2, 'C', 3, 'N'))
+        self.assertEqual(1, bondCount(3, 'C', 3, 'OXT'))
+        self.assertEqual(1, bondCount(4, 'O', 4, 'C1'))
+
+        # Check the types and orders of a few bonds.
+
+        for bond in pdb.topology.bonds():
+            if (bond[0].name == 'C' and bond[1].name == 'O') or (bond[1].name == 'C' and bond[0].name == 'O'):
+                self.assertEqual(topology.Double, bond.type)
+                self.assertEqual(2, bond.order)
+            if (bond[0].name == 'N' or bond[1].name == 'N'):
+                if bond[0].residue == bond[1].residue:
+                    self.assertEqual(topology.Single, bond.type)
+                    self.assertEqual(1, bond.order)
+                else:
+                    self.assertEqual(None, bond.type)
+                    self.assertEqual(None, bond.order)
+
     def testMultiChain(self):
         """Test reading and writing a file that includes multiple chains"""
         cif_ori = PDBxFile('systems/multichain.pdbx')
