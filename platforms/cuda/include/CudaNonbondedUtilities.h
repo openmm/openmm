@@ -170,6 +170,13 @@ public:
         return numForceThreadBlocks;
     }
     /**
+     * Get the reduced number of work groups used for computing nonbonded forces in register heavy kernels.
+     * This value may be the same as getNumForceThreadBlocks.
+     */
+    int getNumReducedForceThreadBlocks() {
+        return numForceThreadBlocks;
+    }
+    /**
      * Get the size of each work group used for computing nonbonded forces.
      */
     int getForceThreadBlockSize() {
