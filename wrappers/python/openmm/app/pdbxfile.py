@@ -92,6 +92,7 @@ class PDBxFile(object):
         resNameCol = atomData.getAttributeIndex('auth_comp_id')
         if resNameCol == -1:
             resNameCol = atomData.getAttributeIndex('label_comp_id')
+        # number the residues preferrably by `auth_seq_id`, fallback to `label_seq_id`
         resNumCol = atomData.getAttributeIndex('auth_seq_id')
         if resNumCol == -1:
             resNumCol = atomData.getAttributeIndex('label_seq_id')
@@ -205,8 +206,14 @@ class PDBxFile(object):
 
         connectData = block.getObj('struct_conn')
         if connectData is not None:
-            res1Col = connectData.getAttributeIndex('ptnr1_label_seq_id')
-            res2Col = connectData.getAttributeIndex('ptnr2_label_seq_id')
+            # since atomTables are keyed preferntially by `auth_seq_id`
+            # access preferrably by `auth_seq_id`, fallback to `label_seq_id`
+            res1Col = connectData.getAttributeIndex('ptnr1_auth_seq_id')
+            if res1Col == -1:
+                res1Col = connectData.getAttributeIndex('ptnr1_label_seq_id')
+            res2Col = connectData.getAttributeIndex('ptnr2_auth_seq_id')
+            if res2Col == -1:
+                res2Col = connectData.getAttributeIndex('ptnr2_label_seq_id')
             atom1Col = connectData.getAttributeIndex('ptnr1_label_atom_id')
             atom2Col = connectData.getAttributeIndex('ptnr2_label_atom_id')
             asym1Col = connectData.getAttributeIndex('ptnr1_label_asym_id')
@@ -336,11 +343,15 @@ class PDBxFile(object):
             print('_struct_conn.conn_type_id', file=file)
             print('_struct_conn.ptnr1_label_asym_id', file=file)
             print('_struct_conn.ptnr1_label_comp_id', file=file)
+            # also serialize auth_seq_id because we do so in `_atom_site`
+            # so if that ever changes, we have to also make sure to change it here
             print('_struct_conn.ptnr1_label_seq_id', file=file)
+            print('_struct_conn.ptnr1_auth_seq_id', file=file)
             print('_struct_conn.ptnr1_label_atom_id', file=file)
             print('_struct_conn.ptnr2_label_asym_id', file=file)
             print('_struct_conn.ptnr2_label_comp_id', file=file)
             print('_struct_conn.ptnr2_label_seq_id', file=file)
+            print('_struct_conn.ptnr2_auth_seq_id', file=file)
             print('_struct_conn.ptnr2_label_atom_id', file=file)
             chainIds = {}
             resIds = {}
@@ -359,9 +370,9 @@ class PDBxFile(object):
                     bondType = 'disulf'
                 else:
                     bondType = 'covale'
-                line = "bond%d %s %s %-4s %5s %-4s %s %-4s %5s %-4s"
-                print(line % (i+1, bondType, chainIds[atom1.residue.chain], atom1.residue.name, resIds[atom1.residue], atom1.name,
-                              chainIds[atom2.residue.chain], atom2.residue.name, resIds[atom2.residue], atom2.name), file=file)
+                line = "bond%d %s %s %-4s %5s %5s %-4s %s %-4s %5s %5s %-4s"
+                print(line % (i+1, bondType, chainIds[atom1.residue.chain], atom1.residue.name, resIds[atom1.residue], resIds[atom1.residue], atom1.name,
+                              chainIds[atom2.residue.chain], atom2.residue.name, resIds[atom2.residue], resIds[atom2.residue], atom2.name), file=file)
             print('#', file=file)
 
         # Write the header for the atom coordinates.
@@ -388,6 +399,8 @@ class PDBxFile(object):
         print('_atom_site.occupancy_esd', file=file)
         print('_atom_site.B_iso_or_equiv_esd', file=file)
         print('_atom_site.pdbx_formal_charge', file=file)
+        # note that we serialize the label_seq_id and auth_seq_id to be the same
+        # this has to be kept in sync with `_struct_conn`
         print('_atom_site.auth_seq_id', file=file)
         print('_atom_site.auth_comp_id', file=file)
         print('_atom_site.auth_asym_id', file=file)
