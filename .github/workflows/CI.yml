@@ -442,7 +442,7 @@ jobs:
       matrix:
         include:
           - name: PowerPC CPU/CUDA 10.2 Python 3.13 with condaforge compilers
-            docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:10.2
+            docker-image: quay.io/condaforge/linux-anvil-ppc64le-cuda:11.8
             python-version: "3.13"
             compilers: compilers
 
