@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2022 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -182,6 +182,7 @@ private:
     HipArray pmeDispersionBsplineModuliZ;
     HipArray pmeAtomGridIndex;
     HipArray pmeEnergyBuffer;
+    HipArray chargeBuffer;
     HipSort* sort;
     Kernel cpuPme;
     PmeIO* pmeio;
@@ -189,7 +190,7 @@ private:
     hipEvent_t pmeSyncEvent, paramsSyncEvent;
     HipFFT3D* fft;
     HipFFT3D* dispersionFft;
-    hipFunction_t computeParamsKernel, computeExclusionParamsKernel;
+    hipFunction_t computeParamsKernel, computeExclusionParamsKernel, computePlasmaCorrectionKernel;
     hipFunction_t ewaldSumsKernel;
     hipFunction_t ewaldForcesKernel;
     hipFunction_t pmeGridIndexKernel;
@@ -208,7 +209,7 @@ private:
     std::vector<std::string> paramNames;
     std::vector<double> paramValues;
     std::map<int, int> exceptionIndex;
-    double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha;
+    double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha, totalCharge;
     int interpolateForceThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;

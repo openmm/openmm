@@ -361,8 +361,10 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         dispersionCoefficient = 0.0;
     alpha = 0;
     ewaldSelfEnergy = 0.0;
+    totalCharge = 0.0;
     map<string, string> paramsDefines;
     paramsDefines["ONE_4PI_EPS0"] = cu.doubleToString(ONE_4PI_EPS0);
+    paramsDefines["EPSILON0"] = clu.doubleToString(EPSILON0);
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
@@ -385,8 +387,10 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         if (cu.getContextIndex() == 0) {
             paramsDefines["INCLUDE_EWALD"] = "1";
             paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cu.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
-            for (int i = 0; i < numParticles; i++)
+            for (int i = 0; i < numParticles; i++) {
                 ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                totalCharge += baseParticleParamVec[i].x;
+            }
 
             // Create the reciprocal space kernels.
 
@@ -438,8 +442,10 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         if (cu.getContextIndex() == 0) {
             paramsDefines["INCLUDE_EWALD"] = "1";
             paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cu.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
-            for (int i = 0; i < numParticles; i++)
+            for (int i = 0; i < numParticles; i++) {
                 ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                totalCharge += baseParticleParamVec[i].x;
+            }
             if (doLJPME) {
                 paramsDefines["INCLUDE_LJPME"] = "1";
                 paramsDefines["LJPME_SELF_ENERGY_SCALE"] = cu.doubleToString(pow(dispersionAlpha, 6)/3.0);
@@ -791,6 +797,8 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     globalParams.initialize(cu, max((int) paramValues.size(), 1), cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "globalParams");
     if (paramValues.size() > 0)
         globalParams.upload(paramValues, true);
+    chargeBuffer.initialize(cu, cu.getNumThreadBlocks(), cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "chargeBuffer");
+    cu.clearBuffer(chargeBuffer);
     recomputeParams = true;
 
     // Initialize the kernel for updating parameters.
@@ -798,6 +806,7 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     hipModule_t module = cu.createModule(CommonKernelSources::nonbondedParameters, paramsDefines);
     computeParamsKernel = cu.getKernel(module, "computeParameters");
     computeExclusionParamsKernel = cu.getKernel(module, "computeExclusionParameters");
+    computePlasmaCorrectionKernel = cu.getKernel(module, "computePlasmaCorrection");
     info = new ForceInfo(force);
     cu.addForce(info);
 }
@@ -818,13 +827,17 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         recomputeParams = true;
         globalParams.upload(paramValues, true);
     }
-    double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
+    if (includeReciprocal) {
+        mm_double4 boxSize = cu.getPeriodicBoxSizeDouble();
+        double volume = boxSize.x*boxSize.y*boxSize.z;
+        energy = ewaldSelfEnergy - totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
+    }
     if (recomputeParams || hasOffsets) {
         int computeSelfEnergy = (includeEnergy && includeReciprocal);
-        int numAtoms = cu.getPaddedNumAtoms();
+        int numAtoms = cu.getNumAtoms();
         vector<void*> paramsArgs = {&cu.getEnergyBuffer().getDevicePointer(), &computeSelfEnergy, &globalParams.getDevicePointer(), &numAtoms,
                 &baseParticleParams.getDevicePointer(), &cu.getPosq().getDevicePointer(), &charges.getDevicePointer(), &sigmaEpsilon.getDevicePointer(),
-                &particleParamOffsets.getDevicePointer(), &particleOffsetIndices.getDevicePointer()};
+                &particleParamOffsets.getDevicePointer(), &particleOffsetIndices.getDevicePointer(), &chargeBuffer.getDevicePointer()};
         int numExceptions;
         if (exceptionParams.isInitialized()) {
             numExceptions = exceptionParams.getSize();
@@ -845,8 +858,26 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             hipEventRecord(paramsSyncEvent, cu.getCurrentStream());
             hipStreamWaitEvent(pmeStream, paramsSyncEvent, 0);
         }
-        if (hasOffsets)
-            energy = 0.0; // The Ewald self energy was computed in the kernel.
+        if (hasOffsets) {
+            // The Ewald self energy was computed in the kernel.
+
+            energy = 0.0;
+
+            // Invoke a kernel to compute the correction for the neutralizing plasma.
+
+            mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
+            if (cu.useDoublePrecision()) {
+                double volume = boxSize.x*boxSize.y*boxSize.z;
+                vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &numAtoms, &alpha, &volume};
+                cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+            }
+            else {
+                float alphaFloat = (float) alpha;
+                float volume = boxSize.x*boxSize.y*boxSize.z;
+                vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &numAtoms, &alphaFloat, &volume};
+                cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+            }
+        }
         recomputeParams = false;
     }
 
