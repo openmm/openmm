@@ -371,6 +371,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     map<string, string> paramsDefines;
     paramsDefines["ONE_4PI_EPS0"] = cu.doubleToString(ONE_4PI_EPS0);
     paramsDefines["EPSILON0"] = cu.doubleToString(EPSILON0);
+    paramsDefines["WORK_GROUP_SIZE"] = cu.intToString(CudaContext::ThreadBlockSize);
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
@@ -869,7 +870,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
     }
     double energy = 0.0;
     if (includeReciprocal) {
-        mm_double4 boxSize = cu.getPeriodicBoxSizeDouble();
+        double4 boxSize = cu.getPeriodicBoxSize();
         double volume = boxSize.x*boxSize.y*boxSize.z;
         energy = ewaldSelfEnergy - totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
     }
@@ -906,17 +907,17 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
 
             // Invoke a kernel to compute the correction for the neutralizing plasma.
 
-            mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
-            if (cu.useDoublePrecision()) {
+            double4 boxSize = cu.getPeriodicBoxSize();
+            if (cu.getUseDoublePrecision()) {
                 double volume = boxSize.x*boxSize.y*boxSize.z;
                 vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &numAtoms, &alpha, &volume};
-                cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+                cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
             }
             else {
                 float alphaFloat = (float) alpha;
                 float volume = boxSize.x*boxSize.y*boxSize.z;
                 vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &numAtoms, &alphaFloat, &volume};
-                cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+                cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
             }
         }
         recomputeParams = false;
