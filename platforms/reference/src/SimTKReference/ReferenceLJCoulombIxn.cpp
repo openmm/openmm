@@ -218,14 +218,19 @@ void ReferenceLJCoulombIxn::calculateEwaldIxn(int numberOfAtoms, vector<Vec3>& a
     // **************************************************************************************
 
     if (includeReciprocal) {
+        double totalCharge = 0.0;
         for (int atomID = 0; atomID < numberOfAtoms; atomID++) {
-            double selfEwaldEnergy       = ONE_4PI_EPS0*atomParameters[atomID][QIndex]*atomParameters[atomID][QIndex] * alphaEwald/SQRT_PI;
-            if(ljpme) {
+            double selfEwaldEnergy = ONE_4PI_EPS0*atomParameters[atomID][QIndex]*atomParameters[atomID][QIndex] * alphaEwald/SQRT_PI;
+            totalCharge += atomParameters[atomID][QIndex];
+            if (ljpme) {
                 // Dispersion self term
                 selfEwaldEnergy -= pow(alphaDispersionEwald, 6.0) * 64.0*pow(atomParameters[atomID][SigIndex], 6.0) * pow(atomParameters[atomID][EpsIndex], 2.0) / 12.0;
             }
-            totalSelfEwaldEnergy            -= selfEwaldEnergy;
+            totalSelfEwaldEnergy -= selfEwaldEnergy;
         }
+        // Correction for the neutralizing plasma.
+        double volume = periodicBoxVectors[0][0] * periodicBoxVectors[1][1] * periodicBoxVectors[2][2];
+        totalSelfEwaldEnergy -= totalCharge*totalCharge/(8*EPSILON0*volume*alphaEwald*alphaEwald);
     }
 
     if (totalEnergy) {

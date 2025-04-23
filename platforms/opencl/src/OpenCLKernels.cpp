@@ -370,8 +370,10 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         dispersionCoefficient = 0.0;
     alpha = 0;
     ewaldSelfEnergy = 0.0;
+    totalCharge = 0.0;
     map<string, string> paramsDefines;
     paramsDefines["ONE_4PI_EPS0"] = cl.doubleToString(ONE_4PI_EPS0);
+    paramsDefines["EPSILON0"] = cl.doubleToString(EPSILON0);
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
@@ -394,8 +396,10 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         if (cl.getContextIndex() == 0) {
             paramsDefines["INCLUDE_EWALD"] = "1";
             paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cl.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
-            for (int i = 0; i < numParticles; i++)
+            for (int i = 0; i < numParticles; i++) {
                 ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                totalCharge += baseParticleParamVec[i].x;
+            }
 
             // Create the reciprocal space kernels.
 
@@ -446,8 +450,10 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         if (cl.getContextIndex() == 0) {
             paramsDefines["INCLUDE_EWALD"] = "1";
             paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cl.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
-            for (int i = 0; i < numParticles; i++)
+            for (int i = 0; i < numParticles; i++) {
                 ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                totalCharge += baseParticleParamVec[i].x;
+            }
             if (doLJPME) {
                 paramsDefines["INCLUDE_LJPME"] = "1";
                 paramsDefines["LJPME_SELF_ENERGY_SCALE"] = cl.doubleToString(pow(dispersionAlpha, 6)/3.0);
@@ -766,6 +772,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     globalParams.initialize(cl, max((int) paramValues.size(), 1), cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "globalParams");
     if (paramValues.size() > 0)
         globalParams.upload(paramValues, true);
+    chargeBuffer.initialize(cl, cl.getNumThreadBlocks(), cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "chargeBuffer");
+    cl.clearBuffer(chargeBuffer);
     recomputeParams = true;
     
     // Initialize the kernel for updating parameters.
@@ -773,6 +781,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     cl::Program program = cl.createProgram(CommonKernelSources::nonbondedParameters, paramsDefines);
     computeParamsKernel = cl::Kernel(program, "computeParameters");
     computeExclusionParamsKernel = cl::Kernel(program, "computeExclusionParameters");
+    computePlasmaCorrectionKernel = cl::Kernel(program, "computePlasmaCorrection");
     info = new ForceInfo(0, force);
     cl.addForce(info);
 }
@@ -792,6 +801,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         computeParamsKernel.setArg<cl::Buffer>(index++, sigmaEpsilon.getDeviceBuffer());
         computeParamsKernel.setArg<cl::Buffer>(index++, particleParamOffsets.getDeviceBuffer());
         computeParamsKernel.setArg<cl::Buffer>(index++, particleOffsetIndices.getDeviceBuffer());
+        computeParamsKernel.setArg<cl::Buffer>(index++, chargeBuffer.getDeviceBuffer());
         if (exceptionParams.isInitialized()) {
             computeParamsKernel.setArg<cl_int>(index++, exceptionParams.getSize());
             computeParamsKernel.setArg<cl::Buffer>(index++, baseExceptionParams.getDeviceBuffer());
@@ -807,6 +817,12 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             computeExclusionParamsKernel.setArg<cl::Buffer>(4, exclusionAtoms.getDeviceBuffer());
             computeExclusionParamsKernel.setArg<cl::Buffer>(5, exclusionParams.getDeviceBuffer());
         }
+        computePlasmaCorrectionKernel.setArg<cl::Buffer>(0, chargeBuffer.getDeviceBuffer());
+        computePlasmaCorrectionKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
+        if (cl.getUseDoublePrecision())
+            computePlasmaCorrectionKernel.setArg<double>(2, alpha);
+        else
+            computePlasmaCorrectionKernel.setArg<float>(2, alpha);
         if (cosSinSums.isInitialized()) {
             ewaldSumsKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
             ewaldSumsKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
@@ -911,10 +927,15 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         recomputeParams = true;
         globalParams.upload(paramValues, true);
     }
-    double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
+    double energy = 0.0;
+    if (includeReciprocal && (pmeGrid1.isInitialized() || cosSinSums.isInitialized())) {
+        mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
+        double volume = boxSize.x*boxSize.y*boxSize.z;
+        energy = ewaldSelfEnergy - totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
+    }
     if (recomputeParams || hasOffsets) {
         computeParamsKernel.setArg<cl_int>(1, includeEnergy && includeReciprocal);
-        cl.executeKernel(computeParamsKernel, cl.getPaddedNumAtoms());
+        cl.executeKernel(computeParamsKernel, cl.getNumAtoms());
         if (exclusionParams.isInitialized())
             cl.executeKernel(computeExclusionParamsKernel, exclusionParams.getSize());
         if (usePmeQueue) {
@@ -922,8 +943,22 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             cl.getQueue().enqueueMarkerWithWaitList(NULL, &events[0]);
             pmeQueue.enqueueBarrierWithWaitList(&events);
         }
-        if (hasOffsets)
-            energy = 0.0; // The Ewald self energy was computed in the kernel.
+        if (hasOffsets) {
+            // The Ewald self energy was computed in the kernel.
+
+            energy = 0.0;
+            if (pmeGrid1.isInitialized() || cosSinSums.isInitialized()) {
+                // Invoke a kernel to compute the correction for the neutralizing plasma.
+
+                mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
+                double volume = boxSize.x*boxSize.y*boxSize.z;
+                if (cl.getUseDoublePrecision())
+                    computePlasmaCorrectionKernel.setArg<double>(3, volume);
+                else
+                    computePlasmaCorrectionKernel.setArg<float>(3, volume);
+                cl.executeKernel(computePlasmaCorrectionKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+            }
+        }
         recomputeParams = false;
     }
     
@@ -1163,10 +1198,12 @@ void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& contex
         // Compute the self energy.
 
         ewaldSelfEnergy = 0.0;
+        totalCharge = 0.0;
         if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
             if (cl.getContextIndex() == 0) {
                 for (int i = 0; i < force.getNumParticles(); i++) {
                     ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                    totalCharge += baseParticleParamVec[i].x;
                     if (doLJPME)
                         ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
                 }
