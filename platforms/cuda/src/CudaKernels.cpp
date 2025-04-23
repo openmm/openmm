@@ -910,13 +910,13 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                 double4 boxSize = cu.getPeriodicBoxSize();
                 if (cu.getUseDoublePrecision()) {
                     double volume = boxSize.x*boxSize.y*boxSize.z;
-                    vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &numAtoms, &alpha, &volume};
+                    vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &alpha, &volume};
                     cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
                 }
                 else {
                     float alphaFloat = (float) alpha;
                     float volume = boxSize.x*boxSize.y*boxSize.z;
-                    vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &numAtoms, &alphaFloat, &volume};
+                    vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &alphaFloat, &volume};
                     cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
                 }
             }

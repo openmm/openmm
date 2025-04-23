@@ -819,11 +819,10 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         }
         computePlasmaCorrectionKernel.setArg<cl::Buffer>(0, chargeBuffer.getDeviceBuffer());
         computePlasmaCorrectionKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
-        computePlasmaCorrectionKernel.setArg<int>(2, cl.getNumAtoms());
         if (cl.getUseDoublePrecision())
-            computePlasmaCorrectionKernel.setArg<double>(3, alpha);
+            computePlasmaCorrectionKernel.setArg<double>(2, alpha);
         else
-            computePlasmaCorrectionKernel.setArg<float>(3, alpha);
+            computePlasmaCorrectionKernel.setArg<float>(2, alpha);
         if (cosSinSums.isInitialized()) {
             ewaldSumsKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
             ewaldSumsKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
@@ -954,9 +953,9 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
                 double volume = boxSize.x*boxSize.y*boxSize.z;
                 if (cl.getUseDoublePrecision())
-                    computePlasmaCorrectionKernel.setArg<double>(4, volume);
+                    computePlasmaCorrectionKernel.setArg<double>(3, volume);
                 else
-                    computePlasmaCorrectionKernel.setArg<float>(4, volume);
+                    computePlasmaCorrectionKernel.setArg<float>(3, volume);
                 cl.executeKernel(computePlasmaCorrectionKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
             }
         }
