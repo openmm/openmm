@@ -929,7 +929,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         globalParams.upload(paramValues, true);
     }
     double energy = 0.0;
-    if (includeReciprocal) {
+    if (includeReciprocal && (pmeGrid1.isInitialized() || cosSinSums.isInitialized())) {
         mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
         double volume = boxSize.x*boxSize.y*boxSize.z;
         energy = ewaldSelfEnergy - totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
@@ -948,16 +948,17 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             // The Ewald self energy was computed in the kernel.
 
             energy = 0.0;
+            if (pmeGrid1.isInitialized() || cosSinSums.isInitialized()) {
+                // Invoke a kernel to compute the correction for the neutralizing plasma.
 
-            // Invoke a kernel to compute the correction for the neutralizing plasma.
-
-            mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
-            double volume = boxSize.x*boxSize.y*boxSize.z;
-            if (cl.getUseDoublePrecision())
-                computePlasmaCorrectionKernel.setArg<double>(4, volume);
-            else
-                computePlasmaCorrectionKernel.setArg<float>(4, volume);
-            cl.executeKernel(computePlasmaCorrectionKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+                mm_double4 boxSize = cl.getPeriodicBoxSizeDouble();
+                double volume = boxSize.x*boxSize.y*boxSize.z;
+                if (cl.getUseDoublePrecision())
+                    computePlasmaCorrectionKernel.setArg<double>(4, volume);
+                else
+                    computePlasmaCorrectionKernel.setArg<float>(4, volume);
+                cl.executeKernel(computePlasmaCorrectionKernel, OpenCLContext::ThreadBlockSize, OpenCLContext::ThreadBlockSize);
+            }
         }
         recomputeParams = false;
     }

@@ -869,7 +869,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         globalParams.upload(paramValues, true);
     }
     double energy = 0.0;
-    if (includeReciprocal) {
+    if (includeReciprocal && (pmeGrid1.isInitialized() || cosSinSums.isInitialized())) {
         double4 boxSize = cu.getPeriodicBoxSize();
         double volume = boxSize.x*boxSize.y*boxSize.z;
         energy = ewaldSelfEnergy - totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
@@ -904,20 +904,21 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             // The Ewald self energy was computed in the kernel.
 
             energy = 0.0;
+            if (pmeGrid1.isInitialized() || cosSinSums.isInitialized()) {
+                // Invoke a kernel to compute the correction for the neutralizing plasma.
 
-            // Invoke a kernel to compute the correction for the neutralizing plasma.
-
-            double4 boxSize = cu.getPeriodicBoxSize();
-            if (cu.getUseDoublePrecision()) {
-                double volume = boxSize.x*boxSize.y*boxSize.z;
-                vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &numAtoms, &alpha, &volume};
-                cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
-            }
-            else {
-                float alphaFloat = (float) alpha;
-                float volume = boxSize.x*boxSize.y*boxSize.z;
-                vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &numAtoms, &alphaFloat, &volume};
-                cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
+                double4 boxSize = cu.getPeriodicBoxSize();
+                if (cu.getUseDoublePrecision()) {
+                    double volume = boxSize.x*boxSize.y*boxSize.z;
+                    vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &numAtoms, &alpha, &volume};
+                    cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
+                }
+                else {
+                    float alphaFloat = (float) alpha;
+                    float volume = boxSize.x*boxSize.y*boxSize.z;
+                    vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &numAtoms, &alphaFloat, &volume};
+                    cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], CudaContext::ThreadBlockSize, CudaContext::ThreadBlockSize);
+                }
             }
         }
         recomputeParams = false;

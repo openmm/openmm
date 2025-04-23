@@ -712,11 +712,12 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         }
         else
             nonbonded->calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, C6params, exclusions, forceData, includeEnergy ? &nonbondedEnergy : NULL);
+        if (ewald || pme || ljpme) {
+            // Add the correction for the neutralizing plasma.
 
-        // Add the correction for the neutralizing plasma.
-
-        double volume = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
-        energy -= totalCharge*totalCharge/(8*EPSILON0*volume*ewaldAlpha*ewaldAlpha);;
+            double volume = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
+            energy -= totalCharge*totalCharge/(8*EPSILON0*volume*ewaldAlpha*ewaldAlpha);
+        }
     }
     energy += nonbondedEnergy;
     if (includeDirect) {
