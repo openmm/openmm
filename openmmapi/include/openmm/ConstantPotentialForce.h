@@ -315,7 +315,7 @@ public:
      */
     bool getExceptionsUsePeriodicBoundaryConditions() const;
     /**
-     * Get whether periodic boundary conditions should be applied to exceptions.
+     * Set whether periodic boundary conditions should be applied to exceptions.
      * Usually this is not appropriate, because exceptions are normally used to
      * represent bonded interactions (1-2, 1-3, and 1-4 pairs), but there are
      * situations when it does make sense.  For example, you may want to
@@ -334,17 +334,19 @@ public:
      */
     void setConstantPotentialMethod(ConstantPotentialMethod method);
     /**
-     * Get the tolerance, in units of the proton charge, used for the conjugate
-     * gradient method of calculating electrode charges.  The conjugate gradient
-     * method will stop if the RMS difference between the vector of electrode
-     * charges changes by no more than this value between successive iterations.
+     * Get the tolerance, in units of kJ/mol per proton charge, used for the
+     * conjugate gradient method of calculating electrode charges.  The method
+     * will iterate until the RMS error in the electrode potentials (gradient of
+     * the energy with respect to the electrode particle charges) no longer
+     * exceeds this tolerance.
      */
     double getCGErrorTolerance() const;
     /**
-     * Set the tolerance, in units of the proton charge, used for the conjugate
-     * gradient method of calculating electrode charges.  The conjugate gradient
-     * method will stop if the RMS difference between the vector of electrode
-     * charges changes by no more than this value between successive iterations.
+     * Set the tolerance, in units of kJ/mol per proton charge, used for the
+     * conjugate gradient method of calculating electrode charges.  The method
+     * will iterate until the RMS error in the electrode potentials (gradient of
+     * the energy with respect to the electrode particle charges) no longer
+     * exceeds this tolerance.
      */
     void setCGErrorTolerance(double tol);
     /**
