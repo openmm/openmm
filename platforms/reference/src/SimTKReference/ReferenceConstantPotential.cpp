@@ -198,6 +198,7 @@ void ReferenceConstantPotential::updateCG(
     const double SELF_ALPHA_SCALE = 2.0 * ONE_4PI_EPS0 / SQRT_PI;
     const double SELF_ETA_SCALE = SELF_ALPHA_SCALE / sqrt(2.0);
     const double TF_SCALE = 1.0 / EPSILON0;
+    const double PLASMA_SCALE = TF_SCALE / 4.0;
 
     // No action is required if the box vectors have not changed.
     if (cg->valid && cg->boxVectors[0] == boxVectors[0] && cg->boxVectors[1] == boxVectors[1] && cg->boxVectors[2] == boxVectors[2]) {
@@ -224,12 +225,14 @@ void ReferenceConstantPotential::updateCG(
     pme_destroy(pmeData);
 
     // The diagonal has a contribution from reciprocal space, Ewald
-    // self-interaction, Gaussian self-interaction, and Thomas-Fermi
-    // contributions.
+    // self-interaction, Ewald neutralizing plasma, Gaussian self-interaction,
+    // and Thomas-Fermi contributions.
     cg->precondScale = 0.0;
+    double volume = boxVectors[0][0] * boxVectors[1][1] * boxVectors[2][2];
+    double ewaldTerm = pmeChargeDerivatives[0] - SELF_ALPHA_SCALE * ewaldAlpha + PLASMA_SCALE / (volume * ewaldAlpha * ewaldAlpha);
     for (int ii = 0; ii < numElectrodeParticles; ii++) {
-        cg->precondVector[ii] = 1.0 / (pmeChargeDerivatives[0] + SELF_ETA_SCALE / electrodeParamArray[ii][GaussianWidthIndex]
-            - SELF_ALPHA_SCALE * ewaldAlpha + TF_SCALE * electrodeParamArray[ii][ThomasFermiScaleIndex]);
+        cg->precondVector[ii] = 1.0 / (SELF_ETA_SCALE / electrodeParamArray[ii][GaussianWidthIndex]
+            + TF_SCALE * electrodeParamArray[ii][ThomasFermiScaleIndex] + ewaldTerm);
         cg->precondScale += cg->precondVector[ii];
     }
     cg->precondScale = 1.0 / cg->precondScale;
@@ -558,6 +561,7 @@ void ReferenceConstantPotential::getEnergyForces(
     const double SELF_ALPHA_SCALE = ONE_4PI_EPS0 / SQRT_PI;
     const double SELF_ETA_SCALE = SELF_ALPHA_SCALE / sqrt(2.0);
     const double TF_SCALE = 1.0 / (2.0 * EPSILON0);
+    const double PLASMA_SCALE = TF_SCALE / 4.0;
 
     double energyAccum = 0.0;
 
@@ -639,11 +643,17 @@ void ReferenceConstantPotential::getEnergyForces(
     energyAccum += pmeEnergy;
 
     // Ewald self-interaction and external field contributions (all particles).
+    double qTotal = 0.0;
     for (int i = 0; i < numParticles; i++) {
         double q = charges[i];
+        qTotal += q;
         energyAccum -= q * (SELF_ALPHA_SCALE * q * ewaldAlpha + posData[i].dot(externalField));
         forceData[i] += q * externalField;
     }
+
+    // Ewald neutralizing plasma.
+    double volume = boxVectors[0][0] * boxVectors[1][1] * boxVectors[2][2];
+    energyAccum -= PLASMA_SCALE * qTotal * qTotal / (volume * ewaldAlpha * ewaldAlpha);
 
     // Gaussian self-interaction, potential, and Thomas-Fermi contributions
     // (electrode particles only).
@@ -676,6 +686,7 @@ void ReferenceConstantPotential::getDerivatives(
     const double SELF_ALPHA_SCALE = 2.0 * ONE_4PI_EPS0 / SQRT_PI;
     const double SELF_ETA_SCALE = SELF_ALPHA_SCALE / sqrt(2.0);
     const double TF_SCALE = 1.0 / EPSILON0;
+    const double PLASMA_SCALE = TF_SCALE / 4.0;
 
     // chargeDerivatives is to be overwritten by this function, not incremented,
     // so zero all derivatives initially.
@@ -718,12 +729,21 @@ void ReferenceConstantPotential::getDerivatives(
     // Reciprocal space.
     pme_exec_charge_derivatives(pmeData, posData, chargeDerivatives, electrodeIndices, charges, boxVectors);
 
-    // Ewald self-interaction, Gaussian self-interaction, potential, external
-    // field, and Thomas-Fermi contributions.
+    // Ewald neutralizing plasma precalculation.
+    double qTotal = 0.0;
+    for (int i = 0; i < numParticles; i++) {
+        qTotal += charges[i];
+    }
+    double volume = boxVectors[0][0] * boxVectors[1][1] * boxVectors[2][2];
+    double plasmaTerm = PLASMA_SCALE * qTotal / (volume * ewaldAlpha * ewaldAlpha);
+
+    // Ewald self-interaction, Ewald neutralizing plasma, Gaussian
+    // self-interaction, potential, external field, and Thomas-Fermi
+    // contributions.
     for (int ii = 0; ii < numElectrodeParticles; ii++) {
         int i = electrodeIndices[ii];
         double q = charges[i];
         chargeDerivatives[ii] += q * (SELF_ETA_SCALE / electrodeParamArray[ii][GaussianWidthIndex] - SELF_ALPHA_SCALE * ewaldAlpha + TF_SCALE * electrodeParamArray[ii][ThomasFermiScaleIndex])
-            - electrodeParamArray[ii][PotentialIndex] - posData[i].dot(externalField);
+            - plasmaTerm - electrodeParamArray[ii][PotentialIndex] - posData[i].dot(externalField);
     }
 }
