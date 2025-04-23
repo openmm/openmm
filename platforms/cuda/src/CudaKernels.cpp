@@ -1176,10 +1176,12 @@ void CudaCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context,
         // Compute the self energy.
 
         ewaldSelfEnergy = 0.0;
+        totalCharge = 0.0;
         if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
             if (cu.getContextIndex() == 0) {
                 for (int i = 0; i < force.getNumParticles(); i++) {
                     ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                    totalCharge += baseParticleParamVec[i].x;
                     if (doLJPME)
                         ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
                 }

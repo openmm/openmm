@@ -457,6 +457,17 @@ void testNeutralizingPlasmaCorrection(NonbondedForce::NonbondedMethod method, bo
     context.reinitialize(true);
     double energy2 = context.getState(State::Energy).getPotentialEnergy();
     ASSERT_EQUAL_TOL(energy1, energy2, 1e-4);
+
+    // Try changing a particle charge with updateParametersInContext() and make sure the
+    // energy changes by the correct amount.
+
+    force->setParticleParameters(0, 2.0, 0.3, 1.0);
+    force->updateParametersInContext(context);
+    double energy3 = context.getState(State::Energy).getPotentialEnergy();
+    force->setCutoffDistance(1.0);
+    context.reinitialize(true);
+    double energy4 = context.getState(State::Energy).getPotentialEnergy();
+    ASSERT_EQUAL_TOL(energy3, energy4, 1e-4);
 }
 
 void runPlatformTests();
