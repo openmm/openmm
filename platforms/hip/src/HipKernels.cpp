@@ -364,8 +364,8 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     totalCharge = 0.0;
     map<string, string> paramsDefines;
     paramsDefines["ONE_4PI_EPS0"] = cu.doubleToString(ONE_4PI_EPS0);
-    paramsDefines["EPSILON0"] = clu.doubleToString(EPSILON0);
-    paramsDefines["WORK_GROUP_SIZE"] = cu.intToString(CudaContext::ThreadBlockSize);
+    paramsDefines["EPSILON0"] = cu.doubleToString(EPSILON0);
+    paramsDefines["WORK_GROUP_SIZE"] = cu.intToString(HipContext::ThreadBlockSize);
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
@@ -828,7 +828,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         recomputeParams = true;
         globalParams.upload(paramValues, true);
     }
-    energy = 0.0;
+    double energy = 0.0;
     if (includeReciprocal && (pmeGrid1.isInitialized() || cosSinSums.isInitialized())) {
         double4 boxSize = cu.getPeriodicBoxSize();
         double volume = boxSize.x*boxSize.y*boxSize.z;
