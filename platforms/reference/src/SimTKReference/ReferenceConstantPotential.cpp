@@ -38,7 +38,7 @@
 
 using namespace OpenMM;
 
-ReferenceConstantPotentialMatrix::ReferenceConstantPotentialMatrix(int numElectrodeParticles) : valid(false), constraintVector(numElectrodeParticles) {
+ReferenceConstantPotentialMatrix::ReferenceConstantPotentialMatrix(int numElectrodeParticles) : valid(false), electrodePosData(numElectrodeParticles), constraintVector(numElectrodeParticles) {
 }
 
 void ReferenceConstantPotentialMatrix::invalidate() {
@@ -94,19 +94,34 @@ void ReferenceConstantPotential::updateMatrix(
     // Initializes or updates the precomputed capacitance matrix if this is its
     // first use or electrode parameters have changed since its initialization.
 
+    // Check for changes to box vectors or electrode positions that might
+    // invalidate a matrix that is currently marked valid.
     if (matrix->valid) {
-        // If the matrix has already been initialized, ensure that the box size
-        // has not changed.  No further action is required.
         if (matrix->boxVectors[0] != boxVectors[0] || matrix->boxVectors[1] != boxVectors[1] || matrix->boxVectors[2] != boxVectors[2]) {
-            throw OpenMMException("Box vectors changed since electrode matrix precomputed");
+            matrix->valid = false;
         }
+    }
+    if (matrix->valid) {
+        for (int ii = 0; ii < numElectrodeParticles; ii++) {
+            if (matrix->electrodePosData[ii] != posData[electrodeIndices[ii]]) {
+                matrix->valid = false;
+                break;
+            }
+        }
+    }
+    if (matrix->valid) {
         return;
     }
 
+    // Store the current box vectors and electrode positions before updating the
+    // capacitance matrix.
     matrix->valid = true;
     matrix->boxVectors[0] = boxVectors[0];
     matrix->boxVectors[1] = boxVectors[1];
     matrix->boxVectors[2] = boxVectors[2];
+    for (int ii = 0; ii < numElectrodeParticles; ii++) {
+        matrix->electrodePosData[ii] = posData[electrodeIndices[ii]];
+    }
 
     TNT::Array2D<double> A(numElectrodeParticles, numElectrodeParticles);
     std::vector<double> dUdQ0(numElectrodeParticles);

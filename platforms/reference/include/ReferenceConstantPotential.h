@@ -47,6 +47,7 @@ class ReferenceConstantPotentialMatrix {
 private:
     bool valid;
     Vec3 boxVectors[3];
+    std::vector<Vec3> electrodePosData;
     JAMA::Cholesky<double> capacitance;
     std::vector<double> constraintVector;
 
