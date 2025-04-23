@@ -322,14 +322,17 @@ void ReferenceConstantPotential::solve(
         std::vector<double> q(numElectrodeParticles);
         std::vector<double> grad(numElectrodeParticles);
         std::vector<double> projGrad(numElectrodeParticles);
+        std::vector<double> precGrad(numElectrodeParticles);
         std::vector<double> qStep(numElectrodeParticles);
         std::vector<double> gradStep(numElectrodeParticles);
         std::vector<double> grad0(numElectrodeParticles);
-        double gamma, gammaNext, offset, error;
+        double offset, error, paramScale, alpha, beta;
+
+        const double errorTarget = cgErrorTol * cgErrorTol * numElectrodeParticles;
 
         // Ensure that initial guess charges satisfy the constraint.
         if (useChargeConstraint) {
-            double offset = chargeTarget;
+            offset = chargeTarget;
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
                 offset -= charges[electrodeIndices[ii]];
             }
@@ -342,6 +345,36 @@ void ReferenceConstantPotential::solve(
         // Evaluate the initial gradient Aq - b.
         getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, grad, pmeData);
 
+        // Project the initial gradient without preconditioning.
+        offset = 0.0;
+        if (useChargeConstraint) {
+            for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                offset += grad[ii];
+            }
+            offset /= numElectrodeParticles;
+        }
+        for (int ii = 0; ii < numElectrodeParticles; ii++) {
+            projGrad[ii] = grad[ii] - offset;
+        }
+
+        // Check for convergence at the initial guess charges.
+        error = 0.0;
+        for (int ii = 0; ii < numElectrodeParticles; ii++) {
+            error += projGrad[ii] * projGrad[ii];
+        }
+        if (error < errorTarget) {
+            return;
+        }
+
+        // Save the current charges, then evaluate the gradient with zero
+        // charges (-b) so that we can later compute Ap as (Ap - b) - (-b).
+        for (int ii = 0; ii < numElectrodeParticles; ii++) {
+            int i = electrodeIndices[ii];
+            q[ii] = charges[i];
+            charges[i] = 0.0;
+        }
+        getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, grad0, pmeData);
+
         // Project the initial gradient with preconditioning.
         offset = 0.0;
         if (useChargeConstraint) {
@@ -351,26 +384,12 @@ void ReferenceConstantPotential::solve(
             offset *= cg->precondScale;
         }
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
-            projGrad[ii] = cg->precondVector[ii] * (grad[ii] - offset);
+            precGrad[ii] = cg->precondVector[ii] * (grad[ii] - offset);
         }
 
-        // Save the current charges, then evaluate the gradient with zero
-        // charges (-b) so that we can later compute Aq as (Aq - b) - (-b).
+        // Initialize step vector for conjugate gradient iterations.
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
-            int i = electrodeIndices[ii];
-            q[ii] = charges[i];
-            charges[i] = 0.0;
-        }
-        getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, grad0, pmeData);
-
-        // Initialize parameters for conjugate gradient iterations.
-        for (int ii = 0; ii < numElectrodeParticles; ii++) {
-            qStep[ii] = -projGrad[ii];
-        }
-
-        gamma = 0.0;
-        for (int ii = 0; ii < numElectrodeParticles; ii++) {
-            gamma += grad[ii] * projGrad[ii];
+            qStep[ii] = -precGrad[ii];
         }
 
         // Perform conjugate gradient iterations.
@@ -385,31 +404,71 @@ void ReferenceConstantPotential::solve(
                 gradStep[ii] -= grad0[ii];
             }
             
-            // Evaluate the conjugate gradient parameter alpha and update the
-            // charge and gradient vectors.
-            double alphaNumerator = 0.0;
-            double alphaDenominator = 0.0;
+            // Evaluate the scalar 1 / (qStep^T A qStep).
+            paramScale = 0.0;
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
-                alphaNumerator -= grad[ii] * qStep[ii];
-                alphaDenominator += qStep[ii] * gradStep[ii];
+                paramScale += qStep[ii] * gradStep[ii];
             }
-            double alpha = alphaNumerator / alphaDenominator;
+            paramScale = 1.0 / paramScale;
 
+            // Evaluate the conjugate gradient parameter alpha.
+            alpha = 0.0;
+            for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                alpha -= qStep[ii] * grad[ii];
+            }
+            alpha *= paramScale;
+
+            // Update the charge vector.
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
                 q[ii] += alpha * qStep[ii];
-                grad[ii] += alpha * gradStep[ii];
             }
 
-            // Check for convergence.  We have to check the step size (see
-            // Shariff, Computers Math. Applic. 30, 11, 25-37, 1995); the
-            // projected gradient with preconditioning may not give meaningful
-            // convergence information.
+            if (useChargeConstraint) {
+                // Remove any accumulated drift from the charge vector.  This
+                // would be zero in exact arithmetic, but error can accumulate
+                // over time in finite precision.
+                offset = chargeTarget;
+                for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                    offset -= q[ii];
+                }
+                offset /= numElectrodeParticles;
+                for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                    q[ii] += offset;
+                }
+            }
+
+            // Update the gradient vector (but periodically recompute it instead
+            // of updating to reduce the accumulation of roundoff error).
+            if (iter != 0 && iter % 32 == 0) {
+                for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                    charges[electrodeIndices[ii]] = q[ii];
+                }
+                getDerivatives(numParticles, numElectrodeParticles, posData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, grad, pmeData);
+            }
+            else {
+                for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                    grad[ii] += alpha * gradStep[ii];
+                }
+            }
+
+            // Project the current gradient without preconditioning.
+            offset = 0.0;
+            if (useChargeConstraint) {
+                for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                    offset += grad[ii];
+                }
+                offset /= numElectrodeParticles;
+            }
+            for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                projGrad[ii] = grad[ii] - offset;
+            }
+
+            // Check for convergence.
             error = 0.0;
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
-                error += qStep[ii] * qStep[ii];
+                error += projGrad[ii] * projGrad[ii];
             }
-            error *= alpha * alpha;
-            if (error <= cgErrorTol * cgErrorTol * numElectrodeParticles) {
+            if (error < errorTarget) {
                 converged = true;
                 break;
             }
@@ -423,29 +482,25 @@ void ReferenceConstantPotential::solve(
                 offset *= cg->precondScale;
             }
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
-                projGrad[ii] = cg->precondVector[ii] * (grad[ii] - offset);
+                precGrad[ii] = cg->precondVector[ii] * (grad[ii] - offset);
             }
 
-            // Evaluate the conjugate gradient parameter beta and update
-            // parameters for the following iteration.
-            gammaNext = 0.0;
+            // Evaluate the conjugate gradient parameter beta.
+            beta = 0.0;
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
-                gammaNext += grad[ii] * projGrad[ii];
+                beta += precGrad[ii] * gradStep[ii];
             }
-            double beta = gammaNext / gamma;
-            gamma = gammaNext;
+            beta *= paramScale;
 
+            // Update the step vector.
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
-                qStep[ii] = beta * qStep[ii] - projGrad[ii];
+                qStep[ii] = beta * qStep[ii] - precGrad[ii];
             }
 
             if (useChargeConstraint) {
-                // Analytically, when using the total charge constraint, qStep
-                // should always sum to 0 so that the constraint will never be
-                // violated as long as it is initially satisfied.  However,
-                // numerically, the algorithm is unstable with respect to a
-                // catastrophic buildup of constraint error!  We thus explicitly
-                // subtract off any accumulated drift after each iteration.
+                // Project out any deviation off of the constraint plane from
+                // the step vector.  This would be zero in exact arithmetic, but
+                // error can accumulate over time in finite precision.
                 offset = 0.0;
                 for (int ii = 0; ii < numElectrodeParticles; ii++) {
                     offset += qStep[ii];
