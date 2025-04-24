@@ -41,7 +41,7 @@ OpenCLCalcAmoebaMultipoleForceKernel::~OpenCLCalcAmoebaMultipoleForceKernel() {
 void OpenCLCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
     CommonCalcAmoebaMultipoleForceKernel::initialize(system, force);
     if (usePME)
-        fft = new OpenCLFFT3D(dynamic_cast<OpenCLContext&>(cc), gridSizeX, gridSizeY, gridSizeZ, false);
+        fft = (OpenCLFFT3D*) cc.createFFT(gridSizeX, gridSizeY, gridSizeZ, false);
 }
 
 void OpenCLCalcAmoebaMultipoleForceKernel::computeFFT(bool forward) {
@@ -71,8 +71,8 @@ void OpenCLCalcHippoNonbondedForceKernel::initialize(const System& system, const
     if (usePME) {
         OpenCLContext& cl = dynamic_cast<OpenCLContext&>(cc);
         sort = new OpenCLSort(cl, new SortTrait(), cc.getNumAtoms());
-        fftForward = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ, true);
-        dfftForward = new OpenCLFFT3D(cl, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
+        fftForward = cl.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
+        dfftForward = cl.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
         hasInitializedFFT = true;
     }
 }

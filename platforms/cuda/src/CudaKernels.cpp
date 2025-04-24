@@ -256,21 +256,8 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
         delete dispersionFft;
     if (pmeio != NULL)
         delete pmeio;
-    if (hasInitializedFFT) {
-        if (useCudaFFT) {
-            cufftDestroy(fftForward);
-            cufftDestroy(fftBackward);
-            if (doLJPME) {
-                cufftDestroy(dispersionFftForward);
-                cufftDestroy(dispersionFftBackward);                
-            }
-        }
-        if (usePmeStream) {
-            cuStreamDestroy(pmeStream);
-            cuEventDestroy(pmeSyncEvent);
-            cuEventDestroy(paramsSyncEvent);
-        }
-    }
+    if (hasInitializedFFT && usePmeStream)
+        cuStreamDestroy(pmeStream);
 }
 
 void CudaCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
@@ -421,15 +408,15 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         // Compute the PME parameters.
 
         NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ, false);
-        gridSizeX = CudaFFT3D::findLegalDimension(gridSizeX);
-        gridSizeY = CudaFFT3D::findLegalDimension(gridSizeY);
-        gridSizeZ = CudaFFT3D::findLegalDimension(gridSizeZ);
+        gridSizeX = cu.findLegalFFTDimension(gridSizeX);
+        gridSizeY = cu.findLegalFFTDimension(gridSizeY);
+        gridSizeZ = cu.findLegalFFTDimension(gridSizeZ);
         if (doLJPME) {
             NonbondedForceImpl::calcPMEParameters(system, force, dispersionAlpha, dispersionGridSizeX,
                                                   dispersionGridSizeY, dispersionGridSizeZ, true);
-            dispersionGridSizeX = CudaFFT3D::findLegalDimension(dispersionGridSizeX);
-            dispersionGridSizeY = CudaFFT3D::findLegalDimension(dispersionGridSizeY);
-            dispersionGridSizeZ = CudaFFT3D::findLegalDimension(dispersionGridSizeZ);
+            dispersionGridSizeX = cu.findLegalFFTDimension(dispersionGridSizeX);
+            dispersionGridSizeY = cu.findLegalFFTDimension(dispersionGridSizeY);
+            dispersionGridSizeZ = cu.findLegalFFTDimension(dispersionGridSizeZ);
         }
 
         defines["EWALD_ALPHA"] = cu.doubleToString(alpha);
@@ -550,45 +537,17 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 pmeEnergyBuffer.initialize(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
                 cu.clearBuffer(pmeEnergyBuffer);
                 sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
-                int cufftVersion;
-                cufftGetVersion(&cufftVersion);
-                useCudaFFT = (cufftVersion >= 7050); // There was a critical bug in version 7.0
-                if (useCudaFFT) {
-                    cufftResult result = cufftPlan3d(&fftForward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
-                    if (result != CUFFT_SUCCESS)
-                        throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
-                    result = cufftPlan3d(&fftBackward, gridSizeX, gridSizeY, gridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2D : CUFFT_C2R);
-                    if (result != CUFFT_SUCCESS)
-                        throw OpenMMException("Error initializing FFT: "+cu.intToString(result));
-                    if (doLJPME) {
-                        result = cufftPlan3d(&dispersionFftForward, dispersionGridSizeX, dispersionGridSizeY, 
-                                                dispersionGridSizeZ, cu.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
-                        if (result != CUFFT_SUCCESS)
-                            throw OpenMMException("Error initializing disperison FFT: "+cu.intToString(result));
-                        result = cufftPlan3d(&dispersionFftBackward, dispersionGridSizeX, dispersionGridSizeY,
-                                             dispersionGridSizeZ, cu.getUseDoublePrecision() ? CUFFT_Z2D : CUFFT_C2R);
-                        if (result != CUFFT_SUCCESS)
-                            throw OpenMMException("Error initializing disperison FFT: "+cu.intToString(result));
-                    }
-                }
-                else {
-                    fft = new CudaFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, true);
-                    if (doLJPME)
-                        dispersionFft = new CudaFFT3D(cu, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
-                }
+                fft = cu.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
+                if (doLJPME)
+                    dispersionFft = cu.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
 
                 // Prepare for doing PME on its own stream.
 
                 if (usePmeStream) {
                     cuStreamCreate(&pmeStream, CU_STREAM_NON_BLOCKING);
-                    if (useCudaFFT) {
-                        cufftSetStream(fftForward, pmeStream);
-                        cufftSetStream(fftBackward, pmeStream);
-                        if (doLJPME) {
-                            cufftSetStream(dispersionFftForward, pmeStream);
-                            cufftSetStream(dispersionFftBackward, pmeStream);
-                        }
-                    }
+                    fft->setStream(pmeStream);
+                    if (doLJPME)
+                        dispersionFft->setStream(pmeStream);
                     CHECK_RESULT(cuEventCreate(&pmeSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     CHECK_RESULT(cuEventCreate(&paramsSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
@@ -987,20 +946,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                 cu.executeKernel(pmeFinishSpreadChargeKernel, finishSpreadArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
             }
 
-            if (useCudaFFT) {
-                if (cu.getUseDoublePrecision()) {
-                    cufftResult result = cufftExecD2Z(fftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
-                    if (result != CUFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                } else {
-                    cufftResult result = cufftExecR2C(fftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
-                    if (result != CUFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                }
-            }
-            else {
-                fft->execFFT(pmeGrid1, pmeGrid2, true);
-            }
+            fft->execFFT(pmeGrid1, pmeGrid2, true);
 
             if (includeEnergy) {
                 void* computeEnergyArgs[] = {&pmeGrid2.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
@@ -1014,20 +960,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeConvolutionKernel, convolutionArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
 
-            if (useCudaFFT) {
-                if (cu.getUseDoublePrecision()) {
-                    cufftResult result = cufftExecZ2D(fftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
-                    if (result != CUFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                } else {
-                    cufftResult result = cufftExecC2R(fftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*)  pmeGrid1.getDevicePointer());
-                    if (result != CUFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                }
-            }
-            else {
-                fft->execFFT(pmeGrid2, pmeGrid1, false);
-            }
+            fft->execFFT(pmeGrid2, pmeGrid1, false);
 
             void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
@@ -1059,20 +992,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                 cu.executeKernel(pmeDispersionFinishSpreadChargeKernel, finishSpreadArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
             }
 
-            if (useCudaFFT) {
-                if (cu.getUseDoublePrecision()) {
-                    cufftResult result = cufftExecD2Z(dispersionFftForward, (double*) pmeGrid1.getDevicePointer(), (double2*) pmeGrid2.getDevicePointer());
-                    if (result != CUFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                } else {
-                    cufftResult result = cufftExecR2C(dispersionFftForward, (float*) pmeGrid1.getDevicePointer(), (float2*) pmeGrid2.getDevicePointer());
-                    if (result != CUFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                }
-            }
-            else {
-                dispersionFft->execFFT(pmeGrid1, pmeGrid2, true);
-            }
+            dispersionFft->execFFT(pmeGrid1, pmeGrid2, true);
 
             if (includeEnergy) {
                 void* computeEnergyArgs[] = {&pmeGrid2.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
@@ -1086,20 +1006,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernel(pmeDispersionConvolutionKernel, convolutionArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
 
-            if (useCudaFFT) {
-                if (cu.getUseDoublePrecision()) {
-                    cufftResult result = cufftExecZ2D(dispersionFftBackward, (double2*) pmeGrid2.getDevicePointer(), (double*) pmeGrid1.getDevicePointer());
-                    if (result != CUFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                } else {
-                    cufftResult result = cufftExecC2R(dispersionFftBackward, (float2*) pmeGrid2.getDevicePointer(), (float*)  pmeGrid1.getDevicePointer());
-                    if (result != CUFFT_SUCCESS)
-                        throw OpenMMException("Error executing FFT: "+cu.intToString(result));
-                }
-            }
-            else {
-                dispersionFft->execFFT(pmeGrid2, pmeGrid1, false);
-            }
+            dispersionFft->execFFT(pmeGrid2, pmeGrid1, false);
 
             void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),

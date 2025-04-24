@@ -1,5 +1,5 @@
-#ifndef __OPENMM_CUDAFFT3D_H__
-#define __OPENMM_CUDAFFT3D_H__
+#ifndef __OPENMM_FFT3D_H__
+#define __OPENMM_FFT3D_H__
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -27,18 +27,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/common/FFT3D.h"
 #include "openmm/common/ArrayInterface.h"
-#include <cuda.h>
-#include <cufft.h>
 
 namespace OpenMM {
 
-class CudaContext;
-
 /**
- * This class performs three dimensional Fast Fourier Transforms.  It is implemented
- * using cuFFT.
+ * This class defines a uniform API for three dimensional Fast Fourier Transforms.
+ * Each platform provides its own implementation.  Instances can be created by
+ * calling createFFT() on a ComputeContext.
  *
  * FFTs tend to be most efficient when the size of each dimension is a product of
  * small prime factors.  You can call findLegalFFTDimension() on the ComputeContext
@@ -50,23 +46,10 @@ class CudaContext;
  * multiply every value of the original data set by the total number of data points.
  */
 
-class OPENMM_EXPORT_COMMON CudaFFT3D : public FFT3D {
+class OPENMM_EXPORT_COMMON FFT3D {
 public:
-    /**
-     * Create a CudaFFT3D object for performing transforms of a particular size.
-     *
-     * @param context the context in which to perform calculations
-     * @param xsize   the first dimension of the data sets on which FFTs will be performed
-     * @param ysize   the second dimension of the data sets on which FFTs will be performed
-     * @param zsize   the third dimension of the data sets on which FFTs will be performed
-     * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
-     */
-    CudaFFT3D(CudaContext& context, int xsize, int ysize, int zsize, bool realToComplex=false);
-    ~CudaFFT3D();
-    /**
-     * Set the stream to perform the FFT on.
-     */
-    void setStream(CUstream stream);
+    virtual ~FFT3D() {
+    }
     /**
      * Perform a Fourier transform.  The transform cannot be done in-place: the input and output
      * arrays must be different.  Also, the input array is used as workspace, so its contents
@@ -80,14 +63,9 @@ public:
      * @param out      on exit, this contains the transformed data
      * @param forward  true to perform a forward transform, false to perform an inverse transform
      */
-    void execFFT(ArrayInterface& in, ArrayInterface& out, bool forward = true);
-private:
-    CudaContext& context;
-    cufftHandle fftForward;
-    cufftHandle fftBackward;
-    bool realToComplex, hasInitialized;
+    virtual void execFFT(ArrayInterface& in, ArrayInterface& out, bool forward=true) = 0;
 };
 
 } // namespace OpenMM
 
-#endif // __OPENMM_CUDAFFT3D_H__
+#endif // __OPENMM_FFT3D_H__

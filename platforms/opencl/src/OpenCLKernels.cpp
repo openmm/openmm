@@ -515,9 +515,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 pmeEnergyBuffer.initialize(cl, cl.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
                 cl.clearBuffer(pmeEnergyBuffer);
                 sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
-                fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ, true);
+                fft = cl.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
                 if (doLJPME)
-                    dispersionFft = new OpenCLFFT3D(cl, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
+                    dispersionFft = cl.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
                 string vendor = cl.getDevice().getInfo<CL_DEVICE_VENDOR>();
                 bool isNvidia = (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA");
                 usePmeQueue = (!cl.getPlatformData().disablePmeStream && !cl.getPlatformData().useCpuPme && isNvidia);
