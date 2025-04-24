@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2018 Stanford University and the Authors.
+Portions copyright (c) 2012-2025 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors:
 
@@ -307,6 +307,13 @@ class Topology(object):
 
             Topology.loadBondDefinitions(os.path.join(os.path.dirname(__file__), 'data', 'residues.xml'))
             Topology._hasLoadedStandardBonds = True
+
+        # Record the existing bonds to avoid adding duplicate ones.
+
+        existingBonds = set([(bond[0], bond[1]) for bond in self._bonds])
+
+        # Add the new bonds.
+
         for chain in self._chains:
             # First build a map of atom names to atoms.
 
@@ -342,7 +349,10 @@ class Topology(object):
                             toResidue = i
                             toAtom = bond[1]
                         if fromAtom in atomMaps[fromResidue] and toAtom in atomMaps[toResidue]:
-                            self.addBond(atomMaps[fromResidue][fromAtom], atomMaps[toResidue][toAtom])
+                            atom1 = atomMaps[fromResidue][fromAtom]
+                            atom2 = atomMaps[toResidue][toAtom]
+                            if (atom1, atom2) not in existingBonds and (atom2, atom1) not in existingBonds:
+                                self.addBond(atom1, atom2)
 
     def createDisulfideBonds(self, positions):
         """Identify disulfide bonds based on proximity and add them to the

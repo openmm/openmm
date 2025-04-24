@@ -712,6 +712,12 @@ double CpuCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         }
         else
             nonbonded->calculateReciprocalIxn(numParticles, &posq[0], posData, particleParams, C6params, exclusions, forceData, includeEnergy ? &nonbondedEnergy : NULL);
+        if (ewald || pme || ljpme) {
+            // Add the correction for the neutralizing plasma.
+
+            double volume = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
+            energy -= totalCharge*totalCharge/(8*EPSILON0*volume*ewaldAlpha*ewaldAlpha);
+        }
     }
     energy += nonbondedEnergy;
     if (includeDirect) {
@@ -843,6 +849,7 @@ void CpuCalcNonbondedForceKernel::computeParameters(ContextImpl& context, bool o
 
     if (hasParticleOffsets || !offsetsOnly) {
         double sumSquaredCharges = 0.0;
+        totalCharge = 0.0;
         for (int i = 0; i < numParticles; i++) {
             double charge = baseParticleParams[i][0];
             double sigma = baseParticleParams[i][1];
@@ -857,6 +864,7 @@ void CpuCalcNonbondedForceKernel::computeParameters(ContextImpl& context, bool o
             particleParams[i] = make_pair((float) (0.5*sigma), (float) (2.0*sqrt(epsilon)));
             C6params[i] = 8.0*pow(particleParams[i].first, 3.0) * particleParams[i].second;
             sumSquaredCharges += charge*charge;
+            totalCharge += charge;
         }
         if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
             ewaldSelfEnergy = -ONE_4PI_EPS0*ewaldAlpha*sumSquaredCharges/sqrt(M_PI);
