@@ -94,7 +94,8 @@ void ConstantPotentialForceImpl::initialize(ContextImpl& context) {
         throw OpenMMException("ConstantPotentialForce: "+Messages::cutoffTooLarge);
 
     // Check for errors in the specification of electrodes.
-    vector<int> electrodes(owner.getNumParticles(), -1);
+    vector<int> electrodeIndexMap(owner.getNumParticles(), -1);
+    vector<int> electrodeIndices;
     for (int electrode = 0; electrode < owner.getNumElectrodes(); electrode++) {
         std::set<int> particles;
         double potential;
@@ -103,12 +104,13 @@ void ConstantPotentialForceImpl::initialize(ContextImpl& context) {
         owner.getElectrodeParameters(electrode, particles, potential, gaussianWidth, thomasFermiScale);
 
         for (int particle : particles) {
-            if (electrodes[particle] != -1) {
+            if (electrodeIndexMap[particle] != -1) {
                 stringstream msg;
-                msg << "ConstantPotentialForce: Particle " << particle << " belongs to electrodes " << electrodes[particle] << " and " << electrode;
+                msg << "ConstantPotentialForce: Particle " << particle << " belongs to electrodes " << electrodeIndexMap[particle] << " and " << electrode;
                 throw OpenMMException(msg.str());
             }
-            electrodes[particle] = electrode;
+            electrodeIndexMap[particle] = electrode;
+            electrodeIndices.push_back(particle);
         }
 
         if (gaussianWidth < 0) {
@@ -128,8 +130,8 @@ void ConstantPotentialForceImpl::initialize(ContextImpl& context) {
         int particle1, particle2;
         double chargeProd;
         owner.getExceptionParameters(i, particle1, particle2, chargeProd);
-        int electrode1 = electrodes[particle1];
-        int electrode2 = electrodes[particle2];
+        int electrode1 = electrodeIndexMap[particle1];
+        int electrode2 = electrodeIndexMap[particle2];
         if (electrode1 != -1) {
             stringstream msg;
             msg << "ConstantPotentialForce: Particle " << particle1 << " belongs to exception " << i << " and electrode " << electrode1;
@@ -139,6 +141,21 @@ void ConstantPotentialForceImpl::initialize(ContextImpl& context) {
             stringstream msg;
             msg << "ConstantPotentialForce: Particle " << particle2 << " belongs to exception " << i << " and electrode " << electrode2;
             throw OpenMMException(msg.str());
+        }
+    }
+
+    // Make sure that we do not try to apply a constraint when zero electrode
+    // particles are present.
+    if (!electrodeIndices.size() && owner.getUseChargeConstraint()) {
+        throw OpenMMException("At least one electrode particle must exist to apply a total charge constraint");
+    }
+
+    // If we are precomputing a matrix, electrode particles must be frozen.
+    if (owner.getConstantPotentialMethod() == ConstantPotentialForce::ConstantPotentialMethod::Matrix) {
+        for (int i = 0; i < electrodeIndices.size(); i++) {
+            if (system.getParticleMass(electrodeIndices[i]) != 0.0) {
+                throw OpenMMException("Electrode particles must have zero mass for the matrix method");
+            }
         }
     }
 

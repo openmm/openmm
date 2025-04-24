@@ -1272,13 +1272,6 @@ void ReferenceCalcConstantPotentialForceKernel::initialize(const System& system,
     matrix = NULL;
     cg = NULL;
     if (method == ConstantPotentialForce::ConstantPotentialMethod::Matrix) {
-        // If we are precomputing a matrix, electrode particles must be frozen.
-        for (int i = 0; i < numElectrodeParticles; i++) {
-            if (system.getParticleMass(electrodeIndices[i]) != 0.0) {
-                throw OpenMMException("Electrode particles must have zero mass for the matrix method");
-            }
-        }
-
         matrix = new ReferenceConstantPotentialMatrix(numElectrodeParticles);
     }
     else { // ConstantPotentialMethod::CG
@@ -1353,7 +1346,7 @@ void ReferenceCalcConstantPotentialForceKernel::copyParametersToContext(ContextI
 
     // Get electrode parameters.
     std::set<int> allElectrodeParticles;
-    for (int i = 0; i <= force.getNumElectrodes(); i++) {
+    for (int i = 0; i < force.getNumElectrodes(); i++) {
         std::set<int> electrodeParticles;
         double potential;
         double gaussianWidth;

@@ -421,6 +421,17 @@ void ReferenceConstantPotential::solve(
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
                 gradStep[ii] -= grad0[ii];
             }
+
+            // If A qStep is small enough, stop to prevent, e.g., division by
+            // zero in the calculation of alpha.
+            error = 0.0;
+            for (int ii = 0; ii < numElectrodeParticles; ii++) {
+                error += gradStep[ii] * gradStep[ii];
+            }
+            if (error <= errorTarget) {
+                converged = true;
+                break;
+            }
             
             // Evaluate the scalar 1 / (qStep^T A qStep).
             paramScale = 0.0;
