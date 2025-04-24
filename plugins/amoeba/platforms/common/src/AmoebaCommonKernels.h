@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,6 +32,7 @@
 #include "openmm/System.h"
 #include "openmm/common/ComputeContext.h"
 #include "openmm/common/ComputeArray.h"
+#include "openmm/common/FFT3D.h"
 #include "openmm/common/NonbondedUtilities.h"
 
 namespace OpenMM {
@@ -153,10 +154,6 @@ public:
      */
     void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
     /**
-     * Compute the FFT.
-     */
-    virtual void computeFFT(bool forward) = 0;
-    /**
      * Get whether charge spreading should be done in fixed point.
      */
     virtual bool useFixedPointChargeSpreading() const = 0;
@@ -238,6 +235,7 @@ protected:
     ComputeKernel pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
     ComputeKernel pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
     ComputeEvent syncEvent;
+    FFT3D* fft;
     CommonCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
     static const int PmeOrder = 5;
     static const int MaxPrevDIISDipoles = 20;
@@ -424,6 +422,7 @@ private:
 class CommonCalcHippoNonbondedForceKernel : public CalcHippoNonbondedForceKernel {
 public:
     CommonCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system);
+    virtual ~CommonCalcHippoNonbondedForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -431,10 +430,6 @@ public:
      * @param force      the HippoNonbondedForce this kernel will be used for
      */
     void initialize(const System& system, const HippoNonbondedForce& force);
-    /**
-     * Compute the FFT.
-     */
-    virtual void computeFFT(bool forward, bool dispersion) = 0;
     /**
      * Get whether charge spreading should be done in fixed point.
      */
@@ -534,6 +529,8 @@ protected:
     ComputeArray lastPositions;
     ComputeArray exceptionScales[6];
     ComputeArray exceptionAtoms;
+    FFT3D* fft;
+    FFT3D* dfft;
     ComputeKernel computeMomentsKernel, recordInducedDipolesKernel, mapTorqueKernel;
     ComputeKernel fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel, computeExceptionsKernel;
     ComputeKernel pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;
