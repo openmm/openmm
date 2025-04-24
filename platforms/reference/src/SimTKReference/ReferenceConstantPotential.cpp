@@ -380,7 +380,7 @@ void ReferenceConstantPotential::solve(
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
             error += projGrad[ii] * projGrad[ii];
         }
-        if (error < errorTarget) {
+        if (error <= errorTarget) {
             return;
         }
 
@@ -486,7 +486,7 @@ void ReferenceConstantPotential::solve(
             for (int ii = 0; ii < numElectrodeParticles; ii++) {
                 error += projGrad[ii] * projGrad[ii];
             }
-            if (error < errorTarget) {
+            if (error <= errorTarget) {
                 converged = true;
                 break;
             }
@@ -612,7 +612,12 @@ void ReferenceConstantPotential::getEnergyForces(
             }
 
             double deltaR[ReferenceForce::LastDeltaRIndex];
-            ReferenceForce::getDeltaRPeriodic(posData[i], posData[j], boxVectors, deltaR);
+            if (exceptionsArePeriodic) {
+                ReferenceForce::getDeltaRPeriodic(posData[i], posData[j], boxVectors, deltaR);
+            }
+            else {
+                ReferenceForce::getDeltaR(posData[i], posData[j], deltaR);
+            }
             double r = deltaR[ReferenceForce::RIndex];
             double inverseR = 1.0 / r;
 
@@ -622,7 +627,7 @@ void ReferenceConstantPotential::getEnergyForces(
             if (alphaR > 1e-6) {
                 double erfAlphaR = erf(alphaR);
 
-                double forceFactor = qqFactor * inverseR * inverseR * inverseR * (erfAlphaR + TWO_OVER_SQRT_PI * alphaR * exp(-alphaR * alphaR));
+                double forceFactor = qqFactor * inverseR * inverseR * inverseR * (erfAlphaR - TWO_OVER_SQRT_PI * alphaR * exp(-alphaR * alphaR));
                 for (int k = 0; k < 3; k++) {
                     double force = forceFactor * deltaR[k];
                     forceData[i][k] += force;

@@ -62,7 +62,7 @@ void ReferenceConstantPotential14::calculateBondIxn(
         ReferenceForce::getDeltaRPeriodic(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], periodicBoxVectors, deltaR);
     }
     else {
-        ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR);  
+        ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR);
     }
 
     double inverseR = 1.0 / deltaR[ReferenceForce::RIndex];
