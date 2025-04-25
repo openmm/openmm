@@ -37,6 +37,7 @@
 #include "openmm/common/ComputeForceInfo.h"
 #include "openmm/common/ComputeProgram.h"
 #include "openmm/common/ComputeVectorTypes.h"
+#include "openmm/common/FFT3D.h"
 #include "openmm/common/IntegrationUtilities.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include "openmm/Vec3.h"
@@ -474,6 +475,16 @@ public:
      * when it is no longer needed.
      */
     virtual NonbondedUtilities* createNonbondedUtilities() = 0;
+    /**
+     * Create an object for performing 3D FFTs.  The caller is responsible for deleting
+     * the object when it is no longer needed.
+     *
+     * @param xsize   the first dimension of the data sets on which FFTs will be performed
+     * @param ysize   the second dimension of the data sets on which FFTs will be performed
+     * @param zsize   the third dimension of the data sets on which FFTs will be performed
+     * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
+     */
+    virtual FFT3D* createFFT(int xsize, int ysize, int zsize, bool realToComplex=false) = 0;
     /**
      * Get the smallest legal size for a dimension of the grid.
      */

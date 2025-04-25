@@ -35,7 +35,6 @@
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "openmm/common/CommonKernels.h"
-#include <cufft.h>
 
 namespace OpenMM {
 
@@ -189,11 +188,7 @@ private:
     CUstream pmeStream;
     CUevent pmeSyncEvent, paramsSyncEvent;
     CudaFFT3D* fft;
-    cufftHandle fftForward;
-    cufftHandle fftBackward;
     CudaFFT3D* dispersionFft;
-    cufftHandle dispersionFftForward;
-    cufftHandle dispersionFftBackward;
     CUfunction computeParamsKernel, computeExclusionParamsKernel, computePlasmaCorrectionKernel;
     CUfunction ewaldSumsKernel;
     CUfunction ewaldForcesKernel;
@@ -217,7 +212,7 @@ private:
     int interpolateForceThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    bool hasCoulomb, hasLJ, useFixedPointChargeSpreading, usePmeStream, useCudaFFT, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
+    bool hasCoulomb, hasLJ, useFixedPointChargeSpreading, usePmeStream, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
     NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;
 };

@@ -53,6 +53,7 @@
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLExpressionUtilities.h"
+#include "OpenCLFFT3D.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLPlatform.h"
@@ -632,6 +633,20 @@ public:
     OpenCLNonbondedUtilities* createNonbondedUtilities() {
         return new OpenCLNonbondedUtilities(*this);
     }
+    /**
+     * Create an object for performing 3D FFTs.  The caller is responsible for deleting
+     * the object when it is no longer needed.
+     *
+     * @param xsize   the first dimension of the data sets on which FFTs will be performed
+     * @param ysize   the second dimension of the data sets on which FFTs will be performed
+     * @param zsize   the third dimension of the data sets on which FFTs will be performed
+     * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
+     */
+    OpenCLFFT3D* createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
+    /**
+     * Get the smallest legal size for a dimension of the grid.
+     */
+    int findLegalFFTDimension(int minimum);
     /**
      * This should be called by the Integrator from its own initialize() method.
      * It ensures all contexts are fully initialized.

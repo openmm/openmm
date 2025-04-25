@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -435,6 +435,10 @@ void CudaContext::initialize() {
 
 void CudaContext::initializeContexts() {
     getPlatformData().initializeContexts(system);
+}
+
+CudaFFT3D* CudaContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
+    return new CudaFFT3D(*this, xsize, ysize, zsize, realToComplex);
 }
 
 void CudaContext::setAsCurrent() {

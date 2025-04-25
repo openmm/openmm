@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -574,6 +574,14 @@ void OpenCLContext::initialize() {
 
 void OpenCLContext::initializeContexts() {
     getPlatformData().initializeContexts(system);
+}
+
+OpenCLFFT3D* OpenCLContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
+    return new OpenCLFFT3D(*this, xsize, ysize, zsize, realToComplex);
+}
+
+int OpenCLContext::findLegalFFTDimension(int minimum) {
+    return OpenCLFFT3D::findLegalDimension(minimum);
 }
 
 void OpenCLContext::addForce(ComputeForceInfo* force) {

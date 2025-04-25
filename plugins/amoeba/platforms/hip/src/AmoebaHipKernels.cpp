@@ -38,7 +38,6 @@
 #include "openmm/internal/AmoebaVdwForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "HipBondedUtilities.h"
-#include "HipFFT3D.h"
 #include "HipForceInfo.h"
 #include "HipKernelSources.h"
 #include "SimTKOpenMMRealType.h"
@@ -54,30 +53,6 @@ using namespace OpenMM;
 using namespace std;
 
 /* -------------------------------------------------------------------------- *
- *                             AmoebaMultipole                                *
- * -------------------------------------------------------------------------- */
-
-HipCalcAmoebaMultipoleForceKernel::~HipCalcAmoebaMultipoleForceKernel() {
-    ContextSelector selector(cc);
-    if (fft != NULL)
-        delete fft;
-}
-
-void HipCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
-    CommonCalcAmoebaMultipoleForceKernel::initialize(system, force);
-    if (usePME) {
-        ContextSelector selector(cc);
-        HipArray& grid1 = cu.unwrap(pmeGrid1);
-        HipArray& grid2 = cu.unwrap(pmeGrid2);
-        fft = new HipFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, false, cu.getCurrentStream(), grid1, grid2);
-    }
-}
-
-void HipCalcAmoebaMultipoleForceKernel::computeFFT(bool forward) {
-    fft->execFFT(forward);
-}
-
-/* -------------------------------------------------------------------------- *
  *                           HippoNonbondedForce                              *
  * -------------------------------------------------------------------------- */
 
@@ -85,10 +60,6 @@ HipCalcHippoNonbondedForceKernel::~HipCalcHippoNonbondedForceKernel() {
     ContextSelector selector(cc);
     if (sort != NULL)
         delete sort;
-    if (fft != NULL)
-        delete fft;
-    if (dfft != NULL)
-        delete dfft;
 }
 
 void HipCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
@@ -96,19 +67,6 @@ void HipCalcHippoNonbondedForceKernel::initialize(const System& system, const Hi
     if (usePME) {
         ContextSelector selector(cc);
         sort = new HipSort(cu, new SortTrait(), cc.getNumAtoms());
-        HipArray& grid1 = cu.unwrap(pmeGrid1);
-        HipArray& grid2 = cu.unwrap(pmeGrid2);
-        fft = new HipFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, true, cu.getCurrentStream(), grid1, grid2);
-        dfft = new HipFFT3D(cu, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true, cu.getCurrentStream(), grid1, grid2);
-    }
-}
-
-void HipCalcHippoNonbondedForceKernel::computeFFT(bool forward, bool dispersion) {
-    if (dispersion) {
-        dfft->execFFT(forward);
-    }
-    else {
-        fft->execFFT(forward);
     }
 }
 

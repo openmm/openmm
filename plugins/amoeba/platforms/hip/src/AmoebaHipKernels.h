@@ -34,7 +34,6 @@
 #include "HipContext.h"
 #include "HipNonbondedUtilities.h"
 #include "HipSort.h"
-#include "HipFFT3D.h"
 #include "AmoebaCommonKernels.h"
 
 namespace OpenMM {
@@ -45,20 +44,8 @@ namespace OpenMM {
 class HipCalcAmoebaMultipoleForceKernel : public CommonCalcAmoebaMultipoleForceKernel {
 public:
     HipCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, HipContext& cu, const System& system) :
-            CommonCalcAmoebaMultipoleForceKernel(name, platform, cu, system), cu(cu), fft(NULL) {
+            CommonCalcAmoebaMultipoleForceKernel(name, platform, cu, system), cu(cu) {
     }
-    ~HipCalcAmoebaMultipoleForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the AmoebaMultipoleForce this kernel will be used for
-     */
-    void initialize(const System& system, const AmoebaMultipoleForce& force);
-    /**
-     * Compute the FFT.
-     */
-    void computeFFT(bool forward);
     /**
      * Get whether charge spreading should be done in fixed point.
      */
@@ -67,7 +54,6 @@ public:
     }
 private:
     HipContext& cu;
-    HipFFT3D* fft;
 };
 
 /**
@@ -76,7 +62,7 @@ private:
 class HipCalcHippoNonbondedForceKernel : public CommonCalcHippoNonbondedForceKernel {
 public:
     HipCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, HipContext& cu, const System& system) :
-            CommonCalcHippoNonbondedForceKernel(name, platform, cu, system), cu(cu), sort(NULL), fft(NULL), dfft(NULL) {
+            CommonCalcHippoNonbondedForceKernel(name, platform, cu, system), cu(cu), sort(NULL) {
     }
     ~HipCalcHippoNonbondedForceKernel();
     /**
@@ -86,10 +72,6 @@ public:
      * @param force      the HippoNonbondedForce this kernel will be used for
      */
     void initialize(const System& system, const HippoNonbondedForce& force);
-    /**
-     * Compute the FFT.
-     */
-    void computeFFT(bool forward, bool dispersion);
     /**
      * Get whether charge spreading should be done in fixed point.
      */
@@ -113,8 +95,6 @@ private:
     };
     HipContext& cu;
     HipSort* sort;
-    HipFFT3D* fft;
-    HipFFT3D* dfft;
 };
 
 } // namespace OpenMM

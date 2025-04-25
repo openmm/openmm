@@ -30,40 +30,12 @@ using namespace OpenMM;
 using namespace std;
 
 /* -------------------------------------------------------------------------- *
- *                             AmoebaMultipole                                *
- * -------------------------------------------------------------------------- */
-
-OpenCLCalcAmoebaMultipoleForceKernel::~OpenCLCalcAmoebaMultipoleForceKernel() {
-    if (fft != NULL)
-        delete fft;
-}
-
-void OpenCLCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
-    CommonCalcAmoebaMultipoleForceKernel::initialize(system, force);
-    if (usePME)
-        fft = new OpenCLFFT3D(dynamic_cast<OpenCLContext&>(cc), gridSizeX, gridSizeY, gridSizeZ, false);
-}
-
-void OpenCLCalcAmoebaMultipoleForceKernel::computeFFT(bool forward) {
-    OpenCLArray& grid1 = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid1);
-    OpenCLArray& grid2 = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid2);
-    if (forward)
-        fft->execFFT(grid1, grid2, true);
-    else
-        fft->execFFT(grid2, grid1, false);
-}
-
-/* -------------------------------------------------------------------------- *
  *                           HippoNonbondedForce                              *
  * -------------------------------------------------------------------------- */
 
 OpenCLCalcHippoNonbondedForceKernel::~OpenCLCalcHippoNonbondedForceKernel() {
     if (sort != NULL)
         delete sort;
-    if (hasInitializedFFT) {
-        delete fftForward;
-        delete dfftForward;
-    }
 }
 
 void OpenCLCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
@@ -71,20 +43,7 @@ void OpenCLCalcHippoNonbondedForceKernel::initialize(const System& system, const
     if (usePME) {
         OpenCLContext& cl = dynamic_cast<OpenCLContext&>(cc);
         sort = new OpenCLSort(cl, new SortTrait(), cc.getNumAtoms());
-        fftForward = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ, true);
-        dfftForward = new OpenCLFFT3D(cl, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
-        hasInitializedFFT = true;
     }
-}
-
-void OpenCLCalcHippoNonbondedForceKernel::computeFFT(bool forward, bool dispersion) {
-    OpenCLArray& grid1 = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid1);
-    OpenCLArray& grid2 = dynamic_cast<OpenCLContext&>(cc).unwrap(pmeGrid2);
-    OpenCLFFT3D* fft = (dispersion ? dfftForward : fftForward);
-    if (forward)
-        fft->execFFT(grid1, grid2, true);
-    else
-        fft->execFFT(grid2, grid1, false);
 }
 
 void OpenCLCalcHippoNonbondedForceKernel::sortGridIndex() {

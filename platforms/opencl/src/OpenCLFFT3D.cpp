@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -71,15 +71,15 @@ OpenCLFFT3D::~OpenCLFFT3D() {
     deleteVkFFT(&app);
 }
 
-void OpenCLFFT3D::execFFT(OpenCLArray& in, OpenCLArray& out, bool forward) {
+void OpenCLFFT3D::execFFT(ArrayInterface& in, ArrayInterface& out, bool forward) {
     VkFFTLaunchParams params = {};
     if (forward) {
-        params.inputBuffer = &in.getDeviceBuffer()();
-        params.buffer = &out.getDeviceBuffer()();
+        params.inputBuffer = &context.unwrap(in).getDeviceBuffer()();
+        params.buffer = &context.unwrap(out).getDeviceBuffer()();
     }
     else {
-        params.inputBuffer = &out.getDeviceBuffer()();
-        params.buffer = &in.getDeviceBuffer()();
+        params.inputBuffer = &context.unwrap(out).getDeviceBuffer()();
+        params.buffer = &context.unwrap(in).getDeviceBuffer()();
     }
     params.commandQueue = &context.getQueue()();
     VkFFTResult result = VkFFTAppend(&app, forward ? -1 : 1, &params);
@@ -148,7 +148,9 @@ OpenCLFFT3D::OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize
     invykernel = createKernel(packedZSize, packedXSize, packedYSize, ythreads, 2, false, inputIsReal);
 }
 
-void OpenCLFFT3D::execFFT(OpenCLArray& in, OpenCLArray& out, bool forward) {
+void OpenCLFFT3D::execFFT(ArrayInterface& in, ArrayInterface& out, bool forward) {
+    OpenCLArray& in2 = context.unwrap(in);
+    OpenCLArray& out2 = context.unwrap(out);
     cl::Kernel kernel1 = (forward ? zkernel : invzkernel);
     cl::Kernel kernel2 = (forward ? xkernel : invxkernel);
     cl::Kernel kernel3 = (forward ? ykernel : invykernel);
@@ -159,37 +161,37 @@ void OpenCLFFT3D::execFFT(OpenCLArray& in, OpenCLArray& out, bool forward) {
 
         // Pack the data into a half sized grid.
         
-        packKernel.setArg<cl::Buffer>(0, in.getDeviceBuffer());
-        packKernel.setArg<cl::Buffer>(1, out.getDeviceBuffer());
+        packKernel.setArg<cl::Buffer>(0, in2.getDeviceBuffer());
+        packKernel.setArg<cl::Buffer>(1, out2.getDeviceBuffer());
         context.executeKernel(packKernel, gridSize);
         
         // Perform the FFT.
         
-        kernel1.setArg<cl::Buffer>(0, out.getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(1, in.getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(0, out2.getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(1, in2.getDeviceBuffer());
         context.executeKernel(kernel1, gridSize, zthreads);
-        kernel2.setArg<cl::Buffer>(0, in.getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(1, out.getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(0, in2.getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(1, out2.getDeviceBuffer());
         context.executeKernel(kernel2, gridSize, xthreads);
-        kernel3.setArg<cl::Buffer>(0, out.getDeviceBuffer());
-        kernel3.setArg<cl::Buffer>(1, in.getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(0, out2.getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(1, in2.getDeviceBuffer());
         context.executeKernel(kernel3, gridSize, ythreads);
         
         // Unpack the data.
         
-        unpackKernel.setArg<cl::Buffer>(0, in.getDeviceBuffer());
-        unpackKernel.setArg<cl::Buffer>(1, out.getDeviceBuffer());
+        unpackKernel.setArg<cl::Buffer>(0, in2.getDeviceBuffer());
+        unpackKernel.setArg<cl::Buffer>(1, out2.getDeviceBuffer());
         context.executeKernel(unpackKernel, gridSize);
     }
     else {
-        kernel1.setArg<cl::Buffer>(0, in.getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(1, out.getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(0, in2.getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(1, out2.getDeviceBuffer());
         context.executeKernel(kernel1, xsize*ysize*zsize, zthreads);
-        kernel2.setArg<cl::Buffer>(0, out.getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(1, in.getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(0, out2.getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(1, in2.getDeviceBuffer());
         context.executeKernel(kernel2, xsize*ysize*zsize, xthreads);
-        kernel3.setArg<cl::Buffer>(0, in.getDeviceBuffer());
-        kernel3.setArg<cl::Buffer>(1, out.getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(0, in2.getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(1, out2.getDeviceBuffer());
         context.executeKernel(kernel3, xsize*ysize*zsize, ythreads);
     }
 }
