@@ -34,7 +34,6 @@
 #include "CommonKernelSources.h"
 #include "HipBondedUtilities.h"
 #include "HipExpressionUtilities.h"
-#include "HipFFT3D.h"
 #include "HipIntegrationUtilities.h"
 #include "HipNonbondedUtilities.h"
 #include "HipKernelSources.h"
@@ -554,9 +553,9 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
                 }
 
                 hipStream_t fftStream = usePmeStream ? pmeStream : cu.getCurrentStream();
-                fft = new HipFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, true, fftStream, pmeGrid1, pmeGrid2);
+                fft = cu.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
                 if (doLJPME)
-                    dispersionFft = new HipFFT3D(cu, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true, fftStream, pmeGrid1, pmeGrid2);
+                    dispersionFft = cu.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
                 hasInitializedFFT = true;
 
                 // Initialize the b-spline moduli.
@@ -947,7 +946,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                 cu.executeKernelFlat(pmeFinishSpreadChargeKernel, finishSpreadArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
             }
 
-            fft->execFFT(true);
+            fft->execFFT(pmeGrid1, pmeGrid2, true);
 
             if (includeEnergy) {
                 void* computeEnergyArgs[] = {&pmeGrid2.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
@@ -961,7 +960,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernelFlat(pmeConvolutionKernel, convolutionArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
 
-            fft->execFFT(false);
+            fft->execFFT(pmeGrid2, pmeGrid1, false);
 
             void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
@@ -993,7 +992,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                 cu.executeKernelFlat(pmeDispersionFinishSpreadChargeKernel, finishSpreadArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
             }
 
-            dispersionFft->execFFT(true);
+            dispersionFft->execFFT(pmeGrid1, pmeGrid2, true);
 
             if (includeEnergy) {
                 void* computeEnergyArgs[] = {&pmeGrid2.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
@@ -1007,7 +1006,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernelFlat(pmeDispersionConvolutionKernel, convolutionArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
 
-            dispersionFft->execFFT(false);
+            dispersionFft->execFFT(pmeGrid2, pmeGrid1, false);
 
             void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),

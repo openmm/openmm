@@ -696,6 +696,10 @@ ComputeEvent HipContext::createEvent() {
     return shared_ptr<ComputeEventImpl>(new HipEvent(*this));
 }
 
+HipFFT3D* HipContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
+    return new HipFFT3D(*this, xsize, ysize, zsize, realToComplex);
+}
+
 int HipContext::findLegalFFTDimension(int minimum) {
     return HipFFT3D::findLegalDimension(minimum);
 }

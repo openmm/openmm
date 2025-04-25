@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -51,6 +51,7 @@
 #include "HipArray.h"
 #include "HipBondedUtilities.h"
 #include "HipExpressionUtilities.h"
+#include "HipFFT3D.h"
 #include "HipIntegrationUtilities.h"
 #include "HipNonbondedUtilities.h"
 #include "HipPlatform.h"
@@ -182,9 +183,19 @@ public:
      */
     ComputeEvent createEvent();
     /**
-     * Get the smallest legal size for a dimension of the grid supported by the FFT.
+     * Create an object for performing 3D FFTs.  The caller is responsible for deleting
+     * the object when it is no longer needed.
+     *
+     * @param xsize   the first dimension of the data sets on which FFTs will be performed
+     * @param ysize   the second dimension of the data sets on which FFTs will be performed
+     * @param zsize   the third dimension of the data sets on which FFTs will be performed
+     * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
      */
-    virtual int findLegalFFTDimension(int minimum);
+    HipFFT3D* createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
+    /**
+     * Get the smallest legal size for a dimension of the grid.
+     */
+    int findLegalFFTDimension(int minimum);
     /**
      * Compile source code to create a ComputeProgram.
      *

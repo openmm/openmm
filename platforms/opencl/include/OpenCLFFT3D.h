@@ -98,7 +98,7 @@ public:
      * arrays must be different.  Also, the input array is used as workspace, so its contents
      * are destroyed.  This also means that both arrays must be large enough to hold complex values,
      * even when performing a real-to-complex transform.
-     * <p>
+     *
      * When performing a real-to-complex transform, the output data is of size xsize*ysize*(zsize/2+1)
      * and contains only the non-redundant elements.
      *
@@ -106,7 +106,7 @@ public:
      * @param out      on exit, this contains the transformed data
      * @param forward  true to perform a forward transform, false to perform an inverse transform
      */
-    void execFFT(ArrayInterface& in, ArrayInterface& out, bool forward = true);
+    void execFFT(ArrayInterface& in, ArrayInterface& out, bool forward=true);
     /**
      * Get the smallest legal size for a dimension of the grid (that is, a size with no unsupported
      * prime factors).
