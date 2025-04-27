@@ -2930,10 +2930,7 @@ void ReferenceApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& contex
         if (rigidMolecules)
             barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), context.getMolecules());
         else {
-            vector<vector<int> > molecules(context.getSystem().getNumParticles());
-            for (int i = 0; i < molecules.size(); i++)
-                molecules[i].push_back(i);
-            barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), molecules);
+            barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), context.getConstrainedGroups());
         }
     }
     vector<Vec3>& posData = extractPositions(context);

@@ -3614,7 +3614,7 @@ double CommonCalcRMSDForceKernel::executeImpl(ContextImpl& context) {
         if (b[i] != b[i])
             throw OpenMMException("NaN encountered during RMSD force calculation");
     }
-    
+
     Array2D<double> F(4, 4);
     F[0][0] =  b[0*3+0] + b[1*3+1] + b[2*3+2];
     F[1][0] =  b[1*3+2] - b[2*3+1];
@@ -3774,9 +3774,7 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
         if (rigidMolecules)
             molecules = context.getMolecules();
         else {
-            molecules.resize(cc.getNumAtoms());
-            for (int i = 0; i < molecules.size(); i++)
-                molecules[i].push_back(i);
+            molecules = context.getConstrainedGroups();
         }
         numMolecules = molecules.size();
         moleculeAtoms.initialize<int>(cc, cc.getNumAtoms(), "moleculeAtoms");
