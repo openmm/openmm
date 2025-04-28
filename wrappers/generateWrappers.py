@@ -79,6 +79,8 @@ class WrapperGenerator:
                             'const std::vector<int>& OpenMM::NoseHooverIntegrator::getAllThermostatedIndividualParticles',
                             'const std::vector<std::tuple<int, int, double> >& OpenMM::NoseHooverIntegrator::getAllThermostatedPairs',
                             'virtual void OpenMM::NoseHooverIntegrator::stateChanged',
+                            'Vec3 OpenMM::MonteCarloAnisotropicBarostat::computeCurrentPressure',
+                            'Vec3 OpenMM::MonteCarloMembraneBarostat::computeCurrentPressure',
                             'virtual bool OpenMM::TabulatedFunction::operator==',
                             'bool OpenMM::Continuous1DFunction::operator==',
                             'bool OpenMM::Continuous2DFunction::operator==',

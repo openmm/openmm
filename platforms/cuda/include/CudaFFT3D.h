@@ -64,10 +64,6 @@ public:
     CudaFFT3D(CudaContext& context, int xsize, int ysize, int zsize, bool realToComplex=false);
     ~CudaFFT3D();
     /**
-     * Set the stream to perform the FFT on.
-     */
-    void setStream(CUstream stream);
-    /**
      * Perform a Fourier transform.  The transform cannot be done in-place: the input and output
      * arrays must be different.  Also, the input array is used as workspace, so its contents
      * are destroyed.  This also means that both arrays must be large enough to hold complex values,

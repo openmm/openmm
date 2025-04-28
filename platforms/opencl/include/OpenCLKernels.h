@@ -185,7 +185,7 @@ private:
     OpenCLArray pmeEnergyBuffer;
     OpenCLArray chargeBuffer;
     OpenCLSort* sort;
-    cl::CommandQueue pmeQueue;
+    ComputeQueue pmeQueue;
     ComputeEvent pmeSyncEvent;
     OpenCLFFT3D* fft;
     OpenCLFFT3D* dispersionFft;

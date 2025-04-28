@@ -162,17 +162,13 @@ public:
      */
     double& getEnergyWorkspace();
     /**
+     * Create a new ComputeQueue for use with this context.
+     */
+    ComputeQueue createQueue();
+    /**
      * Get the stream currently being used for execution.
      */
     hipStream_t getCurrentStream();
-    /**
-     * Set the stream to use for execution.
-     */
-    void setCurrentStream(hipStream_t stream);
-    /**
-     * Reset the context to using the default stream for execution.
-     */
-    void restoreDefaultStream();
     /**
      * Construct an uninitialized array of the appropriate class for this platform.  The returned
      * value should be created on the heap with the "new" operator.
@@ -632,8 +628,6 @@ private:
     std::map<std::string, std::string> compilationDefines;
     std::vector<hipModule_t> loadedModules;
     hipDevice_t device;
-    hipStream_t currentStream;
-    hipStream_t defaultStream;
     hipFunction_t clearBufferKernel;
     hipFunction_t clearTwoBuffersKernel;
     hipFunction_t clearThreeBuffersKernel;

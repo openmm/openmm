@@ -52,6 +52,18 @@ ComputeContext::ComputeContext(const System& system) : system(system), time(0.0)
 ComputeContext::~ComputeContext() {
 }
 
+ComputeQueue ComputeContext::getCurrentQueue() {
+    return currentQueue;
+}
+
+void ComputeContext::setCurrentQueue(ComputeQueue queue) {
+    currentQueue = queue;
+}
+
+void ComputeContext::restoreDefaultQueue() {
+    currentQueue = defaultQueue;
+}
+
 void ComputeContext::addForce(ComputeForceInfo* force) {
     forces.push_back(force);
 }

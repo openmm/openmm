@@ -1,3 +1,6 @@
+#ifndef OPENMM_CUSTOMVOLUMEFORCEIMPL_H_
+#define OPENMM_CUSTOMVOLUMEFORCEIMPL_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,9 +32,36 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLTests.h"
-#include "TestMonteCarloAnisotropicBarostat.h"
+#include "CustomCPPForceImpl.h"
+#include "openmm/CustomVolumeForce.h"
+#include "lepton/CompiledExpression.h"
+#include <string>
 
-void runPlatformTests() {
-    testLJPressure();
-}
+namespace OpenMM {
+
+/**
+ * This is the internal implementation of CustomVolumeForce.
+ */
+
+class CustomVolumeForceImpl : public CustomCPPForceImpl {
+public:
+    CustomVolumeForceImpl(const CustomVolumeForce& owner);
+    void initialize(ContextImpl& context);
+    const CustomVolumeForce& getOwner() const {
+        return owner;
+    }
+    double computeForce(ContextImpl& context, const std::vector<Vec3>& positions, std::vector<Vec3>& forces);
+    std::map<std::string, double> getDefaultParameters();
+private:
+    const CustomVolumeForce& owner;
+    std::map<std::string, double> defaultParameters;
+    Lepton::CompiledExpression energyExpression;
+    std::vector<std::string> globalParameterNames;
+    std::vector<double> globalValues;
+    Vec3 a, b, c;
+    double volume;
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_CUSTOMVOLUMEFORCEIMPL_H_*/

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015 Stanford University and the Authors.           *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,9 +29,49 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLTests.h"
-#include "TestMonteCarloAnisotropicBarostat.h"
+#include "openmm/CustomVolumeForce.h"
+#include "openmm/internal/AssertionUtilities.h"
+#include "openmm/internal/CustomVolumeForceImpl.h"
 
-void runPlatformTests() {
-    testLJPressure();
+using namespace OpenMM;
+using namespace std;
+
+CustomVolumeForce::CustomVolumeForce(const string& energy) : energyExpression(energy) {
+}
+
+const string& CustomVolumeForce::getEnergyFunction() const {
+    return energyExpression;
+}
+
+void CustomVolumeForce::setEnergyFunction(const std::string& energy) {
+    energyExpression = energy;
+}
+
+int CustomVolumeForce::addGlobalParameter(const string& name, double defaultValue) {
+    globalParameters.push_back(GlobalParameterInfo(name, defaultValue));
+    return globalParameters.size()-1;
+}
+
+const string& CustomVolumeForce::getGlobalParameterName(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    return globalParameters[index].name;
+}
+
+void CustomVolumeForce::setGlobalParameterName(int index, const string& name) {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    globalParameters[index].name = name;
+}
+
+double CustomVolumeForce::getGlobalParameterDefaultValue(int index) const {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    return globalParameters[index].defaultValue;
+}
+
+void CustomVolumeForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    ASSERT_VALID_INDEX(index, globalParameters);
+    globalParameters[index].defaultValue = defaultValue;
+}
+
+ForceImpl* CustomVolumeForce::createImpl() const {
+    return new CustomVolumeForceImpl(*this);
 }

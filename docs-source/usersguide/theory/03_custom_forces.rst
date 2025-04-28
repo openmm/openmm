@@ -413,6 +413,21 @@ be used as a collective variable.  The energy is then computed as
 where *f*\ (...) is a user supplied mathematical expression of the collective
 variables.  It also may depend on user defined global parameters.
 
+CustomVolumeForce
+*****************
+
+CustomVolumeForce computes an energy that depends only on the box vectors
+defining the periodic box (see Section :numref:`periodic-boundary-conditions`).
+
+.. math::
+   E = f(\mathbf{a}, \mathbf{b}, \mathbf{c})
+
+Because the energy does not depend on particle positions, it does not apply any
+forces to particles.  It is primarily useful for constant pressure simulations,
+where the volume-dependent energy can influence the behavior of the barostat.
+Energy terms of this sort are often used for pressure matching in coarse grained
+force fields.
+
 ATMForce
 ********
 

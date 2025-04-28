@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -24,18 +24,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLEvent.h"
-#include "OpenCLQueue.h"
+#include "HipQueue.h"
+#include "HipContext.h"
+#include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 
-OpenCLEvent::OpenCLEvent(OpenCLContext& context) : context(context) {
+HipQueue::HipQueue(hipStream_t stream) : stream(stream), initialized(false) {
 }
 
-void OpenCLEvent::enqueue() {
-    dynamic_cast<OpenCLQueue*>(context.getCurrentQueue().get())->getQueue().enqueueMarkerWithWaitList(NULL, &event);
+HipQueue::HipQueue() : initialized(false) {
+    hipError_t result = hipStreamCreateWithFlags(&stream, hipStreamNonBlocking);
+    if (result != hipSuccess)
+        throw OpenMMException("Error creating HIP stream: "+HipContext::getErrorString(result));
+    initialized = true;
 }
 
-void OpenCLEvent::wait() {
-    event.wait();
+HipQueue::~HipQueue() {
+    if (initialized)
+        hipStreamDestroy(stream);
 }

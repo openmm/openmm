@@ -1,3 +1,6 @@
+#ifndef OPENMM_OPENCLQUEUE_H_
+#define OPENMM_OPENCLQUEUE_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -24,18 +27,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLEvent.h"
-#include "OpenCLQueue.h"
+#include "openmm/common/ComputeQueue.h"
+#include "opencl.hpp"
 
-using namespace OpenMM;
+namespace OpenMM {
 
-OpenCLEvent::OpenCLEvent(OpenCLContext& context) : context(context) {
-}
+/**
+ * This is the OpenCL implementation of the ComputeQueue interface.  It wraps a cl::CommandQueue.
+ */
 
-void OpenCLEvent::enqueue() {
-    dynamic_cast<OpenCLQueue*>(context.getCurrentQueue().get())->getQueue().enqueueMarkerWithWaitList(NULL, &event);
-}
+class OpenCLQueue : public ComputeQueueImpl {
+public:
+    /**
+     * Create an OpenCLQueue that wraps a cl::CommandQueue.
+     */
+    OpenCLQueue(cl::CommandQueue queue) : queue(queue) {
+    }
+    /**
+     * Get the cl::CommandQueue.
+     */
+    cl::CommandQueue getQueue() {
+        return queue;
+    }
+private:
+    cl::CommandQueue queue;
+};
 
-void OpenCLEvent::wait() {
-    event.wait();
-}
+} // namespace OpenMM
+
+#endif /*OPENMM_OPENCLQUEUE_H_*/

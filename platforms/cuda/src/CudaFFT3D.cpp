@@ -64,16 +64,12 @@ CudaFFT3D::~CudaFFT3D() {
     }
 }
 
-void CudaFFT3D::setStream(CUstream stream) {
-    cufftSetStream(fftForward, stream);
-    cufftSetStream(fftBackward, stream);
-}
-
 void CudaFFT3D::execFFT(ArrayInterface& in, ArrayInterface& out, bool forward) {
     CUdeviceptr in2 = context.unwrap(in).getDevicePointer();
     CUdeviceptr out2 = context.unwrap(out).getDevicePointer();
     cufftResult result;
     if (forward) {
+        cufftSetStream(fftForward, context.getCurrentStream());
         if (realToComplex) {
             if (context.getUseDoublePrecision())
                 result = cufftExecD2Z(fftForward, (double*) in2, (double2*) out2);
@@ -88,6 +84,7 @@ void CudaFFT3D::execFFT(ArrayInterface& in, ArrayInterface& out, bool forward) {
         }
     }
     else {
+        cufftSetStream(fftBackward, context.getCurrentStream());
         if (realToComplex) {
             if (context.getUseDoublePrecision())
                 result = cufftExecZ2D(fftBackward, (double2*) in2, (double*) out2);

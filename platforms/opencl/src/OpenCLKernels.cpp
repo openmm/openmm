@@ -36,6 +36,7 @@
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLKernelSources.h"
+#include "OpenCLQueue.h"
 #include "SimTKOpenMMRealType.h"
 #include "SimTKOpenMMUtilities.h"
 #include <algorithm>
@@ -200,18 +201,18 @@ private:
 
 class OpenCLCalcNonbondedForceKernel::SyncQueuePreComputation : public OpenCLContext::ForcePreComputation {
 public:
-    SyncQueuePreComputation(OpenCLContext& cl, cl::CommandQueue queue, int forceGroup) : cl(cl), queue(queue), forceGroup(forceGroup) {
+    SyncQueuePreComputation(OpenCLContext& cl, ComputeQueue queue, int forceGroup) : cl(cl), queue(queue), forceGroup(forceGroup) {
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
             vector<cl::Event> events(1);
             cl.getQueue().enqueueMarkerWithWaitList(NULL, &events[0]);
-            queue.enqueueBarrierWithWaitList(&events);
+            dynamic_cast<OpenCLQueue*>(queue.get())->getQueue().enqueueBarrierWithWaitList(&events);
         }
     }
 private:
     OpenCLContext& cl;
-    cl::CommandQueue queue;
+    ComputeQueue queue;
     int forceGroup;
 };
 
@@ -498,7 +499,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 usePmeQueue = (!cl.getPlatformData().disablePmeStream && !cl.getPlatformData().useCpuPme && isNvidia);
                 if (usePmeQueue) {
                     pmeDefines["USE_PME_STREAM"] = "1";
-                    pmeQueue = cl::CommandQueue(cl.getContext(), cl.getDevice());
+                    pmeQueue = cl.createQueue();
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
@@ -939,7 +940,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         if (usePmeQueue) {
             vector<cl::Event> events(1);
             cl.getQueue().enqueueMarkerWithWaitList(NULL, &events[0]);
-            pmeQueue.enqueueBarrierWithWaitList(&events);
+            dynamic_cast<OpenCLQueue*>(pmeQueue.get())->getQueue().enqueueBarrierWithWaitList(&events);
         }
         if (hasOffsets) {
             // The Ewald self energy was computed in the kernel.
@@ -977,7 +978,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     }
     if (pmeGrid1.isInitialized() && includeReciprocal) {
         if (usePmeQueue && !includeEnergy)
-            cl.setQueue(pmeQueue);
+            cl.setCurrentQueue(pmeQueue);
         
         // Invert the periodic box vectors.
         
