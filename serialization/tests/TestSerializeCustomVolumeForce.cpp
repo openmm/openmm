@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,57 +29,51 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CompoundIntegrator.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomCentroidBondForce.h"
-#include "openmm/CustomCompoundBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomCVForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomIntegrator.h"
-#include "openmm/CustomManyParticleForce.h"
-#include "openmm/CustomNonbondedForce.h"
+#include "openmm/internal/AssertionUtilities.h"
 #include "openmm/CustomVolumeForce.h"
-#include "openmm/DPDIntegrator.h"
-#include "openmm/Force.h"
-#include "openmm/GayBerneForce.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LangevinMiddleIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloAnisotropicBarostat.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/MonteCarloFlexibleBarostat.h"
-#include "openmm/MonteCarloMembraneBarostat.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Context.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/RMSDForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/TabulatedFunction.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/NoseHooverIntegrator.h"
-#include "openmm/NoseHooverChain.h"
-#include "openmm/VirtualSite.h"
-#include "openmm/Platform.h"
 #include "openmm/serialization/XmlSerializer.h"
-#include "openmm/ATMForce.h"
+#include <iostream>
+#include <sstream>
 
-#endif /*OPENMM_H_*/
+using namespace OpenMM;
+using namespace std;
+
+void testSerialization() {
+    // Create a Force.
+
+    CustomVolumeForce force("2*v-by");
+    force.setForceGroup(3);
+    force.setName("custom name");
+    force.addGlobalParameter("x", 1.3);
+    force.addGlobalParameter("y", 2.221);
+
+    // Serialize and then deserialize it.
+
+    stringstream buffer;
+    XmlSerializer::serialize<CustomVolumeForce>(&force, "Force", buffer);
+    CustomVolumeForce* copy = XmlSerializer::deserialize<CustomVolumeForce>(buffer);
+
+    // Compare the two forces to see if they are identical.
+
+    CustomVolumeForce& force2 = *copy;
+    ASSERT_EQUAL(force.getForceGroup(), force2.getForceGroup());
+    ASSERT_EQUAL(force.getName(), force2.getName());
+    ASSERT_EQUAL(force.getEnergyFunction(), force2.getEnergyFunction());
+    ASSERT_EQUAL(force.getNumGlobalParameters(), force2.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        ASSERT_EQUAL(force.getGlobalParameterName(i), force2.getGlobalParameterName(i));
+        ASSERT_EQUAL(force.getGlobalParameterDefaultValue(i), force2.getGlobalParameterDefaultValue(i));
+    }
+}
+
+int main() {
+    try {
+        testSerialization();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
+}
