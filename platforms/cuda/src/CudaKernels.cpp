@@ -543,9 +543,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
 
                 if (usePmeStream) {
                     pmeQueue = cu.createQueue();
-                    fft->setStream(dynamic_cast<CudaQueue*>(pmeQueue.get())->getStream());
-                    if (doLJPME)
-                        dispersionFft->setStream(dynamic_cast<CudaQueue*>(pmeQueue.get())->getStream());
                     CHECK_RESULT(cuEventCreate(&pmeSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     CHECK_RESULT(cuEventCreate(&paramsSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
