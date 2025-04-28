@@ -87,7 +87,7 @@ public:
     /**
      * Sort an array.
      */
-    void sort(OpenCLArray& data);
+    void sort(ArrayInterface& data);
 private:
     OpenCLContext& context;
     SortTrait* trait;
@@ -137,7 +137,7 @@ public:
      */
     virtual const char* getMaxValue() const = 0;
     /**
-     * Get the CUDA code to select the key from the data value.
+     * Get the source code to select the key from the data value.
      */
     virtual const char* getSortKey() const = 0;
 };

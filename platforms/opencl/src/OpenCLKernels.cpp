@@ -169,7 +169,7 @@ public:
 private:
     OpenCLContext& cl;
     vector<mm_float4> posq;
-    OpenCLArray forceTemp;
+    ComputeArray forceTemp;
     ComputeKernel addForcesKernel;
 };
 
@@ -218,7 +218,7 @@ private:
 
 class OpenCLCalcNonbondedForceKernel::SyncQueuePostComputation : public OpenCLContext::ForcePostComputation {
 public:
-    SyncQueuePostComputation(OpenCLContext& cl, ComputeEvent event, OpenCLArray& pmeEnergyBuffer, int forceGroup) : cl(cl), event(event),
+    SyncQueuePostComputation(OpenCLContext& cl, ComputeEvent event, ComputeArray& pmeEnergyBuffer, int forceGroup) : cl(cl), event(event),
             pmeEnergyBuffer(pmeEnergyBuffer), forceGroup(forceGroup) {
     }
     void setKernel(ComputeKernel kernel) {
@@ -239,7 +239,7 @@ private:
     OpenCLContext& cl;
     ComputeEvent event;
     ComputeKernel addEnergyKernel;
-    OpenCLArray& pmeEnergyBuffer;
+    ComputeArray& pmeEnergyBuffer;
     int forceGroup;
 };
 
@@ -399,15 +399,15 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         // Compute the PME parameters.
 
         NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ, false);
-        gridSizeX = OpenCLFFT3D::findLegalDimension(gridSizeX);
-        gridSizeY = OpenCLFFT3D::findLegalDimension(gridSizeY);
-        gridSizeZ = OpenCLFFT3D::findLegalDimension(gridSizeZ);
+        gridSizeX = cl.findLegalFFTDimension(gridSizeX);
+        gridSizeY = cl.findLegalFFTDimension(gridSizeY);
+        gridSizeZ = cl.findLegalFFTDimension(gridSizeZ);
         if (doLJPME) {
             NonbondedForceImpl::calcPMEParameters(system, force, dispersionAlpha, dispersionGridSizeX,
                                                   dispersionGridSizeY, dispersionGridSizeZ, true);
-            dispersionGridSizeX = OpenCLFFT3D::findLegalDimension(dispersionGridSizeX);
-            dispersionGridSizeY = OpenCLFFT3D::findLegalDimension(dispersionGridSizeY);
-            dispersionGridSizeZ = OpenCLFFT3D::findLegalDimension(dispersionGridSizeZ);
+            dispersionGridSizeX = cl.findLegalFFTDimension(dispersionGridSizeX);
+            dispersionGridSizeY = cl.findLegalFFTDimension(dispersionGridSizeY);
+            dispersionGridSizeZ = cl.findLegalFFTDimension(dispersionGridSizeZ);
         }
         defines["EWALD_ALPHA"] = cl.doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = cl.doubleToString(2.0/sqrt(M_PI));
@@ -512,7 +512,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
                 for (int grid = 0; grid < 2; grid++) {
                     int xsize, ysize, zsize;
-                    OpenCLArray *xmoduli, *ymoduli, *zmoduli;
+                    ComputeArray *xmoduli, *ymoduli, *zmoduli;
                     if (grid == 0) {
                         xsize = gridSizeX;
                         ysize = gridSizeY;
@@ -643,12 +643,12 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         replacements["CHARGE2"] = prefix+"charge2";
     }
     if (hasCoulomb && !usePosqCharges)
-        cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"charge", "real", 1, charges.getElementSize(), charges.getDeviceBuffer()));
+        cl.getNonbondedUtilities().addParameter(ComputeParameterInfo(charges, prefix+"charge", "real", 1));
     sigmaEpsilon.initialize<mm_float2>(cl, cl.getPaddedNumAtoms(), "sigmaEpsilon");
     if (hasLJ) {
         replacements["SIGMA_EPSILON1"] = prefix+"sigmaEpsilon1";
         replacements["SIGMA_EPSILON2"] = prefix+"sigmaEpsilon2";
-        cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"sigmaEpsilon", "float", 2, sizeof(cl_float2), sigmaEpsilon.getDeviceBuffer()));
+        cl.getNonbondedUtilities().addParameter(ComputeParameterInfo(sigmaEpsilon, prefix+"sigmaEpsilon", "float", 2));
     }
     source = cl.replaceStrings(source, replacements);
     if (force.getIncludeDirectSpace())
@@ -839,7 +839,10 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             for (int i = 0; i < 3; i++)
                 pmeConvolutionKernel->addArg();
             pmeEvalEnergyKernel->addArg(pmeGrid2);
-            pmeEvalEnergyKernel->addArg(usePmeQueue ? pmeEnergyBuffer : cl.getEnergyBuffer());
+            if (usePmeQueue)
+                pmeEvalEnergyKernel->addArg(pmeEnergyBuffer);
+            else
+                pmeEvalEnergyKernel->addArg(cl.getEnergyBuffer());
             pmeEvalEnergyKernel->addArg(pmeBsplineModuliX);
             pmeEvalEnergyKernel->addArg(pmeBsplineModuliY);
             pmeEvalEnergyKernel->addArg(pmeBsplineModuliZ);
@@ -892,7 +895,10 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 for (int i = 0; i < 3; i++)
                     pmeDispersionConvolutionKernel->addArg();
                 pmeDispersionEvalEnergyKernel->addArg(pmeGrid2);
-                pmeDispersionEvalEnergyKernel->addArg(usePmeQueue ? pmeEnergyBuffer : cl.getEnergyBuffer());
+                if (usePmeQueue)
+                    pmeDispersionEvalEnergyKernel->addArg(pmeEnergyBuffer);
+                else
+                    pmeDispersionEvalEnergyKernel->addArg(cl.getEnergyBuffer());
                 pmeDispersionEvalEnergyKernel->addArg(pmeDispersionBsplineModuliX);
                 pmeDispersionEvalEnergyKernel->addArg(pmeDispersionBsplineModuliY);
                 pmeDispersionEvalEnergyKernel->addArg(pmeDispersionBsplineModuliZ);

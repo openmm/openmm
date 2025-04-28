@@ -28,13 +28,13 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLPlatform.h"
-#include "OpenCLArray.h"
 #include "OpenCLContext.h"
-#include "OpenCLFFT3D.h"
 #include "OpenCLSort.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "openmm/common/CommonKernels.h"
+#include "openmm/common/ComputeArray.h"
+#include "openmm/common/FFT3D.h"
 
 namespace OpenMM {
 
@@ -158,37 +158,37 @@ private:
     OpenCLContext& cl;
     ForceInfo* info;
     bool hasInitializedKernel;
-    OpenCLArray charges;
-    OpenCLArray sigmaEpsilon;
-    OpenCLArray exceptionParams;
-    OpenCLArray exclusionAtoms;
-    OpenCLArray exclusionParams;
-    OpenCLArray baseParticleParams;
-    OpenCLArray baseExceptionParams;
-    OpenCLArray particleParamOffsets;
-    OpenCLArray exceptionParamOffsets;
-    OpenCLArray particleOffsetIndices;
-    OpenCLArray exceptionOffsetIndices;
-    OpenCLArray globalParams;
-    OpenCLArray cosSinSums;
-    OpenCLArray pmeGrid1;
-    OpenCLArray pmeGrid2;
-    OpenCLArray pmeBsplineModuliX;
-    OpenCLArray pmeBsplineModuliY;
-    OpenCLArray pmeBsplineModuliZ;
-    OpenCLArray pmeDispersionBsplineModuliX;
-    OpenCLArray pmeDispersionBsplineModuliY;
-    OpenCLArray pmeDispersionBsplineModuliZ;
-    OpenCLArray pmeBsplineTheta;
-    OpenCLArray pmeAtomRange;
-    OpenCLArray pmeAtomGridIndex;
-    OpenCLArray pmeEnergyBuffer;
-    OpenCLArray chargeBuffer;
+    ComputeArray charges;
+    ComputeArray sigmaEpsilon;
+    ComputeArray exceptionParams;
+    ComputeArray exclusionAtoms;
+    ComputeArray exclusionParams;
+    ComputeArray baseParticleParams;
+    ComputeArray baseExceptionParams;
+    ComputeArray particleParamOffsets;
+    ComputeArray exceptionParamOffsets;
+    ComputeArray particleOffsetIndices;
+    ComputeArray exceptionOffsetIndices;
+    ComputeArray globalParams;
+    ComputeArray cosSinSums;
+    ComputeArray pmeGrid1;
+    ComputeArray pmeGrid2;
+    ComputeArray pmeBsplineModuliX;
+    ComputeArray pmeBsplineModuliY;
+    ComputeArray pmeBsplineModuliZ;
+    ComputeArray pmeDispersionBsplineModuliX;
+    ComputeArray pmeDispersionBsplineModuliY;
+    ComputeArray pmeDispersionBsplineModuliZ;
+    ComputeArray pmeBsplineTheta;
+    ComputeArray pmeAtomRange;
+    ComputeArray pmeAtomGridIndex;
+    ComputeArray pmeEnergyBuffer;
+    ComputeArray chargeBuffer;
     OpenCLSort* sort;
     ComputeQueue pmeQueue;
     ComputeEvent pmeSyncEvent;
-    OpenCLFFT3D* fft;
-    OpenCLFFT3D* dispersionFft;
+    FFT3D* fft;
+    FFT3D* dispersionFft;
     Kernel cpuPme;
     PmeIO* pmeio;
     SyncQueuePostComputation* syncQueue;
