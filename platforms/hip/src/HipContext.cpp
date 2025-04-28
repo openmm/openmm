@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -32,12 +32,13 @@
 #include "HipArray.h"
 #include "HipBondedUtilities.h"
 #include "HipEvent.h"
+#include "HipFFT3D.h"
 #include "HipIntegrationUtilities.h"
 #include "HipKernels.h"
 #include "HipKernelSources.h"
 #include "HipNonbondedUtilities.h"
 #include "HipProgram.h"
-#include "HipFFT3D.h"
+#include "HipQueue.h"
 #include "openmm/common/ComputeArray.h"
 #include "openmm/common/ContextSelector.h"
 #include "SHA1.h"
@@ -86,7 +87,7 @@ bool HipContext::hasInitializedHip = false;
 
 
 HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& tempDir, HipPlatform::PlatformData& platformData,
-        HipContext* originalContext) : ComputeContext(system), currentStream(0), defaultStream(0), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
+        HipContext* originalContext) : ComputeContext(system), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
         pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL),
         useBlockingSync(useBlockingSync), supportsHardwareFloatGlobalAtomicAdd(false) {
     if (!hasInitializedHip) {
@@ -149,15 +150,15 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
             else
                 throw OpenMMException("No compatible HIP device is available");
         }
-        CHECK_RESULT(hipStreamCreateWithFlags(&defaultStream, hipStreamNonBlocking));
+        defaultQueue = shared_ptr<ComputeQueueImpl>(new HipQueue());
     }
     else {
         isLinkedContext = true;
         this->deviceIndex = originalContext->deviceIndex;
         this->device = originalContext->device;
-        defaultStream = originalContext->defaultStream;
+        defaultQueue = originalContext->defaultQueue;
     }
-    currentStream = defaultStream;
+    currentQueue = defaultQueue;
 
     hipDeviceProp_t props;
     CHECK_RESULT(hipGetDeviceProperties(&props, device));
@@ -373,8 +374,6 @@ HipContext::~HipContext() {
         delete nonbonded;
     for (auto module : loadedModules)
         hipModuleUnload(module);
-    if (!isLinkedContext)
-        hipStreamDestroy(defaultStream);
     popAsCurrent();
     contextIsValid = false;
 }
@@ -676,16 +675,12 @@ double& HipContext::getEnergyWorkspace() {
     return platformData.contextEnergy[contextIndex];
 }
 
+ComputeQueue HipContext::createQueue() {
+    return shared_ptr<ComputeQueueImpl>(new HipQueue());
+}
+
 hipStream_t HipContext::getCurrentStream() {
-    return currentStream;
-}
-
-void HipContext::setCurrentStream(hipStream_t stream) {
-    currentStream = stream;
-}
-
-void HipContext::restoreDefaultStream() {
-    currentStream = defaultStream;
+    return dynamic_cast<HipQueue*>(currentQueue.get())->getStream();
 }
 
 HipArray* HipContext::createArray() {
@@ -729,7 +724,7 @@ void HipContext::executeKernel(hipFunction_t kernel, void** arguments, int threa
     if (blockSize == -1)
         blockSize = ThreadBlockSize;
     int gridSize = std::min((threads+blockSize-1)/blockSize, numThreadBlocks);
-    hipError_t result = hipModuleLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, currentStream, arguments, NULL);
+    hipError_t result = hipModuleLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, getCurrentStream(), arguments, NULL);
     if (result != hipSuccess) {
         stringstream str;
         str<<"Error invoking kernel: "<<getErrorString(result)<<" ("<<result<<")";
@@ -741,7 +736,7 @@ void HipContext::executeKernelFlat(hipFunction_t kernel, void** arguments, int t
     if (blockSize == -1)
         blockSize = ThreadBlockSize;
     int gridSize = (threads+blockSize-1)/blockSize;
-    hipError_t result = hipModuleLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, currentStream, arguments, NULL);
+    hipError_t result = hipModuleLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, getCurrentStream(), arguments, NULL);
     if (result != hipSuccess) {
         stringstream str;
         str<<"Error invoking kernel: "<<getErrorString(result)<<" ("<<result<<")";

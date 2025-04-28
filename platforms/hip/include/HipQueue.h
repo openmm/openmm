@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAQUEUE_H_
-#define OPENMM_CUDAQUEUE_H_
+#ifndef OPENMM_HIPQUEUE_H_
+#define OPENMM_HIPQUEUE_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -28,36 +28,36 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/common/ComputeQueue.h"
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 namespace OpenMM {
 
 /**
- * This is the CUDA implementation of the ComputeQueue interface.  It wraps a CUstream.
+ * This is the HIP implementation of the ComputeQueue interface.  It wraps a hipStream_t.
  */
 
-class CudaQueue : public ComputeQueueImpl {
+class HipQueue : public ComputeQueueImpl {
 public:
     /**
-     * Create a CudaQueue that wraps an existing CUstream.
+     * Create a HipQueue that wraps an existing hipStream_t.
      */
-    CudaQueue(CUstream stream);
+    HipQueue(hipStream_t stream);
     /**
-     * Create a CudaQueue that create a new CUstream.
+     * Create a HipQueue that create a new hipStream_t.
      */
-    CudaQueue();
-    ~CudaQueue();
+    HipQueue();
+    ~HipQueue();
     /**
      * Get the CUstream.
      */
-    CUstream getStream() {
+    hipStream_t getStream() {
         return stream;
     }
 private:
-    CUstream stream;
+    hipStream_t stream;
     bool initialized;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAQUEUE_H_*/
+#endif /*OPENMM_HIPQUEUE_H_*/

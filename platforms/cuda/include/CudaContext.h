@@ -584,7 +584,6 @@ private:
     std::map<std::string, std::string> compilationDefines;
     CUcontext context;
     CUdevice device;
-    CUstream currentStream;
     CUfunction clearBufferKernel;
     CUfunction clearTwoBuffersKernel;
     CUfunction clearThreeBuffersKernel;

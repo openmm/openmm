@@ -1,6 +1,3 @@
-#ifndef OPENMM_CUDAQUEUE_H_
-#define OPENMM_CUDAQUEUE_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -27,37 +24,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/common/ComputeQueue.h"
-#include <cuda.h>
+#include "HipQueue.h"
+#include "HipContext.h"
+#include "openmm/OpenMMException.h"
 
-namespace OpenMM {
+using namespace OpenMM;
 
-/**
- * This is the CUDA implementation of the ComputeQueue interface.  It wraps a CUstream.
- */
+HipQueue::HipQueue(hipStream_t stream) : stream(stream), initialized(false) {
+}
 
-class CudaQueue : public ComputeQueueImpl {
-public:
-    /**
-     * Create a CudaQueue that wraps an existing CUstream.
-     */
-    CudaQueue(CUstream stream);
-    /**
-     * Create a CudaQueue that create a new CUstream.
-     */
-    CudaQueue();
-    ~CudaQueue();
-    /**
-     * Get the CUstream.
-     */
-    CUstream getStream() {
-        return stream;
-    }
-private:
-    CUstream stream;
-    bool initialized;
-};
+HipQueue::HipQueue() : initialized(false) {
+    hipError_t result = hipStreamCreateWithFlags(&stream, hipStreamNonBlocking);
+    if (result != hipSuccess)
+        throw OpenMMException("Error creating HIP stream: "+HipContext::getErrorString(result));
+    initialized = true;
+}
 
-} // namespace OpenMM
-
-#endif /*OPENMM_CUDAQUEUE_H_*/
+HipQueue::~HipQueue() {
+    if (initialized)
+        hipStreamDestroy(stream);
+}
