@@ -185,7 +185,7 @@ private:
     CudaSort* sort;
     Kernel cpuPme;
     PmeIO* pmeio;
-    CUstream pmeStream;
+    ComputeQueue pmeQueue;
     CUevent pmeSyncEvent, paramsSyncEvent;
     CudaFFT3D* fft;
     CudaFFT3D* dispersionFft;

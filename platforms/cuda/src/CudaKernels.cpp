@@ -207,17 +207,17 @@ private:
 
 class CudaCalcNonbondedForceKernel::SyncStreamPreComputation : public CudaContext::ForcePreComputation {
 public:
-    SyncStreamPreComputation(CudaContext& cu, CUstream stream, CUevent event, int forceGroup) : cu(cu), stream(stream), event(event), forceGroup(forceGroup) {
+    SyncStreamPreComputation(CudaContext& cu, ComputeQueue queue, CUevent event, int forceGroup) : cu(cu), queue(queue), event(event), forceGroup(forceGroup) {
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
             cuEventRecord(event, cu.getCurrentStream());
-            cuStreamWaitEvent(stream, event, 0);
+            cuStreamWaitEvent(dynamic_cast<CudaQueue*>(queue.get())->getStream(), event, 0);
         }
     }
 private:
     CudaContext& cu;
-    CUstream stream;
+    ComputeQueue queue;
     CUevent event;
     int forceGroup;
 };
@@ -256,8 +256,6 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
         delete dispersionFft;
     if (pmeio != NULL)
         delete pmeio;
-    if (hasInitializedFFT && usePmeStream)
-        cuStreamDestroy(pmeStream);
 }
 
 void CudaCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
@@ -544,16 +542,16 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 // Prepare for doing PME on its own stream.
 
                 if (usePmeStream) {
-                    cuStreamCreate(&pmeStream, CU_STREAM_NON_BLOCKING);
-                    fft->setStream(pmeStream);
+                    pmeQueue = cu.createQueue();
+                    fft->setStream(dynamic_cast<CudaQueue*>(pmeQueue.get())->getStream());
                     if (doLJPME)
-                        dispersionFft->setStream(pmeStream);
+                        dispersionFft->setStream(dynamic_cast<CudaQueue*>(pmeQueue.get())->getStream());
                     CHECK_RESULT(cuEventCreate(&pmeSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     CHECK_RESULT(cuEventCreate(&paramsSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
-                    cu.addPreComputation(new SyncStreamPreComputation(cu, pmeStream, pmeSyncEvent, recipForceGroup));
+                    cu.addPreComputation(new SyncStreamPreComputation(cu, pmeQueue, pmeSyncEvent, recipForceGroup));
                     cu.addPostComputation(new SyncStreamPostComputation(cu, pmeSyncEvent, cu.getKernel(module, "addEnergy"), pmeEnergyBuffer, recipForceGroup));
                 }
                 hasInitializedFFT = true;
@@ -857,7 +855,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
         }
         if (usePmeStream) {
             cuEventRecord(paramsSyncEvent, cu.getCurrentStream());
-            cuStreamWaitEvent(pmeStream, paramsSyncEvent, 0);
+            cuStreamWaitEvent(dynamic_cast<CudaQueue*>(pmeQueue.get())->getStream(), paramsSyncEvent, 0);
         }
         if (hasOffsets) {
             // The Ewald self energy was computed in the kernel.
@@ -893,7 +891,7 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
     }
     if (pmeGrid1.isInitialized() && includeReciprocal) {
         if (usePmeStream)
-            cu.setCurrentStream(pmeStream);
+            cu.setCurrentQueue(pmeQueue);
 
         // Invert the periodic box vectors.
 
@@ -1015,8 +1013,8 @@ double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeF
             cu.executeKernel(pmeInterpolateDispersionForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
         }
         if (usePmeStream) {
-            cuEventRecord(pmeSyncEvent, pmeStream);
-            cu.restoreDefaultStream();
+            cuEventRecord(pmeSyncEvent, dynamic_cast<CudaQueue*>(pmeQueue.get())->getStream());
+            cu.restoreDefaultQueue();
         }
     }
 

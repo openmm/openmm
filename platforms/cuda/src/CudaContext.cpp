@@ -84,7 +84,7 @@ const int CudaContext::TileSize = sizeof(tileflags)*8;
 bool CudaContext::hasInitializedCuda = false;
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& tempDir, CudaPlatform::PlatformData& platformData,
-        CudaContext* originalContext) : ComputeContext(system), currentStream(0), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
+        CudaContext* originalContext) : ComputeContext(system), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
         pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), useBlockingSync(useBlockingSync) {
     int cudaDriverVersion;
     cuDriverGetVersion(&cudaDriverVersion);
@@ -200,6 +200,8 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
             CHECK_RESULT(cuCtxEnablePeerAccess(platformData.contexts[0]->getContext(), 0));
         }
     }
+    defaultQueue = shared_ptr<ComputeQueueImpl>(new CudaQueue(0));
+    currentQueue = defaultQueue;
     numAtoms = system.getNumParticles();
     paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
@@ -649,16 +651,12 @@ double& CudaContext::getEnergyWorkspace() {
     return platformData.contextEnergy[contextIndex];
 }
 
+ComputeQueue CudaContext::createQueue() {
+    return shared_ptr<ComputeQueueImpl>(new CudaQueue());
+}
+
 CUstream CudaContext::getCurrentStream() {
-    return currentStream;
-}
-
-void CudaContext::setCurrentStream(CUstream stream) {
-    currentStream = stream;
-}
-
-void CudaContext::restoreDefaultStream() {
-    setCurrentStream(0);
+    return dynamic_cast<CudaQueue*>(currentQueue.get())->getStream();
 }
 
 CudaArray* CudaContext::createArray() {
@@ -697,7 +695,7 @@ void CudaContext::executeKernel(CUfunction kernel, void** arguments, int threads
     if (blockSize == -1)
         blockSize = ThreadBlockSize;
     int gridSize = std::min((threads+blockSize-1)/blockSize, numThreadBlocks);
-    CUresult result = cuLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, currentStream, arguments, NULL);
+    CUresult result = cuLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, getCurrentStream(), arguments, NULL);
     if (result != CUDA_SUCCESS) {
         stringstream str;
         str<<"Error invoking kernel: "<<getErrorString(result)<<" ("<<result<<")";

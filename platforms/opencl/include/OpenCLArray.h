@@ -188,6 +188,10 @@ public:
      */
     ComputeContext& getContext();
     /**
+     * Get the queue in which to perform transfers.
+     */
+    cl::CommandQueue getQueue() const;
+    /**
      * Get the OpenCL Buffer object.
      */
     cl::Buffer& getDeviceBuffer() {

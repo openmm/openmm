@@ -46,6 +46,7 @@
 #include "CudaIntegrationUtilities.h"
 #include "CudaNonbondedUtilities.h"
 #include "CudaPlatform.h"
+#include "CudaQueue.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/common/ComputeContext.h"
 #include "openmm/Kernel.h"
@@ -159,17 +160,13 @@ public:
      */
     double& getEnergyWorkspace();
     /**
+     * Create a new ComputeQueue for use with this context.
+     */
+    ComputeQueue createQueue();
+    /**
      * Get the stream currently being used for execution.
      */
     CUstream getCurrentStream();
-    /**
-     * Set the stream to use for execution.
-     */
-    void setCurrentStream(CUstream stream);
-    /**
-     * Reset the context to using the default stream for execution.
-     */
-    void restoreDefaultStream();
     /**
      * Construct an uninitialized array of the appropriate class for this platform.  The returned
      * value should be created on the heap with the "new" operator.
