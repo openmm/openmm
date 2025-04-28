@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -24,18 +24,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLEvent.h"
-#include "OpenCLQueue.h"
+#include "CudaQueue.h"
+#include "CudaContext.h"
+#include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 
-OpenCLEvent::OpenCLEvent(OpenCLContext& context) : context(context) {
+CudaQueue::CudaQueue(CUstream stream) : stream(stream), initialized(false) {
 }
 
-void OpenCLEvent::enqueue() {
-    dynamic_cast<OpenCLQueue*>(context.getCurrentQueue().get())->getQueue().enqueueMarkerWithWaitList(NULL, &event);
+CudaQueue::CudaQueue() : initialized(false) {
+    CUresult result = cuStreamCreate(&stream, CU_STREAM_NON_BLOCKING);
+    if (result != CUDA_SUCCESS)
+        throw OpenMMException("Error creating CUDA stream: "+CudaContext::getErrorString(result));
+    initialized = true;
 }
 
-void OpenCLEvent::wait() {
-    event.wait();
+CudaQueue::~CudaQueue() {
+    if (initialized)
+        cuStreamDestroy(stream);
 }

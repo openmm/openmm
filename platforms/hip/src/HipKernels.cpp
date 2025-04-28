@@ -37,6 +37,7 @@
 #include "HipIntegrationUtilities.h"
 #include "HipNonbondedUtilities.h"
 #include "HipKernelSources.h"
+#include "HipQueue.h"
 #include "SimTKOpenMMRealType.h"
 #include "SimTKOpenMMUtilities.h"
 #include <algorithm>
@@ -208,17 +209,17 @@ private:
 
 class HipCalcNonbondedForceKernel::SyncStreamPreComputation : public HipContext::ForcePreComputation {
 public:
-    SyncStreamPreComputation(HipContext& cu, hipStream_t stream, hipEvent_t event, int forceGroup) : cu(cu), stream(stream), event(event), forceGroup(forceGroup) {
+    SyncStreamPreComputation(HipContext& cu, ComputeQueue queue, hipEvent_t event, int forceGroup) : cu(cu), queue(queue), event(event), forceGroup(forceGroup) {
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
             hipEventRecord(event, cu.getCurrentStream());
-            hipStreamWaitEvent(stream, event, 0);
+            hipStreamWaitEvent(dynamic_cast<HipQueue*>(queue.get())->getStream(), event, 0);
         }
     }
 private:
     HipContext& cu;
-    hipStream_t stream;
+    ComputeQueue queue;
     hipEvent_t event;
     int forceGroup;
 };
@@ -259,7 +260,6 @@ HipCalcNonbondedForceKernel::~HipCalcNonbondedForceKernel() {
         delete pmeio;
     if (hasInitializedFFT) {
         if (usePmeStream) {
-            hipStreamDestroy(pmeStream);
             hipEventDestroy(pmeSyncEvent);
             hipEventDestroy(paramsSyncEvent);
         }
@@ -542,17 +542,16 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
                 // Prepare for doing PME on its own stream.
 
                 if (usePmeStream) {
-                    CHECK_RESULT(hipStreamCreateWithFlags(&pmeStream, hipStreamNonBlocking), "Error creating stream for NonbondedForce");
+                    pmeQueue = cu.createQueue();
                     CHECK_RESULT(hipEventCreateWithFlags(&pmeSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     CHECK_RESULT(hipEventCreateWithFlags(&paramsSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
-                    cu.addPreComputation(new SyncStreamPreComputation(cu, pmeStream, pmeSyncEvent, recipForceGroup));
+                    cu.addPreComputation(new SyncStreamPreComputation(cu, pmeQueue, pmeSyncEvent, recipForceGroup));
                     cu.addPostComputation(new SyncStreamPostComputation(cu, pmeSyncEvent, cu.getKernel(module, "addEnergy"), pmeEnergyBuffer, recipForceGroup));
                 }
 
-                hipStream_t fftStream = usePmeStream ? pmeStream : cu.getCurrentStream();
                 fft = cu.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
                 if (doLJPME)
                     dispersionFft = cu.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
@@ -857,7 +856,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         }
         if (usePmeStream) {
             hipEventRecord(paramsSyncEvent, cu.getCurrentStream());
-            hipStreamWaitEvent(pmeStream, paramsSyncEvent, 0);
+            hipStreamWaitEvent(dynamic_cast<HipQueue*>(pmeQueue.get())->getStream(), paramsSyncEvent, 0);
         }
         if (hasOffsets) {
             // The Ewald self energy was computed in the kernel.
@@ -893,7 +892,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     }
     if (pmeGrid1.isInitialized() && includeReciprocal) {
         if (usePmeStream)
-            cu.setCurrentStream(pmeStream);
+            cu.setCurrentQueue(pmeQueue);
 
         // Invert the periodic box vectors.
 
@@ -1015,8 +1014,8 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             cu.executeKernelFlat(pmeInterpolateDispersionForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
         }
         if (usePmeStream) {
-            hipEventRecord(pmeSyncEvent, pmeStream);
-            cu.restoreDefaultStream();
+            hipEventRecord(pmeSyncEvent, dynamic_cast<HipQueue*>(pmeQueue.get())->getStream());
+            cu.restoreDefaultQueue();
         }
     }
 

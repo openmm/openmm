@@ -36,6 +36,7 @@
 #include "openmm/common/ComputeEvent.h"
 #include "openmm/common/ComputeForceInfo.h"
 #include "openmm/common/ComputeProgram.h"
+#include "openmm/common/ComputeQueue.h"
 #include "openmm/common/ComputeVectorTypes.h"
 #include "openmm/common/FFT3D.h"
 #include "openmm/common/IntegrationUtilities.h"
@@ -143,6 +144,22 @@ public:
      * multiple devices.
      */
     virtual double& getEnergyWorkspace() = 0;
+    /**
+     * Create a new ComputeQueue for use with this context.
+     */
+    virtual ComputeQueue createQueue() = 0;
+    /**
+     * Get the ComputeQueue currently being used for execution.
+     */
+    ComputeQueue getCurrentQueue();
+    /**
+     * Set the ComputeQueue to use for execution.
+     */
+    void setCurrentQueue(ComputeQueue queue);
+    /**
+     * Reset the context to using the default queue for execution.
+     */
+    void restoreDefaultQueue();
     /**
      * Construct an uninitialized array of the appropriate class for this platform.  The returned
      * value should be created on the heap with the "new" operator.
@@ -560,6 +577,7 @@ protected:
     int numAtoms, paddedNumAtoms, computeForceCount, stepsSinceReorder;
     long long stepCount;
     bool forceNextReorder, atomsWereReordered, forcesValid;
+    ComputeQueue defaultQueue, currentQueue;
     std::vector<ComputeForceInfo*> forces;
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;

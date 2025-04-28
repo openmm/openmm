@@ -186,7 +186,7 @@ private:
     HipSort* sort;
     Kernel cpuPme;
     PmeIO* pmeio;
-    hipStream_t pmeStream;
+    ComputeQueue pmeQueue;
     hipEvent_t pmeSyncEvent, paramsSyncEvent;
     HipFFT3D* fft;
     HipFFT3D* dispersionFft;

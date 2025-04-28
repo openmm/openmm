@@ -203,17 +203,13 @@ public:
      */
     double& getEnergyWorkspace();
     /**
+     * Create a new ComputeQueue for use with this context.
+     */
+    ComputeQueue createQueue();
+    /*
      * Get the cl::CommandQueue currently being used for execution.
      */
-    cl::CommandQueue& getQueue();
-    /**
-     * Set the cl::ComandQueue to use for execution.
-     */
-    void setQueue(cl::CommandQueue& queue);
-    /**
-     * Reset the context to using the default queue for execution.
-     */
-    void restoreDefaultQueue();
+    cl::CommandQueue getQueue();
     /**
      * Construct an uninitialized array of the appropriate class for this platform.  The returned
      * value should be created on the heap with the "new" operator.
@@ -706,7 +702,6 @@ private:
     std::map<std::string, std::string> compilationDefines;
     cl::Context context;
     cl::Device device;
-    cl::CommandQueue defaultQueue, currentQueue;
     cl::Kernel clearBufferKernel;
     cl::Kernel clearTwoBuffersKernel;
     cl::Kernel clearThreeBuffersKernel;

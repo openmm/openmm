@@ -1,3 +1,6 @@
+#ifndef OPENMM_COMPUTEQUEUE_H_
+#define OPENMM_COMPUTEQUEUE_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -24,18 +27,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLEvent.h"
-#include "OpenCLQueue.h"
+#include "openmm/common/windowsExportCommon.h"
+#include <memory>
 
-using namespace OpenMM;
+namespace OpenMM {
 
-OpenCLEvent::OpenCLEvent(OpenCLContext& context) : context(context) {
-}
+/**
+ * This abstract class represents a queue within which kernels can be executed.  Call
+ * createQueue() on a ComputeContext to create an instance of a platform-specific
+ * subclass.  You can then pass it to the ComputeContext's setQueue() method to cause
+ * kernels to be launched on it.
+ * 
+ * Instead of referring to this class directly, it is best to use ComputeQueue, which is
+ * a typedef for a shared_ptr to a ComputeQueueImpl.  This allows you to treat it as having
+ * value semantics, and frees you from having to manage memory.  
+ */
 
-void OpenCLEvent::enqueue() {
-    dynamic_cast<OpenCLQueue*>(context.getCurrentQueue().get())->getQueue().enqueueMarkerWithWaitList(NULL, &event);
-}
+class OPENMM_EXPORT_COMMON ComputeQueueImpl {
+public:
+    virtual ~ComputeQueueImpl() {
+    }
+};
 
-void OpenCLEvent::wait() {
-    event.wait();
-}
+typedef std::shared_ptr<ComputeQueueImpl> ComputeQueue;
+
+} // namespace OpenMM
+
+#endif /*OPENMM_COMPUTEQUEUE_H_*/

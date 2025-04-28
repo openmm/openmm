@@ -1,3 +1,6 @@
+#ifndef OPENMM_HIPQUEUE_H_
+#define OPENMM_HIPQUEUE_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -24,18 +27,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLEvent.h"
-#include "OpenCLQueue.h"
+#include "openmm/common/ComputeQueue.h"
+#include <hip/hip_runtime.h>
 
-using namespace OpenMM;
+namespace OpenMM {
 
-OpenCLEvent::OpenCLEvent(OpenCLContext& context) : context(context) {
-}
+/**
+ * This is the HIP implementation of the ComputeQueue interface.  It wraps a hipStream_t.
+ */
 
-void OpenCLEvent::enqueue() {
-    dynamic_cast<OpenCLQueue*>(context.getCurrentQueue().get())->getQueue().enqueueMarkerWithWaitList(NULL, &event);
-}
+class HipQueue : public ComputeQueueImpl {
+public:
+    /**
+     * Create a HipQueue that wraps an existing hipStream_t.
+     */
+    HipQueue(hipStream_t stream);
+    /**
+     * Create a HipQueue that create a new hipStream_t.
+     */
+    HipQueue();
+    ~HipQueue();
+    /**
+     * Get the CUstream.
+     */
+    hipStream_t getStream() {
+        return stream;
+    }
+private:
+    hipStream_t stream;
+    bool initialized;
+};
 
-void OpenCLEvent::wait() {
-    event.wait();
-}
+} // namespace OpenMM
+
+#endif /*OPENMM_HIPQUEUE_H_*/
