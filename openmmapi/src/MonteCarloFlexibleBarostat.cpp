@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Sander Vandenhaute                                 *
  * Contributors:                                                              *
  *                                                                            *
@@ -56,6 +56,10 @@ void MonteCarloFlexibleBarostat::setDefaultTemperature(double temp) {
     if (temp < 0)
         throw OpenMMException("Temperature cannot be negative");
     defaultTemperature = temp;
+}
+
+void MonteCarloFlexibleBarostat::computeCurrentPressure(Context& context, std::vector<double>& pressure) const {
+    dynamic_cast<MonteCarloFlexibleBarostatImpl&>(getImplInContext(context)).computeCurrentPressure(getContextImpl(context), pressure);
 }
 
 ForceImpl* MonteCarloFlexibleBarostat::createImpl() const {

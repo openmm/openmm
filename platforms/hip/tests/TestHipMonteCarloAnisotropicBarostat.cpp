@@ -34,4 +34,5 @@
 #include "TestMonteCarloAnisotropicBarostat.h"
 
 void runPlatformTests() {
+    testLJPressure();
 }
