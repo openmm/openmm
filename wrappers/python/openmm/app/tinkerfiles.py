@@ -57,22 +57,6 @@ from . import topology as top
 class TinkerFiles:
     """TinkerFiles parses Tinker files (.xyz, .prm, .key), constructs a Topology, and (optionally) an OpenMM System from it."""
 
-    RESIDUE_MAPPING = {
-        "HOH": {"loc": "middle", "type": "AmoebaWater", "tinkerLookupName": "Water", "fullName": "Water"},
-        "LI": {"loc": None, "type": "ion", "tinkerLookupName": "Lithium Ion", "fullName": "Lithium Ion"},
-        "NA": {"loc": None, "type": "ion", "tinkerLookupName": "Sodium Ion", "fullName": "Sodium Ion"},
-        "K": {"loc": None, "type": "ion", "tinkerLookupName": "Potassium Ion", "fullName": "Potassium Ion"},
-        "RB": {"loc": None, "type": "ion", "tinkerLookupName": "Rubidium Ion", "fullName": "Rubidium Ion"},
-        "CS": {"loc": None, "type": "ion", "tinkerLookupName": "Cesium Ion", "fullName": "Cesium Ion"},
-        "BE": {"loc": None, "type": "ion", "tinkerLookupName": "Beryllium Ion", "fullName": "Beryllium Ion"},
-        "MG": {"loc": None, "type": "ion", "tinkerLookupName": "Magnesium Ion", "fullName": "Magnesium Ion"},
-        "CA": {"loc": None, "type": "ion", "tinkerLookupName": "Calcium Ion", "fullName": "Calcium Ion"},
-        "ZN": {"loc": None, "type": "ion", "tinkerLookupName": "Zinc Ion", "fullName": "Zinc Ion"},
-        "F": {"loc": None, "type": "ion", "tinkerLookupName": "Fluoride Ion", "fullName": "Fluoride Ion"},
-        "CL": {"loc": None, "type": "ion", "tinkerLookupName": "Chloride Ion", "fullName": "Chloride Ion"},
-        "BR": {"loc": None, "type": "ion", "tinkerLookupName": "Bromide Ion", "fullName": "Bromide Ion"},
-        "I": {"loc": None, "type": "ion", "tinkerLookupName": "Iodide Ion", "fullName": "Iodide Ion"},
-    } 
 
     RECOGNIZED_FORCES: Dict[str, Any] = {
         "bond": 1,
@@ -135,10 +119,140 @@ class TinkerFiles:
         "mutual-14-scale": "1.0",
     }
 
+    @staticmethod
+    def _initialize_standard_biopolymer_and_biotypes():
+        """Helper function to initialize standard biopolymer and biotype dictionaries"""
+        # Amino Acid Codes
+        _AMINO_ACID_CODES = {
+            'GLY': 'G', 'ALA': 'A', 'VAL': 'V', 'LEU': 'L', 'ILE': 'I',
+            'SER': 'S', 'THR': 'T', 'CYS': 'C', 'CYX': 'C', 'CYD': 'c',
+            'PRO': 'P', 'PHE': 'F', 'TYR': 'Y', 'TYD': 'y', 'TRP': 'W',
+            'HIS': 'H', 'HID': 'U', 'HIE': 'Z', 'ASP': 'D', 'ASH': 'd',
+            'ASN': 'N', 'GLU': 'E', 'GLH': 'e', 'GLN': 'Q', 'MET': 'M',
+            'LYS': 'K', 'LYD': 'k', 'ARG': 'R', 'ORN': 'O', 'AIB': 'B',
+            'PCA': 'J', 'H2N': 't', 'FOR': 'f', 'ACE': 'a', 'COH': 'x',
+            'NH2': 'n', 'NME': 'm', 'UNK': 'X'
+        }
+        _AMINO_ACID_ORDER = [
+            'GLY', 'ALA', 'VAL', 'LEU', 'ILE', 'SER', 'THR', 'CYS', 'CYX', 'CYD',
+            'PRO', 'PHE', 'TYR', 'TYD', 'TRP', 'HIS', 'HID', 'HIE', 'ASP', 'ASH',
+            'ASN', 'GLU', 'GLH', 'GLN', 'MET', 'LYS', 'LYD', 'ARG', 'ORN', 'AIB',
+            'PCA', 'H2N', 'FOR', 'ACE', 'COH', 'NH2', 'NME', 'UNK'
+        ]
+
+        # Nucleotide Codes
+        _NUCLEOTIDE_CODES = {
+            '  A': 'A', '  G': 'G', '  C': 'C', '  U': 'U', ' DA': 'D',
+            ' DG': 'B', ' DC': 'I', ' DT': 'T', ' MP': '1', ' DP': '2',
+            ' TP': '3', 'UNK': 'X'
+        }
+        _NUCLEOTIDE_ORDER = [ 
+            '  A', '  G', '  C', '  U', ' DA', ' DG', ' DC', ' DT',
+            ' MP', ' DP', ' TP', 'UNK'
+        ]
+
+        _AMINO_ACID_BIOTYPES_MID = {}
+        _AMINO_ACID_BIOTYPES_NTERM = {}
+        _AMINO_ACID_BIOTYPES_CTERM = {}
+        _NUCLEOTIDE_BIOTYPES = {}
+
+        # Biopolymer types for mid-chain peptide backbone atoms
+        nt   = [1,   7,  15,  27,  41,  55,  65,  77,  87,  96, 105, 116, 131, 147, 162, 185, 202, 218, 234, 244, 256, 268, 280, 294, 308, 321, 337, 353, 370, 384, 391,   0,   0,   0,   0,   0,   0,   1]
+        cat  = [2,   8,  16,  28,  42,  56,  66,  78,  88,  97, 106, 117, 132, 148, 163, 186, 203, 219, 235, 245, 257, 269, 281, 295, 309, 322, 338, 354, 371, 385, 392,   0,   0,   0,   0,   0,   0,   2]
+        ct   = [3,   9,  17,  29,  43,  57,  67,  79,  89,  98, 107, 118, 133, 149, 164, 187, 204, 220, 236, 246, 258, 270, 282, 296, 310, 323, 339, 355, 372, 386, 393,   0,   0,   0,   0,   0,   0,   3]
+        hnt  = [4,  10,  18,  30,  44,  58,  68,  80,  90,  99,   0, 119, 134, 150, 165, 188, 205, 221, 237, 247, 259, 271, 283, 297, 311, 324, 340, 356, 373, 387, 394,   0,   0,   0,   0,   0,   0,   4]
+        ot   = [5,  11,  19,  31,  45,  59,  69,  81,  91, 100, 108, 120, 135, 151, 166, 189, 206, 222, 238, 248, 260, 272, 284, 298, 312, 325, 341, 357, 374, 388, 395,   0,   0,   0,   0,   0,   0,   5]
+        hat  = [6,  12,  20,  32,  46,  60,  70,  82,  92, 101, 109, 121, 136, 152, 167, 190, 207, 223, 239, 249, 261, 273, 285, 299, 313, 326, 342, 358, 375,   0, 396,   0,   0,   0,   0,   0,   0,   6]
+        cbt  = [0,  13,  21,  33,  47,  61,  71,  83,  93, 102, 110, 122, 137, 153, 168, 191, 208, 224, 240, 250, 262, 274, 286, 300, 314, 327, 343, 359, 376, 389, 397,   0,   0,   0,   0,   0,   0,   0]
+        for i, res in enumerate(_AMINO_ACID_ORDER):
+            _AMINO_ACID_BIOTYPES_MID[res] = {
+                'N': nt[i], 'CA': cat[i], 'C': ct[i], 'H': hnt[i], 'O': ot[i], 'HA': hat[i], 'CB': cbt[i]
+            }
+
+        # Biopolymer types for N-terminal peptide backbone atoms
+        nn   = [403, 409, 415, 421, 427, 433, 439, 445, 451, 457, 463, 471, 477, 483, 489, 495, 501, 507, 513, 519, 525, 531, 537, 543, 549, 555, 561, 567, 573, 579, 391, 762,   0,   0,   0,   0,   0, 403]
+        can  = [404, 410, 416, 422, 428, 434, 440, 446, 452, 458, 464, 472, 478, 484, 490, 496, 502, 508, 514, 520, 526, 532, 538, 544, 550, 556, 562, 568, 574, 580, 392,   0,   0, 767,   0,   0,   0, 404]
+        cn   = [405, 411, 417, 423, 429, 435, 441, 447, 453, 459, 465, 473, 479, 485, 491, 497, 503, 509, 515, 521, 527, 533, 539, 545, 551, 557, 563, 569, 575, 581, 393,   0, 764, 769,   0,   0,   0, 405]
+        hnn  = [406, 412, 418, 424, 430, 436, 442, 448, 454, 460, 466, 474, 480, 486, 492, 498, 504, 510, 516, 522, 528, 534, 540, 546, 552, 558, 564, 570, 576, 582, 394, 763,   0,   0,   0,   0,   0, 406] # HN1, HN2, HN3 usually
+        on   = [407, 413, 419, 425, 431, 437, 443, 449, 455, 461, 467, 475, 481, 487, 493, 499, 505, 511, 517, 523, 529, 535, 541, 547, 553, 559, 565, 571, 577, 583, 395,   0, 766, 770,   0,   0,   0, 407]
+        han  = [408, 414, 420, 426, 432, 438, 444, 450, 456, 462, 468, 476, 482, 488, 494, 500, 506, 512, 518, 524, 530, 536, 542, 548, 554, 560, 566, 572, 578,   0, 396,   0, 765, 768,   0,   0,   0, 408]
+        for i, res in enumerate(_AMINO_ACID_ORDER):
+            _AMINO_ACID_BIOTYPES_NTERM[res] = {
+                'N': nn[i], 'CA': can[i], 'C': cn[i], 'H': hnn[i], 'O': on[i], 'HA': han[i]
+                # Note: CB is usually the same as mid-chain, sidechain atoms need separate lookup
+            }
+
+        # Biopolymer types for C-terminal peptide backbone atoms
+        nc   = [584, 590, 596, 602, 608, 614, 620, 626, 632, 638, 644, 649, 655, 661, 667, 673, 679, 685, 691, 697, 703, 709, 715, 721, 727, 733, 739, 745, 751, 757,   0,   0,   0,   0, 773, 775, 777, 584]
+        cac  = [585, 591, 597, 603, 609, 615, 621, 627, 633, 639, 645, 650, 656, 662, 668, 674, 680, 686, 692, 698, 704, 710, 716, 722, 728, 734, 740, 746, 752, 758,   0,   0,   0,   0,   0,   0, 779, 585]
+        cc   = [586, 592, 598, 604, 610, 616, 622, 628, 634, 640, 646, 651, 657, 663, 669, 675, 681, 687, 693, 699, 705, 711, 717, 723, 729, 735, 741, 747, 753, 759,   0,   0,   0,   0, 771,   0,   0, 586]
+        hnc  = [587, 593, 599, 605, 611, 617, 623, 629, 635, 641,   0, 652, 658, 664, 670, 676, 682, 688, 694, 700, 706, 712, 718, 724, 730, 736, 742, 748, 754, 760,   0,   0,   0,   0, 774, 776, 778, 587]
+        oc   = [588, 594, 600, 606, 612, 618, 624, 630, 636, 642, 647, 653, 659, 665, 671, 677, 683, 689, 695, 701, 707, 713, 719, 725, 731, 737, 743, 749, 755, 761,   0,   0,   0,   0, 772,   0,   0, 588] # OXT, O'
+        hac  = [589, 595, 601, 607, 613, 619, 625, 631, 637, 643, 648, 654, 660, 666, 672, 678, 684, 690, 696, 702, 708, 714, 720, 726, 732, 738, 744, 750, 756,   0,   0,   0,   0,   0,   0,   0, 780, 589]
+        for i, res in enumerate(_AMINO_ACID_ORDER):
+            _AMINO_ACID_BIOTYPES_CTERM[res] = {
+                'N': nc[i], 'CA': cac[i], 'C': cc[i], 'H': hnc[i], 'OXT': oc[i], 'HA': hac[i]
+                # Note: CB is usually the same as mid-chain, sidechain atoms need separate lookup
+            }
+
+        # Biopolymer types for nucleotide phosphate and sugar atoms
+        o5t   = [1001, 1031, 1062, 1090, 1117, 1146, 1176, 1203, 0, 0, 0, 0]
+        c5t   = [1002, 1032, 1063, 1091, 1118, 1147, 1177, 1204, 0, 0, 0, 0]
+        h51t  = [1003, 1033, 1064, 1092, 1119, 1148, 1178, 1205, 0, 0, 0, 0] # H5'
+        h52t  = [1004, 1034, 1065, 1093, 1120, 1149, 1179, 1206, 0, 0, 0, 0] # H5''
+        c4t   = [1005, 1035, 1066, 1094, 1121, 1150, 1180, 1207, 0, 0, 0, 0]
+        h4t   = [1006, 1036, 1067, 1095, 1122, 1151, 1181, 1208, 0, 0, 0, 0] # H4'
+        o4t   = [1007, 1037, 1068, 1096, 1123, 1152, 1182, 1209, 0, 0, 0, 0]
+        c1t   = [1008, 1038, 1069, 1097, 1124, 1153, 1183, 1210, 0, 0, 0, 0]
+        h1t   = [1009, 1039, 1070, 1098, 1125, 1154, 1184, 1211, 0, 0, 0, 0] # H1'
+        c3t   = [1010, 1040, 1071, 1099, 1126, 1155, 1185, 1212, 0, 0, 0, 0]
+        h3t   = [1011, 1041, 1072, 1100, 1127, 1156, 1186, 1213, 0, 0, 0, 0] # H3'
+        c2t   = [1012, 1042, 1073, 1101, 1128, 1157, 1187, 1214, 0, 0, 0, 0]
+        h21t  = [1013, 1043, 1074, 1102, 1129, 1158, 1188, 1215, 0, 0, 0, 0] # H2'
+        o2t   = [1014, 1044, 1075, 1103,    0,    0,    0,    0, 0, 0, 0, 0] # O2' (RNA only)
+        h22t  = [1015, 1045, 1076, 1104, 1130, 1159, 1189, 1216, 0, 0, 0, 0] # H2'' (often same type as H2')
+        o3t   = [1016, 1046, 1077, 1105, 1131, 1160, 1190, 1217, 0, 0, 0, 0]
+        pt    = [1230, 1230, 1230, 1230, 1242, 1242, 1242, 1242, 0, 0, 0, 0]
+        opt   = [1231, 1231, 1231, 1231, 1243, 1243, 1243, 1243, 0, 0, 0, 0] # OP1, OP2
+        h5tt  = [1233, 1233, 1233, 1233, 1245, 1245, 1245, 1245, 0, 0, 0, 0] # HO5' (5' terminal H)
+        h3tt  = [1238, 1238, 1238, 1238, 1250, 1250, 1250, 1250, 0, 0, 0, 0] # HO3' (3' terminal H)
+        for i, res in enumerate(_NUCLEOTIDE_ORDER):
+            _NUCLEOTIDE_BIOTYPES[res] = {
+                 "O5'": o5t[i], "C5'": c5t[i], "H5'": h51t[i], "H5''": h52t[i],
+                 "C4'": c4t[i], "H4'": h4t[i], "O4'": o4t[i], "C1'": c1t[i],
+                 "H1'": h1t[i], "C3'": c3t[i], "H3'": h3t[i], "C2'": c2t[i],
+                 "H2'": h21t[i], "O2'": o2t[i], "H2''": h22t[i], "O3'": o3t[i],
+                 "P": pt[i], "OP1": opt[i], "OP2": opt[i], # OP1/OP2 often share a type
+                 "HO5'": h5tt[i], "HO3'": h3tt[i]
+                 # Base atoms need separate lookup based on A/G/C/T/U
+             }
+
+        return (
+            _AMINO_ACID_CODES,
+            _AMINO_ACID_ORDER,
+            _NUCLEOTIDE_CODES,
+            _NUCLEOTIDE_ORDER,
+            _AMINO_ACID_BIOTYPES_MID,
+            _AMINO_ACID_BIOTYPES_NTERM,
+            _AMINO_ACID_BIOTYPES_CTERM,
+            _NUCLEOTIDE_BIOTYPES
+        )
+
+    # Call the helper function to populate the dictionaries when the class is defined
+    (_AMINO_ACID_CODES, 
+     _AMINO_ACID_ORDER,
+     _NUCLEOTIDE_CODES, 
+     _NUCLEOTIDE_ORDER,
+     _AMINO_ACID_BIOTYPES_MID, 
+     _AMINO_ACID_BIOTYPES_NTERM, 
+     _AMINO_ACID_BIOTYPES_CTERM, 
+     _NUCLEOTIDE_BIOTYPES) = _initialize_standard_biopolymer_and_biotypes()
+
     def __init__(
         self,
         xyz: str,
         key: str,
+        seq: str = None,
         periodicBoxVectors: Tuple[Vec3, Vec3, Vec3] = None,
         unitCellDimensions: Vec3 = None,
         writeXmlFiles: bool = False,
@@ -152,6 +266,8 @@ class TinkerFiles:
             The path to the xyz file to load.
         key : str or list of str
             The path(s) to the key/prm file(s) to load.
+        seq : str, optional
+            The path to the .seq file to load.
         periodicBoxVectors : tuple of Vec3
             The vectors defining the periodic box.
             If provided, this overwrites the box information from the xyz file.
@@ -187,9 +303,19 @@ class TinkerFiles:
         self._atomTypes, self._bioTypes, self._forces, self._scalars = [], [], [], []
 
         # Internal variable to store the combined atom data
-        self._atomData = None
 
         # ----------------------- LOAD FILES -----------------------
+        # Load the .seq file
+        if seq is not None:
+            self._seqDict = self.readSeqFile(seq)
+        else:
+            self._seqDict = None
+
+
+        # Load the .xyz file
+        self._xyzDict, self.boxVectors, self.positions = self._loadSeqFile(xyz)
+        self.positions = self.positions * nanometers
+    
         # Load the .key or .prm file(s)
         key = key if isinstance(key, list) else [key]
         for keyFile in key:
@@ -201,7 +327,7 @@ class TinkerFiles:
 
         # Load the .xyz file
         self._xyzDict, self.boxVectors, self.positions = self._loadXyzFile(xyz)
-        self.positions = positions * nanometers
+        self.positions = self.positions * nanometers
         
         # Combine the data from the .xyz and .key files
         self._atomData = TinkerFiles._combineXyzAndKeyData(
@@ -370,8 +496,140 @@ class TinkerFiles:
                     )
                 self._numpyBoxVectors.append(
                     np.array(self.boxVectors[2].value_in_unit(nanometers)) * nanometers
+                )
             return self._numpyBoxVectors
         return self.boxVectors
+    
+
+    def _loadSeqFile(self, file: str) -> Dict[str, List[str]]:
+        """
+        Load the biopolymer sequence from a TINKER .seq file. 
+
+        Parameters
+        ----------
+        file : str
+            The path to the .seq file.
+
+        Notes
+        -----
+        This function is heavily based on the TINKER readseq.f routine.
+
+        Tinker .seq files list residues belonging to one or more chains.
+        Each line typically starts with a residue number, optionally preceded
+        by a single-character chain ID. Lines starting with residue number 1
+        indicate the beginning of a new chain. If no chain ID is provided
+        for the first residue, a default ID (A, B, C, ...) is assigned.
+
+        With Chain ID:
+            A     1  CYS PHE GLU PRO PRO PRO ALA THR THR THR GLN THR GLY PHE ARG
+            A    16  LEU ...
+
+        Without Chain ID (Chain 'A' assumed for first block, 'B' for second, etc.):
+            1  CYS PHE GLU PRO PRO PRO ALA THR THR THR GLN THR GLY PHE ARG
+           16  LEU ...
+            1  MET VAL ...  (Starts a new chain, 'B')
+
+
+        Returns
+        -------
+        dict[str, list[str]]
+            A dictionary where keys are chain IDs and values are lists of
+            three-letter residue codes for that chain.
+        """
+        seqDict = {}
+        defaultChainIndex = 0
+        currentChainId = None 
+
+        if os.path.exists(file):
+            with open(file, "r") as f:
+                seqContent = f.readlines()
+        else:
+            raise FileNotFoundError(f"File {file} not found")
+
+        for line_num, line in enumerate(seqContent, 1):
+            lineSplit = line.split()
+            if not lineSplit:
+                continue  
+
+            parsedChainId = None
+            startResidue = None
+            residuesStartIndex = -1
+
+            # Determine line format: Chain ID + Res Num or just Res Num
+            if lineSplit[0].isalpha() and len(lineSplit[0]) == 1 and lineSplit[1].isdigit():
+                parsedChainId = lineSplit[0]
+                startResidue = int(lineSplit[1])
+                residuesStartIndex = 2
+            elif lineSplit[0].isdigit():
+                startResidue = int(lineSplit[0])
+                residuesStartIndex = 1
+            else:
+                raise ValueError(
+                    f"Line {line_num}: Does not have the expected format "
+                    f"(ChainID ResNum ... or ResNum ...): {line.strip()}"
+                )
+            
+            # Force 3-letter residues, otherwise add whitespaces to the left
+            residues = [residue.rjust(3) for residue in lineSplit[residuesStartIndex:]]
+            
+            if not residues:
+                raise ValueError(f"Line {line_num}: No residues found after parsing!")
+
+            if startResidue == 1:
+                if parsedChainId:
+                    if parsedChainId in seqDict:
+                        raise ValueError(
+                            f"Line {line_num}: Duplicate start definition (residue 1) "
+                            f"for chain ID '{parsedChainId}'"
+                        )
+                    currentChainId = parsedChainId
+                else:
+                    currentChainId = chr(65 + (defaultChainIndex % 26))
+                    defaultChainIndex += 1
+
+                seqDict[currentChainId] = {
+                    "residues": [],
+                    "chainType": "GENERIC"
+                }
+
+            else: 
+                if currentChainId is None:
+                     raise ValueError(
+                        f"Line {line_num}: Continuation line encountered before "
+                        f"any chain was started (residue 1)."
+                    )
+
+                if parsedChainId is not None and parsedChainId != currentChainId:
+                    raise ValueError(
+                        f"Line {line_num}: Chain ID '{parsedChainId}' provided for residue "
+                        f"{startResidue}, but expected continuation of chain '{currentChainId}'"
+                    )
+
+                expectedResidueNum = len(seqDict[currentChainId]["residues"]) + 1
+                if startResidue != expectedResidueNum:
+                    raise ValueError(
+                        f"Line {line_num}: Residue numbering inconsistency for chain "
+                        f"'{currentChainId}'. Expected residue {expectedResidueNum}, "
+                        f"but line starts with {startResidue}."
+                    )
+
+            # Add residues to the current chain
+            seqDict[currentChainId]["residues"].extend(residues)
+
+        # Determine chain types
+        for chainId, chainData in seqDict.items():
+            residues = chainData["residues"]
+            aminoAcidIntersect = set(residues) & set(self._AMINO_ACID_ORDER)
+            if aminoAcidIntersect:
+                chainData["chainType"] = "PEPTIDE"
+                continue
+
+            nucleotideIntersect = set(residues) & set(self._NUCLEOTIDE_ORDER)
+            if nucleotideIntersect:
+                chainData["chainType"] = "NUCLEIC"
+                continue
+
+        return seqDict
 
     # ------------------------------------------------------------------------------------------ #
     #                                   XYZ FILE PARSING                                         #
@@ -429,7 +687,7 @@ class TinkerFiles:
 
             with open(file, "r") as f:
                 # Read number of atoms
-                nAtoms = int(f.readline())
+                nAtoms = int(f.readline().split()[0])
                 linesLeft = nAtoms
 
                 # Read the second line
