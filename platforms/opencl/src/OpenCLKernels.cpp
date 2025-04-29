@@ -30,6 +30,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/common/CommonKernelUtilities.h"
+#include "openmm/common/ContextSelector.h"
 #include "CommonKernelSources.h"
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLExpressionUtilities.h"
@@ -158,6 +159,7 @@ public:
         addForcesKernel->addArg();
     }
     float* getPosq() {
+        ContextSelector selector(cl);
         cl.getPosq().download(posq);
         return (float*) &posq[0];
     }
@@ -244,11 +246,13 @@ private:
 };
 
 OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
+    ContextSelector selector(cl);
     if (pmeio != NULL)
         delete pmeio;
 }
 
 void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
+    ContextSelector selector(cl);
     int forceIndex;
     for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex)
         ;
@@ -344,6 +348,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     map<string, string> paramsDefines;
     paramsDefines["ONE_4PI_EPS0"] = cl.doubleToString(ONE_4PI_EPS0);
     paramsDefines["EPSILON0"] = cl.doubleToString(EPSILON0);
+    paramsDefines["WORK_GROUP_SIZE"] = cl.intToString(cl.ThreadBlockSize);
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
@@ -478,8 +483,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                     pmeDispersionBsplineModuliY.initialize(cl, dispersionGridSizeY, elementSize, "pmeDispersionBsplineModuliY");
                     pmeDispersionBsplineModuliZ.initialize(cl, dispersionGridSizeZ, elementSize, "pmeDispersionBsplineModuliZ");
                 }
-                pmeBsplineTheta.initialize(cl, PmeOrder*numParticles, 4*elementSize, "pmeBsplineTheta");
-                pmeAtomRange.initialize<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
                 pmeAtomGridIndex.initialize<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
                 int energyElementSize = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
                 pmeEnergyBuffer.initialize(cl, cl.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
@@ -560,7 +563,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
                     for (int dim = 0; dim < 3; dim++) {
                         int ndata = (dim == 0 ? xsize : dim == 1 ? ysize : zsize);
-                        vector<cl_double> moduli(ndata);
+                        vector<double> moduli(ndata);
                         for (int i = 0; i < ndata; i++) {
                             double sc = 0.0;
                             double ss = 0.0;
@@ -572,10 +575,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                             moduli[i] = sc*sc+ss*ss;
                         }
                         for (int i = 0; i < ndata; i++)
-                        {
                             if (moduli[i] < 1.0e-7)
                                 moduli[i] = (moduli[(i-1+ndata)%ndata]+moduli[(i+1)%ndata])*0.5;
-                        }
                         if (dim == 0)
                             xmoduli->upload(moduli, true);
                         else if (dim == 1)
@@ -622,7 +623,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     }
 
     // Add the interaction to the default nonbonded kernel.
-    
+
     string source = cl.replaceStrings(CommonKernelSources::coulombLennardJones, defines);
     charges.initialize(cl, cl.getPaddedNumAtoms(), cl.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "charges");
     baseParticleParams.initialize<mm_float4>(cl, cl.getPaddedNumAtoms(), "baseParticleParams");
@@ -715,8 +716,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     }
     paramValues.resize(paramNames.size(), 0.0);
     particleParamOffsets.initialize<mm_float4>(cl, max(force.getNumParticleParameterOffsets(), 1), "particleParamOffsets");
-    particleOffsetIndices.initialize<cl_int>(cl, cl.getPaddedNumAtoms()+1, "particleOffsetIndices");
-    vector<cl_int> particleOffsetIndicesVec, exceptionOffsetIndicesVec;
+    particleOffsetIndices.initialize<int>(cl, cl.getPaddedNumAtoms()+1, "particleOffsetIndices");
+    vector<int> particleOffsetIndicesVec, exceptionOffsetIndicesVec;
     vector<mm_float4> p, e;
     for (int i = 0; i < particleOffsetVec.size(); i++) {
         particleOffsetIndicesVec.push_back(p.size());
@@ -736,7 +737,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         particleOffsetIndices.upload(particleOffsetIndicesVec);
     }
     exceptionParamOffsets.initialize<mm_float4>(cl, max((int) e.size(), 1), "exceptionParamOffsets");
-    exceptionOffsetIndices.initialize<cl_int>(cl, exceptionOffsetIndicesVec.size(), "exceptionOffsetIndices");
+    exceptionOffsetIndices.initialize<int>(cl, exceptionOffsetIndicesVec.size(), "exceptionOffsetIndices");
     if (e.size() > 0) {
         exceptionParamOffsets.upload(e);
         exceptionOffsetIndices.upload(exceptionOffsetIndicesVec);
@@ -759,6 +760,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 }
 
 double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal) {
+    ContextSelector selector(cl);
     bool deviceIsCpu = (cl.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
@@ -979,9 +981,9 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
     if (pmeGrid1.isInitialized() && includeReciprocal) {
         if (usePmeQueue && !includeEnergy)
             cl.setCurrentQueue(pmeQueue);
-        
+
         // Invert the periodic box vectors.
-        
+
         Vec3 boxVectors[3];
         cl.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double determinant = boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2];
@@ -993,7 +995,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         mm_float4 recipBoxVectorsFloat[3];
         for (int i = 0; i < 3; i++)
             recipBoxVectorsFloat[i] = mm_float4((float) recipBoxVectors[i].x, (float) recipBoxVectors[i].y, (float) recipBoxVectors[i].z, 0);
-        
+
         // Execute the reciprocal space kernels.
 
         if (hasCoulomb) {
@@ -1108,7 +1110,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeDispersionEvalEnergyKernel->setArg(6, recipBoxVectorsFloat[1]);
                 pmeDispersionEvalEnergyKernel->setArg(7, recipBoxVectorsFloat[2]);
             }
-            if (!hasCoulomb) cl.clearBuffer(pmeEnergyBuffer);
+            if (!hasCoulomb)
+                cl.clearBuffer(pmeEnergyBuffer);
             if (includeEnergy)
                 pmeDispersionEvalEnergyKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
             pmeDispersionConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ);
@@ -1144,6 +1147,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
 void OpenCLCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException) {
     // Make sure the new parameters are acceptable.
 
+    ContextSelector selector(cl);
     if (force.getNumParticles() != cl.getNumAtoms())
         throw OpenMMException("updateParametersInContext: The number of particles has changed");
     if (!hasCoulomb || !hasLJ) {

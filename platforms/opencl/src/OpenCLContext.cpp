@@ -208,7 +208,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         this->platformIndex = bestPlatform;
         if (device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() < minThreadBlockSize)
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
-        compilationDefines["WORK_GROUP_SIZE"] = intToString(ThreadBlockSize);
         if (platformVendor.size() >= 5 && platformVendor.substr(0, 5) == "Intel")
             defaultOptimizationOptions = "";
         else

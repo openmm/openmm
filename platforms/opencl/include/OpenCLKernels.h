@@ -179,8 +179,6 @@ private:
     ComputeArray pmeDispersionBsplineModuliX;
     ComputeArray pmeDispersionBsplineModuliY;
     ComputeArray pmeDispersionBsplineModuliZ;
-    ComputeArray pmeBsplineTheta;
-    ComputeArray pmeAtomRange;
     ComputeArray pmeAtomGridIndex;
     ComputeArray pmeEnergyBuffer;
     ComputeArray chargeBuffer;
