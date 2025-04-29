@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,4 +47,8 @@ void CudaEvent::enqueue() {
 
 void CudaEvent::wait() {
     cuEventSynchronize(event);
+}
+
+void CudaEvent::queueWait(ComputeQueue queue) {
+    cuStreamWaitEvent(dynamic_cast<CudaQueue*>(queue.get())->getStream(), event, 0);
 }

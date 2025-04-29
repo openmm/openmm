@@ -30,12 +30,17 @@
 using namespace OpenMM;
 
 OpenCLEvent::OpenCLEvent(OpenCLContext& context) : context(context) {
+    event.resize(1);
 }
 
 void OpenCLEvent::enqueue() {
-    dynamic_cast<OpenCLQueue*>(context.getCurrentQueue().get())->getQueue().enqueueMarkerWithWaitList(NULL, &event);
+    dynamic_cast<OpenCLQueue*>(context.getCurrentQueue().get())->getQueue().enqueueMarkerWithWaitList(NULL, &event[0]);
 }
 
 void OpenCLEvent::wait() {
-    event.wait();
+    event[0].wait();
+}
+
+void OpenCLEvent::queueWait(ComputeQueue queue) {
+    dynamic_cast<OpenCLQueue*>(queue.get())->getQueue().enqueueBarrierWithWaitList(&event);
 }

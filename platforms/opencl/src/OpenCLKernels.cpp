@@ -201,18 +201,18 @@ private:
 
 class OpenCLCalcNonbondedForceKernel::SyncQueuePreComputation : public OpenCLContext::ForcePreComputation {
 public:
-    SyncQueuePreComputation(OpenCLContext& cl, ComputeQueue queue, int forceGroup) : cl(cl), queue(queue), forceGroup(forceGroup) {
+    SyncQueuePreComputation(OpenCLContext& cl, ComputeQueue queue, ComputeEvent event, int forceGroup) : cl(cl), queue(queue), event(event), forceGroup(forceGroup) {
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
-            vector<cl::Event> events(1);
-            cl.getQueue().enqueueMarkerWithWaitList(NULL, &events[0]);
-            dynamic_cast<OpenCLQueue*>(queue.get())->getQueue().enqueueBarrierWithWaitList(&events);
+            event->enqueue();
+            event->queueWait(queue);
         }
     }
 private:
     OpenCLContext& cl;
     ComputeQueue queue;
+    ComputeEvent event;
     int forceGroup;
 };
 
@@ -497,8 +497,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
-                    cl.addPreComputation(new SyncQueuePreComputation(cl, pmeQueue, recipForceGroup));
                     pmeSyncEvent = cl.createEvent();
+                    paramsSyncEvent = cl.createEvent();
+                    cl.addPreComputation(new SyncQueuePreComputation(cl, pmeQueue, pmeSyncEvent, recipForceGroup));
                     cl.addPostComputation(syncQueue = new SyncQueuePostComputation(cl, pmeSyncEvent, pmeEnergyBuffer, recipForceGroup));
                 }
 
@@ -938,9 +939,8 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         if (exclusionParams.isInitialized())
             computeExclusionParamsKernel->execute(exclusionParams.getSize());
         if (usePmeQueue) {
-            vector<cl::Event> events(1);
-            cl.getQueue().enqueueMarkerWithWaitList(NULL, &events[0]);
-            dynamic_cast<OpenCLQueue*>(pmeQueue.get())->getQueue().enqueueBarrierWithWaitList(&events);
+            paramsSyncEvent->enqueue();
+            paramsSyncEvent->queueWait(pmeQueue);
         }
         if (hasOffsets) {
             // The Ewald self energy was computed in the kernel.

@@ -186,7 +186,7 @@ private:
     ComputeArray chargeBuffer;
     ComputeSort sort;
     ComputeQueue pmeQueue;
-    ComputeEvent pmeSyncEvent;
+    ComputeEvent pmeSyncEvent, paramsSyncEvent;
     FFT3D fft, dispersionFft;
     Kernel cpuPme;
     PmeIO* pmeio;
