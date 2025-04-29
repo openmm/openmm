@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2022 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -34,10 +34,10 @@
 #include "CommonKernelSources.h"
 #include "HipBondedUtilities.h"
 #include "HipExpressionUtilities.h"
-#include "HipFFT3D.h"
 #include "HipIntegrationUtilities.h"
 #include "HipNonbondedUtilities.h"
 #include "HipKernelSources.h"
+#include "HipQueue.h"
 #include "SimTKOpenMMRealType.h"
 #include "SimTKOpenMMUtilities.h"
 #include <algorithm>
@@ -209,17 +209,17 @@ private:
 
 class HipCalcNonbondedForceKernel::SyncStreamPreComputation : public HipContext::ForcePreComputation {
 public:
-    SyncStreamPreComputation(HipContext& cu, hipStream_t stream, hipEvent_t event, int forceGroup) : cu(cu), stream(stream), event(event), forceGroup(forceGroup) {
+    SyncStreamPreComputation(HipContext& cu, ComputeQueue queue, hipEvent_t event, int forceGroup) : cu(cu), queue(queue), event(event), forceGroup(forceGroup) {
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
             hipEventRecord(event, cu.getCurrentStream());
-            hipStreamWaitEvent(stream, event, 0);
+            hipStreamWaitEvent(dynamic_cast<HipQueue*>(queue.get())->getStream(), event, 0);
         }
     }
 private:
     HipContext& cu;
-    hipStream_t stream;
+    ComputeQueue queue;
     hipEvent_t event;
     int forceGroup;
 };
@@ -260,7 +260,6 @@ HipCalcNonbondedForceKernel::~HipCalcNonbondedForceKernel() {
         delete pmeio;
     if (hasInitializedFFT) {
         if (usePmeStream) {
-            hipStreamDestroy(pmeStream);
             hipEventDestroy(pmeSyncEvent);
             hipEventDestroy(paramsSyncEvent);
         }
@@ -361,8 +360,11 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         dispersionCoefficient = 0.0;
     alpha = 0;
     ewaldSelfEnergy = 0.0;
+    totalCharge = 0.0;
     map<string, string> paramsDefines;
     paramsDefines["ONE_4PI_EPS0"] = cu.doubleToString(ONE_4PI_EPS0);
+    paramsDefines["EPSILON0"] = cu.doubleToString(EPSILON0);
+    paramsDefines["WORK_GROUP_SIZE"] = cu.intToString(HipContext::ThreadBlockSize);
     hasOffsets = (force.getNumParticleParameterOffsets() > 0 || force.getNumExceptionParameterOffsets() > 0);
     if (hasOffsets)
         paramsDefines["HAS_OFFSETS"] = "1";
@@ -385,8 +387,10 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         if (cu.getContextIndex() == 0) {
             paramsDefines["INCLUDE_EWALD"] = "1";
             paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cu.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
-            for (int i = 0; i < numParticles; i++)
+            for (int i = 0; i < numParticles; i++) {
                 ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                totalCharge += baseParticleParamVec[i].x;
+            }
 
             // Create the reciprocal space kernels.
 
@@ -438,8 +442,10 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
         if (cu.getContextIndex() == 0) {
             paramsDefines["INCLUDE_EWALD"] = "1";
             paramsDefines["EWALD_SELF_ENERGY_SCALE"] = cu.doubleToString(ONE_4PI_EPS0*alpha/sqrt(M_PI));
-            for (int i = 0; i < numParticles; i++)
+            for (int i = 0; i < numParticles; i++) {
                 ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                totalCharge += baseParticleParamVec[i].x;
+            }
             if (doLJPME) {
                 paramsDefines["INCLUDE_LJPME"] = "1";
                 paramsDefines["LJPME_SELF_ENERGY_SCALE"] = cu.doubleToString(pow(dispersionAlpha, 6)/3.0);
@@ -536,20 +542,19 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
                 // Prepare for doing PME on its own stream.
 
                 if (usePmeStream) {
-                    CHECK_RESULT(hipStreamCreateWithFlags(&pmeStream, hipStreamNonBlocking), "Error creating stream for NonbondedForce");
+                    pmeQueue = cu.createQueue();
                     CHECK_RESULT(hipEventCreateWithFlags(&pmeSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     CHECK_RESULT(hipEventCreateWithFlags(&paramsSyncEvent, cu.getEventFlags()), "Error creating event for NonbondedForce");
                     int recipForceGroup = force.getReciprocalSpaceForceGroup();
                     if (recipForceGroup < 0)
                         recipForceGroup = force.getForceGroup();
-                    cu.addPreComputation(new SyncStreamPreComputation(cu, pmeStream, pmeSyncEvent, recipForceGroup));
+                    cu.addPreComputation(new SyncStreamPreComputation(cu, pmeQueue, pmeSyncEvent, recipForceGroup));
                     cu.addPostComputation(new SyncStreamPostComputation(cu, pmeSyncEvent, cu.getKernel(module, "addEnergy"), pmeEnergyBuffer, recipForceGroup));
                 }
 
-                hipStream_t fftStream = usePmeStream ? pmeStream : cu.getCurrentStream();
-                fft = new HipFFT3D(cu, gridSizeX, gridSizeY, gridSizeZ, true, fftStream, pmeGrid1, pmeGrid2);
+                fft = cu.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
                 if (doLJPME)
-                    dispersionFft = new HipFFT3D(cu, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true, fftStream, pmeGrid1, pmeGrid2);
+                    dispersionFft = cu.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
                 hasInitializedFFT = true;
 
                 // Initialize the b-spline moduli.
@@ -791,6 +796,8 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     globalParams.initialize(cu, max((int) paramValues.size(), 1), cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "globalParams");
     if (paramValues.size() > 0)
         globalParams.upload(paramValues, true);
+    chargeBuffer.initialize(cu, cu.getNumThreadBlocks(), cu.getUseDoublePrecision() ? sizeof(double) : sizeof(float), "chargeBuffer");
+    cu.clearBuffer(chargeBuffer);
     recomputeParams = true;
 
     // Initialize the kernel for updating parameters.
@@ -798,6 +805,7 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
     hipModule_t module = cu.createModule(CommonKernelSources::nonbondedParameters, paramsDefines);
     computeParamsKernel = cu.getKernel(module, "computeParameters");
     computeExclusionParamsKernel = cu.getKernel(module, "computeExclusionParameters");
+    computePlasmaCorrectionKernel = cu.getKernel(module, "computePlasmaCorrection");
     info = new ForceInfo(force);
     cu.addForce(info);
 }
@@ -818,13 +826,18 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         recomputeParams = true;
         globalParams.upload(paramValues, true);
     }
-    double energy = (includeReciprocal ? ewaldSelfEnergy : 0.0);
+    double energy = 0.0;
+    if (includeReciprocal && (pmeGrid1.isInitialized() || cosSinSums.isInitialized())) {
+        double4 boxSize = cu.getPeriodicBoxSize();
+        double volume = boxSize.x*boxSize.y*boxSize.z;
+        energy = ewaldSelfEnergy - totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
+    }
     if (recomputeParams || hasOffsets) {
         int computeSelfEnergy = (includeEnergy && includeReciprocal);
-        int numAtoms = cu.getPaddedNumAtoms();
+        int numAtoms = cu.getNumAtoms();
         vector<void*> paramsArgs = {&cu.getEnergyBuffer().getDevicePointer(), &computeSelfEnergy, &globalParams.getDevicePointer(), &numAtoms,
                 &baseParticleParams.getDevicePointer(), &cu.getPosq().getDevicePointer(), &charges.getDevicePointer(), &sigmaEpsilon.getDevicePointer(),
-                &particleParamOffsets.getDevicePointer(), &particleOffsetIndices.getDevicePointer()};
+                &particleParamOffsets.getDevicePointer(), &particleOffsetIndices.getDevicePointer(), &chargeBuffer.getDevicePointer()};
         int numExceptions;
         if (exceptionParams.isInitialized()) {
             numExceptions = exceptionParams.getSize();
@@ -843,10 +856,29 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
         }
         if (usePmeStream) {
             hipEventRecord(paramsSyncEvent, cu.getCurrentStream());
-            hipStreamWaitEvent(pmeStream, paramsSyncEvent, 0);
+            hipStreamWaitEvent(dynamic_cast<HipQueue*>(pmeQueue.get())->getStream(), paramsSyncEvent, 0);
         }
-        if (hasOffsets)
-            energy = 0.0; // The Ewald self energy was computed in the kernel.
+        if (hasOffsets) {
+            // The Ewald self energy was computed in the kernel.
+
+            energy = 0.0;
+            if (pmeGrid1.isInitialized() || cosSinSums.isInitialized()) {
+                // Invoke a kernel to compute the correction for the neutralizing plasma.
+
+                double4 boxSize = cu.getPeriodicBoxSize();
+                if (cu.getUseDoublePrecision()) {
+                    double volume = boxSize.x*boxSize.y*boxSize.z;
+                    vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &alpha, &volume};
+                    cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], HipContext::ThreadBlockSize, HipContext::ThreadBlockSize);
+                }
+                else {
+                    float alphaFloat = (float) alpha;
+                    float volume = boxSize.x*boxSize.y*boxSize.z;
+                    vector<void*> correctionArgs = {&chargeBuffer.getDevicePointer(), &cu.getEnergyBuffer().getDevicePointer(), &alphaFloat, &volume};
+                    cu.executeKernel(computePlasmaCorrectionKernel, &correctionArgs[0], HipContext::ThreadBlockSize, HipContext::ThreadBlockSize);
+                }
+            }
+        }
         recomputeParams = false;
     }
 
@@ -860,7 +892,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
     }
     if (pmeGrid1.isInitialized() && includeReciprocal) {
         if (usePmeStream)
-            cu.setCurrentStream(pmeStream);
+            cu.setCurrentQueue(pmeQueue);
 
         // Invert the periodic box vectors.
 
@@ -913,7 +945,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                 cu.executeKernelFlat(pmeFinishSpreadChargeKernel, finishSpreadArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
             }
 
-            fft->execFFT(true);
+            fft->execFFT(pmeGrid1, pmeGrid2, true);
 
             if (includeEnergy) {
                 void* computeEnergyArgs[] = {&pmeGrid2.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
@@ -927,7 +959,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernelFlat(pmeConvolutionKernel, convolutionArgs, gridSizeX*gridSizeY*gridSizeZ, 256);
 
-            fft->execFFT(false);
+            fft->execFFT(pmeGrid2, pmeGrid1, false);
 
             void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
@@ -959,7 +991,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                 cu.executeKernelFlat(pmeDispersionFinishSpreadChargeKernel, finishSpreadArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
             }
 
-            dispersionFft->execFFT(true);
+            dispersionFft->execFFT(pmeGrid1, pmeGrid2, true);
 
             if (includeEnergy) {
                 void* computeEnergyArgs[] = {&pmeGrid2.getDevicePointer(), usePmeStream ? &pmeEnergyBuffer.getDevicePointer() : &cu.getEnergyBuffer().getDevicePointer(),
@@ -973,7 +1005,7 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
                     recipBoxVectorPointer[0], recipBoxVectorPointer[1], recipBoxVectorPointer[2]};
             cu.executeKernelFlat(pmeDispersionConvolutionKernel, convolutionArgs, dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
 
-            dispersionFft->execFFT(false);
+            dispersionFft->execFFT(pmeGrid2, pmeGrid1, false);
 
             void* interpolateArgs[] = {&cu.getPosq().getDevicePointer(), &cu.getForce().getDevicePointer(), &pmeGrid1.getDevicePointer(), cu.getPeriodicBoxSizePointer(),
                     cu.getInvPeriodicBoxSizePointer(), cu.getPeriodicBoxVecXPointer(), cu.getPeriodicBoxVecYPointer(), cu.getPeriodicBoxVecZPointer(),
@@ -982,8 +1014,8 @@ double HipCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeFo
             cu.executeKernelFlat(pmeInterpolateDispersionForceKernel, interpolateArgs, cu.getNumAtoms(), 128);
         }
         if (usePmeStream) {
-            hipEventRecord(pmeSyncEvent, pmeStream);
-            cu.restoreDefaultStream();
+            hipEventRecord(pmeSyncEvent, dynamic_cast<HipQueue*>(pmeQueue.get())->getStream());
+            cu.restoreDefaultQueue();
         }
     }
 
@@ -1023,7 +1055,11 @@ void HipCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
+        if (exceptionIndex.find(i) == exceptionIndex.end()) {
+            if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
+                throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+        }
+        else
             exceptions.push_back(i);
     }
     int numContexts = cu.getPlatformData().contexts.size();
@@ -1047,10 +1083,12 @@ void HipCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& context, 
         // Compute the self energy.
 
         ewaldSelfEnergy = 0.0;
+        totalCharge = 0.0;
         if (nonbondedMethod == Ewald || nonbondedMethod == PME || nonbondedMethod == LJPME) {
             if (cu.getContextIndex() == 0) {
                 for (int i = 0; i < force.getNumParticles(); i++) {
                     ewaldSelfEnergy -= baseParticleParamVec[i].x*baseParticleParamVec[i].x*ONE_4PI_EPS0*alpha/sqrt(M_PI);
+                    totalCharge += baseParticleParamVec[i].x;
                     if (doLJPME)
                         ewaldSelfEnergy += baseParticleParamVec[i].z*pow(baseParticleParamVec[i].y*dispersionAlpha, 6)/3.0;
                 }

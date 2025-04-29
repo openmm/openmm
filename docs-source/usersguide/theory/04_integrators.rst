@@ -52,34 +52,11 @@ the Langevin equation of motion:
 where :math:`\mathbf{v}_i` is the velocity of particle *i*\ , :math:`\mathbf{f}_i` is
 the force acting on it, :math:`m_i` is its mass, :math:`\gamma` is the friction
 coefficient, and :math:`\mathbf{R}_i` is an uncorrelated random force whose
-components are chosen from a normal distribution with mean zero and unit variance. *T* is the temperature of
-the heat bath.
+components are chosen from a normal distribution with mean zero and variance
+:math:`2 \gamma k_B T`. *T* is the temperature of the heat bath.
 
-The integration is done using the Langevin leap-frog method. :cite:`Izaguirre2010`
-In each step, the positions and velocities are updated as follows:
-
-
-.. math::
-   \mathbf{v}_{i}(t+\Delta t/2)=\mathbf{v}_{i}(t-\Delta t/2)\alpha+\mathbf{f}_{i}(t)(1-\alpha)/(\gamma{m}_{i}) + \sqrt{{k}_{B}T(1-\alpha^2)/{m}_{i}}R
-
-
-.. math::
-   \mathbf{r}_{i}(t+\Delta t)=\mathbf{r}_{i}(t)+\mathbf{v}_{i}(t+\Delta t/2)\Delta t
-
-
-where :math:`k` is Boltzmann's constant, :math:`T` is the temperature,
-:math:`\gamma` is the friction coefficient, :math:`R` is a normally distributed
-random number, and :math:`\alpha=\exp(-\gamma\Delta t)`.
-
-The same comments about the offset between positions and velocities apply to
-this integrator as to VerletIntegrator.
-
-LangevinMiddleIntegrator
-************************
-
-This integrator is similar to LangevinIntegerator, but it instead uses the LFMiddle
-discretization. :cite:`Zhang2019` In each step, the positions and velocities
-are updated as follows:
+The integration is done using the LFMiddle discretization. :cite:`Zhang2019` In each step,
+the positions and velocities are updated as follows:
 
 
 .. math::
@@ -98,17 +75,17 @@ are updated as follows:
    \mathbf{r}_{i}(t+\Delta t) = \mathbf{r}_{i}(t+\Delta t/2) + \mathbf{v'}_{i}(t+\Delta t/2)\Delta t/2
 
 
-This tends to produce more accurate sampling of configurational properties (such
-as free energies), but less accurate sampling of kinetic properties.  Because
-configurational properties are much more important than kinetic ones in most
-simulations, this integrator is generally preferred over LangevinIntegrator.  It
-often allows one to use a larger time step while still maintaining similar or
-better accuracy.
+where :math:`k` is Boltzmann's constant, :math:`T` is the temperature,
+:math:`\gamma` is the friction coefficient, :math:`R` is a normally distributed
+random number, and :math:`\alpha=\exp(-\gamma\Delta t)`.
 
-One disadvantage of this integrator is that it requires applying constraints
-twice per time step, compared to only once for LangevinIntegrator.  This
-can make it slightly slower for systems that involve constraints.  However, this
-usually is more than compensated by allowing you to use a larger time step.
+The same comments about the offset between positions and velocities apply to
+this integrator as to VerletIntegrator.
+
+LangevinMiddleIntegrator
+************************
+
+This integrator is identical to LangevinIntegerator.  Separate classes exist only for historical reasons.
 
 .. _nosehoover-integrators-theory:
 
@@ -288,3 +265,32 @@ CustomIntegrator is a very powerful tool, and this description only gives a
 vague idea of the scope of its capabilities.  For full details and examples,
 consult the API documentation.
 
+DPDIntegrator
+*************
+
+This implements dissipative particle dynamics (DPD). :cite:`Espanol1995`  It is
+similar to a Langevin integrator, but instead of applying friction and noise to
+the Cartesian coordinates of particles, it applies them to inter-particle
+displacements.  This allows it to conserve momentum and efficiently model the
+hydrodynamics of coarse grained models.
+
+The system evolves according to the equation of motion
+
+.. math::
+   m_i\frac{d\mathbf{v}_i}{dt}=\mathbf{f}_i + \sum_{j \neq i } \mathbf{e}_{ij} [ -\gamma \omega^2(r_{ij})(\mathbf{e}_{ij} \cdot \mathbf{v}_{ij}) + \sqrt{2 \gamma k_BT} \omega(r_{ij}) R_{ij} ]
+
+
+where :math:`\mathbf{v}_i` is the velocity of particle *i*\ , :math:`\mathbf{f}_i` is
+the force acting on it, :math:`m_i` is its mass, :math:`r_{ij}` is the distance
+between particles *i* and *j*\ , :math:`\mathbf{e}_{ij}` is a unit vector pointing from
+particle *i* to particle *j*\ , :math:`\gamma` is the friction coefficient, and
+:math:`\mathbf{R}_{ij} = \mathbf{R}_{ji}` is an uncorrelated random force whose
+components are chosen from a normal distribution with mean zero and unit variance.
+*T* is the temperature of the heat bath.  The friction and noise are limited to
+pairs closer than a cutoff distance :math:`r_c` using the function
+:math:`\omega(r) = 1-r/r_c`.  The friction coefficient :math:`\gamma` and cutoff
+distance :math:`r_c` may be constants, or alternatively they can vary depending
+on the types of the particles.
+
+The integration is done using the same LFMiddle discretization used for
+LangevinIntegrator. :cite:`Zhang2019`

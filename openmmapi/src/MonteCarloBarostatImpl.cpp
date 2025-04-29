@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -50,7 +50,7 @@ void MonteCarloBarostatImpl::initialize(ContextImpl& context) {
     if (!context.getSystem().usesPeriodicBoundaryConditions())
         throw OpenMMException("A barostat cannot be used with a non-periodic system");
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
-    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().initialize(context.getSystem(), owner, 1);
     Vec3 box[3];
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
@@ -126,3 +126,38 @@ vector<string> MonteCarloBarostatImpl::getKernelNames() {
     return names;
 }
 
+double MonteCarloBarostatImpl::computeCurrentPressure(ContextImpl& context) {
+    Vec3 box[3];
+    context.getPeriodicBoxVectors(box[0], box[1], box[2]);
+    double volume = box[0][0]*box[1][1]*box[2][2];
+    double delta = 1e-3;
+    int groups = context.getIntegrator().getIntegrationForceGroups();
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().saveCoordinates(context);
+
+    // Compute the first energy.
+
+    double scale1 = 1.0+delta;
+    context.getOwner().setPeriodicBoxVectors(box[0]*scale1, box[1]*scale1, box[2]*scale1);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, scale1, scale1, scale1);
+    double energy1 = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
+
+    // Compute the second energy.
+
+    double scale2 = 1.0-delta;
+    context.getOwner().setPeriodicBoxVectors(box[0]*scale2, box[1]*scale2, box[2]*scale2);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().scaleCoordinates(context, scale2/scale1, scale2/scale1, scale2/scale1);
+    double energy2 = context.getOwner().getState(State::Energy, false, groups).getPotentialEnergy();
+
+    // Restore the context to its original state.
+
+    context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().restoreCoordinates(context);
+
+    // Compute the pressure.
+
+    vector<double> ke;
+    kernel.getAs<ApplyMonteCarloBarostatKernel>().computeKineticEnergy(context, ke);
+    double deltaVolume = volume*(scale1*scale1*scale1 - scale2*scale2*scale2);
+    double pressure = (2.0/3.0)*ke[0]/volume - (energy1-energy2)/deltaVolume;
+    return pressure/(AVOGADRO*1e-25);
+}

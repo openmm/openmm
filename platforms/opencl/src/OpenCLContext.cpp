@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -37,6 +37,7 @@
 #include "OpenCLKernelSources.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLProgram.h"
+#include "OpenCLQueue.h"
 #include "openmm/common/ComputeArray.h"
 #include "openmm/MonteCarloFlexibleBarostat.h"
 #include "openmm/Platform.h"
@@ -302,10 +303,10 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         if (originalContext == NULL) {
             context = cl::Context(contextDevices, cprops, errorCallback);
 #ifdef ENABLE_PROFILING
-            defaultQueue = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE);
+            defaultQueue = shared_ptr<ComputeQueueImpl>(new OpenCLQueue(cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE)));
             printf("[ ");
 #else
-            defaultQueue = cl::CommandQueue(context, device);
+            defaultQueue = shared_ptr<ComputeQueueImpl>(new OpenCLQueue(cl::CommandQueue(context, device)));
 #endif
         }
         else {
@@ -559,7 +560,7 @@ void OpenCLContext::initialize() {
             energyBufferSize*energyBuffer.getElementSize()),
             (int) longForceBuffer.getSize()*longForceBuffer.getElementSize());
     pinnedBuffer = new cl::Buffer(context, CL_MEM_ALLOC_HOST_PTR, bufferBytes);
-    pinnedMemory = currentQueue.enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
+    pinnedMemory = getQueue().enqueueMapBuffer(*pinnedBuffer, CL_TRUE, CL_MAP_READ | CL_MAP_WRITE, 0, bufferBytes);
     for (int i = 0; i < numAtoms; i++) {
         double mass = system.getParticleMass(i);
         if (useDoublePrecision || useMixedPrecision)
@@ -574,6 +575,14 @@ void OpenCLContext::initialize() {
 
 void OpenCLContext::initializeContexts() {
     getPlatformData().initializeContexts(system);
+}
+
+OpenCLFFT3D* OpenCLContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
+    return new OpenCLFFT3D(*this, xsize, ysize, zsize, realToComplex);
+}
+
+int OpenCLContext::findLegalFFTDimension(int minimum) {
+    return OpenCLFFT3D::findLegalDimension(minimum);
 }
 
 void OpenCLContext::addForce(ComputeForceInfo* force) {
@@ -662,16 +671,12 @@ double& OpenCLContext::getEnergyWorkspace() {
     return platformData.contextEnergy[contextIndex];
 }
 
-cl::CommandQueue& OpenCLContext::getQueue() {
-    return currentQueue;
+ComputeQueue OpenCLContext::createQueue() {
+    return shared_ptr<ComputeQueueImpl>(new OpenCLQueue(cl::CommandQueue(context, device)));
 }
 
-void OpenCLContext::setQueue(cl::CommandQueue& queue) {
-    currentQueue = queue;
-}
-
-void OpenCLContext::restoreDefaultQueue() {
-    currentQueue = defaultQueue;
+cl::CommandQueue OpenCLContext::getQueue() {
+    return dynamic_cast<OpenCLQueue*>(currentQueue.get())->getQueue();
 }
 
 OpenCLArray* OpenCLContext::createArray() {
@@ -706,13 +711,13 @@ void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSi
     try {
 #ifdef ENABLE_PROFILING
     cl::Event event;
-    currentQueue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(blockSize), NULL, &event);
+    getQueue().enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(blockSize), NULL, &event);
     profilingEvents.push_back(event);
     profilingKernelNames.push_back(kernel.getInfo<CL_KERNEL_FUNCTION_NAME>());
     if (profilingEvents.size() >= 500)
         printProfilingEvents();
 #else
-        currentQueue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(blockSize));
+        getQueue().enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(blockSize));
 #endif
     }
     catch (cl::Error err) {

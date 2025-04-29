@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2023 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -53,7 +53,7 @@ public:
 };
 
 OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
-        blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), lastCutoff(0.0), groupFlags(0), tilesAfterReorder(0) {
+        blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), groupFlags(0), tilesAfterReorder(0) {
     // Decide how many thread blocks and force buffers to use.
 
     deviceIsCpu = (context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
@@ -282,6 +282,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
 
     // Create data structures for the neighbor list.
 
+    maxCutoff = getMaxCutoffDistance();
     if (useCutoff) {
         // Select a size for the arrays that hold the neighbor list.  We have to make a fairly
         // arbitrary guess, but if this turns out to be too small we'll increase it later.
@@ -351,7 +352,7 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     KernelSet& kernels = groupKernels[forceGroups];
     if (useCutoff && usePeriodic) {
         mm_float4 box = context.getPeriodicBoxSize();
-        double minAllowedSize = 1.999999*kernels.cutoffDistance;
+        double minAllowedSize = 1.999999*maxCutoff;
         if (box.x < minAllowedSize || box.y < minAllowedSize || box.z < minAllowedSize)
             throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
     }
@@ -362,8 +363,6 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
 
     // Compute the neighbor list.
 
-    if (lastCutoff != kernels.cutoffDistance)
-        forceRebuildNeighborList = true;
     setPeriodicBoxArgs(context, kernels.findBlockBoundsKernel, 1);
     context.executeKernel(kernels.findBlockBoundsKernel, context.getNumAtomBlocks());
     context.executeKernel(kernels.computeSortKeysKernel, context.getNumAtomBlocks());
@@ -375,7 +374,6 @@ void OpenCLNonbondedUtilities::prepareInteractions(int forceGroups) {
     setPeriodicBoxArgs(context, kernels.findInteractingBlocksKernel, 0);
     context.executeKernel(kernels.findInteractingBlocksKernel, context.getNumAtoms(), interactingBlocksThreadBlockSize);
     forceRebuildNeighborList = false;
-    lastCutoff = kernels.cutoffDistance;
     context.getQueue().enqueueReadBuffer(interactionCount.getDeviceBuffer(), CL_FALSE, 0, sizeof(int), pinnedCountMemory, NULL, &downloadCountEvent);
     if (isAMD)
         context.getQueue().flush();
@@ -495,23 +493,20 @@ void OpenCLNonbondedUtilities::setAtomBlockRange(double startFraction, double en
 
 void OpenCLNonbondedUtilities::createKernelsForGroups(int groups) {
     KernelSet kernels;
-    double cutoff = 0.0;
     string source;
     for (int i = 0; i < 32; i++) {
         if ((groups&(1<<i)) != 0) {
-            cutoff = max(cutoff, groupCutoff[i]);
             source += groupKernelSource[i];
         }
     }
     kernels.hasForces = (source.size() > 0);
-    kernels.cutoffDistance = cutoff;
     kernels.source = source;
     if (useCutoff) {
-        double paddedCutoff = padCutoff(cutoff);
+        double paddedCutoff = padCutoff(maxCutoff);
         map<string, string> defines;
         defines["TILE_SIZE"] = context.intToString(OpenCLContext::TileSize);
         defines["NUM_ATOMS"] = context.intToString(context.getNumAtoms());
-        defines["PADDING"] = context.doubleToString(paddedCutoff-cutoff);
+        defines["PADDING"] = context.doubleToString(paddedCutoff-maxCutoff);
         defines["PADDED_CUTOFF"] = context.doubleToString(paddedCutoff);
         defines["PADDED_CUTOFF_SQUARED"] = context.doubleToString(paddedCutoff*paddedCutoff);
         defines["NUM_TILES_WITH_EXCLUSIONS"] = context.intToString(exclusionTiles.getSize());

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,7 +35,6 @@
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "openmm/common/CommonKernels.h"
-#include <cufft.h>
 
 namespace OpenMM {
 
@@ -182,18 +181,15 @@ private:
     CudaArray pmeDispersionBsplineModuliZ;
     CudaArray pmeAtomGridIndex;
     CudaArray pmeEnergyBuffer;
+    CudaArray chargeBuffer;
     CudaSort* sort;
     Kernel cpuPme;
     PmeIO* pmeio;
-    CUstream pmeStream;
+    ComputeQueue pmeQueue;
     CUevent pmeSyncEvent, paramsSyncEvent;
     CudaFFT3D* fft;
-    cufftHandle fftForward;
-    cufftHandle fftBackward;
     CudaFFT3D* dispersionFft;
-    cufftHandle dispersionFftForward;
-    cufftHandle dispersionFftBackward;
-    CUfunction computeParamsKernel, computeExclusionParamsKernel;
+    CUfunction computeParamsKernel, computeExclusionParamsKernel, computePlasmaCorrectionKernel;
     CUfunction ewaldSumsKernel;
     CUfunction ewaldForcesKernel;
     CUfunction pmeGridIndexKernel;
@@ -212,11 +208,11 @@ private:
     std::vector<std::string> paramNames;
     std::vector<double> paramValues;
     std::map<int, int> exceptionIndex;
-    double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha;
+    double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha, totalCharge;
     int interpolateForceThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    bool hasCoulomb, hasLJ, useFixedPointChargeSpreading, usePmeStream, useCudaFFT, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
+    bool hasCoulomb, hasLJ, useFixedPointChargeSpreading, usePmeStream, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
     NonbondedMethod nonbondedMethod;
     static const int PmeOrder = 5;
 };

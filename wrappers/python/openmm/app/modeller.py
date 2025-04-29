@@ -6,7 +6,7 @@ Simbios, the NIH National Center for Physics-Based Simulation of
 Biological Structures at Stanford, funded under the NIH Roadmap for
 Medical Research, grant U54 GM072970. See https://simtk.org.
 
-Portions copyright (c) 2012-2024 Stanford University and the Authors.
+Portions copyright (c) 2012-2025 Stanford University and the Authors.
 Authors: Peter Eastman
 Contributors: 
 
@@ -878,6 +878,9 @@ class Modeller(object):
         newResidueTemplates = {}
         newIndices = []
         acceptors = [atom for atom in self.topology.atoms() if atom.element in (elem.oxygen, elem.nitrogen)]
+        positions = self.positions.value_in_unit(nanometer)
+        acceptorPositions = [positions[a.index] for a in acceptors]
+        cells = _CellList(acceptorPositions, 0.35, None, False)
         for chain in self.topology.chains():
             newChain = newTopology.addChain(chain.id)
             for residue in chain.residues():
@@ -934,14 +937,21 @@ class Modeller(object):
 
                                 nd1IsBonded = False
                                 ne2IsBonded = False
-                                for acceptor in acceptors:
+                                for acceptorIndex in cells.neighbors(nd1Pos.value_in_unit(nanometer)):
+                                    acceptor = acceptors[acceptorIndex]
                                     if acceptor.residue != residue:
                                         acceptorPos = self.positions[acceptor.index]
                                         if isHbond(nd1Pos, hd1Pos, acceptorPos):
                                             nd1IsBonded = True
                                             break
-                                        if isHbond(ne2Pos, he2Pos, acceptorPos):
-                                            ne2IsBonded = True
+                                if not nd1IsBonded:
+                                    for acceptorIndex in cells.neighbors(ne2Pos.value_in_unit(nanometer)):
+                                        acceptor = acceptors[acceptorIndex]
+                                        if acceptor.residue != residue:
+                                            acceptorPos = self.positions[acceptor.index]
+                                            if isHbond(ne2Pos, he2Pos, acceptorPos):
+                                                nd1IsBonded = True
+                                                break
                                 if ne2IsBonded and not nd1IsBonded:
                                     variant = 'HIE'
                                 else:
@@ -1205,24 +1215,31 @@ class Modeller(object):
                                 if site.index == index:
                                     # This is a virtual site.  Compute its position by the correct rule.
 
-                                    if site.type == 'average2':
-                                        position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]]
-                                    elif site.type == 'average3':
-                                        position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]] + site.weights[2]*templateAtomPositions[site.atoms[2]]
-                                    elif site.type == 'outOfPlane':
-                                        v1 = templateAtomPositions[site.atoms[1]] - templateAtomPositions[site.atoms[0]]
-                                        v2 = templateAtomPositions[site.atoms[2]] - templateAtomPositions[site.atoms[0]]
-                                        cross = Vec3(v1[1]*v2[2]-v1[2]*v2[1], v1[2]*v2[0]-v1[0]*v2[2], v1[0]*v2[1]-v1[1]*v2[0])
-                                        position = templateAtomPositions[site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
-                                    elif site.type == 'localCoords':
-                                        origin = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.originWeights)])
-                                        xdir = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.xWeights)])
-                                        ydir = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.yWeights)])
-                                        zdir = Vec3(xdir[1]*ydir[2]-xdir[2]*ydir[1], xdir[2]*ydir[0]-xdir[0]*ydir[2], xdir[0]*ydir[1]-xdir[1]*ydir[0])
-                                        xdir /= norm(xdir);
-                                        zdir /= norm(zdir);
-                                        ydir = Vec3(zdir[1]*xdir[2]-zdir[2]*xdir[1], zdir[2]*xdir[0]-zdir[0]*xdir[2], zdir[0]*xdir[1]-zdir[1]*xdir[0])
-                                        position = origin + xdir*site.localPos[0] + ydir*site.localPos[1] + zdir*site.localPos[2];
+                                    try:
+                                        if site.type == 'average2':
+                                            position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]]
+                                        elif site.type == 'average3':
+                                            position = site.weights[0]*templateAtomPositions[site.atoms[0]] + site.weights[1]*templateAtomPositions[site.atoms[1]] + site.weights[2]*templateAtomPositions[site.atoms[2]]
+                                        elif site.type == 'outOfPlane':
+                                            v1 = templateAtomPositions[site.atoms[1]] - templateAtomPositions[site.atoms[0]]
+                                            v2 = templateAtomPositions[site.atoms[2]] - templateAtomPositions[site.atoms[0]]
+                                            cross = Vec3(v1[1]*v2[2]-v1[2]*v2[1], v1[2]*v2[0]-v1[0]*v2[2], v1[0]*v2[1]-v1[1]*v2[0])
+                                            position = templateAtomPositions[site.atoms[0]] + site.weights[0]*v1 + site.weights[1]*v2 + site.weights[2]*cross
+                                        elif site.type == 'localCoords':
+                                            origin = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.originWeights)])
+                                            xdir = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.xWeights)])
+                                            ydir = unit.sum([templateAtomPositions[atom]*weight for atom, weight in zip(site.atoms, site.yWeights)])
+                                            zdir = Vec3(xdir[1]*ydir[2]-xdir[2]*ydir[1], xdir[2]*ydir[0]-xdir[0]*ydir[2], xdir[0]*ydir[1]-xdir[1]*ydir[0])
+                                            xdir /= norm(xdir)
+                                            zdir /= norm(zdir)
+                                            ydir = Vec3(zdir[1]*xdir[2]-zdir[2]*xdir[1], zdir[2]*xdir[0]-zdir[0]*xdir[2], zdir[0]*xdir[1]-zdir[1]*xdir[0])
+                                            position = origin + xdir*site.localPos[0] + ydir*site.localPos[1] + zdir*site.localPos[2]
+                                    except:
+                                        # This can happen if the virtual site depends on another virtual site whose position
+                                        # hasn't been set yet.  Ignore the error.  We'll put it at a random position (see below),
+                                        # which will get replaced with the correct position at the start of the simulation.
+
+                                        pass
                             if position is None and atom.type in drudeTypeMap:
                                 # This is a Drude particle.  Put it on top of its parent atom.
 
@@ -1290,7 +1307,8 @@ class Modeller(object):
         self.positions = newPositions
 
 
-    def addMembrane(self, forcefield, lipidType='POPC', membraneCenterZ=0*nanometer, minimumPadding=1*nanometer, positiveIon='Na+', negativeIon='Cl-', ionicStrength=0*molar, neutralize=True, residueTemplates=dict()):
+    def addMembrane(self, forcefield, lipidType='POPC', membraneCenterZ=0*nanometer, minimumPadding=1*nanometer, positiveIon='Na+', negativeIon='Cl-',
+                    ionicStrength=0*molar, neutralize=True, residueTemplates=dict(), platform=None):
         """Add a lipid membrane to the model.
 
         This method actually adds both a membrane and a water box.  It is best to build them together,
@@ -1348,6 +1366,9 @@ class Modeller(object):
             templates to use for them.  This is useful when a ForceField contains multiple templates
             that can match the same residue (e.g Fe2+ and Fe3+ templates in the ForceField for a
             monoatomic iron ion in the Topology).
+        platform : Platform=None
+            the Platform to use when computing the hydrogen atom positions.  If
+            this is None, the default Platform will be used.
         """
         if 'topology' in dir(lipidType) and 'positions' in dir(lipidType):
             patch = lipidType
@@ -1547,7 +1568,10 @@ class Modeller(object):
 
         steps = int(max(proteinSize.x, proteinSize.y)*10) + 1
         integrator = LangevinIntegrator(10.0, 50.0, 0.001)
-        context = Context(system, integrator)
+        if platform is None:
+            context = Context(system, integrator)
+        else:
+            context = Context(system, integrator, platform)
         context.setPositions(mergedPositions)
         LocalEnergyMinimizer.minimize(context, 10.0, 30)
         try:
@@ -1582,7 +1606,11 @@ class Modeller(object):
 
         needExtraWater = (boxSizeZ > patchSize[2])
         if needExtraWater:
-            modeller.addSolvent(forcefield, neutralize=False, residueTemplates=residueTemplates)
+            newResidueTemplates = {}
+            for r1, r2 in zip(self.topology.residues(), modeller.topology.residues()):
+                if r1 in residueTemplates:
+                    newResidueTemplates[r2] = residueTemplates[r1]
+            modeller.addSolvent(forcefield, neutralize=False, residueTemplates=newResidueTemplates)
 
         # Record the positions of all waters that have been added.
 
@@ -1660,6 +1688,14 @@ class _CellList(object):
     """This class organizes atom positions into cells, so the neighbors of a point can be quickly retrieved"""
 
     def __init__(self, positions, maxCutoff, vectors, periodic):
+        if vectors is None:
+            if len(positions) == 0:
+                vectors = (Vec3(maxCutoff, 0, 0), Vec3(0, maxCutoff, 0), Vec3(0, 0, maxCutoff))
+            else:
+                minPos = [min((pos[i] for pos in positions)) for i in range(3)]
+                maxPos = [max((pos[i] for pos in positions)) for i in range(3)]
+                width = [max(maxPos[i]-minPos[i], maxCutoff) for i in range(3)]
+                vectors = (Vec3(width[0], 0, 0), Vec3(0, width[1], 0), Vec3(0, 0, width[2]))
         self.positions = deepcopy(positions)
         self.cells = {}
         self.numCells = tuple((max(1, int(floor(vectors[i][i]/maxCutoff))) for i in range(3)))

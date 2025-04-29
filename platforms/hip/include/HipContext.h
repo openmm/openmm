@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Portions copyright (c) 2020-2023 Advanced Micro Devices, Inc.              *
  * Authors: Peter Eastman, Nicholas Curtis                                    *
  * Contributors:                                                              *
@@ -46,12 +46,12 @@
     // Prevent Windows from defining macros that interfere with other code.
     #define NOMINMAX
 #endif
-#include <pthread.h>
 #include <hip/hip_runtime.h>
 #include "openmm/common/windowsExportCommon.h"
 #include "HipArray.h"
 #include "HipBondedUtilities.h"
 #include "HipExpressionUtilities.h"
+#include "HipFFT3D.h"
 #include "HipIntegrationUtilities.h"
 #include "HipNonbondedUtilities.h"
 #include "HipPlatform.h"
@@ -162,17 +162,13 @@ public:
      */
     double& getEnergyWorkspace();
     /**
+     * Create a new ComputeQueue for use with this context.
+     */
+    ComputeQueue createQueue();
+    /**
      * Get the stream currently being used for execution.
      */
     hipStream_t getCurrentStream();
-    /**
-     * Set the stream to use for execution.
-     */
-    void setCurrentStream(hipStream_t stream);
-    /**
-     * Reset the context to using the default stream for execution.
-     */
-    void restoreDefaultStream();
     /**
      * Construct an uninitialized array of the appropriate class for this platform.  The returned
      * value should be created on the heap with the "new" operator.
@@ -183,9 +179,19 @@ public:
      */
     ComputeEvent createEvent();
     /**
-     * Get the smallest legal size for a dimension of the grid supported by the FFT.
+     * Create an object for performing 3D FFTs.  The caller is responsible for deleting
+     * the object when it is no longer needed.
+     *
+     * @param xsize   the first dimension of the data sets on which FFTs will be performed
+     * @param ysize   the second dimension of the data sets on which FFTs will be performed
+     * @param zsize   the third dimension of the data sets on which FFTs will be performed
+     * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
      */
-    virtual int findLegalFFTDimension(int minimum);
+    HipFFT3D* createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
+    /**
+     * Get the smallest legal size for a dimension of the grid.
+     */
+    int findLegalFFTDimension(int minimum);
     /**
      * Compile source code to create a ComputeProgram.
      *
@@ -622,8 +628,6 @@ private:
     std::map<std::string, std::string> compilationDefines;
     std::vector<hipModule_t> loadedModules;
     hipDevice_t device;
-    hipStream_t currentStream;
-    hipStream_t defaultStream;
     hipFunction_t clearBufferKernel;
     hipFunction_t clearTwoBuffersKernel;
     hipFunction_t clearThreeBuffersKernel;

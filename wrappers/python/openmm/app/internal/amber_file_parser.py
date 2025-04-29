@@ -62,7 +62,7 @@ from . import customgbforces as customgb
 #=============================================================================================
 
 # A regex for extracting print format info from the FORMAT lines.
-FORMAT_RE_PATTERN=re.compile("([0-9]+)\(?([a-zA-Z]+)([0-9]+)\.?([0-9]*)\)?")
+FORMAT_RE_PATTERN=re.compile(r"([0-9]+)\(?([a-zA-Z]+)([0-9]+)\.?([0-9]*)\)?")
 
 # Pointer labels which map to pointer numbers at top of prmtop files
 POINTER_LABELS  = """

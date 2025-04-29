@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -84,7 +84,7 @@ const int CudaContext::TileSize = sizeof(tileflags)*8;
 bool CudaContext::hasInitializedCuda = false;
 
 CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlockingSync, const string& precision, const string& tempDir, CudaPlatform::PlatformData& platformData,
-        CudaContext* originalContext) : ComputeContext(system), currentStream(0), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
+        CudaContext* originalContext) : ComputeContext(system), platformData(platformData), contextIsValid(false), hasAssignedPosqCharges(false),
         pinnedBuffer(NULL), integration(NULL), expression(NULL), bonded(NULL), nonbonded(NULL), useBlockingSync(useBlockingSync) {
     int cudaDriverVersion;
     cuDriverGetVersion(&cudaDriverVersion);
@@ -189,7 +189,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     contextIsValid = true;
     ContextSelector selector(*this);
     CHECK_RESULT(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED));
-    if (contextIndex > 0) {
+    if (contextIndex > 0 && originalContext == NULL) {
         int canAccess;
         cuDeviceCanAccessPeer(&canAccess, getDevice(), platformData.contexts[0]->getDevice());
         if (canAccess) {
@@ -200,6 +200,8 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
             CHECK_RESULT(cuCtxEnablePeerAccess(platformData.contexts[0]->getContext(), 0));
         }
     }
+    defaultQueue = shared_ptr<ComputeQueueImpl>(new CudaQueue(0));
+    currentQueue = defaultQueue;
     numAtoms = system.getNumParticles();
     paddedNumAtoms = TileSize*((numAtoms+TileSize-1)/TileSize);
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
@@ -437,6 +439,10 @@ void CudaContext::initializeContexts() {
     getPlatformData().initializeContexts(system);
 }
 
+CudaFFT3D* CudaContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
+    return new CudaFFT3D(*this, xsize, ysize, zsize, realToComplex);
+}
+
 void CudaContext::setAsCurrent() {
     if (contextIsValid)
         cuCtxSetCurrent(context);
@@ -547,11 +553,7 @@ CUmodule CudaContext::createModule(const string source, const map<string, string
 
     stringstream tempFileName;
     tempFileName << "openmmTempKernel" << this; // Include a pointer to this context as part of the filename to avoid collisions.
-#ifdef WIN32
-    tempFileName << "_" << GetCurrentProcessId();
-#else
-    tempFileName << "_" << getpid();
-#endif
+    tempFileName << "_" << this_thread::get_id();
     string outputFile = (tempDir+tempFileName.str()+".ptx");
 
     // Split the command line flags into an array of options.
@@ -649,16 +651,12 @@ double& CudaContext::getEnergyWorkspace() {
     return platformData.contextEnergy[contextIndex];
 }
 
+ComputeQueue CudaContext::createQueue() {
+    return shared_ptr<ComputeQueueImpl>(new CudaQueue());
+}
+
 CUstream CudaContext::getCurrentStream() {
-    return currentStream;
-}
-
-void CudaContext::setCurrentStream(CUstream stream) {
-    currentStream = stream;
-}
-
-void CudaContext::restoreDefaultStream() {
-    setCurrentStream(0);
+    return dynamic_cast<CudaQueue*>(currentQueue.get())->getStream();
 }
 
 CudaArray* CudaContext::createArray() {
@@ -697,7 +695,7 @@ void CudaContext::executeKernel(CUfunction kernel, void** arguments, int threads
     if (blockSize == -1)
         blockSize = ThreadBlockSize;
     int gridSize = std::min((threads+blockSize-1)/blockSize, numThreadBlocks);
-    CUresult result = cuLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, currentStream, arguments, NULL);
+    CUresult result = cuLaunchKernel(kernel, gridSize, 1, 1, blockSize, 1, 1, sharedSize, getCurrentStream(), arguments, NULL);
     if (result != CUDA_SUCCESS) {
         stringstream str;
         str<<"Error invoking kernel: "<<getErrorString(result)<<" ("<<result<<")";

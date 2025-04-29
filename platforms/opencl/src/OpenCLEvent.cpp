@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019 Stanford University and the Authors.           *
+ * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -25,6 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLEvent.h"
+#include "OpenCLQueue.h"
 
 using namespace OpenMM;
 
@@ -32,7 +33,7 @@ OpenCLEvent::OpenCLEvent(OpenCLContext& context) : context(context) {
 }
 
 void OpenCLEvent::enqueue() {
-    context.getQueue().enqueueMarkerWithWaitList(NULL, &event);
+    dynamic_cast<OpenCLQueue*>(context.getCurrentQueue().get())->getQueue().enqueueMarkerWithWaitList(NULL, &event);
 }
 
 void OpenCLEvent::wait() {

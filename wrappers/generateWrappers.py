@@ -79,6 +79,8 @@ class WrapperGenerator:
                             'const std::vector<int>& OpenMM::NoseHooverIntegrator::getAllThermostatedIndividualParticles',
                             'const std::vector<std::tuple<int, int, double> >& OpenMM::NoseHooverIntegrator::getAllThermostatedPairs',
                             'virtual void OpenMM::NoseHooverIntegrator::stateChanged',
+                            'Vec3 OpenMM::MonteCarloAnisotropicBarostat::computeCurrentPressure',
+                            'Vec3 OpenMM::MonteCarloMembraneBarostat::computeCurrentPressure',
                             'virtual bool OpenMM::TabulatedFunction::operator==',
                             'bool OpenMM::Continuous1DFunction::operator==',
                             'bool OpenMM::Continuous2DFunction::operator==',
@@ -92,7 +94,8 @@ class WrapperGenerator:
                             'bool OpenMM::Continuous3DFunction::operator!=',
                             'bool OpenMM::Discrete1DFunction::operator!=',
                             'bool OpenMM::Discrete2DFunction::operator!=',
-                            'bool OpenMM::Discrete3DFunction::operator!='
+                            'bool OpenMM::Discrete3DFunction::operator!=',
+                            'const std::map<int, int>& OpenMM::DPDIntegrator::getParticleTypes'
                            ]
         self.skipMethods = [s.replace(' ', '') for s in self.skipMethods]
         self.hideClasses = ['Kernel', 'KernelImpl', 'KernelFactory', 'ContextImpl', 'SerializationNode', 'SerializationProxy']

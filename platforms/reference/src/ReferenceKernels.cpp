@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2024 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -49,6 +49,7 @@
 #include "ReferenceCustomNonbondedIxn.h"
 #include "ReferenceCustomManyParticleIxn.h"
 #include "ReferenceCustomTorsionIxn.h"
+#include "ReferenceDPDDynamics.h"
 #include "ReferenceGayBerneForce.h"
 #include "ReferenceHarmonicBondIxn.h"
 #include "ReferenceLangevinMiddleDynamics.h"
@@ -1067,7 +1068,11 @@ void ReferenceCalcNonbondedForceKernel::copyParametersToContext(ContextImpl& con
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-        if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
+        if (nb14Index.find(i) == nb14Index.end()) {
+            if (chargeProd != 0.0 || epsilon != 0.0 || exceptionsWithOffsets.find(i) != exceptionsWithOffsets.end())
+                throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+        }
+        else
             nb14s.push_back(i);
     }
     if (nb14s.size() != num14)
@@ -2348,7 +2353,7 @@ void ReferenceIntegrateNoseHooverStepKernel::initialize(const System& system, co
     this->chainPropagator = new ReferenceNoseHooverChain();
 }
 
-void ReferenceIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator, bool &forcesAreValid) {
+void ReferenceIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const NoseHooverIntegrator& integrator) {
     double stepSize = integrator.getStepSize();
     vector<Vec3>& posData = extractPositions(context);
     vector<Vec3>& velData = extractVelocities(context);
@@ -2362,7 +2367,7 @@ void ReferenceIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const
         dynamics->setVirtualSites(extractVirtualSites(context));
         prevStepSize = stepSize;
     }
-    dynamics->step1(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid,
+    dynamics->step1(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(),
                      integrator.getAllThermostatedIndividualParticles(), integrator.getAllThermostatedPairs(), integrator.getMaximumPairDistance());
     int numChains = integrator.getNumThermostats();
     for(int chain = 0; chain < numChains; ++chain) {
@@ -2371,7 +2376,7 @@ void ReferenceIntegrateNoseHooverStepKernel::execute(ContextImpl& context, const
         std::pair<double, double> scaleFactors = propagateChain(context, thermostatChain, KEs, stepSize);
         scaleVelocities(context, thermostatChain, scaleFactors);
     }
-    dynamics->step2(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(), forcesAreValid,
+    dynamics->step2(context, context.getSystem(), posData, velData, forceData, masses, integrator.getConstraintTolerance(),
                      integrator.getAllThermostatedIndividualParticles(), integrator.getAllThermostatedPairs(), integrator.getMaximumPairDistance());
     data.time += stepSize;
     data.stepCount++;
@@ -2858,6 +2863,36 @@ void ReferenceIntegrateCustomStepKernel::setPerDofVariable(ContextImpl& context,
         perDofValues[variable][i] = values[i];
 }
 
+ReferenceIntegrateDPDStepKernel::~ReferenceIntegrateDPDStepKernel() {
+    if (dynamics != NULL)
+        delete dynamics;
+}
+
+void ReferenceIntegrateDPDStepKernel::initialize(const System& system, const DPDIntegrator& integrator) {
+    masses.resize(system.getNumParticles());
+    for (int i = 0; i < system.getNumParticles(); ++i)
+        masses[i] = system.getParticleMass(i);
+    dynamics = new ReferenceDPDDynamics(system, integrator);
+    SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
+}
+
+void ReferenceIntegrateDPDStepKernel::execute(ContextImpl& context, const DPDIntegrator& integrator) {
+    dynamics->setTemperature(integrator.getTemperature());
+    dynamics->setDeltaT(integrator.getStepSize());
+    dynamics->setReferenceConstraintAlgorithm(&extractConstraints(context));
+    dynamics->setVirtualSites(extractVirtualSites(context));
+    dynamics->setPeriodicBoxVectors(extractBoxVectors(context));
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& velData = extractVelocities(context);
+    dynamics->update(context, posData, velData, masses, integrator.getConstraintTolerance());
+    data.time += integrator.getStepSize();
+    data.stepCount++;
+}
+
+double ReferenceIntegrateDPDStepKernel::computeKineticEnergy(ContextImpl& context, const DPDIntegrator& integrator) {
+    return computeShiftedKineticEnergy(context, masses, 0.0);
+}
+
 ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel() {
     if (thermostat)
         delete thermostat;
@@ -2886,19 +2921,24 @@ ReferenceApplyMonteCarloBarostatKernel::~ReferenceApplyMonteCarloBarostatKernel(
         delete barostat;
 }
 
-void ReferenceApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& barostat, bool rigidMolecules) {
+void ReferenceApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& barostat, int components, bool rigidMolecules) {
+    this->components = components;
     this->rigidMolecules = rigidMolecules;
 }
 
 void ReferenceApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) {
     if (barostat == NULL) {
+        const System& system = context.getSystem();
+        vector<double> masses;
+        for (int i = 0; i < system.getNumParticles(); i++)
+            masses.push_back(system.getParticleMass(i));
         if (rigidMolecules)
-            barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), context.getMolecules());
+            barostat = new ReferenceMonteCarloBarostat(system.getNumParticles(), context.getMolecules(), masses);
         else {
-            vector<vector<int> > molecules(context.getSystem().getNumParticles());
+            vector<vector<int> > molecules(system.getNumParticles());
             for (int i = 0; i < molecules.size(); i++)
                 molecules[i].push_back(i);
-            barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), molecules);
+            barostat = new ReferenceMonteCarloBarostat(system.getNumParticles(), molecules, masses);
         }
     }
     vector<Vec3>& posData = extractPositions(context);
@@ -2914,6 +2954,10 @@ void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& conte
 void ReferenceApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
     vector<Vec3>& posData = extractPositions(context);
     barostat->restorePositions(posData);
+}
+
+void ReferenceApplyMonteCarloBarostatKernel::computeKineticEnergy(ContextImpl& context, vector<double>& ke) {
+    barostat->computeMolecularKineticEnergy(extractVelocities(context), ke, components);
 }
 
 void ReferenceRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
@@ -2972,8 +3016,18 @@ void ReferenceCalcATMForceKernel::applyForces(ContextImpl& context, ContextImpl&
     vector<Vec3>& force = extractForces(context);
     vector<Vec3>& force0 = extractForces(innerContext0);
     vector<Vec3>& force1 = extractForces(innerContext1);
-    for (int i = 0; i < force.size(); i++)
-        force[i] += dEdu0*force0[i] + dEdu1*force1[i];
+
+    //update forces and
+    //protects from infinite forces when the hybrid potential does
+    //not depend on u1 or u0, typically at the endpoints
+    double epsi = std::numeric_limits<float>::min();
+    for (int i = 0; i < force.size(); i++) {
+        if (fabs(dEdu0) > epsi)
+	    force[i] += dEdu0*force0[i];
+	if (fabs(dEdu1) > epsi)
+	    force[i] += dEdu1*force1[i];
+    }
+
     map<string, double>& derivs = extractEnergyParameterDerivatives(context);
     for (auto deriv : energyParamDerivs)
         derivs[deriv.first] += deriv.second;

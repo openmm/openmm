@@ -35,12 +35,8 @@
 using namespace OpenMM;
 using namespace std;
 
-HipFFT3D::HipFFT3D(HipContext& context, int xsize, int ysize, int zsize, bool realToComplex, hipStream_t stream, HipArray& in, HipArray& out) :
-        context(context), stream(stream) {
-
+HipFFT3D::HipFFT3D(HipContext& context, int xsize, int ysize, int zsize, bool realToComplex) : context(context) {
     deviceIndex = context.getDeviceIndex();
-    inputBuffer = in.getDevicePointer();
-    outputBuffer = out.getDevicePointer();
     size_t valueSize = context.getUseDoublePrecision() ? sizeof(double) : sizeof(float);
     inputBufferSize = zsize * ysize * xsize * valueSize;
     if (realToComplex) {
@@ -54,7 +50,7 @@ HipFFT3D::HipFFT3D(HipContext& context, int xsize, int ysize, int zsize, bool re
     configuration.performR2C = realToComplex;
     configuration.device = &deviceIndex;
     configuration.num_streams = 1;
-    configuration.stream = &this->stream;
+    configuration.stream = &stream;
     configuration.doublePrecision = context.getUseDoublePrecision();
 
     configuration.FFTdim = 3;
@@ -133,7 +129,16 @@ HipFFT3D::~HipFFT3D() {
     delete app;
 }
 
-void HipFFT3D::execFFT(bool forward) {
+void HipFFT3D::execFFT(ArrayInterface& in, ArrayInterface& out, bool forward) {
+    if (forward) {
+        inputBuffer = context.unwrap(in).getDevicePointer();
+        outputBuffer = context.unwrap(out).getDevicePointer();
+    }
+    else {
+        inputBuffer = context.unwrap(out).getDevicePointer();
+        outputBuffer = context.unwrap(in).getDevicePointer();
+    }
+    stream = context.getCurrentStream();
     VkFFTResult fftResult = VkFFTAppend(app, forward ? -1 : 1, NULL);
     if (fftResult != VKFFT_SUCCESS) {
         throw OpenMMException("Error executing VkFFTAppend: "+context.intToString(fftResult));

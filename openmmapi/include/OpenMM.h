@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2009-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -49,6 +49,8 @@
 #include "openmm/CustomIntegrator.h"
 #include "openmm/CustomManyParticleForce.h"
 #include "openmm/CustomNonbondedForce.h"
+#include "openmm/CustomVolumeForce.h"
+#include "openmm/DPDIntegrator.h"
 #include "openmm/Force.h"
 #include "openmm/GayBerneForce.h"
 #include "openmm/GBSAOBCForce.h"

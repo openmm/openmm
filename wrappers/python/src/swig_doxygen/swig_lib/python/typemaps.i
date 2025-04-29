@@ -545,7 +545,7 @@ int Py_SequenceToVecVecVecDouble(PyObject* obj, std::vector<std::vector<std::vec
 
 /* The following typemaps handle the ways a Vec3 can be returned from a function. */
 %typemap(out, fragment="Vec3_to_PyVec3") Vec3 {
-    $result = Vec3_to_PyVec3(*$1);
+    $result = Vec3_to_PyVec3($1);
 }
 
 %typemap(out, fragment="Vec3_to_PyVec3") const Vec3& {

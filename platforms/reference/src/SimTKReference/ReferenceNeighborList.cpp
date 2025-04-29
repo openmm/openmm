@@ -84,7 +84,7 @@ typedef std::vector< VoxelItem > Voxel;
 class VoxelHash
 {
 public:
-    VoxelHash(double vsx, double vsy, double vsz, const Vec3* periodicBoxVectors, bool usePeriodic) :
+    VoxelHash(double vsx, double vsy, double vsz, const Vec3* periodicBoxVectors, const AtomLocationList& atomLocations, bool usePeriodic) :
             voxelSizeX(vsx), voxelSizeY(vsy), voxelSizeZ(vsz), periodicBoxVectors(periodicBoxVectors), usePeriodic(usePeriodic) {
         if (usePeriodic) {
             nx = (int) floor(periodicBoxVectors[0][0]/voxelSizeX+0.5);
@@ -93,6 +93,19 @@ public:
             voxelSizeX = periodicBoxVectors[0][0]/nx;
             voxelSizeY = periodicBoxVectors[1][1]/ny;
             voxelSizeZ = periodicBoxVectors[2][2]/nz;
+        }
+        else {
+            Vec3 minPos = atomLocations[0];
+            Vec3 maxPos = atomLocations[0];
+            for (int i = 1; i < atomLocations.size(); i++) {
+                for (int j = 0; j < 3; j++) {
+                    minPos[j] = min(minPos[j], atomLocations[i][j]);
+                    maxPos[j] = max(maxPos[j], atomLocations[i][j]);
+                }
+            }
+            nx = max(1, min(500, (int) round((maxPos[0]-minPos[0])/voxelSizeY)));
+            ny = max(1, min(500, (int) round((maxPos[1]-minPos[1])/voxelSizeY)));
+            nz = max(1, min(500, (int) round((maxPos[2]-minPos[2])/voxelSizeY)));
         }
     }
 
@@ -240,7 +253,7 @@ void OPENMM_EXPORT computeNeighborListVoxelHash(
         edgeSizeY = 0.5*periodicBoxVectors[1][1]/floor(periodicBoxVectors[1][1]/maxDistance);
         edgeSizeZ = 0.5*periodicBoxVectors[2][2]/floor(periodicBoxVectors[2][2]/maxDistance);
     }
-    VoxelHash voxelHash(edgeSizeX, edgeSizeY, edgeSizeZ, periodicBoxVectors, usePeriodic);
+    VoxelHash voxelHash(edgeSizeX, edgeSizeY, edgeSizeZ, periodicBoxVectors, atomLocations, usePeriodic);
     for (AtomIndex atomJ = 0; atomJ < (AtomIndex) nAtoms; ++atomJ) // use "j", because j > i for pairs
     {
         // 1) Find other atoms that are close to this one

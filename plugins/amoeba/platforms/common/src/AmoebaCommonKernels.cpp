@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -210,10 +210,12 @@ private:
 
 CommonCalcAmoebaMultipoleForceKernel::CommonCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system) :
         CalcAmoebaMultipoleForceKernel(name, platform), cc(cc), system(system), hasInitializedScaleFactors(false), multipolesAreValid(false), hasCreatedEvent(false),
-        gkKernel(NULL) {
+        fft(NULL), gkKernel(NULL) {
 }
 
 CommonCalcAmoebaMultipoleForceKernel::~CommonCalcAmoebaMultipoleForceKernel() {
+    if (fft != NULL)
+        delete fft;
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
@@ -718,6 +720,7 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
         pmePhip.initialize(cc, 10*numMultipoles, elementSize, "pmePhip");
         pmePhidp.initialize(cc, 20*numMultipoles, elementSize, "pmePhidp");
         pmeCphi.initialize(cc, 10*numMultipoles, elementSize, "pmeCphi");
+        fft = cc.createFFT(gridSizeX, gridSizeY, gridSizeZ, false);
 
         // Create the PME kernels.
 
@@ -1162,9 +1165,9 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
         pmeSpreadFixedMultipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
-        computeFFT(true);
+        fft->execFFT(pmeGrid1, pmeGrid2, true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeFFT(false);
+        fft->execFFT(pmeGrid2, pmeGrid1, false);
         pmeFixedPotentialKernel->execute(cc.getNumAtoms());
         pmeTransformPotentialKernel->setArg(0, pmePhi);
         pmeTransformPotentialKernel->execute(cc.getNumAtoms());
@@ -1186,9 +1189,9 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
         pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
-        computeFFT(true);
+        fft->execFFT(pmeGrid1, pmeGrid2, true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeFFT(false);
+        fft->execFFT(pmeGrid2, pmeGrid1, false);
         pmeInducedPotentialKernel->execute(cc.getNumAtoms());
         
         // Iterate until the dipoles converge.
@@ -1262,9 +1265,9 @@ void CommonCalcAmoebaMultipoleForceKernel::computeInducedField() {
         pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
-        computeFFT(true);
+        fft->execFFT(pmeGrid1, pmeGrid2, true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeFFT(false);
+        fft->execFFT(pmeGrid2, pmeGrid1, false);
         pmeInducedPotentialKernel->execute(cc.getNumAtoms());
         if (polarizationType == AmoebaMultipoleForce::Extrapolated) {
             pmeRecordInducedFieldDipolesKernel->execute(cc.getNumAtoms());
@@ -2399,7 +2402,14 @@ private:
 };
 
 CommonCalcHippoNonbondedForceKernel::CommonCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system) :
-        CalcHippoNonbondedForceKernel(name, platform), cc(cc), system(system), hasInitializedKernels(false), multipolesAreValid(false) {
+        CalcHippoNonbondedForceKernel(name, platform), cc(cc), system(system), hasInitializedKernels(false), multipolesAreValid(false), fft(NULL), dfft(NULL) {
+}
+
+CommonCalcHippoNonbondedForceKernel::~CommonCalcHippoNonbondedForceKernel() {
+    if (fft != NULL)
+        delete fft;
+    if (dfft != NULL)
+        delete dfft;
 }
 
 void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
@@ -2665,6 +2675,8 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
         pmePhidp.initialize(cc, 20*numParticles, elementSize, "pmePhidp");
         pmeCphi.initialize(cc, 10*numParticles, elementSize, "pmeCphi");
         pmeAtomGridIndex.initialize<mm_int2>(cc, numParticles, "pmeAtomGridIndex");
+        fft = cc.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
+        dfft = cc.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
 
         // Create the PME kernels.
 
@@ -3298,9 +3310,9 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
         pmeSpreadFixedMultipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
-        computeFFT(true, false);
+        fft->execFFT(pmeGrid1, pmeGrid2, true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeFFT(false, false);
+        fft->execFFT(pmeGrid2, pmeGrid1, false);
         pmeFixedPotentialKernel->execute(cc.getNumAtoms());
         pmeTransformPotentialKernel->setArg(0, pmePhi);
         pmeTransformPotentialKernel->execute(cc.getNumAtoms());
@@ -3317,11 +3329,11 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
         dpmeSpreadChargeKernel->execute(PmeOrder*cc.getNumAtoms(), 128);
         if (useFixedPointChargeSpreading())
             dpmeFinishSpreadChargeKernel->execute(dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
-        computeFFT(true, true);
+        dfft->execFFT(pmeGrid1, pmeGrid2, true);
         if (includeEnergy)
             dpmeEvalEnergyKernel->execute(dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ);
         dpmeConvolutionKernel->execute(dispersionGridSizeX*dispersionGridSizeY*dispersionGridSizeZ, 256);
-        computeFFT(false, true);
+        dfft->execFFT(pmeGrid2, pmeGrid1, false);
         dpmeInterpolateForceKernel->execute(cc.getNumAtoms(), 128);
     }
 
@@ -3388,9 +3400,9 @@ void CommonCalcHippoNonbondedForceKernel::computeInducedField(int optOrder) {
         pmeSpreadInducedDipolesKernel->execute(cc.getNumAtoms());
         if (useFixedPointChargeSpreading())
             pmeFinishSpreadChargeKernel->execute(pmeGrid1.getSize());
-        computeFFT(true, false);
+        fft->execFFT(pmeGrid1, pmeGrid2, true);
         pmeConvolutionKernel->execute(gridSizeX*gridSizeY*gridSizeZ, 256);
-        computeFFT(false, false);
+        fft->execFFT(pmeGrid2, pmeGrid1, false);
         pmeInducedPotentialKernel->setArg(2, optOrder);
         pmeInducedPotentialKernel->execute(cc.getNumAtoms());
         pmeRecordInducedFieldDipolesKernel->execute(cc.getNumAtoms());
