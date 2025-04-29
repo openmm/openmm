@@ -244,10 +244,6 @@ private:
 };
 
 OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
-    if (fft != NULL)
-        delete fft;
-    if (dispersionFft != NULL)
-        delete dispersionFft;
     if (pmeio != NULL)
         delete pmeio;
 }

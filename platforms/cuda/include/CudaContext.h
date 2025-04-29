@@ -42,7 +42,6 @@
 #include "CudaArray.h"
 #include "CudaBondedUtilities.h"
 #include "CudaExpressionUtilities.h"
-#include "CudaFFT3D.h"
 #include "CudaIntegrationUtilities.h"
 #include "CudaNonbondedUtilities.h"
 #include "CudaPlatform.h"
@@ -528,7 +527,7 @@ public:
      * @param zsize   the third dimension of the data sets on which FFTs will be performed
      * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
      */
-    CudaFFT3D* createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
+    FFT3D createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
     /**
      * This should be called by the Integrator from its own initialize() method.
      * It ensures all contexts are fully initialized.

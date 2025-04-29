@@ -696,8 +696,8 @@ ComputeSort HipContext::createSort(ComputeSortImpl::SortTrait* trait, unsigned i
     return shared_ptr<ComputeSortImpl>(new HipSort(*this, trait, length, uniform));
 }
 
-HipFFT3D* HipContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
-    return new HipFFT3D(*this, xsize, ysize, zsize, realToComplex);
+FFT3D HipContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
+    return FFT3D(new HipFFT3D(*this, xsize, ysize, zsize, realToComplex));
 }
 
 int HipContext::findLegalFFTDimension(int minimum) {

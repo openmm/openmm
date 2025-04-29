@@ -32,6 +32,7 @@
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLEvent.h"
+#include "OpenCLFFT3D.h"
 #include "OpenCLForceInfo.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLKernelSources.h"
@@ -578,8 +579,8 @@ void OpenCLContext::initializeContexts() {
     getPlatformData().initializeContexts(system);
 }
 
-OpenCLFFT3D* OpenCLContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
-    return new OpenCLFFT3D(*this, xsize, ysize, zsize, realToComplex);
+FFT3D OpenCLContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
+    return FFT3D(new OpenCLFFT3D(*this, xsize, ysize, zsize, realToComplex));
 }
 
 int OpenCLContext::findLegalFFTDimension(int minimum) {

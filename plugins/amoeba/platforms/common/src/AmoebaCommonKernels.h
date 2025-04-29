@@ -78,7 +78,6 @@ private:
 class CommonCalcAmoebaMultipoleForceKernel : public CalcAmoebaMultipoleForceKernel {
 public:
     CommonCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system);
-    ~CommonCalcAmoebaMultipoleForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -235,7 +234,7 @@ protected:
     ComputeKernel pmeFixedPotentialKernel, pmeInducedPotentialKernel, pmeFixedForceKernel, pmeInducedForceKernel, pmeRecordInducedFieldDipolesKernel;
     ComputeKernel pmeTransformMultipolesKernel, pmeTransformPotentialKernel;
     ComputeEvent syncEvent;
-    FFT3D* fft;
+    FFT3D fft;
     CommonCalcAmoebaGeneralizedKirkwoodForceKernel* gkKernel;
     static const int PmeOrder = 5;
     static const int MaxPrevDIISDipoles = 20;
@@ -422,7 +421,6 @@ private:
 class CommonCalcHippoNonbondedForceKernel : public CalcHippoNonbondedForceKernel {
 public:
     CommonCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system);
-    virtual ~CommonCalcHippoNonbondedForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -529,8 +527,7 @@ protected:
     ComputeArray lastPositions;
     ComputeArray exceptionScales[6];
     ComputeArray exceptionAtoms;
-    FFT3D* fft;
-    FFT3D* dfft;
+    FFT3D fft, dfft;
     ComputeKernel computeMomentsKernel, recordInducedDipolesKernel, mapTorqueKernel;
     ComputeKernel fixedFieldKernel, fixedFieldExceptionKernel, mutualFieldKernel, mutualFieldExceptionKernel, computeExceptionsKernel;
     ComputeKernel pmeSpreadFixedMultipolesKernel, pmeSpreadInducedDipolesKernel, pmeFinishSpreadChargeKernel, pmeConvolutionKernel;

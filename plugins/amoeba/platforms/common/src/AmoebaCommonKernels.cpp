@@ -210,12 +210,7 @@ private:
 
 CommonCalcAmoebaMultipoleForceKernel::CommonCalcAmoebaMultipoleForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system) :
         CalcAmoebaMultipoleForceKernel(name, platform), cc(cc), system(system), hasInitializedScaleFactors(false), multipolesAreValid(false), hasCreatedEvent(false),
-        fft(NULL), gkKernel(NULL) {
-}
-
-CommonCalcAmoebaMultipoleForceKernel::~CommonCalcAmoebaMultipoleForceKernel() {
-    if (fft != NULL)
-        delete fft;
+        gkKernel(NULL) {
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
@@ -2402,14 +2397,7 @@ private:
 };
 
 CommonCalcHippoNonbondedForceKernel::CommonCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, ComputeContext& cc, const System& system) :
-        CalcHippoNonbondedForceKernel(name, platform), cc(cc), system(system), hasInitializedKernels(false), multipolesAreValid(false), fft(NULL), dfft(NULL) {
-}
-
-CommonCalcHippoNonbondedForceKernel::~CommonCalcHippoNonbondedForceKernel() {
-    if (fft != NULL)
-        delete fft;
-    if (dfft != NULL)
-        delete dfft;
+        CalcHippoNonbondedForceKernel(name, platform), cc(cc), system(system), hasInitializedKernels(false), multipolesAreValid(false) {
 }
 
 void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {

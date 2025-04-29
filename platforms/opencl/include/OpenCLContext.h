@@ -53,7 +53,6 @@
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLExpressionUtilities.h"
-#include "OpenCLFFT3D.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLPlatform.h"
@@ -651,7 +650,7 @@ public:
      * @param zsize   the third dimension of the data sets on which FFTs will be performed
      * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
      */
-    OpenCLFFT3D* createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
+    FFT3D createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
     /**
      * Get the smallest legal size for a dimension of the grid.
      */

@@ -31,11 +31,11 @@
 #include "HipPlatform.h"
 #include "HipArray.h"
 #include "HipContext.h"
-#include "HipFFT3D.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "openmm/common/CommonKernels.h"
 #include "openmm/common/ComputeSort.h"
+#include "openmm/common/FFT3D.h"
 
 namespace OpenMM {
 
@@ -89,7 +89,7 @@ private:
 class HipCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     HipCalcNonbondedForceKernel(std::string name, const Platform& platform, HipContext& cu, const System& system) : CalcNonbondedForceKernel(name, platform),
-            cu(cu), hasInitializedFFT(false), dispersionFft(NULL), fft(NULL), pmeio(NULL), useFixedPointChargeSpreading(false), usePmeStream(false) {
+            cu(cu), hasInitializedFFT(false), pmeio(NULL), useFixedPointChargeSpreading(false), usePmeStream(false) {
     }
     ~HipCalcNonbondedForceKernel();
     /**
@@ -188,8 +188,7 @@ private:
     PmeIO* pmeio;
     ComputeQueue pmeQueue;
     hipEvent_t pmeSyncEvent, paramsSyncEvent;
-    HipFFT3D* fft;
-    HipFFT3D* dispersionFft;
+    FFT3D fft, dispersionFft;
     hipFunction_t computeParamsKernel, computeExclusionParamsKernel, computePlasmaCorrectionKernel;
     hipFunction_t ewaldSumsKernel;
     hipFunction_t ewaldForcesKernel;

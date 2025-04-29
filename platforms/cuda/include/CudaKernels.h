@@ -30,11 +30,11 @@
 #include "CudaPlatform.h"
 #include "CudaArray.h"
 #include "CudaContext.h"
-#include "CudaFFT3D.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "openmm/common/CommonKernels.h"
 #include "openmm/common/ComputeSort.h"
+#include "openmm/common/FFT3D.h"
 
 namespace OpenMM {
 
@@ -88,7 +88,7 @@ private:
 class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcNonbondedForceKernel(name, platform),
-            cu(cu), hasInitializedFFT(false), dispersionFft(NULL), fft(NULL), pmeio(NULL), useFixedPointChargeSpreading(false), usePmeStream(false) {
+            cu(cu), hasInitializedFFT(false), pmeio(NULL), useFixedPointChargeSpreading(false), usePmeStream(false) {
     }
     ~CudaCalcNonbondedForceKernel();
     /**
@@ -187,8 +187,7 @@ private:
     PmeIO* pmeio;
     ComputeQueue pmeQueue;
     CUevent pmeSyncEvent, paramsSyncEvent;
-    CudaFFT3D* fft;
-    CudaFFT3D* dispersionFft;
+    FFT3D fft, dispersionFft;
     CUfunction computeParamsKernel, computeExclusionParamsKernel, computePlasmaCorrectionKernel;
     CUfunction ewaldSumsKernel;
     CUfunction ewaldForcesKernel;

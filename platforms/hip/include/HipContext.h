@@ -51,7 +51,6 @@
 #include "HipArray.h"
 #include "HipBondedUtilities.h"
 #include "HipExpressionUtilities.h"
-#include "HipFFT3D.h"
 #include "HipIntegrationUtilities.h"
 #include "HipNonbondedUtilities.h"
 #include "HipPlatform.h"
@@ -200,7 +199,7 @@ public:
      * @param zsize   the third dimension of the data sets on which FFTs will be performed
      * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
      */
-    HipFFT3D* createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
+    FFT3D createFFT(int xsize, int ysize, int zsize, bool realToComplex=false);
     /**
      * Get the smallest legal size for a dimension of the grid.
      */

@@ -32,6 +32,7 @@
 #include "CudaArray.h"
 #include "CudaBondedUtilities.h"
 #include "CudaEvent.h"
+#include "CudaFFT3D.h"
 #include "CudaIntegrationUtilities.h"
 #include "CudaKernels.h"
 #include "CudaKernelSources.h"
@@ -440,8 +441,8 @@ void CudaContext::initializeContexts() {
     getPlatformData().initializeContexts(system);
 }
 
-CudaFFT3D* CudaContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
-    return new CudaFFT3D(*this, xsize, ysize, zsize, realToComplex);
+FFT3D CudaContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
+    return FFT3D(new CudaFFT3D(*this, xsize, ysize, zsize, realToComplex));
 }
 
 void CudaContext::setAsCurrent() {

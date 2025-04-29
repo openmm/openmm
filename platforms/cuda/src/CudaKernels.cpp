@@ -248,10 +248,6 @@ private:
 
 CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
     ContextSelector selector(cu);
-    if (fft != NULL)
-        delete fft;
-    if (dispersionFft != NULL)
-        delete dispersionFft;
     if (pmeio != NULL)
         delete pmeio;
 }

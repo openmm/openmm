@@ -88,7 +88,7 @@ private:
 class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), fft(NULL), dispersionFft(NULL), pmeio(NULL), usePmeQueue(false) {
+            hasInitializedKernel(false), cl(cl), pmeio(NULL), usePmeQueue(false) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**
@@ -187,8 +187,7 @@ private:
     ComputeSort sort;
     ComputeQueue pmeQueue;
     ComputeEvent pmeSyncEvent;
-    FFT3D* fft;
-    FFT3D* dispersionFft;
+    FFT3D fft, dispersionFft;
     Kernel cpuPme;
     PmeIO* pmeio;
     SyncQueuePostComputation* syncQueue;
