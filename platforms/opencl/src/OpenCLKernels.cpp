@@ -223,9 +223,9 @@ public:
     }
     void setKernel(ComputeKernel kernel) {
         addEnergyKernel = kernel;
-        addEnergyKernel->setArg(0, pmeEnergyBuffer);
-        addEnergyKernel->setArg(1, cl.getEnergyBuffer());
-        addEnergyKernel->setArg(2, (int) pmeEnergyBuffer.getSize());
+        addEnergyKernel->addArg(pmeEnergyBuffer);
+        addEnergyKernel->addArg(cl.getEnergyBuffer());
+        addEnergyKernel->addArg((int) pmeEnergyBuffer.getSize());
     }
     double computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         if ((groups&(1<<forceGroup)) != 0) {
@@ -779,7 +779,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         computeParamsKernel->addArg(particleOffsetIndices);
         computeParamsKernel->addArg(chargeBuffer);
         if (exceptionParams.isInitialized()) {
-            computeParamsKernel->addArg(exceptionParams.getSize());
+            computeParamsKernel->addArg((int) exceptionParams.getSize());
             computeParamsKernel->addArg(baseExceptionParams);
             computeParamsKernel->addArg(exceptionParams);
             computeParamsKernel->addArg(exceptionParamOffsets);
@@ -789,7 +789,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             computeExclusionParamsKernel->addArg(cl.getPosq());
             computeExclusionParamsKernel->addArg(charges);
             computeExclusionParamsKernel->addArg(sigmaEpsilon);
-            computeExclusionParamsKernel->addArg(exclusionParams.getSize());
+            computeExclusionParamsKernel->addArg((int) exclusionParams.getSize());
             computeExclusionParamsKernel->addArg(exclusionAtoms);
             computeExclusionParamsKernel->addArg(exclusionParams);
         }
@@ -915,7 +915,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
                 pmeDispersionFinishSpreadChargeKernel->addArg(pmeGrid2);
                 pmeDispersionFinishSpreadChargeKernel->addArg(pmeGrid1);
             }
-       }
+        }
     }
     
     // Update particle and exception parameters.
@@ -939,7 +939,7 @@ double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         energy = ewaldSelfEnergy - totalCharge*totalCharge/(8*EPSILON0*volume*alpha*alpha);
     }
     if (recomputeParams || hasOffsets) {
-        computeParamsKernel->setArg(1, includeEnergy && includeReciprocal);
+        computeParamsKernel->setArg(1, (int) (includeEnergy && includeReciprocal));
         computeParamsKernel->execute(cl.getNumAtoms());
         if (exclusionParams.isInitialized())
             computeExclusionParamsKernel->execute(exclusionParams.getSize());
