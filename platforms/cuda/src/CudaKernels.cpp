@@ -248,8 +248,6 @@ private:
 
 CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
     ContextSelector selector(cu);
-    if (sort != NULL)
-        delete sort;
     if (fft != NULL)
         delete fft;
     if (dispersionFft != NULL)
@@ -534,7 +532,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 int energyElementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
                 pmeEnergyBuffer.initialize(cu, cu.getNumThreadBlocks()*CudaContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
                 cu.clearBuffer(pmeEnergyBuffer);
-                sort = new CudaSort(cu, new SortTrait(), cu.getNumAtoms());
+                sort = cu.createSort(new SortTrait(), cu.getNumAtoms());
                 fft = cu.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
                 if (doLJPME)
                     dispersionFft = cu.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);

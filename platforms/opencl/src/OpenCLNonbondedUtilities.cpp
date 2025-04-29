@@ -30,7 +30,6 @@
 #include "OpenCLContext.h"
 #include "OpenCLKernelSources.h"
 #include "OpenCLExpressionUtilities.h"
-#include "OpenCLSort.h"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -39,7 +38,7 @@
 using namespace OpenMM;
 using namespace std;
 
-class OpenCLNonbondedUtilities::BlockSortTrait : public OpenCLSort::SortTrait {
+class OpenCLNonbondedUtilities::BlockSortTrait : public ComputeSortImpl::SortTrait {
 public:
     BlockSortTrait() {}
     int getDataSize() const {return sizeof(int);}
@@ -53,7 +52,7 @@ public:
 };
 
 OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
-        blockSorter(NULL), pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), groupFlags(0), tilesAfterReorder(0) {
+        pinnedCountBuffer(NULL), pinnedCountMemory(NULL), forceRebuildNeighborList(true), groupFlags(0), tilesAfterReorder(0) {
     // Decide how many thread blocks and force buffers to use.
 
     deviceIsCpu = (context.getDevice().getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_CPU);
@@ -92,8 +91,6 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
 }
 
 OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
-    if (blockSorter != NULL)
-        delete blockSorter;
     if (pinnedCountBuffer != NULL)
         delete pinnedCountBuffer;
 }
@@ -308,7 +305,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         largeBlockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "largeBlockBoundingBox");
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
-        blockSorter = new OpenCLSort(context, new BlockSortTrait(), numAtomBlocks, false);
+        blockSorter = context.createSort(new BlockSortTrait(), numAtomBlocks, false);
         vector<cl_uint> count(1, 0);
         interactionCount.upload(count);
         rebuildNeighborList.upload(count);

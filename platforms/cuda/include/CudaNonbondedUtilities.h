@@ -30,6 +30,7 @@
 #include "openmm/System.h"
 #include "CudaArray.h"
 #include "CudaExpressionUtilities.h"
+#include "openmm/common/ComputeSort.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include <cuda.h>
 #include <sstream>
@@ -39,7 +40,6 @@
 namespace OpenMM {
     
 class CudaContext;
-class CudaSort;
 
 /**
  * This class provides a generic interface for calculating nonbonded interactions.  It does this in two
@@ -343,7 +343,7 @@ private:
     CudaArray largeBlockBoundingBox;
     CudaArray oldPositions;
     CudaArray rebuildNeighborList;
-    CudaSort* blockSorter;
+    ComputeSort blockSorter;
     CUevent downloadCountEvent;
     unsigned int* pinnedCountBuffer;
     std::vector<void*> forceArgs, findBlockBoundsArgs, computeSortKeysArgs, sortBoxDataArgs, findInteractingBlocksArgs;

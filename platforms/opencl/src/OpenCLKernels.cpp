@@ -244,8 +244,6 @@ private:
 };
 
 OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
-    if (sort != NULL)
-        delete sort;
     if (fft != NULL)
         delete fft;
     if (dispersionFft != NULL)
@@ -490,7 +488,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
                 int energyElementSize = (cl.getUseDoublePrecision() || cl.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
                 pmeEnergyBuffer.initialize(cl, cl.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
                 cl.clearBuffer(pmeEnergyBuffer);
-                sort = new OpenCLSort(cl, new SortTrait(), cl.getNumAtoms());
+                sort = cl.createSort(new SortTrait(), cl.getNumAtoms());
                 fft = cl.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
                 if (doLJPME)
                     dispersionFft = cl.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);

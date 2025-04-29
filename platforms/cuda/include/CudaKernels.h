@@ -31,10 +31,10 @@
 #include "CudaArray.h"
 #include "CudaContext.h"
 #include "CudaFFT3D.h"
-#include "CudaSort.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "openmm/common/CommonKernels.h"
+#include "openmm/common/ComputeSort.h"
 
 namespace OpenMM {
 
@@ -88,7 +88,7 @@ private:
 class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaContext& cu, const System& system) : CalcNonbondedForceKernel(name, platform),
-            cu(cu), hasInitializedFFT(false), sort(NULL), dispersionFft(NULL), fft(NULL), pmeio(NULL), useFixedPointChargeSpreading(false), usePmeStream(false) {
+            cu(cu), hasInitializedFFT(false), dispersionFft(NULL), fft(NULL), pmeio(NULL), useFixedPointChargeSpreading(false), usePmeStream(false) {
     }
     ~CudaCalcNonbondedForceKernel();
     /**
@@ -139,7 +139,7 @@ public:
      */
     void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
-    class SortTrait : public CudaSort::SortTrait {
+    class SortTrait : public ComputeSortImpl::SortTrait {
         int getDataSize() const {return 8;}
         int getKeySize() const {return 4;}
         const char* getDataType() const {return "int2";}
@@ -182,7 +182,7 @@ private:
     CudaArray pmeAtomGridIndex;
     CudaArray pmeEnergyBuffer;
     CudaArray chargeBuffer;
-    CudaSort* sort;
+    ComputeSort sort;
     Kernel cpuPme;
     PmeIO* pmeio;
     ComputeQueue pmeQueue;

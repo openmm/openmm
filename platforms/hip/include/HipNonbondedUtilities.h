@@ -31,6 +31,7 @@
 #include "openmm/System.h"
 #include "HipArray.h"
 #include "HipExpressionUtilities.h"
+#include "openmm/common/ComputeSort.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include <hip/hip_runtime.h>
 #include <sstream>
@@ -40,7 +41,6 @@
 namespace OpenMM {
 
 class HipContext;
-class HipSort;
 
 /**
  * This class provides a generic interface for calculating nonbonded interactions.  It does this in two
@@ -344,7 +344,7 @@ private:
     HipArray largeBlockBoundingBox;
     HipArray oldPositions;
     HipArray rebuildNeighborList;
-    HipSort* blockSorter;
+    ComputeSort blockSorter;
     hipEvent_t downloadCountEvent;
     unsigned int* pinnedCountBuffer;
     std::vector<void*> forceArgs, findBlockBoundsArgs, computeSortKeysArgs, sortBoxDataArgs, findInteractingBlocksArgs, copyInteractionCountsArgs;

@@ -29,11 +29,11 @@
 
 #include "OpenCLPlatform.h"
 #include "OpenCLContext.h"
-#include "OpenCLSort.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "openmm/common/CommonKernels.h"
 #include "openmm/common/ComputeArray.h"
+#include "openmm/common/ComputeSort.h"
 #include "openmm/common/FFT3D.h"
 
 namespace OpenMM {
@@ -88,7 +88,7 @@ private:
 class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), sort(NULL), fft(NULL), dispersionFft(NULL), pmeio(NULL), usePmeQueue(false) {
+            hasInitializedKernel(false), cl(cl), fft(NULL), dispersionFft(NULL), pmeio(NULL), usePmeQueue(false) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**
@@ -139,7 +139,7 @@ public:
      */
     void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
-    class SortTrait : public OpenCLSort::SortTrait {
+    class SortTrait : public ComputeSortImpl::SortTrait {
         int getDataSize() const {return 8;}
         int getKeySize() const {return 4;}
         const char* getDataType() const {return "int2";}
@@ -184,7 +184,7 @@ private:
     ComputeArray pmeAtomGridIndex;
     ComputeArray pmeEnergyBuffer;
     ComputeArray chargeBuffer;
-    OpenCLSort* sort;
+    ComputeSort sort;
     ComputeQueue pmeQueue;
     ComputeEvent pmeSyncEvent;
     FFT3D* fft;

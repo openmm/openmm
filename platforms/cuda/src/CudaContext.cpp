@@ -37,6 +37,7 @@
 #include "CudaKernelSources.h"
 #include "CudaNonbondedUtilities.h"
 #include "CudaProgram.h"
+#include "CudaSort.h"
 #include "openmm/common/ComputeArray.h"
 #include "openmm/common/ContextSelector.h"
 #include "SHA1.h"
@@ -665,6 +666,10 @@ CudaArray* CudaContext::createArray() {
 
 ComputeEvent CudaContext::createEvent() {
     return shared_ptr<ComputeEventImpl>(new CudaEvent(*this));
+}
+
+ComputeSort CudaContext::createSort(ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform) {
+    return shared_ptr<ComputeSortImpl>(new CudaSort(*this, trait, length, uniform));
 }
 
 ComputeProgram CudaContext::compileProgram(const std::string source, const std::map<std::string, std::string>& defines) {

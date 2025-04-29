@@ -32,10 +32,10 @@
 #include "HipArray.h"
 #include "HipContext.h"
 #include "HipFFT3D.h"
-#include "HipSort.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "openmm/common/CommonKernels.h"
+#include "openmm/common/ComputeSort.h"
 
 namespace OpenMM {
 
@@ -89,7 +89,7 @@ private:
 class HipCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     HipCalcNonbondedForceKernel(std::string name, const Platform& platform, HipContext& cu, const System& system) : CalcNonbondedForceKernel(name, platform),
-            cu(cu), hasInitializedFFT(false), sort(NULL), dispersionFft(NULL), fft(NULL), pmeio(NULL), useFixedPointChargeSpreading(false), usePmeStream(false) {
+            cu(cu), hasInitializedFFT(false), dispersionFft(NULL), fft(NULL), pmeio(NULL), useFixedPointChargeSpreading(false), usePmeStream(false) {
     }
     ~HipCalcNonbondedForceKernel();
     /**
@@ -140,7 +140,7 @@ public:
      */
     void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
-    class SortTrait : public HipSort::SortTrait {
+    class SortTrait : public ComputeSortImpl::SortTrait {
         int getDataSize() const {return 8;}
         int getKeySize() const {return 4;}
         const char* getDataType() const {return "int2";}
@@ -183,7 +183,7 @@ private:
     HipArray pmeAtomGridIndex;
     HipArray pmeEnergyBuffer;
     HipArray chargeBuffer;
-    HipSort* sort;
+    ComputeSort sort;
     Kernel cpuPme;
     PmeIO* pmeio;
     ComputeQueue pmeQueue;

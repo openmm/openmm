@@ -250,8 +250,6 @@ private:
 
 HipCalcNonbondedForceKernel::~HipCalcNonbondedForceKernel() {
     ContextSelector selector(cu);
-    if (sort != NULL)
-        delete sort;
     if (fft != NULL)
         delete fft;
     if (dispersionFft != NULL)
@@ -537,7 +535,7 @@ void HipCalcNonbondedForceKernel::initialize(const System& system, const Nonbond
                 int energyElementSize = (cu.getUseDoublePrecision() || cu.getUseMixedPrecision() ? sizeof(double) : sizeof(float));
                 pmeEnergyBuffer.initialize(cu, cu.getNumThreadBlocks()*HipContext::ThreadBlockSize, energyElementSize, "pmeEnergyBuffer");
                 cu.clearBuffer(pmeEnergyBuffer);
-                sort = new HipSort(cu, new SortTrait(), cu.getNumAtoms());
+                sort = cu.createSort(cu, new SortTrait(), cu.getNumAtoms());
 
                 // Prepare for doing PME on its own stream.
 

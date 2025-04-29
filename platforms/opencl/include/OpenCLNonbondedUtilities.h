@@ -30,6 +30,7 @@
 #include "openmm/System.h"
 #include "OpenCLArray.h"
 #include "OpenCLExpressionUtilities.h"
+#include "openmm/common/ComputeSort.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include <sstream>
 #include <string>
@@ -38,7 +39,6 @@
 namespace OpenMM {
     
 class OpenCLContext;
-class OpenCLSort;
 
 /**
  * This class provides a generic interface for calculating nonbonded interactions.  It does this in two
@@ -324,7 +324,7 @@ private:
     OpenCLArray largeBlockBoundingBox;
     OpenCLArray oldPositions;
     OpenCLArray rebuildNeighborList;
-    OpenCLSort* blockSorter;
+    ComputeSort blockSorter;
     cl::Event downloadCountEvent;
     cl::Buffer* pinnedCountBuffer;
     unsigned int* pinnedCountMemory;

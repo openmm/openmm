@@ -38,6 +38,7 @@
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLProgram.h"
 #include "OpenCLQueue.h"
+#include "OpenCLSort.h"
 #include "openmm/common/ComputeArray.h"
 #include "openmm/MonteCarloFlexibleBarostat.h"
 #include "openmm/Platform.h"
@@ -685,6 +686,10 @@ OpenCLArray* OpenCLContext::createArray() {
 
 ComputeEvent OpenCLContext::createEvent() {
     return shared_ptr<ComputeEventImpl>(new OpenCLEvent(*this));
+}
+
+ComputeSort OpenCLContext::createSort(ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform) {
+    return shared_ptr<ComputeSortImpl>(new OpenCLSort(*this, trait, length, uniform));
 }
 
 ComputeProgram OpenCLContext::compileProgram(const std::string source, const std::map<std::string, std::string>& defines) {
