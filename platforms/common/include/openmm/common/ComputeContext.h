@@ -43,6 +43,7 @@
 #include "openmm/common/IntegrationUtilities.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include "openmm/Vec3.h"
+#include "openmm/internal/ContextImpl.h"
 #include <condition_variable>
 #include <map>
 #include <mutex>
@@ -140,6 +141,10 @@ public:
      * one ComputeContext is created for each device.
      */
     virtual std::vector<ComputeContext*> getAllContexts() = 0;
+    /**
+     * Get the ContextImpl is ComputeContext is associated with.
+     */
+    virtual ContextImpl& getContextImpl() = 0;
     /**
      * Get a workspace used for accumulating energy when a simulation is parallelized across
      * multiple devices.
@@ -525,6 +530,15 @@ public:
      * It ensures all contexts are fully initialized.
      */
     virtual void initializeContexts() = 0;
+    /**
+     * Set the particle charges.  These are packed into the fourth element of the posq array.
+     */
+    virtual void setCharges(const std::vector<double>& charges) = 0;
+    /**
+     * Request to use the fourth element of the posq array for storing charges.  Since only one force can
+     * do that, this returns true the first time it is called, and false on all subsequent calls.
+     */
+    virtual bool requestPosqCharges() = 0;
     /**
      * Get the thread used by this context for executing parallel computations.
      */
