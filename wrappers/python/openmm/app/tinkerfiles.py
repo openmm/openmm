@@ -180,62 +180,16 @@ class TinkerFiles:
     RECOGNIZED_FORCES, RECOGNIZED_SCALARS = _initialize_class()
 
     _AMINO_ACID_LIST = [
-        "GLY",
-        "ALA",
-        "VAL",
-        "LEU",
-        "ILE",
-        "SER",
-        "THR",
-        "CYS",
-        "CYX",
-        "CYD",
-        "PRO",
-        "PHE",
-        "TYR",
-        "TYD",
-        "TRP",
-        "HIS",
-        "HID",
-        "HIE",
-        "ASP",
-        "ASH",
-        "ASN",
-        "GLU",
-        "GLH",
-        "GLN",
-        "MET",
-        "LYS",
-        "LYD",
-        "ARG",
-        "ORN",
-        "AIB",
-        "PCA",
-        "H2N",
-        "FOR",
-        "ACE",
-        "COH",
-        "NH2",
-        "NME",
-        "UNK",
+        "GLY", "ALA", "VAL", "LEU", "ILE", "SER", "THR", "CYS", "CYX", "CYD", "PRO", 
+        "PHE", "TYR", "TYD", "TRP", "HIS", "HID", "HIE", "ASP", "ASH", "ASN", "GLU", 
+        "GLH", "GLN", "MET", "LYS", "LYD", "ARG", "ORN", "AIB", "PCA", "H2N", "FOR", 
+        "ACE", "COH", "NH2", "NME"
+        ]
+
+    _NUCLEOTIDE_LIST = [
+        "  A", "  G", "  C", "  U", " DA", " DG", " DC", " DT", " MP", " DP", " TP"
     ]
-
-    # Nucleotide Codes
-    _NUCLEOTIDE_LIST = {
-        "  A": "A",
-        "  G": "G",
-        "  C": "C",
-        "  U": "U",
-        " DA": "D",
-        " DG": "B",
-        " DC": "I",
-        " DT": "T",
-        " MP": "1",
-        " DP": "2",
-        " TP": "3",
-        "UNK": "X",
-    }
-
+    
     def __init__(
         self,
         xyz: str,
