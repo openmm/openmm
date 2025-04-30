@@ -156,22 +156,46 @@ class TinkerFiles:
         }
 
         RECOGNIZED_SCALARS = {
-            "polarization": "mutual",
-            "polar-eps": "0.00001",
-            "ewald": "yes",
-            "ewald-cutoff": "7.0",
-            "mpole-cutoff": "9.0",
-            "vdw-cutoff": "9.0",
-            "radiusrule": "ARITHMETIC",
-            "radiustype": "SIGMA",
-            "radiussize": "DIAMETER",
-            "epsilonrule": "GEOMETRIC",
+            "forcefield": "-2.55",
+            "bond-cubic": "-2.55",
+            "bond-quartic": "3.793125",
+            "angle-cubic": "-0.014",
+            "angle-quartic": "0.000056",
+            "angle-pentic": "-0.0000007",
+            "angle-sextic": "0.000000022",
+            "opbendtype": "ALLINGER",
+            "opbend-cubic": "-0.014",
+            "opbend-quartic": "0.000056",
+            "opbend-pentic": "-0.0000007",
+            "opbend-sextic": "0.000000022",
+            "torsionunit": "0.5",
             "vdwtype": "BUFFERED-14-7",
-            "a-expterm": "3.43",
-            "b-expterm": "2.0",
-            "c-expterm": "0.0",
-            "gamma": "0.45",
+            "radiusrule": "CUBIC-MEAN",
+            "radiustype": "R-MIN",
+            "radiussize": "DIAMETER",
+            "epsilonrule": "HHG",
             "dielectric": "1.0",
+            "polarization": "MUTUAL",
+            "vdw-13-scale": "0.0",
+            "vdw-14-scale": "1.0",
+            "vdw-15-scale": "1.0",
+            "mpole-12-scale": "0.0",
+            "mpole-13-scale": "0.0",
+            "mpole-14-scale": "0.4",
+            "mpole-15-scale": "0.8",
+            "polar-12-scale": "0.0",
+            "polar-13-scale": "0.0",
+            "polar-14-scale": "1.0",
+            "polar-15-scale": "1.0",
+            "polar-14-intra": "0.5",
+            "direct-11-scale": "0.0",
+            "direct-12-scale": "1.0",
+            "direct-13-scale": "1.0",
+            "direct-14-scale": "1.0",
+            "mutual-11-scale": "1.0",
+            "mutual-12-scale": "1.0",
+            "mutual-13-scale": "1.0",
+            "mutual-14-scale": "1.0",
         }
 
         return RECOGNIZED_FORCES, RECOGNIZED_SCALARS
@@ -184,19 +208,19 @@ class TinkerFiles:
         "PHE", "TYR", "TYD", "TRP", "HIS", "HID", "HIE", "ASP", "ASH", "ASN", "GLU", 
         "GLH", "GLN", "MET", "LYS", "LYD", "ARG", "ORN", "AIB", "PCA", "H2N", "FOR", 
         "ACE", "COH", "NH2", "NME"
-        ]
+        ] 
 
     _NUCLEOTIDE_LIST = [
         "  A", "  G", "  C", "  U", " DA", " DG", " DC", " DT", " MP", " DP", " TP"
-    ]
+    ] 
     
     def __init__(
         self,
         xyz: str,
         key: str,
-        seq: str = None,
-        periodicBoxVectors: Tuple[Vec3, Vec3, Vec3] = None,
-        unitCellDimensions: Vec3 = None,
+        seq: Optional[str] = None,
+        periodicBoxVectors: Optional[Tuple[Vec3, Vec3, Vec3]] = None,
+        unitCellDimensions: Optional[Vec3] = None,
         writeXmlFiles: bool = False,
     ):
         """
@@ -220,23 +244,12 @@ class TinkerFiles:
         writeXmlFiles : bool, optional, default=False
             If True, the residue and force field XML files are written to disk.
         """
-        # ----------------------- INTERNAL VARIABLES -----------------------
-        # Populate parser functions for the recognized forces
-        self.RECOGNIZED_FORCES["tortors"] = TinkerFiles.__addTorTor
-        self.RECOGNIZED_FORCES["multipole"] = TinkerFiles.__addMultipole
-
-        # Store the input parameters
-        self._writeXmlFiles = writeXmlFiles
-        self._XmlFilesList = None
-
         # Internal variables to store the data from the files
         self._xyzDict = None
         self._seqDict = None
         self._atomDict = None
-        self._scalars, self._forces, self._atomTypes, self._bioTypes = [], [], [], []
-
-        # Topology
         self.topology = None
+        self._scalars, self._forces, self._atomTypes, self._bioTypes = [], [], [], []
 
         # Position and box information
         self.positions = None
@@ -262,15 +275,16 @@ class TinkerFiles:
         if seq is not None:
             self._seqDict = self._loadSeqFile(seq)
         else:
+            print(
+                "WARNING: No sequence file provided. Generic molecules will be used for all chains."
+            )
             self._seqDict = None
 
-        # ----------------------- COMBINE DATA -----------------------
         # Combine the data from the .xyz and .key files
         self._atomDict = TinkerFiles._combineXyzAndKeyData(
             self._xyzDict, self._atomTypes, self._bioTypes
         )
 
-        # ----------------------- CREATE TOPOLOGY -----------------------
         # Create the topology
         self.topology = self._createTopology(self._atomDict, self._seqDict)
 
@@ -291,30 +305,86 @@ class TinkerFiles:
             self.topology.setUnitCellDimensions(unitCellDimensions)
 
         # Write to PDB
+        # TODO: Remove this after testing
         from openmm.app import PDBFile
 
         with open("output.pdb", "w") as f:
             PDBFile.writeFile(self.topology, self.positions, f)
 
-        exit()
+        if writeXmlFiles:
+            self.writeXmlFiles(key)
 
-        # ----------------------- CREATE XML FILES -----------------------
-        self.forceFields = []
-        self.implictForceFields = []
+    def createSystem(
+        self,
+        nonbondedMethod=ff.PME,
+        nonbondedCutoff=1.0 * nanometers,
+        constraints=None,
+        rigidWater: bool = False,
+        removeCMMotion: bool = True,
+        hydrogenMass=None,
+        polarization: str = "mutual",
+        mutualInducedTargetEpsilon: float = 0.00001,
+        implicitSolvent: bool = False,
+        *args,
+        **kwargs,
+    ) -> Any:
+        """
+        Create an OpenMM System from the parsed Tinker files.
+
+        Parameters
+        ----------
+        nonbondedMethod : object=PME
+            The method to use for nonbonded interactions.
+            Allowed values are NoCutoff, and PME.
+        nonbondedCutoff : distance=1.0*nanometers
+            The cutoff distance to use for nonbonded interactions.
+        constraints : object=None
+            Specifies which bonds and angles should be implemented with constraints.
+            Allowed values are None, HBonds, AllBonds, or HAngles.
+        rigidWater : bool, optional, default=True
+            If true, water molecules will be fully rigid regardless of the value passed for the constraints argument.
+            Note that AMOEBA waters are flexible.
+        removeCMMotion : bool, optional, default=True
+            If True, center of mass motion will be removed.
+        hydrogenMass : mass=None
+            The mass to use for hydrogen atoms bound to heavy atoms.
+            Any mass added to a hydrogen is subtracted from the heavy atom to keep their total mass the same.
+        polarization : str, optional, default="mutual"
+            The method to use for calculating induced dipoles.
+            Allowed values are "mutual", "direct", or "extrapolated".
+        mutualInducedTargetEpsilon : float, optional, default=0.00001
+            The target epsilon for mutual induced dipoles.
+            Only used if polarization="mutual".
+        implicitSolvent : bool, optional, default=False
+            If True, solvent will be modeled implicitly.
+
+        Returns
+        -------
+        openmm.System
+            The created OpenMM System.
+        """
+        raise NotImplementedError("createSystem not implemented")
+
+    def writeXmlFiles(self, key):
+        """
+        Write the Tinker XML files.
+        """
         for keyFile, atomTypes, bioTypes, forces, scalars in zip(
             key, self._atomTypes, self._bioTypes, self._forces, self._scalars
         ):
-            xmlFile, implicitXmlFile = self._createXmlFile(
-                keyFile, atomTypes, bioTypes, forces, scalars, self._atomData
+            xmlFile, implicitXmlFile = TinkerXmlWriter.writeXmlFiles(
+                self.topology,
+                keyFile,
+                atomTypes,
+                bioTypes,
+                forces,
+                scalars,
+                self._atomDict,
             )
 
             # Reset the file pointers
             xmlFile.seek(0)
             implicitXmlFile.seek(0)
-
-            # Store the XML files
-            self.forceFields.append(xmlFile)
-            self.implictForceFields.append(implicitXmlFile)
 
     # ------------------------------------------------------------------------------------------ #
     #                                      HELPER FUNCTIONS                                      #
@@ -350,7 +420,7 @@ class TinkerFiles:
         -------
         list[int] or list[list[int]]
             If `index` is provided, returns a flat list of neighbors.
-            If `index` is None, returns a list of lists (multiple groups of neighbors).
+            If `index` is None, returns a list of lists (multiple molecules).
         """
         exclusionList = exclusionList or []
         visited = set()
@@ -660,81 +730,6 @@ class TinkerFiles:
                 topology.addBond(topology_atoms[atomId], topology_atoms[bond])
 
         return topology
-
-    def createSystem(
-        self,
-        nonbondedMethod=ff.PME,
-        nonbondedCutoff=1.0 * nanometers,
-        constraints=None,
-        rigidWater: bool = False,
-        removeCMMotion: bool = True,
-        hydrogenMass=None,
-        polarization: str = "mutual",
-        mutualInducedTargetEpsilon: float = 0.00001,
-        implicitSolvent: bool = False,
-        *args,
-        **kwargs,
-    ) -> Any:
-        """
-        Create an OpenMM System from the parsed Tinker files.
-
-        Parameters
-        ----------
-        nonbondedMethod : object=PME
-            The method to use for nonbonded interactions.
-            Allowed values are NoCutoff, and PME.
-        nonbondedCutoff : distance=1.0*nanometers
-            The cutoff distance to use for nonbonded interactions.
-        constraints : object=None
-            Specifies which bonds and angles should be implemented with constraints.
-            Allowed values are None, HBonds, AllBonds, or HAngles.
-        rigidWater : bool, optional, default=True
-            If true, water molecules will be fully rigid regardless of the value passed for the constraints argument.
-            Note that AMOEBA waters are flexible.
-        removeCMMotion : bool, optional, default=True
-            If True, center of mass motion will be removed.
-        hydrogenMass : mass=None
-            The mass to use for hydrogen atoms bound to heavy atoms.
-            Any mass added to a hydrogen is subtracted from the heavy atom to keep their total mass the same.
-        polarization : str, optional, default="mutual"
-            The method to use for calculating induced dipoles.
-            Allowed values are "mutual", "direct", or "extrapolated".
-        mutualInducedTargetEpsilon : float, optional, default=0.00001
-            The target epsilon for mutual induced dipoles.
-            Only used if polarization="mutual".
-        implicitSolvent : bool, optional, default=False
-            If True, solvent will be modeled implicitly.
-
-        Returns
-        -------
-        openmm.System
-            The created OpenMM System.
-        """
-        xmlFilesList = self.forceFields
-        if implicitSolvent:
-            xmlFilesList += self.implictForceFields
-
-        # Reset the file pointers
-        for f in xmlFilesList:
-            f.seek(0)
-
-        forcefield = ff.ForceField(*xmlFilesList)
-
-        system = forcefield.createSystem(
-            self.topology,
-            nonbondedMethod=nonbondedMethod,
-            nonbondedCutoff=nonbondedCutoff,
-            constraints=constraints,
-            rigidWater=rigidWater,
-            removeCMMotion=removeCMMotion,
-            hydrogenMass=hydrogenMass,
-            polarization=polarization,
-            mutualInducedTargetEpsilon=mutualInducedTargetEpsilon,
-            *args,
-            **kwargs,
-        )
-
-        return system
 
     # ------------------------------------------------------------------------------------------ #
     #                                     POSITIONS AND BOX                                      #
@@ -1388,87 +1383,6 @@ class TinkerFiles:
             raise ValueError(f"Error parsing {keyFile}: {e}")
 
     @staticmethod
-    def __addMultipole(
-        lineIndex: int, allLines: List[List[str]], forces: Dict[str, Any]
-    ) -> int:
-        """
-        Parse and store multipole force data from the key file.
-
-        Parameters
-        ----------
-        lineIndex : int
-            The current line index in the key file.
-        allLines : list of list of str
-            All lines from the key file, split into fields.
-        forces : dict
-            The forces dictionary to store the parsed data.
-
-        Returns
-        -------
-        int
-            The updated line index after parsing the multipole force data.
-        """
-        if "multipole" not in forces:
-            forces["multipole"] = []
-        fields = allLines[lineIndex]
-        multipoles = [fields[-1]]
-        axisInfo = fields[1:-1]
-        lineIndex += 1
-        fields = allLines[lineIndex]
-        multipoles.append(fields[0])
-        multipoles.append(fields[1])
-        multipoles.append(fields[2])
-        lineIndex += 1
-        fields = allLines[lineIndex]
-        multipoles.append(fields[0])
-        lineIndex += 1
-        fields = allLines[lineIndex]
-        multipoles.append(fields[0])
-        multipoles.append(fields[1])
-        lineIndex += 1
-        fields = allLines[lineIndex]
-        multipoles.append(fields[0])
-        multipoles.append(fields[1])
-        multipoles.append(fields[2])
-        lineIndex += 1
-        multipoleInfo = [axisInfo, multipoles]
-        forces["multipole"].append(multipoleInfo)
-        return lineIndex
-
-    @staticmethod
-    def __addTorTor(
-        lineIndex: int, allLines: List[List[str]], forces: Dict[str, Any]
-    ) -> int:
-        """
-        Parse and store torsion-torsion force data from the key file.
-
-        Parameters
-        ----------
-        lineIndex : int
-            The current line index in the key file.
-        allLines : list of list of str
-            All lines from the key file, split into fields.
-        forces : dict
-            The forces dictionary to store the parsed data.
-
-        Returns
-        -------
-        int
-            The updated line index after parsing the torsion-torsion force data.
-        """
-        if "tortors" not in forces:
-            forces["tortors"] = []
-        fields = allLines[lineIndex]
-        tortorInfo = fields[1:]
-        lastGridLine = lineIndex + int(fields[6]) * int(fields[7])
-        grid = []
-        while lineIndex < lastGridLine:
-            lineIndex += 1
-            grid.append(allLines[lineIndex])
-        forces["tortors"].append([tortorInfo, grid])
-        return lineIndex
-
-    @staticmethod
     def _combineXyzAndKeyData(xyzDict: Dict, atomTypes: List, bioTypes: List) -> Dict:
         """
         Combine the data from the .xyz and .key files into one dictionary.
@@ -1535,9 +1449,12 @@ class TinkerFiles:
 
         return atomDataDict
 
-    # ---------------------------------------------------------------------------------------- #
-    #                                      WRITE XML FILE                                      #
-    # ---------------------------------------------------------------------------------------- #
+
+class TinkerXmlWriter:
+    """
+    Write the Tinker XML file.
+    """
+
     @staticmethod
     def _writeAtomTypes(
         root: etree.Element, atomTypes: Dict[str, Dict[str, Any]]
@@ -1558,14 +1475,13 @@ class TinkerFiles:
             atomTypeElement.attrib["name"] = atomType
             atomTypeElement.attrib["class"] = atomTypes[atomType]["atomClass"]
             atomTypeElement.attrib["element"] = atomTypes[atomType]["element"]
-            atomTypeElement.attrib["mass"] = atomTypes[atomType]["mass"]
+            atomTypeElement.attrib["mass"] = str(atomTypes[atomType]["mass"])
 
     @staticmethod
     def _writeResidues(
         root: etree.Element,
-        atomData: Dict[int, Dict[str, Any]],
+        atomDict: Dict[int, Dict[str, Any]],
         topology: top.Topology,
-        residuesSet: Set[str],
     ) -> None:
         """
         Write the residues to the XML file.
@@ -1574,7 +1490,7 @@ class TinkerFiles:
         ----------
         root : xml.etree.ElementTree.Element
             The root element of the XML tree.
-        atomData : dict
+        atomDict : dict
             The atom data dictionary.
         topology : openmm.app.topology.Topology
             The topology object.
@@ -1582,7 +1498,7 @@ class TinkerFiles:
         residuesElement = etree.SubElement(root, "Residues")
         residuesSeen = set()
         for residue in topology.residues():
-            if residue.name in residuesSet and residue.name not in residuesSeen:
+            if residue.name not in residuesSeen:
                 residueElement = etree.SubElement(residuesElement, "Residue")
                 residueElement.attrib["name"] = residue.name
 
@@ -1592,10 +1508,10 @@ class TinkerFiles:
 
                 for i, atom in enumerate(residue.atoms()):
                     atomElement = etree.SubElement(residueElement, "Atom")
-                    atomElement.attrib["name"] = atomData[atom.index][
+                    atomElement.attrib["name"] = atomDict[atom.index][
                         "nameShort"
                     ] + str(i)
-                    atomElement.attrib["type"] = atomData[atom.index]["atomType"]
+                    atomElement.attrib["type"] = atomDict[atom.index]["atomType"]
 
                 baseIndex = next(atom.index for atom in residue.atoms())
                 for bond in residue.bonds():
@@ -1765,7 +1681,7 @@ class TinkerFiles:
             torsionElement.attrib["class3"] = torsion[2]
             torsionElement.attrib["class4"] = torsion[3]
             startIndex = 4
-            for ii in range(0, 3):
+            for ii in range(0, (len(torsion) - 4) // 3):
                 torsionSuffix = str(ii + 1)
                 amplitudeAttributeName = f"k{torsionSuffix}"
                 angleAttributeName = f"phase{torsionSuffix}"
@@ -2278,7 +2194,10 @@ class TinkerFiles:
             ureyBradleyElement.attrib["k"] = str(k)
             ureyBradleyElement.attrib["d"] = str(d)
 
-    def _createXmlFile(self, filename, atomTypes, bioTypes, forces, scalars, atomData):
+    @staticmethod
+    def writeXmlFiles(
+        topology, filename, atomTypes, bioTypes, forces, scalars, atomDict
+    ):
         """
         Create the XML file.
 
@@ -2294,7 +2213,7 @@ class TinkerFiles:
             The forces dictionary.
         scalars : dict
             The scalars dictionary.
-        atomData : dict
+        atomDict : dict
             The atom data dictionary.
 
         Returns
@@ -2314,38 +2233,31 @@ class TinkerFiles:
         gkRoot = root.__copy__()
 
         # Write the AtomTypes
-        TinkerFiles._writeAtomTypes(root, atomTypes)
-
-        # Extract residues present in this file
-        residuesSet = {
-            atomInfo["residue"]
-            for atomInfo in atomData.values()
-            if atomInfo["atomType"] in atomTypes
-        }
+        TinkerXmlWriter._writeAtomTypes(root, atomTypes)
 
         # Write the Residues
-        TinkerFiles._writeResidues(root, atomData, self.topology, residuesSet)
+        TinkerXmlWriter._writeResidues(root, atomDict, topology)
 
         # Write the Forces
         # Bonded forces
-        TinkerFiles._writeAmoebaBondForce(root, forces, scalars)
-        TinkerFiles._writeAmoebaAngleForce(root, forces, scalars)
-        TinkerFiles._writeAmoebaOutOfPlaneBendForce(root, forces, scalars)
-        TinkerFiles._writeAmoebaTorsionForce(root, forces, scalars)
-        TinkerFiles._writeAmoebaPiTorsionForce(root, forces)
-        TinkerFiles._writeAmoebaStretchTorsionForce(root, forces)
-        TinkerFiles._writeAmoebaAngleTorsionForce(root, forces)
-        TinkerFiles._writeAmoebaStretchBendForce(root, forces)
-        TinkerFiles._writeAmoebaTorsionTorsionForce(root, forces)
+        TinkerXmlWriter._writeAmoebaBondForce(root, forces, scalars)
+        TinkerXmlWriter._writeAmoebaAngleForce(root, forces, scalars)
+        TinkerXmlWriter._writeAmoebaOutOfPlaneBendForce(root, forces, scalars)
+        TinkerXmlWriter._writeAmoebaTorsionForce(root, forces, scalars)
+        TinkerXmlWriter._writeAmoebaPiTorsionForce(root, forces)
+        TinkerXmlWriter._writeAmoebaStretchTorsionForce(root, forces)
+        TinkerXmlWriter._writeAmoebaAngleTorsionForce(root, forces)
+        TinkerXmlWriter._writeAmoebaStretchBendForce(root, forces)
+        TinkerXmlWriter._writeAmoebaTorsionTorsionForce(root, forces)
 
         # Non-bonded forces
-        TinkerFiles._writeAmoebaVdwForce(root, forces, scalars)
-        TinkerFiles._writeAmoebaMultipoleForce(root, forces, scalars)
-        TinkerFiles._writeAmoebaUreyBradleyForce(root, forces)
+        TinkerXmlWriter._writeAmoebaVdwForce(root, forces, scalars)
+        TinkerXmlWriter._writeAmoebaMultipoleForce(root, forces, scalars)
+        TinkerXmlWriter._writeAmoebaUreyBradleyForce(root, forces)
 
         # Write the Generalized Kirkwood Force
-        TinkerFiles._writeAmoebaGeneralizedKirkwoodForce(gkRoot, forces, atomTypes)
-        TinkerFiles._writeAmoebaWcaDispersionForce(gkRoot, forces, scalars)
+        TinkerXmlWriter._writeAmoebaGeneralizedKirkwoodForce(gkRoot, forces, atomTypes)
+        TinkerXmlWriter._writeAmoebaWcaDispersionForce(gkRoot, forces, scalars)
 
         # Write footer
         tree = etree.ElementTree(root)
@@ -2364,16 +2276,15 @@ class TinkerFiles:
             gkTinkerXmlFile, xml_declaration=True, encoding="unicode", method="xml"
         )
 
-        if self._writeXmlFiles:
-            if scalars["forcefield"] == "-2.55":
-                scalars["forcefield"] = filename.rsplit(".", 1)[0]
+        if scalars["forcefield"] == "-2.55":
+            scalars["forcefield"] = filename.rsplit(".", 1)[0]
 
-            tinkerXmlFileName = scalars["forcefield"] + ".xml"
-            with open(tinkerXmlFileName, "w") as f:
-                f.write(tinkerXmlFile.getvalue())
+        tinkerXmlFileName = scalars["forcefield"] + ".xml"
+        with open(tinkerXmlFileName, "w") as f:
+            f.write(tinkerXmlFile.getvalue())
 
-            gkTinkerXmlFileName = scalars["forcefield"] + "_gk.xml"
-            with open(gkTinkerXmlFileName, "w") as f:
-                f.write(gkTinkerXmlFile.getvalue())
+        gkTinkerXmlFileName = scalars["forcefield"] + "_gk.xml"
+        with open(gkTinkerXmlFileName, "w") as f:
+            f.write(gkTinkerXmlFile.getvalue())
 
         return tinkerXmlFile, gkTinkerXmlFile
