@@ -276,7 +276,7 @@ class TinkerFiles:
             self._seqDict = self._loadSeqFile(seq)
         else:
             print(
-                "WARNING: No sequence file provided. Generic molecules will be used for all chains."
+                "WARNING: No sequence (.seq) file provided. Generic molecules will be used for all chains."
             )
             self._seqDict = None
 
@@ -387,7 +387,7 @@ class TinkerFiles:
             implicitXmlFile.seek(0)
 
     # ------------------------------------------------------------------------------------------ #
-    #                                      HELPER FUNCTIONS                                      #
+    #                                      TOPOLOGY FUNCTIONS                                    #
     # ------------------------------------------------------------------------------------------ #
     @staticmethod
     def _findNeighbours(
@@ -684,7 +684,7 @@ class TinkerFiles:
                                     ]
                                     otherAtoms.extend(caiNeighbours)
 
-                                    # Get the atoms attached to the carbonyl carbon atom (Usually just the carbonyl oxygen atom, but sometimes 2 oxygens)
+                                    # Get the atoms attached to the carbonyl carbon atom (usually just the carbonyl oxygen atom, but sometimes 2 oxygens)
                                     ciNeighbours = TinkerFiles._findNeighbours(
                                         atomDict,
                                         ci,
@@ -693,22 +693,22 @@ class TinkerFiles:
                                         exclusionList=[oi, cai],
                                     )
 
-                                    # Remove oi from the list and any other amide nitrogen atoms
+                                    # Remove any other amide nitrogen atoms
                                     ciNeighbours = [
                                         neighbour
                                         for neighbour in ciNeighbours
-                                        if neighbour != oi
-                                        and atomDict[neighbour]["atomicNumber"] != 7
+                                        if atomDict[neighbour]["atomicNumber"] != 7
                                     ]
                                     otherAtoms.extend(ciNeighbours)
 
                                     # Atoms of the residue
                                     resAtoms = [ni, cai, ci, oi] + otherAtoms
 
-                    # Assign the correct residue name to the atoms
+                    # Add the residue to the topology
                     residue = topology.addResidue(resName, chain)
                     sortedAtoms = sorted(resAtoms)
                     for atom in sortedAtoms:
+                        # Add the residue name and chain to the atom dictionary
                         atomDict[atom]["residueName"] = resName
                         atomDict[atom]["chain"] = chain
 
