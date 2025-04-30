@@ -40,9 +40,10 @@ import os
 import re
 import shlex
 import xml.etree.ElementTree as etree
-import numpy as np
 from functools import wraps
-from typing import Any, Dict, List, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
+
+import numpy as np
 
 from openmm.app.internal.unitcell import computePeriodicBoxVectors
 from openmm.unit import nanometers
@@ -53,10 +54,8 @@ from . import forcefield as ff
 from . import topology as top
 
 
-
 class TinkerFiles:
     """TinkerFiles parses Tinker files (.xyz, .prm, .key), constructs a Topology, and (optionally) an OpenMM System from it."""
-
 
     RECOGNIZED_FORCES: Dict[str, Any] = {
         "bond": 1,
@@ -119,134 +118,19 @@ class TinkerFiles:
         "mutual-14-scale": "1.0",
     }
 
-    @staticmethod
-    def _initialize_standard_biopolymer_and_biotypes():
-        """Helper function to initialize standard biopolymer and biotype dictionaries"""
-        # Amino Acid Codes
-        _AMINO_ACID_CODES = {
-            'GLY': 'G', 'ALA': 'A', 'VAL': 'V', 'LEU': 'L', 'ILE': 'I',
-            'SER': 'S', 'THR': 'T', 'CYS': 'C', 'CYX': 'C', 'CYD': 'c',
-            'PRO': 'P', 'PHE': 'F', 'TYR': 'Y', 'TYD': 'y', 'TRP': 'W',
-            'HIS': 'H', 'HID': 'U', 'HIE': 'Z', 'ASP': 'D', 'ASH': 'd',
-            'ASN': 'N', 'GLU': 'E', 'GLH': 'e', 'GLN': 'Q', 'MET': 'M',
-            'LYS': 'K', 'LYD': 'k', 'ARG': 'R', 'ORN': 'O', 'AIB': 'B',
-            'PCA': 'J', 'H2N': 't', 'FOR': 'f', 'ACE': 'a', 'COH': 'x',
-            'NH2': 'n', 'NME': 'm', 'UNK': 'X'
-        }
-        _AMINO_ACID_ORDER = [
-            'GLY', 'ALA', 'VAL', 'LEU', 'ILE', 'SER', 'THR', 'CYS', 'CYX', 'CYD',
-            'PRO', 'PHE', 'TYR', 'TYD', 'TRP', 'HIS', 'HID', 'HIE', 'ASP', 'ASH',
-            'ASN', 'GLU', 'GLH', 'GLN', 'MET', 'LYS', 'LYD', 'ARG', 'ORN', 'AIB',
-            'PCA', 'H2N', 'FOR', 'ACE', 'COH', 'NH2', 'NME', 'UNK'
-        ]
+    _AMINO_ACID_LIST = [
+        'GLY', 'ALA', 'VAL', 'LEU', 'ILE', 'SER', 'THR', 'CYS', 'CYX', 'CYD',
+        'PRO', 'PHE', 'TYR', 'TYD', 'TRP', 'HIS', 'HID', 'HIE', 'ASP', 'ASH',
+        'ASN', 'GLU', 'GLH', 'GLN', 'MET', 'LYS', 'LYD', 'ARG', 'ORN', 'AIB',
+        'PCA', 'H2N', 'FOR', 'ACE', 'COH', 'NH2', 'NME', 'UNK'
+    ]
 
-        # Nucleotide Codes
-        _NUCLEOTIDE_CODES = {
-            '  A': 'A', '  G': 'G', '  C': 'C', '  U': 'U', ' DA': 'D',
-            ' DG': 'B', ' DC': 'I', ' DT': 'T', ' MP': '1', ' DP': '2',
-            ' TP': '3', 'UNK': 'X'
-        }
-        _NUCLEOTIDE_ORDER = [ 
-            '  A', '  G', '  C', '  U', ' DA', ' DG', ' DC', ' DT',
-            ' MP', ' DP', ' TP', 'UNK'
-        ]
-
-        _AMINO_ACID_BIOTYPES_MID = {}
-        _AMINO_ACID_BIOTYPES_NTERM = {}
-        _AMINO_ACID_BIOTYPES_CTERM = {}
-        _NUCLEOTIDE_BIOTYPES = {}
-
-        # Biopolymer types for mid-chain peptide backbone atoms
-        nt   = [1,   7,  15,  27,  41,  55,  65,  77,  87,  96, 105, 116, 131, 147, 162, 185, 202, 218, 234, 244, 256, 268, 280, 294, 308, 321, 337, 353, 370, 384, 391,   0,   0,   0,   0,   0,   0,   1]
-        cat  = [2,   8,  16,  28,  42,  56,  66,  78,  88,  97, 106, 117, 132, 148, 163, 186, 203, 219, 235, 245, 257, 269, 281, 295, 309, 322, 338, 354, 371, 385, 392,   0,   0,   0,   0,   0,   0,   2]
-        ct   = [3,   9,  17,  29,  43,  57,  67,  79,  89,  98, 107, 118, 133, 149, 164, 187, 204, 220, 236, 246, 258, 270, 282, 296, 310, 323, 339, 355, 372, 386, 393,   0,   0,   0,   0,   0,   0,   3]
-        hnt  = [4,  10,  18,  30,  44,  58,  68,  80,  90,  99,   0, 119, 134, 150, 165, 188, 205, 221, 237, 247, 259, 271, 283, 297, 311, 324, 340, 356, 373, 387, 394,   0,   0,   0,   0,   0,   0,   4]
-        ot   = [5,  11,  19,  31,  45,  59,  69,  81,  91, 100, 108, 120, 135, 151, 166, 189, 206, 222, 238, 248, 260, 272, 284, 298, 312, 325, 341, 357, 374, 388, 395,   0,   0,   0,   0,   0,   0,   5]
-        hat  = [6,  12,  20,  32,  46,  60,  70,  82,  92, 101, 109, 121, 136, 152, 167, 190, 207, 223, 239, 249, 261, 273, 285, 299, 313, 326, 342, 358, 375,   0, 396,   0,   0,   0,   0,   0,   0,   6]
-        cbt  = [0,  13,  21,  33,  47,  61,  71,  83,  93, 102, 110, 122, 137, 153, 168, 191, 208, 224, 240, 250, 262, 274, 286, 300, 314, 327, 343, 359, 376, 389, 397,   0,   0,   0,   0,   0,   0,   0]
-        for i, res in enumerate(_AMINO_ACID_ORDER):
-            _AMINO_ACID_BIOTYPES_MID[res] = {
-                'N': nt[i], 'CA': cat[i], 'C': ct[i], 'H': hnt[i], 'O': ot[i], 'HA': hat[i], 'CB': cbt[i]
-            }
-
-        # Biopolymer types for N-terminal peptide backbone atoms
-        nn   = [403, 409, 415, 421, 427, 433, 439, 445, 451, 457, 463, 471, 477, 483, 489, 495, 501, 507, 513, 519, 525, 531, 537, 543, 549, 555, 561, 567, 573, 579, 391, 762,   0,   0,   0,   0,   0, 403]
-        can  = [404, 410, 416, 422, 428, 434, 440, 446, 452, 458, 464, 472, 478, 484, 490, 496, 502, 508, 514, 520, 526, 532, 538, 544, 550, 556, 562, 568, 574, 580, 392,   0,   0, 767,   0,   0,   0, 404]
-        cn   = [405, 411, 417, 423, 429, 435, 441, 447, 453, 459, 465, 473, 479, 485, 491, 497, 503, 509, 515, 521, 527, 533, 539, 545, 551, 557, 563, 569, 575, 581, 393,   0, 764, 769,   0,   0,   0, 405]
-        hnn  = [406, 412, 418, 424, 430, 436, 442, 448, 454, 460, 466, 474, 480, 486, 492, 498, 504, 510, 516, 522, 528, 534, 540, 546, 552, 558, 564, 570, 576, 582, 394, 763,   0,   0,   0,   0,   0, 406] # HN1, HN2, HN3 usually
-        on   = [407, 413, 419, 425, 431, 437, 443, 449, 455, 461, 467, 475, 481, 487, 493, 499, 505, 511, 517, 523, 529, 535, 541, 547, 553, 559, 565, 571, 577, 583, 395,   0, 766, 770,   0,   0,   0, 407]
-        han  = [408, 414, 420, 426, 432, 438, 444, 450, 456, 462, 468, 476, 482, 488, 494, 500, 506, 512, 518, 524, 530, 536, 542, 548, 554, 560, 566, 572, 578,   0, 396,   0, 765, 768,   0,   0,   0, 408]
-        for i, res in enumerate(_AMINO_ACID_ORDER):
-            _AMINO_ACID_BIOTYPES_NTERM[res] = {
-                'N': nn[i], 'CA': can[i], 'C': cn[i], 'H': hnn[i], 'O': on[i], 'HA': han[i]
-                # Note: CB is usually the same as mid-chain, sidechain atoms need separate lookup
-            }
-
-        # Biopolymer types for C-terminal peptide backbone atoms
-        nc   = [584, 590, 596, 602, 608, 614, 620, 626, 632, 638, 644, 649, 655, 661, 667, 673, 679, 685, 691, 697, 703, 709, 715, 721, 727, 733, 739, 745, 751, 757,   0,   0,   0,   0, 773, 775, 777, 584]
-        cac  = [585, 591, 597, 603, 609, 615, 621, 627, 633, 639, 645, 650, 656, 662, 668, 674, 680, 686, 692, 698, 704, 710, 716, 722, 728, 734, 740, 746, 752, 758,   0,   0,   0,   0,   0,   0, 779, 585]
-        cc   = [586, 592, 598, 604, 610, 616, 622, 628, 634, 640, 646, 651, 657, 663, 669, 675, 681, 687, 693, 699, 705, 711, 717, 723, 729, 735, 741, 747, 753, 759,   0,   0,   0,   0, 771,   0,   0, 586]
-        hnc  = [587, 593, 599, 605, 611, 617, 623, 629, 635, 641,   0, 652, 658, 664, 670, 676, 682, 688, 694, 700, 706, 712, 718, 724, 730, 736, 742, 748, 754, 760,   0,   0,   0,   0, 774, 776, 778, 587]
-        oc   = [588, 594, 600, 606, 612, 618, 624, 630, 636, 642, 647, 653, 659, 665, 671, 677, 683, 689, 695, 701, 707, 713, 719, 725, 731, 737, 743, 749, 755, 761,   0,   0,   0,   0, 772,   0,   0, 588] # OXT, O'
-        hac  = [589, 595, 601, 607, 613, 619, 625, 631, 637, 643, 648, 654, 660, 666, 672, 678, 684, 690, 696, 702, 708, 714, 720, 726, 732, 738, 744, 750, 756,   0,   0,   0,   0,   0,   0,   0, 780, 589]
-        for i, res in enumerate(_AMINO_ACID_ORDER):
-            _AMINO_ACID_BIOTYPES_CTERM[res] = {
-                'N': nc[i], 'CA': cac[i], 'C': cc[i], 'H': hnc[i], 'OXT': oc[i], 'HA': hac[i]
-                # Note: CB is usually the same as mid-chain, sidechain atoms need separate lookup
-            }
-
-        # Biopolymer types for nucleotide phosphate and sugar atoms
-        o5t   = [1001, 1031, 1062, 1090, 1117, 1146, 1176, 1203, 0, 0, 0, 0]
-        c5t   = [1002, 1032, 1063, 1091, 1118, 1147, 1177, 1204, 0, 0, 0, 0]
-        h51t  = [1003, 1033, 1064, 1092, 1119, 1148, 1178, 1205, 0, 0, 0, 0] # H5'
-        h52t  = [1004, 1034, 1065, 1093, 1120, 1149, 1179, 1206, 0, 0, 0, 0] # H5''
-        c4t   = [1005, 1035, 1066, 1094, 1121, 1150, 1180, 1207, 0, 0, 0, 0]
-        h4t   = [1006, 1036, 1067, 1095, 1122, 1151, 1181, 1208, 0, 0, 0, 0] # H4'
-        o4t   = [1007, 1037, 1068, 1096, 1123, 1152, 1182, 1209, 0, 0, 0, 0]
-        c1t   = [1008, 1038, 1069, 1097, 1124, 1153, 1183, 1210, 0, 0, 0, 0]
-        h1t   = [1009, 1039, 1070, 1098, 1125, 1154, 1184, 1211, 0, 0, 0, 0] # H1'
-        c3t   = [1010, 1040, 1071, 1099, 1126, 1155, 1185, 1212, 0, 0, 0, 0]
-        h3t   = [1011, 1041, 1072, 1100, 1127, 1156, 1186, 1213, 0, 0, 0, 0] # H3'
-        c2t   = [1012, 1042, 1073, 1101, 1128, 1157, 1187, 1214, 0, 0, 0, 0]
-        h21t  = [1013, 1043, 1074, 1102, 1129, 1158, 1188, 1215, 0, 0, 0, 0] # H2'
-        o2t   = [1014, 1044, 1075, 1103,    0,    0,    0,    0, 0, 0, 0, 0] # O2' (RNA only)
-        h22t  = [1015, 1045, 1076, 1104, 1130, 1159, 1189, 1216, 0, 0, 0, 0] # H2'' (often same type as H2')
-        o3t   = [1016, 1046, 1077, 1105, 1131, 1160, 1190, 1217, 0, 0, 0, 0]
-        pt    = [1230, 1230, 1230, 1230, 1242, 1242, 1242, 1242, 0, 0, 0, 0]
-        opt   = [1231, 1231, 1231, 1231, 1243, 1243, 1243, 1243, 0, 0, 0, 0] # OP1, OP2
-        h5tt  = [1233, 1233, 1233, 1233, 1245, 1245, 1245, 1245, 0, 0, 0, 0] # HO5' (5' terminal H)
-        h3tt  = [1238, 1238, 1238, 1238, 1250, 1250, 1250, 1250, 0, 0, 0, 0] # HO3' (3' terminal H)
-        for i, res in enumerate(_NUCLEOTIDE_ORDER):
-            _NUCLEOTIDE_BIOTYPES[res] = {
-                 "O5'": o5t[i], "C5'": c5t[i], "H5'": h51t[i], "H5''": h52t[i],
-                 "C4'": c4t[i], "H4'": h4t[i], "O4'": o4t[i], "C1'": c1t[i],
-                 "H1'": h1t[i], "C3'": c3t[i], "H3'": h3t[i], "C2'": c2t[i],
-                 "H2'": h21t[i], "O2'": o2t[i], "H2''": h22t[i], "O3'": o3t[i],
-                 "P": pt[i], "OP1": opt[i], "OP2": opt[i], # OP1/OP2 often share a type
-                 "HO5'": h5tt[i], "HO3'": h3tt[i]
-                 # Base atoms need separate lookup based on A/G/C/T/U
-             }
-
-        return (
-            _AMINO_ACID_CODES,
-            _AMINO_ACID_ORDER,
-            _NUCLEOTIDE_CODES,
-            _NUCLEOTIDE_ORDER,
-            _AMINO_ACID_BIOTYPES_MID,
-            _AMINO_ACID_BIOTYPES_NTERM,
-            _AMINO_ACID_BIOTYPES_CTERM,
-            _NUCLEOTIDE_BIOTYPES
-        )
-
-    # Call the helper function to populate the dictionaries when the class is defined
-    (_AMINO_ACID_CODES, 
-     _AMINO_ACID_ORDER,
-     _NUCLEOTIDE_CODES, 
-     _NUCLEOTIDE_ORDER,
-     _AMINO_ACID_BIOTYPES_MID, 
-     _AMINO_ACID_BIOTYPES_NTERM, 
-     _AMINO_ACID_BIOTYPES_CTERM, 
-     _NUCLEOTIDE_BIOTYPES) = _initialize_standard_biopolymer_and_biotypes()
+    # Nucleotide Codes
+    _NUCLEOTIDE_LIST = {
+        '  A': 'A', '  G': 'G', '  C': 'C', '  U': 'U', ' DA': 'D',
+        ' DG': 'B', ' DC': 'I', ' DT': 'T', ' MP': '1', ' DP': '2',
+        ' TP': '3', 'UNK': 'X'
+    }
 
     def __init__(
         self,
@@ -287,6 +171,12 @@ class TinkerFiles:
         self._writeXmlFiles = writeXmlFiles
         self._XmlFilesList = None
 
+        # Internal variables to store the data from the files
+        self._xyzDict = None
+        self._seqDict = None
+        self._atomDict = None
+        self._scalars, self._forces, self._atomTypes, self._bioTypes = [], [], [], []
+
         # Topology
         self.topology = None
 
@@ -296,26 +186,11 @@ class TinkerFiles:
         self._numpyPositions = None
         self._numpyBoxVectors = None
 
-        # Internal variable to store the data from the xyz file
-        self._xyzDict = None
-
-        # Internal variables to store the data from the key file(s)
-        self._atomTypes, self._bioTypes, self._forces, self._scalars = [], [], [], []
-
-        # Internal variable to store the combined atom data
-
         # ----------------------- LOAD FILES -----------------------
-        # Load the .seq file
-        if seq is not None:
-            self._seqDict = self.readSeqFile(seq)
-        else:
-            self._seqDict = None
-
-
         # Load the .xyz file
-        self._xyzDict, self.boxVectors, self.positions = self._loadSeqFile(xyz)
+        self._xyzDict, self.boxVectors, self.positions = self._loadXyzFile(xyz)
         self.positions = self.positions * nanometers
-    
+
         # Load the .key or .prm file(s)
         key = key if isinstance(key, list) else [key]
         for keyFile in key:
@@ -325,18 +200,21 @@ class TinkerFiles:
             self._forces.append(forces)
             self._scalars.append(scalars)
 
-        # Load the .xyz file
-        self._xyzDict, self.boxVectors, self.positions = self._loadXyzFile(xyz)
-        self.positions = self.positions * nanometers
-        
+        # Load the .seq file
+        if seq is not None:
+            self._seqDict = self._loadSeqFile(seq)
+        else:
+            self._seqDict = None
+
+        # ----------------------- COMBINE DATA -----------------------
         # Combine the data from the .xyz and .key files
-        self._atomData = TinkerFiles._combineXyzAndKeyData(
+        self._atomDict = TinkerFiles._combineXyzAndKeyData(
             self._xyzDict, self._atomTypes, self._bioTypes
         )
-
+        
         # ----------------------- CREATE TOPOLOGY -----------------------
         # Create the topology
-        self.topology = self._createTopology(self._atomData)
+        self.topology = self._createTopology(self._atomDict, self._seqDict)
 
         # Set the periodic box vectors as specified in the xyz file
         if self.boxVectors is not None:
@@ -348,10 +226,20 @@ class TinkerFiles:
             raise ValueError(
                 "Specify either periodicBoxVectors or unitCellDimensions, but not both"
             )
+
         if periodicBoxVectors is not None:
             self.topology.setPeriodicBoxVectors(periodicBoxVectors)
         elif unitCellDimensions is not None:
             self.topology.setUnitCellDimensions(unitCellDimensions)
+
+        # Write to PDB
+        from openmm.app import PDBFile
+
+        with open("output.pdb", "w") as f:
+            PDBFile.writeFile(self.topology, self.positions, f)
+
+        exit()
+
 
         # ----------------------- CREATE XML FILES -----------------------
         self.forceFields = []
@@ -371,14 +259,341 @@ class TinkerFiles:
             self.forceFields.append(xmlFile)
             self.implictForceFields.append(implicitXmlFile)
 
+    # ------------------------------------------------------------------------------------------ #
+    #                                      HELPER FUNCTIONS                                      #
+    # ------------------------------------------------------------------------------------------ #
+    @staticmethod
+    def _findNeighbours(
+        atomData: Dict,
+        index: Optional[int] = None,
+        distance: Optional[int] = None,
+        exact: bool = False,
+        exclusionList: Optional[List[int]] = None,
+    ) -> Union[List[int], List[List[int]]]:
+        """
+        Find atoms within or exactly at a specified distance from a given atom,
+        or all connected groups (molecules) if no index is specified.
+
+        Parameters
+        ----------
+        atomData : dict
+            The atom data dictionary.
+        index : int, optional
+            The index of the atom to find neighbours for. If None, returns multiple molecules.
+        distance : int, optional
+            The distance to search for neighbours in number of bonds.
+            If None, all neighbours are returned, including the atom itself.
+        exact : bool, default=False
+            If True, only atoms exactly at the specified distance are returned.
+            If False, atoms within the distance (inclusive) are returned.
+        exclusionList : list[int], optional
+            A list of atom indices to exclude from the search.
+
+        Returns
+        -------
+        list[int] or list[list[int]]
+            If `index` is provided, returns a flat list of neighbors.
+            If `index` is None, returns a list of lists (multiple groups of neighbors).
+        """
+        exclusionList = exclusionList or []
+        visited = set()
+
+        def bfs(start: int) -> List[int]:
+            local_neighbours = set()
+            queue = [(start, 0)]
+
+            while queue:
+                atom, dist = queue.pop(0)
+
+                if atom in exclusionList or atom in visited:
+                    continue
+
+                visited.add(atom)
+
+                if (
+                    distance is None
+                    or (exact and dist == distance)
+                    or (not exact and dist <= distance)
+                ):
+                    local_neighbours.add(atom)
+
+                if distance is None or dist < distance:
+                    for neighbor in atomData[atom]["bonds"]:
+                        if neighbor not in visited and neighbor not in exclusionList:
+                            queue.append((neighbor, dist + 1))
+
+            return sorted(local_neighbours)
+
+        if index is not None:
+            return bfs(index)
+
+        molecules = []
+        for atom in atomData:
+            if atom not in visited and atom not in exclusionList:
+                molecule = bfs(atom)
+                if molecule:
+                    molecules.append(molecule)
+
+        return molecules
+
+    @staticmethod
+    def _createTopology(atomDict: Dict, seqDict: Optional[Dict] = None) -> top.Topology:
+        """Create the topology from the molecules and sequence data.
+
+        Parameters
+        ----------
+        atomDict : dict
+            The atom data dictionary.
+        seqDict : dict, optional
+            The sequence data dictionary. 
+            If None, generic molecules will be used for all chains.
+
+        Returns
+        -------
+        topology : Topology
+            The created topology
+        """
+        topology = top.Topology()
+        molecules = TinkerFiles._findNeighbours(atomDict)
+
+        if seqDict is None:
+            seqDict = {chainId: {"chainType": "GENERIC"} for chainId in range(len(molecules))}
+
+        for molecule, chainId in zip(molecules, seqDict):
+            chain = topology.addChain(id=chainId)
+            if seqDict[chainId]["chainType"] == "GENERIC":
+                # Either a water molecule or a generic molecule
+                if len(molecule) == 3:
+                    atomCounts = {atomDict[atomId]["atomicNumber"]: 0 for atomId in molecule}
+                    for atomId in molecule:
+                        atomCounts[atomDict[atomId]["atomicNumber"]] += 1
+
+                    if atomCounts[1] == 2 and atomCounts[8] == 1:
+                        resName = "HOH"
+                    else:
+                        resName = "UNK"
+                elif len(molecule) == 1:
+                    # Ions
+                    atom = atomDict[molecule[0]]
+                    if atom["atomicNumber"] == 3:
+                        resName = "Li+"
+                    elif atom["atomicNumber"] == 11:
+                        resName = "Na+"
+                    elif atom["atomicNumber"] == 19:
+                        resName = "K+"
+                    elif atom["atomicNumber"] == 37:
+                        resName = "Rb+"
+                    elif atom["atomicNumber"] == 55:
+                        resName = "Cs+"
+                    elif atom["atomicNumber"] == 4:
+                        resName = "Be2+"
+                    elif atom["atomicNumber"] == 12:
+                        resName = "Mg2+"
+                    elif atom["atomicNumber"] == 20:
+                        resName = "Ca2+"
+                    elif atom["atomicNumber"] == 30:
+                        resName = "Zn2+"
+                    elif atom["atomicNumber"] == 9:
+                        resName = "F-"
+                    elif atom["atomicNumber"] == 17:
+                        resName = "Cl-"
+                    elif atom["atomicNumber"] == 35:
+                        resName = "Br-"
+                    elif atom["atomicNumber"] == 53:
+                        resName = "I-"
+                    else:
+                        resName = "UNK"
+                else:
+                    resName = "UNK"
+                residue = topology.addResidue(resName, chain)
+                for atomId in molecule:
+                    atom = atomDict[atomId]
+                    topology.addAtom(atom["nameShort"], elem.Element.getByAtomicNumber(atom["atomicNumber"]), residue)
+            elif seqDict[chainId]["chainType"] == "NUCLEIC":
+                raise NotImplementedError("Nucleic acids not implemented")
+            elif seqDict[chainId]["chainType"] == "PEPTIDE":
+                seenAtomIds = set()
+                resId = 0
+                for atomId in molecule:
+                    if atomId in seenAtomIds:
+                        continue
+
+                    resName = seqDict[chainId]["residues"][resId]
+                    atom = atomDict[atomId]
+
+                    if resName == "H2N":
+                        raise NotImplementedError("H2N Residue not implemented")
+                    elif resName == "FOR":
+                        # Formyl (FOR) - N-terminus
+                        # O=CH-- // Bonded to N of next residue
+                        obone = False
+                        nbone = False
+                        if atom["atomicNumber"] == 6:
+                            neighbours = TinkerFiles._findNeighbours(
+                                atomDict, atomId, 1, exact=True
+                            )
+                            for neighbour in neighbours:
+                                if atomDict[neighbour]["atomicNumber"] == 7:
+                                    nbone = True
+                                elif atomDict[neighbour]["atomicNumber"] == 8:
+                                    obone = True
+
+                            if nbone and obone:
+                                cai = atomId
+                                ci = atomId + 1
+                                oi = atomId + 2
+
+                                otherAtoms = []
+                                # Get the atoms attached to the carbonyl carbon atom (carbonyl oxygen + hydrogen)
+                                ciNeighbours = TinkerFiles._findNeighbours(
+                                    atomDict, ci, 1, exact=True, exclusionList=[cai]
+                                )
+                                ciNeighbours = [
+                                    neighbour
+                                    for neighbour in ciNeighbours
+                                    if atomDict[neighbour]["atomicNumber"] != 7
+                                ]
+                                otherAtoms.extend(ciNeighbours)
+
+                                # Get the atoms attached to the carbonyl oxygen atom
+                                # Atoms of the residue
+                                resAtoms = [ci, oi] + otherAtoms
+                    elif resName == "ACE":
+                        # Acetyl (ACE) - C-terminus
+                        # O=C-CαH3
+                        #   |
+                        #  // Bonded to N of next residue
+                        obone = False
+                        nbone = False
+                        if atom["atomicNumber"] == 6:
+                            neighbours = TinkerFiles._findNeighbours(
+                                atomDict, atomId, 2, exact=True
+                            )
+                            for neighbour in neighbours:
+                                if atomDict[neighbour]["atomicNumber"] == 7:
+                                    nbone = True
+                                elif atomDict[neighbour]["atomicNumber"] == 8:
+                                    obone = True
+                        if obone and nbone:
+                            cai = atomId
+                            ci = atomId + 1
+                            oi = atomId + 2
+
+                            otherAtoms = []
+                            # Get the hydrogens attached to the alpha carbon atom
+                            caiNeighbours = TinkerFiles._findNeighbours(
+                                atomDict, cai, 1, exact=True, exclusionList=[ci]
+                            )
+                            otherAtoms.extend(caiNeighbours)
+
+                            resAtoms = [cai, ci, oi] + otherAtoms
+                    elif resName == "COH":
+                        raise NotImplementedError("COH Residue not implemented")
+                    elif resName == "NH2":
+                        raise NotImplementedError("NH2 Residue not implemented")
+                    elif resName == "NME":
+                        raise NotImplementedError("NME Residue not implemented")
+                    else:
+                        if atom["atomicNumber"] == 7:
+                            # Amino acid backbone atoms
+                            #              O                  O
+                            #             ||                 ||
+                            # H – N – Cα – C – N – Cα – C – N – Cα – C – OH
+                            #     |     |     |     |     |     |     ||
+                            #     H    Cβ     H    Cβ     H    Cβ     O
+                            #           |           |           |
+                            #          R1          R2          R3
+                            neighbours = TinkerFiles._findNeighbours(
+                                atomDict, atomId, 3, exact=True
+                            )
+                            for neighbour in neighbours:
+                                if atomDict[neighbour]["atomicNumber"] == 8:
+                                    # We have found the backbone atoms for an amino acid.
+                                    # Tinker uses a strict numbering scheme for the atoms in a peptide bond.
+                                    ni = atomId  # Amide nitrogen atom
+                                    cai = atomId + 1  # Alpha carbon atom
+                                    ci = atomId + 2  # Carbonyl carbon atom
+                                    oi = atomId + 3  # Carbonyl oxygen atom
+
+                                    # We need to find the atoms attached to the ni, cai, and ci and add them to the side chain atoms list
+                                    otherAtoms = []
+
+                                    # Get the hydrogen atom attached to the amide nitrogen atom
+                                    niNeighbours = TinkerFiles._findNeighbours(
+                                        atomDict, ni, 1, exact=True, exclusionList=[cai]
+                                    )
+                                    hydrogenAtoms = [
+                                        neighbour
+                                        for neighbour in niNeighbours
+                                        if atomDict[neighbour]["atomicNumber"] == 1
+                                    ]
+                                    otherAtoms.extend(hydrogenAtoms)
+
+                                    # Get the atoms attached to the alpha carbon atom (H + side chain atoms)
+                                    caiNeighbours = TinkerFiles._findNeighbours(
+                                        atomDict,
+                                        cai,
+                                        None,
+                                        exact=True,
+                                        exclusionList=[ni, ci],
+                                    )
+                                    caiNeighbours = [
+                                        neighbour
+                                        for neighbour in caiNeighbours
+                                        if neighbour != cai
+                                    ]
+                                    otherAtoms.extend(caiNeighbours)
+
+                                    # Get the atoms attached to the carbonyl carbon atom (Usually just the carbonyl oxygen atom, but sometimes 2 oxygens)
+                                    ciNeighbours = TinkerFiles._findNeighbours(
+                                        atomDict, ci, 1, exact=True, exclusionList=[oi, cai]
+                                    )
+
+                                    # Remove oi from the list and any other amide nitrogen atoms
+                                    ciNeighbours = [
+                                        neighbour
+                                        for neighbour in ciNeighbours
+                                        if neighbour != oi
+                                        and atomDict[neighbour]["atomicNumber"] != 7
+                                    ]
+                                    otherAtoms.extend(ciNeighbours)
+
+                                    # Atoms of the residue
+                                    resAtoms = [ni, cai, ci, oi] + otherAtoms
+
+                    # Assign the correct residue name to the atoms
+                    residue = topology.addResidue(resName, chain)
+                    sortedAtoms = sorted(resAtoms)
+                    for atom in sortedAtoms:
+                        atomDict[atom]["residueName"] = resName
+                        atomDict[atom]["chain"] = chain
+
+                        # Add the atom to the residue
+                        topology.addAtom(
+                            atomDict[atom]["nameShort"],
+                            elem.Element.getByAtomicNumber(atomDict[atom]["atomicNumber"]),
+                            residue,
+                        )
+                    seenAtomIds.update(sortedAtoms)
+                    resId += 1
+
+        # Add the bonds to the topology
+        topology_atoms = list(topology.atoms())
+        for atomId, atomIdDict in atomDict.items():
+            for bond in atomIdDict["bonds"]:
+                print(atomId, bond)
+                topology.addBond(topology_atoms[atomId], topology_atoms[bond])
+
+        return topology
+
     def createSystem(
         self,
-        nonbondedMethod = ff.PME,
-        nonbondedCutoff = 1.0 * nanometers,
-        constraints = None,
+        nonbondedMethod=ff.PME,
+        nonbondedCutoff=1.0 * nanometers,
+        constraints=None,
         rigidWater: bool = False,
         removeCMMotion: bool = True,
-        hydrogenMass = None,
+        hydrogenMass=None,
         polarization: str = "mutual",
         mutualInducedTargetEpsilon: float = 0.00001,
         implicitSolvent: bool = False,
@@ -465,7 +680,9 @@ class TinkerFiles:
         """
         if asNumpy:
             if self._numpyPositions is None:
-                self._numpyPositions = np.array(self.positions.value_in_unit(nanometers)) * nanometers
+                self._numpyPositions = (
+                    np.array(self.positions.value_in_unit(nanometers)) * nanometers
+                )
             return self._numpyPositions
         return self.positions
 
@@ -490,20 +707,19 @@ class TinkerFiles:
                 self._numpyBoxVectors = []
                 self._numpyBoxVectors.append(
                     np.array(self.boxVectors[0].value_in_unit(nanometers)) * nanometers
-                    )
+                )
                 self._numpyBoxVectors.append(
                     np.array(self.boxVectors[1].value_in_unit(nanometers)) * nanometers
-                    )
+                )
                 self._numpyBoxVectors.append(
                     np.array(self.boxVectors[2].value_in_unit(nanometers)) * nanometers
                 )
             return self._numpyBoxVectors
         return self.boxVectors
-    
 
     def _loadSeqFile(self, file: str) -> Dict[str, List[str]]:
         """
-        Load the biopolymer sequence from a TINKER .seq file. 
+        Load the biopolymer sequence from a TINKER .seq file.
 
         Parameters
         ----------
@@ -536,9 +752,11 @@ class TinkerFiles:
             A dictionary where keys are chain IDs and values are lists of
             three-letter residue codes for that chain.
         """
-        seqDict = {}
+        from collections import OrderedDict
+
+        seqDict = OrderedDict()
         defaultChainIndex = 0
-        currentChainId = None 
+        currentChainId = None
 
         if os.path.exists(file):
             with open(file, "r") as f:
@@ -549,14 +767,18 @@ class TinkerFiles:
         for line_num, line in enumerate(seqContent, 1):
             lineSplit = line.split()
             if not lineSplit:
-                continue  
+                continue
 
             parsedChainId = None
             startResidue = None
             residuesStartIndex = -1
 
             # Determine line format: Chain ID + Res Num or just Res Num
-            if lineSplit[0].isalpha() and len(lineSplit[0]) == 1 and lineSplit[1].isdigit():
+            if (
+                lineSplit[0].isalpha()
+                and len(lineSplit[0]) == 1
+                and lineSplit[1].isdigit()
+            ):
                 parsedChainId = lineSplit[0]
                 startResidue = int(lineSplit[1])
                 residuesStartIndex = 2
@@ -568,13 +790,13 @@ class TinkerFiles:
                     f"Line {line_num}: Does not have the expected format "
                     f"(ChainID ResNum ... or ResNum ...): {line.strip()}"
                 )
-            
+
             # Force 3-letter residues, otherwise add whitespaces to the left
             residues = [residue.rjust(3) for residue in lineSplit[residuesStartIndex:]]
-            
+
             if not residues:
                 raise ValueError(f"Line {line_num}: No residues found after parsing!")
-
+            print(startResidue, parsedChainId)
             if startResidue == 1:
                 if parsedChainId:
                     if parsedChainId in seqDict:
@@ -587,14 +809,11 @@ class TinkerFiles:
                     currentChainId = chr(65 + (defaultChainIndex % 26))
                     defaultChainIndex += 1
 
-                seqDict[currentChainId] = {
-                    "residues": [],
-                    "chainType": "GENERIC"
-                }
+                seqDict[currentChainId] = {"residues": [], "chainType": "GENERIC"}
 
-            else: 
+            else:
                 if currentChainId is None:
-                     raise ValueError(
+                    raise ValueError(
                         f"Line {line_num}: Continuation line encountered before "
                         f"any chain was started (residue 1)."
                     )
@@ -616,18 +835,21 @@ class TinkerFiles:
             # Add residues to the current chain
             seqDict[currentChainId]["residues"].extend(residues)
 
+        # ----------------------- DETERMINE CHAIN TYPES -----------------------
         # Determine chain types
         for chainId, chainData in seqDict.items():
             residues = chainData["residues"]
-            aminoAcidIntersect = set(residues) & set(self._AMINO_ACID_ORDER)
+            aminoAcidIntersect = set(residues) & set(self._AMINO_ACID_LIST)
             if aminoAcidIntersect:
                 chainData["chainType"] = "PEPTIDE"
                 continue
 
-            nucleotideIntersect = set(residues) & set(self._NUCLEOTIDE_ORDER)
+            nucleotideIntersect = set(residues) & set(self._NUCLEOTIDE_LIST)
             if nucleotideIntersect:
                 chainData["chainType"] = "NUCLEIC"
                 continue
+
+            chainData["chainType"] = "GENERIC"
 
         return seqDict
 
@@ -736,7 +958,6 @@ class TinkerFiles:
         mass: float,
         valence: int,
         element: str,
-        residue: str,
     ) -> None:
         """
         Helper function to validate atom type information.
@@ -761,8 +982,6 @@ class TinkerFiles:
             The valence of the atom type.
         element : str
             The element of the atom type.
-        residue : str
-            The residue of the atom type.
         """
         if atomType in atomTypeDict:
             # Validate against existing atom type data
@@ -775,7 +994,6 @@ class TinkerFiles:
                 "atomicNumber": atomicNumber,
                 "mass": mass,
                 "valence": valence,
-                "residue": residue,
             }
 
             for key, new_value in mismatches.items():
@@ -794,7 +1012,6 @@ class TinkerFiles:
             "atomicNumber": atomicNumber,
             "mass": mass,
             "valence": valence,
-            "residue": residue,
         }
 
     @staticmethod
@@ -805,7 +1022,6 @@ class TinkerFiles:
         nameLong: str,
         atomType: str,
         element: str,
-        residue: str,
     ) -> None:
         """
         Helper function to validate biotype information.
@@ -824,8 +1040,6 @@ class TinkerFiles:
             The atom type counterpart of the biotype.
         element : str
             The element of the biotype.
-        residue : str
-            The residue of the biotype
         """
         if bioType in bioTypeDict:
             # Validate against existing atom type data
@@ -835,7 +1049,6 @@ class TinkerFiles:
                 "nameLong": nameLong,
                 "atomType": atomType,
                 "element": element,
-                "residue": residue,
             }
 
             for key, new_value in mismatches.items():
@@ -851,7 +1064,6 @@ class TinkerFiles:
             "nameLong": nameLong,
             "atomType": atomType,
             "element": element,
-            "residue": residue,
         }
 
     @staticmethod
@@ -878,7 +1090,8 @@ class TinkerFiles:
 
         return residueName[:3].upper()
 
-    def _loadKeyFile(self, keyFile: str) -> Tuple[Dict, Dict, Dict, Dict]:
+    @staticmethod
+    def _loadKeyFile(keyFile: str) -> Tuple[Dict, Dict, Dict, Dict]:
         """
         Load a TINKER .key or .prm file.
 
@@ -892,7 +1105,6 @@ class TinkerFiles:
         atomTypes, bioTypes, forces, scalars : dict, dict, dict, dict
             The atom types, bio types, forces, and scalars.
         """
-        # Get all interesting lines from the file
         try:
             allLines = []
             with open(keyFile) as file:
@@ -903,14 +1115,14 @@ class TinkerFiles:
                             # with citations or other non-essential information
                             continue
 
-                        fields = shlex.split(line)
-
-                        if not fields or fields[0].startswith("#"):
-                            # Skip empty lines and comments
+                        lineStripped = line.lstrip()
+                        if lineStripped.startswith("#") or lineStripped == "":
                             continue
+
+                        fields = shlex.split(line)
                         allLines.append(fields)
                     except Exception as e:
-                        raise ValueError(f"Error parsing line in {keyFile}: {e}")
+                        raise ValueError(f"Error parsing line {line} in {keyFile}: {e}")
         except FileNotFoundError:
             raise IOError(f"Could not find file {keyFile}")
         except Exception as e:
@@ -919,9 +1131,7 @@ class TinkerFiles:
         atomTypesDict = dict()
         bioTypesDict = dict()
         forcesDict = dict()
-        # We use the default values for the scalars as a starting point
-        # and update them with the values from the key file
-        scalarsDict = self.RECOGNIZED_SCALARS.copy()
+        scalarsDict = TinkerFiles.RECOGNIZED_SCALARS.copy()  # We use the default values for the scalars as a starting point and update them with the values from the key file
 
         lineIndex = 0
         while lineIndex < len(allLines):
@@ -942,20 +1152,23 @@ class TinkerFiles:
                     mass,
                     valence,
                 ) = fields[1:]
-                element = elem.Element.getByAtomicNumber(int(atomicNumber)).symbol
+
+                if int(atomicNumber) > 0:
+                    element = elem.Element.getByAtomicNumber(int(atomicNumber)).symbol
+                else:
+                    element = None  # For dummy atoms
+
                 nameLong = re.sub(r"\s+", " ", nameLong.strip())
-                resAbbr = TinkerFiles.getResidueAbbreviation(nameLong)
                 TinkerFiles._addAtomType(
                     atomTypesDict,
                     atomType,
                     atomClass,
                     nameShort,
                     nameLong,
-                    atomicNumber,
-                    mass,
-                    valence,
+                    int(atomicNumber),
+                    float(mass),
+                    int(valence),
                     element,
-                    resAbbr,
                 )
                 lineIndex += 1
             elif fields[0] == "biotype":
@@ -966,12 +1179,7 @@ class TinkerFiles:
                     )
                 bioType, nameShort, nameLong, atomType = fields[1:]
                 element = elem.Element.getByAtomicNumber(int(atomicNumber)).symbol
-                nameLong = nameLong.replace('"', "")
-                lookUp = f"{nameShort}_{nameLong}"
-                if lookUp in bioTypesDict:
-                    # Workaround for Tinker using the same name but different types for H2', H2'', and for H5', H5''
-                    lookUp = f"{nameShort}*_{nameLong}"
-                resAbbr = TinkerFiles.getResidueAbbreviation(nameLong)
+                nameLong = re.sub(r"\s+", " ", nameLong.strip())
                 TinkerFiles._addBioType(
                     bioTypesDict,
                     bioType,
@@ -979,21 +1187,20 @@ class TinkerFiles:
                     nameLong,
                     atomType,
                     element,
-                    resAbbr,
                 )
                 lineIndex += 1
-            elif fields[0] in self.RECOGNIZED_FORCES:
-                if self.RECOGNIZED_FORCES[fields[0]] == 1:
+            elif fields[0] in TinkerFiles.RECOGNIZED_FORCES:
+                if TinkerFiles.RECOGNIZED_FORCES[fields[0]] == 1:
                     if fields[0] not in forcesDict:
                         forcesDict[fields[0]] = []
                     forcesDict[fields[0]].append(fields[1:])
                     lineIndex += 1
                 else:
                     # Call the function to parse the specific force
-                    lineIndex = self.RECOGNIZED_FORCES[fields[0]](
+                    lineIndex = TinkerFiles.RECOGNIZED_FORCES[fields[0]](
                         lineIndex, allLines, forcesDict
                     )
-            elif fields[0] in self.RECOGNIZED_SCALARS:
+            elif fields[0] in TinkerFiles.RECOGNIZED_SCALARS:
                 scalar, value = fields
                 scalarsDict[scalar] = value
                 lineIndex += 1
@@ -1100,158 +1307,56 @@ class TinkerFiles:
 
         Returns
         -------
-        dict
+        atomDataDict : dict
             The combined data.
 
         Notes
         -----
-        atomData[index]                          index = 0, 1, 2, ...
-        atomData[index]['symbol']                atom symbol
-        atomData[index]['positions']             atom position
-        atomData[index]['bonds']                 list of bonded atom indices
-        atomData[index]['residue']               residue name
+        atomDataDict[index]                          index = 0, 1, 2, ...
+        atomDataDict[index]['symbol']                atom symbol
+        atomDataDict[index]['positions']             atom position
+        atomDataDict[index]['bonds']                 list of bonded atom indices
+        atomDataDict[index]['residue']               residue name
 
         # if atomType is present in the .key file
-        atomData[index]['atomType']              atom type
-        atomData[index]['atomClass']             atom class
-        atomData[index]['nameShort']             short name
-        atomData[index]['nameLong']              long name
-        atomData[index]['element']               element
-        atomData[index]['atomicNumber']          atomic number
-        atomData[index]['mass']                  mass
-        atomData[index]['valence']               valence
+        atomDataDict[index]['atomType']              atom type
+        atomDataDict[index]['atomClass']             atom class
+        atomDataDict[index]['nameShort']             short name
+        atomDataDict[index]['nameLong']              long name
+        atomDataDict[index]['element']               element
+        atomDataDict[index]['atomicNumber']          atomic number
+        atomDataDict[index]['mass']                  mass
+        atomDataDict[index]['valence']               valence
 
         # if bioType is present in the .key file
-        atomData[index]['bioType']               bio type
-        atomData[index]['nameShort']             short name
-        atomData[index]['nameLong']              long name
-        atomData[index]['atomType']              atom type
-        atomData[index]['element']               element
+        atomDataDict[index]['bioType']               bio type
+        atomDataDict[index]['nameShort']             short name
+        atomDataDict[index]['nameLong']              long name
+        atomDataDict[index]['atomType']              atom type
+        atomDataDict[index]['element']               element
         """
-        atomData = dict()
+        atomDataDict = dict()
         for atomIndex in xyzDict:
-            atomData[atomIndex] = xyzDict[atomIndex]
+            atomDataDict[atomIndex] = xyzDict[atomIndex]
 
-            if "atomType" in atomData[atomIndex]:
+            if "atomType" in atomDataDict[atomIndex]:
                 # Add all the atom type data to the atom data
                 for atomTypeDict in atomTypes:
-                    if atomData[atomIndex]["atomType"] in atomTypeDict:
-                        atomData[atomIndex].update(
-                            atomTypeDict[atomData[atomIndex]["atomType"]]
+                    if atomDataDict[atomIndex]["atomType"] in atomTypeDict:
+                        atomDataDict[atomIndex].update(
+                            atomTypeDict[atomDataDict[atomIndex]["atomType"]]
                         )
                         break
-            elif "bioType" in atomData[atomIndex]:
+            elif "bioType" in atomDataDict[atomIndex]:
                 # Add all the biotype data to the atom data
                 for bioTypeDict in bioTypes:
-                    if atomData[atomIndex]["bioType"] in bioTypeDict:
-                        atomData[atomIndex].update(
-                            bioTypeDict[atomData[atomIndex]["bioType"]]
+                    if atomDataDict[atomIndex]["bioType"] in bioTypeDict:
+                        atomDataDict[atomIndex].update(
+                            bioTypeDict[atomDataDict[atomIndex]["bioType"]]
                         )
                         break
 
-        return atomData
-
-    # ------------------------------------------------------------------------------------------ #
-    #                                        TOPOLOGY                                            #
-    # ------------------------------------------------------------------------------------------ #
-    @staticmethod
-    def _getResiduesFromBonds(atomData: Dict) -> Tuple[List[List[int]], List[str]]:
-        """
-        Form whole residues by traversing bonded atoms.
-
-        Notes
-        -----
-        Residues are defined as connected atoms in the graph formed by the bonds between atoms.
-        For example, connected amino acids in a protein are considered to be part of the same residue.
-
-        Returns
-        -------
-        list of list of int
-            A list of residues, where each residue is a list of atom indices.
-        """
-
-        def _getResidueName(atomIndex):
-            # Find atom type in atomTypesDict
-            atomType = atomData[atomIndex]["atomType"]
-            residueName = atomData[atomIndex]["residue"]
-
-            nameParts = residueName.split()
-            if len(nameParts) == 2:
-                residueName = nameParts[0]
-            else:
-                residueName = " ".join(nameParts[:2])
-            return residueName
-
-        residues = []
-        residueNames = []
-        seen = set()
-
-        for atom1 in range(len(atomData)):
-            if atom1 not in seen:
-                # Start a new residue
-                residue = []
-
-                # Get the residue name
-                residueName = _getResidueName(atom1)
-
-                # Iterative way of traversing a graph-like structure
-                # Recursive approach led to stack overflow
-                stack = [atom1]
-                while stack:
-                    atom = stack.pop()
-                    if atom not in seen:
-                        seen.add(atom)
-                        residue.append(atom)
-                        stack.extend(atomData[atom]["bonds"])
-
-                residues.append(sorted(residue))
-                residueNames.append(residueName)
-
-        return residues, residueNames
-
-    def _createTopology(self, atomData: Dict) -> top.Topology:
-        """
-        Build the topology from the data parsed from the .xyz file and the .key file.
-
-        Parameters
-        ----------
-        atomData : dict
-            The atom data parsed from the .xyz and .key files.
-
-        Returns
-        -------
-        openmm.app.topology.Topology
-            The topology object.
-        """
-        self.topology = top.Topology()
-
-        # Infer the residues from the bonds
-        residues, residueNames = self._getResiduesFromBonds(atomData)
-
-        # Add chain to the topology
-        chain = self.topology.addChain()
-        for residueName, residueAtoms in zip(residueNames, residues):
-            # Add residues to the topology
-            residue = self.topology.addResidue(residueName, chain)
-            for atomIndex in residueAtoms:
-                name = atomData[atomIndex]["nameShort"]
-                element = elem.Element.getByAtomicNumber(
-                    int(atomData[atomIndex]["atomicNumber"])
-                )
-
-                # Add atoms to the topology
-                self.topology.addAtom(name, element, residue)
-
-        # Add bonds to the topology
-        atoms = list(self.topology.atoms())
-        seenBonds = set()
-        for atomIndex in range(len(atomData)):
-            for bondedAtomIndex in atomData[atomIndex]["bonds"]:
-                if (bondedAtomIndex, atomIndex) not in seenBonds:
-                    self.topology.addBond(atoms[atomIndex], atoms[bondedAtomIndex])
-                    seenBonds.add((atomIndex, bondedAtomIndex))
-
-        return self.topology
+        return atomDataDict
 
     # ---------------------------------------------------------------------------------------- #
     #                                      WRITE XML FILE                                      #
