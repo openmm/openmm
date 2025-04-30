@@ -32,6 +32,7 @@
 #include "openmm/internal/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "ReferencePlatform.h"
+#include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/ConstantPotentialForce.h"
 #include "openmm/System.h"
@@ -942,6 +943,187 @@ void testParallelPlateCapacitorFiniteField() {
     }
 }
 
+void makeTestSimulateSystem(bool useConstantPotential, bool freezeAll, System& system, ConstantPotentialForce*& constantPotentialForce, vector<Vec3>& positions) {
+    // Generates a test system with SPC/E water in contact with a model
+    // electrode.
+
+    system = System();
+    system.setDefaultPeriodicBoxVectors(Vec3(3, 0, 0), Vec3(0, 2, 0), Vec3(0, 0, 2));
+
+    HarmonicBondForce* bondForce = new HarmonicBondForce();
+    NonbondedForce* nonbondedForce = new NonbondedForce();
+    if (useConstantPotential) {
+        constantPotentialForce = new ConstantPotentialForce();
+    }
+    else {
+        constantPotentialForce = NULL;
+    }
+
+    for (int i = 0; i < 300; i++) {
+        system.addParticle((i >= 100 && i < 200) || freezeAll ? 0 : 195.08);
+        nonbondedForce->addParticle(0, 0.25, 1);
+        if (useConstantPotential) {
+            constantPotentialForce->addParticle(0);
+        }
+    }
+
+    // static const int bondCount = ...;
+    // static const int bondIndices[...][2] = {...};
+#include "conp_bond_indices.dat"
+
+    for (int i = 0; i < bondCount; i++) {
+        bondForce->addBond(bondIndices[i][0], bondIndices[i][1], 0.28284271247461906, 10000);
+    }
+
+    int offset = system.getNumParticles();
+    for (int i = 0; i < 222; i++) {
+        int i1 = system.addParticle(15.99943);
+        int i2 = system.addParticle(1.007947);
+        int i3 = system.addParticle(1.007947);
+        system.addConstraint(i1, i2, 0.1);
+        system.addConstraint(i1, i3, 0.1);
+        system.addConstraint(i2, i3, 0.1632980861841278);
+        if (useConstantPotential) {
+            nonbondedForce->addParticle(0, 0.3165719505039882, 0.6497752);
+            nonbondedForce->addParticle(0, 1, 0);
+            nonbondedForce->addParticle(0, 1, 0);
+            constantPotentialForce->addParticle(-0.8476);
+            constantPotentialForce->addParticle(0.4238);
+            constantPotentialForce->addParticle(0.4238);
+            constantPotentialForce->addException(i1, i2, 0);
+            constantPotentialForce->addException(i1, i3, 0);
+            constantPotentialForce->addException(i2, i3, 0);
+        } else {
+            nonbondedForce->addParticle(-0.8476, 0.3165719505039882, 0.6497752);
+            nonbondedForce->addParticle(0.4238, 1, 0);
+            nonbondedForce->addParticle(0.4238, 1, 0);
+            nonbondedForce->addException(i1, i2, 0, 1, 0);
+            nonbondedForce->addException(i1, i3, 0, 1, 0);
+            nonbondedForce->addException(i2, i3, 0, 1, 0);
+        }
+    }
+
+    bondForce->setUsesPeriodicBoundaryConditions(true);
+    system.addForce(bondForce);
+
+    nonbondedForce->setCutoffDistance(0.9);
+    nonbondedForce->setNonbondedMethod(useConstantPotential ? NonbondedForce::CutoffPeriodic : NonbondedForce::PME);
+    system.addForce(nonbondedForce);
+
+    positions.clear();
+    positions.resize(system.getNumParticles());
+
+    // positions[...] = Vec3(..., ..., ...);
+#include "conp_positions.dat"
+
+    if (useConstantPotential) {
+        set<int> electrodeLeft;
+        set<int> electrodeRight;
+        for (int i = 0; i < 300; i++) {
+            if (positions[i][0] < 1.5) {
+                electrodeLeft.insert(i);
+            } else {
+                electrodeRight.insert(i);
+            }
+        }
+
+        // Initialize the electrodes (parameters will be set later).
+        constantPotentialForce->addElectrode(electrodeLeft, 0, 0, 0);
+        constantPotentialForce->addElectrode(electrodeRight, 0, 0, 0);
+        system.addForce(constantPotentialForce);
+    }
+}
+
+void testChargeUpdate(ConstantPotentialForce::ConstantPotentialMethod method) {
+    // Make sure that charges get updated correctly before and after dynamics.
+
+    System testSystem;
+    ConstantPotentialForce* testForce;
+    vector<Vec3> positions;
+
+    makeTestSimulateSystem(true, method == ConstantPotentialForce::Matrix, testSystem, testForce, positions);
+
+    testForce->setConstantPotentialMethod(method);
+    testForce->setUseChargeConstraint(true);
+    testForce->setChargeConstraintTarget(1);
+    testForce->setExternalField(Vec3(10, 0, 0));
+
+    set<int> electrodeParticles;
+    double potential, gaussianWidth, thomasFermiScale;
+    testForce->getElectrodeParameters(0, electrodeParticles, potential, gaussianWidth, thomasFermiScale);
+    testForce->setElectrodeParameters(0, electrodeParticles, 1, 0.05, 1);
+    testForce->getElectrodeParameters(1, electrodeParticles, potential, gaussianWidth, thomasFermiScale);
+    testForce->setElectrodeParameters(1, electrodeParticles, 2, 0.06, 1.2);
+
+    VerletIntegrator integrator(0.001);
+    Context testContext(testSystem, integrator, platform);
+
+    testContext.setPositions(positions);
+    testContext.setVelocitiesToTemperature(300);
+
+    // Charges of non-electrode atoms should exactly match charges set.
+    vector<double> charges0;
+    testForce->getCharges(testContext, charges0);
+    for (int i = 300; i < charges0.size(); i++) {
+        double refCharge;
+        testForce->getParticleParameters(i, refCharge);
+        ASSERT_EQUAL(refCharge, charges0[i]);
+    }
+
+    integrator.step(1);
+
+    // Charges of non-electrode atoms should be changed, and charges of
+    // non-electrode atoms should exactly match charges set.
+    vector<double> charges1;
+    testForce->getCharges(testContext, charges1);
+    for (int i = 0; i < 300; i++) {
+        ASSERT(charges1[i] != charges0[i]);
+    }
+    for (int i = 300; i < charges1.size(); i++) {
+        double refCharge;
+        testForce->getParticleParameters(i, refCharge);
+        ASSERT_EQUAL(refCharge, charges1[i]);
+    }
+}
+
+void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod method) {
+    // Do a short dynamics run and ensure that energy is conserved.
+
+    System system;
+    ConstantPotentialForce* force;
+    vector<Vec3> positions;
+
+    makeTestSimulateSystem(true, method == ConstantPotentialForce::Matrix, system, force, positions);
+
+    force->setConstantPotentialMethod(method);
+    force->setUseChargeConstraint(true);
+    force->setChargeConstraintTarget(1);
+    force->setExternalField(Vec3(10, 0, 0));
+    force->setEwaldErrorTolerance(1e-5);
+
+    set<int> electrodeParticles;
+    double potential, gaussianWidth, thomasFermiScale;
+    force->getElectrodeParameters(0, electrodeParticles, potential, gaussianWidth, thomasFermiScale);
+    force->setElectrodeParameters(0, electrodeParticles, 1, 0.05, 1);
+    force->getElectrodeParameters(1, electrodeParticles, potential, gaussianWidth, thomasFermiScale);
+    force->setElectrodeParameters(1, electrodeParticles, 2, 0.06, 1.2);
+
+    VerletIntegrator integrator(0.001);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocitiesToTemperature(300);
+
+    State state1 = context.getState(State::Energy);
+    double energy1 = state1.getPotentialEnergy() + state1.getKineticEnergy();
+
+    integrator.step(100);
+
+    State state2 = context.getState(State::Energy);
+    double energy2 = state2.getPotentialEnergy() + state2.getKineticEnergy();
+
+    ASSERT_USUALLY_EQUAL_TOL(energy1, energy2, 1e-4);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
@@ -979,6 +1161,11 @@ int main(int argc, char* argv[]) {
 
         testParallelPlateCapacitorDoubleCell();
         testParallelPlateCapacitorFiniteField();
+
+        testChargeUpdate(ConstantPotentialForce::Matrix);
+        testChargeUpdate(ConstantPotentialForce::CG);
+        testEnergyConservation(ConstantPotentialForce::Matrix);
+        testEnergyConservation(ConstantPotentialForce::CG);
 
         runPlatformTests();
     }
