@@ -40,7 +40,6 @@ import os
 import re
 import shlex
 import xml.etree.ElementTree as etree
-from functools import wraps
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
@@ -57,79 +56,184 @@ from . import topology as top
 class TinkerFiles:
     """TinkerFiles parses Tinker files (.xyz, .prm, .key), constructs a Topology, and (optionally) an OpenMM System from it."""
 
-    RECOGNIZED_FORCES: Dict[str, Any] = {
-        "bond": 1,
-        "angle": 1,
-        "anglep": 1,
-        "strbnd": 1,
-        "ureybrad": 1,
-        "opbend": 1,
-        "torsion": 1,
-        "pitors": 1,
-        "strtors": 1,
-        "angtors": 1,
-        "vdw": 1,
-        "vdwpr": 1,
-        "polarize": 1,
-        "tortors": None,
-        "multipole": None,
-    }
+    @staticmethod
+    def _initialize_class():
+        """Initialize class variables RECOGNIZED_FORCES and RECOGNIZED_SCALARS upon class creation."""
 
-    RECOGNIZED_SCALARS: Dict[str, str] = {
-        "forcefield": "-2.55",
-        "bond-cubic": "-2.55",
-        "bond-quartic": "3.793125",
-        "angle-cubic": "-0.014",
-        "angle-quartic": "0.000056",
-        "angle-pentic": "-0.0000007",
-        "angle-sextic": "0.000000022",
-        "opbendtype": "ALLINGER",
-        "opbend-cubic": "-0.014",
-        "opbend-quartic": "0.000056",
-        "opbend-pentic": "-0.0000007",
-        "opbend-sextic": "0.000000022",
-        "torsionunit": "0.5",
-        "vdwtype": "BUFFERED-14-7",
-        "radiusrule": "CUBIC-MEAN",
-        "radiustype": "R-MIN",
-        "radiussize": "DIAMETER",
-        "epsilonrule": "HHG",
-        "dielectric": "1.0",
-        "polarization": "MUTUAL",
-        "vdw-13-scale": "0.0",
-        "vdw-14-scale": "1.0",
-        "vdw-15-scale": "1.0",
-        "mpole-12-scale": "0.0",
-        "mpole-13-scale": "0.0",
-        "mpole-14-scale": "0.4",
-        "mpole-15-scale": "0.8",
-        "polar-12-scale": "0.0",
-        "polar-13-scale": "0.0",
-        "polar-14-scale": "1.0",
-        "polar-15-scale": "1.0",
-        "polar-14-intra": "0.5",
-        "direct-11-scale": "0.0",
-        "direct-12-scale": "1.0",
-        "direct-13-scale": "1.0",
-        "direct-14-scale": "1.0",
-        "mutual-11-scale": "1.0",
-        "mutual-12-scale": "1.0",
-        "mutual-13-scale": "1.0",
-        "mutual-14-scale": "1.0",
-    }
+        def addMultipole(
+            lineIndex: int, allLines: List[List[str]], forces: Dict[str, Any]
+        ) -> int:
+            """
+            Parse and store multipole force data from the key file.
+
+            Parameters
+            ----------
+            lineIndex : int
+                The current line index in the key file.
+            allLines : list of list of str
+                All lines from the key file, split into fields.
+            forces : dict
+                The forces dictionary to store the parsed data.
+
+            Returns
+            -------
+            int
+                The updated line index after parsing the multipole force data.
+            """
+            if "multipole" not in forces:
+                forces["multipole"] = []
+            fields = allLines[lineIndex]
+            multipoles = [fields[-1]]
+            axisInfo = fields[1:-1]
+            lineIndex += 1
+            fields = allLines[lineIndex]
+            multipoles.append(fields[0])
+            multipoles.append(fields[1])
+            multipoles.append(fields[2])
+            lineIndex += 1
+            fields = allLines[lineIndex]
+            multipoles.append(fields[0])
+            lineIndex += 1
+            fields = allLines[lineIndex]
+            multipoles.append(fields[0])
+            multipoles.append(fields[1])
+            lineIndex += 1
+            fields = allLines[lineIndex]
+            multipoles.append(fields[0])
+            multipoles.append(fields[1])
+            multipoles.append(fields[2])
+            lineIndex += 1
+            multipoleInfo = [axisInfo, multipoles]
+            forces["multipole"].append(multipoleInfo)
+            return lineIndex
+
+        @staticmethod
+        def addTorTor(
+            lineIndex: int, allLines: List[List[str]], forces: Dict[str, Any]
+        ) -> int:
+            """
+            Parse and store torsion-torsion force data from the key file.
+
+            Parameters
+            ----------
+            lineIndex : int
+                The current line index in the key file.
+            allLines : list of list of str
+                All lines from the key file, split into fields.
+            forces : dict
+                The forces dictionary to store the parsed data.
+
+            Returns
+            -------
+            int
+                The updated line index after parsing the torsion-torsion force data.
+            """
+            if "tortors" not in forces:
+                forces["tortors"] = []
+            fields = allLines[lineIndex]
+            tortorInfo = fields[1:]
+            lastGridLine = lineIndex + int(fields[6]) * int(fields[7])
+            grid = []
+            while lineIndex < lastGridLine:
+                lineIndex += 1
+                grid.append(allLines[lineIndex])
+            forces["tortors"].append([tortorInfo, grid])
+            return lineIndex
+
+        RECOGNIZED_FORCES = {
+            "bond": 1,
+            "angle": 1,
+            "strbnd": 1,
+            "ureybrad": 1,
+            "opbend": 1,
+            "torsion": 1,
+            "pitors": 1,
+            "strtor": 1,
+            "angtor": 1,
+            "vdw": 1,
+            "multipole": addMultipole,
+            "tortors": addTorTor,
+        }
+
+        RECOGNIZED_SCALARS = {
+            "polarization": "mutual",
+            "polar-eps": "0.00001",
+            "ewald": "yes",
+            "ewald-cutoff": "7.0",
+            "mpole-cutoff": "9.0",
+            "vdw-cutoff": "9.0",
+            "radiusrule": "ARITHMETIC",
+            "radiustype": "SIGMA",
+            "radiussize": "DIAMETER",
+            "epsilonrule": "GEOMETRIC",
+            "vdwtype": "BUFFERED-14-7",
+            "a-expterm": "3.43",
+            "b-expterm": "2.0",
+            "c-expterm": "0.0",
+            "gamma": "0.45",
+            "dielectric": "1.0",
+        }
+
+        return RECOGNIZED_FORCES, RECOGNIZED_SCALARS
+
+    # Call the initialization method
+    RECOGNIZED_FORCES, RECOGNIZED_SCALARS = _initialize_class()
 
     _AMINO_ACID_LIST = [
-        'GLY', 'ALA', 'VAL', 'LEU', 'ILE', 'SER', 'THR', 'CYS', 'CYX', 'CYD',
-        'PRO', 'PHE', 'TYR', 'TYD', 'TRP', 'HIS', 'HID', 'HIE', 'ASP', 'ASH',
-        'ASN', 'GLU', 'GLH', 'GLN', 'MET', 'LYS', 'LYD', 'ARG', 'ORN', 'AIB',
-        'PCA', 'H2N', 'FOR', 'ACE', 'COH', 'NH2', 'NME', 'UNK'
+        "GLY",
+        "ALA",
+        "VAL",
+        "LEU",
+        "ILE",
+        "SER",
+        "THR",
+        "CYS",
+        "CYX",
+        "CYD",
+        "PRO",
+        "PHE",
+        "TYR",
+        "TYD",
+        "TRP",
+        "HIS",
+        "HID",
+        "HIE",
+        "ASP",
+        "ASH",
+        "ASN",
+        "GLU",
+        "GLH",
+        "GLN",
+        "MET",
+        "LYS",
+        "LYD",
+        "ARG",
+        "ORN",
+        "AIB",
+        "PCA",
+        "H2N",
+        "FOR",
+        "ACE",
+        "COH",
+        "NH2",
+        "NME",
+        "UNK",
     ]
 
     # Nucleotide Codes
     _NUCLEOTIDE_LIST = {
-        '  A': 'A', '  G': 'G', '  C': 'C', '  U': 'U', ' DA': 'D',
-        ' DG': 'B', ' DC': 'I', ' DT': 'T', ' MP': '1', ' DP': '2',
-        ' TP': '3', 'UNK': 'X'
+        "  A": "A",
+        "  G": "G",
+        "  C": "C",
+        "  U": "U",
+        " DA": "D",
+        " DG": "B",
+        " DC": "I",
+        " DT": "T",
+        " MP": "1",
+        " DP": "2",
+        " TP": "3",
+        "UNK": "X",
     }
 
     def __init__(
@@ -211,7 +315,7 @@ class TinkerFiles:
         self._atomDict = TinkerFiles._combineXyzAndKeyData(
             self._xyzDict, self._atomTypes, self._bioTypes
         )
-        
+
         # ----------------------- CREATE TOPOLOGY -----------------------
         # Create the topology
         self.topology = self._createTopology(self._atomDict, self._seqDict)
@@ -239,7 +343,6 @@ class TinkerFiles:
             PDBFile.writeFile(self.topology, self.positions, f)
 
         exit()
-
 
         # ----------------------- CREATE XML FILES -----------------------
         self.forceFields = []
@@ -345,7 +448,7 @@ class TinkerFiles:
         atomDict : dict
             The atom data dictionary.
         seqDict : dict, optional
-            The sequence data dictionary. 
+            The sequence data dictionary.
             If None, generic molecules will be used for all chains.
 
         Returns
@@ -357,14 +460,23 @@ class TinkerFiles:
         molecules = TinkerFiles._findNeighbours(atomDict)
 
         if seqDict is None:
-            seqDict = {chainId: {"chainType": "GENERIC"} for chainId in range(len(molecules))}
+            seqDict = {
+                str(chainId): {"chainType": "GENERIC"}
+                for chainId in range(len(molecules))
+            }
+        else:
+            # Ensure seqDict has entries for all molecules
+            for i in range(len(molecules) - len(seqDict)):
+                seqDict[str(len(seqDict))] = {"chainType": "GENERIC"}
 
         for molecule, chainId in zip(molecules, seqDict):
             chain = topology.addChain(id=chainId)
             if seqDict[chainId]["chainType"] == "GENERIC":
                 # Either a water molecule or a generic molecule
                 if len(molecule) == 3:
-                    atomCounts = {atomDict[atomId]["atomicNumber"]: 0 for atomId in molecule}
+                    atomCounts = {
+                        atomDict[atomId]["atomicNumber"]: 0 for atomId in molecule
+                    }
                     for atomId in molecule:
                         atomCounts[atomDict[atomId]["atomicNumber"]] += 1
 
@@ -408,7 +520,11 @@ class TinkerFiles:
                 residue = topology.addResidue(resName, chain)
                 for atomId in molecule:
                     atom = atomDict[atomId]
-                    topology.addAtom(atom["nameShort"], elem.Element.getByAtomicNumber(atom["atomicNumber"]), residue)
+                    topology.addAtom(
+                        atom["nameShort"],
+                        elem.Element.getByAtomicNumber(atom["atomicNumber"]),
+                        residue,
+                    )
             elif seqDict[chainId]["chainType"] == "NUCLEIC":
                 raise NotImplementedError("Nucleic acids not implemented")
             elif seqDict[chainId]["chainType"] == "PEPTIDE":
@@ -546,7 +662,11 @@ class TinkerFiles:
 
                                     # Get the atoms attached to the carbonyl carbon atom (Usually just the carbonyl oxygen atom, but sometimes 2 oxygens)
                                     ciNeighbours = TinkerFiles._findNeighbours(
-                                        atomDict, ci, 1, exact=True, exclusionList=[oi, cai]
+                                        atomDict,
+                                        ci,
+                                        1,
+                                        exact=True,
+                                        exclusionList=[oi, cai],
                                     )
 
                                     # Remove oi from the list and any other amide nitrogen atoms
@@ -571,7 +691,9 @@ class TinkerFiles:
                         # Add the atom to the residue
                         topology.addAtom(
                             atomDict[atom]["nameShort"],
-                            elem.Element.getByAtomicNumber(atomDict[atom]["atomicNumber"]),
+                            elem.Element.getByAtomicNumber(
+                                atomDict[atom]["atomicNumber"]
+                            ),
                             residue,
                         )
                     seenAtomIds.update(sortedAtoms)
@@ -581,7 +703,6 @@ class TinkerFiles:
         topology_atoms = list(topology.atoms())
         for atomId, atomIdDict in atomDict.items():
             for bond in atomIdDict["bonds"]:
-                print(atomId, bond)
                 topology.addBond(topology_atoms[atomId], topology_atoms[bond])
 
         return topology
@@ -717,7 +838,11 @@ class TinkerFiles:
             return self._numpyBoxVectors
         return self.boxVectors
 
-    def _loadSeqFile(self, file: str) -> Dict[str, List[str]]:
+    # ------------------------------------------------------------------------------------------ #
+    #                                    SEQ FILE PARSING                                        #
+    # ------------------------------------------------------------------------------------------ #
+    @staticmethod
+    def _loadSeqFile(file: str) -> Dict[str, Dict[str, Union[List[str], str]]]:
         """
         Load the biopolymer sequence from a TINKER .seq file.
 
@@ -725,6 +850,13 @@ class TinkerFiles:
         ----------
         file : str
             The path to the .seq file.
+
+        Returns
+        -------
+        Dict[str, Dict[str, Union[List[str], str]]]
+            A dictionary where keys are chain IDs and values are dictionaries containing
+            'residues': list of three-letter residue codes
+            'chainType': string indicating the type ('PEPTIDE', 'NUCLEIC', or 'GENERIC')
 
         Notes
         -----
@@ -744,13 +876,6 @@ class TinkerFiles:
             1  CYS PHE GLU PRO PRO PRO ALA THR THR THR GLN THR GLY PHE ARG
            16  LEU ...
             1  MET VAL ...  (Starts a new chain, 'B')
-
-
-        Returns
-        -------
-        dict[str, list[str]]
-            A dictionary where keys are chain IDs and values are lists of
-            three-letter residue codes for that chain.
         """
         from collections import OrderedDict
 
@@ -758,93 +883,107 @@ class TinkerFiles:
         defaultChainIndex = 0
         currentChainId = None
 
-        if os.path.exists(file):
+        try:
             with open(file, "r") as f:
-                seqContent = f.readlines()
-        else:
-            raise FileNotFoundError(f"File {file} not found")
+                for line_num, line in enumerate(f, 1):
+                    lineSplit = line.split()
+                    if not lineSplit:
+                        continue
 
-        for line_num, line in enumerate(seqContent, 1):
-            lineSplit = line.split()
-            if not lineSplit:
-                continue
+                    parsedChainId = None
+                    startResidue = None
+                    residuesStartIndex = -1
 
-            parsedChainId = None
-            startResidue = None
-            residuesStartIndex = -1
-
-            # Determine line format: Chain ID + Res Num or just Res Num
-            if (
-                lineSplit[0].isalpha()
-                and len(lineSplit[0]) == 1
-                and lineSplit[1].isdigit()
-            ):
-                parsedChainId = lineSplit[0]
-                startResidue = int(lineSplit[1])
-                residuesStartIndex = 2
-            elif lineSplit[0].isdigit():
-                startResidue = int(lineSplit[0])
-                residuesStartIndex = 1
-            else:
-                raise ValueError(
-                    f"Line {line_num}: Does not have the expected format "
-                    f"(ChainID ResNum ... or ResNum ...): {line.strip()}"
-                )
-
-            # Force 3-letter residues, otherwise add whitespaces to the left
-            residues = [residue.rjust(3) for residue in lineSplit[residuesStartIndex:]]
-
-            if not residues:
-                raise ValueError(f"Line {line_num}: No residues found after parsing!")
-            print(startResidue, parsedChainId)
-            if startResidue == 1:
-                if parsedChainId:
-                    if parsedChainId in seqDict:
+                    # Determine line format: Chain ID + Res Num or just Res Num
+                    if (
+                        lineSplit[0].isalpha()
+                        and len(lineSplit[0]) == 1
+                        and lineSplit[1].isdigit()
+                    ):
+                        parsedChainId = lineSplit[0]
+                        startResidue = int(lineSplit[1])
+                        residuesStartIndex = 2
+                    elif lineSplit[0].isdigit():
+                        startResidue = int(lineSplit[0])
+                        residuesStartIndex = 1
+                    else:
                         raise ValueError(
-                            f"Line {line_num}: Duplicate start definition (residue 1) "
-                            f"for chain ID '{parsedChainId}'"
+                            f"Line {line_num}: Does not have the expected format "
+                            f"(ChainID ResNum ... or ResNum ...): {line.strip()}"
                         )
-                    currentChainId = parsedChainId
-                else:
-                    currentChainId = chr(65 + (defaultChainIndex % 26))
-                    defaultChainIndex += 1
 
-                seqDict[currentChainId] = {"residues": [], "chainType": "GENERIC"}
+                    # Force 3-letter residues, otherwise add whitespaces to the left
+                    residues = [
+                        residue.rjust(3) for residue in lineSplit[residuesStartIndex:]
+                    ]
 
-            else:
-                if currentChainId is None:
-                    raise ValueError(
-                        f"Line {line_num}: Continuation line encountered before "
-                        f"any chain was started (residue 1)."
-                    )
+                    if not residues:
+                        raise ValueError(
+                            f"Line {line_num}: No residues found after parsing!"
+                        )
 
-                if parsedChainId is not None and parsedChainId != currentChainId:
-                    raise ValueError(
-                        f"Line {line_num}: Chain ID '{parsedChainId}' provided for residue "
-                        f"{startResidue}, but expected continuation of chain '{currentChainId}'"
-                    )
+                    if startResidue == 1:
+                        if parsedChainId:
+                            if parsedChainId in seqDict:
+                                raise ValueError(
+                                    f"Line {line_num}: Duplicate start definition (residue 1) "
+                                    f"for chain ID '{parsedChainId}'"
+                                )
+                            currentChainId = parsedChainId
+                        else:
+                            currentChainId = chr(65 + (defaultChainIndex % 26))
+                            defaultChainIndex += 1
 
-                expectedResidueNum = len(seqDict[currentChainId]["residues"]) + 1
-                if startResidue != expectedResidueNum:
-                    raise ValueError(
-                        f"Line {line_num}: Residue numbering inconsistency for chain "
-                        f"'{currentChainId}'. Expected residue {expectedResidueNum}, "
-                        f"but line starts with {startResidue}."
-                    )
+                        seqDict[currentChainId] = {
+                            "residues": [],
+                            "chainType": "GENERIC",
+                        }
 
-            # Add residues to the current chain
-            seqDict[currentChainId]["residues"].extend(residues)
+                    else:
+                        if currentChainId is None:
+                            raise ValueError(
+                                f"Line {line_num}: Continuation line encountered before "
+                                f"any chain was started (residue 1)."
+                            )
 
-        # ----------------------- DETERMINE CHAIN TYPES -----------------------
+                        if (
+                            parsedChainId is not None
+                            and parsedChainId != currentChainId
+                        ):
+                            raise ValueError(
+                                f"Line {line_num}: Chain ID '{parsedChainId}' provided for residue "
+                                f"{startResidue}, but expected continuation of chain '{currentChainId}'"
+                            )
+
+                        expectedResidueNum = (
+                            len(seqDict[currentChainId]["residues"]) + 1
+                        )
+                        if startResidue != expectedResidueNum:
+                            raise ValueError(
+                                f"Line {line_num}: Residue numbering inconsistency for chain "
+                                f"'{currentChainId}'. Expected residue {expectedResidueNum}, "
+                                f"but line starts with {startResidue}."
+                            )
+
+                    # Add residues to the current chain
+                    seqDict[currentChainId]["residues"].extend(residues)
+
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File {file} not found")
+        except IOError as e:
+            raise IOError(f"Error reading file {file}: {e}")
+        except Exception as e:
+            raise ValueError(f"Error parsing {file}: {e}")
+
         # Determine chain types
         for chainId, chainData in seqDict.items():
             residues = chainData["residues"]
-            aminoAcidIntersect = set(residues) & set(self._AMINO_ACID_LIST)
+            aminoAcidIntersect = set(residues) & set(TinkerFiles._AMINO_ACID_LIST)
             if aminoAcidIntersect:
                 chainData["chainType"] = "PEPTIDE"
                 continue
 
-            nucleotideIntersect = set(residues) & set(self._NUCLEOTIDE_LIST)
+            nucleotideIntersect = set(residues) & set(TinkerFiles._NUCLEOTIDE_LIST)
             if nucleotideIntersect:
                 chainData["chainType"] = "NUCLEIC"
                 continue
@@ -857,7 +996,9 @@ class TinkerFiles:
     #                                   XYZ FILE PARSING                                         #
     # ------------------------------------------------------------------------------------------ #
     @staticmethod
-    def _parseAndStoreXyzLine(line: str, xyzDict: dict) -> None:
+    def _parseAndStoreXyzLine(
+        line: str, lineNum: int, xyzDict: Dict[int, Dict]
+    ) -> None:
         """
         Parse a line of an .xyz file and store the data in a dictionary.
 
@@ -865,91 +1006,145 @@ class TinkerFiles:
         ----------
         line : str
             The line containing atom data.
-        xyzDict : dict
+        lineNum : int
+            The line number in the file, for error reporting.
+        xyzDict : Dict[int, Dict]
             The dictionary to store parsed atom data.
+
+        Raises
+        ------
+        ValueError
+            If the line format is invalid.
         """
         fields = line.split()
         if len(fields) < 6:
             raise ValueError(
-                "Each line in the TINKER .xyz file must have at least 6 fields"
+                f"Line {lineNum}: Each line in the TINKER .xyz file must have at least 6 fields"
             )
 
-        index = int(fields[0]) - 1
-        symbol = str(fields[1])
-        x = float(fields[2]) * 0.1
-        y = float(fields[3]) * 0.1
-        z = float(fields[4]) * 0.1
-        position = Vec3(x, y, z)
-        atomType = str(fields[5])
-        bonds = [int(bond) - 1 for bond in fields[6:]]
+        try:
+            index = int(fields[0]) - 1
+            symbol = str(fields[1])
+            # Convert from Angstroms to nanometers
+            x = float(fields[2]) * 0.1
+            y = float(fields[3]) * 0.1
+            z = float(fields[4]) * 0.1
+            position = Vec3(x, y, z)
+            atomType = str(fields[5])
+            bonds = [int(bond) - 1 for bond in fields[6:]]
 
-        xyzDict[index] = {
-            "symbol": symbol,
-            "positions": position,
-            "atomType": atomType,
-            "bonds": bonds,
-        }
+            xyzDict[index] = {
+                "symbol": symbol,
+                "positions": position,
+                "atomType": atomType,
+                "bonds": bonds,
+            }
+        except ValueError as e:
+            raise ValueError(f"Line {lineNum}: Error parsing atom data: {e}")
 
-    def _loadXyzFile(self, file: str) -> Tuple[Dict, List[Vec3], List[Vec3]]:
+    @staticmethod
+    def _loadXyzFile(file: str) -> Tuple[Dict[int, Dict], List[Vec3], List[Vec3]]:
         """
         Load a TINKER .xyz file.
 
         Parameters
         ----------
         file : str
-            The name of the .xyz file to load.
+            The path to the .xyz file to load.
 
         Returns
         -------
-        self._xyzDict, self.boxVectors, self.positions : dict, list of Vec3, list of Vec3
-            The dictionary with the atom data, the box vectors, and the atomic positions.
-        """
-        try:
-            self._xyzDict = {}
+        Tuple[Dict[int, Dict], List[Vec3], List[Vec3]]
+            A tuple containing:
+            - Dictionary with atom data (key: atom index, value: atom properties)
+            - Box vectors (if periodic, otherwise None)
+            - List of atomic positions
 
+        Raises
+        ------
+        FileNotFoundError
+            If the file does not exist.
+        ValueError
+            If there is an error parsing the file.
+        """
+        xyzDict = {}
+        boxVectors = None
+
+        try:
             with open(file, "r") as f:
                 # Read number of atoms
-                nAtoms = int(f.readline().split()[0])
+                firstLine = f.readline().strip()
+                if not firstLine:
+                    raise ValueError("Empty .xyz file")
+
+                try:
+                    nAtoms = int(firstLine.split()[0])
+                except (ValueError, IndexError):
+                    raise ValueError("First line must contain the number of atoms")
+
                 linesLeft = nAtoms
+                lineNum = 1
 
                 # Read the second line
                 secondLine = f.readline().strip()
+                lineNum += 1
+                if not secondLine:
+                    raise ValueError("Missing atom coordinates in .xyz file")
+
                 secondLineSplit = secondLine.split()
 
-                # Check for box information
+                # Check for box information (second line contains box dimensions if it has 6 fields and doesn't start with "1")
                 if len(secondLineSplit) == 6 and secondLineSplit[0] != "1":
-                    # Read box unit vectors and angles from the second line
-                    box = [
-                        float(val) * (0.1 if i < 3 else math.pi / 180.0)
-                        for i, val in enumerate(secondLineSplit)
-                    ]
-                    self.boxVectors = computePeriodicBoxVectors(*box)
+                    try:
+                        # Read box unit vectors and angles from the second line
+                        # Convert lengths from Angstroms to nm and angles from degrees to radians
+                        box = [
+                            float(val) * (0.1 if i < 3 else math.pi / 180.0)
+                            for i, val in enumerate(secondLineSplit)
+                        ]
+                        boxVectors = computePeriodicBoxVectors(*box)
+                    except ValueError as e:
+                        raise ValueError(
+                            f"Line {lineNum}: Error parsing box vectors: {e}"
+                        )
                 else:
                     # No box information, so treat the second line as atom positions
-                    TinkerFiles._parseAndStoreXyzLine(secondLine, self._xyzDict)
+                    TinkerFiles._parseAndStoreXyzLine(secondLine, lineNum, xyzDict)
                     linesLeft -= 1
 
                 # Process the remaining atom lines
-                for _ in range(linesLeft):
+                for i in range(linesLeft):
+                    lineNum += 1
                     atomLine = f.readline().strip()
-                    TinkerFiles._parseAndStoreXyzLine(atomLine, self._xyzDict)
+                    if not atomLine:
+                        raise ValueError(
+                            f"Expected {nAtoms} atoms but found only {i + (1 if len(secondLineSplit) != 6 or secondLineSplit[0] == '1' else 0)}"
+                        )
+                    TinkerFiles._parseAndStoreXyzLine(atomLine, lineNum, xyzDict)
+
+                # Check if we have the expected number of atoms
+                if len(xyzDict) != nAtoms:
+                    raise ValueError(
+                        f"Expected {nAtoms} atoms but found {len(xyzDict)}"
+                    )
 
             # Store the positions
-            self.positions = [self._xyzDict[i]["positions"] for i in range(nAtoms)]
+            positions = [xyzDict[i]["positions"] for i in range(nAtoms)]
+            return xyzDict, boxVectors, positions
 
         except FileNotFoundError:
-            raise IOError(f"Could not find file {file}")
+            raise FileNotFoundError(f"File {file} not found")
+        except IOError as e:
+            raise IOError(f"Error reading file {file}: {e}")
         except Exception as e:
             raise ValueError(f"Error parsing {file}: {e}")
-
-        return self._xyzDict, self.boxVectors, self.positions
 
     # ------------------------------------------------------------------------------------------ #
     #                                   KEY FILE PARSING                                         #
     # ------------------------------------------------------------------------------------------ #
     @staticmethod
     def _addAtomType(
-        atomTypeDict: Dict,
+        atomTypeDict: Dict[str, Dict],
         atomType: str,
         atomClass: str,
         nameShort: str,
@@ -960,11 +1155,11 @@ class TinkerFiles:
         element: str,
     ) -> None:
         """
-        Helper function to validate atom type information.
+        Add and validate atom type information.
 
         Parameters
         ----------
-        atomTypeDict : dict
+        atomTypeDict : Dict[str, Dict]
             The dictionary of atom type data.
         atomType : str
             The atom type.
@@ -982,6 +1177,11 @@ class TinkerFiles:
             The valence of the atom type.
         element : str
             The element of the atom type.
+
+        Raises
+        ------
+        ValueError
+            If there is an inconsistency with existing atom type data.
         """
         if atomType in atomTypeDict:
             # Validate against existing atom type data
@@ -1016,7 +1216,7 @@ class TinkerFiles:
 
     @staticmethod
     def _addBioType(
-        bioTypeDict: Dict,
+        bioTypeDict: Dict[str, Dict],
         bioType: str,
         nameShort: str,
         nameLong: str,
@@ -1024,11 +1224,11 @@ class TinkerFiles:
         element: str,
     ) -> None:
         """
-        Helper function to validate biotype information.
+        Add and validate biotype information.
 
         Parameters
         ----------
-        bioTypeDict : dict
+        bioTypeDict : Dict[str, Dict]
             The dictionary of biotype data.
         bioType : str
             The bio type.
@@ -1040,6 +1240,11 @@ class TinkerFiles:
             The atom type counterpart of the biotype.
         element : str
             The element of the biotype.
+
+        Raises
+        ------
+        ValueError
+            If there is an inconsistency with existing biotype data.
         """
         if bioType in bioTypeDict:
             # Validate against existing atom type data
@@ -1067,48 +1272,42 @@ class TinkerFiles:
         }
 
     @staticmethod
-    def getResidueAbbreviation(residueName: str) -> str:
-        """
-        Get the residue abbreviation for a given residue name.
-
-        Parameters
-        ----------
-        residueName : str
-            The name of the residue.
-
-        Returns
-        -------
-        str
-            The residue abbreviation.
-        """
-        for abbr, data in TinkerFiles.RESIDUE_MAPPING.items():
-            if data["tinkerLookupName"] in residueName:
-                if data["type"] == "ion":
-                    return abbr
-                elif data["type"] == "AmoebaWater":
-                    return "HOH"
-
-        return residueName[:3].upper()
-
-    @staticmethod
-    def _loadKeyFile(keyFile: str) -> Tuple[Dict, Dict, Dict, Dict]:
+    def _loadKeyFile(
+        keyFile: str,
+    ) -> Tuple[Dict[str, Dict], Dict[str, Dict], Dict[str, List], Dict[str, str]]:
         """
         Load a TINKER .key or .prm file.
 
         Parameters
         ----------
         keyFile : str
-            The name of the file.
+            The path to the .key or .prm file.
 
         Returns
         -------
-        atomTypes, bioTypes, forces, scalars : dict, dict, dict, dict
-            The atom types, bio types, forces, and scalars.
+        Tuple[Dict[str, Dict], Dict[str, Dict], Dict[str, List], Dict[str, str]]
+            A tuple containing:
+            - Atom types dictionary
+            - Bio types dictionary
+            - Forces dictionary
+            - Scalars dictionary
+
+        Raises
+        ------
+        FileNotFoundError
+            If the file does not exist.
+        ValueError
+            If there is an error parsing the file.
         """
+        atomTypesDict = dict()
+        bioTypesDict = dict()
+        forcesDict = dict()
+        scalarsDict = TinkerFiles.RECOGNIZED_SCALARS.copy()
+
         try:
-            allLines = []
-            with open(keyFile) as file:
-                for line in file:
+            with open(keyFile, "r") as file:
+                allLines = []
+                for line_num, line in enumerate(file, 1):
                     try:
                         if line.count('"') % 2 != 0:
                             # Skip lines with an odd number of quotes to avoid parsing errors
@@ -1120,95 +1319,119 @@ class TinkerFiles:
                             continue
 
                         fields = shlex.split(line)
-                        allLines.append(fields)
+                        if fields:  # Make sure the line has content after parsing
+                            allLines.append(fields)
                     except Exception as e:
-                        raise ValueError(f"Error parsing line {line} in {keyFile}: {e}")
-        except FileNotFoundError:
-            raise IOError(f"Could not find file {keyFile}")
-        except Exception as e:
-            raise ValueError(f"Error reading {keyFile}: {e}")
+                        raise ValueError(f"Line {line_num}: Error parsing line: {e}")
 
-        atomTypesDict = dict()
-        bioTypesDict = dict()
-        forcesDict = dict()
-        scalarsDict = TinkerFiles.RECOGNIZED_SCALARS.copy()  # We use the default values for the scalars as a starting point and update them with the values from the key file
+            lineIndex = 0
+            while lineIndex < len(allLines):
+                fields = allLines[lineIndex]
+                if not fields:  # Skip empty lines
+                    lineIndex += 1
+                    continue
 
-        lineIndex = 0
-        while lineIndex < len(allLines):
-            fields = allLines[lineIndex]
-            if fields[0] == "atom":
-                if len(fields) != 8:
-                    raise ValueError(
-                        f"Invalid atom line: Expected 8 fields, got {len(fields)}. Fields: {fields}"
+                if fields[0] == "atom":
+                    if len(fields) != 8:
+                        raise ValueError(
+                            f"Invalid atom line: Expected 8 fields, got {len(fields)}. Fields: {fields}"
+                        )
+                    # Atom type information
+                    # atom atomType atomClass nameShort nameLong atomicNumber mass valence
+                    (
+                        atomType,
+                        atomClass,
+                        nameShort,
+                        nameLong,
+                        atomicNumber,
+                        mass,
+                        valence,
+                    ) = fields[1:]
+
+                    try:
+                        atomicNumber = int(atomicNumber)
+                        mass = float(mass)
+                        valence = int(valence)
+                    except ValueError:
+                        raise ValueError(
+                            f"Invalid numeric values in atom line: {fields}"
+                        )
+
+                    if atomicNumber > 0:
+                        element = elem.Element.getByAtomicNumber(atomicNumber).symbol
+                    else:
+                        element = None  # For dummy atoms
+
+                    nameLong = re.sub(r"\s+", " ", nameLong.strip())
+                    TinkerFiles._addAtomType(
+                        atomTypesDict,
+                        atomType,
+                        atomClass,
+                        nameShort,
+                        nameLong,
+                        atomicNumber,
+                        mass,
+                        valence,
+                        element,
                     )
-                # Atom type information
-                # atom atomType atomClass nameShort nameLong atomicNumber mass valence
-                (
-                    atomType,
-                    atomClass,
-                    nameShort,
-                    nameLong,
-                    atomicNumber,
-                    mass,
-                    valence,
-                ) = fields[1:]
+                    lineIndex += 1
+                elif fields[0] == "biotype":
+                    # Biotype information
+                    if len(fields) != 5:
+                        raise ValueError(
+                            f"Invalid biotype line: Expected 5 fields, got {len(fields)}. Fields: {fields}"
+                        )
+                    bioType, nameShort, nameLong, atomType = fields[1:]
 
-                if int(atomicNumber) > 0:
-                    element = elem.Element.getByAtomicNumber(int(atomicNumber)).symbol
-                else:
-                    element = None  # For dummy atoms
+                    # Look up element from atom type definition
+                    if atomType in atomTypesDict:
+                        element = atomTypesDict[atomType]["element"]
+                    else:
+                        # If atom type not found, assume it will be defined later
+                        element = None
 
-                nameLong = re.sub(r"\s+", " ", nameLong.strip())
-                TinkerFiles._addAtomType(
-                    atomTypesDict,
-                    atomType,
-                    atomClass,
-                    nameShort,
-                    nameLong,
-                    int(atomicNumber),
-                    float(mass),
-                    int(valence),
-                    element,
-                )
-                lineIndex += 1
-            elif fields[0] == "biotype":
-                # Biotype information
-                if len(fields) != 5:
-                    raise ValueError(
-                        f"Invalid biotype line: Expected 5 fields, got {len(fields)}. Fields: {fields}"
+                    nameLong = re.sub(r"\s+", " ", nameLong.strip())
+                    TinkerFiles._addBioType(
+                        bioTypesDict,
+                        bioType,
+                        nameShort,
+                        nameLong,
+                        atomType,
+                        element,
                     )
-                bioType, nameShort, nameLong, atomType = fields[1:]
-                element = elem.Element.getByAtomicNumber(int(atomicNumber)).symbol
-                nameLong = re.sub(r"\s+", " ", nameLong.strip())
-                TinkerFiles._addBioType(
-                    bioTypesDict,
-                    bioType,
-                    nameShort,
-                    nameLong,
-                    atomType,
-                    element,
-                )
-                lineIndex += 1
-            elif fields[0] in TinkerFiles.RECOGNIZED_FORCES:
-                if TinkerFiles.RECOGNIZED_FORCES[fields[0]] == 1:
-                    if fields[0] not in forcesDict:
-                        forcesDict[fields[0]] = []
-                    forcesDict[fields[0]].append(fields[1:])
+                    lineIndex += 1
+                elif fields[0] in TinkerFiles.RECOGNIZED_FORCES:
+                    if TinkerFiles.RECOGNIZED_FORCES[fields[0]] == 1:
+                        if fields[0] not in forcesDict:
+                            forcesDict[fields[0]] = []
+                        forcesDict[fields[0]].append(fields[1:])
+                        lineIndex += 1
+                    else:
+                        # Call the function to parse the specific force
+                        lineIndex = TinkerFiles.RECOGNIZED_FORCES[fields[0]](
+                            lineIndex, allLines, forcesDict
+                        )
+                elif fields[0] in TinkerFiles.RECOGNIZED_SCALARS:
+                    scalar, value = fields
+                    scalarsDict[scalar] = value
                     lineIndex += 1
                 else:
-                    # Call the function to parse the specific force
-                    lineIndex = TinkerFiles.RECOGNIZED_FORCES[fields[0]](
-                        lineIndex, allLines, forcesDict
-                    )
-            elif fields[0] in TinkerFiles.RECOGNIZED_SCALARS:
-                scalar, value = fields
-                scalarsDict[scalar] = value
-                lineIndex += 1
-            else:
-                # Skip unrecognized fields
-                lineIndex += 1
+                    # Skip unrecognized fields
+                    lineIndex += 1
 
-        return atomTypesDict, bioTypesDict, forcesDict, scalarsDict
+            # Update biotypes with elements from atom types if they weren't available initially
+            for bioType, bioData in bioTypesDict.items():
+                if bioData["element"] is None and bioData["atomType"] in atomTypesDict:
+                    bioData["element"] = atomTypesDict[bioData["atomType"]]["element"]
+
+            return atomTypesDict, bioTypesDict, forcesDict, scalarsDict
+
+        except FileNotFoundError:
+            raise FileNotFoundError(f"File {keyFile} not found")
+        except IOError as e:
+            raise IOError(f"Error reading file {keyFile}: {e}")
+        except Exception as e:
+            raise ValueError(f"Error parsing {keyFile}: {e}")
 
     @staticmethod
     def __addMultipole(
