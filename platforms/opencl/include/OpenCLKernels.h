@@ -32,6 +32,7 @@
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 #include "openmm/common/CommonKernels.h"
+#include "openmm/common/CommonCalcNonbondedForce.h"
 #include "openmm/common/ComputeArray.h"
 #include "openmm/common/ComputeSort.h"
 #include "openmm/common/FFT3D.h"
@@ -85,12 +86,11 @@ private:
 /**
  * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
-class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
+class OpenCLCalcNonbondedForceKernel : public CommonCalcNonbondedForceKernel {
 public:
-    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) : CalcNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), pmeio(NULL), usePmeQueue(false) {
+    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, const System& system) :
+            CommonCalcNonbondedForceKernel(name, platform, cl, system), cl(cl) {
     }
-    ~OpenCLCalcNonbondedForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -98,116 +98,8 @@ public:
      * @param force      the NonbondedForce this kernel will be used for
      */
     void initialize(const System& system, const NonbondedForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @param includeDirect  true if direct space interactions should be included
-     * @param includeReciprocal  true if reciprocal space interactions should be included
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy, bool includeDirect, bool includeReciprocal);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context        the context to copy parameters to
-     * @param force          the NonbondedForce to copy the parameters from
-     * @param firstParticle  the index of the first particle whose parameters might have changed
-     * @param lastParticle   the index of the last particle whose parameters might have changed
-     * @param firstException the index of the first exception whose parameters might have changed
-     * @param lastException  the index of the last exception whose parameters might have changed
-     */
-    void copyParametersToContext(ContextImpl& context, const NonbondedForce& force, int firstParticle, int lastParticle, int firstException, int lastException);
-    /**
-     * Get the parameters being used for PME.
-     *
-     * @param alpha   the separation parameter
-     * @param nx      the number of grid points along the X axis
-     * @param ny      the number of grid points along the Y axis
-     * @param nz      the number of grid points along the Z axis
-     */
-    void getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
-    /**
-     * Get the parameters being used for the dispersion term in LJPME.
-     *
-     * @param alpha   the separation parameter
-     * @param nx      the number of grid points along the X axis
-     * @param ny      the number of grid points along the Y axis
-     * @param nz      the number of grid points along the Z axis
-     */
-    void getLJPMEParameters(double& alpha, int& nx, int& ny, int& nz) const;
 private:
-    class SortTrait : public ComputeSortImpl::SortTrait {
-        int getDataSize() const {return 8;}
-        int getKeySize() const {return 4;}
-        const char* getDataType() const {return "int2";}
-        const char* getKeyType() const {return "int";}
-        const char* getMinKey() const {return "INT_MIN";}
-        const char* getMaxKey() const {return "INT_MAX";}
-        const char* getMaxValue() const {return "(int2) (INT_MAX, INT_MAX)";}
-        const char* getSortKey() const {return "value.y";}
-    };
-    class ForceInfo;
-    class PmeIO;
-    class PmePreComputation;
-    class PmePostComputation;
-    class SyncQueuePreComputation;
-    class SyncQueuePostComputation;
-    OpenCLContext& cl;
-    ForceInfo* info;
-    bool hasInitializedKernel;
-    ComputeArray charges;
-    ComputeArray sigmaEpsilon;
-    ComputeArray exceptionParams;
-    ComputeArray exclusionAtoms;
-    ComputeArray exclusionParams;
-    ComputeArray baseParticleParams;
-    ComputeArray baseExceptionParams;
-    ComputeArray particleParamOffsets;
-    ComputeArray exceptionParamOffsets;
-    ComputeArray particleOffsetIndices;
-    ComputeArray exceptionOffsetIndices;
-    ComputeArray globalParams;
-    ComputeArray cosSinSums;
-    ComputeArray pmeGrid1;
-    ComputeArray pmeGrid2;
-    ComputeArray pmeBsplineModuliX;
-    ComputeArray pmeBsplineModuliY;
-    ComputeArray pmeBsplineModuliZ;
-    ComputeArray pmeDispersionBsplineModuliX;
-    ComputeArray pmeDispersionBsplineModuliY;
-    ComputeArray pmeDispersionBsplineModuliZ;
-    ComputeArray pmeAtomGridIndex;
-    ComputeArray pmeEnergyBuffer;
-    ComputeArray chargeBuffer;
-    ComputeSort sort;
-    ComputeQueue pmeQueue;
-    ComputeEvent pmeSyncEvent, paramsSyncEvent;
-    FFT3D fft, dispersionFft;
-    Kernel cpuPme;
-    PmeIO* pmeio;
-    SyncQueuePostComputation* syncQueue;
-    ComputeKernel computeParamsKernel, computeExclusionParamsKernel, computePlasmaCorrectionKernel;
-    ComputeKernel ewaldSumsKernel, ewaldForcesKernel;
-    ComputeKernel pmeGridIndexKernel, pmeDispersionGridIndexKernel;
-    ComputeKernel pmeSpreadChargeKernel, pmeDispersionSpreadChargeKernel;
-    ComputeKernel pmeFinishSpreadChargeKernel, pmeDispersionFinishSpreadChargeKernel;
-    ComputeKernel pmeConvolutionKernel, pmeDispersionConvolutionKernel;
-    ComputeKernel pmeEvalEnergyKernel, pmeDispersionEvalEnergyKernel;
-    ComputeKernel pmeInterpolateForceKernel, pmeDispersionInterpolateForceKernel;
-    std::map<std::string, std::string> pmeDefines;
-    std::vector<std::pair<int, int> > exceptionAtoms;
-    std::vector<std::string> paramNames;
-    std::vector<double> paramValues;
-    std::map<int, int> exceptionIndex;
-    double ewaldSelfEnergy, dispersionCoefficient, alpha, dispersionAlpha, totalCharge;
-    int gridSizeX, gridSizeY, gridSizeZ;
-    int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    bool hasCoulomb, hasLJ, usePmeQueue, doLJPME, usePosqCharges, recomputeParams, hasOffsets;
-    NonbondedMethod nonbondedMethod;
-    static const int PmeOrder = 5;
+   OpenCLContext& cl;
 };
 
 /**
