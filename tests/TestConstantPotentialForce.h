@@ -212,6 +212,71 @@ void testCoulombNonNeutral() {
     }
 }
 
+void testCoulombGaussian() {
+    // Ensures that Gaussian charge interactions are computed correctly by
+    // comparing a ConstantPotentialForce-containing system with Gaussian
+    // charges to a NonbondedForce-containing system with point charges.
+
+    System testSystem;
+    ConstantPotentialForce* testForce = new ConstantPotentialForce();
+    testSystem.setDefaultPeriodicBoxVectors(Vec3(10, 0, 0), Vec3(0, 10, 0), Vec3(0, 0, 10));
+    testSystem.addParticle(0);
+    testSystem.addParticle(0);
+    testSystem.addParticle(0);
+    testForce->addParticle(2);
+    testForce->addParticle(0);
+    testForce->addParticle(0);
+    set<int> electrode1{1};
+    testForce->addElectrode(electrode1, 0, 0.2, 0);
+    set<int> electrode2{2};
+    testForce->addElectrode(electrode2, 0, 0.3, 0);
+    testSystem.addForce(testForce);
+
+    vector<Vec3> positions{Vec3(0, 0, 0), Vec3(0.9, 0, 0), Vec3(0.6, 0.4, 0)};
+
+    VerletIntegrator testIntegrator(0.001);
+    Context testContext(testSystem, testIntegrator, platform);
+    testContext.setPositions(positions);
+
+    vector<double> charges;
+    testForce->getCharges(testContext, charges);
+
+    System refSystem;
+    NonbondedForce* refForce = new NonbondedForce();
+    refSystem.setDefaultPeriodicBoxVectors(Vec3(10, 0, 0), Vec3(0, 10, 0), Vec3(0, 0, 10));
+    refSystem.addParticle(0);
+    refSystem.addParticle(0);
+    refSystem.addParticle(0);
+    refForce->addParticle(charges[0], 1, 0);
+    refForce->addParticle(charges[1], 1, 0);
+    refForce->addParticle(charges[2], 1, 0);
+    refForce->setNonbondedMethod(NonbondedForce::PME);
+    refSystem.addForce(refForce);
+
+    VerletIntegrator refIntegrator(0.001);
+    Context refContext(refSystem, refIntegrator, platform);
+    refContext.setPositions(positions);
+
+    State testState = testContext.getState(State::Energy);
+    State refState = refContext.getState(State::Energy);
+
+    Vec3 x01 = positions[1] - positions[0];
+    Vec3 x02 = positions[2] - positions[0];
+    Vec3 x12 = positions[2] - positions[1];
+    double r01 = sqrt(x01.dot(x01));
+    double r02 = sqrt(x02.dot(x02));
+    double r12 = sqrt(x12.dot(x12));
+
+    double du_pair = -ONE_4PI_EPS0 * (
+        charges[0] * charges[1] * erfc(r01 / 0.2) / r01 +
+        charges[0] * charges[2] * erfc(r02 / 0.3) / r02 +
+        charges[1] * charges[2] * erfc(r12 / sqrt(0.13)) / r12
+    );
+    double du_self = ONE_4PI_EPS0 * (charges[1] * charges[1] / 0.2 + charges[2] * charges[2] / 0.3) / sqrt(2 * M_PI);
+
+    ASSERT_EQUAL_TOL(refState.getPotentialEnergy() + du_pair + du_self, testState.getPotentialEnergy(), TOL);
+}
+
 void testElectrodesDisjoint() {
     // Ensures that a particle cannot belong to more than one electrode.
 
@@ -1134,6 +1199,7 @@ int main(int argc, char* argv[]) {
         testCoulomb(true);  // Periodic exceptions
         testCoulombOverlap();
         testCoulombNonNeutral();
+        testCoulombGaussian();
         testElectrodesDisjoint();
         testNoElectrodeExceptions();
         testElectrodeMatrixNoMass();
