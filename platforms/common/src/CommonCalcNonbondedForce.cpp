@@ -617,7 +617,7 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
     }
     source = cc.replaceStrings(source, replacements);
     if (force.getIncludeDirectSpace())
-        cc.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), numParticles > 3000);
+        cc.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source, force.getForceGroup(), numParticles > 3000, true);
 
     // Initialize the exceptions.
 
