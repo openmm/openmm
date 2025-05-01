@@ -527,7 +527,32 @@ to them.
          :file:`tip3p.xml` will be missing parameters for ions in your system.
 
 The converted parameter sets come from the `AmberTools 17 release <http://ambermd.org/AmberTools.php>`_
-and were converted using the `openmmforcefields <https://github.com/openmm/openmmforcefields>`_ package and `ParmEd <https://github.com/parmed/parmed>`_.
+and were converted using the openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
+
+Amber19
+-------
+
+Updated protein and DNA force fields from the
+`AmberTools 24 release <http://ambermd.org/AmberTools.php>`_ are also available.
+
+.. tabularcolumns:: |l|L|
+
+===================================  ===========================================
+File                                 Parameters
+===================================  ===========================================
+:file:`amber19/protein.ff19SB.xml`   Protein\ :cite:`Tian2020` (recommended, includes residue-specific CMAP terms)
+:file:`amber19/protein.ff19ipq.xml`  Protein (alternative)
+:file:`amber19/DNA.OL21.xml`         DNA\ :cite:`Zgarbova2021`
+===================================  ===========================================
+
+The OL3 RNA force field (:file:`amber14/RNA.OL3.xml`) and GLYCAM
+(:file:`amber14/GLYCAM_06j-1.xml`) described above are recommended for use with
+these updated protein and DNA force field files.  The :file:`amber14` directory
+also contains water models that can be used with these force fields.
+
+.. warning:: The updated :code:`Lipid21` lipid force field is not yet supported,
+             as it makes use of Amber features not yet supported in
+             `ParmEd <https://github.com/parmed/parmed>`_.
 
 CHARMM36
 --------
@@ -541,7 +566,7 @@ for full references).
 =================================  ============================================
 File                               Parameters
 =================================  ============================================
-:file:`charmm36.xml`               Protein, DNA, RNA, lipids, carbohydrates, and small molecules
+:file:`charmm36_2024.xml`          Protein, DNA, RNA, lipids, carbohydrates, and small molecules
 :file:`charmm36/water.xml`         Default CHARMM water model (a modified version of TIP3P\ :cite:`Jorgensen1983`) and ions
 :file:`charmm36/spce.xml`          SPC/E water model\ :cite:`Berendsen1987` and ions
 :file:`charmm36/tip3p-pme-b.xml`   TIP3P-PME-B water model\ :cite:`Price2004` and ions
@@ -552,19 +577,13 @@ File                               Parameters
 :file:`charmm36/tip5pew.xml`       TIP5P-Ew water model\ :cite:`Rick2004` and ions
 =================================  ============================================
 
-The file :file:`charmm36.xml` bundles everything but the water and ions into a single
+The file :file:`charmm36_2024.xml` bundles everything but the water and ions into a single
 file.  In most cases, you can simply include that file, plus one of the water models,
 such as :file:`charmm36/water.xml`, which specifies the default CHARMM water model
 (a modified version of TIP3P\ :cite:`Jorgensen1983`) and ions:
 ::
 
-    forcefield = ForceField('charmm36.xml', 'charmm36/water.xml')
-
-.. warning:: Drude polarizable sites and lone pairs are not yet supported
-             by `ParmEd <https://github.com/parmed/parmed>`_ and the CHARMM36 forcefields
-             that depend on these features are not included in this port.
-             To use the CHARMM 2019 polarizable force field\ :cite:`Lopes2013`,
-             include the single file :file:`charmm_polar_2019.xml`.
+    forcefield = ForceField('charmm36_2024.xml', 'charmm36/water.xml')
 
 .. tip:: The solvent model XML files included under the :file:`charmm36/` directory
          include both water *and* ions compatible with that water model, so if you
@@ -595,8 +614,18 @@ such as :file:`charmm36/water.xml`, which specifies the default CHARMM water mod
          `CHARMM-GUI <http://charmm-gui.org/>`_, it's easiest to load
          the PSF file directly, as discussed in Section :numref:`using-charmm-files`.
 
-The converted parameter sets come from the `CHARMM36 July 2017 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_
-and were converted using the `openmmforcefields <https://github.com/openmm/openmmforcefields>`_ package and `parmed <https://github.com/parmed/parmed>`_.
+.. warning:: Some residues and patches are not included in this port of
+             CHARMM36, either due to a lack of support for certain CHARMM
+             features in `ParmEd <https://github.com/parmed/parmed>`_, or
+             because they generate a large number of residue-patch combinations,
+             slowing down parameterization.  The openmmforcefields_ package
+             includes residues and patches not present in this port within
+             additional force field XML files that can be loaded as needed.
+
+The converted parameter sets come from the
+`CHARMM36 July 2024 update <http://mackerell.umaryland.edu/charmm_ff.shtml>`_,
+which includes the CHARMM36m protein parameters.  They were converted using the
+openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
 
 Implicit Solvent
 ----------------
@@ -681,8 +710,8 @@ recommended for most simulations.
 CHARMM Polarizable Force Field
 ------------------------------
 
-To use the CHARMM 2019 polarizable force field\ :cite:`Lopes2013`, include the
-single file :file:`charmm_polar_2019.xml`.  It includes parameters for proteins, lipids,
+To use the CHARMM 2023 polarizable force field\ :cite:`Lopes2013`, include the
+single file :file:`charmm_polar_2023.xml`.  It includes parameters for proteins, lipids, carbohydrates,
 water, and ions.  When using this force field, remember to add extra particles to
 the :class:`Topology` as described in section :numref:`adding-or-removing-extra-particles`.
 This force field also requires that you use one of the special integrators that
@@ -698,17 +727,19 @@ still useful for reproducing older results.
 
 .. tabularcolumns:: |l|L|
 
-=============================  ================================================================================
+=============================  ==================================================================================
 File                           Force Field
-=============================  ================================================================================
+=============================  ==================================================================================
 :code:`amber96.xml`            Amber96\ :cite:`Kollman1997`
 :code:`amber99sb.xml`          Amber99\ :cite:`Wang2000` with modified backbone torsions\ :cite:`Hornak2006`
 :code:`amber99sbildn.xml`      Amber99SB plus improved side chain torsions\ :cite:`Lindorff-Larsen2010`
 :code:`amber99sbnmr.xml`       Amber99SB with modifications to fit NMR data\ :cite:`Li2010`
 :code:`amber03.xml`            Amber03\ :cite:`Duan2003`
 :code:`amber10.xml`            Amber10 (documented in the AmberTools_ manual as `ff10`)
+:code:`charmm36.xml`           July 2017 release of the CHARMM36 force field without CHARMM36m protein parameters
 :code:`charmm_polar_2013.xml`  2013 version of the CHARMM polarizable force field\ :cite:`Lopes2013`
-=============================  ================================================================================
+:code:`charmm_polar_2019.xml`  2019 version of the CHARMM polarizable force field\ :cite:`Lopes2013`
+=============================  ==================================================================================
 
 Several of these force fields support implicit solvent.  To enable it, also
 include the corresponding OBC file.
