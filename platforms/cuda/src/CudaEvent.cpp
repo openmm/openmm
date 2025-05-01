@@ -42,7 +42,7 @@ CudaEvent::~CudaEvent() {
 }
 
 void CudaEvent::enqueue() {
-    cuEventRecord(event, 0);
+    cuEventRecord(event, context.getCurrentStream());
 }
 
 void CudaEvent::wait() {

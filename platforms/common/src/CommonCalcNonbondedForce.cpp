@@ -216,7 +216,7 @@ CommonCalcNonbondedForceKernel::~CommonCalcNonbondedForceKernel() {
 
 void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, const NonbondedForce& force, bool usePmeQueue,
         bool deviceIsCpu, bool useFixedPointChargeSpreading, bool useCpuPme) {
-    this->usePmeQueue = usePmeQueue;
+    this->usePmeQueue = false;
     this->deviceIsCpu = deviceIsCpu;
     this->useFixedPointChargeSpreading = useFixedPointChargeSpreading;
     this->useCpuPme = useCpuPme;
@@ -462,6 +462,7 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
                 fft = cc.createFFT(gridSizeX, gridSizeY, gridSizeZ, true);
                 if (doLJPME)
                     dispersionFft = cc.createFFT(dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, true);
+                this->usePmeQueue = usePmeQueue;
                 if (usePmeQueue) {
                     pmeDefines["USE_PME_STREAM"] = "1";
                     pmeQueue = cc.createQueue();
@@ -785,7 +786,6 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeConvolutionKernel = program->createKernel("reciprocalConvolution");
             pmeEvalEnergyKernel = program->createKernel("gridEvaluateEnergy");
             pmeInterpolateForceKernel = program->createKernel("gridInterpolateForce");
-            int elementSize = (cc.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4));
             pmeGridIndexKernel->addArg(cc.getPosq());
             pmeGridIndexKernel->addArg(pmeAtomGridIndex);
             for (int i = 0; i < 8; i++)
@@ -959,7 +959,7 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
         ewaldForcesKernel->execute(cc.getNumAtoms());
     }
     if (pmeGrid1.isInitialized() && includeReciprocal) {
-        if (usePmeQueue && !includeEnergy)
+        if (usePmeQueue)
             cc.setCurrentQueue(pmeQueue);
 
         // Invert the periodic box vectors.
@@ -1059,7 +1059,10 @@ double CommonCalcNonbondedForceKernel::execute(ContextImpl& context, bool includ
             pmeDispersionGridIndexKernel->execute(cc.getNumAtoms());
             if (!hasCoulomb)
                 sort->sort(pmeAtomGridIndex);
-            cc.clearBuffer(pmeGrid2);
+            if (useFixedPointChargeSpreading)
+                cc.clearBuffer(pmeGrid2);
+            else
+                cc.clearBuffer(pmeGrid1);
             setPeriodicBoxArgs(cc, pmeDispersionSpreadChargeKernel, 2);
             if (cc.getUseDoublePrecision()) {
                 pmeDispersionSpreadChargeKernel->setArg(7, recipBoxVectors[0]);
