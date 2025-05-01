@@ -726,256 +726,127 @@ class TinkerFiles:
 
                     if resName == "H2N":
                         # N-terminal deprotonated residue
-                        # H2N-- // Bonded to C of next residue
-                        if atom["atomicNumber"] == 7:
-                            neighbours = TinkerFiles._findNeighbours(
-                                atomDict, atomId, 1, exact=True
-                            )
-                            ni = atomId  # Amide nitrogen atom
-                            cai = atomId + 1  # Alpha carbon atom
-                            ci = atomId + 2  # Carbonyl carbon atom
-                            oi = atomId + 3  # Carbonyl oxygen atom
-
-                            otherAtoms = []
-                            # Get the hydrogen atoms attached to the amide nitrogen atom
-                            niNeighbours = TinkerFiles._findNeighbours(
-                                atomDict, ni, 1, exact=True, exclusionList=[cai]
-                            )
-                            hydrogenAtoms = [
-                                neighbour
-                                for neighbour in niNeighbours
-                                if atomDict[neighbour]["atomicNumber"] == 1
-                            ]
-                            otherAtoms.extend(hydrogenAtoms)
-
-                            # Get the atoms attached to the alpha carbon atom (H + side chain atoms)
-                            caiNeighbours = TinkerFiles._findNeighbours(
-                                atomDict,
-                                cai,
-                                None,
-                                exact=True,
-                                exclusionList=[ni, ci],
-                            )
-                            caiNeighbours = [
-                                neighbour
-                                for neighbour in caiNeighbours
-                                if neighbour != cai
-                            ]
-                            otherAtoms.extend(caiNeighbours)
-
-                            # Get the atoms attached to the carbonyl carbon atom
-                            ciNeighbours = TinkerFiles._findNeighbours(
-                                atomDict,
-                                ci,
-                                1,
-                                exact=True,
-                                exclusionList=[oi, cai],
-                            )
-                            ciNeighbours = [
-                                neighbour
-                                for neighbour in ciNeighbours
-                                if atomDict[neighbour]["atomicNumber"] != 7
-                            ]
-                            otherAtoms.extend(ciNeighbours)
-
-                            # Atoms of the residue
-                            resAtoms = [ni, cai, ci, oi] + otherAtoms
+                        # Not written at all in the .xyz files, though it may be present in the .seq files
+                        continue
                     elif resName == "FOR":
-                        # Formyl (FOR) - N-terminus
-                        # O=CH-- // Bonded to N of next residue
-                        obone = False
-                        nbone = False
-                        if atom["atomicNumber"] == 6:
-                            neighbours = TinkerFiles._findNeighbours(
-                                atomDict, atomId, 1, exact=True
-                            )
-                            for neighbour in neighbours:
-                                if atomDict[neighbour]["atomicNumber"] == 7:
-                                    nbone = True
-                                elif atomDict[neighbour]["atomicNumber"] == 8:
-                                    obone = True
-
-                            if nbone and obone:
-                                cai = atomId
-                                ci = atomId + 1
-                                oi = atomId + 2
-
-                                otherAtoms = []
-                                # Get the atoms attached to the carbonyl carbon atom (carbonyl oxygen + hydrogen)
-                                ciNeighbours = TinkerFiles._findNeighbours(
-                                    atomDict, ci, 1, exact=True, exclusionList=[cai]
-                                )
-                                ciNeighbours = [
-                                    neighbour
-                                    for neighbour in ciNeighbours
-                                    if atomDict[neighbour]["atomicNumber"] != 7
-                                ]
-                                otherAtoms.extend(ciNeighbours)
-
-                                # Get the atoms attached to the carbonyl oxygen atom
-                                # Atoms of the residue
-                                resAtoms = [ci, oi] + otherAtoms
+                        # N-terminal formyl residue
+                        assert atom["atomicNumber"] == 6, "FOR residue must start with a carbon atom"
+                        cai = atomId  # Carbon atom
+                        oi = atomId + 1  # Oxygen atom
+                        # Get the hydrogen atom attached to the carbon atom
+                        caiNeighbours = TinkerFiles._findNeighbours(
+                            atomDict, cai, 1, exact=True, exclusionList=[oi]
+                        )
+                        hydrogenAtoms = [
+                            n for n in caiNeighbours 
+                            if atomDict[n]["atomicNumber"] == 1
+                        ]
+                        resAtoms = [cai, oi] + hydrogenAtoms
                     elif resName == "ACE":
-                        # Acetyl (ACE) - C-terminus
-                        # O=C-CαH3
-                        #   |
-                        #  // Bonded to N of next residue
-                        obone = False
-                        nbone = False
-                        if atom["atomicNumber"] == 6:
-                            neighbours = TinkerFiles._findNeighbours(
-                                atomDict, atomId, 2, exact=True
-                            )
-                            for neighbour in neighbours:
-                                if atomDict[neighbour]["atomicNumber"] == 7:
-                                    nbone = True
-                                elif atomDict[neighbour]["atomicNumber"] == 8:
-                                    obone = True
-                        if obone and nbone:
-                            cai = atomId
-                            ci = atomId + 1
-                            oi = atomId + 2
-
-                            otherAtoms = []
-                            # Get the hydrogens attached to the alpha carbon atom
-                            caiNeighbours = TinkerFiles._findNeighbours(
-                                atomDict, cai, 1, exact=True, exclusionList=[ci]
-                            )
-                            otherAtoms.extend(caiNeighbours)
-
-                            resAtoms = [cai, ci, oi] + otherAtoms
+                        # N-terminal acetyl residue
+                        assert atom["atomicNumber"] == 6, "ACE residue must start with a carbon atom"
+                        cai = atomId  # Alpha carbon atom
+                        ci = atomId + 1  # Carbonyl carbon atom
+                        oi = atomId + 2  # Carbonyl oxygen atom
+                        # Get the 3 hydrogens attached to the alpha carbon atom
+                        hydrogenAtoms = TinkerFiles._findNeighbours(
+                            atomDict, cai, 1, exact=True, exclusionList=[ci]
+                        )
+                        resAtoms = [cai, ci, oi] + hydrogenAtoms
                     elif resName == "COH":
                         # C-terminal protonated residue (OH)
-                        # OH-- // Bonded to C of previous residue
-                        if atom["atomicNumber"] == 8:  # Oxygen atom
-                            ni = atomId  # Hydroxyl oxygen atom
-                            
-                            otherAtoms = []
-                            # Get the hydrogen atom attached to the hydroxyl oxygen
-                            niNeighbours = TinkerFiles._findNeighbours(
-                                atomDict, ni, 1, exact=True
-                            )
-                            hydrogenAtoms = [
-                                neighbour
-                                for neighbour in niNeighbours
-                                if atomDict[neighbour]["atomicNumber"] == 1
-                            ]
-                            otherAtoms.extend(hydrogenAtoms)
-
-                            # Atoms of the residue
-                            resAtoms = [ni] + otherAtoms
+                        assert atom["atomicNumber"] == 8, "COH residue must start with an oxygen atom"
+                        oi = atomId  # Hydroxyl oxygen atom
+                        # Get the hydrogen atom attached to the hydroxyl oxygen
+                        hydrogenAtoms = TinkerFiles._findNeighbours(
+                            atomDict, oi, 1, exact=True
+                        )
+                        resAtoms = [oi] + hydrogenAtoms
                     elif resName == "NH2":
-                        raise NotImplementedError("NH2 Residue not implemented")
+                        # C-terminal amide residue
+                        assert atom["atomicNumber"] == 7, "NH2 residue must start with a nitrogen atom"
+                        ni = atomId  # Amide nitrogen atom
+                        # Get the 2 hydrogens attached to the nitrogen atom
+                        niNeighbours = TinkerFiles._findNeighbours(
+                            atomDict, ni, 1, exact=True
+                        )
+                        hydrogenAtoms = [
+                            neighbour
+                            for neighbour in niNeighbours
+                            if atomDict[neighbour]["atomicNumber"] == 1
+                        ]
+                        resAtoms = [ni] + hydrogenAtoms
                     elif resName == "NME":
                         # C-terminal N-methylamide residue
-                        # N-CH3-- // Bonded to C of previous residue
-                        if atom["atomicNumber"] == 7:
-                            neighbours = TinkerFiles._findNeighbours(
-                                atomDict, atomId, 1, exact=True
-                            )
-                            ni = atomId       # Amide nitrogen atom
-                            cai = atomId + 1  # Methyl carbon atom
-
-                            otherAtoms = []
-                            # Get the hydrogen atoms attached to the amide nitrogen
-                            niNeighbours = TinkerFiles._findNeighbours(
-                                atomDict, ni, 1, exact=True, exclusionList=[cai]
-                            )
-                            hydrogenAtoms = [
-                                neighbour
-                                for neighbour in niNeighbours
-                                if atomDict[neighbour]["atomicNumber"] == 1
-                            ]
-                            otherAtoms.extend(hydrogenAtoms)
-
-                            # Get the hydrogen atoms attached to the methyl carbon
-                            caiNeighbours = TinkerFiles._findNeighbours(
-                                atomDict,
-                                cai,
-                                1,
-                                exact=True,
-                                exclusionList=[ni],
-                            )
-                            hydrogenAtoms = [
-                                neighbour
-                                for neighbour in caiNeighbours
-                                if atomDict[neighbour]["atomicNumber"] == 1
-                            ]
-                            otherAtoms.extend(hydrogenAtoms)
-
-                            # Atoms of the residue
-                            resAtoms = [ni, cai] + otherAtoms
+                        assert atom["atomicNumber"] == 7, "NME residue must start with a nitrogen atom"
+                        ni = atomId  # Amide nitrogen atom
+                        cai = atomId + 1  # Methyl carbon atom
+                        # Get the hydrogen atoms attached to the nitrogen atom
+                        niNeighbours = TinkerFiles._findNeighbours(
+                            atomDict, ni, 1, exact=True
+                        )
+                        niHydrogenAtoms = [
+                            neighbour
+                            for neighbour in niNeighbours
+                            if atomDict[neighbour]["atomicNumber"] == 1
+                        ]
+                        # Get the hydrogen atoms attached to the methyl carbon atom
+                        caiNeighbours = TinkerFiles._findNeighbours(
+                            atomDict, cai, 1, exact=True, exclusionList=[ni]
+                        )
+                        caiHydrogenAtoms = [
+                            neighbour
+                            for neighbour in caiNeighbours
+                            if atomDict[neighbour]["atomicNumber"] == 1
+                        ]
+                        resAtoms = [ni, cai] + niHydrogenAtoms + caiHydrogenAtoms
                     else:
-                        if atom["atomicNumber"] == 7:
-                            # Amino acid backbone atoms
-                            #              O                  O
-                            #             ||                 ||
-                            # H – N – Cα – C – N – Cα – C – N – Cα – C – OH
-                            #     |     |     |     |     |     |     ||
-                            #     H    Cβ     H    Cβ     H    Cβ     O
-                            #           |           |           |
-                            #          R1          R2          R3
-                            neighbours = TinkerFiles._findNeighbours(
-                                atomDict, atomId, 3, exact=True
-                            )
-                            for neighbour in neighbours:
-                                if atomDict[neighbour]["atomicNumber"] == 8:
-                                    # We have found the backbone atoms for an amino acid.
-                                    # Tinker uses a strict numbering scheme for the atoms in a peptide bond.
-                                    ni = atomId  # Amide nitrogen atom
-                                    cai = atomId + 1  # Alpha carbon atom
-                                    ci = atomId + 2  # Carbonyl carbon atom
-                                    oi = atomId + 3  # Carbonyl oxygen atom
-
-                                    # We need to find the atoms attached to the ni, cai, and ci and add them to the side chain atoms list
-                                    otherAtoms = []
-
-                                    # Get the hydrogen atom attached to the amide nitrogen atom
-                                    niNeighbours = TinkerFiles._findNeighbours(
-                                        atomDict, ni, 1, exact=True, exclusionList=[cai]
-                                    )
-                                    hydrogenAtoms = [
-                                        neighbour
-                                        for neighbour in niNeighbours
-                                        if atomDict[neighbour]["atomicNumber"] == 1
-                                    ]
-                                    otherAtoms.extend(hydrogenAtoms)
-
-                                    # Get the atoms attached to the alpha carbon atom (H + side chain atoms)
-                                    caiNeighbours = TinkerFiles._findNeighbours(
-                                        atomDict,
-                                        cai,
-                                        None,
-                                        exact=True,
-                                        exclusionList=[ni, ci],
-                                    )
-                                    caiNeighbours = [
-                                        neighbour
-                                        for neighbour in caiNeighbours
-                                        if neighbour != cai
-                                    ]
-                                    otherAtoms.extend(caiNeighbours)
-
-                                    # Get the atoms attached to the carbonyl carbon atom (usually just the carbonyl oxygen atom, but sometimes 2 oxygens)
-                                    ciNeighbours = TinkerFiles._findNeighbours(
-                                        atomDict,
-                                        ci,
-                                        1,
-                                        exact=True,
-                                        exclusionList=[oi, cai],
-                                    )
-
-                                    # Remove any other amide nitrogen atoms
-                                    ciNeighbours = [
-                                        neighbour
-                                        for neighbour in ciNeighbours
-                                        if atomDict[neighbour]["atomicNumber"] != 7
-                                    ]
-                                    otherAtoms.extend(ciNeighbours)
-
-                                    # Atoms of the residue
-                                    resAtoms = [ni, cai, ci, oi] + otherAtoms
-
+                        # Standard amino acid residue
+                        assert atom["atomicNumber"] == 7, "Amino acid residue must start with a nitrogen atom"
+                        ni = atomId  # Amide nitrogen atom
+                        cai = atomId + 1  # Alpha carbon atom
+                        ci = atomId + 2  # Carbonyl carbon atom
+                        oi = atomId + 3  # Carbonyl oxygen atom
+                        
+                        # Get the hydrogen atom attached to the amide nitrogen atom
+                        niNeighbours = TinkerFiles._findNeighbours(
+                            atomDict, ni, 1, exact=True, exclusionList=[cai]
+                        )
+                        hydrogenAtoms = [
+                            neighbour
+                            for neighbour in niNeighbours
+                            if atomDict[neighbour]["atomicNumber"] == 1
+                        ]                        
+                        # Get the atoms attached to the alpha carbon atom (H + side chain atoms)
+                        caiNeighbours = TinkerFiles._findNeighbours(
+                            atomDict,
+                            cai,
+                            None,
+                            exact=True,
+                            exclusionList=[ni, ci],
+                        )
+                        caiNeighbours = [
+                            neighbour
+                            for neighbour in caiNeighbours
+                            if neighbour != cai
+                        ]
+                        
+                        # Get the atoms attached to the carbonyl carbon atom
+                        ciNeighbours = TinkerFiles._findNeighbours(
+                            atomDict,
+                            ci,
+                            1,
+                            exact=True,
+                            exclusionList=[oi, cai],
+                        )
+                        ciNeighbours = [
+                            neighbour
+                            for neighbour in ciNeighbours
+                            if atomDict[neighbour]["atomicNumber"] != 7
+                        ]
+                        
+                        resAtoms = [ni, cai, ci, oi] + hydrogenAtoms + caiNeighbours + ciNeighbours
+                        
                     # Add the residue to the topology
                     residue = topology.addResidue(resName, chain)
                     sortedAtoms = sorted(resAtoms)
@@ -996,10 +867,8 @@ class TinkerFiles:
                     resId += 1
 
         # Add the bonds to the topology
-        print(topology)
         topology_atoms = list(topology.atoms())
         for atomId, atomIdDict in atomDict.items():
-            print(topology_atoms[atomId].name, atomIdDict['symbol'])
             for bond in atomIdDict["bonds"]:
                 topology.addBond(topology_atoms[atomId], topology_atoms[bond])
 
