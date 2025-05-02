@@ -233,11 +233,13 @@ void CommonCalcAmoebaMultipoleForceKernel::initialize(const System& system, cons
     vector<float> localDipolesVec;
     vector<float> localQuadrupolesVec;
     vector<mm_int4> multipoleParticlesVec;
+    totalCharge = 0.0;
     for (int i = 0; i < numMultipoles; i++) {
         double charge, thole, damping, polarity;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         force.getMultipoleParameters(i, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+        totalCharge += charge;
         if (cc.getUseDoublePrecision())
             posqd[i] = mm_double4(0, 0, 0, charge);
         else
@@ -1228,7 +1230,17 @@ double CommonCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool 
     
     cc.getPosq().copyTo(lastPositions);
     multipolesAreValid = true;
-    return 0.0;
+
+    // Correction for the neutralizing plasma.
+
+    if (usePME) {
+        Vec3 a, b, c;
+        cc.getPeriodicBoxVectors(a, b, c);
+        double volume = a[0] * b[1] * c[2];
+        return -totalCharge*totalCharge/(8*EPSILON0*volume*pmeAlpha*pmeAlpha);
+    }
+    else
+        return 0.0;
 }
 
 void CommonCalcAmoebaMultipoleForceKernel::computeInducedField() {
@@ -1664,11 +1676,13 @@ void CommonCalcAmoebaMultipoleForceKernel::copyParametersToContext(ContextImpl& 
     vector<float> localDipolesVec;
     vector<float> localQuadrupolesVec;
     vector<mm_int4> multipoleParticlesVec;
+    totalCharge = 0.0;
     for (int i = 0; i < force.getNumMultipoles(); i++) {
         double charge, thole, damping, polarity;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         force.getMultipoleParameters(i, charge, dipole, quadrupole, axisType, atomZ, atomX, atomY, thole, damping, polarity);
+        totalCharge += charge;
         if (cc.getUseDoublePrecision())
             posqd[i].w = charge;
         else
@@ -2424,12 +2438,14 @@ void CommonCalcHippoNonbondedForceKernel::initialize(const System& system, const
     vector<double> localDipolesVec, localQuadrupolesVec;
     vector<mm_int4> multipoleParticlesVec;
     vector<vector<int> > exclusions(numParticles);
+    totalCharge = 0.0;
     for (int i = 0; i < numParticles; i++) {
         double charge, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         force.getParticleParameters(i, charge, dipole, quadrupole, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha,
                                     polarizability, axisType, atomZ, atomX, atomY);
+        totalCharge += charge;
         coreChargeVec.push_back(coreCharge);
         valenceChargeVec.push_back(charge-coreCharge);
         alphaVec.push_back(alpha);
@@ -3378,7 +3394,17 @@ double CommonCalcHippoNonbondedForceKernel::execute(ContextImpl& context, bool i
     
     cc.getPosq().copyTo(lastPositions);
     multipolesAreValid = true;
-    return 0.0;
+
+    // Correction for the neutralizing plasma.
+
+    if (usePME) {
+        Vec3 a, b, c;
+        cc.getPeriodicBoxVectors(a, b, c);
+        double volume = a[0] * b[1] * c[2];
+        return -totalCharge*totalCharge/(8*EPSILON0*volume*pmeAlpha*pmeAlpha);
+    }
+    else
+        return 0.0;
 }
 
 void CommonCalcHippoNonbondedForceKernel::computeInducedField(int optOrder) {
@@ -3513,12 +3539,14 @@ void CommonCalcHippoNonbondedForceKernel::copyParametersToContext(ContextImpl& c
     vector<double> coreChargeVec, valenceChargeVec, alphaVec, epsilonVec, dampingVec, c6Vec, pauliKVec, pauliQVec, pauliAlphaVec, polarizabilityVec;
     vector<double> localDipolesVec, localQuadrupolesVec;
     vector<mm_int4> multipoleParticlesVec;
+    totalCharge = 0.0;
     for (int i = 0; i < numParticles; i++) {
         double charge, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha, polarizability;
         int axisType, atomX, atomY, atomZ;
         vector<double> dipole, quadrupole;
         force.getParticleParameters(i, charge, dipole, quadrupole, coreCharge, alpha, epsilon, damping, c6, pauliK, pauliQ, pauliAlpha,
                                     polarizability, axisType, atomZ, atomX, atomY);
+        totalCharge += charge;
         coreChargeVec.push_back(coreCharge);
         valenceChargeVec.push_back(charge-coreCharge);
         alphaVec.push_back(alpha);

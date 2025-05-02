@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006-222 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2025 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -6370,10 +6370,12 @@ double AmoebaReferencePmeMultipoleForce::calculatePmeSelfEnergy(const vector<Mul
     double cii = 0.0;
     double dii = 0.0;
     double qii = 0.0;
+    double totalCharge = 0.0;
     for (unsigned int ii = 0; ii < _numParticles; ii++) {
 
         const MultipoleParticleData& particleI = particleData[ii];
 
+        totalCharge += particleI.charge;
         cii += particleI.charge*particleI.charge;
 
         Vec3 dipole(particleI.sphericalDipole[1], particleI.sphericalDipole[2], particleI.sphericalDipole[0]);
@@ -6389,6 +6391,9 @@ double AmoebaReferencePmeMultipoleForce::calculatePmeSelfEnergy(const vector<Mul
     double a2 = _alphaEwald * _alphaEwald;
     double a4 = a2*a2;
     double energy = prefac*(cii + twoThirds*a2*dii + fourOverFifteen*a4*qii);
+    // Correction for the neutralizing plasma.
+    double volume = _periodicBoxVectors[0][0] * _periodicBoxVectors[1][1] * _periodicBoxVectors[2][2];
+    energy -= totalCharge*totalCharge/(8*EPSILON0*volume*_alphaEwald*_alphaEwald);
     return energy;
 }
 
