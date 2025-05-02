@@ -662,10 +662,6 @@ class TinkerFiles:
         List[int]
             List of atom indices in the residue.
         """
-        # Raise error for unimplemented residue types
-        if resName in [" MP", " DP", " TP"]:
-            raise NotImplementedError("Residue type not implemented.")
-
         # Regular nucleotide check: Atom must be carbon (C) with 4 bonds
         atom = atomDict.get(atomId)
         if not atom or atom["atomicNumber"] != 6 or len(atom["bonds"]) != 4:
