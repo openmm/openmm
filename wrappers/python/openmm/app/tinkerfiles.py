@@ -40,6 +40,7 @@ import os
 import re
 import shlex
 import xml.etree.ElementTree as etree
+from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
@@ -397,44 +398,41 @@ class TinkerFiles:
         exclusionList: Optional[List[int]] = None,
     ) -> Union[List[int], List[List[int]]]:
         """
-        Find atoms within or exactly at a specified distance from a given atom,
-        or all connected groups (molecules) if no index is specified.
+        Find neighboring atoms using breadth-first search.
 
         Parameters
         ----------
-        atomData : dict
-            The atom data dictionary.
-        index : int, optional
-            The index of the atom to find neighbours for. If None, returns multiple molecules.
-        distance : int, optional
-            The distance to search for neighbours in number of bonds.
-            If None, all neighbours are returned, including the atom itself.
+        atomData : Dict
+            Dictionary containing atom data including bond information.
+        index : Optional[int], default=None
+            Starting atom index. If None, returns neighbors for all atoms.
+        distance : Optional[int], default=None
+            Maximum distance to search (in number of bonds). If None, searches entire connected graph.
         exact : bool, default=False
-            If True, only atoms exactly at the specified distance are returned.
-            If False, atoms within the distance (inclusive) are returned.
-        exclusionList : list[int], optional
-            A list of atom indices to exclude from the search.
+            If True, only returns atoms at exactly the specified distance.
+            If False, returns atoms up to and including the specified distance.
+        exclusionList : Optional[List[int]], default=None
+            List of atom indices to exclude from the search.
 
         Returns
         -------
-        list[int] or list[list[int]]
-            If `index` is provided, returns a flat list of neighbors.
-            If `index` is None, returns a list of lists (multiple molecules).
+        Union[List[int], List[List[int]]]
+            If index is provided, returns list of neighbor indices.
+            If index is None, returns list of lists containing neighbor indices for each atom.
         """
-        exclusionList = exclusionList or []
+        exclusionList = set(exclusionList or [])
         visited = set()
 
         def bfs(start: int) -> List[int]:
+            if start in exclusionList:
+                return []
+
             local_neighbours = set()
-            queue = [(start, 0)]
+            queue = deque([(start, 0)])
+            visited.add(start)
 
             while queue:
-                atom, dist = queue.pop(0)
-
-                if atom in exclusionList or atom in visited:
-                    continue
-
-                visited.add(atom)
+                atom, dist = queue.popleft()
 
                 if (
                     distance is None
@@ -446,6 +444,7 @@ class TinkerFiles:
                 if distance is None or dist < distance:
                     for neighbor in atomData[atom]["bonds"]:
                         if neighbor not in visited and neighbor not in exclusionList:
+                            visited.add(neighbor)
                             queue.append((neighbor, dist + 1))
 
             return sorted(local_neighbours)
@@ -453,14 +452,11 @@ class TinkerFiles:
         if index is not None:
             return bfs(index)
 
-        molecules = []
-        for atom in atomData:
-            if atom not in visited and atom not in exclusionList:
-                molecule = bfs(atom)
-                if molecule:
-                    molecules.append(molecule)
-
-        return molecules
+        return [
+            bfs(atom)
+            for atom in atomData
+            if atom not in visited and atom not in exclusionList
+        ]
 
     @staticmethod
     def _createTopology(atomDict: Dict, seqDict: Optional[Dict] = None) -> top.Topology:
@@ -503,13 +499,17 @@ class TinkerFiles:
         for molecule, chainId in zip(molecules, seqDict):
             chain = topology.addChain(id=chainId)
             chainType = seqDict[chainId]["chainType"]
-            
+
             if chainType == "GENERIC":
                 TinkerFiles._processGenericMolecule(topology, molecule, atomDict, chain)
             elif chainType == "NUCLEIC":
-                TinkerFiles._processNucleicAcidChain(topology, molecule, atomDict, chain, seqDict[chainId])
+                TinkerFiles._processNucleicAcidChain(
+                    topology, molecule, atomDict, chain, seqDict[chainId]
+                )
             elif chainType == "PEPTIDE":
-                TinkerFiles._processPeptideChain(topology, molecule, atomDict, chain, seqDict[chainId])
+                TinkerFiles._processPeptideChain(
+                    topology, molecule, atomDict, chain, seqDict[chainId]
+                )
 
         # Add the bonds to the topology
         topology_atoms = list(topology.atoms())
@@ -520,7 +520,9 @@ class TinkerFiles:
         return topology
 
     @staticmethod
-    def _processGenericMolecule(topology: top.Topology, molecule: List[int], atomDict: Dict, chain: top.Chain) -> None:
+    def _processGenericMolecule(
+        topology: top.Topology, molecule: List[int], atomDict: Dict, chain: top.Chain
+    ) -> None:
         """
         Process a generic molecule (water, ion, or unknown).
 
@@ -573,15 +575,30 @@ class TinkerFiles:
             The residue name for the ion.
         """
         ionMap = {
-            3: "Li+", 11: "Na+", 19: "K+", 37: "Rb+", 55: "Cs+",
-            4: "Be2+", 12: "Mg2+", 20: "Ca2+", 30: "Zn2+",
-            9: "F-", 17: "Cl-", 35: "Br-", 53: "I-"
+            3: "Li+",
+            11: "Na+",
+            19: "K+",
+            37: "Rb+",
+            55: "Cs+",
+            4: "Be2+",
+            12: "Mg2+",
+            20: "Ca2+",
+            30: "Zn2+",
+            9: "F-",
+            17: "Cl-",
+            35: "Br-",
+            53: "I-",
         }
         return ionMap.get(atomicNumber, "UNK")
 
     @staticmethod
-    def _processNucleicAcidChain(topology: top.Topology, molecule: List[int], atomDict: Dict, 
-                                chain: top.Chain, chainData: Dict) -> None:
+    def _processNucleicAcidChain(
+        topology: top.Topology,
+        molecule: List[int],
+        atomDict: Dict,
+        chain: top.Chain,
+        chainData: Dict,
+    ) -> None:
         """
         Process a nucleic acid chain.
 
@@ -604,23 +621,30 @@ class TinkerFiles:
         for atomId in molecule:
             if atomId in seenAtomIds:
                 continue
-
             resName = chainData["residues"][resId]
 
             # Validate residue
-            assert resName in TinkerFiles._NUCLEIC_ACID_LIST, f"Residue {resName} is not a valid or supported nucleic acid"
+            assert resName in TinkerFiles._NUCLEOTIDE_LIST, (
+                f"Residue {resName} is not a valid or supported nucleic acid"
+            )
 
             # Get atoms for the residue
-            resAtoms = TinkerFiles._getNucleicAcidResidueAtoms(atomId, resName, atomDict)
+            resAtoms = TinkerFiles._getNucleicAcidResidueAtoms(
+                atomId, resName, atomDict
+            )
             if not resAtoms:
                 continue
 
             # Add residue to topology
-            TinkerFiles._addResidueToTopology(topology, resAtoms, resName, chain, atomDict, seenAtomIds)
+            TinkerFiles._addResidueToTopology(
+                topology, resAtoms, resName, chain, atomDict, seenAtomIds
+            )
             resId += 1
 
     @staticmethod
-    def _getNucleicAcidResidueAtoms(atomId: int, resName: str, atomDict: Dict) -> List[int]:
+    def _getNucleicAcidResidueAtoms(
+        atomId: int, resName: str, atomDict: Dict
+    ) -> List[int]:
         """
         Get the atoms for a nucleic acid residue.
 
@@ -638,35 +662,76 @@ class TinkerFiles:
         List[int]
             List of atom indices in the residue.
         """
-        if resName == " MP":
-            # Monophosphate
-            if atomDict[atomId]["atomicNumber"] == 15:  # Phosphorus
-                return [atomId, atomId + 1, atomId + 2, atomId + 3]  # P, O1, O2, O3
+        # Raise error for unimplemented residue types
+        if resName in [" MP", " DP", " TP"]:
+            raise NotImplementedError("Residue type not implemented.")
+
+        # Regular nucleotide check: Atom must be carbon (C) with 4 bonds
+        atom = atomDict.get(atomId)
+        if not atom or atom["atomicNumber"] != 6 or len(atom["bonds"]) != 4:
             return []
 
-        if resName in [" DP", " TP"]:
-            # Not implemented in Fortran code
-            return []
-
-        # Regular nucleotide
-        atom = atomDict[atomId]
-        if atom["atomicNumber"] != 6 or len(atom["bonds"]) != 4:
-            return []
-
-        # Find C1' atom
+        # Ensure C1' atom is correct
         if not TinkerFiles._isC1Atom(atomId, atomDict):
             return []
 
-        # Get backbone atoms
-        backboneAtoms = TinkerFiles._getNucleicAcidBackboneAtoms(atomId)
-        
-        # Get base atoms
-        baseAtoms = TinkerFiles._getNucleicAcidBaseAtoms(atomId + 12, resName)
-        
-        # Get hydrogen atoms
-        hydrogenAtoms = TinkerFiles._getHydrogenAtoms(backboneAtoms + baseAtoms, atomDict)
+        # Get sugar backbone atoms
+        sugarBackboneAtoms = TinkerFiles._getNucleicSugarBackboneAtoms(atomId)
+        o5, c5, c4, o4, c1, c3, c2 = sugarBackboneAtoms
 
-        return baseAtoms + backboneAtoms + hydrogenAtoms
+        # Find neighbors for C2', C3', and C4'
+        c2Neighbours = TinkerFiles._findNeighbours(
+            atomDict, c2, None, exact=True, exclusionList=[c1, c3]
+        )[1:]  # Exclude c2 itself
+        c3Neighbours = TinkerFiles._findNeighbours(
+            atomDict, c3, 1, exact=True, exclusionList=[c2, c4]
+        )
+        c4Neighbours = TinkerFiles._findNeighbours(
+            atomDict, c4, 1, exact=True, exclusionList=[c3, o4, c5]
+        )
+
+        # Get hydrogen atoms
+        c1NeighboursHydrogen = TinkerFiles._getHydrogenAtoms([c1], atomDict)
+        c5NeighboursHydrogens = TinkerFiles._getHydrogenAtoms([c5], atomDict)
+        o5NeighboursHydrogens = TinkerFiles._getHydrogenAtoms([o5], atomDict)
+
+        # Determine phosphate atoms if H5T is not present
+        phosphateAtoms = []
+        if not o5NeighboursHydrogens:
+            phosphateAtoms = [
+                atomId - 7,
+                atomId - 6,
+                atomId - 5,
+            ]  # No H5T, so include phosphate group
+
+        # Get terminal hydrogen (H3T) if present
+        o3 = [atom for atom in c3Neighbours if atomDict[atom]["atomicNumber"] == 8]
+        o3NeighboursHydrogens = TinkerFiles._getHydrogenAtoms(o3, atomDict)
+
+        # Get organic base atoms
+        baseAtoms = TinkerFiles._findNeighbours(
+            atomDict,
+            c1,
+            None,
+            exact=False,
+            exclusionList=[*c1NeighboursHydrogen, o4, c2],
+        )[1:]  # Exclude c1 itself
+
+        # Combine all atoms into one list
+        nucleicAtoms = (
+            sugarBackboneAtoms
+            + c2Neighbours
+            + c3Neighbours
+            + c4Neighbours
+            + c5NeighboursHydrogens
+            + c1NeighboursHydrogen
+            + baseAtoms
+            + o5NeighboursHydrogens
+            + phosphateAtoms
+            + o3NeighboursHydrogens
+        )
+
+        return nucleicAtoms
 
     @staticmethod
     def _isC1Atom(atomId: int, atomDict: Dict) -> bool:
@@ -690,6 +755,9 @@ class TinkerFiles:
         hasNitrogenBond = False
         hasOxygenBond = False
 
+        if atom["atomicNumber"] != 6:
+            return False
+
         for bond in atom["bonds"]:
             bondAtom = atomDict[bond]
             if bondAtom["atomicNumber"] == 6:
@@ -702,9 +770,9 @@ class TinkerFiles:
         return hasCarbonBond and hasNitrogenBond and hasOxygenBond
 
     @staticmethod
-    def _getNucleicAcidBackboneAtoms(atomId: int) -> List[int]:
+    def _getNucleicSugarBackboneAtoms(atomId: int) -> List[int]:
         """
-        Get the backbone atoms for a nucleic acid residue.
+        Get the sugar backbone atoms for a nucleic acid residue.
 
         Parameters
         ----------
@@ -714,52 +782,19 @@ class TinkerFiles:
         Returns
         -------
         List[int]
-            List of backbone atom indices.
+            List of sugar backbone atom indices.
         """
+
+        # Atomic numbers of the backbone sugar atoms
         return [
-            atomId,      # C1'
-            atomId + 1,  # C2'
-            atomId + 2,  # O2'
-            atomId + 3,  # C3'
-            atomId + 4,  # O3'
-            atomId + 5,  # C4'
-            atomId + 6,  # O4'
-            atomId + 7,  # C5'
-            atomId + 8,  # O5'
-            atomId + 9,  # P
-            atomId + 10, # O1P
-            atomId + 11  # O2P
+            atomId - 4,  # O5'
+            atomId - 3,  # C5'
+            atomId - 2,  # C4'
+            atomId - 1,  # O4'
+            atomId,       # C1'
+            atomId + 1,  # C3'
+            atomId + 2,  # C2'
         ]
-
-    @staticmethod
-    def _getNucleicAcidBaseAtoms(atomId: int, resName: str) -> List[int]:
-        """
-        Get the base atoms for a nucleic acid residue.
-
-        Parameters
-        ----------
-        atomId : int
-            The index of the first base atom (N1/N9).
-        resName : str
-            The name of the residue.
-
-        Returns
-        -------
-        List[int]
-            List of base atom indices.
-        """
-        baseAtoms = []
-        if resName in ["  A", " DA"]:  # Adenine
-            baseAtoms = [atomId + i for i in range(10)]  # N9 through C4
-        elif resName in ["  G", " DG"]:  # Guanine
-            baseAtoms = [atomId + i for i in range(11)]  # N9 through C4
-        elif resName in ["  C", " DC"]:  # Cytosine
-            baseAtoms = [atomId + i for i in range(8)]   # N1 through C6
-        elif resName in ["  U", " DT"]:  # Uracil/Thymine
-            baseAtoms = [atomId + i for i in range(8)]   # N1 through C6
-            if resName == " DT":  # Thymine has extra methyl
-                baseAtoms.append(atomId + 8)  # C7 (methyl)
-        return baseAtoms
 
     @staticmethod
     def _getHydrogenAtoms(atoms: List[int], atomDict: Dict) -> List[int]:
@@ -782,14 +817,20 @@ class TinkerFiles:
         for atom in atoms:
             neighbours = TinkerFiles._findNeighbours(atomDict, atom, 1, exact=True)
             hydrogenAtoms.extend(
-                neighbour for neighbour in neighbours
+                neighbour
+                for neighbour in neighbours
                 if atomDict[neighbour]["atomicNumber"] == 1
             )
         return hydrogenAtoms
 
     @staticmethod
-    def _processPeptideChain(topology: top.Topology, molecule: List[int], atomDict: Dict,
-                            chain: top.Chain, chainData: Dict) -> None:
+    def _processPeptideChain(
+        topology: top.Topology,
+        molecule: List[int],
+        atomDict: Dict,
+        chain: top.Chain,
+        chainData: Dict,
+    ) -> None:
         """
         Process a peptide chain.
 
@@ -816,7 +857,9 @@ class TinkerFiles:
             resName = chainData["residues"][resId]
 
             # Validate residue
-            assert resName in TinkerFiles._AMINO_ACID_LIST, f"Residue {resName} is not a valid or supported amino acid"
+            assert resName in TinkerFiles._AMINO_ACID_LIST, (
+                f"Residue {resName} is not a valid or supported amino acid"
+            )
 
             # Get atoms for the residue
             resAtoms = TinkerFiles._getPeptideResidueAtoms(atomId, resName, atomDict)
@@ -824,7 +867,9 @@ class TinkerFiles:
                 continue
 
             # Add residue to topology
-            TinkerFiles._addResidueToTopology(topology, resAtoms, resName, chain, atomDict, seenAtomIds)
+            TinkerFiles._addResidueToTopology(
+                topology, resAtoms, resName, chain, atomDict, seenAtomIds
+            )
             resId += 1
 
     @staticmethod
@@ -861,12 +906,16 @@ class TinkerFiles:
         elif resName == "NME":
             return TinkerFiles._getMethylAmideResidueAtoms(atomId, atomDict)
         else:
-            return TinkerFiles._getStandardAminoAcidResidueAtoms(atomId, resName, atomDict)
+            return TinkerFiles._getStandardAminoAcidResidueAtoms(
+                atomId, resName, atomDict
+            )
 
     @staticmethod
     def _getFormylResidueAtoms(atomId: int, atomDict: Dict) -> List[int]:
         """Get atoms for a formyl residue."""
-        assert atomDict[atomId]["atomicNumber"] == 6, "FOR residue must start with a carbon atom"
+        assert atomDict[atomId]["atomicNumber"] == 6, (
+            "FOR residue must start with a carbon atom"
+        )
         cai = atomId
         oi = atomId + 1
         hydrogenAtoms = TinkerFiles._getHydrogenAtoms([cai], atomDict)
@@ -875,7 +924,9 @@ class TinkerFiles:
     @staticmethod
     def _getAcetylResidueAtoms(atomId: int, atomDict: Dict) -> List[int]:
         """Get atoms for an acetyl residue."""
-        assert atomDict[atomId]["atomicNumber"] == 6, "ACE residue must start with a carbon atom"
+        assert atomDict[atomId]["atomicNumber"] == 6, (
+            "ACE residue must start with a carbon atom"
+        )
         cai = atomId
         ci = atomId + 1
         oi = atomId + 2
@@ -885,7 +936,9 @@ class TinkerFiles:
     @staticmethod
     def _getCarboxylResidueAtoms(atomId: int, atomDict: Dict) -> List[int]:
         """Get atoms for a carboxyl residue."""
-        assert atomDict[atomId]["atomicNumber"] == 8, "COH residue must start with an oxygen atom"
+        assert atomDict[atomId]["atomicNumber"] == 8, (
+            "COH residue must start with an oxygen atom"
+        )
         oi = atomId
         hydrogenAtoms = TinkerFiles._getHydrogenAtoms([oi], atomDict)
         return [oi] + hydrogenAtoms
@@ -893,7 +946,9 @@ class TinkerFiles:
     @staticmethod
     def _getAmideResidueAtoms(atomId: int, atomDict: Dict) -> List[int]:
         """Get atoms for an amide residue."""
-        assert atomDict[atomId]["atomicNumber"] == 7, "NH2 residue must start with a nitrogen atom"
+        assert atomDict[atomId]["atomicNumber"] == 7, (
+            "NH2 residue must start with a nitrogen atom"
+        )
         ni = atomId
         hydrogenAtoms = TinkerFiles._getHydrogenAtoms([ni], atomDict)
         return [ni] + hydrogenAtoms
@@ -901,7 +956,9 @@ class TinkerFiles:
     @staticmethod
     def _getMethylAmideResidueAtoms(atomId: int, atomDict: Dict) -> List[int]:
         """Get atoms for a methyl amide residue."""
-        assert atomDict[atomId]["atomicNumber"] == 7, "NME residue must start with a nitrogen atom"
+        assert atomDict[atomId]["atomicNumber"] == 7, (
+            "NME residue must start with a nitrogen atom"
+        )
         ni = atomId
         cai = atomId + 1
         niHydrogenAtoms = TinkerFiles._getHydrogenAtoms([ni], atomDict)
@@ -909,13 +966,17 @@ class TinkerFiles:
         return [ni, cai] + niHydrogenAtoms + caiHydrogenAtoms
 
     @staticmethod
-    def _getStandardAminoAcidResidueAtoms(atomId: int, resName: str, atomDict: Dict) -> List[int]:
+    def _getStandardAminoAcidResidueAtoms(
+        atomId: int, resName: str, atomDict: Dict
+    ) -> List[int]:
         """Get atoms for a standard amino acid residue."""
-        assert atomDict[atomId]["atomicNumber"] == 7, "Amino acid residue must start with a nitrogen atom"
-        
+        assert atomDict[atomId]["atomicNumber"] == 7, (
+            "Amino acid residue must start with a nitrogen atom"
+        )
+
         # Backbone atoms
-        ni = atomId      # Amide nitrogen
-        cai = atomId + 1 # Alpha carbon
+        ni = atomId  # Amide nitrogen
+        cai = atomId + 1  # Alpha carbon
         ci = atomId + 2  # Carbonyl carbon
         oi = atomId + 3  # Carbonyl oxygen
 
@@ -923,9 +984,9 @@ class TinkerFiles:
         niHydrogenAtoms = TinkerFiles._getHydrogenAtoms([ni], atomDict)
 
         # Get side chain atoms
-        # For CYX residues, limit side chain connectivity to 2 bonds 
+        # For CYX residues, limit side chain connectivity to 2 bonds
         # to prevent the side chain from growing past the sulfur atom
-        nBondsSideChain = 2 if resName == "CYX" else None 
+        nBondsSideChain = 2 if resName == "CYX" else None
         caiNeighbours = TinkerFiles._findNeighbours(
             atomDict, cai, nBondsSideChain, exact=False, exclusionList=[ni, ci]
         )
@@ -940,8 +1001,14 @@ class TinkerFiles:
         return [ni, cai, ci, oi] + niHydrogenAtoms + caiNeighbours + ciNeighbours
 
     @staticmethod
-    def _addResidueToTopology(topology: top.Topology, resAtoms: List[int], resName: str,
-                             chain: top.Chain, atomDict: Dict, seenAtomIds: Set[int]) -> None:
+    def _addResidueToTopology(
+        topology: top.Topology,
+        resAtoms: List[int],
+        resName: str,
+        chain: top.Chain,
+        atomDict: Dict,
+        seenAtomIds: Set[int],
+    ) -> None:
         """
         Add a residue to the topology.
 
@@ -962,7 +1029,7 @@ class TinkerFiles:
         """
         residue = topology.addResidue(resName, chain)
         sortedAtoms = sorted(resAtoms)
-        
+
         for atom in sortedAtoms:
             # Add residue info to atom dictionary
             atomDict[atom]["residueName"] = resName
@@ -974,7 +1041,7 @@ class TinkerFiles:
                 elem.Element.getByAtomicNumber(atomDict[atom]["atomicNumber"]),
                 residue,
             )
-        
+
         seenAtomIds.update(sortedAtoms)
 
     # ------------------------------------------------------------------------------------------ #
