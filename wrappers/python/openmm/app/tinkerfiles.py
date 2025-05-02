@@ -29,8 +29,6 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-from __future__ import absolute_import
-
 __author__ = "Joao Morado"
 
 import datetime
@@ -40,7 +38,7 @@ import os
 import re
 import shlex
 import xml.etree.ElementTree as etree
-from collections import deque
+from collections import OrderedDict, deque
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
@@ -55,7 +53,7 @@ from . import topology as top
 
 
 class TinkerFiles:
-    """TinkerFiles parses Tinker files (.xyz, .prm, .key), constructs a Topology, and (optionally) an OpenMM System from it."""
+    """TinkerFiles parses Tinker files (.xyz, .prm, .key, .seq), constructs a Topology, and (optionally) an OpenMM System from it."""
 
     @staticmethod
     def _initialize_class():
@@ -223,9 +221,10 @@ class TinkerFiles:
         periodicBoxVectors: Optional[Tuple[Vec3, Vec3, Vec3]] = None,
         unitCellDimensions: Optional[Vec3] = None,
         writeXmlFiles: bool = False,
+        writePDB: bool = False,
     ):
         """
-        Load exactly one .xyz file and one or more .key or .prm files.
+        Load and parse Tinker files to create a Topology.
 
         Parameters
         ----------
@@ -244,6 +243,8 @@ class TinkerFiles:
             If provided, this overwrites the box information from the xyz file.
         writeXmlFiles : bool, optional, default=False
             If True, the residue and force field XML files are written to disk.
+        writePDB : bool, optional, default=False
+            If True, the PDB file is written to disk.
         """
         # Internal variables to store the data from the files
         self._xyzDict = None
@@ -305,11 +306,11 @@ class TinkerFiles:
         elif unitCellDimensions is not None:
             self.topology.setUnitCellDimensions(unitCellDimensions)
 
-        # Write to PDB
-        # TODO: Remove this after testing
-        from openmm.app import PDBFile
-        with open("output.pdb", "w") as f:
-            PDBFile.writeFile(self.topology, self.positions, f)
+        # Write to PDB # TODO: Remove this after testing
+        if writePDB:
+            from openmm.app import PDBFile
+            with open("output.pdb", "w") as f:
+                PDBFile.writeFile(self.topology, self.positions, f)
 
         if writeXmlFiles:
             self.writeXmlFiles(key)
@@ -1101,42 +1102,25 @@ class TinkerFiles:
     # ------------------------------------------------------------------------------------------ #
     @staticmethod
     def _loadSeqFile(file: str) -> Dict[str, Dict[str, Union[List[str], str]]]:
-        """
-        Load the biopolymer sequence from a TINKER .seq file.
+        """Load and parse a Tinker .seq file containing sequence information.
 
         Parameters
         ----------
         file : str
-            The path to the .seq file.
+            Path to the .seq file to load.
 
         Returns
         -------
         Dict[str, Dict[str, Union[List[str], str]]]
-            A dictionary where keys are chain IDs and values are dictionaries containing
-            'residues': list of three-letter residue codes
-            'chainType': string indicating the type ('PEPTIDE', 'NUCLEIC', or 'GENERIC')
+            Dictionary mapping chain IDs to dictionaries containing:
+            - 'chainType': Type of chain (str)
+            - 'residues': List of 3-letter residue codes (List[str])
 
-        Notes
-        -----
-        This function is heavily based on the TINKER readseq.f routine.
-
-        Tinker .seq files list residues belonging to one or more chains.
-        Each line typically starts with a residue number, optionally preceded
-        by a single-character chain ID. Lines starting with residue number 1
-        indicate the beginning of a new chain. If no chain ID is provided
-        for the first residue, a default ID (A, B, C, ...) is assigned.
-
-        With Chain ID:
-            A     1  CYS PHE GLU PRO PRO PRO ALA THR THR THR GLN THR GLY PHE ARG
-            A    16  LEU ...
-
-        Without Chain ID (Chain 'A' assumed for first block, 'B' for second, etc.):
-            1  CYS PHE GLU PRO PRO PRO ALA THR THR THR GLN THR GLY PHE ARG
-           16  LEU ...
-            1  MET VAL ...  (Starts a new chain, 'B')
+        Raises
+        ------
+        ValueError
+            If the file format is invalid or contains duplicate chain IDs.
         """
-        from collections import OrderedDict
-
         seqDict = OrderedDict()
         defaultChainIndex = 0
         currentChainId = None
@@ -1152,7 +1136,6 @@ class TinkerFiles:
                     startResidue = None
                     residuesStartIndex = -1
 
-                    # Determine line format: Chain ID + Res Num or just Res Num
                     if (
                         lineSplit[0].isalpha()
                         and len(lineSplit[0]) == 1
@@ -1166,11 +1149,14 @@ class TinkerFiles:
                         residuesStartIndex = 1
                     else:
                         raise ValueError(
-                            f"Line {line_num}: Does not have the expected format "
-                            f"(ChainID ResNum ... or ResNum ...): {line.strip()}"
+                            f"Line {line_num}: Invalid format. Expected 'ChainID ResNum ...' or 'ResNum ...'. Got: {line.strip()}"
                         )
 
-                    # Force 3-letter residues, otherwise add whitespaces to the left
+                    if startResidue < 1:
+                        raise ValueError(
+                            f"Line {line_num}: Invalid residue number {startResidue}. Must be positive."
+                        )
+
                     residues = [
                         residue.rjust(3) for residue in lineSplit[residuesStartIndex:]
                     ]
@@ -1184,8 +1170,7 @@ class TinkerFiles:
                         if parsedChainId:
                             if parsedChainId in seqDict:
                                 raise ValueError(
-                                    f"Line {line_num}: Duplicate start definition (residue 1) "
-                                    f"for chain ID '{parsedChainId}'"
+                                    f"Line {line_num}: Duplicate chain ID '{parsedChainId}' found. Each chain must have a unique ID."
                                 )
                             currentChainId = parsedChainId
                         else:
@@ -1200,40 +1185,32 @@ class TinkerFiles:
                     else:
                         if currentChainId is None:
                             raise ValueError(
-                                f"Line {line_num}: Continuation line encountered before "
-                                f"any chain was started (residue 1)."
+                                f"Line {line_num}: Continuation line encountered before any chain was started (residue 1)."
                             )
 
-                        if (
-                            parsedChainId is not None
-                            and parsedChainId != currentChainId
-                        ):
+                        if parsedChainId is not None and parsedChainId != currentChainId:
                             raise ValueError(
-                                f"Line {line_num}: Chain ID '{parsedChainId}' provided for residue "
-                                f"{startResidue}, but expected continuation of chain '{currentChainId}'"
+                                f"Line {line_num}: Chain ID '{parsedChainId}' provided for residue {startResidue}, but expected continuation of chain '{currentChainId}'"
                             )
 
-                        expectedResidueNum = (
-                            len(seqDict[currentChainId]["residues"]) + 1
-                        )
+                        expectedResidueNum = len(seqDict[currentChainId]["residues"]) + 1
                         if startResidue != expectedResidueNum:
                             raise ValueError(
-                                f"Line {line_num}: Residue numbering inconsistency for chain "
-                                f"'{currentChainId}'. Expected residue {expectedResidueNum}, "
-                                f"but line starts with {startResidue}."
+                                f"Line {line_num}: Residue numbering inconsistency for chain '{currentChainId}'. Expected residue {expectedResidueNum}, but line starts with {startResidue}."
                             )
 
-                    # Add residues to the current chain
                     seqDict[currentChainId]["residues"].extend(residues)
 
         except FileNotFoundError:
-            raise FileNotFoundError(f"File {file} not found")
+            raise FileNotFoundError(f"Sequence file not found: {file}")
         except IOError as e:
-            raise IOError(f"Error reading file {file}: {e}")
+            raise IOError(f"Error reading sequence file {file}: {e}")
         except Exception as e:
-            raise ValueError(f"Error parsing {file}: {e}")
+            raise ValueError(f"Error parsing sequence file {file}: {e}")
 
-        # Determine chain types
+        if not seqDict:
+            raise ValueError(f"No valid chains found in sequence file {file}")
+
         for chainId, chainData in seqDict.items():
             residues = chainData["residues"]
             aminoAcidIntersect = set(residues) & set(TinkerFiles._AMINO_ACID_LIST)
@@ -1254,96 +1231,42 @@ class TinkerFiles:
     #                                   XYZ FILE PARSING                                         #
     # ------------------------------------------------------------------------------------------ #
     @staticmethod
-    def _parseAndStoreXyzLine(
-        line: str, lineNum: int, xyzDict: Dict[int, Dict]
-    ) -> None:
-        """
-        Parse a line of an .xyz file and store the data in a dictionary.
-
-        Parameters
-        ----------
-        line : str
-            The line containing atom data.
-        lineNum : int
-            The line number in the file, for error reporting.
-        xyzDict : Dict[int, Dict]
-            The dictionary to store parsed atom data.
-
-        Raises
-        ------
-        ValueError
-            If the line format is invalid.
-        """
-        fields = line.split()
-        if len(fields) < 6:
-            raise ValueError(
-                f"Line {lineNum}: Each line in the TINKER .xyz file must have at least 6 fields"
-            )
-
-        try:
-            index = int(fields[0]) - 1
-            symbol = str(fields[1])
-            # Convert from Angstroms to nanometers
-            x = float(fields[2]) * 0.1
-            y = float(fields[3]) * 0.1
-            z = float(fields[4]) * 0.1
-            position = Vec3(x, y, z)
-            atomType = str(fields[5])
-            bonds = [int(bond) - 1 for bond in fields[6:]]
-
-            xyzDict[index] = {
-                "symbol": symbol,
-                "positions": position,
-                "atomType": atomType,
-                "bonds": bonds,
-            }
-        except ValueError as e:
-            raise ValueError(f"Line {lineNum}: Error parsing atom data: {e}")
-
-    @staticmethod
     def _loadXyzFile(file: str) -> Tuple[Dict[int, Dict], List[Vec3], List[Vec3]]:
         """
-        Load a TINKER .xyz file.
+        Load and parse a Tinker .xyz file.
 
         Parameters
         ----------
         file : str
-            The path to the .xyz file to load.
+            Path to the .xyz file to load.
 
         Returns
         -------
         Tuple[Dict[int, Dict], List[Vec3], List[Vec3]]
             A tuple containing:
-            - Dictionary with atom data (key: atom index, value: atom properties)
-            - Box vectors (if periodic, otherwise None)
+            - Dictionary mapping atom indices to their properties
             - List of atomic positions
-
-        Raises
-        ------
-        FileNotFoundError
-            If the file does not exist.
-        ValueError
-            If there is an error parsing the file.
+            - List of periodic box vectors (if present, otherwise None)
         """
         xyzDict = {}
         boxVectors = None
 
         try:
             with open(file, "r") as f:
-                # Read number of atoms
                 firstLine = f.readline().strip()
                 if not firstLine:
                     raise ValueError("Empty .xyz file")
 
                 try:
                     nAtoms = int(firstLine.split()[0])
+                    if nAtoms <= 0:
+                        raise ValueError(f"Invalid number of atoms: {nAtoms}. Must be positive.")
                 except (ValueError, IndexError):
-                    raise ValueError("First line must contain the number of atoms")
+                    raise ValueError("First line must contain a positive integer number of atoms")
 
                 linesLeft = nAtoms
                 lineNum = 1
 
-                # Read the second line
                 secondLine = f.readline().strip()
                 lineNum += 1
                 if not secondLine:
@@ -1351,26 +1274,21 @@ class TinkerFiles:
 
                 secondLineSplit = secondLine.split()
 
-                # Check for box information (second line contains box dimensions if it has 6 fields and doesn't start with "1")
                 if len(secondLineSplit) == 6 and secondLineSplit[0] != "1":
                     try:
-                        # Read box unit vectors and angles from the second line
-                        # Convert lengths from Angstroms to nm and angles from degrees to radians
                         box = [
                             float(val) * (0.1 if i < 3 else math.pi / 180.0)
                             for i, val in enumerate(secondLineSplit)
                         ]
+                        if any(math.isnan(x) or math.isinf(x) for x in box):
+                            raise ValueError("Box vectors contain invalid values (NaN or Inf)")
                         boxVectors = computePeriodicBoxVectors(*box)
                     except ValueError as e:
-                        raise ValueError(
-                            f"Line {lineNum}: Error parsing box vectors: {e}"
-                        )
+                        raise ValueError(f"Line {lineNum}: Error parsing box vectors: {e}")
                 else:
-                    # No box information, so treat the second line as atom positions
                     TinkerFiles._parseAndStoreXyzLine(secondLine, lineNum, xyzDict)
                     linesLeft -= 1
 
-                # Process the remaining atom lines
                 for i in range(linesLeft):
                     lineNum += 1
                     atomLine = f.readline().strip()
@@ -1380,22 +1298,82 @@ class TinkerFiles:
                         )
                     TinkerFiles._parseAndStoreXyzLine(atomLine, lineNum, xyzDict)
 
-                # Check if we have the expected number of atoms
                 if len(xyzDict) != nAtoms:
                     raise ValueError(
                         f"Expected {nAtoms} atoms but found {len(xyzDict)}"
                     )
 
-            # Store the positions
             positions = [xyzDict[i]["positions"] for i in range(nAtoms)]
             return xyzDict, boxVectors, positions
 
         except FileNotFoundError:
-            raise FileNotFoundError(f"File {file} not found")
+            raise FileNotFoundError(f"XYZ file not found: {file}")
         except IOError as e:
-            raise IOError(f"Error reading file {file}: {e}")
+            raise IOError(f"Error reading XYZ file {file}: {e}")
         except Exception as e:
-            raise ValueError(f"Error parsing {file}: {e}")
+            raise ValueError(f"Error parsing XYZ file {file}: {e}")
+
+    @staticmethod
+    def _parseAndStoreXyzLine(line: str, lineNum: int, xyzDict: Dict[int, Dict]) -> None:
+        """
+        Parse a single line from a TINKER .xyz file and store the data in the xyzDict.
+
+        Parameters
+        ----------
+        line : str
+            The line to parse from the .xyz file.
+        lineNum : int
+            The line number in the file (for error reporting).
+        xyzDict : Dict[int, Dict]
+            Dictionary to store the parsed atom data, keyed by atom index.
+        """
+        fields = line.split()
+        if len(fields) < 6:
+            raise ValueError(
+                f"Line {lineNum}: Each line in the TINKER .xyz file must have at least 6 fields"
+            )
+
+        try:
+            index = int(fields[0]) - 1
+            if index < 0:
+                raise ValueError(f"Line {lineNum}: Invalid atom index {index + 1}. Must be positive.")
+
+            symbol = str(fields[1])
+            if not symbol:
+                raise ValueError(f"Line {lineNum}: Empty atom symbol")
+
+            try:
+                x = float(fields[2]) * 0.1
+                y = float(fields[3]) * 0.1
+                z = float(fields[4]) * 0.1
+                if any(math.isnan(coord) or math.isinf(coord) for coord in (x, y, z)):
+                    raise ValueError("Atom coordinates contain invalid values (NaN or Inf)")
+                position = Vec3(x, y, z)
+            except ValueError as e:
+                raise ValueError(f"Line {lineNum}: Error parsing atom coordinates: {e}")
+
+            atomType = str(fields[5])
+            if not atomType:
+                raise ValueError(f"Line {lineNum}: Empty atom type")
+
+            try:
+                bonds = [int(bond) - 1 for bond in fields[6:]]
+                if any(bond < 0 for bond in bonds):
+                    raise ValueError("Invalid bond index (must be positive)")
+            except ValueError as e:
+                raise ValueError(f"Line {lineNum}: Error parsing bond indices: {e}")
+
+            if index in xyzDict:
+                raise ValueError(f"Line {lineNum}: Duplicate atom index {index + 1}")
+
+            xyzDict[index] = {
+                "symbol": symbol,
+                "positions": position,
+                "atomType": atomType,
+                "bonds": bonds,
+            }
+        except ValueError as e:
+            raise ValueError(f"Line {lineNum}: {str(e)}")
 
     # ------------------------------------------------------------------------------------------ #
     #                                   KEY FILE PARSING                                         #
