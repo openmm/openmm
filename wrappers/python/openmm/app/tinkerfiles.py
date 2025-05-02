@@ -307,7 +307,6 @@ class TinkerFiles:
         # Write to PDB
         # TODO: Remove this after testing
         from openmm.app import PDBFile
-
         with open("output.pdb", "w") as f:
             PDBFile.writeFile(self.topology, self.positions, f)
 
@@ -817,12 +816,21 @@ class TinkerFiles:
                             for neighbour in niNeighbours
                             if atomDict[neighbour]["atomicNumber"] == 1
                         ]                        
-                        # Get the atoms attached to the alpha carbon atom (H + side chain atoms)
+
+                        # Get the number of bonds in the side chain
+                        if resName in "CYX":
+                            # Disulfide bond
+                            # --CA-CH2-S-//
+                            nBondsSideChain = 2
+                        else:
+                            # Linear and cyclic residues
+                            nBondsSideChain = None
+
                         caiNeighbours = TinkerFiles._findNeighbours(
                             atomDict,
                             cai,
-                            None,
-                            exact=True,
+                            nBondsSideChain,
+                            exact=False,
                             exclusionList=[ni, ci],
                         )
                         caiNeighbours = [
@@ -830,7 +838,7 @@ class TinkerFiles:
                             for neighbour in caiNeighbours
                             if neighbour != cai
                         ]
-                        
+
                         # Get the atoms attached to the carbonyl carbon atom
                         ciNeighbours = TinkerFiles._findNeighbours(
                             atomDict,
@@ -844,7 +852,6 @@ class TinkerFiles:
                             for neighbour in ciNeighbours
                             if atomDict[neighbour]["atomicNumber"] != 7
                         ]
-                        
                         resAtoms = [ni, cai, ci, oi] + hydrogenAtoms + caiNeighbours + ciNeighbours
                         
                     # Add the residue to the topology
