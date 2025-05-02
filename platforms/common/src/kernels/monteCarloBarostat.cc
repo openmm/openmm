@@ -106,5 +106,6 @@ KERNEL void computeMolecularKineticEnergy(int numMolecules, GLOBAL mixed4* RESTR
         }
         if (LOCAL_ID == 0)
             buffers[j][GROUP_ID] = tempBuffer[0];
+        SYNC_THREADS;
     }
 }
