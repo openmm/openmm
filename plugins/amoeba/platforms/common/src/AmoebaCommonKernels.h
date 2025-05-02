@@ -168,7 +168,7 @@ protected:
     int numMultipoles, maxInducedIterations, maxExtrapolationOrder;
     int fixedFieldThreads, inducedFieldThreads, electrostaticsThreads;
     int gridSizeX, gridSizeY, gridSizeZ;
-    double pmeAlpha, inducedEpsilon;
+    double pmeAlpha, inducedEpsilon, totalCharge;
     bool usePME, hasQuadrupoles, hasInitializedScaleFactors, multipolesAreValid, hasCreatedEvent;
     AmoebaMultipoleForce::PolarizationType polarizationType;
     ComputeContext& cc;
@@ -507,7 +507,7 @@ protected:
     int numParticles, maxExtrapolationOrder, maxTiles, fieldThreadBlockSize;
     int gridSizeX, gridSizeY, gridSizeZ;
     int dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ;
-    double pmeAlpha, dpmeAlpha, cutoff;
+    double pmeAlpha, dpmeAlpha, cutoff, totalCharge;
     bool usePME, hasInitializedKernels, multipolesAreValid;
     std::vector<double> extrapolationCoefficients;
     ComputeContext& cc;
