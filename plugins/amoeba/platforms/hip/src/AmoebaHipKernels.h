@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Portions copyright (c) 2021 Advanced Micro Devices, Inc.                   *
  * Authors: Mark Friedrichs, Peter Eastman                                    *
  * Contributors:                                                              *
@@ -31,9 +31,9 @@
 #include "openmm/amoebaKernels.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
+#include "openmm/common/ComputeSort.h"
 #include "HipContext.h"
 #include "HipNonbondedUtilities.h"
-#include "HipSort.h"
 #include "AmoebaCommonKernels.h"
 
 namespace OpenMM {
@@ -62,9 +62,8 @@ private:
 class HipCalcHippoNonbondedForceKernel : public CommonCalcHippoNonbondedForceKernel {
 public:
     HipCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, HipContext& cu, const System& system) :
-            CommonCalcHippoNonbondedForceKernel(name, platform, cu, system), cu(cu), sort(NULL) {
+            CommonCalcHippoNonbondedForceKernel(name, platform, cu, system), cu(cu) {
     }
-    ~HipCalcHippoNonbondedForceKernel();
     /**
      * Initialize the kernel.
      *
@@ -83,7 +82,7 @@ public:
      */
     void sortGridIndex();
 private:
-    class SortTrait : public HipSort::SortTrait {
+    class SortTrait : public ComputeSortImpl::SortTrait {
         int getDataSize() const {return 8;}
         int getKeySize() const {return 4;}
         const char* getDataType() const {return "int2";}
@@ -94,7 +93,7 @@ private:
         const char* getSortKey() const {return "value.y";}
     };
     HipContext& cu;
-    HipSort* sort;
+    ComputeSort sort;
 };
 
 } // namespace OpenMM

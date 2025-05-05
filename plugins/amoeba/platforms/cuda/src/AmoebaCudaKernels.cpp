@@ -82,18 +82,12 @@ static void setPeriodicBoxArgs(ComputeContext& cc, ComputeKernel kernel, int ind
  *                           HippoNonbondedForce                              *
  * -------------------------------------------------------------------------- */
 
-CudaCalcHippoNonbondedForceKernel::~CudaCalcHippoNonbondedForceKernel() {
-    ContextSelector selector(cc);
-    if (sort != NULL)
-        delete sort;
-}
-
 void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
     CommonCalcHippoNonbondedForceKernel::initialize(system, force);
     if (usePME) {
         ContextSelector selector(cc);
         CudaContext& cu = dynamic_cast<CudaContext&>(cc);
-        sort = new CudaSort(cu, new SortTrait(), cc.getNumAtoms());
+        sort = cu.createSort(new SortTrait(), cc.getNumAtoms());
     }
 }
 

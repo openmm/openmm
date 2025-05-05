@@ -32,12 +32,14 @@
 #include "OpenCLArray.h"
 #include "OpenCLBondedUtilities.h"
 #include "OpenCLEvent.h"
+#include "OpenCLFFT3D.h"
 #include "OpenCLForceInfo.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLKernelSources.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLProgram.h"
 #include "OpenCLQueue.h"
+#include "OpenCLSort.h"
 #include "openmm/common/ComputeArray.h"
 #include "openmm/MonteCarloFlexibleBarostat.h"
 #include "openmm/Platform.h"
@@ -206,7 +208,6 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
         this->platformIndex = bestPlatform;
         if (device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() < minThreadBlockSize)
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
-        compilationDefines["WORK_GROUP_SIZE"] = intToString(ThreadBlockSize);
         if (platformVendor.size() >= 5 && platformVendor.substr(0, 5) == "Intel")
             defaultOptimizationOptions = "";
         else
@@ -577,8 +578,8 @@ void OpenCLContext::initializeContexts() {
     getPlatformData().initializeContexts(system);
 }
 
-OpenCLFFT3D* OpenCLContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
-    return new OpenCLFFT3D(*this, xsize, ysize, zsize, realToComplex);
+FFT3D OpenCLContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
+    return FFT3D(new OpenCLFFT3D(*this, xsize, ysize, zsize, realToComplex));
 }
 
 int OpenCLContext::findLegalFFTDimension(int minimum) {
@@ -685,6 +686,10 @@ OpenCLArray* OpenCLContext::createArray() {
 
 ComputeEvent OpenCLContext::createEvent() {
     return shared_ptr<ComputeEventImpl>(new OpenCLEvent(*this));
+}
+
+ComputeSort OpenCLContext::createSort(ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform) {
+    return shared_ptr<ComputeSortImpl>(new OpenCLSort(*this, trait, length, uniform));
 }
 
 ComputeProgram OpenCLContext::compileProgram(const std::string source, const std::map<std::string, std::string>& defines) {

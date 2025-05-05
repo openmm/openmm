@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Portions copyright (c) 2021 Advanced Micro Devices, Inc.                   *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
@@ -56,17 +56,11 @@ using namespace std;
  *                           HippoNonbondedForce                              *
  * -------------------------------------------------------------------------- */
 
-HipCalcHippoNonbondedForceKernel::~HipCalcHippoNonbondedForceKernel() {
-    ContextSelector selector(cc);
-    if (sort != NULL)
-        delete sort;
-}
-
 void HipCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
     CommonCalcHippoNonbondedForceKernel::initialize(system, force);
     if (usePME) {
         ContextSelector selector(cc);
-        sort = new HipSort(cu, new SortTrait(), cc.getNumAtoms());
+        sort = cu.createSort(new SortTrait(), cc.getNumAtoms());
     }
 }
 

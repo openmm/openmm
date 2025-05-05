@@ -39,6 +39,7 @@
 #include "HipNonbondedUtilities.h"
 #include "HipProgram.h"
 #include "HipQueue.h"
+#include "HipSort.h"
 #include "openmm/common/ComputeArray.h"
 #include "openmm/common/ContextSelector.h"
 #include "SHA1.h"
@@ -691,8 +692,12 @@ ComputeEvent HipContext::createEvent() {
     return shared_ptr<ComputeEventImpl>(new HipEvent(*this));
 }
 
-HipFFT3D* HipContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
-    return new HipFFT3D(*this, xsize, ysize, zsize, realToComplex);
+ComputeSort HipContext::createSort(ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform) {
+    return shared_ptr<ComputeSortImpl>(new HipSort(*this, trait, length, uniform));
+}
+
+FFT3D HipContext::createFFT(int xsize, int ysize, int zsize, bool realToComplex) {
+    return FFT3D(new HipFFT3D(*this, xsize, ysize, zsize, realToComplex));
 }
 
 int HipContext::findLegalFFTDimension(int minimum) {

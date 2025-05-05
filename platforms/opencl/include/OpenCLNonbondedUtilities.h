@@ -30,6 +30,7 @@
 #include "openmm/System.h"
 #include "OpenCLArray.h"
 #include "OpenCLExpressionUtilities.h"
+#include "openmm/common/ComputeSort.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include <sstream>
 #include <string>
@@ -38,7 +39,6 @@
 namespace OpenMM {
     
 class OpenCLContext;
-class OpenCLSort;
 
 /**
  * This class provides a generic interface for calculating nonbonded interactions.  It does this in two
@@ -82,8 +82,11 @@ public:
      * @param forceGroup     the force group in which the interaction should be calculated
      * @param useNeighborList  specifies whether a neighbor list should be used to optimize this interaction.  This should
      *                         be viewed as only a suggestion.  Even when it is false, a neighbor list may be used anyway.
+     * @param supportsPairList specifies whether this interaction can work with a neighbor list that uses a separate pair list
      */
-    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel, int forceGroup, bool useNeighborList=true);
+    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance,
+                        const std::vector<std::vector<int> >& exclusionList, const std::string& kernel,
+                        int forceGroup, bool useNeighborList=true, bool supportsPairList=false);
     /**
      * Add a per-atom parameter that the default interaction kernel may depend on.
      */
@@ -324,7 +327,7 @@ private:
     OpenCLArray largeBlockBoundingBox;
     OpenCLArray oldPositions;
     OpenCLArray rebuildNeighborList;
-    OpenCLSort* blockSorter;
+    ComputeSort blockSorter;
     cl::Event downloadCountEvent;
     cl::Buffer* pinnedCountBuffer;
     unsigned int* pinnedCountMemory;

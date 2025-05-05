@@ -30,9 +30,9 @@
 #include "openmm/amoebaKernels.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
+#include "openmm/common/ComputeSort.h"
 #include "AmoebaCommonKernels.h"
 #include "OpenCLContext.h"
-#include "OpenCLSort.h"
 
 namespace OpenMM {
 
@@ -59,9 +59,8 @@ public:
 class OpenCLCalcHippoNonbondedForceKernel : public CommonCalcHippoNonbondedForceKernel {
 public:
     OpenCLCalcHippoNonbondedForceKernel(const std::string& name, const Platform& platform, OpenCLContext& cl, const System& system) :
-            CommonCalcHippoNonbondedForceKernel(name, platform, cl, system), sort(NULL) {
+            CommonCalcHippoNonbondedForceKernel(name, platform, cl, system) {
     }
-    ~OpenCLCalcHippoNonbondedForceKernel();
     /**
      * Initialize the kernel.
      * 
@@ -80,7 +79,7 @@ public:
      */
     void sortGridIndex();
 private:
-    class SortTrait : public OpenCLSort::SortTrait {
+    class SortTrait : public ComputeSortImpl::SortTrait {
         int getDataSize() const {return 8;}
         int getKeySize() const {return 4;}
         const char* getDataType() const {return "int2";}
@@ -90,7 +89,7 @@ private:
         const char* getMaxValue() const {return "make_int2(2147483647, 2147483647)";}
         const char* getSortKey() const {return "value.y";}
     };
-    OpenCLSort* sort;
+    ComputeSort sort;
 };
 
 } // namespace OpenMM

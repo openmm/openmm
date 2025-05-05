@@ -48,7 +48,7 @@ class HipContext;
  * multiply every value of the original data set by the total number of data points.
  */
 
-class OPENMM_EXPORT_COMMON HipFFT3D : public FFT3D {
+class OPENMM_EXPORT_COMMON HipFFT3D : public FFT3DImpl {
 public:
     /**
      * Create an HipFFT3D object for performing transforms of a particular size.

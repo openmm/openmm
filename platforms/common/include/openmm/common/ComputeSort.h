@@ -1,5 +1,5 @@
-#ifndef OPENMM_OPENCLEVENT_H_
-#define OPENMM_OPENCLEVENT_H_
+#ifndef OPENMM_COMPUTESORT_H_
+#define OPENMM_COMPUTESORT_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2019-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -27,37 +27,76 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLContext.h"
-#include "openmm/common/ComputeEvent.h"
-#include <vector>
+#include "openmm/common/ArrayInterface.h"
+#include "openmm/common/windowsExportCommon.h"
+#include <memory>
 
 namespace OpenMM {
 
 /**
- * This is the OpenCL implementation of the ComputeKernelImpl interface. 
+ * This abstract class represents an algorithm for sorting arrays.  It is created
+ * by calling createEvent() on a ComputeContext, which returns an instance of a
+ * platform-specific subclass.
+ *
+ * Instead of referring to this class directly, it is best to use a ComputeSort, which is
+ * a typedef for a shared_ptr to a ComputeSortImpl.  This allows you to treat it as having
+ * value semantics, and frees you from having to manage memory.  
  */
 
-class OpenCLEvent : public ComputeEventImpl {
+class OPENMM_EXPORT_COMMON ComputeSortImpl {
 public:
-    OpenCLEvent(OpenCLContext& context);
+    class SortTrait;
+    virtual ~ComputeSortImpl() {
+    }
     /**
-     * Place the event into the device's execution queue.
+     * Sort an array.
      */
-    void enqueue();
+    virtual void sort(ArrayInterface& data) = 0;
+};
+
+typedef std::shared_ptr<ComputeSortImpl> ComputeSort;
+
+/**
+ * A subclass of SortTrait defines the type of value to sort, and the key for sorting them.
+ */
+class ComputeSortImpl::SortTrait {
+public:
+    virtual ~SortTrait() {
+    }
     /**
-     * Block until all operations started before the call to enqueue() have completed.
+     * Get the size of each data value in bytes.
      */
-    void wait();
+    virtual int getDataSize() const = 0;
     /**
-     * Enqueue a barrier that causes a specified ComputeQueue to block until all
-     * operations started before the call to enqueue() have completed.
+     * Get the size of each key value in bytes.
      */
-    void queueWait(ComputeQueue queue);
-private:
-    OpenCLContext& context;
-    std::vector<cl::Event> event;
+    virtual int getKeySize() const = 0;
+    /**
+     * Get the data type of the values to sort.
+     */
+    virtual const char* getDataType() const = 0;
+    /**
+     * Get the data type of the sorting key.
+     */
+    virtual const char* getKeyType() const = 0;
+    /**
+     * Get the minimum value a key can take.
+     */
+    virtual const char* getMinKey() const = 0;
+    /**
+     * Get the maximum value a key can take.
+     */
+    virtual const char* getMaxKey() const = 0;
+    /**
+     * Get a value whose key is guaranteed to equal getMaxKey().
+     */
+    virtual const char* getMaxValue() const = 0;
+    /**
+     * Get the source code to select the key from the data value.
+     */
+    virtual const char* getSortKey() const = 0;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_OPENCLEVENT_H_*/
+#endif /*OPENMM_COMPUTESORT_H_*/

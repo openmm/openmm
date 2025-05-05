@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/common/ArrayInterface.h"
+#include <memory>
 
 namespace OpenMM {
 
@@ -44,11 +45,15 @@ namespace OpenMM {
  * Note that this class performs an unnormalized transform.  That means that if you perform
  * a forward transform followed immediately by an inverse transform, the effect is to
  * multiply every value of the original data set by the total number of data points.
+ * 
+ * Instead of referring to this class directly, it is best to use a FFT3D, which is
+ * a typedef for a shared_ptr to a FFT3DImpl.  This allows you to treat it as having
+ * value semantics, and frees you from having to manage memory.  
  */
 
-class OPENMM_EXPORT_COMMON FFT3D {
+class OPENMM_EXPORT_COMMON FFT3DImpl {
 public:
-    virtual ~FFT3D() {
+    virtual ~FFT3DImpl() {
     }
     /**
      * Perform a Fourier transform.  The transform cannot be done in-place: the input and output
@@ -65,6 +70,8 @@ public:
      */
     virtual void execFFT(ArrayInterface& in, ArrayInterface& out, bool forward=true) = 0;
 };
+
+typedef std::shared_ptr<FFT3DImpl> FFT3D;
 
 } // namespace OpenMM
 
