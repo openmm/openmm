@@ -1336,7 +1336,7 @@ class TestForceField(unittest.TestCase):
     def test_Disulfides(self):
         """Test that various force fields handle disulfides correctly."""
         pdb = PDBFile('systems/bpti.pdb')
-        for ff in ['amber99sb.xml', 'amber14-all.xml', 'charmm36.xml', 'amberfb15.xml', 'amoeba2013.xml']:
+        for ff in ['amber99sb.xml', 'amber14-all.xml', 'amber19-all.xml', 'charmm36.xml', 'charmm36_2024.xml', 'amberfb15.xml', 'amoeba2013.xml']:
             forcefield = ForceField(ff)
             system = forcefield.createSystem(pdb.topology)
 
