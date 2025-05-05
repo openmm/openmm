@@ -25,7 +25,7 @@ steps.
         from sys import stdout
 
         pdb = PDBFile('input.pdb')
-        forcefield = ForceField('amber19-all.xml', 'amber14/tip3pfb.xml')
+        forcefield = ForceField('amber19-all.xml', 'amber19/tip3pfb.xml')
         system = forcefield.createSystem(pdb.topology, nonbondedMethod=PME,
                 nonbondedCutoff=1*nanometer, constraints=HBonds)
         integrator = LangevinMiddleIntegrator(300*kelvin, 1/picosecond, 0.004*picoseconds)
@@ -87,14 +87,14 @@ Make sure you include the single quotes around the file name.  OpenMM also can l
 files in the newer PDBx/mmCIF format: just change :class:`PDBFile` to :class:`PDBxFile`.
 ::
 
-    forcefield = ForceField('amber19-all.xml', 'amber14/tip3pfb.xml')
+    forcefield = ForceField('amber19-all.xml', 'amber19/tip3pfb.xml')
 
 This line specifies the force field to use for the simulation.  Force fields are
 defined by XML files.  OpenMM includes XML files defining lots of standard force fields (see Section :numref:`force-fields`).
 If you find you need to extend the repertoire of force fields available,
 you can find more information on how to create these XML files in Chapter :numref:`creating-force-fields`.
 In this case we load two of those files: :file:`amber19-all.xml`, which contains the
-Amber19 force field, and :file:`amber14/tip3pfb.xml`, which contains the TIP3P-FB water model.  The
+Amber19 force field, and :file:`amber19/tip3pfb.xml`, which contains the TIP3P-FB water model.  The
 :class:`ForceField` object is assigned to a variable called :code:`forcefield`\ .
 ::
 
@@ -456,7 +456,7 @@ the main force field, and possibly a second file to define the water model
 (either implicit or explicit).  For example:
 ::
 
-    forcefield = ForceField('amber19-all.xml', 'amber14/tip3pfb.xml')
+    forcefield = ForceField('amber19-all.xml', 'amber19/tip3pfb.xml')
 
 In some cases, one XML file may load several others.  For example, :file:`amber19-all.xml`
 is really just a shortcut for loading several different files that together make up
@@ -488,29 +488,29 @@ File                                 Parameters
 :file:`amber19/DNA.OL21.xml`         DNA\ :cite:`Zgarbova2021`
 :file:`amber14/RNA.OL3.xml`          RNA
 :file:`amber14/GLYCAM_06j-1.xml`     Carbohydrates and glycosylated proteins\ :cite:`Kirschner2007`
-:file:`amber14/tip3p.xml`            TIP3P water model\ :cite:`Jorgensen1983` and ions
-:file:`amber14/tip3pfb.xml`          TIP3P-FB water model\ :cite:`Wang2014` and ions
-:file:`amber14/tip4pew.xml`          TIP4P-Ew water model\ :cite:`Horn2004` and ions
-:file:`amber14/tip4pfb.xml`          TIP4P-FB water model\ :cite:`Wang2014` and ions
-:file:`amber14/spce.xml`             SPC/E water model\ :cite:`Berendsen1987` and ions
-:code:`amber14/opc.xml`              OPC water model\ :cite:`Izadi2014` and ions
-:code:`amber14/opc3.xml`             OPC3 water model\ :cite:`Izadi2016` and ions
+:file:`amber19/tip3p.xml`            TIP3P water model\ :cite:`Jorgensen1983` and ions
+:file:`amber19/tip3pfb.xml`          TIP3P-FB water model\ :cite:`Wang2014` and ions
+:file:`amber19/tip4pew.xml`          TIP4P-Ew water model\ :cite:`Horn2004` and ions
+:file:`amber19/tip4pfb.xml`          TIP4P-FB water model\ :cite:`Wang2014` and ions
+:file:`amber19/spce.xml`             SPC/E water model\ :cite:`Berendsen1987` and ions
+:file:`amber19/opc.xml`              OPC water model\ :cite:`Izadi2014` and ions
+:file:`amber19/opc3.xml`             OPC3 water model\ :cite:`Izadi2016` and ions
 ===================================  ===========================================
 
 As a convenience, the file :file:`amber19-all.xml` can be used as a shortcut to
 include :file:`amber19/protein.ff19SB.xml`, :file:`amber19/DNA.OL21.xml`, and
 :file:`amber14/RNA.OL3.xml`.  In most cases, you can simply include that file,
-plus one of the water models, such as :file:`amber14/tip3pfb.xml` for the
+plus one of the water models, such as :file:`amber19/tip3pfb.xml` for the
 TIP3P-FB water model and ions\ :cite:`Wang2014`:
 ::
 
-    forcefield = ForceField('amber19-all.xml', 'amber14/tip3pfb.xml')
+    forcefield = ForceField('amber19-all.xml', 'amber19/tip3pfb.xml')
 
 GLYCAM is not included by default, since it is quite large.  If your system contains
 carbohydrates, include that file as well:
 ::
 
-    forcefield = ForceField('amber19-all.xml', 'amber19/tip3pfb.xml', 'amber19/GLYCAM_06j-1.xml')
+    forcefield = ForceField('amber19-all.xml', 'amber19/tip3pfb.xml', 'amber14/GLYCAM_06j-1.xml')
 
 Be aware that GLYCAM works somewhat differently from most force fields.  It uses
 its own nonstandard `naming convention <https://glycam.org/docs/forcefield/glycam-naming-2/index.html>`_
@@ -524,9 +524,9 @@ to them.
    the Amber14 and Amber19 force fields and can be used with the files in the
    :code:`amber19` directory.
 
-.. tip:: The solvent model XML files included under the :file:`amber14/` directory
+.. tip:: The solvent model XML files included under the :file:`amber19/` directory
          include both water *and* ions compatible with that water model, so if you
-         mistakenly specify :file:`tip3p.xml` instead of :file:`amber14/tip3p.xml`,
+         mistakenly specify :file:`tip3p.xml` instead of :file:`amber19/tip3p.xml`,
          you run the risk of having :class:`ForceField` throw an exception since
          :file:`tip3p.xml` will be missing parameters for ions in your system.
 
@@ -569,9 +569,14 @@ File                                 Parameters
 :file:`amber14/tip4pew.xml`          TIP4P-Ew water model\ :cite:`Horn2004` and ions
 :file:`amber14/tip4pfb.xml`          TIP4P-FB water model\ :cite:`Wang2014` and ions
 :file:`amber14/spce.xml`             SPC/E water model\ :cite:`Berendsen1987` and ions
-:code:`amber14/opc.xml`              OPC water model\ :cite:`Izadi2014` and ions
-:code:`amber14/opc3.xml`             OPC3 water model\ :cite:`Izadi2016` and ions
+:file:`amber14/opc.xml`              OPC water model\ :cite:`Izadi2014` and ions
+:file:`amber14/opc3.xml`             OPC3 water model\ :cite:`Izadi2016` and ions
 ===================================  ============================================
+
+.. tip::
+   The XML files for water and ions provided in the :file:`amber14/` directory
+   are identical to those in the :file:`amber19/` directory.  They are provided
+   in both directories for compatibility and convenience.
 
 The converted parameter sets come from the `AmberTools 17 release <http://ambermd.org/AmberTools.php>`_
 and were converted using the openmmforcefields_ package and `ParmEd <https://github.com/parmed/parmed>`_.
