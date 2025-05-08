@@ -440,7 +440,7 @@ static void testMultipoleAmmoniaMutualPolarization() {
 static void setupAndGetForcesEnergyMultipoleWater(AmoebaMultipoleForce::NonbondedMethod nonbondedMethod,
                                                    AmoebaMultipoleForce::PolarizationType polarizationType,
                                                    double cutoff, int inputPmeGridDimension, std::vector<Vec3>& forces,
-                                                   double& energy) {
+                                                   double& energy, int offsetIndex = -1) {
 
     // beginning of Multipole setup
 
@@ -578,6 +578,9 @@ static void setupAndGetForcesEnergyMultipoleWater(AmoebaMultipoleForce::Nonbonde
     positions[10]             = Vec3(  6.0459330e-01,   3.0620510e-01,   -7.0100130e-01);
     positions[11]             = Vec3(  5.0590640e-01,   1.8880920e-01,   -6.8813470e-01);
 
+    if (offsetIndex != -1)
+        positions[offsetIndex] += a + b + c;
+
     system.addForce(amoebaMultipoleForce);
 
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
@@ -601,27 +604,31 @@ static void testMultipoleWaterPMEDirectPolarization() {
     std::vector<Vec3> forces;
     double energy;
 
-    setupAndGetForcesEnergyMultipoleWater(AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Direct, 
-                                            cutoff, inputPmeGridDimension, forces, energy);
-    std::vector<Vec3> expectedForces(numberOfParticles);
+    // test periodic boundary conditions by moving individual atoms to a different periodic image
+    for (int offsetIndex = -1; offsetIndex < 12; ++offsetIndex) {
 
-    double expectedEnergy     = 6.4585115e-1;
+        setupAndGetForcesEnergyMultipoleWater(AmoebaMultipoleForce::PME, AmoebaMultipoleForce::Direct,
+                                               cutoff, inputPmeGridDimension, forces, energy, offsetIndex);
+        std::vector<Vec3> expectedForces(numberOfParticles);
 
-    expectedForces[0]         = Vec3( -1.2396731e+00,  -2.4231698e+01,   8.3348523e+00);
-    expectedForces[1]         = Vec3( -3.3737276e+00,   9.9304523e+00,  -6.3917827e+00);
-    expectedForces[2]         = Vec3(  4.4062247e+00,   1.9518971e+01,  -4.6552873e+00);
-    expectedForces[3]         = Vec3( -1.3128824e+00,  -1.2887339e+00,  -1.4473147e+00);
-    expectedForces[4]         = Vec3(  2.1137034e+00,   3.9457973e-01,   2.9269129e-01);
-    expectedForces[5]         = Vec3(  1.0271174e+00,   1.2039367e+00,   1.2112214e+00);
-    expectedForces[6]         = Vec3( -3.2082903e+00,   1.4979371e+01,  -1.0274832e+00);
-    expectedForces[7]         = Vec3( -1.1880320e+00,  -1.5177166e+01,   2.5525509e+00);
-    expectedForces[8]         = Vec3(  4.3607105e+00,  -7.0253274e+00,   2.9522580e-01);
-    expectedForces[9]         = Vec3( -3.0175134e+00,   1.3607102e+00,   6.6883370e+00);
-    expectedForces[10]        = Vec3(  9.2036949e-01,  -1.4717629e+00,  -3.3362339e+00);
-    expectedForces[11]        = Vec3(  1.2523841e+00,  -1.9794292e+00,  -3.4670129e+00);
+        double expectedEnergy     = 6.4585115e-1;
 
-    double tolerance          = 1.0e-3;
-    compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
+        expectedForces[0]         = Vec3( -1.2396731e+00,  -2.4231698e+01,   8.3348523e+00);
+        expectedForces[1]         = Vec3( -3.3737276e+00,   9.9304523e+00,  -6.3917827e+00);
+        expectedForces[2]         = Vec3(  4.4062247e+00,   1.9518971e+01,  -4.6552873e+00);
+        expectedForces[3]         = Vec3( -1.3128824e+00,  -1.2887339e+00,  -1.4473147e+00);
+        expectedForces[4]         = Vec3(  2.1137034e+00,   3.9457973e-01,   2.9269129e-01);
+        expectedForces[5]         = Vec3(  1.0271174e+00,   1.2039367e+00,   1.2112214e+00);
+        expectedForces[6]         = Vec3( -3.2082903e+00,   1.4979371e+01,  -1.0274832e+00);
+        expectedForces[7]         = Vec3( -1.1880320e+00,  -1.5177166e+01,   2.5525509e+00);
+        expectedForces[8]         = Vec3(  4.3607105e+00,  -7.0253274e+00,   2.9522580e-01);
+        expectedForces[9]         = Vec3( -3.0175134e+00,   1.3607102e+00,   6.6883370e+00);
+        expectedForces[10]        = Vec3(  9.2036949e-01,  -1.4717629e+00,  -3.3362339e+00);
+        expectedForces[11]        = Vec3(  1.2523841e+00,  -1.9794292e+00,  -3.4670129e+00);
+
+        double tolerance          = 1.0e-3;
+        compareForcesEnergy(testName, expectedEnergy, energy, expectedForces, forces, tolerance);
+    }
 }
 
 // test multipole mutual polarization using PME for box of water
