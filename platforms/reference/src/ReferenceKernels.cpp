@@ -36,6 +36,8 @@
 #include "ReferenceBondForce.h"
 #include "ReferenceBrownianDynamics.h"
 #include "ReferenceCMAPTorsionIxn.h"
+#include "ReferenceConstantPotential.h"
+#include "ReferenceConstantPotential14.h"
 #include "ReferenceConstraints.h"
 #include "ReferenceCustomAngleIxn.h"
 #include "ReferenceCustomBondIxn.h"
@@ -77,6 +79,7 @@
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "openmm/internal/ConstantPotentialForceImpl.h"
 #include "openmm/Integrator.h"
 #include "openmm/OpenMMException.h"
 #include "SimTKOpenMMUtilities.h"
@@ -1173,6 +1176,256 @@ void ReferenceCalcNonbondedForceKernel::computeParameters(ContextImpl& context) 
         bonded14ParamArray[i][0] = sigmas[i];
         bonded14ParamArray[i][1] = 4.0*epsilons[i];
         bonded14ParamArray[i][2] = charges[i];
+    }
+}
+
+ReferenceCalcConstantPotentialForceKernel::~ReferenceCalcConstantPotentialForceKernel() {
+    if (neighborList != NULL) {
+        delete neighborList;
+    }
+    if (matrix != NULL) {
+        delete matrix;
+    }
+    if (cg != NULL) {
+        delete cg;
+    }
+}
+
+void ReferenceCalcConstantPotentialForceKernel::initialize(const System& system, const ConstantPotentialForce& force) {
+    // Get particle parameters.
+    numParticles = force.getNumParticles();
+    charges.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+       force.getParticleParameters(i, charges[i]);
+    }
+
+    // Get "1-4" exceptions (those that don't zero the charge product).
+    exclusions.resize(numParticles);
+    vector<int> nb14s;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd);
+        exclusions[particle1].insert(particle2);
+        exclusions[particle2].insert(particle1);
+        if (chargeProd != 0.0) {
+            nb14Index[i] = nb14s.size();
+            nb14s.push_back(i);
+        }
+    }
+
+    // Get exception parameters.
+    num14 = nb14s.size();
+    bonded14ParamArray.resize(num14, vector<double>(1));
+    bonded14IndexArray.resize(num14, vector<int>(2));
+    for (int i = 0; i < num14; ++i) {
+        int particle1, particle2;
+        force.getExceptionParameters(nb14s[i], particle1, particle2, bonded14ParamArray[i][0]);
+        bonded14IndexArray[i][0] = particle1;
+        bonded14IndexArray[i][1] = particle2;
+    }
+
+    // Get electrode parameters.  electrodeIndexMap will be a map from system
+    // particle indices to electrode particle indices (or -1 if the particle is
+    // not an electrode particle), while electrodeIndices will be a map from
+    // electrode particle indices to system particle indices.
+    electrodeIndexMap.resize(numParticles, -1);
+    for (int i = 0; i < force.getNumElectrodes(); i++) {
+        std::set<int> electrodeParticles;
+        double potential;
+        double gaussianWidth;
+        double thomasFermiScale;
+        force.getElectrodeParameters(i, electrodeParticles, potential, gaussianWidth, thomasFermiScale);
+        for (int particle : electrodeParticles) {
+            electrodeIndexMap[particle] = electrodeParamArray.size();
+            electrodeIndices.push_back(particle);
+            electrodeParamArray.push_back({potential, gaussianWidth, thomasFermiScale});
+        }
+    }
+
+    // Clear (initial guess) charges on electrode particles.
+    numElectrodeParticles = electrodeIndices.size();
+    for (int ii = 0; ii < numElectrodeParticles; ii++) {
+        charges[electrodeIndices[ii]] = 0.0;
+    }
+
+    // Set options from force.
+    nonbondedCutoff = force.getCutoffDistance();
+    neighborList = new NeighborList();
+    ConstantPotentialForceImpl::calcPMEParameters(system, force, ewaldAlpha, gridSize[0], gridSize[1], gridSize[2]);
+    exceptionsArePeriodic = force.getExceptionsUsePeriodicBoundaryConditions();
+    method = force.getConstantPotentialMethod();
+    cgErrorTol = force.getCGErrorTolerance();
+    useChargeConstraint = force.getUseChargeConstraint();
+    chargeTarget = force.getChargeConstraintTarget();
+    force.getExternalField(externalField);
+
+    // Set the charge target to be that on the electrode particles (so that the
+    // overall charge is constrained correctly if the non-electrolyte particles
+    // are non-neutral).
+    for (int i = 0; i < numParticles; i++) {
+        if (electrodeIndexMap[i] == -1) {
+            chargeTarget -= charges[i];
+        }
+    }
+
+    matrix = NULL;
+    cg = NULL;
+    if (method == ConstantPotentialForce::ConstantPotentialMethod::Matrix) {
+        matrix = new ReferenceConstantPotentialMatrix(numElectrodeParticles);
+    }
+    else { // ConstantPotentialMethod::CG
+        cg = new ReferenceConstantPotentialCG(numElectrodeParticles);
+    }
+}
+
+double ReferenceCalcConstantPotentialForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    Vec3* boxVectors = extractBoxVectors(context);
+    vector<Vec3>& posData = extractPositions(context);
+    vector<Vec3>& forceData = extractForces(context);
+    double energy = 0;
+
+    // Solve for charges, then calculate forces and energy.
+    updateNeighborList(boxVectors, posData);
+    ReferenceConstantPotential conp(nonbondedCutoff, neighborList, boxVectors, exceptionsArePeriodic, ewaldAlpha, gridSize, cgErrorTol, useChargeConstraint, chargeTarget, externalField);
+    updateConstantPotentialData(conp, posData);
+    conp.execute(numParticles, numElectrodeParticles, posData, forceData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, includeEnergy ? &energy : NULL, matrix, cg);
+
+    // Process non-zeroing exceptions.  Since exceptions and electrodes should
+    // involve disjoint sets of atoms, this isn't required for the energy
+    // minimization with respect to the electrode atom charges.
+    ReferenceBondForce refBondForce;
+    ReferenceConstantPotential14 conp14;
+    if (exceptionsArePeriodic) {
+        conp14.setPeriodic(boxVectors);
+    }
+    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, includeEnergy ? &energy : NULL, conp14);
+
+    return energy;
+}
+
+void ReferenceCalcConstantPotentialForceKernel::copyParametersToContext(ContextImpl& context, const ConstantPotentialForce& force, int firstParticle, int lastParticle, int firstException, int lastException, int firstElectrode, int lastElectrode) {
+    // Get particle parameters.
+    if (force.getNumParticles() != numParticles) {
+        throw OpenMMException("updateParametersInContext: The number of particles has changed");
+    }
+    for (int i = firstParticle; i <= lastParticle; i++) {
+        // Only update charges on non-electrode particles; keep current guesses
+        // for electrode particles.
+        if (electrodeIndexMap[i] == -1) {
+            force.getParticleParameters(i, charges[i]);
+        }
+    }
+
+    // Get "1-4" (non-zeroing) exceptions.
+    vector<int> nb14s;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd);
+        if (nb14Index.find(i) == nb14Index.end()) {
+            if (chargeProd != 0.0) {
+                throw OpenMMException("updateParametersInContext: The set of non-excluded exceptions has changed");
+            }
+        }
+        else {
+            nb14s.push_back(i);
+        }
+    }
+    if (nb14s.size() != num14) {
+        throw OpenMMException("updateParametersInContext: The number of non-excluded exceptions has changed");
+    }
+
+    // Get exception parameters.
+    for (int i = 0; i < num14; i++) {
+        int particle1, particle2;
+        force.getExceptionParameters(nb14s[i], particle1, particle2, bonded14ParamArray[i][0]);
+        bonded14IndexArray[i][0] = particle1;
+        bonded14IndexArray[i][1] = particle2;
+    }
+
+    // Get electrode parameters.
+    std::set<int> allElectrodeParticles;
+    for (int i = 0; i < force.getNumElectrodes(); i++) {
+        std::set<int> electrodeParticles;
+        double potential;
+        double gaussianWidth;
+        double thomasFermiScale;
+        force.getElectrodeParameters(i, electrodeParticles, potential, gaussianWidth, thomasFermiScale);
+        for (int particle : electrodeParticles) {
+            int electrodeIndex = electrodeIndexMap[particle];
+            if (electrodeIndex == -1) {
+                // Particle was not an electrode particle but is now.
+                throw OpenMMException("updateParametersInContext: The electrode state of a particle has changed");
+            }
+            electrodeParamArray[electrodeIndex][0] = potential;
+            electrodeParamArray[electrodeIndex][1] = gaussianWidth;
+            electrodeParamArray[electrodeIndex][2] = thomasFermiScale;
+            allElectrodeParticles.insert(particle);
+        }
+    }
+    if (allElectrodeParticles.size() != numElectrodeParticles) {
+        // Particle that was an electrode particle might not be now.
+        throw OpenMMException("updateParametersInContext: The electrode state of a particle has changed");
+    }
+
+    // Update external field.
+    force.getExternalField(externalField);
+
+    // Update charge target.
+    chargeTarget = force.getChargeConstraintTarget();
+    for (int i = 0; i < numParticles; i++) {
+        if (electrodeIndexMap[i] == -1) {
+            chargeTarget -= charges[i];
+        }
+    }
+
+    // Invalidate matrix or CG data if electrode parameters changed.
+    if (firstElectrode <= lastElectrode) {
+        if (matrix != NULL) {
+            matrix->invalidate();
+        }
+        if (cg != NULL) {
+            cg->invalidate();
+        }
+    }
+}
+
+void ReferenceCalcConstantPotentialForceKernel::getPMEParameters(double& alpha, int& nx, int& ny, int& nz) const {
+    alpha = ewaldAlpha;
+    nx = gridSize[0];
+    ny = gridSize[1];
+    nz = gridSize[2];
+}
+
+void ReferenceCalcConstantPotentialForceKernel::getCharges(ContextImpl& context, std::vector<double>& chargesOut) {
+    Vec3* boxVectors = extractBoxVectors(context);
+    vector<Vec3>& posData = extractPositions(context);
+    
+    // Solve for charges only.
+    updateNeighborList(boxVectors, posData);
+    ReferenceConstantPotential conp(nonbondedCutoff, neighborList, boxVectors, exceptionsArePeriodic, ewaldAlpha, gridSize, cgErrorTol, useChargeConstraint, chargeTarget, externalField);
+    updateConstantPotentialData(conp, posData);
+    conp.getCharges(numParticles, numElectrodeParticles, posData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, matrix, cg);
+
+    chargesOut = charges;
+}
+
+void ReferenceCalcConstantPotentialForceKernel::updateNeighborList(const Vec3* boxVectors, const std::vector<Vec3>& posData) {
+    double minAllowedSize = 1.999999*nonbondedCutoff;
+    if (boxVectors[0][0] < minAllowedSize || boxVectors[1][1] < minAllowedSize || boxVectors[2][2] < minAllowedSize) {
+        throw OpenMMException("The periodic box size has decreased to less than twice the nonbonded cutoff.");
+    }
+    computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, boxVectors, true, nonbondedCutoff, 0.0);
+}
+
+void ReferenceCalcConstantPotentialForceKernel::updateConstantPotentialData(ReferenceConstantPotential& conp, const std::vector<Vec3>& posData) {
+    if (method == ConstantPotentialForce::ConstantPotentialMethod::Matrix) {
+        // This will update the matrix only if it was cleared.
+        conp.updateMatrix(numParticles, numElectrodeParticles, posData, charges, exclusions, electrodeIndexMap, electrodeIndices, electrodeParamArray, matrix);
+    }
+    else { // ConstantPotentialMethod::CG
+        conp.updateCG(numParticles, numElectrodeParticles, electrodeIndexMap, electrodeIndices, electrodeParamArray, cg);
     }
 }
 
