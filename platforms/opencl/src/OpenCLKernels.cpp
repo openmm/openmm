@@ -187,6 +187,8 @@ public:
         addForcesKernel.setArg<cl::Buffer>(1, cl.getLongForceBuffer().getDeviceBuffer());
         cl.executeKernel(addForcesKernel, cl.getNumAtoms());
     }
+    void setChargeDerivatives(float* derivatives) {
+    }
 private:
     OpenCLContext& cl;
     vector<mm_float4> posq;
@@ -200,7 +202,7 @@ public:
     }
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         Vec3 boxVectors[3] = {Vec3(cl.getPeriodicBoxSize().x, 0, 0), Vec3(0, cl.getPeriodicBoxSize().y, 0), Vec3(0, 0, cl.getPeriodicBoxSize().z)};
-        pme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxVectors, includeEnergy);
+        pme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxVectors, includeEnergy, true, false);
     }
 private:
     OpenCLContext& cl;
@@ -478,7 +480,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
                 try {
                     cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), *cl.getPlatformData().context);
-                    cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha, false);
+                    cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, {}, alpha, false);
                     cl::Program program = cl.createProgram(CommonKernelSources::pme, pmeDefines);
                     cl::Kernel addForcesKernel = cl::Kernel(program, "addForces");
                     pmeio = new PmeIO(cl, addForcesKernel);

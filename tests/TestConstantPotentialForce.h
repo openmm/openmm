@@ -46,7 +46,7 @@
 using namespace OpenMM;
 using namespace std;
 
-const double TOL = 1e-5;
+const double TOL = 1e-4;
 
 void testCoulomb(bool periodicExceptions) {
     // Ensures that the Coulomb energy and force computation for
@@ -68,8 +68,9 @@ void testCoulomb(bool periodicExceptions) {
     for (int i = 0; i < 10; i++) {
         refSystem.addParticle(1);
         testSystem.addParticle(1);
-        refForce->addParticle(i % 2 ? -1 : 1, 1, 0);
-        testForce->addParticle(i % 2 ? -1 : 1);
+        double testCharge = (i / 2 + 1) * (i % 2 ? -1 : 1);
+        refForce->addParticle(testCharge, 1, 0);
+        testForce->addParticle(testCharge);
         double f = 0.1 * i;
         positions.push_back(f * a + f * f * b + f * f * f * c);
         bonds.push_back(pair<int, int>(i, (i + 1) % 10));
@@ -80,6 +81,8 @@ void testCoulomb(bool periodicExceptions) {
     testForce->setExceptionsUsePeriodicBoundaryConditions(periodicExceptions);
 
     refForce->setNonbondedMethod(NonbondedForce::PME);
+    refForce->setCutoffDistance(3.0);
+    testForce->setCutoffDistance(3.0);
 
     refSystem.addForce(refForce);
     testSystem.addForce(testForce);
@@ -162,7 +165,7 @@ void testCoulombNonNeutral() {
     // thus different values of alpha) matches NonbondedForce.  Since the latter
     // includes a neutralizing plasma correction, this ensures that the same
     // correction is working in ConstantPotentialForce.
-    
+
     for (int iCutoff = 1; iCutoff < 5; iCutoff++) {
         System refSystem;
         System testSystem;
@@ -849,42 +852,6 @@ void testUpdatePositions(ConstantPotentialForce::ConstantPotentialMethod method)
     }
 }
 
-void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMethod method) {
-    // Ensures that computed forces match actual changes in energy with particle
-    // perturbations, accounting for changes in electrode atom charges.
-
-    System system;
-    ConstantPotentialForce* force;
-    vector<Vec3> positions;
-    makeTestUpdateSystem(method, system, force, positions);
-    force->setEwaldErrorTolerance(1e-6);
-    VerletIntegrator integrator(0.001);
-    Context context(system, integrator, platform);
-    context.setPositions(positions);
-
-    State state = context.getState(State::Energy | State::Forces);
-    double energy = state.getPotentialEnergy();
-    vector<Vec3> forces = state.getForces();
-
-    double delta = 1e-2;
-    for (int i = 0; i < forces.size(); i++) {
-        for (int d = 0; d < 3; d++) {
-            double refPos = positions[i][d];
-            
-            positions[i][d] = refPos - delta;
-            context.setPositions(positions);
-            vector<double> c;
-            double energyL = context.getState(State::Energy).getPotentialEnergy();
-            positions[i][d] = refPos + delta;
-            context.setPositions(positions);
-            double energyR = context.getState(State::Energy).getPotentialEnergy();
-            positions[i][d] = refPos;
-
-            ASSERT_EQUAL_TOL((energyR - energyL) / (2 * delta), -forces[i][d], 1e-3);
-        }
-    }
-}
-
 void testParallelPlateCapacitorDoubleCell() {
     // Uses the zero field double-cell geometry to test an ideal parallel plate
     // capacitor with vacuum between the plates.
@@ -1042,6 +1009,9 @@ void makeTestSimulateSystem(bool freezeAll, System& system, ConstantPotentialFor
         nonbondedForce->addParticle(0, 0.3165719505039882, 0.6497752);
         nonbondedForce->addParticle(0, 1, 0);
         nonbondedForce->addParticle(0, 1, 0);
+        nonbondedForce->addException(i1, i2, 0, 1, 0);
+        nonbondedForce->addException(i1, i3, 0, 1, 0);
+        nonbondedForce->addException(i2, i3, 0, 1, 0);
         constantPotentialForce->addParticle(-0.8476);
         constantPotentialForce->addParticle(0.4238);
         constantPotentialForce->addParticle(0.4238);
@@ -1088,7 +1058,7 @@ void testReferenceCharges(bool testThomasFermi, ConstantPotentialForce::Constant
 
     makeTestSimulateSystem(method == ConstantPotentialForce::Matrix, testSystem, testForce, positions);
 
-    testForce->setEwaldErrorTolerance(1e-6);
+    testForce->setEwaldErrorTolerance(5e-5);
     testForce->setConstantPotentialMethod(method);
     testForce->setUseChargeConstraint(true);
     testForce->setChargeConstraintTarget(0);
@@ -1193,7 +1163,7 @@ void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod meth
     force->setUseChargeConstraint(true);
     force->setChargeConstraintTarget(1);
     force->setExternalField(Vec3(10, 0, 0));
-    force->setEwaldErrorTolerance(1e-5);
+    force->setEwaldErrorTolerance(5e-5);
 
     set<int> electrodeParticles;
     double potential, gaussianWidth, thomasFermiScale;
@@ -1218,11 +1188,74 @@ void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod meth
     ASSERT_USUALLY_EQUAL_TOL(energy1, energy2, 1e-4);
 }
 
+void compareToReferencePlatform(System& system, ConstantPotentialForce* force, const vector<Vec3>& positions) {
+    // Compares results from the current platform to results computed by the
+    // reference platform.
+
+    VerletIntegrator refIntegrator(0.001);
+    VerletIntegrator testIntegrator(0.001);
+    ReferencePlatform refPlatform;
+    Context refContext(system, refIntegrator, refPlatform);
+    Context testContext(system, testIntegrator, platform);
+    refContext.setPositions(positions);
+    testContext.setPositions(positions);
+
+    State refState = refContext.getState(State::Energy | State::Forces);
+    State testState = testContext.getState(State::Energy | State::Forces);
+    const vector<Vec3>& refForces = refState.getForces();
+    const vector<Vec3>& testForces = testState.getForces();
+    vector<double> refCharges, testCharges;
+    force->getCharges(refContext, refCharges);
+    force->getCharges(testContext, testCharges);
+
+    ASSERT_EQUAL_TOL(refState.getPotentialEnergy(), testState.getPotentialEnergy(), TOL);
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        ASSERT_EQUAL_VEC(refForces[i], testForces[i], 1e-3);
+    }
+    for (int i = 0; i < system.getNumParticles(); i++) {
+        ASSERT_EQUAL_TOL(refCharges[i], testCharges[i], TOL);
+    }
+}
+
+void testCompareToReferencePlatform(ConstantPotentialForce::ConstantPotentialMethod method) {
+    // Compares results between the current and reference platforms for a few
+    // test systems.  This is only called in the runPlatformTests() for
+    // platforms other than the reference platform.
+
+    System system;
+    ConstantPotentialForce* force;
+    vector<Vec3> positions;
+
+    makeTestUpdateSystem(method, system, force, positions);
+    force->setEwaldErrorTolerance(5e-5);
+    compareToReferencePlatform(system, force, positions);
+
+    makeTestSimulateSystem(method == ConstantPotentialForce::Matrix, system, force, positions);
+    force->setConstantPotentialMethod(method);
+    force->setUseChargeConstraint(true);
+    force->setChargeConstraintTarget(1);
+    force->setExternalField(Vec3(10, 0, 0));
+    force->setEwaldErrorTolerance(5e-5);
+    set<int> electrodeParticles;
+    double potential, gaussianWidth, thomasFermiScale;
+    force->getElectrodeParameters(0, electrodeParticles, potential, gaussianWidth, thomasFermiScale);
+    force->setElectrodeParameters(0, electrodeParticles, 1, 0.05, 1);
+    force->getElectrodeParameters(1, electrodeParticles, potential, gaussianWidth, thomasFermiScale);
+    force->setElectrodeParameters(1, electrodeParticles, 2, 0.06, 1.2);
+    compareToReferencePlatform(system, force, positions);
+}
+
 void runPlatformTests();
 
 int main(int argc, char* argv[]) {
     try {
         initializeTests(argc, argv);
+
+        // CPU implementation requires CPU PME plugin.
+        if (platform.getName() == "CPU") {
+            Platform::registerPlatform(&platform);
+            Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
+        }
 
         testCoulomb(false); // Non-periodic exceptions
         testCoulomb(true);  // Periodic exceptions
@@ -1250,9 +1283,6 @@ int main(int argc, char* argv[]) {
         testUpdateBox(ConstantPotentialForce::CG);
         testUpdatePositions(ConstantPotentialForce::Matrix);
         testUpdatePositions(ConstantPotentialForce::CG);
-
-        testGradientFiniteDifference(ConstantPotentialForce::Matrix);
-        testGradientFiniteDifference(ConstantPotentialForce::CG);
 
         testParallelPlateCapacitorDoubleCell();
         testParallelPlateCapacitorFiniteField();

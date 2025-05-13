@@ -43,7 +43,7 @@ using namespace OpenMM;
 using namespace std;
 
 ConstantPotentialForce::ConstantPotentialForce() : constantPotentialMethod(CG),
-        cutoffDistance(1.0), ewaldErrorTol(5e-4), alpha(0.0), cgErrorTol(1e-8),
+        cutoffDistance(1.0), ewaldErrorTol(5e-4), alpha(0.0), cgErrorTol(1e-4),
         chargeTarget(0.0), exceptionsUsePeriodic(false),
         useChargeConstraint(false), nx(0), ny(0), nz(0), numContexts(0) {
 }

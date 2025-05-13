@@ -679,7 +679,7 @@ private:
  */
 class ReferenceCalcConstantPotentialForceKernel : public CalcConstantPotentialForceKernel {
 public:
-    ReferenceCalcConstantPotentialForceKernel(std::string name, const Platform& platform) : CalcConstantPotentialForceKernel(name, platform), neighborList(NULL), matrix(NULL), cg(NULL) {
+    ReferenceCalcConstantPotentialForceKernel(std::string name, const Platform& platform) : CalcConstantPotentialForceKernel(name, platform), neighborList(NULL), solver(NULL) {
     }
     ~ReferenceCalcConstantPotentialForceKernel();
     /**
@@ -729,7 +729,6 @@ public:
     void getCharges(ContextImpl& context, std::vector<double>& charges);
 private:
     void updateNeighborList(const Vec3* boxVectors, const std::vector<Vec3>& posData);
-    void updateConstantPotentialData(ReferenceConstantPotential& conp, const std::vector<Vec3>& posData);
 private:
     int numParticles, num14, numElectrodeParticles;
     std::vector<double> charges;
@@ -737,17 +736,14 @@ private:
     std::vector<std::vector<int> > bonded14IndexArray;
     std::map<int, int> nb14Index;
     std::vector<std::set<int> > exclusions;
-    std::vector<int> electrodeIndexMap;
-    std::vector<int> electrodeIndices;
+    std::vector<int> sysToElec, elecToSys;
     std::vector<std::array<double, 3> > electrodeParamArray;
     double nonbondedCutoff, ewaldAlpha, cgErrorTol, chargeTarget;
     int gridSize[3];
     bool exceptionsArePeriodic, useChargeConstraint;
-    ConstantPotentialForce::ConstantPotentialMethod method;
     Vec3 externalField;
     NeighborList* neighborList;
-    ReferenceConstantPotentialMatrix* matrix;
-    ReferenceConstantPotentialCG* cg;
+    ReferenceConstantPotentialSolver* solver;
 };
 
 /**

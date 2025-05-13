@@ -1,7 +1,7 @@
 /*
  * Reference implementation of PME reciprocal space interactions.
  *
- * Copyright (c) 2009-2022, Erik Lindahl, Rossen Apostolov, Szilard Pall, Peter Eastman
+ * Copyright (c) 2009-2025, Erik Lindahl, Rossen Apostolov, Szilard Pall, Peter Eastman, Evan Pretti
  * All rights reserved.
  * Contact: lindahl@cbr.su.se Stockholm University, Sweden.
  *
@@ -469,25 +469,24 @@ pme_reciprocal_convolution(pme_t     pme,
 
             for (kz=0;kz<nz;kz++)
             {
-                /* If the net charge of the system is 0.0, there will not be any DC (direct current, zero frequency) component. However,
-                 * we can still handle charged systems through a charge correction, in which case the DC
-                 * component should be excluded from recprocal space. We will anyway run into problems below when dividing with the
-                 * frequency if it is zero...
-                 *
-                 * In cuda you could probably work around this by setting something to 0.0 instead, but the short story is that we
-                 * should skip the zero frequency case!
+                /* Pointer to the grid cell in question */
+                ptr       = pme->grid + kx*ny*nz + ky*nz + kz;
+
+                /* The zero frequency term is undefined due to division by the frequency below.  Set this term to zero;
+                 * in the case that the net charge of the system is non-zero, this is equivalent to applying a uniform
+                 * neutralizing background charge density.  The contribution to the energy and charge derivatives of
+                 * this neutralizing plasma is applied elsewhere.  If this term is not zeroed, however, energies and
+                 * forces will be unaffected but charge derivatives for non-neutral systems will be incorrect!
                  */
                 if (kx==0 && ky==0 && kz==0)
                 {
+                    *ptr = 0;
                     continue;
                 }
 
                 /* Calculate frequency. Grid indices in the upper half correspond to negative frequencies! */
                 mz        = (kz<maxkz) ? kz : (kz-nz);
                 mhz       = mx*recipBoxVectors[2][0]+my*recipBoxVectors[2][1]+mz*recipBoxVectors[2][2];
-
-                /* Pointer to the grid cell in question */
-                ptr       = pme->grid + kx*ny*nz + ky*nz + kz;
 
                 /* Get grid data for this frequency */
                 d1        = ptr->real();

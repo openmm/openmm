@@ -1613,18 +1613,21 @@ public:
      * @param gridy        the y size of the PME grid
      * @param gridz        the z size of the PME grid
      * @param numParticles the number of particles in the system
+     * @param indices      indices of particles to compute charge derivatives for
      * @param alpha        the Ewald blending parameter
      * @param deterministic whether it should attempt to make the resulting forces deterministic
      */
-    virtual void initialize(int gridx, int gridy, int gridz, int numParticles, double alpha, bool deterministic) = 0;
+    virtual void initialize(int gridx, int gridy, int gridz, int numParticles, const std::vector<int>& indices, double alpha, bool deterministic) = 0;
     /**
      * Begin computing the force and energy.
      *
-     * @param io                  an object that coordinates data transfer
-     * @param periodicBoxVectors  the vectors defining the periodic box (measured in nm)
-     * @param includeEnergy       true if potential energy should be computed
+     * @param io                        an object that coordinates data transfer
+     * @param periodicBoxVectors        the vectors defining the periodic box (measured in nm)
+     * @param includeEnergy             true if potential energy should be computed
+     * @param includeForces             true if forces should be computed
+     * @param includeChargeDerivatives  true if charge derivatives should be computed
      */
-    virtual void beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) = 0;
+    virtual void beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy, bool includeForces, bool includeChargeDerivatives) = 0;
     /**
      * Finish computing the force and energy.
      * 
@@ -1662,8 +1665,14 @@ public:
      *                 should be ignored.
      */
     virtual void setForce(float* force) = 0;
+    /**
+     * Record the charge derivatives calculated by the kernel.
+     *
+     * @param chargeDerivatives  an array containing one element for each atom
+     *                           to compute charge derivatives for.
+     */
+    virtual void setChargeDerivatives(float* chargeDerivatives) = 0;
 };
-
 
 /**
  * This kernel performs the dispersion reciprocal space calculation for LJPME.  In most cases, this

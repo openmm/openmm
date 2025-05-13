@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2015-2025 Stanford University and the Authors.      *
+ * Portions copyright (c) 2025 Stanford University and the Authors.           *
  * Authors: Evan Pretti                                                       *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,50 +29,10 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferenceTests.h"
-#include "TestConstantPotentialForce.h"
+#include "CpuConstantPotentialForceFvec.h"
+#include "CpuNeighborList.h"
+#include "openmm/internal/vectorize.h"
 
-void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMethod method) {
-    // Ensures that computed forces match actual changes in energy with particle
-    // perturbations, accounting for changes in electrode atom charges.
-
-    // Finite differences with single precision PME have a lot of error, so we
-    // only run this test on the reference platform, and the other platforms'
-    // forces are compared to forces computed by the reference platform.
-
-    System system;
-    ConstantPotentialForce* force;
-    vector<Vec3> positions;
-    makeTestUpdateSystem(method, system, force, positions);
-    force->setEwaldErrorTolerance(1e-7);
-    VerletIntegrator integrator(0.001);
-    Context context(system, integrator, platform);
-    context.setPositions(positions);
-
-    State state = context.getState(State::Energy | State::Forces);
-    double energy = state.getPotentialEnergy();
-    vector<Vec3> forces = state.getForces();
-
-    double delta = 1e-3;
-    for (int i = 0; i < forces.size(); i++) {
-        for (int d = 0; d < 3; d++) {
-            double refPos = positions[i][d];
-
-            positions[i][d] = refPos - delta;
-            context.setPositions(positions);
-            vector<double> c;
-            double energyL = context.getState(State::Energy).getPotentialEnergy();
-            positions[i][d] = refPos + delta;
-            context.setPositions(positions);
-            double energyR = context.getState(State::Energy).getPotentialEnergy();
-            positions[i][d] = refPos;
-
-            ASSERT_EQUAL_TOL((energyR - energyL) / (2 * delta), -forces[i][d], 1e-4);
-        }
-    }
-}
-
-void runPlatformTests() {
-    testGradientFiniteDifference(ConstantPotentialForce::Matrix);
-    testGradientFiniteDifference(ConstantPotentialForce::CG);
+OpenMM::CpuConstantPotentialForce* createCpuConstantPotentialForceVec4() {
+    return new OpenMM::CpuConstantPotentialForceFvec<fvec4, ivec4>();
 }

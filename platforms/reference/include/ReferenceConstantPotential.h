@@ -41,36 +41,192 @@
 
 namespace OpenMM {
 
-class ReferenceConstantPotentialMatrix {
-    friend class ReferenceConstantPotential;
+class ReferenceConstantPotential;
 
-private:
+/**
+ * A generic charge solver for the constant potential method.
+ */
+class ReferenceConstantPotentialSolver {
+protected:
     bool valid;
+
+public:
+    /**
+     * Creates a ReferenceConstantPotentialSolver.
+     */
+    ReferenceConstantPotentialSolver();
+    virtual ~ReferenceConstantPotentialSolver();
+    /**
+     * Mark precomputed data stored by the solver as invalid due to a change in
+     * electrode parameters.
+     */
+    void invalidate();
+    /**
+     * Updates precomputed data stored by the solver.
+     * 
+     * @param numParticles           the total number of particles
+     * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param posData                particle positions
+     * @param charges                particle charges
+     * @param exclusions             particle exclusions
+     * @param sysToElec              mapping from system particle indices to electrode particle indices
+     * @param elecToSys              mapping from electrode particle indices to system particle indices
+     * @param electrodeParamArray    electrode particle parameters
+     * @param conp                   constant potential derivative evaluation class
+     */
+    virtual void update(int numParticles, int numElectrodeParticles,
+        const std::vector<Vec3>& posData, const std::vector<double>& charges,
+        const std::vector<std::set<int>>& exclusions,
+        const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
+        const std::vector<std::array<double, 3> >& electrodeParamArray,
+        ReferenceConstantPotential& conp) = 0;
+    /**
+     * Solves for charges.
+     * 
+     * @param numParticles           the total number of particles
+     * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param posData                particle positions
+     * @param charges                output particle charges
+     * @param exclusions             particle exclusions
+     * @param sysToElec              mapping from system particle indices to electrode particle indices
+     * @param elecToSys              mapping from electrode particle indices to system particle indices
+     * @param electrodeParamArray    electrode particle parameters
+     * @param conp                   constant potential derivative evaluation class
+     * @param pmeData                reference PME solver
+     */
+    virtual void solve(int numParticles, int numElectrodeParticles,
+        const std::vector<Vec3>& posData, std::vector<double>& charges,
+        const std::vector<std::set<int>>& exclusions,
+        const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
+        const std::vector<std::array<double, 3> >& electrodeParamArray,
+        ReferenceConstantPotential& conp, pme_t pmeData) = 0;
+};
+
+/**
+ * A constant potential solver using direct inversion of the Coulomb matrix.
+ * Suitable only when electrode particle positions are fixed.
+ */
+class ReferenceConstantPotentialMatrixSolver : public ReferenceConstantPotentialSolver {
+private:
     Vec3 boxVectors[3];
     std::vector<Vec3> electrodePosData;
     JAMA::Cholesky<double> capacitance;
     std::vector<double> constraintVector;
 
 public:
-    ReferenceConstantPotentialMatrix(int numElectrodeParticles);
-    void invalidate();
+    /**
+     * Creates a ReferenceConstantPotentialMatrixSolver.
+     * 
+     * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     */
+    ReferenceConstantPotentialMatrixSolver(int numElectrodeParticles);
+    /**
+     * Updates precomputed data stored by the solver.
+     * 
+     * @param numParticles           the total number of particles
+     * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param posData                particle positions
+     * @param charges                particle charges
+     * @param exclusions             particle exclusions
+     * @param sysToElec              mapping from system particle indices to electrode particle indices
+     * @param elecToSys              mapping from electrode particle indices to system particle indices
+     * @param electrodeParamArray    electrode particle parameters
+     * @param conp                   constant potential derivative evaluation class
+     */
+    void update(int numParticles, int numElectrodeParticles,
+        const std::vector<Vec3>& posData, const std::vector<double>& charges,
+        const std::vector<std::set<int>>& exclusions,
+        const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
+        const std::vector<std::array<double, 3> >& electrodeParamArray,
+        ReferenceConstantPotential& conp);
+    /**
+     * Solves for charges.
+     * 
+     * @param numParticles           the total number of particles
+     * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param posData                particle positions
+     * @param charges                output particle charges
+     * @param exclusions             particle exclusions
+     * @param sysToElec              mapping from system particle indices to electrode particle indices
+     * @param elecToSys              mapping from electrode particle indices to system particle indices
+     * @param electrodeParamArray    electrode particle parameters
+     * @param conp                   constant potential derivative evaluation class
+     * @param pmeData                reference PME solver
+     */
+    void solve(int numParticles, int numElectrodeParticles,
+        const std::vector<Vec3>& posData, std::vector<double>& charges,
+        const std::vector<std::set<int>>& exclusions,
+        const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
+        const std::vector<std::array<double, 3> >& electrodeParamArray,
+        ReferenceConstantPotential& conp, pme_t pmeData);
 };
 
-class ReferenceConstantPotentialCG {
-    friend class ReferenceConstantPotential;
-
+/**
+ * A constant potential solver using the conjugate gradient method.  Suitable
+ * for both fixed and variable electrode particle positions.
+ */
+class ReferenceConstantPotentialCGSolver : public ReferenceConstantPotentialSolver {
 private:
-    bool valid;
     Vec3 boxVectors[3];
     std::vector<double> precondVector;
     double precondScale;
 
 public:
-    ReferenceConstantPotentialCG(int numElectrodeParticles);
-    void invalidate();
+    /**
+     * Creates a ReferenceConstantPotentialCGSolver.
+     * 
+     * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     */
+    ReferenceConstantPotentialCGSolver(int numElectrodeParticles);
+    /**
+     * Updates precomputed data stored by the solver.
+     * 
+     * @param numParticles           the total number of particles
+     * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param posData                particle positions
+     * @param charges                particle charges
+     * @param exclusions             particle exclusions
+     * @param sysToElec              mapping from system particle indices to electrode particle indices
+     * @param elecToSys              mapping from electrode particle indices to system particle indices
+     * @param electrodeParamArray    electrode particle parameters
+     * @param conp                   constant potential derivative evaluation class
+     */
+    void update(int numParticles, int numElectrodeParticles,
+        const std::vector<Vec3>& posData, const std::vector<double>& charges,
+        const std::vector<std::set<int>>& exclusions,
+        const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
+        const std::vector<std::array<double, 3> >& electrodeParamArray,
+        ReferenceConstantPotential& conp);
+    /**
+     * Solves for charges.
+     * 
+     * @param numParticles           the total number of particles
+     * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param posData                particle positions
+     * @param charges                output particle charges
+     * @param exclusions             particle exclusions
+     * @param sysToElec              mapping from system particle indices to electrode particle indices
+     * @param elecToSys              mapping from electrode particle indices to system particle indices
+     * @param electrodeParamArray    electrode particle parameters
+     * @param conp                   constant potential derivative evaluation class
+     * @param pmeData                reference PME solver
+     */
+    void solve(int numParticles, int numElectrodeParticles,
+        const std::vector<Vec3>& posData, std::vector<double>& charges,
+        const std::vector<std::set<int>>& exclusions,
+        const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
+        const std::vector<std::array<double, 3> >& electrodeParamArray,
+        ReferenceConstantPotential& conp, pme_t pmeData);
 };
 
+/**
+ * Performs energy, force, and charge derivative calculations for the reference
+ * kernel for ConstantPotentialForce.
+ */
 class ReferenceConstantPotential {
+    friend class ReferenceConstantPotentialMatrixSolver;
+    friend class ReferenceConstantPotentialCGSolver;
+
 private:
     double nonbondedCutoff, ewaldAlpha, cgErrorTol, chargeTarget;
     const NeighborList* neighborList;
@@ -83,63 +239,108 @@ private:
     static const int ThomasFermiScaleIndex = 2;
 
 public:
+    /**
+     * Creates a ReferenceConstantPotential.
+     * 
+     * @param nonbondedCutoff        direct space cutoff
+     * @param neighborList           neighbor list for direct space calculation
+     * @param boxVectors             periodic box vectors
+     * @param exceptionsArePeriodic  whether or not exceptions use periodic boundary conditions
+     * @param ewaldAlpha             Ewald reciprocal Gaussian width parameter
+     * @param gridSize               Ewald mesh dimensions
+     * @param cgErrorTol             constant potential conjugate gradient error tolerance
+     * @param useChargeConstraint    whether or not to constrain total charge
+     * @param chargeTarget           target sum of charges on electrode particles only
+     * @param externalField          electric field vector
+     */
     ReferenceConstantPotential(double nonbondedCutoff,
         const NeighborList* neighborList, const Vec3* boxVectors,
         bool exceptionsArePeriodic, double ewaldAlpha, const int* gridSize,
         double cgErrorTol, bool useChargeConstraint, double chargeTarget,
         Vec3 externalField);
-    void updateMatrix(int numParticles, int numElectrodeParticles,
-        const std::vector<Vec3>& posData, const std::vector<double>& charges,
-        const std::vector<std::set<int>>& exclusions,
-        const std::vector<int>& electrodeIndexMap,
-        const std::vector<int>& electrodeIndices,
-        const std::vector<std::array<double, 3> >& electrodeParamArray,
-        ReferenceConstantPotentialMatrix* matrix);
-    void updateCG(int numParticles, int numElectrodeParticles,
-        const std::vector<int>& electrodeIndexMap,
-        const std::vector<int>& electrodeIndices,
-        const std::vector<std::array<double, 3> >& electrodeParamArray,
-        ReferenceConstantPotentialCG* cg);
+    /**
+     * Solves for charges and computes energies and forces.
+     * 
+     * @param numParticles           the total number of particles
+     * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param posData                particle positions
+     * @param forceData              output forces on particles
+     * @param charges                output particle charges
+     * @param exclusions             particle exclusions
+     * @param sysToElec              mapping from system particle indices to electrode particle indices
+     * @param elecToSys              mapping from electrode particle indices to system particle indices
+     * @param electrodeParamArray    electrode particle parameters
+     * @param energy                 output system energy
+     * @param solver                 charge solver implementation
+     */
     void execute(int numParticles, int numElectrodeParticles,
         const std::vector<Vec3>& posData, std::vector<Vec3>& forceData,
         std::vector<double>& charges,
         const std::vector<std::set<int>>& exclusions,
-        const std::vector<int>& electrodeIndexMap,
-        const std::vector<int>& electrodeIndices,
+        const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
-        double* energy, ReferenceConstantPotentialMatrix* matrix,
-        ReferenceConstantPotentialCG* cg);
+        double* energy, ReferenceConstantPotentialSolver* solver);
+    /**
+     * Solves for charges without computing energies and forces.
+     * 
+     * @param numParticles           the total number of particles
+     * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param posData                particle positions
+     * @param charges                output particle charges
+     * @param exclusions             particle exclusions
+     * @param sysToElec              mapping from system particle indices to electrode particle indices
+     * @param elecToSys              mapping from electrode particle indices to system particle indices
+     * @param electrodeParamArray    electrode particle parameters
+     * @param solver                 charge solver implementation
+     */
     void getCharges(int numParticles, int numElectrodeParticles,
         const std::vector<Vec3>& posData, std::vector<double>& charges,
         const std::vector<std::set<int>>& exclusions,
-        const std::vector<int>& electrodeIndexMap,
-        const std::vector<int>& electrodeIndices,
+        const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
-        ReferenceConstantPotentialMatrix* matrix,
-        ReferenceConstantPotentialCG* cg);
+        ReferenceConstantPotentialSolver* solver);
 
 private:
-    void solve(int numParticles, int numElectrodeParticles,
-        const std::vector<Vec3>& posData, std::vector<double>& charges,
-        const std::vector<std::set<int>>& exclusions,
-        const std::vector<int>& electrodeIndexMap,
-        const std::vector<int>& electrodeIndices,
-        const std::vector<std::array<double, 3> >& electrodeParamArray,
-        ReferenceConstantPotentialMatrix* matrix,
-        ReferenceConstantPotentialCG* cg, pme_t pmeData);
+    /**
+     * Computes energies and forces for fixed (solved) charges.
+     * 
+     * @param numParticles           the total number of particles
+     * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param posData                particle positions
+     * @param forceData              output forces on particles
+     * @param charges                particle charges
+     * @param exclusions             particle exclusions
+     * @param sysToElec              mapping from system particle indices to electrode particle indices
+     * @param elecToSys              mapping from electrode particle indices to system particle indices
+     * @param electrodeParamArray    electrode particle parameters
+     * @param energy                 output system energy
+     * @param pmeData                reference PME solver
+     */
     void getEnergyForces(int numParticles, int numElectrodeParticles,
         const std::vector<Vec3>& posData, std::vector<Vec3>& forceData,
         std::vector<double>& charges,
         const std::vector<std::set<int>>& exclusions,
-        const std::vector<int>& electrodeIndexMap,
-        const std::vector<int>& electrodeIndices,
+        const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
         double* energy, pme_t pmeData);
+    /**
+     * Computes energy derivatives with respect to charges.
+     * 
+     * @param numParticles           the total number of particles
+     * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
+     * @param posData                particle positions
+     * @param charges                particle charges
+     * @param exclusions             particle exclusions
+     * @param sysToElec              mapping from system particle indices to electrode particle indices
+     * @param elecToSys              mapping from electrode particle indices to system particle indices
+     * @param electrodeParamArray    electrode particle parameters
+     * @param chargeDerivatives      output charge derivatives
+     * @param pmeData                reference PME solver
+     */
     void getDerivatives(int numParticles, int numElectrodeParticles,
         const std::vector<Vec3>& posData, std::vector<double>& charges,
         const std::vector<std::set<int>>& exclusions,
-        const std::vector<int>& electrodeIndexMap,
-        const std::vector<int>& electrodeIndices,
+        const std::vector<int>& sysToElec, const std::vector<int>& elecToSys,
         const std::vector<std::array<double, 3> >& electrodeParamArray,
         std::vector<double>& chargeDerivatives, pme_t pmeData);
 };

@@ -8,7 +8,7 @@
  *                                                                            *
  * Portions copyright (c) 2013-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
- * Contributors:                                                              *
+ * Contributors: Evan Pretti                                                  *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
  * copy of this software and associated documentation files (the "Software"), *
@@ -421,13 +421,101 @@ static void interpolateForces(float* posq, vector<float>& force, vector<float>& 
     }
 }
 
+static void interpolateChargeDerivatives(float* posq, const vector<int>& chargeIndices, vector<float>& chargeDerivatives, vector<float>& grid, int gridx, int gridy, int gridz, int numIndices, Vec3* periodicBoxVectors, Vec3* recipBoxVectors, atomic<int>& atomicCounter, const float epsilonFactor, int numThreads) {
+    fvec4 boxSize((float) periodicBoxVectors[0][0], (float) periodicBoxVectors[1][1], (float) periodicBoxVectors[2][2], 0);
+    fvec4 invBoxSize((float) recipBoxVectors[0][0], (float) recipBoxVectors[1][1], (float) recipBoxVectors[2][2], 0);
+    fvec4 recipBoxVec0((float) recipBoxVectors[0][0], (float) recipBoxVectors[0][1], (float) recipBoxVectors[0][2], 0);
+    fvec4 recipBoxVec1((float) recipBoxVectors[1][0], (float) recipBoxVectors[1][1], (float) recipBoxVectors[1][2], 0);
+    fvec4 recipBoxVec2((float) recipBoxVectors[2][0], (float) recipBoxVectors[2][1], (float) recipBoxVectors[2][2], 0);
+    fvec4 gridSize(gridx, gridy, gridz, 0);
+    ivec4 gridSizeInt(gridx, gridy, gridz, 0);
+    fvec4 one(1);
+    fvec4 scale(1.0f/(PME_ORDER-1));
+
+    const int groupSize = max(1, numIndices / (10 * numThreads));
+    while (true) {
+        int start = atomicCounter.fetch_add(groupSize);
+        if (start >= numIndices)
+            break;
+
+        int end = min(start + groupSize, numIndices);
+
+        for (int ii = start; ii < end; ii++) {
+            // Find the position relative to the nearest grid point.
+
+            fvec4 pos(&posq[4*chargeIndices[ii]]);
+            float posInBox[4];
+            (pos-boxSize*floor(pos*invBoxSize)).store(posInBox);
+            fvec4 t = posInBox[0]*recipBoxVec0 + posInBox[1]*recipBoxVec1 + posInBox[2]*recipBoxVec2;
+            t = (t-floor(t))*gridSize;
+            ivec4 ti = t;
+            fvec4 dr = t-ti;
+            ivec4 gridIndex = ti-(gridSizeInt&ti==gridSizeInt);
+
+            // Compute the B-spline coefficients.
+
+            fvec4 data[PME_ORDER];
+            data[PME_ORDER-1] = 0.0f;
+            data[1] = dr;
+            data[0] = one-dr;
+            for (int j = 3; j < PME_ORDER; j++) {
+                fvec4 div(1.0f/(j-1));
+                data[j-1] = div*dr*data[j-2];
+                for (int k = 1; k < j-1; k++)
+                    data[j-k-1] = div*((dr+k)*data[j-k-2]+(fvec4(j-k)-dr)*data[j-k-1]);
+                data[0] = div*(one-dr)*data[0];
+            }
+            data[PME_ORDER-1] = scale*dr*data[PME_ORDER-2];
+            for (int j = 1; j < (PME_ORDER-1); j++)
+                data[PME_ORDER-j-1] = scale*((dr+j)*data[PME_ORDER-j-2]+(fvec4(PME_ORDER-j)-dr)*data[PME_ORDER-j-1]);
+            data[0] = scale*(one-dr)*data[0];
+
+            // Compute the charge derivative for this atom.
+
+            int gridIndexX = gridIndex[0];
+            int gridIndexY = gridIndex[1];
+            int gridIndexZ = gridIndex[2];
+            if (gridIndexX < 0)
+                return; // This happens when a simulation blows up and coordinates become NaN.
+            int zindex[PME_ORDER];
+            for (int j = 0; j < PME_ORDER; j++) {
+                zindex[j] = gridIndexZ+j;
+                zindex[j] -= (zindex[j] >= gridz ? gridz : 0);
+            }
+            float f = 0.0f;
+            for (int ix = 0; ix < PME_ORDER; ix++) {
+                int xbase = gridIndexX+ix;
+                xbase -= (xbase >= gridx ? gridx : 0);
+                xbase = xbase*gridy*gridz;
+                float dx = data[ix][0];
+
+                for (int iy = 0; iy < PME_ORDER; iy++) {
+                    int ybase = gridIndexY+iy;
+                    ybase -= (ybase >= gridy ? gridy : 0);
+                    ybase = xbase + ybase*gridz;
+                    float dy = data[iy][1];
+
+                    for (int iz = 0; iz < PME_ORDER; iz++) {
+                        float dz = data[iz][2];
+                        float gridValue = grid[ybase+zindex[iz]];
+
+                        f += dx*dy*dz*gridValue;
+                    }
+                }
+            }
+
+            chargeDerivatives[ii] = epsilonFactor * f;
+        }
+    }
+}
+
 static void* threadBody(void* args) {
     CpuCalcPmeReciprocalForceKernel& owner = *reinterpret_cast<CpuCalcPmeReciprocalForceKernel*>(args);
     owner.runMainThread();
     return 0;
 }
 
-void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize, int numParticles, double alpha, bool deterministic) {
+void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize, int numParticles, const vector<int>& indices, double alpha, bool deterministic) {
     if (!hasInitializedThreads) {
         numThreads = getNumProcessors();
         char* threadsEnv = getenv("OPENMM_CPU_THREADS");
@@ -455,6 +543,9 @@ void CpuCalcPmeReciprocalForceKernel::initialize(int xsize, int ysize, int zsize
     this->alpha = alpha;
     this->deterministic = deterministic;
     force.resize(4*numParticles);
+    chargeIndices = indices;
+    numIndices = chargeIndices.size();
+    chargeDerivatives.resize(numIndices);
     recipEterm.resize(gridx*gridy*gridz);
     
     // Initialize threads.
@@ -569,11 +660,27 @@ void CpuCalcPmeReciprocalForceKernel::runMainThread() {
             for (auto e : threadEnergy)
                 energy += e;
         }
-        threads.resumeThreads(); // Signal threads to perform reciprocal convolution.
-        threads.waitForThreads();
-        pocketfft::c2r(gridShape, complexGridStride, realGridStride, fftAxes, false, complexGrid.data(), realGrids[0].data(), 1.0f, 0);
-        atomicCounter = 0;
-        threads.resumeThreads(); // Signal threads to interpolate forces.
+        if (includeForces || includeChargeDerivatives) {
+            // Explicitly zero out the zero frequency component or charge
+            // derivatives will be incorrect.  The neutralizing plasma
+            // interaction energy contribution is computed separately.
+            complexGrid[0] = 0;
+
+            threads.resumeThreads(); // Signal threads to perform reciprocal convolution.
+            threads.waitForThreads();
+            pocketfft::c2r(gridShape, complexGridStride, realGridStride, fftAxes, false, complexGrid.data(), realGrids[0].data(), 1.0f, 0);
+            if (includeForces) {
+                atomicCounter = 0;
+                threads.resumeThreads(); // Signal threads to interpolate forces.
+                threads.waitForThreads();
+            }
+            if (includeChargeDerivatives) {
+                atomicCounter = 0;
+                threads.resumeThreads(); // Signal threads to interpolate charge derivatives.
+                threads.waitForThreads();
+            }
+        }
+        threads.resumeThreads(); // Signal threads to finish.
         threads.waitForThreads();
         isFinished = true;
         lastBoxVectors[0] = periodicBoxVectors[0];
@@ -611,17 +718,28 @@ void CpuCalcPmeReciprocalForceKernel::runWorkerThread(ThreadPool& threads, int i
         threadEnergy[index] = reciprocalEnergy(gridxStart, gridxEnd, complexGrid, recipEterm, gridx, gridy, gridz, alpha, bsplineModuli, periodicBoxVectors, recipBoxVectors);
         threads.syncThreads();
     }
-    reciprocalConvolution(complexStart, complexEnd, complexGrid, recipEterm);
-    threads.syncThreads();
-    interpolateForces(posq, force, realGrids[0], gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, numThreads);
+    if (includeForces || includeChargeDerivatives) {
+        reciprocalConvolution(complexStart, complexEnd, complexGrid, recipEterm);
+        threads.syncThreads();
+        if (includeForces) {
+            interpolateForces(posq, force, realGrids[0], gridx, gridy, gridz, numParticles, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, numThreads);
+            threads.syncThreads();
+        }
+        if (includeChargeDerivatives) {
+            interpolateChargeDerivatives(posq, chargeIndices, chargeDerivatives, realGrids[0], gridx, gridy, gridz, numIndices, periodicBoxVectors, recipBoxVectors, atomicCounter, epsilonFactor, numThreads);
+            threads.syncThreads();
+        }
+    }
 }
 
-void CpuCalcPmeReciprocalForceKernel::beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy) {
+void CpuCalcPmeReciprocalForceKernel::beginComputation(IO& io, const Vec3* periodicBoxVectors, bool includeEnergy, bool includeForces, bool includeChargeDerivatives) {
     this->io = &io;
     this->periodicBoxVectors[0] = periodicBoxVectors[0];
     this->periodicBoxVectors[1] = periodicBoxVectors[1];
     this->periodicBoxVectors[2] = periodicBoxVectors[2];
     this->includeEnergy = includeEnergy;
+    this->includeForces = includeForces;
+    this->includeChargeDerivatives = includeChargeDerivatives;
     energy = 0.0;
 
     // Invert the box vectors.
@@ -646,7 +764,12 @@ double CpuCalcPmeReciprocalForceKernel::finishComputation(IO& io) {
             endCondition.wait(ul);
         }
     }
-    io.setForce(&force[0]);
+    if (includeForces) {
+        io.setForce(&force[0]);
+    }
+    if (includeChargeDerivatives) {
+        io.setChargeDerivatives(&chargeDerivatives[0]);
+    }
     return energy;
 }
 
