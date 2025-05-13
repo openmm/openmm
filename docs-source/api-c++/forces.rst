@@ -100,3 +100,4 @@ expression.
     generated/CustomManyParticleForce
     generated/CustomNonbondedForce
     generated/CustomTorsionForce
+    generated/CustomVolumeForce

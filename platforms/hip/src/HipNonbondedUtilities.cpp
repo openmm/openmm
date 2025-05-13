@@ -31,7 +31,6 @@
 #include "HipContext.h"
 #include "HipKernelSources.h"
 #include "HipExpressionUtilities.h"
-#include "HipSort.h"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -48,7 +47,7 @@ using namespace std;
     }
 
 
-class HipNonbondedUtilities::BlockSortTrait : public HipSort::SortTrait {
+class HipNonbondedUtilities::BlockSortTrait : public ComputeSortImpl::SortTrait {
 public:
     BlockSortTrait() {}
     int getDataSize() const {return sizeof(int);}
@@ -62,7 +61,7 @@ public:
 };
 
 HipNonbondedUtilities::HipNonbondedUtilities(HipContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
-        blockSorter(NULL), pinnedCountBuffer(NULL), forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), tilesAfterReorder(0) {
+        pinnedCountBuffer(NULL), forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), tilesAfterReorder(0) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -82,18 +81,13 @@ HipNonbondedUtilities::HipNonbondedUtilities(HipContext& context) : context(cont
 }
 
 HipNonbondedUtilities::~HipNonbondedUtilities() {
-    if (blockSorter != NULL)
-        delete blockSorter;
     if (pinnedCountBuffer != NULL)
         hipHostFree(pinnedCountBuffer);
     hipEventDestroy(downloadCountEvent);
 }
 
-void HipNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup, bool usesNeighborList) {
-    addInteraction(usesCutoff, usesPeriodic, usesExclusions, cutoffDistance, exclusionList, kernel, forceGroup, usesNeighborList, false);
-}
-
-void HipNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup, bool usesNeighborList, bool supportsPairList) {
+void HipNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance,
+        const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup, bool usesNeighborList, bool supportsPairList) {
     if (groupCutoff.size() > 0) {
         if (usesCutoff != useCutoff)
             throw OpenMMException("All Forces must agree on whether to use a cutoff");
@@ -304,7 +298,7 @@ void HipNonbondedUtilities::initialize(const System& system) {
         largeBlockBoundingBox.initialize(context, numAtomBlocks*4, elementSize, "largeBlockBoundingBox");
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
-        blockSorter = new HipSort(context, new BlockSortTrait(), numAtomBlocks, false);
+        blockSorter = context.createSort(new BlockSortTrait(), numAtomBlocks, false);
         vector<unsigned int> count(2, 0);
         interactionCount.upload(count);
         rebuildNeighborList.upload(&count[0]);

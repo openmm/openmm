@@ -48,6 +48,7 @@
 #include "openmm/CustomManyParticleForce.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/CustomTorsionForce.h"
+#include "openmm/CustomVolumeForce.h"
 #include "openmm/DPDIntegrator.h"
 #include "openmm/GayBerneForce.h"
 #include "openmm/GBSAOBCForce.h"
@@ -90,6 +91,7 @@
 #include "openmm/serialization/CustomManyParticleForceProxy.h"
 #include "openmm/serialization/CustomNonbondedForceProxy.h"
 #include "openmm/serialization/CustomTorsionForceProxy.h"
+#include "openmm/serialization/CustomVolumeForceProxy.h"
 #include "openmm/serialization/DPDIntegratorProxy.h"
 #include "openmm/serialization/GayBerneForceProxy.h"
 #include "openmm/serialization/GBSAOBCForceProxy.h"
@@ -150,6 +152,7 @@ extern "C" void registerSerializationProxies() {
     SerializationProxy::registerProxy(typeid(CustomManyParticleForce), new CustomManyParticleForceProxy());
     SerializationProxy::registerProxy(typeid(CustomNonbondedForce), new CustomNonbondedForceProxy());
     SerializationProxy::registerProxy(typeid(CustomTorsionForce), new CustomTorsionForceProxy());
+    SerializationProxy::registerProxy(typeid(CustomVolumeForce), new CustomVolumeForceProxy());
     SerializationProxy::registerProxy(typeid(Discrete1DFunction), new Discrete1DFunctionProxy());
     SerializationProxy::registerProxy(typeid(Discrete2DFunction), new Discrete2DFunctionProxy());
     SerializationProxy::registerProxy(typeid(Discrete3DFunction), new Discrete3DFunctionProxy());

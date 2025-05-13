@@ -48,7 +48,7 @@ using namespace std;
 
 static OpenCLPlatform platform;
 
-class SortTrait : public OpenCLSort::SortTrait {
+class SortTrait : public ComputeSortImpl::SortTrait {
     int getDataSize() const {return 4;}
     int getKeySize() const {return 4;}
     const char* getDataType() const {return "float";}

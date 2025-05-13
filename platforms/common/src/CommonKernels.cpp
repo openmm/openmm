@@ -3731,7 +3731,8 @@ void CommonApplyAndersenThermostatKernel::execute(ContextImpl& context) {
     kernel->execute(cc.getNumAtoms());
 }
 
-void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat, bool rigidMolecules) {
+void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const Force& thermostat, int components, bool rigidMolecules) {
+    this->components = components;
     this->rigidMolecules = rigidMolecules;
     ContextSelector selector(cc);
     savedPositions.initialize(cc, cc.getPaddedNumAtoms(), cc.getUseDoublePrecision() ? sizeof(mm_double4) : sizeof(mm_float4), "savedPositions");
@@ -3744,8 +3745,18 @@ void CommonApplyMonteCarloBarostatKernel::initialize(const System& system, const
     catch (...) {
         // The CUDA platform doesn't have a floating point force buffer, so we don't need to copy it.
     }
-    ComputeProgram program = cc.compileProgram(CommonKernelSources::monteCarloBarostat);
+    energyBuffers.resize(components);
+    for (int i = 0; i < components; i++)
+        energyBuffers[i].initialize(cc, cc.getNumThreadBlocks(), cc.getUseDoublePrecision() || cc.getUseMixedPrecision() ? sizeof(double) : sizeof(float), "energyBuffer");
+    vector<float> zeros(energyBuffers[0].getSize(), 0.0f);
+    for (int i = 0; i < components; i++)
+        energyBuffers[i].upload(zeros, true);
+    map<string, string> defines;
+    defines["WORK_GROUP_SIZE"] = cc.intToString(cc.ThreadBlockSize);
+    defines["COMPONENTS"] = cc.intToString(components);
+    ComputeProgram program = cc.compileProgram(CommonKernelSources::monteCarloBarostat, defines);
     kernel = program->createKernel("scalePositions");
+    kineticEnergyKernel = program->createKernel("computeMolecularKineticEnergy");
 }
 
 void CommonApplyMonteCarloBarostatKernel::saveCoordinates(ContextImpl& context) {
@@ -3804,12 +3815,18 @@ void CommonApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
         kernel->addArg(cc.getPosq());
         kernel->addArg(moleculeAtoms);
         kernel->addArg(moleculeStartIndex);
+        kineticEnergyKernel->addArg(numMolecules);
+        kineticEnergyKernel->addArg(cc.getVelm());
+        kineticEnergyKernel->addArg(moleculeAtoms);
+        kineticEnergyKernel->addArg(moleculeStartIndex);
+        for (int i = 0; i < components; i++)
+            kineticEnergyKernel->addArg(energyBuffers[i]);
     }
     kernel->setArg(0, (float) scaleX);
     kernel->setArg(1, (float) scaleY);
     kernel->setArg(2, (float) scaleZ);
     setPeriodicBoxArgs(cc, kernel, 4);
-    kernel->execute(cc.getNumAtoms());
+    kernel->execute(numMolecules);
 }
 
 void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
@@ -3824,6 +3841,27 @@ void CommonApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& contex
     // check if atoms were reordered from energy evaluation before or after scaling
     if (atomsWereReordered || cc.getAtomsWereReordered())
         cc.setAtomIndex(lastAtomOrder);
+}
+
+void CommonApplyMonteCarloBarostatKernel::computeKineticEnergy(ContextImpl& context, vector<double>& ke) {
+    ContextSelector selector(cc);
+    ke.resize(components);
+    kineticEnergyKernel->execute(numMolecules);
+    for (int j = 0; j < components; j++) {
+        ke[j] = 0.0;
+        if (energyBuffers[j].getElementSize() == sizeof(float)) {
+            vector<float> buffer;
+            energyBuffers[j].download(buffer);
+            for (int i = 0; i < buffer.size(); i++)
+                ke[j] += buffer[i];
+        }
+        else {
+            vector<double> buffer;
+            energyBuffers[j].download(buffer);
+            for (int i = 0; i < buffer.size(); i++)
+                ke[j] += buffer[i];
+        }
+    }
 }
 
 class CommonCalcATMForceKernel::ReorderListener : public ComputeContext::ReorderListener {

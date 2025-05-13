@@ -30,7 +30,6 @@
 #include "CudaContext.h"
 #include "CudaKernelSources.h"
 #include "CudaExpressionUtilities.h"
-#include "CudaSort.h"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -47,7 +46,7 @@ using namespace std;
     }
 
 
-class CudaNonbondedUtilities::BlockSortTrait : public CudaSort::SortTrait {
+class CudaNonbondedUtilities::BlockSortTrait : public ComputeSortImpl::SortTrait {
 public:
     BlockSortTrait() {}
     int getDataSize() const {return sizeof(int);}
@@ -61,7 +60,7 @@ public:
 };
 
 CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(context), useCutoff(false), usePeriodic(false), useNeighborList(false), anyExclusions(false), usePadding(true),
-        blockSorter(NULL), pinnedCountBuffer(NULL), forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), tilesAfterReorder(0) {
+        pinnedCountBuffer(NULL), forceRebuildNeighborList(true), groupFlags(0), canUsePairList(true), tilesAfterReorder(0) {
     // Decide how many thread blocks to use.
 
     string errorMessage = "Error initializing nonbonded utilities";
@@ -82,18 +81,13 @@ CudaNonbondedUtilities::CudaNonbondedUtilities(CudaContext& context) : context(c
 }
 
 CudaNonbondedUtilities::~CudaNonbondedUtilities() {
-    if (blockSorter != NULL)
-        delete blockSorter;
     if (pinnedCountBuffer != NULL)
         cuMemFreeHost(pinnedCountBuffer);
     cuEventDestroy(downloadCountEvent);
 }
 
-void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup, bool useNeighborList) {
-    addInteraction(usesCutoff, usesPeriodic, usesExclusions, cutoffDistance, exclusionList, kernel, forceGroup, useNeighborList, false);
-}
-
-void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup, bool useNeighborList, bool supportsPairList) {
+void CudaNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance,
+        const vector<vector<int> >& exclusionList, const string& kernel, int forceGroup, bool useNeighborList, bool supportsPairList) {
     if (groupCutoff.size() > 0) {
         if (usesCutoff != useCutoff)
             throw OpenMMException("All Forces must agree on whether to use a cutoff");
@@ -289,7 +283,7 @@ void CudaNonbondedUtilities::initialize(const System& system) {
         largeBlockBoundingBox.initialize(context, numAtomBlocks, 4*elementSize, "largeBlockBoundingBox");
         oldPositions.initialize(context, numAtoms, 4*elementSize, "oldPositions");
         rebuildNeighborList.initialize<int>(context, 1, "rebuildNeighborList");
-        blockSorter = new CudaSort(context, new BlockSortTrait(), numAtomBlocks, false);
+        blockSorter = context.createSort(new BlockSortTrait(), numAtomBlocks, false);
         vector<unsigned int> count(2, 0);
         interactionCount.upload(count);
         rebuildNeighborList.upload(&count[0]);

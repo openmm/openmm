@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2010-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2010-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,7 +32,7 @@
 using namespace OpenMM;
 using namespace std;
 
-CudaSort::CudaSort(CudaContext& context, SortTrait* trait, unsigned int length, bool uniform) :
+CudaSort::CudaSort(CudaContext& context, ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform) :
         context(context), trait(trait), dataLength(length), uniform(uniform) {
     // Create kernels.
 
@@ -92,21 +92,22 @@ CudaSort::~CudaSort() {
     delete trait;
 }
 
-void CudaSort::sort(CudaArray& data) {
+void CudaSort::sort(ArrayInterface& data) {
     if (data.getSize() != dataLength || data.getElementSize() != trait->getDataSize())
         throw OpenMMException("CudaSort called with different data size");
     if (data.getSize() == 0)
         return;
+    CudaArray& cudata = context.unwrap(data);
     if (isShortList) {
         // We can use a simpler sort kernel that does the entire operation in one kernel.
         
         if (dataLength <= CudaContext::ThreadBlockSize*context.getNumThreadBlocks()) {
-            void* sortArgs[] = {&data.getDevicePointer(), &buckets.getDevicePointer(), &dataLength};
+            void* sortArgs[] = {&cudata.getDevicePointer(), &buckets.getDevicePointer(), &dataLength};
             context.executeKernel(shortList2Kernel, sortArgs, dataLength);
-            buckets.copyTo(data);
+            buckets.copyTo(cudata);
         }
         else {
-            void* sortArgs[] = {&data.getDevicePointer(), &dataLength};
+            void* sortArgs[] = {&cudata.getDevicePointer(), &dataLength};
             context.executeKernel(shortListKernel, sortArgs, sortKernelSize, sortKernelSize, dataLength*trait->getDataSize());
         }
     }
@@ -114,14 +115,14 @@ void CudaSort::sort(CudaArray& data) {
         // Compute the range of data values.
 
         unsigned int numBuckets = bucketOffset.getSize();
-        void* rangeArgs[] = {&data.getDevicePointer(), &dataLength, &dataRange.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer()};
+        void* rangeArgs[] = {&cudata.getDevicePointer(), &dataLength, &dataRange.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer()};
         context.executeKernel(computeRangeKernel, rangeArgs, rangeKernelSize, rangeKernelSize, 2*rangeKernelSize*trait->getKeySize());
 
         // Assign array elements to buckets.
 
-        void* elementsArgs[] = {&data.getDevicePointer(), &dataLength, &numBuckets, &dataRange.getDevicePointer(),
+        void* elementsArgs[] = {&cudata.getDevicePointer(), &dataLength, &numBuckets, &dataRange.getDevicePointer(),
                 &bucketOffset.getDevicePointer(), &bucketOfElement.getDevicePointer(), &offsetInBucket.getDevicePointer()};
-        context.executeKernel(assignElementsKernel, elementsArgs, data.getSize(), 128);
+        context.executeKernel(assignElementsKernel, elementsArgs, cudata.getSize(), 128);
 
         // Compute the position of each bucket.
 
@@ -130,13 +131,13 @@ void CudaSort::sort(CudaArray& data) {
 
         // Copy the data into the buckets.
 
-        void* copyArgs[] = {&data.getDevicePointer(), &buckets.getDevicePointer(), &dataLength, &bucketOffset.getDevicePointer(),
+        void* copyArgs[] = {&cudata.getDevicePointer(), &buckets.getDevicePointer(), &dataLength, &bucketOffset.getDevicePointer(),
                 &bucketOfElement.getDevicePointer(), &offsetInBucket.getDevicePointer()};
-        context.executeKernel(copyToBucketsKernel, copyArgs, data.getSize());
+        context.executeKernel(copyToBucketsKernel, copyArgs, cudata.getSize());
 
         // Sort each bucket.
 
-        void* sortArgs[] = {&data.getDevicePointer(), &buckets.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer()};
-        context.executeKernel(sortBucketsKernel, sortArgs, ((data.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize, sortKernelSize*trait->getDataSize());
+        void* sortArgs[] = {&cudata.getDevicePointer(), &buckets.getDevicePointer(), &numBuckets, &bucketOffset.getDevicePointer()};
+        context.executeKernel(sortBucketsKernel, sortArgs, ((cudata.getSize()+sortKernelSize-1)/sortKernelSize)*sortKernelSize, sortKernelSize, sortKernelSize*trait->getDataSize());
     }
 }

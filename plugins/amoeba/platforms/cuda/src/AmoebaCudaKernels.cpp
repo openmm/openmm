@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2021 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2025 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -38,7 +38,6 @@
 #include "openmm/internal/AmoebaVdwForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "CudaBondedUtilities.h"
-#include "CudaFFT3D.h"
 #include "CudaForceInfo.h"
 #include "CudaKernelSources.h"
 #include "SimTKOpenMMRealType.h"
@@ -80,97 +79,15 @@ static void setPeriodicBoxArgs(ComputeContext& cc, ComputeKernel kernel, int ind
 }
 
 /* -------------------------------------------------------------------------- *
- *                             AmoebaMultipole                                *
- * -------------------------------------------------------------------------- */
-
-CudaCalcAmoebaMultipoleForceKernel::~CudaCalcAmoebaMultipoleForceKernel() {
-    ContextSelector selector(cc);
-    if (hasInitializedFFT)
-        cufftDestroy(fft);
-}
-
-void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const AmoebaMultipoleForce& force) {
-    CommonCalcAmoebaMultipoleForceKernel::initialize(system, force);
-    if (usePME) {
-        ContextSelector selector(cc);
-        cufftResult result = cufftPlan3d(&fft, gridSizeX, gridSizeY, gridSizeZ, cc.getUseDoublePrecision() ? CUFFT_Z2Z : CUFFT_C2C);
-        if (result != CUFFT_SUCCESS)
-            throw OpenMMException("Error initializing FFT: "+cc.intToString(result));
-        hasInitializedFFT = true;
-    }
-}
-
-void CudaCalcAmoebaMultipoleForceKernel::computeFFT(bool forward) {
-    CudaArray& grid1 = dynamic_cast<CudaContext&>(cc).unwrap(pmeGrid1);
-    CudaArray& grid2 = dynamic_cast<CudaContext&>(cc).unwrap(pmeGrid2);
-    if (forward) {
-        if (cc.getUseDoublePrecision())
-            cufftExecZ2Z(fft, (double2*) grid1.getDevicePointer(), (double2*) grid2.getDevicePointer(), CUFFT_FORWARD);
-        else
-            cufftExecC2C(fft, (float2*) grid1.getDevicePointer(), (float2*) grid2.getDevicePointer(), CUFFT_FORWARD);
-    }
-    else {
-        if (cc.getUseDoublePrecision())
-            cufftExecZ2Z(fft, (double2*) grid2.getDevicePointer(), (double2*) grid1.getDevicePointer(), CUFFT_INVERSE);
-        else
-            cufftExecC2C(fft, (float2*) grid2.getDevicePointer(), (float2*) grid1.getDevicePointer(), CUFFT_INVERSE);
-    }
-}
-
-/* -------------------------------------------------------------------------- *
  *                           HippoNonbondedForce                              *
  * -------------------------------------------------------------------------- */
-
-CudaCalcHippoNonbondedForceKernel::~CudaCalcHippoNonbondedForceKernel() {
-    ContextSelector selector(cc);
-    if (sort != NULL)
-        delete sort;
-    if (hasInitializedFFT) {
-        cufftDestroy(fftForward);
-        cufftDestroy(fftBackward);
-        cufftDestroy(dfftForward);
-        cufftDestroy(dfftBackward);
-    }
-}
 
 void CudaCalcHippoNonbondedForceKernel::initialize(const System& system, const HippoNonbondedForce& force) {
     CommonCalcHippoNonbondedForceKernel::initialize(system, force);
     if (usePME) {
         ContextSelector selector(cc);
         CudaContext& cu = dynamic_cast<CudaContext&>(cc);
-        sort = new CudaSort(cu, new SortTrait(), cc.getNumAtoms());
-        cufftResult result = cufftPlan3d(&fftForward, gridSizeX, gridSizeY, gridSizeZ, cc.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
-        if (result != CUFFT_SUCCESS)
-            throw OpenMMException("Error initializing FFT: "+cc.intToString(result));
-        result = cufftPlan3d(&fftBackward, gridSizeX, gridSizeY, gridSizeZ, cc.getUseDoublePrecision() ? CUFFT_Z2D : CUFFT_C2R);
-        if (result != CUFFT_SUCCESS)
-            throw OpenMMException("Error initializing FFT: "+cc.intToString(result));
-        result = cufftPlan3d(&dfftForward, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, cc.getUseDoublePrecision() ? CUFFT_D2Z : CUFFT_R2C);
-        if (result != CUFFT_SUCCESS)
-            throw OpenMMException("Error initializing FFT: "+cc.intToString(result));
-        result = cufftPlan3d(&dfftBackward, dispersionGridSizeX, dispersionGridSizeY, dispersionGridSizeZ, cc.getUseDoublePrecision() ? CUFFT_Z2D : CUFFT_C2R);
-        if (result != CUFFT_SUCCESS)
-            throw OpenMMException("Error initializing FFT: "+cc.intToString(result));
-        hasInitializedFFT = true;
-    }
-}
-
-void CudaCalcHippoNonbondedForceKernel::computeFFT(bool forward, bool dispersion) {
-    CudaArray& grid1 = dynamic_cast<CudaContext&>(cc).unwrap(pmeGrid1);
-    CudaArray& grid2 = dynamic_cast<CudaContext&>(cc).unwrap(pmeGrid2);
-    if (forward) {
-        cufftHandle fft = dispersion ? dfftForward : fftForward;
-        if (cc.getUseDoublePrecision())
-            cufftExecD2Z(fft, (double*) grid1.getDevicePointer(), (double2*) grid2.getDevicePointer());
-        else
-            cufftExecR2C(fft, (float*) grid1.getDevicePointer(), (float2*) grid2.getDevicePointer());
-    }
-    else {
-        cufftHandle fft = dispersion ? dfftBackward : fftBackward;
-        if (cc.getUseDoublePrecision())
-            cufftExecZ2D(fft, (double2*) grid2.getDevicePointer(), (double*) grid1.getDevicePointer());
-        else
-            cufftExecC2R(fft, (float2*) grid2.getDevicePointer(), (float*) grid1.getDevicePointer());
+        sort = cu.createSort(new SortTrait(), cc.getNumAtoms());
     }
 }
 

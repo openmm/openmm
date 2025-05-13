@@ -36,10 +36,14 @@
 #include "openmm/common/ComputeEvent.h"
 #include "openmm/common/ComputeForceInfo.h"
 #include "openmm/common/ComputeProgram.h"
+#include "openmm/common/ComputeQueue.h"
+#include "openmm/common/ComputeSort.h"
 #include "openmm/common/ComputeVectorTypes.h"
+#include "openmm/common/FFT3D.h"
 #include "openmm/common/IntegrationUtilities.h"
 #include "openmm/common/NonbondedUtilities.h"
 #include "openmm/Vec3.h"
+#include "openmm/internal/ContextImpl.h"
 #include <condition_variable>
 #include <map>
 #include <mutex>
@@ -138,10 +142,30 @@ public:
      */
     virtual std::vector<ComputeContext*> getAllContexts() = 0;
     /**
+     * Get the ContextImpl is ComputeContext is associated with.
+     */
+    virtual ContextImpl& getContextImpl() = 0;
+    /**
      * Get a workspace used for accumulating energy when a simulation is parallelized across
      * multiple devices.
      */
     virtual double& getEnergyWorkspace() = 0;
+    /**
+     * Create a new ComputeQueue for use with this context.
+     */
+    virtual ComputeQueue createQueue() = 0;
+    /**
+     * Get the ComputeQueue currently being used for execution.
+     */
+    ComputeQueue getCurrentQueue();
+    /**
+     * Set the ComputeQueue to use for execution.
+     */
+    void setCurrentQueue(ComputeQueue queue);
+    /**
+     * Reset the context to using the default queue for execution.
+     */
+    void restoreDefaultQueue();
     /**
      * Construct an uninitialized array of the appropriate class for this platform.  The returned
      * value should be created on the heap with the "new" operator.
@@ -151,6 +175,19 @@ public:
      * Construct a ComputeEvent object of the appropriate class for this platform.
      */
     virtual ComputeEvent createEvent() = 0;
+    /**
+     * Construct a ComputeSort object of the appropriate class for this platform.
+     * 
+     * @param trait      a SortTrait defining the type of data to sort.  It should have been allocated
+     *                   on the heap with the "new" operator.  This object takes over ownership of it,
+     *                   and deletes it when the ComputeSort is deleted.
+     * @param length     the length of the arrays this object will be used to sort
+     * @param uniform    whether the input data is expected to follow a uniform or nonuniform
+     *                   distribution.  This argument is used only as a hint.  It allows parts
+     *                   of the algorithm to be tuned for faster performance on the expected
+     *                   distribution.
+     */
+    virtual ComputeSort createSort(ComputeSortImpl::SortTrait* trait, unsigned int length, bool uniform=true) = 0;
     /**
      * Compile source code to create a ComputeProgram.
      *
@@ -475,6 +512,16 @@ public:
      */
     virtual NonbondedUtilities* createNonbondedUtilities() = 0;
     /**
+     * Create an object for performing 3D FFTs.  The caller is responsible for deleting
+     * the object when it is no longer needed.
+     *
+     * @param xsize   the first dimension of the data sets on which FFTs will be performed
+     * @param ysize   the second dimension of the data sets on which FFTs will be performed
+     * @param zsize   the third dimension of the data sets on which FFTs will be performed
+     * @param realToComplex  if true, a real-to-complex transform will be done.  Otherwise, it is complex-to-complex.
+     */
+    virtual FFT3D createFFT(int xsize, int ysize, int zsize, bool realToComplex=false) = 0;
+    /**
      * Get the smallest legal size for a dimension of the grid.
      */
     virtual int findLegalFFTDimension(int minimum);
@@ -483,6 +530,15 @@ public:
      * It ensures all contexts are fully initialized.
      */
     virtual void initializeContexts() = 0;
+    /**
+     * Set the particle charges.  These are packed into the fourth element of the posq array.
+     */
+    virtual void setCharges(const std::vector<double>& charges) = 0;
+    /**
+     * Request to use the fourth element of the posq array for storing charges.  Since only one force can
+     * do that, this returns true the first time it is called, and false on all subsequent calls.
+     */
+    virtual bool requestPosqCharges() = 0;
     /**
      * Get the thread used by this context for executing parallel computations.
      */
@@ -549,6 +605,7 @@ protected:
     int numAtoms, paddedNumAtoms, computeForceCount, stepsSinceReorder;
     long long stepCount;
     bool forceNextReorder, atomsWereReordered, forcesValid;
+    ComputeQueue defaultQueue, currentQueue;
     std::vector<ComputeForceInfo*> forces;
     std::vector<Molecule> molecules;
     std::vector<MoleculeGroup> moleculeGroups;
