@@ -32,6 +32,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include <array>
+
 #include "CpuNeighborList.h"
 #include "openmm/Kernel.h"
 #include "openmm/kernels.h"

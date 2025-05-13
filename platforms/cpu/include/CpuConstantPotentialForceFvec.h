@@ -253,7 +253,7 @@ void CpuConstantPotentialForceFvec<FVEC, IVEC>::getDerivativesBlockImpl(int bloc
     IVEC tableOffsets(tableOffsetsArray);
 
     // Check if any block atoms are electrode atoms.
-    IVEC iiInclude = ii != -1;
+    IVEC iiInclude = ii != IVEC(-1);
     bool iiIncludeAny = any(iiInclude);
 
     CpuNeighborList::NeighborIterator neighbors = neighborList->getNeighborIterator(blockIndex);
@@ -299,7 +299,7 @@ void CpuConstantPotentialForceFvec<FVEC, IVEC>::getDerivativesBlockImpl(int bloc
 
     // Apply derivatives to block atoms.
     for (int k = 0; k < blockSize; k++) {
-        derivatives[4 * ii[k]] += blockAtomDerivatives[k];
+        derivatives[4 * iiArray[k]] += blockAtomDerivatives[k];
     }
 }
 
