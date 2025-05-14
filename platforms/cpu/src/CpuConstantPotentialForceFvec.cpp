@@ -39,8 +39,6 @@ CpuConstantPotentialForce* createCpuConstantPotentialForceVec4();
 CpuConstantPotentialForce* createCpuConstantPotentialForceAvx();
 CpuConstantPotentialForce* createCpuConstantPotentialForceAvx2();
 
-bool isAvx2Supported();
-
 CpuConstantPotentialForce* createCpuConstantPotentialForceVec() {
     if (isAvx2Supported())
         return createCpuConstantPotentialForceAvx2();

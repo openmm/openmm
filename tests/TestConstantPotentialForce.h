@@ -1254,7 +1254,14 @@ int main(int argc, char* argv[]) {
         // CPU implementation requires CPU PME plugin.
         if (platform.getName() == "CPU") {
             Platform::registerPlatform(&platform);
-            Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
+            // TODO: there must be a better way to load a plugin from a test.
+#if defined(WIN32)
+            Platform::loadPluginLibrary("libOpenMMPME.dll");
+#elif defined(__APPLE__)
+            Platform::loadPluginLibrary("libOpenMMPME.dylib");
+#else
+            Platform::loadPluginLibrary("libOpenMMPME.so");
+#endif
         }
 
         testCoulomb(false); // Non-periodic exceptions

@@ -608,7 +608,7 @@ void testPME(bool triclinic, bool nonNeutral) {
     force->setNonbondedMethod(NonbondedForce::PME);
     force->setCutoffDistance(cutoff);
     force->setReciprocalSpaceForceGroup(1);
-    force->setEwaldErrorTolerance(1e-4);
+    force->setEwaldErrorTolerance(5e-5);
     
     // Compute the reciprocal space forces with the reference platform.
     
@@ -646,8 +646,9 @@ void testPME(bool triclinic, bool nonNeutral) {
     // See if they match.
     
     ASSERT_EQUAL_TOL(refState.getPotentialEnergy(), energy+ewaldSelfEnergy+ewaldPlasmaEnergy, 1e-3);
-    for (int i = 0; i < numParticles; i++)
+    for (int i = 0; i < numParticles; i++) {
         ASSERT_EQUAL_VEC(refState.getForces()[i], Vec3(io.force[4*i], io.force[4*i+1], io.force[4*i+2]), 1e-3);
+    }
 
     // Get charge derivatives from the reference PME implementation.
 

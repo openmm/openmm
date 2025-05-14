@@ -298,8 +298,10 @@ void CpuConstantPotentialForceFvec<FVEC, IVEC>::getDerivativesBlockImpl(int bloc
     }
 
     // Apply derivatives to block atoms.
+    float blockAtomDerivativesArray[blockSize];
+    blockAtomDerivatives.store(blockAtomDerivativesArray);
     for (int k = 0; k < blockSize; k++) {
-        derivatives[4 * iiArray[k]] += blockAtomDerivatives[k];
+        derivatives[4 * iiArray[k]] += blockAtomDerivativesArray[k];
     }
 }
 
