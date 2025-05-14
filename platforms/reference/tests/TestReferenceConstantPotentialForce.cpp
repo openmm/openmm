@@ -32,6 +32,9 @@
 #include "ReferenceTests.h"
 #include "TestConstantPotentialForce.h"
 
+void platformInitialize() {
+}
+
 void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMethod method) {
     // Ensures that computed forces match actual changes in energy with particle
     // perturbations, accounting for changes in electrode atom charges.

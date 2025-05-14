@@ -31,6 +31,14 @@
 
 #include "CpuTests.h"
 #include "TestConstantPotentialForce.h"
+#include "internal/windowsExportPme.h"
+
+extern "C" OPENMM_EXPORT_PME void registerCpuPmeKernelFactories();
+
+void platformInitialize() {
+    Platform::registerPlatform(&platform);
+    registerCpuPmeKernelFactories();
+}
 
 void runPlatformTests() {
     testCompareToReferencePlatform(ConstantPotentialForce::Matrix);
