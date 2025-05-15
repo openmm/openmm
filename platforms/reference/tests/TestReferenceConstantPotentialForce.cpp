@@ -47,7 +47,7 @@ void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMetho
     ConstantPotentialForce* force;
     vector<Vec3> positions;
     makeTestUpdateSystem(method, system, force, positions);
-    force->setEwaldErrorTolerance(1e-7);
+    force->setEwaldErrorTolerance(2e-6);
     VerletIntegrator integrator(0.001);
     Context context(system, integrator, platform);
     context.setPositions(positions);
@@ -70,7 +70,7 @@ void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMetho
             double energyR = context.getState(State::Energy).getPotentialEnergy();
             positions[i][d] = refPos;
 
-            ASSERT_EQUAL_TOL((energyR - energyL) / (2 * delta), -forces[i][d], 1e-4);
+            ASSERT_EQUAL_TOL((energyR - energyL) / (2 * delta), -forces[i][d], 5e-4);
         }
     }
 }

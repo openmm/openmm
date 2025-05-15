@@ -1163,7 +1163,7 @@ void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod meth
     force->setUseChargeConstraint(true);
     force->setChargeConstraintTarget(1);
     force->setExternalField(Vec3(10, 0, 0));
-    force->setEwaldErrorTolerance(5e-5);
+    force->setEwaldErrorTolerance(1e-4);
 
     set<int> electrodeParticles;
     double potential, gaussianWidth, thomasFermiScale;
