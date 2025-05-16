@@ -76,6 +76,10 @@ void testGradientFiniteDifference(ConstantPotentialForce::ConstantPotentialMetho
 }
 
 void runPlatformTests() {
+    // Test is extremely slow on emulated platforms, so don't run many steps.
+    testEnergyConservation(ConstantPotentialForce::Matrix, 50);
+    testEnergyConservation(ConstantPotentialForce::CG, 50);
+
     testGradientFiniteDifference(ConstantPotentialForce::Matrix);
     testGradientFiniteDifference(ConstantPotentialForce::CG);
 }

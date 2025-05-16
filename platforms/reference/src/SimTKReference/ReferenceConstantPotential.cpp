@@ -350,7 +350,7 @@ void ReferenceConstantPotentialCGSolver::solve(
 
     // Perform conjugate gradient iterations.
     bool converged = false;
-    for (int iter = 0; iter < numElectrodeParticles; iter++) {
+    for (int iter = 0; iter <= numElectrodeParticles; iter++) {
         // Evaluate the matrix-vector product A qStep.
         for (int ii = 0; ii < numElectrodeParticles; ii++) {
             charges[elecToSys[ii]] = qStep[ii];

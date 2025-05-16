@@ -1150,7 +1150,7 @@ void testChargeUpdate(ConstantPotentialForce::ConstantPotentialMethod method) {
     }
 }
 
-void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod method) {
+void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod method, int stepCount) {
     // Do a short dynamics run and ensure that energy is conserved.
 
     System system;
@@ -1180,7 +1180,7 @@ void testEnergyConservation(ConstantPotentialForce::ConstantPotentialMethod meth
     State state1 = context.getState(State::Energy);
     double energy1 = state1.getPotentialEnergy() + state1.getKineticEnergy();
 
-    integrator.step(100);
+    integrator.step(stepCount);
 
     State state2 = context.getState(State::Energy);
     double energy2 = state2.getPotentialEnergy() + state2.getKineticEnergy();
@@ -1289,8 +1289,6 @@ int main(int argc, char* argv[]) {
         testReferenceCharges(true, ConstantPotentialForce::CG);
         testChargeUpdate(ConstantPotentialForce::Matrix);
         testChargeUpdate(ConstantPotentialForce::CG);
-        testEnergyConservation(ConstantPotentialForce::Matrix);
-        testEnergyConservation(ConstantPotentialForce::CG);
 
         runPlatformTests();
     }

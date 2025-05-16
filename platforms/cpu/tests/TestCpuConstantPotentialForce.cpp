@@ -41,6 +41,8 @@ void platformInitialize() {
 }
 
 void runPlatformTests() {
+    testEnergyConservation(ConstantPotentialForce::Matrix, 100);
+    testEnergyConservation(ConstantPotentialForce::CG, 100);
     testCompareToReferencePlatform(ConstantPotentialForce::Matrix);
     testCompareToReferencePlatform(ConstantPotentialForce::CG);
 }
