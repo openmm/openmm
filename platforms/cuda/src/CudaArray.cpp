@@ -41,7 +41,7 @@ CudaArray::CudaArray(CudaContext& context, size_t size, int elementSize, const s
 }
 
 CudaArray::~CudaArray() {
-    if (pointer != 0 && ownsMemory) {
+    if (pointer != 0 && ownsMemory && context->getContextIsValid()) {
         ContextSelector selector(*context);
         CUresult result = cuMemFree(pointer);
         if (result != CUDA_SUCCESS) {
