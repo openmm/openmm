@@ -1044,7 +1044,7 @@ class ForceField(object):
                 t1, m1 = allMatches[0]
                 for t2, m2 in allMatches[1:]:
                     if not t1.areParametersIdentical(t2, m1, m2):
-                        raise Exception('Multiple non-identical matching templates found for residue %d (%s): %s.' % (res.index+1, res.name, ', '.join(match[0].name for match in allMatches)))
+                        raise Exception('Multiple non-identical matching templates found for residue %d (%s): %s.' % (res.index, res.name, ', '.join(match[0].name for match in allMatches)))
                 template = allMatches[0][0]
                 matches = allMatches[0][1]
         return [template, matches]
