@@ -41,9 +41,14 @@
 using namespace std;
 using namespace OpenMM;
 
-CpuConstantPotentialSolver::CpuConstantPotentialSolver(
-    int numElectrodeParticles
-) : numElectrodeParticles(numElectrodeParticles), valid(false) {
+CpuConstantPotentialSolver::CpuConstantPotentialSolver(int numParticles, int numElectrodeParticles) :
+    numParticles(numParticles),
+    numElectrodeParticles(numElectrodeParticles),
+    valid(false),
+    hasSavedSolution(false),
+    savedPositions(numParticles),
+    savedCharges(numElectrodeParticles)
+{
 }
 
 CpuConstantPotentialSolver::~CpuConstantPotentialSolver() {
@@ -51,18 +56,58 @@ CpuConstantPotentialSolver::~CpuConstantPotentialSolver() {
 
 void CpuConstantPotentialSolver::invalidate() {
     valid = false;
+    hasSavedSolution = false;
 }
 
-CpuConstantPotentialMatrixSolver::CpuConstantPotentialMatrixSolver(
-    int numElectrodeParticles
-) : CpuConstantPotentialSolver(numElectrodeParticles), electrodePosData(numElectrodeParticles), constraintVector(numElectrodeParticles), b(numElectrodeParticles) {
+void CpuConstantPotentialSolver::discardSavedSolution() {
+    hasSavedSolution = false;
 }
 
-void CpuConstantPotentialMatrixSolver::solve(
-    CpuConstantPotentialForce& conp,
-    ThreadPool& threads,
-    Kernel& pmeKernel
-) {
+void CpuConstantPotentialSolver::solve(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel) {
+    // There is nothing to do if all particles have fixed charges.
+    if(!numElectrodeParticles) {
+        return;
+    }
+
+    // If box vectors or positions have not changed, and there is a solution
+    // already computed, we can simply reload it instead of solving again.
+    if (hasSavedSolution) {
+        if (savedBoxVectors[0] != conp.boxVectors[0] || savedBoxVectors[1] != conp.boxVectors[1] || savedBoxVectors[2] != conp.boxVectors[2]) {
+            hasSavedSolution = false;
+        }
+    }
+    if (hasSavedSolution) {
+        for (int i = 0; i < numParticles; i++) {
+            if (savedPositions[i] != conp.posData[i]) {
+                hasSavedSolution = false;
+                break;
+            }
+        }
+    }
+    if (hasSavedSolution) {
+        for (int ii = 0; ii < numElectrodeParticles; ii++) {
+            conp.posq[4 * conp.elecToSys[ii] + 3] = savedCharges[ii];
+        }
+        return;
+    }
+
+    solveImpl(conp, threads, pmeKernel);
+
+    hasSavedSolution = true;
+    savedBoxVectors[0] = conp.boxVectors[0];
+    savedBoxVectors[1] = conp.boxVectors[1];
+    savedBoxVectors[2] = conp.boxVectors[2];
+    savedPositions.assign(static_cast<const Vec3*>(conp.posData), static_cast<const Vec3*>(conp.posData + numParticles));
+    for (int ii = 0; ii < numElectrodeParticles; ii++) {
+        savedCharges[ii] = conp.posq[4 * conp.elecToSys[ii] + 3];
+    }
+}
+
+CpuConstantPotentialMatrixSolver::CpuConstantPotentialMatrixSolver(int numParticles, int numElectrodeParticles) : CpuConstantPotentialSolver(numParticles, numElectrodeParticles),
+        electrodePosData(numElectrodeParticles), constraintVector(numElectrodeParticles), b(numElectrodeParticles) {
+}
+
+void CpuConstantPotentialMatrixSolver::solveImpl(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel) {
     ensureValid(conp, threads, pmeKernel);
 
     // Zero electrode charges and get derivatives at zero charge.
@@ -95,11 +140,7 @@ void CpuConstantPotentialMatrixSolver::solve(
     }
 }
 
-void CpuConstantPotentialMatrixSolver::ensureValid(
-    CpuConstantPotentialForce& conp,
-    ThreadPool& threads,
-    Kernel& pmeKernel
-) {
+void CpuConstantPotentialMatrixSolver::ensureValid(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel) {
     // Initializes or updates the precomputed capacitance matrix if this is its
     // first use or electrode parameters have changed since its initialization.
 
@@ -191,9 +232,7 @@ void CpuConstantPotentialMatrixSolver::ensureValid(
     }
 }
 
-CpuConstantPotentialCGSolver::CpuConstantPotentialCGSolver(
-    int numElectrodeParticles
-) : CpuConstantPotentialSolver(numElectrodeParticles),
+CpuConstantPotentialCGSolver::CpuConstantPotentialCGSolver(int numParticles,int numElectrodeParticles) : CpuConstantPotentialSolver(numParticles, numElectrodeParticles),
     precondVector(numElectrodeParticles),
     q(numElectrodeParticles),
     grad(numElectrodeParticles),
@@ -205,11 +244,7 @@ CpuConstantPotentialCGSolver::CpuConstantPotentialCGSolver(
 {
 }
 
-void CpuConstantPotentialCGSolver::solve(
-    CpuConstantPotentialForce& conp,
-    ThreadPool& threads,
-    Kernel& pmeKernel
-) {
+void CpuConstantPotentialCGSolver::solveImpl(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel) {
     ensureValid(conp, threads, pmeKernel);
 
     // offset, precondVector, and precondScale need to use double precision for
@@ -427,11 +462,7 @@ void CpuConstantPotentialCGSolver::solve(
     }
 }
 
-void CpuConstantPotentialCGSolver::ensureValid(
-    CpuConstantPotentialForce& conp,
-    ThreadPool& threads,
-    Kernel& pmeKernel
-) {
+void CpuConstantPotentialCGSolver::ensureValid(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel) {
     // Initializes or updates information for a preconditioner for the conjugate
     // gradient method if this is its first use or electrode parameters have
     // changed since its initialization.
@@ -455,8 +486,8 @@ void CpuConstantPotentialCGSolver::ensureValid(
         float z0 = conp.posq[4 * i0 + 2];
 
         // Save the charges of all particles, and then zero them.
-        std::vector<float> qSave(conp.numParticles);
-        for (int i = 0; i < conp.numParticles; i++) {
+        std::vector<float> qSave(numParticles);
+        for (int i = 0; i < numParticles; i++) {
             qSave[i] = conp.posq[4 * i + 3];
             conp.posq[4 * i + 3] = 0.0f;
         }
@@ -473,7 +504,7 @@ void CpuConstantPotentialCGSolver::ensureValid(
         // position but only due to finite accuracy of the PME splines, so it is
         // fine to assume it will be constant for the preconditioner.
         std::vector<float> derivatives(numElectrodeParticles);
-        CpuConstantPotentialPmeIO io(conp.posq, NULL, &derivatives[0], conp.numParticles, numElectrodeParticles);
+        CpuConstantPotentialPmeIO io(conp.posq, NULL, &derivatives[0], numParticles, numElectrodeParticles);
         pmeKernel.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxVectors, false, false, true);
         pmeKernel.getAs<CalcPmeReciprocalForceKernel>().finishComputation(io);
         pmeTerm = derivatives[0];
@@ -482,7 +513,7 @@ void CpuConstantPotentialCGSolver::ensureValid(
         conp.posq[4 * i0] = x0;
         conp.posq[4 * i0 + 1] = y0;
         conp.posq[4 * i0 + 2] = z0;
-        for (int i = 0; i < conp.numParticles; i++) {
+        for (int i = 0; i < numParticles; i++) {
             conp.posq[4 * i + 3] = qSave[i];
         }
     }
@@ -594,12 +625,8 @@ void CpuConstantPotentialForce::initialize(
     }
 }
 
-void CpuConstantPotentialForce::update(
-    float chargeTarget,
-    const float* externalField,
-    int firstElectrode,
-    int lastElectrode
-) {
+void CpuConstantPotentialForce::update(float chargeTarget, const float* externalField, int firstElectrode, int lastElectrode) {
+    solver->discardSavedSolution();
     if (firstElectrode <= lastElectrode) {
         solver->invalidate();
     }
@@ -656,12 +683,7 @@ void CpuConstantPotentialForce::getCharges(
     saveCharges(charges);
 }
 
-void CpuConstantPotentialForce::setThreadData(
-    const Vec3* boxVectors,
-    const vector<Vec3>& posData,
-    float* posq,
-    vector<AlignedArray<float> >& threadForce
-) {
+void CpuConstantPotentialForce::setThreadData(const Vec3* boxVectors, const vector<Vec3>& posData, float* posq, vector<AlignedArray<float> >& threadForce) {
     this->boxVectors[0] = boxVectors[0];
     this->boxVectors[1] = boxVectors[1];
     this->boxVectors[2] = boxVectors[2];
@@ -685,20 +707,14 @@ void CpuConstantPotentialForce::setThreadData(
     this->threadForce = &threadForce;
 }
 
-void CpuConstantPotentialForce::saveCharges(
-    vector<float>& charges
-) {
+void CpuConstantPotentialForce::saveCharges(vector<float>& charges) {
     for (int ii = 0; ii < numElectrodeParticles; ii++) {
         int i = elecToSys[ii];
         charges[i] = posq[4 * i + 3];
     }
 }
 
-void CpuConstantPotentialForce::getEnergyForces(
-    ThreadPool& threads,
-    Kernel& pmeKernel,
-    double* energy
-) {
+void CpuConstantPotentialForce::getEnergyForces(ThreadPool& threads, Kernel& pmeKernel, double* energy) {
     // Everything except reciprocal space.
     int numThreads = threads.getNumThreads();
     threadEnergy.resize(numThreads);
@@ -733,11 +749,7 @@ void CpuConstantPotentialForce::getEnergyForces(
     }
 }
 
-void CpuConstantPotentialForce::getEnergyForcesThread(
-    ThreadPool& threads,
-    int threadIndex,
-    bool includeEnergy
-) {
+void CpuConstantPotentialForce::getEnergyForcesThread(ThreadPool& threads, int threadIndex, bool includeEnergy) {
     int numThreads = threads.getNumThreads();
     int groupSize = max(1, numParticles / (10 * numThreads));
     float* forces = &(*threadForce)[threadIndex][0];
@@ -818,10 +830,7 @@ void CpuConstantPotentialForce::getEnergyForcesThread(
     }
 }
 
-void CpuConstantPotentialForce::getDerivatives(
-    ThreadPool& threads,
-    Kernel& pmeKernel
-) {
+void CpuConstantPotentialForce::getDerivatives(ThreadPool& threads, Kernel& pmeKernel) {
     // Ewald neutralizing plasma.
     float qTotal = 0.0f;
     for (int i = 0; i < numParticles; i++) {

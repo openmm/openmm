@@ -53,9 +53,10 @@ public:
     /**
      * Creates a CpuConstantPotentialSolver.
      * 
+     * @param numParticles           the number of particles
      * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
      */
-    CpuConstantPotentialSolver(int numElectrodeParticles);
+    CpuConstantPotentialSolver(int numParticles, int numElectrodeParticles);
     virtual ~CpuConstantPotentialSolver();
     /**
      * Mark precomputed data stored by the solver as invalid due to a change in
@@ -63,17 +64,33 @@ public:
      */
     void invalidate();
     /**
+     * Mark any existing solution stored by the solver as invalid due to a
+     * change in system parameters.
+     */
+    void discardSavedSolution();
+    /**
+     * Solves for charges if needed.
+     * 
+     * @param conp       CPU constant potential force implementation
+     * @param threads    thread pool for parallel evaluation
+     * @param pmeKernel  CPU PME solver kernel
+     */
+    void solve(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel);
+    /**
      * Solves for charges.
      * 
      * @param conp       CPU constant potential force implementation
      * @param threads    thread pool for parallel evaluation
      * @param pmeKernel  CPU PME solver kernel
      */
-    virtual void solve(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel) = 0;
+    virtual void solveImpl(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel) = 0;
 
 protected:
-    int numElectrodeParticles;
-    bool valid;
+    int numParticles, numElectrodeParticles;
+    bool valid, hasSavedSolution;
+    Vec3 savedBoxVectors[3];
+    std::vector<Vec3> savedPositions;
+    std::vector<float> savedCharges;
 };
 
 /**
@@ -92,9 +109,10 @@ public:
     /**
      * Creates a CpuConstantPotentialMatrixSolver.
      * 
+     * @param numParticles           the number of particles
      * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
      */
-    CpuConstantPotentialMatrixSolver(int numElectrodeParticles);
+    CpuConstantPotentialMatrixSolver(int numParticles, int numElectrodeParticles);
     /**
      * Solves for charges.
      * 
@@ -102,7 +120,7 @@ public:
      * @param threads    thread pool for parallel evaluation
      * @param pmeKernel  CPU PME solver kernel
      */
-    void solve(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel);
+    void solveImpl(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel);
 
 private:
     /**
@@ -136,9 +154,10 @@ public:
     /**
      * Creates a CpuConstantPotentialCGSolver.
      * 
+     * @param numParticles           the number of particles
      * @param numElectrodeParticles  the number of electrode (fluctuating-charge) particles
      */
-    CpuConstantPotentialCGSolver(int numElectrodeParticles);
+    CpuConstantPotentialCGSolver(int numParticles, int numElectrodeParticles);
     /**
      * Solves for charges.
      * 
@@ -146,7 +165,7 @@ public:
      * @param threads    thread pool for parallel evaluation
      * @param pmeKernel  CPU PME solver kernel
      */
-    void solve(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel);
+    void solveImpl(CpuConstantPotentialForce& conp, ThreadPool& threads, Kernel& pmeKernel);
 
 private:
     /**
@@ -164,6 +183,7 @@ private:
  * for ConstantPotentialForce.
  */
 class CpuConstantPotentialForce {
+    friend class CpuConstantPotentialSolver;
     friend class CpuConstantPotentialMatrixSolver;
     friend class CpuConstantPotentialCGSolver;
 
