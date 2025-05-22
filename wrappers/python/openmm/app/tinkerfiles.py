@@ -113,13 +113,45 @@ class TinkerAtom:
         atomTypeData : Dict[str, Any]
             Dictionary containing atom type data
         """
-        self.atomClass = atomTypeData["atomClass"]
-        self.nameShort = atomTypeData["nameShort"]
-        self.nameLong = atomTypeData["nameLong"]
-        self.element = atomTypeData["element"]
-        self.atomicNumber = atomTypeData["atomicNumber"]
-        self.mass = atomTypeData["mass"]
-        self.valence = atomTypeData["valence"]
+        self.atomClass = atomTypeData.atomClass
+        self.nameShort = atomTypeData.nameShort
+        self.nameLong = atomTypeData.nameLong
+        self.element = atomTypeData.element
+        self.atomicNumber = atomTypeData.atomicNumber
+        self.mass = atomTypeData.mass
+        self.valence = atomTypeData.valence
+
+
+@dataclass
+class TinkerAtomType:
+    """
+    A data class to represent Tinker atom types.
+    atomType : str
+        The atom type
+    atomClass : str
+        The atom class
+    nameShort : str
+        The short name of the atom
+    nameLong : str
+        The long name of the atom
+    element : str
+        The element
+    atomicNumber : int
+        The atomic number
+    mass : float
+        The mass
+    valence : int
+        The valence
+    """
+
+    atomType: str
+    atomClass: str
+    nameShort: str
+    nameLong: str
+    element: str
+    atomicNumber: int
+    mass: float
+    valence: int
 
 
 class TinkerFiles:
@@ -308,7 +340,9 @@ class TinkerFiles:
         # Store data from files
         self.atoms = None
         self.topology = None
-        self._scalars, self._forces, self._atomTypes, self._bioTypes = [], [], [], []
+        self._atomTypes = dict()
+        self._forces = dict()
+        self._scalars = dict()
 
         # Load xyz file
         self.atoms, self.boxVectors, self.positions = TinkerFiles._loadXyzFile(xyz)
@@ -317,20 +351,17 @@ class TinkerFiles:
         # Load the .key or .prm file(s)
         key = key if isinstance(key, list) else [key]
         for keyFile in key:
-            atomTypes, bioTypes, forces, scalars = self._loadKeyFile(keyFile)
-            self._atomTypes.append(atomTypes)
-            self._bioTypes.append(bioTypes)
-            self._forces.append(forces)
-            self._scalars.append(scalars)
+            atomTypes, forces, scalars = self._loadKeyFile(keyFile)
+            self._atomTypes.update(atomTypes)
+            self._forces.update(forces)
+            self._scalars.update(scalars)
 
         # Update atoms with atom type information
         for atom in self.atoms:
-            for atomTypeDict in self._atomTypes:
-                if atom.atomType in atomTypeDict:
-                    atom.updateFromAtomType(atomTypeDict[atom.atomType])
-                    break
-            else:
-                raise ValueError(f"Atom type {atom.atomType} not found in atomTypes")
+            atomType = atom.atomType
+            if atomType not in self._atomTypes:
+                raise ValueError(f"Atom type {atomType} not found in atomTypes")
+            atom.updateFromAtomType(self._atomTypes[atomType])
 
         # Create topology
         self.topology = TinkerFiles._createTopology(self.atoms)
@@ -357,7 +388,6 @@ class TinkerFiles:
                 self.topology,
                 key,
                 self.atomTypes,
-                self.bioTypes,
                 self.forces,
                 self.scalars,
                 self.atoms,
@@ -370,7 +400,7 @@ class TinkerFiles:
 
     def createSystem(
         self,
-        nonbondedMethod=ff.PME,
+        nonbondedMethod=ff.NoCutoff,
         nonbondedCutoff=1.0 * nanometers,
         constraints=None,
         rigidWater: bool = False,
@@ -417,64 +447,28 @@ class TinkerFiles:
         openmm.System
             The created OpenMM System.
         """
-        import openmm as mm
-        from openmm.app.internal.amoebaforces import AmoebaBondGenerator
+        from openmm.app.forcefield import ForceField
+
+        # Re-use SystemData to get bond information
+        data = ForceField._SystemData(self.topology)
+        rigidResidue = [False] * self.topology.getNumResidues()
+
+        # Set atomtypes in SystemData
+        for atom in self.topology.atoms():
+            data.atomType[atom] = self.atoms[atom.index].atomType
 
         # Initialize system
-        system = mm.System()
-
-        # Add bonds
-        bondGenerator = AmoebaBondGenerator(
-            cubic=self._scalars[0]["bond-cubic"],
-            quartic=self._scalars[0]["bond-quartic"],
+        system = ForceField._initializeSystem(
+            self.topology,
+            self._atomTypes,
+            data,
+            hydrogenMass,
+            nonbondedMethod,
+            rigidResidue,
+            constraints,
         )
 
-        # Iterate over bonds in topology
-        for bond in self.topology.bonds():
-            atom1, atom2 = bond.atom1, bond.atom2
-            atomType1, atomType2 = (
-                self.atoms[atom1].atomType,
-                self.atoms[atom2].atomType,
-            )
-
-            bondGenerator.createBond(system, atomType1, atomType2)
-
-            print(bond.atom1, bond.atom2)
-
-        print(self._forces[0]["bond"])
-
-    def writeXmlFiles(self, key):
-        """
-        Write XML files for the Tinker force field parameters.
-
-        Creates both a standard XML file and an implicit solvent (GK) version.
-        The file names are derived from the force field name in the key file.
-
-        Parameters
-        ----------
-        key : str or list of str
-            Path(s) to the Tinker .key file(s).
-
-        Returns
-        -------
-        None
-        """
-        for keyFile, atomTypes, bioTypes, forces, scalars in zip(
-            key, self._atomTypes, self._bioTypes, self._forces, self._scalars
-        ):
-            xmlFile, implicitXmlFile = TinkerXmlWriter.writeXmlFiles(
-                self.topology,
-                keyFile,
-                atomTypes,
-                bioTypes,
-                forces,
-                scalars,
-                self.atoms,
-            )
-
-            # Reset the file pointers
-            xmlFile.seek(0)
-            implicitXmlFile.seek(0)
+        return system
 
     # ------------------------------------------------------------------------------------------ #
     #                                      TOPOLOGY FUNCTIONS                                    #
@@ -2158,7 +2152,7 @@ class TinkerFiles:
     # ------------------------------------------------------------------------------------------ #
     @staticmethod
     def _addAtomType(
-        atomTypeDict: Dict[str, Dict],
+        atomTypeDict: Dict[str, TinkerAtomType],
         atomType: str,
         atomClass: str,
         nameShort: str,
@@ -2173,7 +2167,7 @@ class TinkerFiles:
 
         Parameters
         ----------
-        atomTypeDict : Dict[str, Dict]
+        atomTypeDict : Dict[str, TinkerAtomType]
             The dictionary of atom type data.
         atomType : str
             The atom type.
@@ -2197,98 +2191,33 @@ class TinkerFiles:
         ValueError
             If there is an inconsistency with existing atom type data.
         """
+        tinkerType = TinkerAtomType(
+            atomType=atomType,
+            atomClass=atomClass,
+            nameShort=nameShort,
+            nameLong=nameLong,
+            element=element,
+            atomicNumber=atomicNumber,
+            mass=mass,
+            valence=valence,
+        )
+
         if atomType in atomTypeDict:
             # Validate against existing atom type data
             stored = atomTypeDict[atomType]
-            mismatches = {
-                "atomClass": atomClass,
-                "nameShort": nameShort,
-                "nameLong": nameLong,
-                "element": element,
-                "atomicNumber": atomicNumber,
-                "mass": mass,
-                "valence": valence,
-            }
-
-            for key, new_value in mismatches.items():
-                if stored[key] != new_value:
-                    raise ValueError(
-                        f"Inconsistent {key} for atom type '{atomType}': "
-                        f"expected '{stored[key]}', got '{new_value}'."
-                    )
+            if stored != tinkerType:
+                raise ValueError(
+                    f"Inconsistent data for atom type '{atomType}': "
+                    f"expected '{stored}', got '{tinkerType}'."
+                )
 
         # Add new atom type to the dictionary
-        atomTypeDict[atomType] = {
-            "atomClass": atomClass,
-            "nameShort": nameShort,
-            "nameLong": nameLong,
-            "element": element,
-            "atomicNumber": atomicNumber,
-            "mass": mass,
-            "valence": valence,
-        }
-
-    @staticmethod
-    def _addBioType(
-        bioTypeDict: Dict[str, Dict],
-        bioType: str,
-        nameShort: str,
-        nameLong: str,
-        atomType: str,
-        element: str,
-    ) -> None:
-        """
-        Add and validate biotype information.
-
-        Parameters
-        ----------
-        bioTypeDict : Dict[str, Dict]
-            The dictionary of biotype data.
-        bioType : str
-            The bio type.
-        nameShort : str
-            The short name of the biotype.
-        nameLong : str
-            The long name of the biotype.
-        atomType : str
-            The atom type counterpart of the biotype.
-        element : str
-            The element of the biotype.
-
-        Raises
-        ------
-        ValueError
-            If there is an inconsistency with existing biotype data.
-        """
-        if bioType in bioTypeDict:
-            # Validate against existing atom type data
-            stored = bioTypeDict[bioType]
-            mismatches = {
-                "nameShort": nameShort,
-                "nameLong": nameLong,
-                "atomType": atomType,
-                "element": element,
-            }
-
-            for key, new_value in mismatches.items():
-                if stored[key] != new_value:
-                    raise ValueError(
-                        f"Inconsistent {key} for biotype '{bioType}': "
-                        f"expected '{stored[key]}', got '{new_value}'."
-                    )
-
-        # Add new biotype to the dictionary
-        bioTypeDict[bioType] = {
-            "nameShort": nameShort,
-            "nameLong": nameLong,
-            "atomType": atomType,
-            "element": element,
-        }
+        atomTypeDict[atomType] = tinkerType
 
     @staticmethod
     def _loadKeyFile(
         keyFile: str,
-    ) -> Tuple[Dict[str, Dict], Dict[str, Dict], Dict[str, List], Dict[str, str]]:
+    ) -> Tuple[Dict[str, TinkerAtomType], Dict[str, Dict], Dict[str, str]]:
         """
         Load a TINKER .key or .prm file.
 
@@ -2299,22 +2228,13 @@ class TinkerFiles:
 
         Returns
         -------
-        Tuple[Dict[str, Dict], Dict[str, Dict], Dict[str, List], Dict[str, str]]
+        Tuple[Dict[str, TinkerAtomType], Dict[str, Dict], Dict[str, str]]
             A tuple containing:
             - Atom types dictionary
-            - Bio types dictionary
             - Forces dictionary
             - Scalars dictionary
-
-        Raises
-        ------
-        FileNotFoundError
-            If the file does not exist.
-        ValueError
-            If there is an error parsing the file.
         """
         atomTypesDict = dict()
-        bioTypesDict = dict()
         forcesDict = dict()
         scalarsDict = TinkerFiles.RECOGNIZED_SCALARS.copy()
 
@@ -2390,55 +2310,13 @@ class TinkerFiles:
                     )
                     lineIndex += 1
                 elif fields[0] == "biotype":
-                    # Biotype information
-                    if len(fields) != 5:
-                        raise ValueError(
-                            f"Invalid biotype line: Expected 5 fields, got {len(fields)}. Fields: {fields}"
-                        )
-                    bioType, nameShort, nameLong, atomType = fields[1:]
-
-                    # Look up element from atom type definition
-                    if atomType in atomTypesDict:
-                        element = atomTypesDict[atomType]["element"]
-                    else:
-                        # If atom type not found, assume it will be defined later
-                        element = None
-
-                    nameLong = re.sub(r"\s+", " ", nameLong.strip())
-                    TinkerFiles._addBioType(
-                        bioTypesDict,
-                        bioType,
-                        nameShort,
-                        nameLong,
-                        atomType,
-                        element,
-                    )
-                    lineIndex += 1
-                elif fields[0] in TinkerFiles.RECOGNIZED_FORCES:
-                    if TinkerFiles.RECOGNIZED_FORCES[fields[0]] == 1:
-                        if fields[0] not in forcesDict:
-                            forcesDict[fields[0]] = []
-                        forcesDict[fields[0]].append(fields[1:])
-                        lineIndex += 1
-                    else:
-                        # Call the function to parse the specific force
-                        lineIndex = TinkerFiles.RECOGNIZED_FORCES[fields[0]](
-                            lineIndex, allLines, forcesDict
-                        )
-                elif fields[0] in TinkerFiles.RECOGNIZED_SCALARS:
-                    scalar, value = fields
-                    scalarsDict[scalar] = value
+                    # No need to read biotype information because the Tinker
+                    # .xyz file directly contains atom type information
                     lineIndex += 1
                 else:
-                    # Skip unrecognized fields
                     lineIndex += 1
 
-            # Update biotypes with elements from atom types if they weren't available initially
-            for bioType, bioData in bioTypesDict.items():
-                if bioData["element"] is None and bioData["atomType"] in atomTypesDict:
-                    bioData["element"] = atomTypesDict[bioData["atomType"]]["element"]
-
-            return atomTypesDict, bioTypesDict, forcesDict, scalarsDict
+            return atomTypesDict, forcesDict, scalarsDict
 
         except FileNotFoundError:
             raise FileNotFoundError(f"File {keyFile} not found")
@@ -3048,8 +2926,6 @@ class TinkerXmlWriter:
             The forces dictionary.
         atomTypes : dict
             The atom types dictionary.
-        bioTypes : dict
-            The bio types dictionary.
         scalars : dict
             The scalars dictionary.
         """
@@ -3195,9 +3071,7 @@ class TinkerXmlWriter:
             ureyBradleyElement.attrib["d"] = str(d)
 
     @staticmethod
-    def writeXmlFiles(
-        topology, filename, atomTypes, bioTypes, forces, scalars, atomDict
-    ):
+    def writeXmlFiles(topology, filename, atomTypes, forces, scalars, atomDict):
         """
         Create XML force field files from Tinker parameters.
 
@@ -3213,8 +3087,6 @@ class TinkerXmlWriter:
             The Tinker .key file path used to derive output filenames.
         atomTypes : dict
             Dictionary of atom types and their properties.
-        bioTypes : dict
-            Dictionary of biotypes and their properties.
         forces : dict
             Dictionary of force parameters from the Tinker file.
         scalars : dict
