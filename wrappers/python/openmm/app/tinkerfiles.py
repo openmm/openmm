@@ -1,5 +1,5 @@
 """
-tinkerfiles.py: Used for loading TINKER key/prm and xyz files.
+tinkerfiles.py: A loader for TINKER files (.xyz, .prm, .key, .seq)
 
 This is part of the OpenMM molecular simulation toolkit originating from
 Simbios, the NIH National Center for Physics-Based Simulation of
@@ -12,7 +12,7 @@ Contributors: Peter Eastman
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
-to deal in the Software without restriction, including without limitation
+to deal in the Software without restriction, includ  ing without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
 and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
@@ -38,11 +38,12 @@ import os
 import re
 import shlex
 import xml.etree.ElementTree as etree
-from collections import OrderedDict, deque
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
+from openmm.app import PDBFile
 from openmm.app.internal.unitcell import computePeriodicBoxVectors
 from openmm.unit import nanometers
 from openmm.vec3 import Vec3
@@ -52,8 +53,77 @@ from . import forcefield as ff
 from . import topology as top
 
 
+@dataclass
+class TinkerAtom:
+    """
+    A data class to represent Tinker atoms.
+
+    Attributes
+    ----------
+    symbol : str
+        The atom symbol (e.g., 'C', 'N', 'O')
+    positions : Vec3
+        The atom's position in nanometers
+    bonds : List[int]
+        List of indices of bonded atoms
+    atomType : Optional[str]
+        The atom type from the force field
+    atomClass : Optional[str]
+        The atom class from the force field
+    nameShort : Optional[str]
+        Short name of the atom
+    nameLong : Optional[str]
+        Long name of the atom
+    element : Optional[str]
+        The element symbol
+    atomicNumber : Optional[int]
+        The atomic number
+    mass : Optional[float]
+        The atom's mass in amu
+    valence : Optional[int]
+        The atom's valence
+    residueName : Optional[str]
+        The name of the residue this atom belongs to
+    chain : Optional[Any]
+        The chain this atom belongs to
+    index : int
+        The atom's index in the system
+    """
+
+    symbol: str
+    positions: Vec3
+    bonds: List[int]
+    index: int
+    atomType: Optional[str] = None
+    atomClass: Optional[str] = None
+    nameShort: Optional[str] = None
+    nameLong: Optional[str] = None
+    element: Optional[str] = None
+    atomicNumber: Optional[int] = None
+    mass: Optional[float] = None
+    valence: Optional[int] = None
+    residueName: Optional[str] = None
+    chain: Optional[Any] = None
+
+    def updateFromAtomType(self, atomTypeData: Dict[str, Any]) -> None:
+        """Update atom data from atom type information.
+
+        Parameters
+        ----------
+        atomTypeData : Dict[str, Any]
+            Dictionary containing atom type data
+        """
+        self.atomClass = atomTypeData["atomClass"]
+        self.nameShort = atomTypeData["nameShort"]
+        self.nameLong = atomTypeData["nameLong"]
+        self.element = atomTypeData["element"]
+        self.atomicNumber = atomTypeData["atomicNumber"]
+        self.mass = atomTypeData["mass"]
+        self.valence = atomTypeData["valence"]
+
+
 class TinkerFiles:
-    """TinkerFiles parses Tinker files (.xyz, .prm, .key, .seq), constructs a Topology, and (optionally) an OpenMM System from it."""
+    """TinkerFiles parses Tinker files (.xyz, .prm, .key), constructs a Topology, and (optionally) an OpenMM System from it."""
 
     @staticmethod
     def _initialize_class():
@@ -202,66 +272,46 @@ class TinkerFiles:
     # Call the initialization method
     RECOGNIZED_FORCES, RECOGNIZED_SCALARS = _initialize_class()
 
-    _AMINO_ACID_LIST = [
-        "GLY", "ALA", "VAL", "LEU", "ILE", "SER", "THR", "CYS", "CYX", "CYD", "PRO", 
-        "PHE", "TYR", "TYD", "TRP", "HIS", "HID", "HIE", "ASP", "ASH", "ASN", "GLU", 
-        "GLH", "GLN", "MET", "LYS", "LYD", "ARG", "ORN", "AIB", "PCA", "H2N", "FOR", 
-        "ACE", "COH", "NH2", "NME"
-        ] 
-
-    _NUCLEOTIDE_LIST = [
-        "  A", "  G", "  C", "  U", " DA", " DG", " DC", " DT", " MP", " DP", " TP"
-    ] 
-    
     def __init__(
         self,
         xyz: str,
         key: str,
-        seq: Optional[str] = None,
         periodicBoxVectors: Optional[Tuple[Vec3, Vec3, Vec3]] = None,
         unitCellDimensions: Optional[Vec3] = None,
         writeXmlFiles: bool = False,
-        writePDB: bool = False,
+        writePDB: bool = True,
     ):
         """
-        Load and parse Tinker files to create a Topology.
+        Initialize TinkerFiles.
 
         Parameters
         ----------
         xyz : str
-            The path to the xyz file to load.
-        key : str or list of str
-            The path(s) to the key/prm file(s) to load.
-        seq : str, optional
-            The path to the .seq file to load.
-        periodicBoxVectors : tuple of Vec3
-            The vectors defining the periodic box.
-            If provided, this overwrites the box information from the xyz file.
-        unitCellDimensions : Vec3, optional
-            The dimensions of the crystallographic unit cell.
-            For non-rectangular unit cells, specify periodicBoxVectors instead.
-            If provided, this overwrites the box information from the xyz file.
-        writeXmlFiles : bool, optional, default=False
-            If True, the residue and force field XML files are written to disk.
-        writePDB : bool, optional, default=False
-            If True, the PDB file is written to disk.
+            Path to the Tinker .xyz file.
+        key : str
+            Path to the Tinker .key file.
+        periodicBoxVectors : Optional[Tuple[Vec3, Vec3, Vec3]]
+            The periodic box vectors.
+        unitCellDimensions : Optional[Vec3]
+            The unit cell dimensions.
+        writeXmlFiles : bool
+            Whether to write XML files.
+        writePDB : bool
+            Whether to write PDB files.
         """
-        # Internal variables to store the data from the files
-        self._xyzDict = None
-        self._seqDict = None
-        self._atomDict = None
-        self.topology = None
-        self._scalars, self._forces, self._atomTypes, self._bioTypes = [], [], [], []
-
         # Position and box information
         self.positions = None
         self.boxVectors = None
         self._numpyPositions = None
         self._numpyBoxVectors = None
 
-        # ----------------------- LOAD FILES -----------------------
-        # Load the .xyz file
-        self._xyzDict, self.boxVectors, self.positions = self._loadXyzFile(xyz)
+        # Store data from files
+        self.atoms = None
+        self.topology = None
+        self._scalars, self._forces, self._atomTypes, self._bioTypes = [], [], [], []
+
+        # Load xyz file
+        self.atoms, self.boxVectors, self.positions = TinkerFiles._loadXyzFile(xyz)
         self.positions = self.positions * nanometers
 
         # Load the .key or .prm file(s)
@@ -273,22 +323,17 @@ class TinkerFiles:
             self._forces.append(forces)
             self._scalars.append(scalars)
 
-        # Load the .seq file
-        if seq is not None:
-            self._seqDict = self._loadSeqFile(seq)
-        else:
-            print(
-                "WARNING: No sequence (.seq) file provided. Generic molecules will be used for all chains."
-            )
-            self._seqDict = None
+        # Update atoms with atom type information
+        for atom in self.atoms:
+            for atomTypeDict in self._atomTypes:
+                if atom.atomType in atomTypeDict:
+                    atom.updateFromAtomType(atomTypeDict[atom.atomType])
+                    break
+            else:
+                raise ValueError(f"Atom type {atom.atomType} not found in atomTypes")
 
-        # Combine the data from the .xyz and .key files
-        self._atomDict = TinkerFiles._combineXyzAndKeyData(
-            self._xyzDict, self._atomTypes, self._bioTypes
-        )
-
-        # Create the topology
-        self.topology = self._createTopology(self._atomDict, self._seqDict)
+        # Create topology
+        self.topology = TinkerFiles._createTopology(self.atoms)
 
         # Set the periodic box vectors as specified in the xyz file
         if self.boxVectors is not None:
@@ -306,14 +351,22 @@ class TinkerFiles:
         elif unitCellDimensions is not None:
             self.topology.setUnitCellDimensions(unitCellDimensions)
 
-        # Write to PDB # TODO: Remove this after testing
-        if writePDB:
-            from openmm.app import PDBFile
-            with open("output.pdb", "w") as f:
-                PDBFile.writeFile(self.topology, self.positions, f)
-
+        # Write XML files if requested
         if writeXmlFiles:
-            self.writeXmlFiles(key)
+            TinkerXmlWriter.writeXmlFiles(
+                self.topology,
+                key,
+                self.atomTypes,
+                self.bioTypes,
+                self.forces,
+                self.scalars,
+                self.atoms,
+            )
+
+        # Write PDB file if requested
+        if writePDB:
+            with open(xyz.replace(".xyz", ".pdb"), "w") as f:
+                PDBFile.writeFile(self.topology, self.positions, f)
 
     def createSystem(
         self,
@@ -364,11 +417,47 @@ class TinkerFiles:
         openmm.System
             The created OpenMM System.
         """
-        raise NotImplementedError("createSystem not implemented")
+        import openmm as mm
+        from openmm.app.internal.amoebaforces import AmoebaBondGenerator
+
+        # Initialize system
+        system = mm.System()
+
+        # Add bonds
+        bondGenerator = AmoebaBondGenerator(
+            cubic=self._scalars[0]["bond-cubic"],
+            quartic=self._scalars[0]["bond-quartic"],
+        )
+
+        # Iterate over bonds in topology
+        for bond in self.topology.bonds():
+            atom1, atom2 = bond.atom1, bond.atom2
+            atomType1, atomType2 = (
+                self.atoms[atom1].atomType,
+                self.atoms[atom2].atomType,
+            )
+
+            bondGenerator.createBond(system, atomType1, atomType2)
+
+            print(bond.atom1, bond.atom2)
+
+        print(self._forces[0]["bond"])
 
     def writeXmlFiles(self, key):
         """
-        Write the Tinker XML files.
+        Write XML files for the Tinker force field parameters.
+
+        Creates both a standard XML file and an implicit solvent (GK) version.
+        The file names are derived from the force field name in the key file.
+
+        Parameters
+        ----------
+        key : str or list of str
+            Path(s) to the Tinker .key file(s).
+
+        Returns
+        -------
+        None
         """
         for keyFile, atomTypes, bioTypes, forces, scalars in zip(
             key, self._atomTypes, self._bioTypes, self._forces, self._scalars
@@ -380,7 +469,7 @@ class TinkerFiles:
                 bioTypes,
                 forces,
                 scalars,
-                self._atomDict,
+                self.atoms,
             )
 
             # Reset the file pointers
@@ -391,174 +480,219 @@ class TinkerFiles:
     #                                      TOPOLOGY FUNCTIONS                                    #
     # ------------------------------------------------------------------------------------------ #
     @staticmethod
-    def _findNeighbours(
-        atomData: Dict,
-        index: Optional[int] = None,
-        distance: Optional[int] = None,
-        exact: bool = False,
-        exclusionList: Optional[List[int]] = None,
-    ) -> Union[List[int], List[List[int]]]:
+    def _createTopology(atoms: List[TinkerAtom]) -> top.Topology:
         """
-        Find neighboring atoms using breadth-first search.
+        Create a topology from the atom dictionary.
 
         Parameters
         ----------
-        atomData : Dict
-            Dictionary containing atom data including bond information.
-        index : Optional[int], default=None
-            Starting atom index. If None, returns neighbors for all atoms.
-        distance : Optional[int], default=None
-            Maximum distance to search (in number of bonds). If None, searches entire connected graph.
-        exact : bool, default=False
-            If True, only returns atoms at exactly the specified distance.
-            If False, returns atoms up to and including the specified distance.
-        exclusionList : Optional[List[int]], default=None
-            List of atom indices to exclude from the search.
+        atoms : List[TinkerAtom]
+            List of atoms in the system
 
         Returns
         -------
-        Union[List[int], List[List[int]]]
-            If index is provided, returns list of neighbor indices.
-            If index is None, returns list of lists containing neighbor indices for each atom.
-        """
-        exclusionList = set(exclusionList or [])
-        visited = set()
-
-        def bfs(start: int) -> List[int]:
-            if start in exclusionList:
-                return []
-
-            local_neighbours = set()
-            queue = deque([(start, 0)])
-            visited.add(start)
-
-            while queue:
-                atom, dist = queue.popleft()
-
-                if (
-                    distance is None
-                    or (exact and dist == distance)
-                    or (not exact and dist <= distance)
-                ):
-                    local_neighbours.add(atom)
-
-                if distance is None or dist < distance:
-                    for neighbor in atomData[atom]["bonds"]:
-                        if neighbor not in visited and neighbor not in exclusionList:
-                            visited.add(neighbor)
-                            queue.append((neighbor, dist + 1))
-
-            return sorted(local_neighbours)
-
-        if index is not None:
-            return bfs(index)
-
-        return [
-            bfs(atom)
-            for atom in atomData
-            if atom not in visited and atom not in exclusionList
-        ]
-
-    @staticmethod
-    def _createTopology(atomDict: Dict, seqDict: Optional[Dict] = None) -> top.Topology:
-        """
-        Create the topology from the molecules and sequence data.
-
-        Parameters
-        ----------
-        atomDict : dict
-            The atom data dictionary.
-        seqDict : dict, optional
-            The sequence data dictionary.
-            If None, generic molecules will be used for all chains.
-
-        Notes
-        -----
-        Much of the logic here attempts to reproduce the Fortran code in xyzpdb.f
-        which can be found in the Tinker source code.
-
-        Returns
-        -------
-        topology : Topology
-            The created topology
+        Topology
+            The created topology.
         """
         topology = top.Topology()
-        molecules = TinkerFiles._findNeighbours(atomDict)
 
-        # Initialize sequence dictionary if not provided
-        if seqDict is None:
-            seqDict = {
-                str(chainId): {"chainType": "GENERIC"}
-                for chainId in range(len(molecules))
-            }
-        else:
-            # Ensure seqDict has entries for all molecules
-            for i in range(len(molecules) - len(seqDict)):
-                seqDict[str(len(seqDict))] = {"chainType": "GENERIC"}
+        # Find molecules using depth-first search through bond network
+        molecules = []
+        seenAtoms = set()
 
-        # Process each molecule
-        for molecule, chainId in zip(molecules, seqDict):
-            chain = topology.addChain(id=chainId)
-            chainType = seqDict[chainId]["chainType"]
+        for atomId in range(len(atoms)):
+            if atomId in seenAtoms or atoms[atomId] is None:
+                continue
 
-            if chainType == "GENERIC":
-                TinkerFiles._processGenericMolecule(topology, molecule, atomDict, chain)
-            elif chainType == "NUCLEIC":
-                TinkerFiles._processNucleicAcidChain(
-                    topology, molecule, atomDict, chain, seqDict[chainId]
-                )
-            elif chainType == "PEPTIDE":
-                TinkerFiles._processPeptideChain(
-                    topology, molecule, atomDict, chain, seqDict[chainId]
-                )
+            # Start a new molecule from this atom
+            molecule = []
+            stack = [atomId]
+            while stack:
+                current = stack.pop()
+                if current in seenAtoms or atoms[current] is None:
+                    continue
+                seenAtoms.add(current)
+                molecule.append(current)
+                stack.extend(
+                    atoms[current].bonds
+                )  # Add all connected atoms to traverse
+
+            if molecule:
+                molecules.append(sorted(molecule))
+
+        # Process each molecule into a chain
+        for molecule in molecules:
+            processingFunctions = [
+                TinkerFiles._processWaterMolecule,
+                TinkerFiles._processIonMolecule,
+                TinkerFiles._processPeptideChain,
+                TinkerFiles._processNucleicAcidChain,
+                TinkerFiles._processGenericMolecule,
+            ]
+
+            chain = topology.addChain()
+            for processingFunction in processingFunctions:
+                processingOutput = processingFunction(molecule, atoms)
+                if processingOutput:
+                    for residueAtoms, residueLabel in processingOutput:
+                        residue = topology.addResidue(residueLabel, chain)
+                        for atomId in residueAtoms:
+                            atom = atoms[atomId]
+                            topology.addAtom(
+                                atom.nameShort,
+                                elem.Element.getByAtomicNumber(atom.atomicNumber),
+                                residue,
+                                atomId,
+                            )
+                    break
 
         # Add the bonds to the topology
         topology_atoms = list(topology.atoms())
-        for atomId, atomIdDict in atomDict.items():
-            for bond in atomIdDict["bonds"]:
-                topology.addBond(topology_atoms[atomId], topology_atoms[bond])
-
+        for atom in atoms:
+            for bond in atom.bonds:
+                if bond > atom.index:
+                    topology.addBond(topology_atoms[atom.index], topology_atoms[bond])
         return topology
 
     @staticmethod
     def _processGenericMolecule(
-        topology: top.Topology, molecule: List[int], atomDict: Dict, chain: top.Chain
-    ) -> None:
+        molecule: List[int],
+        atoms: List[TinkerAtom],
+    ) -> List[Union[List[int], str]]:
         """
-        Process a generic molecule (water, ion, or unknown).
+        Process a generic molecule (unknown).
 
         Parameters
         ----------
-        topology : Topology
-            The topology to add the molecule to.
         molecule : List[int]
             List of atom indices in the molecule.
-        atomDict : Dict
-            Dictionary containing atom data.
-        chain : Chain
-            The chain to add the molecule to.
-        """
-        if len(molecule) == 3:
-            # Check if it's water
-            atomCounts = {atomDict[atomId]["atomicNumber"]: 0 for atomId in molecule}
-            for atomId in molecule:
-                atomCounts[atomDict[atomId]["atomicNumber"]] += 1
-            resName = "HOH" if atomCounts[1] == 2 and atomCounts[8] == 1 else "UNK"
-        elif len(molecule) == 1:
-            # Check if it's an ion
-            atom = atomDict[molecule[0]]
-            resName = TinkerFiles._getIonResidueName(atom["atomicNumber"])
-        else:
-            resName = "UNK"
+        atoms : List[TinkerAtom]
+            List of atoms in the system
 
-        residue = topology.addResidue(resName, chain)
+        Returns
+        -------
+        List[Union[List[int], str]]
+            A list containing [atomIndices, residueName] for the molecule.
+        """
+        return [[molecule, "UNK"]]
+
+    @staticmethod
+    def _processWaterMolecule(
+        molecule: List[int],
+        atoms: List[TinkerAtom],
+    ) -> List[Union[List[int], str]]:
+        """
+        Process a water molecule.
+
+        Parameters
+        ----------
+        molecule : List[int]
+            List of atom indices in the molecule.
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+
+        Returns
+        -------
+        List[Union[List[int], str]] or bool
+            If a water molecule is identified, returns a list containing [atomIndices, "HOH"].
+            Otherwise, returns False.
+        """
+        if len(molecule) != 3:
+            return False
+
+        atomCounts = {atoms[atomId].atomicNumber: 0 for atomId in molecule}
         for atomId in molecule:
-            atom = atomDict[atomId]
-            topology.addAtom(
-                atom["nameShort"],
-                elem.Element.getByAtomicNumber(atom["atomicNumber"]),
-                residue,
-            )
+            atomCounts[atoms[atomId].atomicNumber] += 1
+
+        if atomCounts.get(1, 0) != 2 or atomCounts.get(8, 0) != 1:
+            return False
+
+        return [[molecule, "HOH"]]
+
+    @staticmethod
+    def _processPeptideChain(
+        molecule: List[int],
+        atoms: List[TinkerAtom],
+    ) -> List[Union[List[int], str]]:
+        """
+        Process a peptide chain, identifying all residues and adding them to the topology.
+
+        Parameters
+        ----------
+        molecule : List[int]
+            List of atom indices in the molecule.
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+
+        Returns
+        -------
+        List[Union[List[int], str]]
+            If peptide chain is found, returns [molecule, residueLabel].
+            If no peptide chain is found, returns an empty list.
+        """
+        moleculeAtoms = [None] * len(atoms)
+        for atomId in molecule:
+            moleculeAtoms[atomId] = atoms[atomId]
+        return TinkerFiles._getPeptideResidueAtoms(moleculeAtoms)
+
+    @staticmethod
+    def _processNucleicAcidChain(
+        molecule: List[int],
+        atoms: List[TinkerAtom],
+    ) -> List[Union[List[int], str]]:
+        """
+        Process a nucleic acid chain, identifying all residues.
+
+        Parameters
+        ----------
+        molecule : List[int]
+            List of atom indices in the molecule.
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+
+        Returns
+        -------
+        List[Union[List[int], str]]
+            If nucleic acid chain is found, returns a list of [residueAtoms, residueLabel] pairs.
+            If no nucleic acids are found, returns an empty list.
+        """
+        # Map molecule atoms into full atom array for residue detection
+        moleculeAtoms = [None] * len(atoms)
+        for atomId in molecule:
+            moleculeAtoms[atomId] = atoms[atomId]
+
+        # Identify nucleic acid residues in this molecule
+        residues = TinkerFiles._getNucleicAcidResidueAtoms(moleculeAtoms)
+
+        return residues
+
+    @staticmethod
+    def _processIonMolecule(
+        molecule: List[int],
+        atoms: List[TinkerAtom],
+    ) -> List[Union[List[int], str]]:
+        """
+        Process an ion molecule.
+
+        Parameters
+        ----------
+        molecule : List[int]
+            List of atom indices in the molecule.
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+
+        Returns
+        -------
+        List[Union[List[int], str]] or bool
+            If an ion is identified, returns a list containing [atomIndices, ionResidueName].
+            Otherwise, returns False.
+        """
+        if len(molecule) != 1:
+            return False
+
+        atom = atoms[molecule[0]]
+        resName = TinkerFiles._getIonResidueName(atom.atomicNumber)
+        return [[molecule, resName]]
 
     @staticmethod
     def _getIonResidueName(atomicNumber: int) -> str:
@@ -573,7 +707,8 @@ class TinkerFiles:
         Returns
         -------
         str
-            The residue name for the ion.
+            The residue name for the ion (e.g., "Na+", "Cl-").
+            Returns "UNK" if the atomic number does not correspond to a known ion.
         """
         ionMap = {
             3: "Li+",
@@ -593,409 +728,61 @@ class TinkerFiles:
         return ionMap.get(atomicNumber, "UNK")
 
     @staticmethod
-    def _processNucleicAcidChain(
-        topology: top.Topology,
-        molecule: List[int],
-        atomDict: Dict,
-        chain: top.Chain,
-        chainData: Dict,
-    ) -> None:
+    def _findBitorsions(
+        atoms: List[TinkerAtom],
+    ) -> List[Tuple[int, int, int, int, int]]:
         """
-        Process a nucleic acid chain.
+        Find all bitorsions (pairs of adjacent torsional angles) in the molecule.
+
+        Notes
+        -----
+        Follows the logic of the bitors.f and angles.f in Tinker.
 
         Parameters
         ----------
-        topology : Topology
-            The topology to add the chain to.
-        molecule : List[int]
-            List of atom indices in the molecule.
-        atomDict : Dict
-            Dictionary containing atom data.
-        chain : Chain
-            The chain to add the residues to.
-        chainData : Dict
-            Dictionary containing chain data including residues.
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+
+        Returns
+        -------
+        List[Tuple[int, int, int, int, int]]
+            List of bitorsion tuples (ia, ib, ic, id, ie) where:
+            - ia, ib, ic, id, ie are atom indices
+            - ib-ic-id forms an angle
+            - ia is connected to ib
+            - ie is connected to id
+            - ia, ie are not part of the angle
         """
-        seenAtomIds = set()
-        resId = 0
-
-        for atomId in molecule:
-            if atomId in seenAtomIds:
-                continue
-            resName = chainData["residues"][resId]
-
-            # Validate residue
-            assert resName in TinkerFiles._NUCLEOTIDE_LIST, (
-                f"Residue {resName} is not a valid or supported nucleic acid"
-            )
-
-            # Get atoms for the residue
-            resAtoms = TinkerFiles._getNucleicAcidResidueAtoms(
-                atomId, resName, atomDict
-            )
-            if not resAtoms:
+        # First collect all angles (3-atom sequences)
+        angles = set()
+        for i in range(len(atoms)):
+            if atoms[i] is None:
                 continue
 
-            # Add residue to topology
-            TinkerFiles._addResidueToTopology(
-                topology, resAtoms, resName, chain, atomDict, seenAtomIds
-            )
-            resId += 1
+            ib = i  # Central atom of the angle
+            # For each pair of bonds from the central atom
+            for j in range(len(atoms[i].bonds) - 1):
+                ic = atoms[i].bonds[j]
+                for k in range(j + 1, len(atoms[i].bonds)):
+                    id = atoms[i].bonds[k]
+                    angles.add((ic, ib, id))
 
-    @staticmethod
-    def _getNucleicAcidResidueAtoms(
-        atomId: int, resName: str, atomDict: Dict
-    ) -> List[int]:
-        """
-        Get the atoms for a nucleic acid residue.
+        # Now find bitorsions (5-atom sequences) using angles
+        bitorsions = set()
+        for ib, ic, id in angles:
+            # Find external atom connected to ib
+            for ia in atoms[ib].bonds:
+                if ia == ic or ia == id:
+                    continue
 
-        Parameters
-        ----------
-        atomId : int
-            The index of the first atom in the residue.
-        resName : str
-            The name of the residue.
-        atomDict : Dict
-            Dictionary containing atom data.
+                # Find external atom connected to id
+                for ie in atoms[id].bonds:
+                    if ie == ic or ie == ib or ie == ia:
+                        continue
 
-        Returns
-        -------
-        List[int]
-            List of atom indices in the residue.
-        """
-        # Regular nucleotide check: Atom must be carbon (C) with 4 bonds
-        atom = atomDict.get(atomId)
-        if not atom or atom["atomicNumber"] != 6 or len(atom["bonds"]) != 4:
-            return []
+                        bitorsions.add((ia, ib, ic, id, ie))
 
-        # Ensure C1' atom is correct
-        if not TinkerFiles._isC1Atom(atomId, atomDict):
-            return []
-
-        # Get sugar backbone atoms
-        sugarBackboneAtoms = TinkerFiles._getNucleicSugarBackboneAtoms(atomId)
-        o5, c5, c4, o4, c1, c3, c2 = sugarBackboneAtoms
-
-        # Find neighbors for C2', C3', and C4'
-        c2Neighbours = TinkerFiles._findNeighbours(
-            atomDict, c2, None, exact=True, exclusionList=[c1, c3]
-        )[1:]  # Exclude c2 itself
-        c3Neighbours = TinkerFiles._findNeighbours(
-            atomDict, c3, 1, exact=True, exclusionList=[c2, c4]
-        )
-        c4Neighbours = TinkerFiles._findNeighbours(
-            atomDict, c4, 1, exact=True, exclusionList=[c3, o4, c5]
-        )
-
-        # Get hydrogen atoms
-        c1NeighboursHydrogen = TinkerFiles._getHydrogenAtoms([c1], atomDict)
-        c5NeighboursHydrogens = TinkerFiles._getHydrogenAtoms([c5], atomDict)
-        o5NeighboursHydrogens = TinkerFiles._getHydrogenAtoms([o5], atomDict)
-
-        # Determine phosphate atoms if H5T is not present
-        phosphateAtoms = []
-        if not o5NeighboursHydrogens:
-            phosphateAtoms = [
-                atomId - 7,
-                atomId - 6,
-                atomId - 5,
-            ]  # No H5T, so include phosphate group
-
-        # Get terminal hydrogen (H3T) if present
-        o3 = [atom for atom in c3Neighbours if atomDict[atom]["atomicNumber"] == 8]
-        o3NeighboursHydrogens = TinkerFiles._getHydrogenAtoms(o3, atomDict)
-
-        # Get organic base atoms
-        baseAtoms = TinkerFiles._findNeighbours(
-            atomDict,
-            c1,
-            None,
-            exact=False,
-            exclusionList=[*c1NeighboursHydrogen, o4, c2],
-        )[1:]  # Exclude c1 itself
-
-        # Combine all atoms into one list
-        nucleicAtoms = (
-            sugarBackboneAtoms
-            + c2Neighbours
-            + c3Neighbours
-            + c4Neighbours
-            + c5NeighboursHydrogens
-            + c1NeighboursHydrogen
-            + baseAtoms
-            + o5NeighboursHydrogens
-            + phosphateAtoms
-            + o3NeighboursHydrogens
-        )
-
-        return nucleicAtoms
-
-    @staticmethod
-    def _isC1Atom(atomId: int, atomDict: Dict) -> bool:
-        """
-        Check if an atom is a C1' atom in a nucleic acid.
-
-        Parameters
-        ----------
-        atomId : int
-            The index of the atom to check.
-        atomDict : Dict
-            Dictionary containing atom data.
-
-        Returns
-        -------
-        bool
-            True if the atom is a C1' atom, False otherwise.
-        """
-        atom = atomDict[atomId]
-        hasCarbonBond = False
-        hasNitrogenBond = False
-        hasOxygenBond = False
-
-        if atom["atomicNumber"] != 6:
-            return False
-
-        for bond in atom["bonds"]:
-            bondAtom = atomDict[bond]
-            if bondAtom["atomicNumber"] == 6:
-                hasCarbonBond = True
-            elif bondAtom["atomicNumber"] == 7 and len(bondAtom["bonds"]) == 3:
-                hasNitrogenBond = True
-            elif bondAtom["atomicNumber"] == 8 and len(bondAtom["bonds"]) == 2:
-                hasOxygenBond = True
-
-        return hasCarbonBond and hasNitrogenBond and hasOxygenBond
-
-    @staticmethod
-    def _getNucleicSugarBackboneAtoms(atomId: int) -> List[int]:
-        """
-        Get the sugar backbone atoms for a nucleic acid residue.
-
-        Parameters
-        ----------
-        atomId : int
-            The index of the C1' atom.
-
-        Returns
-        -------
-        List[int]
-            List of sugar backbone atom indices.
-        """
-
-        # Atomic numbers of the backbone sugar atoms
-        return [
-            atomId - 4,  # O5'
-            atomId - 3,  # C5'
-            atomId - 2,  # C4'
-            atomId - 1,  # O4'
-            atomId,       # C1'
-            atomId + 1,  # C3'
-            atomId + 2,  # C2'
-        ]
-
-    @staticmethod
-    def _getHydrogenAtoms(atoms: List[int], atomDict: Dict) -> List[int]:
-        """
-        Get all hydrogen atoms bonded to the given atoms.
-
-        Parameters
-        ----------
-        atoms : List[int]
-            List of atom indices to find hydrogens for.
-        atomDict : Dict
-            Dictionary containing atom data.
-
-        Returns
-        -------
-        List[int]
-            List of hydrogen atom indices.
-        """
-        hydrogenAtoms = []
-        for atom in atoms:
-            neighbours = TinkerFiles._findNeighbours(atomDict, atom, 1, exact=True)
-            hydrogenAtoms.extend(
-                neighbour
-                for neighbour in neighbours
-                if atomDict[neighbour]["atomicNumber"] == 1
-            )
-        return hydrogenAtoms
-
-    @staticmethod
-    def _processPeptideChain(
-        topology: top.Topology,
-        molecule: List[int],
-        atomDict: Dict,
-        chain: top.Chain,
-        chainData: Dict,
-    ) -> None:
-        """
-        Process a peptide chain.
-
-        Parameters
-        ----------
-        topology : Topology
-            The topology to add the chain to.
-        molecule : List[int]
-            List of atom indices in the molecule.
-        atomDict : Dict
-            Dictionary containing atom data.
-        chain : Chain
-            The chain to add the residues to.
-        chainData : Dict
-            Dictionary containing chain data including residues.
-        """
-        seenAtomIds = set()
-        resId = 0
-
-        for atomId in molecule:
-            if atomId in seenAtomIds:
-                continue
-
-            resName = chainData["residues"][resId]
-
-            # Validate residue
-            assert resName in TinkerFiles._AMINO_ACID_LIST, (
-                f"Residue {resName} is not a valid or supported amino acid"
-            )
-
-            # Get atoms for the residue
-            resAtoms = TinkerFiles._getPeptideResidueAtoms(atomId, resName, atomDict)
-            if not resAtoms:
-                continue
-
-            # Add residue to topology
-            TinkerFiles._addResidueToTopology(
-                topology, resAtoms, resName, chain, atomDict, seenAtomIds
-            )
-            resId += 1
-
-    @staticmethod
-    def _getPeptideResidueAtoms(atomId: int, resName: str, atomDict: Dict) -> List[int]:
-        """
-        Get the atoms for a peptide residue.
-
-        Parameters
-        ----------
-        atomId : int
-            The index of the first atom in the residue.
-        resName : str
-            The name of the residue.
-        atomDict : Dict
-            Dictionary containing atom data.
-
-        Returns
-        -------
-        List[int]
-            List of atom indices in the residue.
-        """
-        if resName == "H2N":
-            # N-terminal deprotonated residue
-            return []
-
-        if resName == "FOR":
-            return TinkerFiles._getFormylResidueAtoms(atomId, atomDict)
-        elif resName == "ACE":
-            return TinkerFiles._getAcetylResidueAtoms(atomId, atomDict)
-        elif resName == "COH":
-            return TinkerFiles._getCarboxylResidueAtoms(atomId, atomDict)
-        elif resName == "NH2":
-            return TinkerFiles._getAmideResidueAtoms(atomId, atomDict)
-        elif resName == "NME":
-            return TinkerFiles._getMethylAmideResidueAtoms(atomId, atomDict)
-        else:
-            return TinkerFiles._getStandardAminoAcidResidueAtoms(
-                atomId, resName, atomDict
-            )
-
-    @staticmethod
-    def _getFormylResidueAtoms(atomId: int, atomDict: Dict) -> List[int]:
-        """Get atoms for a formyl residue."""
-        assert atomDict[atomId]["atomicNumber"] == 6, (
-            "FOR residue must start with a carbon atom"
-        )
-        cai = atomId
-        oi = atomId + 1
-        hydrogenAtoms = TinkerFiles._getHydrogenAtoms([cai], atomDict)
-        return [cai, oi] + hydrogenAtoms
-
-    @staticmethod
-    def _getAcetylResidueAtoms(atomId: int, atomDict: Dict) -> List[int]:
-        """Get atoms for an acetyl residue."""
-        assert atomDict[atomId]["atomicNumber"] == 6, (
-            "ACE residue must start with a carbon atom"
-        )
-        cai = atomId
-        ci = atomId + 1
-        oi = atomId + 2
-        hydrogenAtoms = TinkerFiles._getHydrogenAtoms([cai], atomDict)
-        return [cai, ci, oi] + hydrogenAtoms
-
-    @staticmethod
-    def _getCarboxylResidueAtoms(atomId: int, atomDict: Dict) -> List[int]:
-        """Get atoms for a carboxyl residue."""
-        assert atomDict[atomId]["atomicNumber"] == 8, (
-            "COH residue must start with an oxygen atom"
-        )
-        oi = atomId
-        hydrogenAtoms = TinkerFiles._getHydrogenAtoms([oi], atomDict)
-        return [oi] + hydrogenAtoms
-
-    @staticmethod
-    def _getAmideResidueAtoms(atomId: int, atomDict: Dict) -> List[int]:
-        """Get atoms for an amide residue."""
-        assert atomDict[atomId]["atomicNumber"] == 7, (
-            "NH2 residue must start with a nitrogen atom"
-        )
-        ni = atomId
-        hydrogenAtoms = TinkerFiles._getHydrogenAtoms([ni], atomDict)
-        return [ni] + hydrogenAtoms
-
-    @staticmethod
-    def _getMethylAmideResidueAtoms(atomId: int, atomDict: Dict) -> List[int]:
-        """Get atoms for a methyl amide residue."""
-        assert atomDict[atomId]["atomicNumber"] == 7, (
-            "NME residue must start with a nitrogen atom"
-        )
-        ni = atomId
-        cai = atomId + 1
-        niHydrogenAtoms = TinkerFiles._getHydrogenAtoms([ni], atomDict)
-        caiHydrogenAtoms = TinkerFiles._getHydrogenAtoms([cai], atomDict)
-        return [ni, cai] + niHydrogenAtoms + caiHydrogenAtoms
-
-    @staticmethod
-    def _getStandardAminoAcidResidueAtoms(
-        atomId: int, resName: str, atomDict: Dict
-    ) -> List[int]:
-        """Get atoms for a standard amino acid residue."""
-        assert atomDict[atomId]["atomicNumber"] == 7, (
-            "Amino acid residue must start with a nitrogen atom"
-        )
-
-        # Backbone atoms
-        ni = atomId  # Amide nitrogen
-        cai = atomId + 1  # Alpha carbon
-        ci = atomId + 2  # Carbonyl carbon
-        oi = atomId + 3  # Carbonyl oxygen
-
-        # Get hydrogen atoms for amide nitrogen
-        niHydrogenAtoms = TinkerFiles._getHydrogenAtoms([ni], atomDict)
-
-        # Get side chain atoms
-        # For CYX residues, limit side chain connectivity to 2 bonds
-        # to prevent the side chain from growing past the sulfur atom
-        nBondsSideChain = 2 if resName == "CYX" else None
-        caiNeighbours = TinkerFiles._findNeighbours(
-            atomDict, cai, nBondsSideChain, exact=False, exclusionList=[ni, ci]
-        )
-        caiNeighbours = [n for n in caiNeighbours if n != cai]
-
-        # Get atoms attached to carbonyl carbon
-        ciNeighbours = TinkerFiles._findNeighbours(
-            atomDict, ci, 1, exact=True, exclusionList=[oi, cai]
-        )
-        ciNeighbours = [n for n in ciNeighbours if atomDict[n]["atomicNumber"] != 7]
-
-        return [ni, cai, ci, oi] + niHydrogenAtoms + caiNeighbours + ciNeighbours
+        return list(bitorsions)
 
     @staticmethod
     def _addResidueToTopology(
@@ -1003,15 +790,14 @@ class TinkerFiles:
         resAtoms: List[int],
         resName: str,
         chain: top.Chain,
-        atomDict: Dict,
-        seenAtomIds: Set[int],
+        atoms: List[TinkerAtom],
     ) -> None:
         """
         Add a residue to the topology.
 
         Parameters
         ----------
-        topology : Topology
+        topology : openmm.app.topology.Topology
             The topology to add the residue to.
         resAtoms : List[int]
             List of atom indices in the residue.
@@ -1019,27 +805,1138 @@ class TinkerFiles:
             The name of the residue.
         chain : Chain
             The chain to add the residue to.
-        atomDict : Dict
-            Dictionary containing atom data.
-        seenAtomIds : Set[int]
-            Set of atom indices that have been processed.
+        atoms : List[TinkerAtom]
+            List of atoms in the system.
         """
         residue = topology.addResidue(resName, chain)
-        sortedAtoms = sorted(resAtoms)
-
-        for atom in sortedAtoms:
-            # Add residue info to atom dictionary
-            atomDict[atom]["residueName"] = resName
-            atomDict[atom]["chain"] = chain
-
-            # Add atom to topology
+        for atomIndex in resAtoms:
+            atom = atoms[atomIndex]
             topology.addAtom(
-                atomDict[atom]["nameShort"],
-                elem.Element.getByAtomicNumber(atomDict[atom]["atomicNumber"]),
+                atom.nameShort or atom.element or str(atom.atomicNumber),
+                elem.Element.getByAtomicNumber(atom.atomicNumber),
                 residue,
             )
 
-        seenAtomIds.update(sortedAtoms)
+    # ------------------------------------------------------------------------------------------ #
+    #                                     PEPTIDE PROCESSING                                     #
+    # ------------------------------------------------------------------------------------------ #
+    @staticmethod
+    def _getPeptideResidueAtoms(
+        atoms: List[TinkerAtom], atomIndex: Optional[int] = None
+    ) -> List[Tuple[List[int], str]]:
+        """
+        Get all amino acid residues in the molecule.
+        If atomIndex is provided, only return residues that contain that atom.
+
+        Parameters
+        ----------
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+        atomIndex : Optional[int]
+            Optional index of an atom to filter residues by
+
+        Returns
+        -------
+        List[Tuple[List[int], str]]
+            List of (residueAtoms, residueLabel) tuples for each amino acid residue found
+        """
+        residues = []
+        seenAtoms = set()
+
+        # Get all bitorsions in the molecule
+        bitorsions = TinkerFiles._findBitorsions(atoms)
+        for ia, ib, ic, id, ie in bitorsions:
+            if any(atom in seenAtoms for atom in [ib, ic, id]):
+                continue
+
+            if atomIndex is not None and atomIndex not in [ib, ic, id]:
+                continue
+
+            # Check for N/C-terminal cap groups (ACE, NME)
+            capAtoms = TinkerFiles._checkCapGroup(ia, ib, ic, id, ie, atoms)
+            if capAtoms is not None:
+                # Collect all atoms in the cap group including hydrogens
+                allAtoms = set(capAtoms)
+                for atom in capAtoms:
+                    allAtoms.update(atoms[atom].bonds)
+                allAtoms = sorted(list(allAtoms))
+                seenAtoms.update(allAtoms)
+                # Determine if it's an acetyl (ACE) or N-methyl (NME) cap
+                residues.append(
+                    (allAtoms, "ACE" if atoms[ia].atomicNumber == 6 else "NME")
+                )
+                continue
+
+            # Backbone pattern
+            if TinkerFiles._checkBackbonePattern(ia, ib, ic, id, ie, atoms):
+                residueLabel, sideChain = TinkerFiles._identifyAminoAcid(
+                    ic, ib, id, atoms
+                )
+                if residueLabel:
+                    residueAtoms = TinkerFiles._collectResidueAtoms(
+                        ic, ib, id, sideChain, atoms
+                    )
+                    seenAtoms.update(residueAtoms)
+                    residues.append((residueAtoms, residueLabel))
+                continue
+
+            # Terminal pattern
+            if TinkerFiles._checkTerminalPattern(ia, ib, ic, id, ie, atoms):
+                residueLabel, sideChain = TinkerFiles._identifyAminoAcid(
+                    ic, ib, id, atoms
+                )
+                if residueLabel:
+                    residueAtoms = TinkerFiles._collectResidueAtoms(
+                        ic, ib, id, sideChain, atoms
+                    )
+                    seenAtoms.update(residueAtoms)
+                    residues.append((residueAtoms, residueLabel))
+                continue
+
+        return sorted(residues, key=lambda x: x[0][0])
+
+    @staticmethod
+    def _checkBackbonePattern(
+        ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]
+    ) -> bool:
+        """
+        Check if a 5-atom sequence matches a peptide backbone pattern.
+        """
+        atomA = atoms[ia]
+        atomB = atoms[ib]
+        atomC = atoms[ic]
+        atomD = atoms[id]
+        atomE = atoms[ie]
+
+        # Identify peptide backbone pattern
+        if (
+            len(atomA.bonds) == 3
+            and len(atomB.bonds) == 3
+            and len(atomC.bonds) == 4
+            and len(atomD.bonds) == 3
+            and len(atomE.bonds) == 3
+        ):
+            if (
+                atomA.atomicNumber == 6
+                and atomB.atomicNumber == 7
+                and atomC.atomicNumber == 6
+                and atomD.atomicNumber == 6
+                and atomE.atomicNumber == 7
+            ) or (
+                atomA.atomicNumber == 7
+                and atomB.atomicNumber == 6
+                and atomC.atomicNumber == 6
+                and atomD.atomicNumber == 7
+                and atomE.atomicNumber == 6
+            ):
+                # Check for carbonyl oxygen
+                if atomA.atomicNumber == 6:
+                    for j in range(len(atomA.bonds)):
+                        ij = atomA.bonds[j]
+                        if len(atoms[ij].bonds) == 1 and atoms[ij].atomicNumber == 8:
+                            return True
+
+                if atomB.atomicNumber == 6:
+                    for j in range(len(atomB.bonds)):
+                        ij = atomB.bonds[j]
+                        if len(atoms[ij].bonds) == 1 and atoms[ij].atomicNumber == 8:
+                            return True
+
+                if atomD.atomicNumber == 6:
+                    for j in range(len(atomD.bonds)):
+                        ij = atomD.bonds[j]
+                        if len(atoms[ij].bonds) == 1 and atoms[ij].atomicNumber == 8:
+                            return True
+
+                if atomE.atomicNumber == 6:
+                    for j in range(len(atomE.bonds)):
+                        ij = atomE.bonds[j]
+                        if len(atoms[ij].bonds) == 1 and atoms[ij].atomicNumber == 8:
+                            return True
+
+        return False
+
+    @staticmethod
+    def _checkTerminalPattern(
+        ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]
+    ) -> bool:
+        """
+        Check if a 5-atom sequence matches a terminal residue pattern.
+        """
+        atomA = atoms[ia]
+        atomB = atoms[ib]
+        atomC = atoms[ic]
+        atomD = atoms[id]
+        atomE = atoms[ie]
+
+        # H-N-C-C-N
+        if (
+            len(atomA.bonds) == 1
+            and len(atomB.bonds) == 4
+            and len(atomC.bonds) == 4
+            and len(atomD.bonds) == 3
+            and len(atomE.bonds) == 3
+            and atomA.atomicNumber == 1
+            and atomB.atomicNumber == 7
+            and atomC.atomicNumber == 6
+            and atomD.atomicNumber == 6
+            and atomE.atomicNumber == 7
+        ):
+            return True
+
+        # N-C-C-N-H
+        if (
+            len(atomA.bonds) == 3
+            and len(atomB.bonds) == 3
+            and len(atomC.bonds) == 4
+            and len(atomD.bonds) == 4
+            and len(atomE.bonds) == 1
+            and atomA.atomicNumber == 7
+            and atomB.atomicNumber == 6
+            and atomC.atomicNumber == 6
+            and atomD.atomicNumber == 7
+            and atomE.atomicNumber == 1
+        ):
+            return True
+
+        # C-N-C-C-N
+        if (
+            len(atomA.bonds) == 3
+            and len(atomB.bonds) == 3
+            and len(atomC.bonds) == 4
+            and len(atomD.bonds) == 3
+            and len(atomE.bonds) == 1
+            and atomA.atomicNumber == 6
+            and atomB.atomicNumber == 7
+            and atomC.atomicNumber == 6
+            and atomD.atomicNumber == 6
+            and atomE.atomicNumber == 8
+        ):
+            return True
+
+        # O-C-C-N-C
+        if (
+            len(atomA.bonds) == 1
+            and len(atomB.bonds) == 3
+            and len(atomC.bonds) == 4
+            and len(atomD.bonds) == 3
+            and len(atomE.bonds) == 3
+            and atomA.atomicNumber == 8
+            and atomB.atomicNumber == 6
+            and atomC.atomicNumber == 6
+            and atomD.atomicNumber == 7
+            and atomE.atomicNumber == 6
+        ):
+            return True
+
+        return False
+
+    @staticmethod
+    def _checkCapGroup(
+        ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]
+    ) -> Optional[List[int]]:
+        """
+        Check if a 5-atom sequence matches a cap group pattern (ACE or NME).
+
+        Parameters
+        ----------
+        ia, ib, ic, id, ie : int
+            Indices of the 5 atoms in the sequence
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+
+        Returns
+        -------
+        Optional[List[int]]
+            List of atom indices in the cap group if found, None otherwise
+        """
+        atomA = atoms[ia]
+        atomB = atoms[ib]
+        atomC = atoms[ic]
+        atomD = atoms[id]
+        atomE = atoms[ie]
+
+        # ACE cap group pattern
+        if (
+            len(atomA.bonds) == 4
+            and len(atomB.bonds) == 3
+            and len(atomC.bonds) == 3
+            and len(atomD.bonds) == 4
+            and len(atomE.bonds) == 3
+            and atomA.atomicNumber == 6
+            and atomB.atomicNumber == 6
+            and atomC.atomicNumber == 7
+            and atomD.atomicNumber == 6
+            and atomE.atomicNumber == 6
+        ):
+            # Count hydrogens on first carbon
+            nHyd = sum(1 for bond in atomA.bonds if atoms[bond].atomicNumber == 1)
+            if nHyd == 3:
+                capAtoms = [ia]
+                for bond in atomA.bonds:
+                    if atoms[bond].atomicNumber == 1:
+                        capAtoms.append(bond)
+                capAtoms.append(ib)
+                for bond in atomB.bonds:
+                    if atoms[bond].atomicNumber == 8:
+                        capAtoms.append(bond)
+                return capAtoms
+
+        # NME cap group pattern
+        if (
+            len(atomA.bonds) == 3
+            and len(atomB.bonds) == 4
+            and len(atomC.bonds) == 3
+            and len(atomD.bonds) == 4
+            and len(atomE.bonds) == 3
+            and atomA.atomicNumber == 7
+            and atomB.atomicNumber == 6
+            and atomC.atomicNumber == 6
+            and atomD.atomicNumber == 6
+            and atomE.atomicNumber == 7
+        ):
+            # Count hydrogens on last carbon
+            nHyd = sum(1 for bond in atomE.bonds if atoms[bond].atomicNumber == 1)
+            if nHyd == 3:
+                capAtoms = [id]
+                for bond in atomD.bonds:
+                    if atoms[bond].atomicNumber == 1:
+                        capAtoms.append(bond)
+                capAtoms.append(ie)
+                for bond in atomE.bonds:
+                    if atoms[bond].atomicNumber == 1:
+                        capAtoms.append(bond)
+                return capAtoms
+
+        return None
+
+    @staticmethod
+    def _identifyAminoAcid(
+        ic: int, ib: int, id: int, atoms: List[TinkerAtom]
+    ) -> Tuple[str, Dict[str, int]]:
+        """
+        Identify amino acid type based on side chain atoms.
+
+        Notes
+        -----
+        Follows logic from findpro.f in Tinker.
+
+        Parameters
+        ----------
+        ic : int
+            Alpha carbon index
+        ib : int
+            Nitrogen index
+        id : int
+            Carbonyl carbon index
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+
+        Returns
+        -------
+        Tuple[str, Dict[str, int]]
+            Amino acid label and dictionary of side chain atom indices
+        """
+        # Zero out residue name and possible side chain atoms
+        # Format: "i" + element + position + number (e.g., "icb1" = carbon beta 1)
+        # Position codes: b=beta, g=gamma, d=delta, e=epsilon, z=zeta
+        sideChain = {
+            # Carbon atoms along side chain
+            "icb1": 0,  # First beta carbon (Cβ1)
+            "icb2": 0,  # Second beta carbon (Cβ2)
+            "icg1": 0,  # First gamma carbon (Cγ1)
+            "icg2": 0,  # Second gamma carbon (Cγ2)
+            "icd1": 0,  # First delta carbon (Cδ1)
+            "icd2": 0,  # Second delta carbon (Cδ2)
+            "ice1": 0,  # First epsilon carbon (Cε1)
+            "ice2": 0,  # Second epsilon carbon (Cε2)
+            "icz1": 0,  # First zeta carbon (Cζ1)
+            "icz2": 0,  # Second zeta carbon (Cζ2)
+            # Oxygen atoms
+            "iog": 0,  # Gamma oxygen (Oγ)
+            "ioh": 0,  # Hydroxyl oxygen (Oη)
+            "iod1": 0,  # First delta oxygen (Oδ1)
+            "iod2": 0,  # Second delta oxygen (Oδ2)
+            "ioe1": 0,  # First epsilon oxygen (Oε1)
+            "ioe2": 0,  # Second epsilon oxygen (Oε2)
+            # Nitrogen atoms
+            "ind": 0,  # Delta nitrogen (Nδ)
+            "ine": 0,  # Epsilon nitrogen (Nε)
+            "inz": 0,  # Zeta nitrogen (Nζ)
+            "inh1": 0,  # First hydrogen on zeta nitrogen (NζH1)
+            "inh2": 0,  # Second hydrogen on zeta nitrogen (NζH2)
+            # Sulfur atoms
+            "isg": 0,  # Gamma sulfur (Sγ)
+            "isd": 0,  # Delta sulfur (Sδ)
+            # Ring carbon (for aromatic residues)
+            "ich": 0,  # Ring carbon (Cη)
+        }
+
+        label = "   "
+        atomC = atoms[ic]  # Alpha carbon
+
+        # Inspect the beta position of amino acid residue
+        nHa = 0
+        for bond in atomC.bonds:
+            if atoms[bond].atomicNumber == 1:
+                nHa += 1
+            elif bond != ib and bond != id and atoms[bond].atomicNumber == 6:
+                if sideChain["icb1"] != 0:
+                    sideChain["icb2"] = bond
+                else:
+                    sideChain["icb1"] = bond
+        if nHa == 2:
+            label = "GLY"
+            return label, sideChain
+        if sideChain["icb2"] != 0:
+            label = "AIB"
+            return label, sideChain
+
+        # Inspect the gamma position of amino acid residue
+        if sideChain["icb1"] != 0:
+            nHb = 0
+            for bond in atoms[sideChain["icb1"]].bonds:
+                if atoms[bond].atomicNumber == 1:
+                    nHb += 1
+                elif bond != ic and atoms[bond].atomicNumber == 6:
+                    if sideChain["icg1"] != 0:
+                        sideChain["icg2"] = bond
+                    else:
+                        sideChain["icg1"] = bond
+                elif atoms[bond].atomicNumber == 8:
+                    sideChain["iog"] = bond
+                elif atoms[bond].atomicNumber == 16:
+                    sideChain["isg"] = bond
+            if nHb == 3:
+                label = "ALA"
+                return label, sideChain
+            if sideChain["iog"] != 0 and sideChain["icg1"] == 0:
+                label = "SER"
+                return label, sideChain
+            if sideChain["iog"] != 0 and sideChain["icg1"] != 0:
+                label = "THR"
+                return label, sideChain
+            if sideChain["isg"] != 0:
+                if len(atoms[sideChain["isg"]].bonds) == 1:
+                    label = "CYD"
+                else:
+                    for bond in atoms[sideChain["isg"]].bonds:
+                        if atoms[bond].atomicNumber == 1:
+                            label = "CYS"
+
+                        elif atoms[bond].atomicNumber == 16:
+                            sideChain["isg"] = 0
+                            label = "CYX"
+                    return label, sideChain
+            if sideChain["icg2"] != 0:
+                nhg = 0
+                for bond in atoms[sideChain["icg1"]].bonds:
+                    if atoms[bond].atomicNumber == 1:
+                        nhg += 1
+                    elif bond != sideChain["icb1"] and atoms[bond].atomicNumber == 6:
+                        sideChain["icd1"] = bond
+                for bond in atoms[sideChain["icg2"]].bonds:
+                    if atoms[bond].atomicNumber == 1:
+                        nhg += 1
+                    elif bond != sideChain["icb1"] and atoms[bond].atomicNumber == 6:
+                        sideChain["icd1"] = bond
+                if nhg == 5:
+                    label = "ILE"
+                    return label, sideChain
+                if nhg == 6:
+                    label = "VAL"
+                    return label, sideChain
+
+        # Inspect the delta position of amino acid residue
+        if sideChain["icg1"] != 0:
+            for bond in atoms[sideChain["icg1"]].bonds:
+                if bond != sideChain["icb1"]:
+                    if atoms[bond].atomicNumber == 6:
+                        if sideChain["icd1"] != 0:
+                            sideChain["icd2"] = bond
+                        else:
+                            sideChain["icd1"] = bond
+                    elif atoms[bond].atomicNumber == 7:
+                        sideChain["ind"] = bond
+                    elif atoms[bond].atomicNumber == 8:
+                        if sideChain["iod1"] != 0:
+                            sideChain["iod2"] = bond
+                        else:
+                            sideChain["iod1"] = bond
+                    elif atoms[bond].atomicNumber == 16:
+                        sideChain["isd"] = bond
+                        label = "MET"
+                        for subbond in atoms[bond].bonds:
+                            if (
+                                subbond != sideChain["icg1"]
+                                and atoms[subbond].atomicNumber == 6
+                            ):
+                                sideChain["ice1"] = subbond
+                        return label, sideChain
+
+            if sideChain["iod1"] != 0 and sideChain["ind"] != 0:
+                label = "ASN"
+                return label, sideChain
+            if sideChain["iod2"] != 0:
+                if (
+                    len(atoms[sideChain["iod1"]].bonds) == 1
+                    and len(atoms[sideChain["iod2"]].bonds) == 1
+                ):
+                    label = "ASP"
+                else:
+                    label = "ASH"
+                return label, sideChain
+            if sideChain["icd2"] != 0:
+                nhd = 0
+                for bond in atoms[sideChain["icd1"]].bonds:
+                    if atoms[bond].atomicNumber == 1:
+                        nhd += 1
+                for bond in atoms[sideChain["icd2"]].bonds:
+                    if atoms[bond].atomicNumber == 1:
+                        nhd += 1
+                if nhd == 6:
+                    label = "LEU"
+                    return label, sideChain
+            if sideChain["icd1"] != 0:
+                for bond in atoms[sideChain["icd1"]].bonds:
+                    if bond == ib or bond == id:
+                        label = "PRO"
+                        return label, sideChain
+
+        # Inspect the epsilon position of amino acid residue
+        if sideChain["icd1"] != 0:
+            for bond in atoms[sideChain["icd1"]].bonds:
+                if bond != sideChain["icg1"]:
+                    if atoms[bond].atomicNumber == 6:
+                        if sideChain["ice1"] != 0:
+                            sideChain["ice2"] = bond
+                        else:
+                            sideChain["ice1"] = bond
+                    elif atoms[bond].atomicNumber == 7:
+                        sideChain["ine"] = bond
+                    elif atoms[bond].atomicNumber == 8:
+                        if sideChain["ioe1"] != 0:
+                            sideChain["ioe2"] = bond
+                        else:
+                            sideChain["ioe1"] = bond
+
+            if sideChain["ine"] != 0:
+                if len(atoms[sideChain["ine"]].bonds) == 4:
+                    label = "ORN"
+                    return label, sideChain
+            if sideChain["ioe1"] != 0 and sideChain["ine"] != 0:
+                label = "GLN"
+                return label, sideChain
+            if sideChain["ioe2"] != 0:
+                if (
+                    len(atoms[sideChain["ioe1"]].bonds) == 1
+                    and len(atoms[sideChain["ioe2"]].bonds) == 1
+                ):
+                    label = "GLU"
+                else:
+                    label = "GLH"
+                return label, sideChain
+
+        if sideChain["icd2"] != 0:
+            for bond in atoms[sideChain["icd2"]].bonds:
+                if bond != sideChain["icg1"]:
+                    if atoms[bond].atomicNumber == 6:
+                        if sideChain["ice1"] != 0:
+                            sideChain["ice2"] = bond
+                        else:
+                            sideChain["ice1"] = bond
+                    elif atoms[bond].atomicNumber == 7:
+                        sideChain["ine"] = bond
+
+        if sideChain["ind"] != 0:
+            for bond in atoms[sideChain["ind"]].bonds:
+                if bond != sideChain["icg1"] and atoms[bond].atomicNumber == 6:
+                    if sideChain["ice1"] != 0:
+                        sideChain["ice2"] = bond
+                    else:
+                        sideChain["ice1"] = bond
+
+        if min(sideChain["ind"], sideChain["ine"]) != 0:
+            for bond in atoms[sideChain["ine"]].bonds:
+                if bond == sideChain["ice1"]:
+                    label = "HIS"
+                    if len(atoms[sideChain["ind"]].bonds) == 2:
+                        label = "HIE"
+                        return label, sideChain
+                    if len(atoms[sideChain["ine"]].bonds) == 2:
+                        label = "HID"
+                        return label, sideChain
+                    return label, sideChain
+
+        if sideChain["ine"] != 0:
+            for bond in atoms[sideChain["ine"]].bonds:
+                if bond == sideChain["ice1"]:
+                    label = "TRP"
+                    # Store ring atoms for TRP
+                    for ebond in atoms[sideChain["ice1"]].bonds:
+                        if (
+                            ebond != sideChain["icd1"]
+                            and atoms[ebond].atomicNumber == 6
+                        ):
+                            if sideChain["icz1"] != 0:
+                                sideChain["icz2"] = ebond
+                            else:
+                                sideChain["icz1"] = ebond
+                    # Look for CH atom in the ring
+                    for zbond in atoms[sideChain["icz1"]].bonds:
+                        if (
+                            zbond != sideChain["ice1"]
+                            and atoms[zbond].atomicNumber == 6
+                        ):
+                            sideChain["ich"] = zbond
+                    return label, sideChain
+                elif bond == sideChain["ice2"]:
+                    label = "TRP"
+                    # Store ring atoms for TRP
+                    for ebond in atoms[sideChain["ice2"]].bonds:
+                        if (
+                            ebond != sideChain["icd1"]
+                            and atoms[ebond].atomicNumber == 6
+                        ):
+                            if sideChain["icz1"] != 0:
+                                sideChain["icz2"] = ebond
+                            else:
+                                sideChain["icz1"] = ebond
+                    # Look for CH atom in the ring
+                    for zbond in atoms[sideChain["icz1"]].bonds:
+                        if (
+                            zbond != sideChain["ice2"]
+                            and atoms[zbond].atomicNumber == 6
+                        ):
+                            sideChain["ich"] = zbond
+                    return label, sideChain
+
+        # Inspect the zeta position of amino acid residue
+        if sideChain["ice1"] != 0:
+            for bond in atoms[sideChain["ice1"]].bonds:
+                if bond != sideChain["icd1"]:
+                    if atoms[bond].atomicNumber == 6:
+                        if sideChain["icz1"] != 0:
+                            sideChain["icz2"] = bond
+                        else:
+                            sideChain["icz1"] = bond
+                    elif atoms[bond].atomicNumber == 7:
+                        sideChain["inz"] = bond
+
+            if sideChain["inz"] != 0 and len(atoms[sideChain["ice1"]].bonds) == 4:
+                if len(atoms[sideChain["inz"]].bonds) == 3:
+                    label = "LYD"
+                    return label, sideChain
+                elif len(atoms[sideChain["inz"]].bonds) == 4:
+                    label = "LYS"
+                    return label, sideChain
+
+        if sideChain["ice2"] != 0:
+            for bond in atoms[sideChain["ice2"]].bonds:
+                if bond != sideChain["icd2"]:
+                    if atoms[bond].atomicNumber == 6:
+                        if sideChain["icz1"] != 0:
+                            sideChain["icz2"] = bond
+                        else:
+                            sideChain["icz1"] = bond
+
+        if sideChain["icz1"] == sideChain["icz2"]:
+            sideChain["icz2"] = 0
+            label = "PHE"
+            for bond in atoms[sideChain["icz1"]].bonds:
+                if atoms[bond].atomicNumber == 8:
+                    sideChain["ioh"] = bond
+                    if len(atoms[bond].bonds) == 1:
+                        label = "TYD"
+                    elif len(atoms[bond].bonds) == 2:
+                        label = "TYR"
+                    return label, sideChain
+
+        if sideChain["ine"] != 0:
+            for bond in atoms[sideChain["ine"]].bonds:
+                if bond != sideChain["icd1"] and atoms[bond].atomicNumber == 6:
+                    if sideChain["icz1"] != 0:
+                        sideChain["icz2"] = bond
+                    else:
+                        sideChain["icz1"] = bond
+
+            if sideChain["icz1"] != 0:
+                label = "ARG"
+                for bond in atoms[sideChain["icz1"]].bonds:
+                    if atoms[bond].atomicNumber != 7:
+                        label = "   "
+                    elif bond != sideChain["ine"]:
+                        if sideChain["inh1"] != 0:
+                            sideChain["inh2"] = bond
+                        else:
+                            sideChain["inh1"] = bond
+                return label, sideChain
+
+        return label, sideChain
+
+    @staticmethod
+    def _collectResidueAtoms(
+        ic: int, ib: int, id: int, sideChain: Dict[str, int], atoms: List[TinkerAtom]
+    ) -> List[int]:
+        """
+        Collect all atoms in the residue.
+
+        Parameters
+        ----------
+        ic, ib, id : int
+            Alpha carbon, nitrogen, and carbonyl carbon indices
+        sideChain : Dict[str, int]
+            Dictionary of side chain atom indices
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+
+        Returns
+        -------
+        List[int]
+            List of all atom indices in the residue
+        """
+        residueAtoms = {ic}  # Alpha carbon
+
+        # Add backbone atoms (N-H, C=O)
+        residueAtoms.add(ib)
+        for bond in atoms[ib].bonds:
+            if atoms[bond].atomicNumber == 1:
+                residueAtoms.add(bond)
+
+        residueAtoms.add(id)  # Add carbonyl carbon
+        for bond in atoms[id].bonds:
+            if atoms[bond].atomicNumber == 8:  # Add carbonyl oxygen
+                residueAtoms.add(bond)
+            elif atoms[bond].atomicNumber == 1:  # Add any hydrogens
+                residueAtoms.add(bond)
+
+        # Add side chain atoms
+        for key, index in sideChain.items():
+            if index != 0:
+                residueAtoms.add(index)
+                residueAtoms.update(atoms[index].bonds)
+
+        # Add all hydrogen atoms
+        for atom in list(residueAtoms):
+            for bond in atoms[atom].bonds:
+                if atoms[bond].atomicNumber == 1:
+                    residueAtoms.add(bond)
+
+        return sorted(list(residueAtoms))
+
+    # ------------------------------------------------------------------------------------------ #
+    #                                   NUCLEIC ACID PROCESSING                                  #
+    # ------------------------------------------------------------------------------------------ #
+    @staticmethod
+    def _getNucleicAcidResidueAtoms(
+        atoms: List[TinkerAtom],
+    ) -> List[Tuple[List[int], str]]:
+        """
+        Get all nucleic acid residues in the molecule.
+
+        Parameters
+        ----------
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+
+        Returns
+        -------
+        List[Tuple[List[int], str]]
+            List of (residueAtoms, residueLabel) tuples for each nucleic acid residue found
+        """
+        residues = []
+        seenAtoms = set()
+
+        # Get all bitorsions in the molecule
+        bitorsions = TinkerFiles._findBitorsions(atoms)
+
+        for ia, ib, ic, id, ie in bitorsions:
+            if any(atom in seenAtoms for atom in [ib, ic, id]):
+                continue
+
+            # Check if the sequence matches a nucleotide pattern
+            if not TinkerFiles._checkNucleotidePattern(ia, ib, ic, id, ie, atoms):
+                continue
+
+            # Identify sugar ring and phosphate atoms
+            label, nucleotideAtoms = TinkerFiles._identifyNucleotide(
+                ia, ib, ic, id, ie, atoms
+            )
+
+            # Extract all atoms in this nucleotide
+            residueAtoms = TinkerFiles._collectNucleotideAtoms(nucleotideAtoms, atoms)
+            seenAtoms.update(residueAtoms)
+            residues.append((sorted(residueAtoms), label))
+
+        return sorted(residues, key=lambda x: x[0][0])
+
+    @staticmethod
+    def _checkNucleotidePattern(
+        ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]
+    ) -> bool:
+        """
+        Check if a 5-atom sequence matches a nucleotide pattern (O5' -> C5' -> C4' -> C3' -> O3').
+
+        Parameters
+        ----------
+        ia, ib, ic, id, ie : int
+            Indices of the 5 atoms in the sequence
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+
+        Returns
+        -------
+        bool
+            True if the sequence matches a nucleotide pattern, False otherwise
+        """
+        atomA = atoms[ia]
+        atomB = atoms[ib]
+        atomC = atoms[ic]
+        atomD = atoms[id]
+        atomE = atoms[ie]
+
+        # Atomic numbers
+        if not (
+            atomA.atomicNumber == 8
+            and atomB.atomicNumber == 6
+            and atomC.atomicNumber == 6
+            and atomD.atomicNumber == 6
+            and atomE.atomicNumber == 8
+        ):
+            return False
+
+        # Connectivity
+        if not (
+            len(atomA.bonds) == 2
+            and len(atomB.bonds) == 4
+            and len(atomC.bonds) == 4
+            and len(atomD.bonds) == 4
+            and len(atomE.bonds) == 2
+        ):
+            return False
+
+        # Count hydrogens and phosphorus atoms connected to O5' and O3'
+        nHyd = sum(
+            1 for bond in atomA.bonds + atomE.bonds if atoms[bond].atomicNumber == 1
+        )
+        nPhos = sum(
+            1 for bond in atomA.bonds + atomE.bonds if atoms[bond].atomicNumber == 15
+        )
+
+        return (nPhos == 1 and nHyd == 1) or (nPhos == 2 and nHyd == 0)
+
+    @staticmethod
+    def _identifyNucleotide(
+        ia: int, ib: int, ic: int, id: int, ie: int, atoms: List[TinkerAtom]
+    ) -> Tuple[str, Dict[str, int]]:
+        """
+        Identify a nucleotide and its atoms.
+
+        Parameters
+        ----------
+        ia, ib, ic, id, ie : int
+            Indices of the 5 atoms in the sequence
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+
+        Returns
+        -------
+        Tuple[str, Dict[str, int]]
+            Label of the nucleotide and dictionary of nucleotide atom indices
+        """
+        # Initialize with empty values
+        nucleotideAtoms = {
+            "io5s": 0,  # 5' sugar oxygen
+            "ic5s": 0,  # 5' carbon
+            "ic4s": 0,  # 4' carbon
+            "ic3s": 0,  # 3' carbon
+            "ic2s": 0,  # 2' carbon
+            "io4s": 0,  # Ring oxygen
+            "ic1s": 0,  # 1' carbon (connects to base)
+            "io3s": 0,  # 3' sugar oxygen
+            "io2s": 0,  # 2' hydroxyl oxygen (absent in deoxyribose)
+            "ipo": 0,  # Phosphate phosphorus
+            "iop1": 0,  # First phosphate oxygen
+            "iop2": 0,  # Second phosphate oxygen
+            "iop3": 0,  # Third phosphate oxygen
+            "in1": 0,  # N1 nitrogen (connects to sugar)
+            "in3": 0,  # N3 nitrogen
+            "in4": 0,  # N4 nitrogen
+            "in5": 0,  # N5 nitrogen
+            "in6": 0,  # N6 nitrogen
+            "in7": 0,  # N7 nitrogen
+            "in8": 0,  # N8 nitrogen
+            "in9": 0,  # N9 nitrogen
+            "ic2": 0,  # C2 carbon in base
+            "ic3": 0,  # C3 carbon in base
+            "ic4": 0,  # C4 carbon in base
+            "ic5": 0,  # C5 carbon in base
+            "ic6": 0,  # C6 carbon in base
+            "ic7": 0,  # C7 carbon in base
+            "ic9": 0,  # C9 carbon in base
+            "icm": 0,  # Methyl carbon (in thymine)
+            "io2": 0,  # O2 oxygen (for pyrimidines)
+            "io4": 0,  # O4 oxygen
+            "io9": 0,  # O9 oxygen
+        }
+
+        label = "   "
+
+        # Locate sugar ring and assign corresponding atom names
+        # First determine orientation by hydrogen count on C5'
+        nHyd = 0
+        for bond in atoms[ib].bonds:
+            if atoms[bond].atomicNumber == 1:
+                nHyd += 1
+
+        if nHyd == 2:
+            # 5' to 3' orientation
+            nucleotideAtoms["io5s"] = ia
+            nucleotideAtoms["ic5s"] = ib
+            nucleotideAtoms["ic4s"] = ic
+            nucleotideAtoms["ic3s"] = id
+            nucleotideAtoms["io3s"] = ie
+        else:
+            # 3' to 5' orientation
+            nucleotideAtoms["io5s"] = ie
+            nucleotideAtoms["ic5s"] = id
+            nucleotideAtoms["ic4s"] = ic
+            nucleotideAtoms["ic3s"] = ib
+            nucleotideAtoms["io3s"] = ia
+
+        # Find ring oxygen (O4')
+        for bond in atoms[nucleotideAtoms["ic4s"]].bonds:
+            if (
+                atoms[bond].atomicNumber == 8
+                and bond != nucleotideAtoms["ic5s"]
+                and bond != nucleotideAtoms["ic3s"]
+            ):
+                nucleotideAtoms["io4s"] = bond
+
+        # Find C2' carbon
+        for bond in atoms[nucleotideAtoms["ic3s"]].bonds:
+            if bond != nucleotideAtoms["ic4s"] and atoms[bond].atomicNumber == 6:
+                nucleotideAtoms["ic2s"] = bond
+
+        # Check for 2' hydroxyl oxygen (absent in DNA)
+        deoxy = True
+        if nucleotideAtoms["ic2s"] != 0:
+            for bond in atoms[nucleotideAtoms["ic2s"]].bonds:
+                if atoms[bond].atomicNumber == 8:
+                    nucleotideAtoms["io2s"] = bond
+                    deoxy = False
+
+        # Find C1' carbon connected to ring oxygen
+        if nucleotideAtoms["io4s"] != 0:
+            for bond in atoms[nucleotideAtoms["io4s"]].bonds:
+                if bond != nucleotideAtoms["ic4s"] and atoms[bond].atomicNumber == 6:
+                    nucleotideAtoms["ic1s"] = bond
+
+        # Find phosphate group attached at 5' sugar oxygen
+        for bond in atoms[nucleotideAtoms["io5s"]].bonds:
+            if atoms[bond].atomicNumber == 15:
+                nucleotideAtoms["ipo"] = bond
+
+        # Find phosphate oxygens
+        if nucleotideAtoms["ipo"] != 0:
+            for bond in atoms[nucleotideAtoms["ipo"]].bonds:
+                if (
+                    bond != nucleotideAtoms["io5s"]
+                    and atoms[bond].atomicNumber == 8
+                    and len(atoms[bond].bonds) == 1
+                ):
+                    if nucleotideAtoms["iop2"] != 0:
+                        nucleotideAtoms["iop3"] = bond
+                    elif nucleotideAtoms["iop1"] != 0:
+                        nucleotideAtoms["iop2"] = bond
+                    else:
+                        nucleotideAtoms["iop1"] = bond
+
+        # Find N1 nitrogen connecting sugar to base
+        if nucleotideAtoms["ic1s"] != 0:
+            for bond in atoms[nucleotideAtoms["ic1s"]].bonds:
+                if atoms[bond].atomicNumber == 7:
+                    nucleotideAtoms["in1"] = bond
+
+        # Identify if purine or pyrimidine and set base atoms
+        baseType = "   "
+        if nucleotideAtoms["in1"] != 0:
+            for bond in atoms[nucleotideAtoms["in1"]].bonds:
+                if bond != nucleotideAtoms["ic1s"]:
+                    for subbond in atoms[bond].bonds:
+                        if atoms[subbond].atomicNumber == 1:
+                            nucleotideAtoms["ic2"] = bond
+                        if atoms[subbond].atomicNumber == 8:
+                            nucleotideAtoms["io2"] = subbond
+                            nucleotideAtoms["ic6"] = bond
+                            baseType = "PYR"
+
+                    if nucleotideAtoms["ic6"] == 0:
+                        baseType = "PUR"
+                        nucleotideAtoms["ic5"] = bond
+
+        # For purines: adenine (A) or guanine (G)
+        if baseType == "PUR":
+            # Find N3 nitrogen attached to C2
+            if nucleotideAtoms["ic2"] != 0:
+                for bond in atoms[nucleotideAtoms["ic2"]].bonds:
+                    if bond != nucleotideAtoms["in1"] and atoms[bond].atomicNumber == 7:
+                        nucleotideAtoms["in3"] = bond
+
+            # Find C4 carbon attached to N3
+            if nucleotideAtoms["in3"] != 0:
+                for bond in atoms[nucleotideAtoms["in3"]].bonds:
+                    if bond != nucleotideAtoms["ic2"] and atoms[bond].atomicNumber == 6:
+                        nucleotideAtoms["ic4"] = bond
+
+            # Find N6 nitrogen in the ring
+            if nucleotideAtoms["ic5"] != 0:
+                for bond in atoms[nucleotideAtoms["ic5"]].bonds:
+                    if bond != nucleotideAtoms["in1"] and atoms[bond].atomicNumber == 7:
+                        nucleotideAtoms["in6"] = bond
+
+            # Find C7 carbon connected to N6
+            if nucleotideAtoms["in6"] != 0:
+                for bond in atoms[nucleotideAtoms["in6"]].bonds:
+                    if bond != nucleotideAtoms["ic5"] and atoms[bond].atomicNumber == 6:
+                        nucleotideAtoms["ic7"] = bond
+
+            # Find N7/N8 based on hydrogen count
+            if nucleotideAtoms["ic7"] != 0:
+                for bond in atoms[nucleotideAtoms["ic7"]].bonds:
+                    if bond != nucleotideAtoms["in6"] and atoms[bond].atomicNumber == 7:
+                        # Count hydrogens to determine if it's N7 or N8
+                        nHyd = 0
+                        for subbond in atoms[bond].bonds:
+                            if atoms[subbond].atomicNumber == 1:
+                                nHyd += 1
+
+                        if nHyd <= 1:
+                            nucleotideAtoms["in8"] = bond
+                        elif nHyd == 2:
+                            nucleotideAtoms["in7"] = bond
+
+            # Find C9 carbon connected to N8
+            if nucleotideAtoms["in8"] != 0:
+                for bond in atoms[nucleotideAtoms["in8"]].bonds:
+                    if bond != nucleotideAtoms["ic7"] and atoms[bond].atomicNumber == 6:
+                        nucleotideAtoms["ic9"] = bond
+
+            # Find N9 or O9 to determine if adenine or guanine
+            if nucleotideAtoms["ic9"] != 0:
+                for bond in atoms[nucleotideAtoms["ic9"]].bonds:
+                    if bond != nucleotideAtoms["in8"]:
+                        if atoms[bond].atomicNumber == 7:
+                            nucleotideAtoms["in9"] = bond
+                        elif atoms[bond].atomicNumber == 8:
+                            nucleotideAtoms["io9"] = bond
+
+            # Set final nucleotide label
+            if nucleotideAtoms["io9"] != 0:
+                label = "  G" if not deoxy else " DG"
+            elif nucleotideAtoms["in9"] != 0:
+                label = "  A" if not deoxy else " DA"
+
+        # For pyrimidines: uracil (U), cytosine (C), or thymine (T)
+        elif baseType == "PYR":
+            # Find N5 nitrogen attached to C6
+            if nucleotideAtoms["ic6"] != 0:
+                for bond in atoms[nucleotideAtoms["ic6"]].bonds:
+                    if bond != nucleotideAtoms["in1"] and atoms[bond].atomicNumber == 7:
+                        nucleotideAtoms["in5"] = bond
+
+            # Find C4 carbon attached to N5
+            if nucleotideAtoms["in5"] != 0:
+                for bond in atoms[nucleotideAtoms["in5"]].bonds:
+                    if bond != nucleotideAtoms["ic6"] and atoms[bond].atomicNumber == 6:
+                        nucleotideAtoms["ic4"] = bond
+
+            # Find O4 oxygen, N4 nitrogen, and C3 carbon from C4
+            if nucleotideAtoms["ic4"] != 0:
+                for bond in atoms[nucleotideAtoms["ic4"]].bonds:
+                    if atoms[bond].atomicNumber == 6:
+                        nucleotideAtoms["ic3"] = bond
+                    elif (
+                        bond != nucleotideAtoms["in5"] and atoms[bond].atomicNumber == 7
+                    ):
+                        nucleotideAtoms["in4"] = bond
+                    elif atoms[bond].atomicNumber == 8:
+                        nucleotideAtoms["io4"] = bond
+
+            # Default to uracil
+            label = "  U"
+
+            # Check if cytosine (has N-H)
+            if (
+                nucleotideAtoms["in5"] != 0
+                and len(atoms[nucleotideAtoms["in5"]].bonds) == 2
+            ):
+                # Cytosine identified by N5 with 2 bonds
+                label = "  C" if not deoxy else " DC"
+
+            # Check if thymine (has methyl group)
+            if nucleotideAtoms["ic3"] != 0:
+                for bond in atoms[nucleotideAtoms["ic3"]].bonds:
+                    if (
+                        bond != nucleotideAtoms["ic2"]
+                        and bond != nucleotideAtoms["ic4"]
+                        and atoms[bond].atomicNumber == 6
+                    ):
+                        # Additional verification for methyl group: should have 3 hydrogens
+                        methylHydrogens = 0
+                        for methylBond in atoms[bond].bonds:
+                            if atoms[methylBond].atomicNumber == 1:
+                                methylHydrogens += 1
+
+                        # Only identify as thymine if the methyl group has appropriate hydrogens
+                        if (
+                            methylHydrogens >= 2
+                        ):  # Should be 3, but allow some flexibility
+                            nucleotideAtoms["icm"] = bond
+                            label = "  T" if not deoxy else " DT"
+        else:
+            raise ValueError(
+                f"Could not identify base type for nucleotide with bitorsion {ia}, {ib}, {ic}, {id}, {ie}"
+            )
+
+        return label, nucleotideAtoms
+
+    @staticmethod
+    def _collectNucleotideAtoms(
+        nucleotideAtoms: Dict[str, Any], atoms: List[TinkerAtom]
+    ) -> List[int]:
+        """
+        Collect all atoms in a nucleotide.
+
+        Parameters
+        ----------
+        nucleotideAtoms : Dict[str, Any]
+            Dictionary of nucleotide atoms
+        atoms : List[TinkerAtom]
+            List of atoms in the system
+
+        Returns
+        -------
+        List[int]
+            List of all atom indices in the nucleotide
+        """
+        residueAtoms = set()
+
+        # Add all heavy atoms in the nucleotide
+        for key, index in nucleotideAtoms.items():
+            # Special handling for terminal oxygens (5' and 3') which can have indices of 0
+            if key in ("io5s", "io3s"):
+                residueAtoms.add(index)
+            elif index != 0:
+                residueAtoms.add(index)
+
+        # Add all hydrogen atoms
+        for atom in list(residueAtoms):
+            for bond in atoms[atom].bonds:
+                if atoms[bond].atomicNumber == 1:
+                    residueAtoms.add(bond)
+
+        return list(residueAtoms)
 
     # ------------------------------------------------------------------------------------------ #
     #                                     POSITIONS AND BOX                                      #
@@ -1098,140 +1995,10 @@ class TinkerFiles:
         return self.boxVectors
 
     # ------------------------------------------------------------------------------------------ #
-    #                                    SEQ FILE PARSING                                        #
-    # ------------------------------------------------------------------------------------------ #
-    @staticmethod
-    def _loadSeqFile(file: str) -> Dict[str, Dict[str, Union[List[str], str]]]:
-        """Load and parse a Tinker .seq file containing sequence information.
-
-        Parameters
-        ----------
-        file : str
-            Path to the .seq file to load.
-
-        Returns
-        -------
-        Dict[str, Dict[str, Union[List[str], str]]]
-            Dictionary mapping chain IDs to dictionaries containing:
-            - 'chainType': Type of chain (str)
-            - 'residues': List of 3-letter residue codes (List[str])
-
-        Raises
-        ------
-        ValueError
-            If the file format is invalid or contains duplicate chain IDs.
-        """
-        seqDict = OrderedDict()
-        defaultChainIndex = 0
-        currentChainId = None
-
-        try:
-            with open(file, "r") as f:
-                for line_num, line in enumerate(f, 1):
-                    lineSplit = line.split()
-                    if not lineSplit:
-                        continue
-
-                    parsedChainId = None
-                    startResidue = None
-                    residuesStartIndex = -1
-
-                    if (
-                        lineSplit[0].isalpha()
-                        and len(lineSplit[0]) == 1
-                        and lineSplit[1].isdigit()
-                    ):
-                        parsedChainId = lineSplit[0]
-                        startResidue = int(lineSplit[1])
-                        residuesStartIndex = 2
-                    elif lineSplit[0].isdigit():
-                        startResidue = int(lineSplit[0])
-                        residuesStartIndex = 1
-                    else:
-                        raise ValueError(
-                            f"Line {line_num}: Invalid format. Expected 'ChainID ResNum ...' or 'ResNum ...'. Got: {line.strip()}"
-                        )
-
-                    if startResidue < 1:
-                        raise ValueError(
-                            f"Line {line_num}: Invalid residue number {startResidue}. Must be positive."
-                        )
-
-                    residues = [
-                        residue.rjust(3) for residue in lineSplit[residuesStartIndex:]
-                    ]
-
-                    if not residues:
-                        raise ValueError(
-                            f"Line {line_num}: No residues found after parsing!"
-                        )
-
-                    if startResidue == 1:
-                        if parsedChainId:
-                            if parsedChainId in seqDict:
-                                raise ValueError(
-                                    f"Line {line_num}: Duplicate chain ID '{parsedChainId}' found. Each chain must have a unique ID."
-                                )
-                            currentChainId = parsedChainId
-                        else:
-                            currentChainId = chr(65 + (defaultChainIndex % 26))
-                            defaultChainIndex += 1
-
-                        seqDict[currentChainId] = {
-                            "residues": [],
-                            "chainType": "GENERIC",
-                        }
-
-                    else:
-                        if currentChainId is None:
-                            raise ValueError(
-                                f"Line {line_num}: Continuation line encountered before any chain was started (residue 1)."
-                            )
-
-                        if parsedChainId is not None and parsedChainId != currentChainId:
-                            raise ValueError(
-                                f"Line {line_num}: Chain ID '{parsedChainId}' provided for residue {startResidue}, but expected continuation of chain '{currentChainId}'"
-                            )
-
-                        expectedResidueNum = len(seqDict[currentChainId]["residues"]) + 1
-                        if startResidue != expectedResidueNum:
-                            raise ValueError(
-                                f"Line {line_num}: Residue numbering inconsistency for chain '{currentChainId}'. Expected residue {expectedResidueNum}, but line starts with {startResidue}."
-                            )
-
-                    seqDict[currentChainId]["residues"].extend(residues)
-
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Sequence file not found: {file}")
-        except IOError as e:
-            raise IOError(f"Error reading sequence file {file}: {e}")
-        except Exception as e:
-            raise ValueError(f"Error parsing sequence file {file}: {e}")
-
-        if not seqDict:
-            raise ValueError(f"No valid chains found in sequence file {file}")
-
-        for chainId, chainData in seqDict.items():
-            residues = chainData["residues"]
-            aminoAcidIntersect = set(residues) & set(TinkerFiles._AMINO_ACID_LIST)
-            if aminoAcidIntersect:
-                chainData["chainType"] = "PEPTIDE"
-                continue
-
-            nucleotideIntersect = set(residues) & set(TinkerFiles._NUCLEOTIDE_LIST)
-            if nucleotideIntersect:
-                chainData["chainType"] = "NUCLEIC"
-                continue
-
-            chainData["chainType"] = "GENERIC"
-
-        return seqDict
-
-    # ------------------------------------------------------------------------------------------ #
     #                                   XYZ FILE PARSING                                         #
     # ------------------------------------------------------------------------------------------ #
     @staticmethod
-    def _loadXyzFile(file: str) -> Tuple[Dict[int, Dict], List[Vec3], List[Vec3]]:
+    def _loadXyzFile(file: str) -> Tuple[List[TinkerAtom], List[Vec3], List[Vec3]]:
         """
         Load and parse a Tinker .xyz file.
 
@@ -1242,13 +2009,13 @@ class TinkerFiles:
 
         Returns
         -------
-        Tuple[Dict[int, Dict], List[Vec3], List[Vec3]]
+        Tuple[List[TinkerAtom], List[Vec3], List[Vec3]]
             A tuple containing:
-            - Dictionary mapping atom indices to their properties
+            - List of TinkerAtom objects
             - List of atomic positions
             - List of periodic box vectors (if present, otherwise None)
         """
-        xyzDict = {}
+        atoms = []
         boxVectors = None
 
         try:
@@ -1260,9 +2027,13 @@ class TinkerFiles:
                 try:
                     nAtoms = int(firstLine.split()[0])
                     if nAtoms <= 0:
-                        raise ValueError(f"Invalid number of atoms: {nAtoms}. Must be positive.")
+                        raise ValueError(
+                            f"Invalid number of atoms: {nAtoms}. Must be positive."
+                        )
                 except (ValueError, IndexError):
-                    raise ValueError("First line must contain a positive integer number of atoms")
+                    raise ValueError(
+                        "First line must contain a positive integer number of atoms"
+                    )
 
                 linesLeft = nAtoms
                 lineNum = 1
@@ -1281,12 +2052,16 @@ class TinkerFiles:
                             for i, val in enumerate(secondLineSplit)
                         ]
                         if any(math.isnan(x) or math.isinf(x) for x in box):
-                            raise ValueError("Box vectors contain invalid values (NaN or Inf)")
+                            raise ValueError(
+                                "Box vectors contain invalid values (NaN or Inf)"
+                            )
                         boxVectors = computePeriodicBoxVectors(*box)
                     except ValueError as e:
-                        raise ValueError(f"Line {lineNum}: Error parsing box vectors: {e}")
+                        raise ValueError(
+                            f"Line {lineNum}: Error parsing box vectors: {e}"
+                        )
                 else:
-                    TinkerFiles._parseAndStoreXyzLine(secondLine, lineNum, xyzDict)
+                    TinkerFiles._parseAndStoreXyzLine(secondLine, lineNum, atoms)
                     linesLeft -= 1
 
                 for i in range(linesLeft):
@@ -1296,15 +2071,13 @@ class TinkerFiles:
                         raise ValueError(
                             f"Expected {nAtoms} atoms but found only {i + (1 if len(secondLineSplit) != 6 or secondLineSplit[0] == '1' else 0)}"
                         )
-                    TinkerFiles._parseAndStoreXyzLine(atomLine, lineNum, xyzDict)
+                    TinkerFiles._parseAndStoreXyzLine(atomLine, lineNum, atoms)
 
-                if len(xyzDict) != nAtoms:
-                    raise ValueError(
-                        f"Expected {nAtoms} atoms but found {len(xyzDict)}"
-                    )
+                if len(atoms) != nAtoms:
+                    raise ValueError(f"Expected {nAtoms} atoms but found {len(atoms)}")
 
-            positions = [xyzDict[i]["positions"] for i in range(nAtoms)]
-            return xyzDict, boxVectors, positions
+            positions = [atom.positions for atom in atoms]
+            return atoms, boxVectors, positions
 
         except FileNotFoundError:
             raise FileNotFoundError(f"XYZ file not found: {file}")
@@ -1314,9 +2087,9 @@ class TinkerFiles:
             raise ValueError(f"Error parsing XYZ file {file}: {e}")
 
     @staticmethod
-    def _parseAndStoreXyzLine(line: str, lineNum: int, xyzDict: Dict[int, Dict]) -> None:
+    def _parseAndStoreXyzLine(line: str, lineNum: int, atoms: List[TinkerAtom]) -> None:
         """
-        Parse a single line from a TINKER .xyz file and store the data in the xyzDict.
+        Parse a single line from a TINKER .xyz file and create an TinkerAtom object.
 
         Parameters
         ----------
@@ -1324,8 +2097,8 @@ class TinkerFiles:
             The line to parse from the .xyz file.
         lineNum : int
             The line number in the file (for error reporting).
-        xyzDict : Dict[int, Dict]
-            Dictionary to store the parsed atom data, keyed by atom index.
+        atoms : List[TinkerAtom]
+            List to store the created TinkerAtom object.
         """
         fields = line.split()
         if len(fields) < 6:
@@ -1336,7 +2109,9 @@ class TinkerFiles:
         try:
             index = int(fields[0]) - 1
             if index < 0:
-                raise ValueError(f"Line {lineNum}: Invalid atom index {index + 1}. Must be positive.")
+                raise ValueError(
+                    f"Line {lineNum}: Invalid atom index {index}. Must be positive."
+                )
 
             symbol = str(fields[1])
             if not symbol:
@@ -1347,7 +2122,9 @@ class TinkerFiles:
                 y = float(fields[3]) * 0.1
                 z = float(fields[4]) * 0.1
                 if any(math.isnan(coord) or math.isinf(coord) for coord in (x, y, z)):
-                    raise ValueError("Atom coordinates contain invalid values (NaN or Inf)")
+                    raise ValueError(
+                        "Atom coordinates contain invalid values (NaN or Inf)"
+                    )
                 position = Vec3(x, y, z)
             except ValueError as e:
                 raise ValueError(f"Line {lineNum}: Error parsing atom coordinates: {e}")
@@ -1359,19 +2136,20 @@ class TinkerFiles:
             try:
                 bonds = [int(bond) - 1 for bond in fields[6:]]
                 if any(bond < 0 for bond in bonds):
-                    raise ValueError("Invalid bond index (must be positive)")
+                    raise ValueError("Invalid bond index (must be >= 0)")
             except ValueError as e:
                 raise ValueError(f"Line {lineNum}: Error parsing bond indices: {e}")
 
-            if index in xyzDict:
-                raise ValueError(f"Line {lineNum}: Duplicate atom index {index + 1}")
+            # Create TinkerAtom object
+            atom = TinkerAtom(
+                symbol=symbol,
+                positions=position,
+                bonds=bonds,
+                index=index,
+                atomType=atomType,
+            )
+            atoms.append(atom)
 
-            xyzDict[index] = {
-                "symbol": symbol,
-                "positions": position,
-                "atomType": atomType,
-                "bonds": bonds,
-            }
         except ValueError as e:
             raise ValueError(f"Line {lineNum}: {str(e)}")
 
@@ -1669,77 +2447,14 @@ class TinkerFiles:
         except Exception as e:
             raise ValueError(f"Error parsing {keyFile}: {e}")
 
-    @staticmethod
-    def _combineXyzAndKeyData(xyzDict: Dict, atomTypes: List, bioTypes: List) -> Dict:
-        """
-        Combine the data from the .xyz and .key files into one dictionary.
-
-        Parameters
-        ----------
-        xyzDict : dict
-            The data from the .xyz file.
-        atomTypes : dict
-            The atom types from the .key file.
-        bioTypes : dict
-            The bio types from the .key file.
-
-        Returns
-        -------
-        atomDataDict : dict
-            The combined data.
-
-        Notes
-        -----
-        atomDataDict[index]                          index = 0, 1, 2, ...
-        atomDataDict[index]['symbol']                atom symbol
-        atomDataDict[index]['positions']             atom position
-        atomDataDict[index]['bonds']                 list of bonded atom indices
-        atomDataDict[index]['residue']               residue name
-
-        # if atomType is present in the .key file
-        atomDataDict[index]['atomType']              atom type
-        atomDataDict[index]['atomClass']             atom class
-        atomDataDict[index]['nameShort']             short name
-        atomDataDict[index]['nameLong']              long name
-        atomDataDict[index]['element']               element
-        atomDataDict[index]['atomicNumber']          atomic number
-        atomDataDict[index]['mass']                  mass
-        atomDataDict[index]['valence']               valence
-
-        # if bioType is present in the .key file
-        atomDataDict[index]['bioType']               bio type
-        atomDataDict[index]['nameShort']             short name
-        atomDataDict[index]['nameLong']              long name
-        atomDataDict[index]['atomType']              atom type
-        atomDataDict[index]['element']               element
-        """
-        atomDataDict = dict()
-        for atomIndex in xyzDict:
-            atomDataDict[atomIndex] = xyzDict[atomIndex]
-
-            if "atomType" in atomDataDict[atomIndex]:
-                # Add all the atom type data to the atom data
-                for atomTypeDict in atomTypes:
-                    if atomDataDict[atomIndex]["atomType"] in atomTypeDict:
-                        atomDataDict[atomIndex].update(
-                            atomTypeDict[atomDataDict[atomIndex]["atomType"]]
-                        )
-                        break
-            elif "bioType" in atomDataDict[atomIndex]:
-                # Add all the biotype data to the atom data
-                for bioTypeDict in bioTypes:
-                    if atomDataDict[atomIndex]["bioType"] in bioTypeDict:
-                        atomDataDict[atomIndex].update(
-                            bioTypeDict[atomDataDict[atomIndex]["bioType"]]
-                        )
-                        break
-
-        return atomDataDict
-
 
 class TinkerXmlWriter:
     """
-    Write the Tinker XML file.
+    Utility class for converting Tinker force field parameters to OpenMM XML format.
+
+    This class provides methods to transform Tinker force field parameters extracted
+    from .key/.prm files into OpenMM-compatible XML force field files. It creates
+    both standard and implicit solvent (Generalized Kirkwood) parameter files.
     """
 
     @staticmethod
@@ -1767,7 +2482,7 @@ class TinkerXmlWriter:
     @staticmethod
     def _writeResidues(
         root: etree.Element,
-        atomDict: Dict[int, Dict[str, Any]],
+        atomDict: Dict[int, TinkerAtom],
         topology: top.Topology,
     ) -> None:
         """
@@ -1777,8 +2492,8 @@ class TinkerXmlWriter:
         ----------
         root : xml.etree.ElementTree.Element
             The root element of the XML tree.
-        atomDict : dict
-            The atom data dictionary.
+        atomDict : Dict[int, TinkerAtom]
+            Dictionary mapping atom indices to TinkerAtom objects.
         topology : openmm.app.topology.Topology
             The topology object.
         """
@@ -1795,10 +2510,8 @@ class TinkerXmlWriter:
 
                 for i, atom in enumerate(residue.atoms()):
                     atomElement = etree.SubElement(residueElement, "Atom")
-                    atomElement.attrib["name"] = atomDict[atom.index][
-                        "nameShort"
-                    ] + str(i)
-                    atomElement.attrib["type"] = atomDict[atom.index]["atomType"]
+                    atomElement.attrib["name"] = atomDict[atom.index].nameShort + str(i)
+                    atomElement.attrib["type"] = atomDict[atom.index].atomType
 
                 baseIndex = next(atom.index for atom in residue.atoms())
                 for bond in residue.bonds():
@@ -2486,27 +3199,33 @@ class TinkerXmlWriter:
         topology, filename, atomTypes, bioTypes, forces, scalars, atomDict
     ):
         """
-        Create the XML file.
+        Create XML force field files from Tinker parameters.
+
+        Generates two XML files:
+        1. Standard force field file (filename.xml)
+        2. Implicit solvent version with Generalized Kirkwood model (filename_gk.xml)
 
         Parameters
         ----------
+        topology : openmm.app.Topology
+            The molecular topology.
         filename : str
-            The name of .key file.
+            The Tinker .key file path used to derive output filenames.
         atomTypes : dict
-            The atom types dictionary.
+            Dictionary of atom types and their properties.
         bioTypes : dict
-            The bio types dictionary.
+            Dictionary of biotypes and their properties.
         forces : dict
-            The forces dictionary.
+            Dictionary of force parameters from the Tinker file.
         scalars : dict
-            The scalars dictionary.
+            Dictionary of scalar parameters from the Tinker file.
         atomDict : dict
-            The atom data dictionary.
+            Dictionary mapping atom indices to TinkerAtom objects.
 
         Returns
         -------
-        tinkXmlFile, gkXmlFile : tuple(file, file)
-            The XML files.
+        tuple(file, file)
+            Tuple containing file handles for the standard and implicit solvent XML files.
         """
         root = etree.Element("ForceField")
 
