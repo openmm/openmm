@@ -468,6 +468,11 @@ class TinkerFiles:
             constraints,
         )
 
+        # Add AMOEBA bond force
+        print(self._forces["bond"])
+        for type1, type2, length, k in self._forces["bond"]:
+            print(type1, type2, length, k)
+
         return system
 
     # ------------------------------------------------------------------------------------------ #
@@ -2313,7 +2318,23 @@ class TinkerFiles:
                     # No need to read biotype information because the Tinker
                     # .xyz file directly contains atom type information
                     lineIndex += 1
+                elif fields[0] in TinkerFiles.RECOGNIZED_FORCES:
+                    if TinkerFiles.RECOGNIZED_FORCES[fields[0]] == 1:
+                        if fields[0] not in forcesDict:
+                            forcesDict[fields[0]] = []
+                        forcesDict[fields[0]].append(fields[1:])
+                        lineIndex += 1
+                    else:
+                        # Call the function to parse the specific force
+                        lineIndex = TinkerFiles.RECOGNIZED_FORCES[fields[0]](
+                            lineIndex, allLines, forcesDict
+                        )
+                elif fields[0] in TinkerFiles.RECOGNIZED_SCALARS:
+                    scalar, value = fields
+                    scalarsDict[scalar] = value
+                    lineIndex += 1
                 else:
+                    # Skip unrecognized fields
                     lineIndex += 1
 
             return atomTypesDict, forcesDict, scalarsDict
