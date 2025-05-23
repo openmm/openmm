@@ -752,6 +752,17 @@ class TinkerFiles:
 
                     piTorsionForce.addPiTorsion(force, piTorsionAtom1, piTorsionAtom2, piTorsionAtom3, piTorsionAtom4, piTorsionAtom5, piTorsionAtom6, params["k"])
 
+        # Add AmoebaTorsionTorsion force
+        pass
+        # Add AmoebaVdw force
+        pass
+        # Add AmoebaMultipole force
+        pass
+        # Add AmoebaWcaDispersion force
+        pass
+        # Add AmoebaGeneralizedKirkwood force
+        pass
+
         # Add the force to the system if it has any bonds
         if force.getNumBonds() > 0:
             sys.addForce(force)
