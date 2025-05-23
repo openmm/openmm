@@ -102,8 +102,6 @@ class TinkerAtom:
     atomicNumber: Optional[int] = None
     mass: Optional[float] = None
     valence: Optional[int] = None
-    residueName: Optional[str] = None
-    chain: Optional[Any] = None
 
     def updateFromAtomType(self, atomTypeData: Dict[str, Any]) -> None:
         """Update atom data from atom type information.
@@ -126,6 +124,7 @@ class TinkerAtom:
 class TinkerAtomType:
     """
     A data class to represent Tinker atom types.
+
     atomType : str
         The atom type
     atomClass : str
@@ -270,6 +269,7 @@ class TinkerFiles:
             "opbend-pentic": "-0.0000007",
             "opbend-sextic": "0.000000022",
             "torsionunit": "0.5",
+            "pi-torsionunit": "1.0",
             "vdwtype": "BUFFERED-14-7",
             "radiusrule": "CUBIC-MEAN",
             "radiustype": "R-MIN",
@@ -358,10 +358,9 @@ class TinkerFiles:
 
         # Update atoms with atom type information
         for atom in self.atoms:
-            atomType = atom.atomType
-            if atomType not in self._atomTypes:
-                raise ValueError(f"Atom type {atomType} not found in atomTypes")
-            atom.updateFromAtomType(self._atomTypes[atomType])
+            if atom.atomType not in self._atomTypes:
+                raise ValueError(f"Atom type {atom.atomType} not found in atomTypes")
+            atom.updateFromAtomType(self._atomTypes[atom.atomType])
 
         # Create topology
         self.topology = TinkerFiles._createTopology(self.atoms)
@@ -447,34 +446,258 @@ class TinkerFiles:
         openmm.System
             The created OpenMM System.
         """
-        from openmm.app.forcefield import ForceField
+        from openmm.app.internal.amoebaforces import AmoebaBondForce, AmoebaUreyBradleyForce, AmoebaOutOfPlaneBendForce, AmoebaTorsionForce, AmoebaPiTorsionForce
+        import openmm as mm
 
-        # Re-use SystemData to get bond information
-        data = ForceField._SystemData(self.topology)
-        rigidResidue = [False] * self.topology.getNumResidues()
+        # Create OpenMM System.
+        sys = mm.System()
 
-        # Set atomtypes in SystemData
-        for atom in self.topology.atoms():
-            data.atomType[atom] = self.atoms[atom.index].atomType
+        # Add particles to the system
+        for atom in self.atoms:
+            sys.addParticle(atom.mass)
 
-        # Initialize system
-        system = ForceField._initializeSystem(
-            self.topology,
-            self._atomTypes,
-            data,
-            hydrogenMass,
-            nonbondedMethod,
-            rigidResidue,
-            constraints,
-        )
+        # Check that no constraints are specified
+        # TODO: Add support for constraints if needed
+        if constraints is not None:
+            raise ValueError("Constraints are not supported for Tinker files. AMOEBA is a flexible force field.")
+        if rigidWater:
+            raise ValueError("AMOEBA water model is flexible, so rigidWater is not supported.")
 
         # Add AMOEBA bond force
-        print(self._forces["bond"])
-        for type1, type2, length, k in self._forces["bond"]:
-            print(type1, type2, length, k)
+        bondParams = {(at1, at2): {"k": float(k), "r0": float(r0)} for at1, at2, k, r0 in self._forces["bond"]}
+        bondForce = AmoebaBondForce(self._scalars["bond-cubic"], self._scalars["bond-quartic"])
+        force = bondForce.getForce(sys)
+        for atom1, atom2 in self.topology.bonds():
+            idx1, idx2 = atom1.index, atom2.index
+            class1 = self.atoms[idx1].atomClass
+            class2 = self.atoms[idx2].atomClass
+            params = bondParams.get((class1, class2)) or bondParams.get((class2, class1))
+            if not params:
+                raise ValueError(f"No bond parameters found for atom classes {class1}-{class2}")
+            bondForce.addBond(force, idx1, idx2, params["r0"], params["k"])
+        sys.addForce(force)
 
-        return system
+        # Find all unique angles in the system
+        uniqueAngles = set()
+        for atom1, atom2 in self.topology.bonds():
+            idx1, idx2 = atom1.index, atom2.index
+            # Get all atoms bonded to atom1
+            for bonded1 in self.topology.bonds():
+                if bonded1[0].index == idx1 and bonded1[1].index != idx2:
+                    if bonded1[1].index < idx2:
+                        uniqueAngles.add((bonded1[1].index, idx1, idx2))
+                    else:
+                        uniqueAngles.add((idx2, idx1, bonded1[1].index))
+            # Get all atoms bonded to atom2
+            for bonded2 in self.topology.bonds():
+                if bonded2[0].index == idx2 and bonded2[1].index != idx1:
+                    if bonded2[1].index > idx1:
+                        uniqueAngles.add((idx1, idx2, bonded2[1].index))
+                    else:
+                        uniqueAngles.add((bonded2[1].index, idx2, idx1))
+        angles = sorted(list(uniqueAngles))
 
+
+        # Classify angles into in-plane, out-of-plane and generic.
+        # If middle atom has covalency of 3 and the types of the middle atom and the partner atom (atom bonded to   
+        # middle atom, but not in angle) match types1 and types2, then three out-of-plane bend angles are generated.
+        # Three in-plane angle are also generated. 
+        # If the conditions are not satisfied, the angle is marked as 'generic' angle (not a in-plane angle).
+        # TODO: check if the angle is constrained
+        genericAngles = []
+        inPlaneAngles = []
+        outOfPlaneAngles = []
+        skipAtoms = {}
+        opbendParams = {(at1, at2, at3, at4): {"k": float(k)} for at1, at2, at3, at4, k in self._forces["opbend"]}
+   
+        for angle in angles:
+            middleAtom = angle[1]
+            middleType = self.atoms[middleAtom].atomType
+            middleCovalency = len(self.atoms[middleAtom].bonds)
+            if middleCovalency == 3 and middleAtom not in skipAtoms:
+                partners = []
+                for partner in self.atoms[middleAtom].bonds:
+                    partnerType = self.atoms[partner].atomType
+                    for types in opbendParams:
+                        if middleType in types[1] and partnerType in types[0]:
+                            partners.append(partner)
+                            break
+                if len(partners) == 3:
+                    outOfPlaneAngles.append([partners[0], middleAtom, partners[1], partners[2]])
+                    outOfPlaneAngles.append([partners[2], middleAtom, partners[0], partners[1]])
+                    outOfPlaneAngles.append([partners[1], middleAtom, partners[2], partners[0]])
+
+                    skipAtoms[middleAtom] = set(partners[:3])
+
+                    angleList = list(angle[:3])
+                    for atomIndex in partners:
+                        if atomIndex not in angleList:
+                            angleList.append(atomIndex)
+
+                    inPlaneAngles.append(angleList)
+                else:
+                    angleList = list(angle[:3])
+                    for atomIndex in partners:
+                        if atomIndex not in angleList:
+                            angleList.append(atomIndex)
+                    genericAngles.append(angleList)
+            elif middleCovalency == 3 and middleAtom in skipAtoms:
+                angleList = list(angle[:3])
+                for atomIndex in skipAtoms[middleAtom]:
+                    if atomIndex not in angleList:
+                        angleList.append(atomIndex)
+                inPlaneAngles.append(angleList)
+            else:
+                genericAngles.append(list(angle))
+
+        """        # Add AMOEBA out-of-plane bend force
+        outOfPlaneBendParams = {(at1, at2, at3, at4): {"k": float(k)} for at1, at2, at3, at4, k in self._forces["opbend"]}
+        outOfPlaneBendForce = AmoebaOutOfPlaneBendForce(self._scalars["opbend-cubic"], self._scalars["opbend-quartic"], self._scalars["opbend-pentic"], self._scalars["opbend-sextic"])
+        force = outOfPlaneBendForce.getForce(sys)
+        for idx1, idx2, idx3 in angles:
+            class1 = self.atoms[idx1].atomClass
+            class2 = self.atoms[idx2].atomClass
+            class3 = self.atoms[idx3].atomClass
+            class4 = self.atoms[idx4].atomClass
+
+        # Add AMOEBA angle force
+        angles = sorted(list(uniqueAngles))
+        angleParams = {(at1, at2, at3): {"k": k, "theta0": theta0} for at1, at2, at3, k, theta0 in self._forces["angle"]}
+        angleForce = AmoebaAngleForce(self._scalars["angle-cubic"], self._scalars["angle-quartic"], self._scalars["angle-pentic"], self._scalars["angle-sextic"])
+        angleForce.addForce(sys)
+        for atom1, atom2, atom3 in angles:
+            idx1, idx2, idx3 = atom1.index, atom2.index, atom3.index
+            class1 = self.atoms[idx1].atomClass
+            class2 = self.atoms[idx2].atomClass
+            class3 = self.atoms[idx3].atomClass
+            params = angleParams.get((class1, class2, class3)) or angleParams.get((class3, class2, class1))
+            if not params:
+                raise ValueError(f"No angle parameters found for atom classes {class1}-{class2}-{class3}")
+            angleForce.addAngle(idx1, idx2, idx3, float(params["theta0"]), float(params["k"]))
+        """
+
+        # Add AMOEBA Urey-Bradley force
+        ureyBradleyParams = {(at1, at2, at3): {"k": float(k), "d": float(d)} for at1, at2, at3, k, d in self._forces["ureybrad"]}
+        ureyBradleyForce = AmoebaUreyBradleyForce()
+        force = ureyBradleyForce.getForce(sys)
+        for idx1, idx2, idx3 in angles:
+            # TODO: Check if the angle is constrained
+            class1 = self.atoms[idx1].atomClass
+            class2 = self.atoms[idx2].atomClass
+            class3 = self.atoms[idx3].atomClass
+            params = ureyBradleyParams.get((class1, class2, class3)) or ureyBradleyParams.get((class3, class2, class1))
+            if params:
+                ureyBradleyForce.addUreyBradley(force, idx1, idx3, params["k"], params["d"])
+
+        # Add the force to the system if it has any bonds
+        if force.getNumBonds() > 0:
+            sys.addForce(force)
+
+        # Find all unique proper torsions in the system
+        uniquePropers = set()
+        for angle in angles:
+            for atom in self.atoms[angle[0]].bonds:
+                if atom not in angle:
+                    if atom < angle[2]:
+                        uniquePropers.add((atom, angle[0], angle[1], angle[2]))
+                    else:
+                        uniquePropers.add((angle[2], angle[1], angle[0], atom))
+            for atom in self.atoms[angle[2]].bonds:
+                if atom not in angle:
+                    if atom > angle[0]:
+                        uniquePropers.add((angle[0], angle[1], angle[2], atom))
+                    else:
+                        uniquePropers.add((atom, angle[2], angle[1], angle[0]))
+        propers = sorted(list(uniquePropers))
+
+        # Add AMOEBA periodic torsion force
+        torsionParams = {(at1, at2, at3, at4): {"t1": [float(t11), float(t12), int(t13)], "t2": [float(t21), float(t22), int(t23)], "t3": [float(t31), float(t32), int(t33)]} 
+                         for at1, at2, at3, at4, t11, t12, t13, t21, t22, t23, t31, t32, t33 in self._forces["torsion"]}
+        torsionForce = AmoebaTorsionForce(self._scalars["torsionunit"])
+        force = torsionForce.getForce(sys)
+        for idx1, idx2, idx3, idx4 in propers:
+            class1 = self.atoms[idx1].atomClass
+            class2 = self.atoms[idx2].atomClass
+            class3 = self.atoms[idx3].atomClass
+            class4 = self.atoms[idx4].atomClass
+            params = torsionParams.get((class1, class2, class3, class4)) or torsionParams.get((class4, class3, class2, class1))
+            if not params:
+                raise ValueError(f"No torsion parameters found for atom classes {class1}-{class2}-{class3}-{class4}")
+            torsionForce.addTorsion(force, idx1, idx2, idx3, idx4, params["t1"], params["t2"], params["t3"])
+        sys.addForce(force)
+
+        # Add AmoebaPiTorsionForce
+        piTorsionParams = {(at1, at2): {"k": float(k)} for at1, at2, k in self._forces["pitors"]}
+        piTorsionForce = AmoebaPiTorsionForce(self._scalars["pi-torsionunit"])
+        force = piTorsionForce.getForce(sys)
+        for bond in self.topology.bonds():
+            idx1, idx2 = bond[0].index, bond[1].index
+            valence1 = len(self.atoms[idx1].bonds)
+            valence2 = len(self.atoms[idx2].bonds)
+
+            if valence1 == 3 and valence2 == 3:
+                class1 = self.atoms[idx1].atomClass
+                class2 = self.atoms[idx2].atomClass
+                params = piTorsionParams.get((class1, class2)) or piTorsionParams.get((class2, class1))
+
+                if params:
+                    piTorsionAtom3 = idx1
+                    piTorsionAtom4 = idx2
+
+                    # piTorsionAtom1, piTorsionAtom2 are the atoms bonded to atom1, excluding atom2
+                    # piTorsionAtom5, piTorsionAtom6 are the atoms bonded to atom2, excluding atom1
+                    piTorsionAtom1, piTorsionAtom2 = [bond for bond in self.atoms[idx1].bonds if bond != piTorsionAtom4]
+                    piTorsionAtom5, piTorsionAtom6 = [bond for bond in self.atoms[idx2].bonds if bond != piTorsionAtom3]
+
+                    piTorsionForce.addPiTorsion(force, piTorsionAtom1, piTorsionAtom2, piTorsionAtom3, piTorsionAtom4, piTorsionAtom5, piTorsionAtom6, params["k"])
+
+        # Add the force to the system if it has any bonds
+        if force.getNumBonds() > 0:
+            sys.addForce(force)
+
+        # Set periodic boundary conditions
+        boxVectors = self.topology.getPeriodicBoxVectors()
+        if boxVectors is not None:
+            sys.setDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2])
+        elif nonbondedMethod not in [ff.NoCutoff, ff.CutoffNonPeriodic]:
+            raise ValueError('Requested periodic boundary conditions for a Topology that does not specify periodic box dimensions')
+
+        # Adjust masses of hydrogens
+        if hydrogenMass is not None:
+            for atom1, atom2 in self.topology.bonds():
+                if atom1.element == elem.hydrogen:
+                    (atom1, atom2) = (atom2, atom1)
+                if rigidWater and atom2.residue.name == 'HOH':
+                    continue
+                if atom2.element == elem.hydrogen and atom1.element not in (elem.hydrogen, None):
+                    transferMass = hydrogenMass-sys.getParticleMass(atom2.index)
+                    sys.setParticleMass(atom2.index, hydrogenMass)
+                    sys.setParticleMass(atom1.index, sys.getParticleMass(atom1.index)-transferMass)
+
+        """
+        # Set ewald error tolerance and switching distance
+        for force in sys.getForces():
+            if isinstance(force, mm.NonbondedForce):
+                force.setEwaldErrorTolerance(ewaldErrorTolerance)
+            if isinstance(force, (mm.NonbondedForce, mm.CustomNonbondedForce)):
+                if switchDistance and nonbondedMethod is not ff.NoCutoff:
+                    # make sure it's legal
+                    if (_strip_optunit(switchDistance, u.nanometer) >=
+                            _strip_optunit(nonbondedCutoff, u.nanometer)):
+                        raise ValueError('switchDistance is too large compared '
+                                         'to the cutoff!')
+                    if _strip_optunit(switchDistance, u.nanometer) < 0:
+                        # Detects negatives for both Quantity and float
+                        raise ValueError('switchDistance must be non-negative!')
+                    force.setUseSwitchingFunction(True)
+                    force.setSwitchingDistance(switchDistance)
+        """
+        # Add CMMotionRemover
+        if removeCMMotion:
+            sys.addForce(mm.CMMotionRemover())
+
+        return sys
+    
     # ------------------------------------------------------------------------------------------ #
     #                                      TOPOLOGY FUNCTIONS                                    #
     # ------------------------------------------------------------------------------------------ #
