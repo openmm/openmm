@@ -446,7 +446,16 @@ class TinkerFiles:
         openmm.System
             The created OpenMM System.
         """
-        from openmm.app.internal.amoebaforces import AmoebaBondForce, AmoebaUreyBradleyForce, AmoebaOutOfPlaneBendForce, AmoebaTorsionForce, AmoebaPiTorsionForce
+        from openmm.app.internal.amoebaforces import (
+            AmoebaBondForce,
+            AmoebaUreyBradleyForce,
+            AmoebaAngleForce,
+            AmoebaOutOfPlaneBendForce,
+            AmoebaInPlaneAngleForce,
+            AmoebaStretchBendForce,
+            AmoebaTorsionForce,
+            AmoebaPiTorsionForce,
+        )
         import openmm as mm
 
         # Create OpenMM System.
@@ -550,31 +559,123 @@ class TinkerFiles:
             else:
                 genericAngles.append(list(angle))
 
-        """        # Add AMOEBA out-of-plane bend force
-        outOfPlaneBendParams = {(at1, at2, at3, at4): {"k": float(k)} for at1, at2, at3, at4, k in self._forces["opbend"]}
-        outOfPlaneBendForce = AmoebaOutOfPlaneBendForce(self._scalars["opbend-cubic"], self._scalars["opbend-quartic"], self._scalars["opbend-pentic"], self._scalars["opbend-sextic"])
-        force = outOfPlaneBendForce.getForce(sys)
-        for idx1, idx2, idx3 in angles:
-            class1 = self.atoms[idx1].atomClass
-            class2 = self.atoms[idx2].atomClass
-            class3 = self.atoms[idx3].atomClass
-            class4 = self.atoms[idx4].atomClass
+        # Add AMOEBA out-of-plane bend force
+        if outOfPlaneAngles:
+            outOfPlaneBendForce = AmoebaOutOfPlaneBendForce(self._scalars["opbend-cubic"], self._scalars["opbend-quartic"], self._scalars["opbend-pentic"], self._scalars["opbend-sextic"])
+            force = outOfPlaneBendForce.getForce(sys)
+            for idx1, idx2, idx3, idx4 in outOfPlaneAngles:
+                class1 = self.atoms[idx1].atomClass
+                class2 = self.atoms[idx2].atomClass
+                class3 = self.atoms[idx3].atomClass
+                class4 = self.atoms[idx4].atomClass
 
-        # Add AMOEBA angle force
-        angles = sorted(list(uniqueAngles))
-        angleParams = {(at1, at2, at3): {"k": k, "theta0": theta0} for at1, at2, at3, k, theta0 in self._forces["angle"]}
-        angleForce = AmoebaAngleForce(self._scalars["angle-cubic"], self._scalars["angle-quartic"], self._scalars["angle-pentic"], self._scalars["angle-sextic"])
-        angleForce.addForce(sys)
-        for atom1, atom2, atom3 in angles:
-            idx1, idx2, idx3 = atom1.index, atom2.index, atom3.index
-            class1 = self.atoms[idx1].atomClass
-            class2 = self.atoms[idx2].atomClass
-            class3 = self.atoms[idx3].atomClass
-            params = angleParams.get((class1, class2, class3)) or angleParams.get((class3, class2, class1))
-            if not params:
-                raise ValueError(f"No angle parameters found for atom classes {class1}-{class2}-{class3}")
-            angleForce.addAngle(idx1, idx2, idx3, float(params["theta0"]), float(params["k"]))
-        """
+                # Try exact match first, then fall back to wildcards
+                for typeTuple in [(class1, class2, class3, class4), 
+                                (class1, class2, class3, str(0)),
+                                (class1, class2, str(0), str(0))]:
+                    if typeTuple in opbendParams:
+                        outOfPlaneBendForce.addOutOfPlaneBend(force, idx1, idx2, idx3, idx4, opbendParams[typeTuple]["k"])
+                        break
+                else:
+                    raise ValueError(f"No out-of-plane bend parameters found for atom classes {class1}-{class2}-{class3}-{class4}")
+            
+            if force.getNumBonds() > 0:
+                sys.addForce(force)
+        
+        angleParams = {(at1, at2, at3): {"k": float(k), "theta0": [float(theta) for theta in theta]} for at1, at2, at3, k, *theta in self._forces["angle"]}
+        # Add AMOEBA generic angle force
+        if genericAngles:
+            # TODO: check if needed to use angle[5] and angle[6]
+            angleForce = AmoebaAngleForce(self._scalars["angle-cubic"], self._scalars["angle-quartic"], self._scalars["angle-pentic"], self._scalars["angle-sextic"])
+            force = angleForce.getForce(sys)
+            for angle in genericAngles:
+                class1 = self.atoms[angle[0]].atomClass
+                class2 = self.atoms[angle[1]].atomClass
+                class3 = self.atoms[angle[2]].atomClass
+                params = angleParams.get((class1, class2, class3)) or angleParams.get((class3, class2, class1))
+                if params:
+                    if params["theta0"] != 0.0:
+                        if len(params["theta0"]) > 1:
+                            # Get k-index by counting number of non-angle hydrogens on the central atom
+                            # Based on kangle.f
+                            nHyd = sum(1 for i in angle if self.atoms[i].element == elem.hydrogen)
+                            if nHyd < len(params["theta0"]):
+                                theta0 = params["theta0"][nHyd]
+                            else:
+                                raise ValueError(f"Angle parameters out of range for atom classes {class1}-{class2}-{class3}")
+                        else:
+                            theta0 = params["theta0"][0]
+
+                        params["idealAngle"] = theta0
+                        angleForce.addAngle(force, angle[0], angle[1], angle[2], theta0, params["k"])
+            
+            if force.getNumAngles() > 0:
+                sys.addForce(force)
+
+        # Add AMOEBA in-plane angle force
+        if inPlaneAngles:
+            inPlaneAngleForce = AmoebaInPlaneAngleForce(self._scalars["angle-cubic"], self._scalars["angle-quartic"], self._scalars["angle-pentic"], self._scalars["angle-sextic"])
+            force = inPlaneAngleForce.getForce(sys)
+            for angle in inPlaneAngles:
+                class1 = self.atoms[angle[0]].atomClass
+                class2 = self.atoms[angle[1]].atomClass
+                class3 = self.atoms[angle[2]].atomClass
+                params = angleParams.get((class1, class2, class3)) or angleParams.get((class3, class2, class1))
+                if params:
+                    if params["k"] != 0.0:
+                        if len(params["theta0"]) > 1:
+                            raise ValueError(f"In-plane angle parameters with multiple theta0 values are not supported for atom classes {class1}-{class2}-{class3}")
+                        else:
+                            theta0 = params["theta0"][0]
+
+                        # TODO: check if ideal angle is to be used here
+                        params["idealAngle"] = theta0
+                        inPlaneAngleForce.addInPlaneAngle(force, angle[0], angle[1], angle[2], params["theta0"], params["k"])
+                else:
+                    print(f"No in-plane angle parameters found for atom classes {class1}-{class2}-{class3}")
+
+            if force.getNumBonds() > 0:
+                sys.addForce(force)
+        
+        # Add AMOEBA stretch bend force
+        stretchBendParams = {(at1, at2, at3): {"k1": float(k1), "k2": float(k2)} for at1, at2, at3, k1, k2 in self._forces["strbnd"]}
+        stretchBendForce = AmoebaStretchBendForce()
+
+        force = stretchBendForce.getForce(sys)
+        for angle in genericAngles:
+            class1 = self.atoms[angle[0]].atomClass
+            class2 = self.atoms[angle[1]].atomClass
+            class3 = self.atoms[angle[2]].atomClass
+            params = stretchBendParams.get((class1, class2, class3)) or stretchBendParams.get((class3, class2, class1))
+            if params:
+                # Get ideal angle
+                angleParamsLocal = angleParams.get((class1, class2, class3)) or angleParams.get((class3, class2, class1))
+                print(angleParamsLocal)
+                if angleParamsLocal['idealAngle'] is None:
+                    raise ValueError(f"Ideal angle not set for atom classes {class1}-{class2}-{class3}")
+                idealAngle = angleParamsLocal['idealAngle']
+
+                if class1 == self.atoms[angle[0]].atomClass:
+                    # 1-2-3
+                    bondAB = bondParams.get((class1, class2)) or bondParams.get((class2, class1))
+                    bondCB = bondParams.get((class2, class3)) or bondParams.get((class3, class2))
+                    bondAB = bondAB['r0']
+                    bondCB = bondCB['r0']
+
+                    k1, k2 = params["k1"], params["k2"]
+                else:
+                    # 3-2-1
+                    bondAB = bondParams.get((class3, class2)) or bondParams.get((class2, class3))
+                    bondCB = bondParams.get((class2, class1)) or bondParams.get((class1, class2))
+                    bondAB = bondAB['r0']
+                    bondCB = bondCB['r0']
+
+                    k1, k2 = params["k2"], params["k1"]
+
+                if not bondAB or not bondCB:
+                    raise ValueError(f"No bond parameters found for atom classes {class1}-{class2} or {class3}-{class2}")
+                # TODO: check for radian
+                stretchBendForce.addStretchBend(force, angle[0], angle[1], angle[2], bondAB, bondCB, idealAngle, k1, k2)
 
         # Add AMOEBA Urey-Bradley force
         ureyBradleyParams = {(at1, at2, at3): {"k": float(k), "d": float(d)} for at1, at2, at3, k, d in self._forces["ureybrad"]}
