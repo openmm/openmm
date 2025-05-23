@@ -351,6 +351,7 @@ HipContext::HipContext(const System& system, int deviceIndex, bool useBlockingSy
     nonbonded = new HipNonbondedUtilities(*this);
     integration = new HipIntegrationUtilities(*this, system);
     expression = new HipExpressionUtilities(*this);
+    clearBuffer(posq);
 }
 
 HipContext::~HipContext() {

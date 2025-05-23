@@ -492,6 +492,7 @@ OpenCLContext::OpenCLContext(const System& system, int platformIndex, int device
     nonbonded = new OpenCLNonbondedUtilities(*this);
     integration = new OpenCLIntegrationUtilities(*this, system);
     expression = new OpenCLExpressionUtilities(*this);
+    clearBuffer(posq);
 }
 
 OpenCLContext::~OpenCLContext() {

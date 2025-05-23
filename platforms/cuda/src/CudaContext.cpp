@@ -359,6 +359,7 @@ CudaContext::CudaContext(const System& system, int deviceIndex, bool useBlocking
     nonbonded = new CudaNonbondedUtilities(*this);
     integration = new CudaIntegrationUtilities(*this, system);
     expression = new CudaExpressionUtilities(*this);
+    clearBuffer(posq);
 }
 
 CudaContext::~CudaContext() {
