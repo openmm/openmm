@@ -154,6 +154,8 @@ public:
     void loadCheckpoint(ContextImpl& context, std::istream& stream);
 private:
     ComputeContext& cc;
+    ComputeArray floatBuffer, doubleBuffer;
+    ComputeKernel copyFloatKernel, copyDoubleKernel;
 };
 
 /**

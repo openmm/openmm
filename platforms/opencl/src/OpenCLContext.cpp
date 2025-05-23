@@ -570,6 +570,7 @@ void OpenCLContext::initialize() {
             ((mm_float4*) pinnedMemory)[i] = mm_float4(0.0f, 0.0f, 0.0f, mass == 0.0 ? 0.0f : (cl_float) (1.0/mass));
     }
     velm.upload(pinnedMemory);
+    clearBuffer(posq);
     findMoleculeGroups();
     nonbonded->initialize(system);
 }

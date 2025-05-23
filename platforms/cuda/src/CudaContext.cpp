@@ -422,6 +422,7 @@ void CudaContext::initialize() {
             ((float4*) pinnedBuffer)[i] = make_float4(0.0f, 0.0f, 0.0f, mass == 0.0 ? 0.0f : (float) (1.0/mass));
     }
     velm.upload(pinnedBuffer);
+    clearBuffer(posq);
     bonded->initialize(system);
     addAutoclearBuffer(force.getDevicePointer(), force.getSize()*force.getElementSize());
     addAutoclearBuffer(energyBuffer.getDevicePointer(), energyBuffer.getSize()*energyBuffer.getElementSize());
