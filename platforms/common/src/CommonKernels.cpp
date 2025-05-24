@@ -4002,9 +4002,6 @@ void CommonCalcATMForceKernel::copyState(ContextImpl& context,
 
     ComputeContext& cc0 = getInnerComputeContext(innerContext0);
     ComputeContext& cc1 = getInnerComputeContext(innerContext1);
-    cc0.reorderAtoms();
-    cc1.reorderAtoms();
-    copyStateKernel->execute(numParticles);
 
     Vec3 a, b, c;
     context.getPeriodicBoxVectors(a, b, c);
@@ -4012,6 +4009,11 @@ void CommonCalcATMForceKernel::copyState(ContextImpl& context,
     innerContext0.setTime(context.getTime());
     innerContext1.setPeriodicBoxVectors(a, b, c);
     innerContext1.setTime(context.getTime());
+
+    cc0.reorderAtoms();
+    cc1.reorderAtoms();
+    copyStateKernel->execute(numParticles);
+
     map<string, double> innerParameters0 = innerContext0.getParameters();
     for (auto& param : innerParameters0)
         innerContext0.setParameter(param.first, context.getParameter(param.first));
