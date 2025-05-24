@@ -48,6 +48,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceVirtualSitesKernel(name, platform);
     if (name == CalcNonbondedForceKernel::Name())
         return new ReferenceCalcNonbondedForceKernel(name, platform);
+    if (name == CalcConstantPotentialForceKernel::Name())
+        return new ReferenceCalcConstantPotentialForceKernel(name, platform);
     if (name == CalcCustomNonbondedForceKernel::Name())
         return new ReferenceCalcCustomNonbondedForceKernel(name, platform);
     if (name == CalcHarmonicBondForceKernel::Name())
