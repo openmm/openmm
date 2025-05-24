@@ -1075,3 +1075,24 @@ KERNEL void timeShiftVelocities(GLOBAL mixed4* RESTRICT velm, GLOBAL const mm_lo
         }
     }
 }
+
+/**
+ * Compute the total kinetic energy.
+ */
+KERNEL void computeKineticEnergy(GLOBAL mixed4* RESTRICT velm, GLOBAL mixed* result) {
+    LOCAL mixed tempBuffer[KE_WORK_GROUP_SIZE];
+    mixed sum = 0;
+    for (unsigned int index = LOCAL_ID; index < NUM_ATOMS; index += LOCAL_SIZE) {
+        mixed4 v = velm[index];
+        if (v.w != 0)
+            sum += (v.x*v.x+v.y*v.y+v.z*v.z)/v.w;
+    }
+    tempBuffer[LOCAL_ID] = sum;
+    for (int i = 1; i < KE_WORK_GROUP_SIZE; i *= 2) {
+        SYNC_THREADS;
+        if (LOCAL_ID%(i*2) == 0 && LOCAL_ID+i < KE_WORK_GROUP_SIZE)
+            tempBuffer[LOCAL_ID] += tempBuffer[LOCAL_ID+i];
+    }
+    if (LOCAL_ID == 0)
+        *result = 0.5f*tempBuffer[0];
+}
