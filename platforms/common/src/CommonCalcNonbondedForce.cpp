@@ -130,6 +130,8 @@ public:
         addForcesKernel->setArg(1, cc.getLongForceBuffer());
         addForcesKernel->execute(cc.getNumAtoms());
     }
+    void setChargeDerivatives(float* chargeDerivatives) {
+    }
 private:
     ComputeContext& cc;
     vector<mm_float4> posq;
@@ -144,7 +146,7 @@ public:
     void computeForceAndEnergy(bool includeForces, bool includeEnergy, int groups) {
         Vec3 boxVectors[3];
         cc.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        pme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxVectors, includeEnergy);
+        pme.getAs<CalcPmeReciprocalForceKernel>().beginComputation(io, boxVectors, includeEnergy, true, false);
     }
 private:
     ComputeContext& cc;
@@ -421,7 +423,7 @@ void CommonCalcNonbondedForceKernel::commonInitialize(const System& system, cons
 
                 try {
                     cpuPme = getPlatform().createKernel(CalcPmeReciprocalForceKernel::Name(), cc.getContextImpl());
-                    cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, alpha, false);
+                    cpuPme.getAs<CalcPmeReciprocalForceKernel>().initialize(gridSizeX, gridSizeY, gridSizeZ, numParticles, {}, alpha, false);
                     ComputeProgram program = cc.compileProgram(CommonKernelSources::pme, pmeDefines);
                     ComputeKernel addForcesKernel = program->createKernel("addForces");
                     pmeio = new PmeIO(cc, addForcesKernel);
